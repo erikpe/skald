@@ -2,16 +2,16 @@
 
 use crate::{
     identity::{
-        ClassId, CopyConstructorId, InterfaceId, InterfaceRequirementId, LocalId, LoopId,
-        OptionalTypeId,
+        ArrayTypeId, ClassId, CopyConstructorId, InterfaceId, InterfaceRequirementId, LocalId,
+        LoopId, OptionalTypeId,
     },
     source::Span,
 };
 
 use super::{
-    HirAccess, HirBlock, HirControlEffects, HirObjectView, HirOptionalDestructionPlan,
-    HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan, HirSelectedCopyOperation, HirViewTarget,
-    Type,
+    HirAccess, HirArrayCopyElement, HirBlock, HirControlEffects, HirObjectView,
+    HirOptionalCopyPlan, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
+    HirOptionalUnwrapPlan, HirSelectedCopyOperation, HirSharedTarget, HirViewTarget, Type,
 };
 
 /// One completely selected and typed `for-in` statement.
@@ -65,6 +65,7 @@ impl HirForIn {
         assert_eq!(result.payload, protocol.item);
         assert_eq!(item.binding, binding);
         assert_eq!(item.value.ty, protocol.item);
+        assert!(item.value.copy.is_some());
         assert_eq!(item.access, HirAccess::ReadOnly);
 
         let effects = body.effects.clone().through_loop(loop_id);
@@ -188,16 +189,28 @@ pub struct HirIterationItemPlan {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct HirIterationStoredValuePlan {
     pub ty: Type,
-    pub initialization: HirIterationValueInitialization,
+    /// Copying is required when a yielded payload becomes an independent item.
+    /// State initialization adopts the call result directly and therefore does
+    /// not require this capability.
+    pub copy: Option<HirIterationValueCopy>,
     pub destruction: HirIterationValueDestruction,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirIterationValueInitialization {
+pub enum HirIterationValueCopy {
     Trivial,
-    CopyClass {
+    Class {
         class: ClassId,
         operation: HirSelectedCopyOperation<CopyConstructorId>,
+    },
+    Array {
+        array: ArrayTypeId,
+        operation: HirArrayCopyElement,
+    },
+    Shared(HirSharedTarget),
+    Optional {
+        optional: OptionalTypeId,
+        operation: HirOptionalCopyPlan,
     },
 }
 
@@ -205,6 +218,12 @@ pub enum HirIterationValueInitialization {
 pub enum HirIterationValueDestruction {
     Trivial,
     Class(ClassId),
+    Array(ArrayTypeId),
+    Shared(HirSharedTarget),
+    Optional {
+        optional: OptionalTypeId,
+        plan: HirOptionalDestructionPlan,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

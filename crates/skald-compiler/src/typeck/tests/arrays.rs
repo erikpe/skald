@@ -10,7 +10,7 @@ use crate::{
     typeck::{
         capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE,
         COPY_OPERATION_UNAVAILABLE, INVALID_ARRAY_ELEMENT, INVALID_EXTERNAL_DECLARATION,
-        INVALID_INTERFACE_REQUIREMENT, PRIVATE_INITIALIZER_ACCESS, TYPE_MISMATCH,
+        PRIVATE_INITIALIZER_ACCESS, TYPE_MISMATCH,
     },
 };
 
@@ -489,10 +489,12 @@ fn rejects_non_storable_elements_and_array_contract_boundaries() {
         "interface Source { fn values() -> i64[]; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    assert!(interface
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_INTERFACE_REQUIREMENT));
+    assert!(
+        interface.diagnostics.is_empty(),
+        "{:?}",
+        interface.diagnostics
+    );
+    assert!(interface.hir.is_some());
 }
 
 #[test]

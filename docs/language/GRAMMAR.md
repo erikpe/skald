@@ -259,8 +259,8 @@ module's ordinary namespace.
 
 Alias parameter syntax is parsed uniformly for functions, external
 declarations, initializers, and methods. Later semantic rules decide which
-storage types may be designated; shared-owner and `unit` aliases remain
-unavailable.
+storage types may be designated; exact shared-owner and optional shared-owner
+slots are eligible, while `unit` aliases remain unavailable.
 
 Postfix `?` and `[]` associate from left to right, and general type grouping
 selects the complete operand to wrap. A leading `shared` consumes the complete

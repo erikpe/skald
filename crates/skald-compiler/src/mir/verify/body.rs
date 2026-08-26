@@ -247,6 +247,7 @@ impl<'mir> Verifier<'mir> {
                     storage.kind,
                     MirStorageKind::Local
                         | MirStorageKind::Parameter
+                        | MirStorageKind::AliasParameter(_)
                         | MirStorageKind::Temporary
                         | MirStorageKind::SharedAnchor
                         | MirStorageKind::Argument

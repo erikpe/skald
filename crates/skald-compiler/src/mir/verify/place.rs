@@ -166,6 +166,7 @@ impl Verifier<'_> {
                     kind,
                     MirStorageKind::Local
                         | MirStorageKind::Parameter
+                        | MirStorageKind::AliasParameter(_)
                         | MirStorageKind::SharedAnchor
                 ) && matches!(storage.ty, MirType::Shared(_)) =>
             {

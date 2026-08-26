@@ -80,6 +80,7 @@ pub(super) enum FramePlaceBase {
     OwnedParameter { home: i32 },
     Alias { home: i32 },
     SharedPointee { home: i32 },
+    AliasedSharedPointee { home: i32 },
 }
 
 impl FramePlaceBase {
@@ -90,7 +91,8 @@ impl FramePlaceBase {
             | Self::Receiver { home }
             | Self::OwnedParameter { home }
             | Self::Alias { home }
-            | Self::SharedPointee { home } => Some(home),
+            | Self::SharedPointee { home }
+            | Self::AliasedSharedPointee { home } => Some(home),
         }
     }
 }
@@ -333,8 +335,14 @@ impl FrameLayout {
                 0,
             ),
             MirPlaceBase::SharedPointee(_) => (
-                FramePlaceBase::SharedPointee {
-                    home: self.storage(storage_id),
+                if matches!(storage.kind, MirStorageKind::AliasParameter(_)) {
+                    FramePlaceBase::AliasedSharedPointee {
+                        home: self.storage(storage_id),
+                    }
+                } else {
+                    FramePlaceBase::SharedPointee {
+                        home: self.storage(storage_id),
+                    }
                 },
                 i32::try_from(SHARED_HEADER_SIZE)
                     .map_err(|_| place_address_error(function.callable()))?,

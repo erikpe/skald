@@ -266,7 +266,7 @@ fn box_array_positions_use_shared_owner_lifecycle_plans() {
 }
 
 #[test]
-fn plain_box_statics_and_box_designated_aliases_remain_invalid() {
+fn plain_box_statics_require_initializers_and_box_designated_aliases_are_supported() {
     let uninitialized_static = check_text(
         "class State { static value: shared i64?; init() {} }\n\
          fn main() -> i64 { return 0; }\n",
@@ -281,11 +281,8 @@ fn plain_box_statics_and_box_designated_aliases_remain_invalid() {
         "fn inspect(ref value: shared i64?) -> i64 { return 0; }\n\
          fn main() -> i64 { return 0; }\n",
     );
-    assert!(alias.hir.is_none());
-    assert!(alias
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_ALIAS_PARAMETER));
+    assert!(alias.diagnostics.is_empty(), "{:?}", alias.diagnostics);
+    assert!(alias.hir.is_some());
 }
 
 #[test]

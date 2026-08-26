@@ -60,6 +60,15 @@ impl InstructionSelector<'_, '_> {
                 });
                 Register::R11
             }
+            FramePlaceBase::AliasedSharedPointee { home } => {
+                load_rax(memory(Register::Rbp, home), self.output);
+                load_rax(memory(Register::Rax, 0), self.output);
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::R11.into(),
+                });
+                Register::R11
+            }
             _ => match layout.base().pointer_home() {
                 None => Register::Rbp,
                 Some(home) => {
@@ -102,6 +111,22 @@ impl InstructionSelector<'_, '_> {
                 self.output.push(Instruction::LoadSymbolAddress {
                     symbol: symbol::static_field(self.program, field),
                     destination,
+                });
+                if layout.displacement() != 0 {
+                    self.output.push(Instruction::LoadEffectiveAddress {
+                        source: memory(destination, layout.displacement()),
+                        destination,
+                    });
+                }
+            }
+            FramePlaceBase::AliasedSharedPointee { home } => {
+                self.output.push(Instruction::Move {
+                    source: memory(Register::Rbp, home),
+                    destination: Register::Rax.into(),
+                });
+                self.output.push(Instruction::Move {
+                    source: memory(Register::Rax, 0),
+                    destination: destination.into(),
                 });
                 if layout.displacement() != 0 {
                     self.output.push(Instruction::LoadEffectiveAddress {

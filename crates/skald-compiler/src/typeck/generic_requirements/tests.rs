@@ -148,13 +148,13 @@ fn declaration_roles_delegate_to_stored_alias_optional_array_and_shared_owners()
         optional,
         nested,
         array,
+        shared,
+        optional_shared,
         ResolvedTypeKind::Obj,
         ResolvedTypeKind::Interface(InterfaceId::new(0)),
     ] {
         assert!(supports(&query, &program, readonly, kind));
     }
-    assert!(!supports(&query, &program, readonly, shared));
-    assert!(!supports(&query, &program, readonly, optional_shared));
     assert!(!supports(
         &query,
         &program,

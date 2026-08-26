@@ -2,8 +2,9 @@
 
 use super::*;
 use crate::hir::{
-    HirForIn, HirIterationReceiverCarrier, HirIterationValueInitialization,
-    HirOptionalDestructionPlan, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
+    HirForIn, HirIterationReceiverCarrier, HirIterationStoredValuePlan, HirIterationValueCopy,
+    HirIterationValueDestruction, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
+    HirOptionalUnwrapPlan, Type,
 };
 
 impl BodyLowerer<'_> {
@@ -21,10 +22,12 @@ impl BodyLowerer<'_> {
         let outer_cleanup = self.body.allocate_block(statement.spans.span);
         let exit = self.body.allocate_block(statement.spans.span);
         let access_failure = self.body.allocate_block(statement.spans.binding_span);
-        let class_payload = matches!(
-            statement.item.value.initialization,
-            HirIterationValueInitialization::CopyClass { .. }
-        );
+        let item_copy = statement
+            .item
+            .value
+            .copy
+            .expect("typed iteration item must be independently copyable");
+        let class_payload = matches!(item_copy, HirIterationValueCopy::Class { .. });
         let guard_overflow =
             class_payload.then(|| self.body.allocate_block(statement.spans.binding_span));
         let payload_guard = class_payload.then(|| {
@@ -56,29 +59,20 @@ impl BodyLowerer<'_> {
         );
         self.begin_storage_lifetime(state, statement.spans.iterable_span);
         self.cleanup.register_storage(state);
-        let state_value = self.new_value(
-            self.lower_type(statement.protocol.state),
-            statement.spans.iterable_span,
-        );
-        self.emit(MirInstruction::Call(MirCall {
-            target: MirCallTarget::Interface(MirInterfaceCallTarget {
-                interface: statement.state.initialize.target.interface,
-                requirement: statement.state.initialize.target.requirement,
-            }),
-            receiver: Some(receiver.clone().into()),
-            arguments: Vec::new(),
-            result: Some(state_value),
-            shared_result: None,
-            destination: None,
-            span: statement.spans.iterable_span,
-        }));
-        self.emit(MirInstruction::Store(MirStore {
-            destination: MirPlace::base(state),
-            value: state_value,
-            authorization: None,
-            final_authorization: None,
-            span: statement.spans.iterable_span,
-        }));
+        self.emit_iteration_state_call(statement, receiver.clone(), state);
+        self.register_iteration_value(state, &statement.state.value);
+        let state_array_anchor = match statement.protocol.state {
+            Type::Array(array) => Some((
+                self.new_iteration_storage(
+                    "iteration-state-array-anchor",
+                    MirStorageKind::ArrayAnchor(MirArrayAnchorKind::InlineBacking),
+                    MirType::Array(array),
+                    statement.spans.span,
+                ),
+                array,
+            )),
+            _ => None,
+        };
 
         let result = self.new_iteration_storage(
             "iteration-result",
@@ -86,11 +80,7 @@ impl BodyLowerer<'_> {
             MirType::Optional(statement.result.optional),
             statement.spans.span,
         );
-        let scalar_payload = matches!(
-            statement.item.value.initialization,
-            HirIterationValueInitialization::Trivial
-        )
-        .then(|| {
+        let scalar_payload = matches!(item_copy, HirIterationValueCopy::Trivial).then(|| {
             self.new_iteration_storage(
                 "iteration-payload",
                 MirStorageKind::OptionalUnwrap,
@@ -108,6 +98,20 @@ impl BodyLowerer<'_> {
             .select_block(header)
             .expect("allocated iteration header must be selectable");
         self.begin_storage_lifetime(result, statement.spans.span);
+        if let Some((anchor, array)) = state_array_anchor {
+            self.begin_storage_lifetime(anchor, statement.spans.span);
+            self.emit(MirInstruction::Array(MirArrayInstruction::AnchorBegin {
+                anchor,
+                owner: MirPlace::base(state),
+                array,
+                kind: MirArrayAnchorKind::InlineBacking,
+                span: statement.spans.span,
+            }));
+        }
+        let optional_shared_result = matches!(
+            statement.result.destruction,
+            HirOptionalDestructionPlan::Shared(_)
+        );
         self.emit(MirInstruction::Call(MirCall {
             target: MirCallTarget::Interface(MirInterfaceCallTarget {
                 interface: statement.state.advance.target.interface,
@@ -116,14 +120,21 @@ impl BodyLowerer<'_> {
             receiver: Some(receiver.clone().into()),
             arguments: vec![MirArgument::Place(MirPlace::base(state))],
             result: None,
-            shared_result: None,
-            destination: Some(MirPlace::base(result)),
+            shared_result: optional_shared_result.then_some(result),
+            destination: (!optional_shared_result).then(|| MirPlace::base(result)),
             span: statement.spans.span,
         }));
-        debug_assert_eq!(
+        if let Some((anchor, _)) = state_array_anchor {
+            self.emit(MirInstruction::Array(MirArrayInstruction::AnchorEnd {
+                anchor,
+                span: statement.spans.span,
+            }));
+            self.end_storage_lifetime(anchor, statement.spans.span);
+        }
+        debug_assert!(matches!(
             statement.result.presence,
-            HirOptionalPresenceTestPlan::OuterTag
-        );
+            HirOptionalPresenceTestPlan::OuterTag | HirOptionalPresenceTestPlan::SharedOwnerNull
+        ));
         let is_present = self.assign(
             MirRvalueKind::OptionalPresence {
                 source: MirPlace::base(result),
@@ -142,8 +153,8 @@ impl BodyLowerer<'_> {
         self.body
             .select_block(present)
             .expect("allocated iteration presence block must be selectable");
-        match statement.item.value.initialization {
-            HirIterationValueInitialization::Trivial => {
+        match item_copy {
+            HirIterationValueCopy::Trivial => {
                 debug_assert_eq!(
                     statement.result.unwrap,
                     HirOptionalUnwrapPlan::ExtractScalar
@@ -158,7 +169,7 @@ impl BodyLowerer<'_> {
                     span: statement.spans.binding_span,
                 });
             }
-            HirIterationValueInitialization::CopyClass { class, .. } => {
+            HirIterationValueCopy::Class { class, .. } => {
                 debug_assert_eq!(
                     statement.result.unwrap,
                     HirOptionalUnwrapPlan::CheckedInlineClass(class)
@@ -175,6 +186,46 @@ impl BodyLowerer<'_> {
                     absent_target: access_failure,
                     overflow_target: guard_overflow
                         .expect("class iteration item needs a guard-overflow block"),
+                    span: statement.spans.binding_span,
+                });
+            }
+            HirIterationValueCopy::Shared(target) => {
+                debug_assert_eq!(
+                    statement.result.unwrap,
+                    HirOptionalUnwrapPlan::SecureSharedOwner(target)
+                );
+                let item = self.local_storage[statement.binding.index()];
+                self.begin_storage_lifetime(item, statement.spans.binding_span);
+                self.terminate(MirTerminator::OptionalSharedUnwrap {
+                    unwrap: MirOptionalSharedUnwrap {
+                        optional: statement.result.optional,
+                        source: MirPlace::base(result),
+                        destination: item,
+                        target: lower_shared_target(target),
+                        span: statement.spans.binding_span,
+                    },
+                    success_target: body,
+                    failure_target: access_failure,
+                    span: statement.spans.binding_span,
+                });
+            }
+            HirIterationValueCopy::Array { array, .. } => {
+                debug_assert_eq!(
+                    statement.result.unwrap,
+                    HirOptionalUnwrapPlan::CheckedInlineArray(array)
+                );
+                self.terminate(MirTerminator::Goto {
+                    target: body,
+                    span: statement.spans.binding_span,
+                });
+            }
+            HirIterationValueCopy::Optional { optional, .. } => {
+                debug_assert_eq!(
+                    statement.result.unwrap,
+                    HirOptionalUnwrapPlan::CheckedNested(optional)
+                );
+                self.terminate(MirTerminator::Goto {
+                    target: body,
                     span: statement.spans.binding_span,
                 });
             }
@@ -213,10 +264,17 @@ impl BodyLowerer<'_> {
             .expect("allocated iteration body block must be selectable");
         self.cleanup.enter_scope();
         let item = self.local_storage[statement.binding.index()];
-        self.begin_storage_lifetime(item, statement.spans.binding_span);
+        if !matches!(item_copy, HirIterationValueCopy::Shared(_)) {
+            self.begin_storage_lifetime(item, statement.spans.binding_span);
+        } else {
+            self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                temporaries: Vec::new(),
+                span: statement.spans.binding_span,
+            }));
+        }
         self.cleanup.register_storage(item);
-        match statement.item.value.initialization {
-            HirIterationValueInitialization::Trivial => {
+        match item_copy {
+            HirIterationValueCopy::Trivial => {
                 let payload = scalar_payload.expect("scalar iteration item needs payload storage");
                 let value = self.assign(
                     MirRvalueKind::Load(MirPlace::base(payload)),
@@ -232,7 +290,7 @@ impl BodyLowerer<'_> {
                     span: statement.spans.binding_span,
                 }));
             }
-            HirIterationValueInitialization::CopyClass { class, operation } => {
+            HirIterationValueCopy::Class { class, operation } => {
                 self.active_optional_guards
                     .push(ActiveOptionalGuard::Inline {
                         guard: payload_guard.expect("class iteration item needs a payload guard"),
@@ -248,9 +306,48 @@ impl BodyLowerer<'_> {
                     span: statement.spans.binding_span,
                 }));
                 self.end_optional_views_from(0, statement.spans.binding_span);
-                self.cleanup.register_owned(item, class);
+            }
+            HirIterationValueCopy::Array { array, operation } => {
+                let produced = self.lower_array_copy_from_place(
+                    array,
+                    MirPlace::base(result)
+                        .project_aggregate_optional_payload(statement.result.optional),
+                    lower_array_copy_element(operation),
+                    statement.spans.binding_span,
+                );
+                self.consume_array_temporary(produced);
+                self.emit(MirInstruction::Array(MirArrayInstruction::Adopt {
+                    destination: MirPlace::base(item),
+                    source: produced,
+                    array,
+                    span: statement.spans.binding_span,
+                }));
+                self.finish_full_expression(statement.spans.binding_span);
+            }
+            HirIterationValueCopy::Shared(_) => {
+                // The optional-shared unwrap edge initialized the item and
+                // retained its independent strong owner before body entry.
+            }
+            HirIterationValueCopy::Optional {
+                optional,
+                operation,
+            } => {
+                let metadata = self
+                    .input
+                    .optional_types
+                    .get(optional)
+                    .expect("typed iteration optional item must have metadata");
+                debug_assert_eq!(metadata.lifecycle.copy, Some(operation));
+                self.lower_optional_copy_initialize_at(
+                    MirPlace::base(item),
+                    optional,
+                    MirPlace::base(result)
+                        .project_aggregate_optional_payload(statement.result.optional),
+                    statement.spans.binding_span,
+                );
             }
         }
+        self.register_iteration_value(item, &statement.item.value);
         self.cleanup_iteration_result(statement, result);
         self.lower_block(&statement.body);
         if !self.body.is_current_terminated() {
@@ -308,6 +405,83 @@ impl BodyLowerer<'_> {
         id
     }
 
+    fn emit_iteration_state_call(
+        &mut self,
+        statement: &HirForIn,
+        receiver: MirObjectView,
+        state: StorageId,
+    ) {
+        let ty = statement.state.value.ty;
+        let scalar = matches!(
+            ty,
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+        );
+        let shared = matches!(ty, Type::Shared(_))
+            || matches!(
+                statement.state.value.destruction,
+                HirIterationValueDestruction::Optional {
+                    plan: HirOptionalDestructionPlan::Shared(_),
+                    ..
+                }
+            );
+        let result = scalar.then(|| {
+            self.new_value(
+                self.lower_type(statement.protocol.state),
+                statement.spans.iterable_span,
+            )
+        });
+        self.emit(MirInstruction::Call(MirCall {
+            target: MirCallTarget::Interface(MirInterfaceCallTarget {
+                interface: statement.state.initialize.target.interface,
+                requirement: statement.state.initialize.target.requirement,
+            }),
+            receiver: Some(receiver.into()),
+            arguments: Vec::new(),
+            result,
+            shared_result: shared.then_some(state),
+            destination: (!scalar && !shared).then(|| MirPlace::base(state)),
+            span: statement.spans.iterable_span,
+        }));
+        if let Some(value) = result {
+            self.emit(MirInstruction::Store(MirStore {
+                destination: MirPlace::base(state),
+                value,
+                authorization: None,
+                final_authorization: None,
+                span: statement.spans.iterable_span,
+            }));
+        }
+    }
+
+    fn register_iteration_value(
+        &mut self,
+        storage: StorageId,
+        value: &HirIterationStoredValuePlan,
+    ) {
+        match value.destruction {
+            HirIterationValueDestruction::Trivial => {}
+            HirIterationValueDestruction::Class(class) => {
+                self.cleanup.register_owned(storage, class)
+            }
+            HirIterationValueDestruction::Array(array) => {
+                self.cleanup.register_array(storage, array)
+            }
+            HirIterationValueDestruction::Shared(_) => self.cleanup.register_shared(storage),
+            HirIterationValueDestruction::Optional { optional, plan } => match plan {
+                HirOptionalDestructionPlan::Trivial => {}
+                HirOptionalDestructionPlan::Class(class) => self
+                    .cleanup
+                    .register_class_optional(storage, optional, class),
+                HirOptionalDestructionPlan::Shared(target) => self
+                    .cleanup
+                    .register_optional_shared(storage, optional, lower_shared_target(target)),
+                HirOptionalDestructionPlan::Array(_) | HirOptionalDestructionPlan::Optional(_) => {
+                    self.cleanup.register_aggregate_optional(storage, optional)
+                }
+            },
+        }
+    }
+
     fn cleanup_iteration_result(&mut self, statement: &HirForIn, result: StorageId) {
         match statement.result.destruction {
             HirOptionalDestructionPlan::Trivial => {}
@@ -319,7 +493,23 @@ impl BodyLowerer<'_> {
                     span: statement.spans.span,
                 });
             }
-            _ => unreachable!("the core iteration result matrix is primitive or inline class"),
+            HirOptionalDestructionPlan::Array(_) | HirOptionalDestructionPlan::Optional(_) => {
+                self.emit_aggregate_optional_cleanup(MirAggregateOptionalCleanup {
+                    optional: statement.result.optional,
+                    destination: MirPlace::base(result),
+                    span: statement.spans.span,
+                });
+            }
+            HirOptionalDestructionPlan::Shared(target) => {
+                self.emit(MirInstruction::OptionalSharedCleanup(
+                    MirOptionalSharedCleanup {
+                        optional: statement.result.optional,
+                        destination: MirPlace::base(result),
+                        target: lower_shared_target(target),
+                        span: statement.spans.span,
+                    },
+                ));
+            }
         }
         self.end_storage_lifetime(result, statement.spans.span);
     }

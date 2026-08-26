@@ -18,18 +18,6 @@ pub(super) fn validate_interface_signature_type(
             .with_primary_label(term.span, capability_label(capability)),
         );
     }
-    if direct_interface_array(term) {
-        diagnostics.push(
-            Diagnostic::error(
-                super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
-                "array types are not supported in interface requirements",
-            )
-            .with_primary_label(
-                term.span,
-                "arrays do not participate in interface dispatch contracts",
-            ),
-        );
-    }
 }
 
 fn validate_closed_construction(term: &ResolvedTemplateType, diagnostics: &mut Diagnostics) {
@@ -159,15 +147,6 @@ fn type_category(term: &ResolvedTemplateType) -> TypeCategory {
             unreachable!("closed capability checks exclude template parameters")
         }
     }
-}
-
-fn direct_interface_array(term: &ResolvedTemplateType) -> bool {
-    matches!(term.kind, ResolvedTemplateTypeKind::Array(_))
-        || matches!(
-            &term.kind,
-            ResolvedTemplateTypeKind::Shared(target)
-                if matches!(target.kind, ResolvedTemplateTypeKind::Array(_))
-        )
 }
 
 fn capability_label(capability: GenericCapability) -> &'static str {

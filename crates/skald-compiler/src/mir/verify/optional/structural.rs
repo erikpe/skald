@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use super::super::{
     super::model::{
-        MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirOptionalSharedSource,
+        MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSharedSource,
         MirOptionalSource, MirPlace, MirPrimitiveType, MirSharedTarget, MirStorageKind,
         MirTerminationReason, MirTerminator, MirType, StorageId, ValueId,
     },
@@ -111,16 +111,35 @@ impl Verifier<'_> {
             .verify_place(function, block, &unwrap.source)
             .is_some_and(|place| place.ty == MirType::Optional(unwrap.optional))
             && self.optional_shared(MirType::Optional(unwrap.optional)) == Some(unwrap.target);
-        let destination_valid = function.storage(unwrap.destination).is_some_and(|storage| {
-            matches!(
-                storage.kind,
-                MirStorageKind::Temporary
-                    | MirStorageKind::SharedAnchor
-                    | MirStorageKind::Argument
-                    | MirStorageKind::Return
-            ) && storage.ty == MirType::Shared(unwrap.target)
-                && storage.source.is_none()
-        });
+        let destination_is_not_move_target =
+            !function.block(success_target).is_some_and(|success| {
+                success.instructions.iter().any(|instruction| {
+                    matches!(
+                        instruction,
+                        MirInstruction::SharedMove(transfer)
+                            if transfer.destination == unwrap.destination
+                    )
+                })
+            });
+        let destination_valid = destination_is_not_move_target
+            && function.storage(unwrap.destination).is_some_and(|storage| {
+                let local_begins_here = storage.kind == MirStorageKind::Local
+                    && block.instructions.iter().any(|instruction| {
+                        matches!(
+                            instruction,
+                            MirInstruction::StorageLive(live) if live.storage == unwrap.destination
+                        )
+                    });
+                (local_begins_here
+                    || matches!(
+                        storage.kind,
+                        MirStorageKind::Temporary
+                            | MirStorageKind::SharedAnchor
+                            | MirStorageKind::Argument
+                            | MirStorageKind::Return
+                    ) && storage.source.is_none())
+                    && storage.ty == MirType::Shared(unwrap.target)
+            });
         if !source_valid || !destination_valid {
             self.block_error(
                 function.callable(),

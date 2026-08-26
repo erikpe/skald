@@ -2,8 +2,8 @@ use super::*;
 use crate::{
     hir::{
         HirAccess, HirIterationReceiverCarrier, HirIterationReceiverLifetime,
-        HirIterationValueInitialization, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
-        HirStatement, HirViewSource, Type,
+        HirIterationValueCopy, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan, HirStatement,
+        HirViewSource, Type,
     },
     resolve::{resolve_module_graph, ResolveOutput},
     test_support::{load_module_sources, CANONICAL_ITER_SOURCE},
@@ -96,10 +96,7 @@ fn primitive_iteration_retains_exact_dispatch_receiver_and_lifecycle_plans() {
     assert_eq!(loop_.result.payload, Type::I64);
     assert_eq!(loop_.item.access, HirAccess::ReadOnly);
     assert_eq!(loop_.item.binding, loop_.binding);
-    assert_eq!(
-        loop_.item.value.initialization,
-        HirIterationValueInitialization::Trivial
-    );
+    assert_eq!(loop_.item.value.copy, Some(HirIterationValueCopy::Trivial));
 
     let dump = dump_hir(&hir);
     assert_eq!(dump, dump_hir(&hir));
@@ -177,8 +174,8 @@ fn trivial_exact_class_items_select_copy_and_one_layer_optional_plans() {
         panic!("expected exact class item")
     };
     assert!(matches!(
-        loop_.item.value.initialization,
-        HirIterationValueInitialization::CopyClass { class, .. } if class == item
+        loop_.item.value.copy,
+        Some(HirIterationValueCopy::Class { class, .. }) if class == item
     ));
     assert_eq!(loop_.result.payload, Type::Class(item));
     assert_eq!(
@@ -188,7 +185,7 @@ fn trivial_exact_class_items_select_copy_and_one_layer_optional_plans() {
 }
 
 #[test]
-fn unsupported_state_and_item_capabilities_are_source_diagnostics() {
+fn class_state_is_supported_and_unavailable_item_copy_is_diagnosed() {
     let state = resolve_iteration(concat!(
         "from std::iter import Iterable;\n",
         "class State { init() {} }\n",
@@ -202,11 +199,10 @@ fn unsupported_state_and_item_capabilities_are_source_diagnostics() {
     ));
     assert!(state.diagnostics.is_empty(), "{:?}", state.diagnostics);
     let checked = type_check(&state.program);
-    assert!(checked.hir.is_none());
-    assert!(checked
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == GENERAL_ITERATION_UNSUPPORTED));
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.expect("exact-class state must be supported");
+    crate::mir::verify_mir(&crate::mir::lower_hir(&hir))
+        .expect("exact-class iteration state must lower through ordinary MIR");
 
     let mut unavailable = resolve_iteration(concat!(
         "from std::iter import Iterable;\n",
@@ -239,6 +235,151 @@ fn unsupported_state_and_item_capabilities_are_source_diagnostics() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
+}
+
+#[test]
+fn stored_value_state_and_item_families_lower_through_their_ordinary_lifecycles() {
+    let families = [
+        (
+            "ClassState",
+            "Iterable<i64, Value>",
+            "Value",
+            "Value(0)",
+            "i64?",
+        ),
+        (
+            "ArrayState",
+            "Iterable<i64, i64[]>",
+            "i64[]",
+            "i64[]{0}",
+            "i64?",
+        ),
+        (
+            "OptionalState",
+            "Iterable<i64, i64?>",
+            "i64?",
+            "none",
+            "i64?",
+        ),
+        (
+            "SharedState",
+            "Iterable<i64, shared Value>",
+            "shared Value",
+            "new Value(0)",
+            "i64?",
+        ),
+        (
+            "OptionalBoxState",
+            "Iterable<i64, shared Value?>",
+            "shared Value?",
+            "new Value?()",
+            "i64?",
+        ),
+        (
+            "OptionalOwnerState",
+            "Iterable<i64, (shared Value)?>",
+            "(shared Value)?",
+            "none",
+            "i64?",
+        ),
+        (
+            "OptionalBoxOwnerState",
+            "Iterable<i64, (shared Value?)?>",
+            "(shared Value?)?",
+            "none",
+            "i64?",
+        ),
+        ("ClassItems", "Iterable<Value, u64>", "u64", "0u", "Value?"),
+        ("ArrayItems", "Iterable<i64[], u64>", "u64", "0u", "i64[]?"),
+        ("OptionalItems", "Iterable<i64?, u64>", "u64", "0u", "i64??"),
+        (
+            "DeepOptionalItems",
+            "Iterable<i64??, u64>",
+            "u64",
+            "0u",
+            "i64???",
+        ),
+        (
+            "SharedItems",
+            "Iterable<shared Value, u64>",
+            "u64",
+            "0u",
+            "(shared Value)?",
+        ),
+        (
+            "OptionalBoxItems",
+            "Iterable<shared Value?, u64>",
+            "u64",
+            "0u",
+            "(shared Value?)?",
+        ),
+        (
+            "OptionalOwnerItems",
+            "Iterable<(shared Value)?, u64>",
+            "u64",
+            "0u",
+            "(shared Value)??",
+        ),
+        (
+            "OptionalBoxOwnerItems",
+            "Iterable<(shared Value?)?, u64>",
+            "u64",
+            "0u",
+            "(shared Value?)??",
+        ),
+    ];
+    let mut dumps = String::new();
+    for (name, application, state, initial, result) in families {
+        let source = format!(
+            "from std::iter import Iterable;\nclass Value {{ marker: i64; init(marker: i64) {{ self.marker = marker; }} }}\nclass {name} implements {application} {{ init() {{}} fn iter_state() -> {state} {{ return {initial}; }} fn iter_next(mut ref state: {state}) -> {result} {{ return none; }} }}\nfn scan() -> unit {{ for (item in {name}()) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
+        );
+        let hir = check_iteration(&source);
+        let mir = std::panic::catch_unwind(|| crate::mir::lower_hir(&hir))
+            .unwrap_or_else(|_| panic!("{name} lowering must satisfy MIR invariants"));
+        crate::mir::verify_mir(&mir)
+            .unwrap_or_else(|errors| panic!("{name} must verify: {errors}"));
+        dumps.push_str(&crate::mir::dump_mir(&mir));
+    }
+    assert!(dumps.contains("array-adopt"), "{dumps}");
+    assert!(dumps.contains("optional-shared-unwrap"), "{dumps}");
+    assert!(dumps.contains("aggregate-optional-initialize"), "{dumps}");
+}
+
+#[test]
+fn yielded_arrays_and_optionals_preserve_underlying_copy_failures() {
+    for (item_type, result_type, expected_code) in [
+        (
+            "Item[]",
+            "Item[]?",
+            crate::typeck::ARRAY_CAPABILITY_UNAVAILABLE,
+        ),
+        ("Item?", "Item??", COPY_OPERATION_UNAVAILABLE),
+    ] {
+        let source = format!(
+            "from std::iter import Iterable;\nclass Item {{ init() {{}} }}\nclass Items implements Iterable<{item_type}, u64> {{ init() {{}} fn iter_state() -> u64 {{ return 0u; }} fn iter_next(mut ref state: u64) -> {result_type} {{ return none; }} }}\nfn scan(values: Items) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
+        );
+        let mut resolved = resolve_iteration(&source);
+        assert!(
+            resolved.diagnostics.is_empty(),
+            "{:?}",
+            resolved.diagnostics
+        );
+        let item = resolved
+            .program
+            .classes
+            .iter()
+            .find(|class| class.name == "Item")
+            .expect("fixture item class must resolve")
+            .id;
+        resolved.program.classes.entries_mut_for_test()[item.index()].copy_constructor =
+            crate::resolve::ResolvedCopyOperation::Unavailable;
+        let checked = type_check(&resolved.program);
+        assert!(checked.hir.is_none());
+        assert!(checked
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == expected_code));
+    }
 }
 
 #[test]

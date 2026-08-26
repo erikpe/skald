@@ -9,6 +9,15 @@ use crate::hir::{
 };
 
 impl BodyLowerer<'_> {
+    pub(super) fn lower_shared_place(&mut self, place: &HirSharedPlace) -> MirPlace {
+        match place {
+            HirSharedPlace::Binding { binding, .. } => self.lower_binding_place(*binding),
+            HirSharedPlace::Field { place, .. } => self.lower_field_place(place),
+            HirSharedPlace::ArrayElement { place, .. } => self.lower_array_element_place(place),
+            HirSharedPlace::Static { place, .. } => MirPlace::static_field(place.field),
+        }
+    }
+
     pub(super) fn lower_shared_local(
         &mut self,
         destination: StorageId,
@@ -36,6 +45,21 @@ impl BodyLowerer<'_> {
         let destination = self.storage_for_binding(assignment.destination);
         let secured = self.new_shared_temporary(assignment.value.target, assignment.span);
         self.lower_shared_transfer(secured, &assignment.value);
+        if matches!(
+            self.storage[destination.index()].kind,
+            MirStorageKind::AliasParameter(_)
+        ) {
+            self.consume_shared_temporary(secured);
+            self.emit(MirInstruction::SharedFieldReplace(MirSharedFieldReplace {
+                destination: MirPlace::alias_parameter(destination),
+                source: secured,
+                authorization: None,
+                final_authorization: None,
+                span: assignment.span,
+            }));
+            self.full_expression.mark_shared_effect();
+            return;
+        }
         self.emit(MirInstruction::SharedRelease(MirSharedRelease {
             owner: destination,
             span: assignment.span,

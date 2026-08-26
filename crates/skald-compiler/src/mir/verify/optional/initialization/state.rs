@@ -301,62 +301,62 @@ impl InitializationState {
             for instruction in &block.instructions {
                 match instruction {
                     MirInstruction::OptionalInitialize(initialize) => {
-                        self.seed_projected(&initialize.destination);
+                        self.seed_projected(function, &initialize.destination);
                         if let MirOptionalSource::Copy(source) = &initialize.source {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::OptionalAssign(assignment) => {
-                        self.seed_projected(&assignment.destination);
+                        self.seed_projected(function, &assignment.destination);
                         if let MirOptionalSource::Copy(source) = &assignment.source {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::AggregateOptionalInitialize(initialize) => {
-                        self.seed_projected(&initialize.destination);
+                        self.seed_projected(function, &initialize.destination);
                         if let crate::mir::MirAggregateOptionalSource::Copy(source) =
                             &initialize.source
                         {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::AggregateOptionalAssign(assignment) => {
-                        self.seed_projected(&assignment.destination);
+                        self.seed_projected(function, &assignment.destination);
                         if let crate::mir::MirAggregateOptionalSource::Copy(source) =
                             &assignment.source
                         {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::OptionalSharedInitialize(initialize) => {
-                        self.seed_projected(&initialize.destination);
+                        self.seed_projected(function, &initialize.destination);
                         if let MirOptionalSharedSource::Copy(source) = &initialize.source {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::OptionalSharedAssign(assignment) => {
-                        self.seed_projected(&assignment.destination);
+                        self.seed_projected(function, &assignment.destination);
                         if let MirOptionalSharedSource::Copy(source) = &assignment.source {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::ClassOptionalInitialize(initialize) => {
-                        self.seed_projected(&initialize.destination);
+                        self.seed_projected(function, &initialize.destination);
                         if let MirClassOptionalSource::Copy(source) = &initialize.source {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::ClassOptionalAssign(assignment) => {
-                        self.seed_projected(&assignment.destination);
+                        self.seed_projected(function, &assignment.destination);
                         if let MirClassOptionalSource::Copy(source) = &assignment.source {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     MirInstruction::Assign(assignment) => {
                         if let MirRvalueKind::OptionalPresence { source, .. } =
                             &assignment.rvalue.kind
                         {
-                            self.seed_projected(source);
+                            self.seed_projected(function, source);
                         }
                     }
                     _ => {}
@@ -364,24 +364,40 @@ impl InitializationState {
             }
             match &block.terminator {
                 Some(MirTerminator::OptionalUnwrap { source, .. }) => {
-                    self.seed_projected(source);
+                    self.seed_projected(function, source);
                 }
                 Some(MirTerminator::OptionalSharedUnwrap { unwrap, .. }) => {
-                    self.seed_projected(&unwrap.source);
+                    self.seed_projected(function, &unwrap.source);
                 }
                 Some(MirTerminator::BeginOptionalView { begin, .. }) => {
-                    self.seed_projected(&begin.source);
+                    self.seed_projected(function, &begin.source);
                 }
                 Some(MirTerminator::CheckOptionalMutation { source, .. }) => {
-                    self.seed_projected(source);
+                    self.seed_projected(function, source);
                 }
                 _ => {}
             }
         }
     }
 
-    fn seed_projected(&mut self, place: &MirPlace) {
-        if !place.projections.is_empty() {
+    fn seed_projected(&mut self, function: MirDefinitionRef<'_>, place: &MirPlace) {
+        let is_preinitialized_root = match place.base {
+            MirPlaceBase::Storage(storage) => function.storage(storage).is_some_and(|storage| {
+                matches!(
+                    storage.kind,
+                    MirStorageKind::Receiver | MirStorageKind::Parameter
+                )
+            }),
+            MirPlaceBase::StaticLifecycleDestination(_)
+            | MirPlaceBase::SharedAllocationPayload(_) => false,
+            MirPlaceBase::StaticField(_)
+            | MirPlaceBase::AliasParameter(_)
+            | MirPlaceBase::CheckedView(_)
+            | MirPlaceBase::ArrayAlias(_)
+            | MirPlaceBase::SharedPointee(_)
+            | MirPlaceBase::OptionalBoxPayload { .. } => true,
+        };
+        if is_preinitialized_root && !place.projections.is_empty() {
             self.insert(place.clone());
         }
     }

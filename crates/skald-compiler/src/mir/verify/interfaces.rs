@@ -108,13 +108,15 @@ impl Verifier<'_> {
                             | MirType::F64
                             | MirType::Bool
                             | MirType::Class(_)
+                            | MirType::Array(_)
+                            | MirType::Shared(_)
                             | MirType::Interface(_)
                             | MirType::Obj
                             | MirType::Optional(_)
                     ) =>
                 {
                     self.program_error(format!(
-                        "{owner} alias parameter {index} must have primitive, object-view, or inline-optional type"
+                        "{owner} alias parameter {index} must have primitive, owning, object-view, or optional type"
                     ));
                 }
                 _ => {}

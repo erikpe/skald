@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT5` is complete; `IT6` is next.
+Status: in progress. `IT6` is complete; `IT7` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -84,7 +84,7 @@ Every task preserves these cross-cutting decisions:
 | [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [x] Complete | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans for the initial core matrix. |
 | [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [x] Complete | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
 | [IT5](#it5--loop-duration-receiver-composition) | [x] Complete | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
-| [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [ ] Planned | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
+| [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [x] Complete | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
 | [IT7](#it7--ordinary-vec-adoption) | [ ] Planned | `Vec<T>` implements `Iterable<T, u64>` in ordinary source and composes with generic consumers. |
 | [IT8](#it8--verification-diagnostics-and-determinism-hardening) | [ ] Planned | Negative verifier evidence, stable diagnostics, dumps, and reordered-declaration determinism close trust gaps. |
 | [IT9](#it9--native-boundary-and-release-closure) | [ ] Planned | Native evidence, unchanged runtime/ABI checks, full gates, living status, and archival complete delivery. |
@@ -459,22 +459,22 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Cover primitive, exact-class, inline array, optional, shared-owner, and
+- [x] Cover primitive, exact-class, inline array, optional, shared-owner, and
   supported optional shared-owner states.
-- [ ] Cover primitive, copy-capable exact-class, inline array, optional,
+- [x] Cover primitive, copy-capable exact-class, inline array, optional,
   shared-owner, and supported optional shared-owner items.
-- [ ] Preserve ordinary `iter_next` result construction, caller-owned returned
+- [x] Preserve ordinary `iter_next` result construction, caller-owned returned
   optional storage, payload transfer/copy, and result cleanup.
-- [ ] Prove `Item = T?` selects result `T??`: outer `none` terminates,
+- [x] Prove `Item = T?` selects result `T??`: outer `none` terminates,
   `some(none)` enters the body with an absent item, and `some(some(value))`
   enters with a present item.
-- [ ] Begin a fresh owning item epoch on each entered iteration and end it on
+- [x] Begin a fresh owning item epoch on each entered iteration and end it on
   normal, continue, break, and return paths.
-- [ ] Preserve copy capability and failure diagnostics from collection/protocol
+- [x] Preserve copy capability and failure diagnostics from collection/protocol
   implementations rather than adding iteration-specific implicit copying.
-- [ ] Exercise destructors and shared counts for state, result payload, item,
+- [x] Exercise destructors and shared counts for state, result payload, item,
   and nested body locals in observable order.
-- [ ] Reject unsupported recursive/storage categories before MIR.
+- [x] Reject unsupported recursive/storage categories before MIR.
 
 Tests:
 
@@ -489,6 +489,20 @@ Tests:
 Exit condition: every frozen state and item category composes through verified
 MIR/native execution, nested optional termination is exact, and all cleanup
 counts and order match ordinary value semantics.
+
+Completion evidence: stored-value planning now selects ordinary trivial,
+class, array, shared-owner, and recursive optional copy/destruction operations
+independently for state and item. Focused source-to-HIR/MIR tests cover the
+complete admitted state/item matrix, optional boxes and optional box owners,
+multi-layer optionals, unavailable class/array/optional copy diagnostics, and
+fresh repeatable storage. The native value-matrix golden distinguishes outer
+termination from `some(none)` and `some(some(value))` and observes class,
+array, shared-owner, optional-owner, and optional-box cleanup/count order.
+Exact shared-owner aliases and array-valued internal interface requirements
+were enabled through their existing ABI/lifecycle machinery so every frozen
+`Iterable<Item, State>` signature is expressible. The full repository gate,
+documentation/static checks, all 363 golden sources, and the Rust 1.82 MSRV
+check pass.
 
 ## IT7 — Ordinary Vec adoption
 

@@ -270,13 +270,13 @@ fn validate_parameters(
                     Diagnostic::error(
                         INVALID_ALIAS_PARAMETER,
                         format!(
-                            "{owner} alias parameter `{}` must name a primitive, class, array, interface, `Obj`, or supported inline optional",
+                            "{owner} alias parameter `{}` must name a primitive, class, array, shared owner, interface, `Obj`, or supported optional",
                             parameter.name
                         ),
                     )
                     .with_primary_label(
                         parameter.type_syntax.span,
-                        "shared-owner and `unit` aliases are unavailable",
+                        "`unit` and function aliases are unavailable",
                     ),
                 );
                 valid = false;
@@ -294,6 +294,7 @@ pub(super) fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bo
             Some(
                 super::optional_types::OptionalPayloadKind::Primitive(_)
                     | super::optional_types::OptionalPayloadKind::Class(_)
+                    | super::optional_types::OptionalPayloadKind::Shared(_)
                     | super::optional_types::OptionalPayloadKind::Nested(_)
                     | super::optional_types::OptionalPayloadKind::Array(_)
             )

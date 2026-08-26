@@ -1,13 +1,13 @@
 # General Iteration
 
 Status: frozen semantic design with source syntax, canonical protocol, nominal
-resolution, and the loop-duration receiver matrix implemented. The compiler selects
+resolution, and the receiver and stored-value matrices implemented. The compiler selects
 exact closed applications, types the item scope, freezes generic-bound
 selection, and emits structured lifecycle and dispatch plans for exact,
 produced, checked, shared-backed, optional-derived, and array-backed read-only
-receivers with primitive state and primitive or trivially copied exact-class
-items. That matrix executes through verified ordinary MIR and native code.
-Broader stored-value families remain gated.
+receivers. Primitive, exact-class, inline-array, optional, shared-owner,
+optional shared-owner, and optional-box-owner states and items execute through
+verified ordinary MIR and native code.
 The [status matrix](STATUS.md) records implementation maturity.
 
 This document is authoritative for general iteration semantics selected for
@@ -39,6 +39,10 @@ select exact requirements and types without structural method discovery.
 Neither the interface nor iteration requires a heap-allocated iterator.
 `State` is an ordinary owning value and may itself be a primitive, class,
 array, optional, or shared owner supported by ordinary stored-value rules.
+`Item` may use the same stored-value families when its ordinary copy operation
+is available, because a yielded payload is copied from the caller-owned result
+wrapper into a fresh item epoch. Iteration does not synthesize a copy operation
+or weaken an existing capability failure.
 
 The installed `std::iter` declaration and request-local resolved identity
 record are implemented. Every successfully parsed `for-in` supplies exact

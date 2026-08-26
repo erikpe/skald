@@ -987,7 +987,7 @@ impl BodyLowerer<'_> {
         }
     }
 
-    fn lower_optional_shared_place(
+    pub(super) fn lower_optional_shared_place(
         &mut self,
         place: &crate::hir::HirOptionalSharedPlace,
     ) -> crate::mir::MirPlace {

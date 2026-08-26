@@ -83,16 +83,12 @@ matches = [
 ]
 
 [[test]]
-name = "optional_owner_alias_exclusions"
-mode = "compile-fail"
+name = "optional_owner_aliases"
+mode = "run"
 source = "optional_owner_alias_exclusions.ska"
-[test.expect.stderr]
-matches = [
-  { name = "shorthand optional-owner alias", match = "contains", inline = """error[TYP019]: function alias parameter `value` must name a primitive, class, array, interface, `Obj`, or supported inline optional
- --> tests/golden/optionals/optional_owner_alias_exclusions.ska:5:25""" },
-  { name = "canonical optional-owner alias", match = "contains", inline = """error[TYP019]: function alias parameter `value` must name a primitive, class, array, interface, `Obj`, or supported inline optional
- --> tests/golden/optionals/optional_owner_alias_exclusions.ska:6:25""" },
-]
+[[test.run]]
+name = "shorthand_and_canonical_replacement"
+expect = { exit = 42 }
 
 [[test]]
 name = "external_signature"

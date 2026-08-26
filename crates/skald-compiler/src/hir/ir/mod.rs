@@ -75,7 +75,7 @@ pub use iteration::{
     HirIterationProtocol, HirIterationReceiver, HirIterationReceiverCarrier,
     HirIterationReceiverLifetime, HirIterationResultPlan, HirIterationSpans,
     HirIterationStateAlias, HirIterationStateCallPlan, HirIterationStatePlan,
-    HirIterationStoredValuePlan, HirIterationValueDestruction, HirIterationValueInitialization,
+    HirIterationStoredValuePlan, HirIterationValueCopy, HirIterationValueDestruction,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,

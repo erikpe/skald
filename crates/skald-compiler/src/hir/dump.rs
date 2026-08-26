@@ -1095,8 +1095,8 @@ impl<'types> HirDumper<'types> {
                 }
             });
             dumper.raw_line(&format!(
-                "State initialization={:?} destruction={:?}",
-                statement.state.value.initialization, statement.state.value.destruction,
+                "State copy={:?} destruction={:?}",
+                statement.state.value.copy, statement.state.value.destruction,
             ));
             dumper.raw_line(&format!(
                 "IterState target={}:{} receiver={} result={}",
@@ -1123,10 +1123,10 @@ impl<'types> HirDumper<'types> {
                 statement.result.destruction,
             ));
             dumper.raw_line(&format!(
-                "Item binding={} access={} initialization={:?} destruction={:?}",
+                "Item binding={} access={} copy={:?} destruction={:?}",
                 statement.item.binding,
                 access_name(statement.item.access),
-                statement.item.value.initialization,
+                statement.item.value.copy,
                 statement.item.value.destruction,
             ));
             dumper.raw_line(&format!("Effects {:?}", statement.effects));
@@ -2103,6 +2103,10 @@ impl<'types> HirDumper<'types> {
                     );
                 }
             },
+            HirCallArgument::OptionalSharedPlace(place) => {
+                self.line("OptionalSharedPlaceArgument", place.span);
+                self.indented(|dumper| dumper.optional_shared_place(place));
+            }
             HirCallArgument::Place(place) => {
                 self.line("PlaceArgument", place.span());
                 self.indented(|dumper| dumper.object_place(place));
@@ -2127,6 +2131,12 @@ impl<'types> HirDumper<'types> {
             HirCallArgument::Shared(value) => {
                 self.line("SharedArgument", value.span);
                 self.indented(|dumper| dumper.shared_transfer(value));
+            }
+            HirCallArgument::SharedPlace(place) => {
+                self.line("SharedPlaceArgument", place.span());
+                self.indented(|dumper| {
+                    dumper.shared_source(&crate::hir::HirSharedSource::Place(place.clone()));
+                });
             }
             HirCallArgument::Array(value) => {
                 self.line("ArrayArgument", value.span);

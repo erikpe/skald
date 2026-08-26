@@ -463,11 +463,12 @@ This profile excludes:
   [generic interfaces](GENERIC_INTERFACES.md) specialize closed declarations
   before applying this profile. Arrays and static fields compose through their
   separate implemented contracts;
-- aliases to optional shared owners. Primitive, exact-class, and optional
-  shared-owner parameters/results, plus aliases to supported inline optional
-  containers, are implemented as exact virtual and interface signature
-  components; checked optional class payload views and secured optional-owner
-  unwrap support the existing direct, virtual, interface, cast, and type-test
+- polymorphic conversion of shared-owner alias slots. Primitive, exact-class,
+  and optional shared-owner parameters/results, plus
+  aliases to supported inline optional containers and exact shared-owner
+  slots, are implemented as exact virtual and interface signature components;
+  checked optional class payload views and secured optional-owner unwrap
+  support the existing direct, virtual, interface, cast, and type-test
   consumers;
 - exceptions, failed-construction unwinding, and partial-copy cleanup;
 - unsafe or unchecked casts, user-visible dispatch tables, and user-defined

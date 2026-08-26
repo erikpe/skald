@@ -409,6 +409,9 @@ impl BodyLowerer<'_> {
                     };
                     LoweredArgument::Ready(MirArgument::Place(place))
                 }
+                HirCallArgument::OptionalSharedPlace(place) => LoweredArgument::Ready(
+                    MirArgument::Place(self.lower_optional_shared_place(place)),
+                ),
                 HirCallArgument::Place(place) => {
                     LoweredArgument::Ready(MirArgument::Place(self.lower_object_place(place)))
                 }
@@ -461,6 +464,9 @@ impl BodyLowerer<'_> {
                     self.track_full_expression_storage(storage, transfer.span);
                     self.lower_shared_transfer(storage, transfer);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
+                }
+                HirCallArgument::SharedPlace(place) => {
+                    LoweredArgument::Ready(MirArgument::Place(self.lower_shared_place(place)))
                 }
                 HirCallArgument::Array(initialization) => {
                     let storage = self.new_array_storage(

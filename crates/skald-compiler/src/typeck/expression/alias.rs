@@ -312,6 +312,18 @@ impl CallableChecker<'_, '_> {
         ) {
             return self.check_primitive_alias_argument(expression, expected, parameter);
         }
+        if matches!(expected, Type::Shared(_)) {
+            return self.check_shared_owner_alias_argument(expression, expected, parameter);
+        }
+        if matches!(expected, Type::Optional(_))
+            && matches!(
+                self.optional_kind(expected),
+                Some(super::super::optional_types::OptionalPayloadKind::Shared(_))
+            )
+        {
+            return self
+                .check_optional_shared_owner_alias_argument(expression, expected, parameter);
+        }
         if matches!(expected, Type::Optional(_))
             && !matches!(
                 self.optional_kind(expected),
@@ -371,6 +383,133 @@ impl CallableChecker<'_, '_> {
             required,
             parameter,
         )
+    }
+
+    fn check_shared_owner_alias_argument(
+        &mut self,
+        expression: &ResolvedExpression,
+        expected: Type,
+        parameter: &impl CallParameter,
+    ) -> Option<HirCallArgument> {
+        let source = self.check_shared_source(expression, false)?;
+        let crate::hir::HirSharedSource::Place(place) = source else {
+            self.report_non_place_alias(expression, parameter, "shared-owner");
+            return None;
+        };
+        let actual = Type::Shared(place.target());
+        if actual != expected {
+            self.report_exact_alias_type_mismatch(actual, expected, place.span(), parameter);
+            return None;
+        }
+        let required = lower_parameter_mode(parameter.binding_mode())
+            .required_access()
+            .expect("alias parameter mode must require place access");
+        let access = self.shared_place_access(&place)?;
+        if !access.permits(required) {
+            self.report_alias_access_failure(place.span(), parameter, "shared-owner");
+            return None;
+        }
+        Some(HirCallArgument::SharedPlace(place))
+    }
+
+    fn check_optional_shared_owner_alias_argument(
+        &mut self,
+        expression: &ResolvedExpression,
+        expected: Type,
+        parameter: &impl CallParameter,
+    ) -> Option<HirCallArgument> {
+        let Some(place) = self.optional_shared_place(expression) else {
+            self.report_non_place_alias(expression, parameter, "optional shared-owner");
+            return None;
+        };
+        let actual = self.static_expression_type(expression);
+        if actual != expected {
+            self.report_exact_alias_type_mismatch(actual, expected, place.span, parameter);
+            return None;
+        }
+        let required = lower_parameter_mode(parameter.binding_mode())
+            .required_access()
+            .expect("alias parameter mode must require place access");
+        let access = self.optional_storage_access(&place.storage, place.span)?;
+        if !access.permits(required) {
+            self.report_alias_access_failure(place.span, parameter, "optional shared-owner");
+            return None;
+        }
+        Some(HirCallArgument::OptionalSharedPlace(place))
+    }
+
+    fn shared_place_access(&mut self, place: &crate::hir::HirSharedPlace) -> Option<HirAccess> {
+        match place {
+            crate::hir::HirSharedPlace::Binding { binding, span, .. } => {
+                self.binding_access(*binding, false, *span)
+            }
+            crate::hir::HirSharedPlace::Field { place, .. } => {
+                Some(self.rebinding_field_place_alias_access(place))
+            }
+            crate::hir::HirSharedPlace::ArrayElement { place, .. } => Some(place.receiver.access),
+            crate::hir::HirSharedPlace::Static { place, .. } => {
+                Some(self.rebinding_static_field_alias_access(place.field))
+            }
+        }
+    }
+
+    fn report_non_place_alias(
+        &mut self,
+        expression: &ResolvedExpression,
+        parameter: &impl CallParameter,
+        kind: &str,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                INVALID_ALIAS_ARGUMENT,
+                format!("{kind} alias argument must designate existing storage"),
+            )
+            .with_primary_label(
+                expression.span(),
+                "this expression produces a temporary owner",
+            )
+            .with_secondary_label(parameter.span(), "alias parameter declared here"),
+        );
+    }
+
+    fn report_exact_alias_type_mismatch(
+        &mut self,
+        actual: Type,
+        expected: Type,
+        span: Span,
+        parameter: &impl CallParameter,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                TYPE_MISMATCH,
+                format!(
+                    "alias argument has type `{}`, but `{}` is required",
+                    self.diagnostic_type_name(actual),
+                    self.diagnostic_type_name(expected),
+                ),
+            )
+            .with_primary_label(span, "this owner place has a different exact type")
+            .with_secondary_label(
+                parameter.type_syntax().span,
+                "alias parameter type declared here",
+            ),
+        );
+    }
+
+    fn report_alias_access_failure(
+        &mut self,
+        span: Span,
+        parameter: &impl CallParameter,
+        kind: &str,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                INSUFFICIENT_ALIAS_ACCESS,
+                format!("read-only {kind} access cannot satisfy a mutable alias parameter"),
+            )
+            .with_primary_label(span, "this owner place provides read-only access")
+            .with_secondary_label(parameter.span(), "mutable alias declared here"),
+        );
     }
 
     fn check_primitive_alias_argument(

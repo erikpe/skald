@@ -145,7 +145,7 @@ source = "alias_slot_exclusion.ska"
 compiler_args = ["--no-stdlib"]
 [test.expect.stderr]
 match = "contains"
-inline = "error[TYP019]: function alias parameter `callback` must name a primitive, class, array, interface, `Obj`, or supported inline optional"
+inline = "error[TYP019]: function alias parameter `callback` must name a primitive, class, array, shared owner, interface, `Obj`, or supported optional"
 
 [[test]]
 name = "function_static_initializer_exclusion"

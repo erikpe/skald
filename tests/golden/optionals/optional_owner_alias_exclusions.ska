@@ -1,10 +1,26 @@
 class Value {
-    init() {}
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
 }
 
-fn shorthand(ref value: shared? Value) -> unit {}
-fn canonical(ref value: (shared Value)?) -> unit {}
+fn shorthand(mut ref value: shared? Value) -> unit {
+    value = none;
+}
+
+fn canonical(mut ref value: (shared Value)?) -> unit {
+    value = new Value(42);
+}
 
 fn main() -> i64 {
+    var first: shared? Value = new Value(1);
+    var second: (shared Value)? = none;
+    shorthand(first);
+    canonical(second);
+    if (first is none && second is some) {
+        return second!->marker;
+    }
     return 0;
 }

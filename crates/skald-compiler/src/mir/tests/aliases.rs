@@ -55,8 +55,9 @@ fn rejects_parameter_mode_storage_and_external_signature_corruption() {
         .storage[0]
         .ty = MirType::Unit;
     assert!(messages(&unit_alias).iter().any(|message| {
-        message
-            .contains("alias parameter 0 must have primitive, object-view, or inline-optional type")
+        message.contains(
+            "alias parameter 0 must have primitive, owning, object-view, or optional type",
+        )
     }));
 
     let (mut unlisted, ids) = alias_mir();

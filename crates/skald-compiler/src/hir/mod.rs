@@ -47,7 +47,7 @@ pub use ir::{
     HirIterationItemPlan, HirIterationNextCallPlan, HirIterationProtocol, HirIterationReceiver,
     HirIterationReceiverCarrier, HirIterationReceiverLifetime, HirIterationResultPlan,
     HirIterationSpans, HirIterationStateAlias, HirIterationStateCallPlan, HirIterationStatePlan,
-    HirIterationStoredValuePlan, HirIterationValueDestruction, HirIterationValueInitialization,
+    HirIterationStoredValuePlan, HirIterationValueCopy, HirIterationValueDestruction,
     HirLiteralData, HirLiteralDataTable, HirLocal, HirLocalDecl, HirLocalInitializer,
     HirLogicalExpression, HirLogicalOperation, HirMemberDefinition, HirMethodCallTarget,
     HirMethodDeclaration, HirMethodDispatch, HirMethodKind, HirMethodReceiver,

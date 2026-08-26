@@ -631,6 +631,13 @@ impl<'mir> Verifier<'mir> {
         let static_replacement = !initialization
             && destination.base.static_field().is_some()
             && destination.projections.is_empty();
+        let alias_replacement = !initialization
+            && destination.projections.is_empty()
+            && destination.base.local_storage().is_some_and(|storage| {
+                function.storage(storage).is_some_and(|storage| {
+                    storage.kind == MirStorageKind::AliasParameter(MirAliasAccess::Mutable)
+                })
+            });
         let valid = matches!(
             (field, source),
             (Some(field), Some(source))
@@ -641,7 +648,8 @@ impl<'mir> Verifier<'mir> {
                     && (is_direct_field
                         || (initialization && is_unpublished_array_element)
                         || static_initialization
-                        || static_replacement)
+                        || static_replacement
+                        || alias_replacement)
         );
         if !valid
             || (initialization
@@ -656,7 +664,7 @@ impl<'mir> Verifier<'mir> {
                 if initialization {
                     "shared owner initialization requires a mutable receiver field or array element and matching temporary owner"
                 } else {
-                    "shared owner replacement requires a mutable field or static and matching temporary owner"
+                    "shared owner replacement requires a mutable field, static, or alias and matching temporary owner"
                 },
             );
         }

@@ -48,9 +48,11 @@ External declarations may parse alias syntax for recovery, but such signatures
 are semantically invalid.
 
 The implemented designated type may be a primitive, concrete class,
-interface, `Obj`, inline array, or supported primitive/exact-class inline
-optional container. `unit`, shared-owner, and function alias parameter types
-are unsupported. The container borrows `ref value: T?` and
+interface, `Obj`, inline array, shared owner, optional shared owner, or a
+supported inline optional container. `unit` and function alias parameter types
+are unsupported. A shared-owner alias designates the exact owner storage slot,
+not its pointee; replacing it through `mut ref` therefore performs ordinary
+release/adoption. The container borrows `ref value: T?` and
 `mut ref value: T?` designate an always-present optional wrapper, not an
 optional reference. A shared-backed source is explicitly dereferenced, as in
 `inspect(*owner)`, and borrows the allocated class/interface/`Obj` pointee
@@ -391,12 +393,14 @@ with relocation, and any anchoring requirement are not frozen. The current
 parameter restrictions do not implicitly specify that larger feature.
 
 Optional owning values, including `(shared T)?`, and aliases to supported inline
-optional containers execute. Their
+optional containers execute. Exact `(shared T)?` owner slots also bind directly
+to `ref` and `mut ref` parameters and retain their ordinary conditional owner
+lifecycle. Their
 [contract](OPTIONAL_VALUES.md#aliases)
 bounds a checked `value!` payload view to one complete immediate consumer
 under a dynamic presence guard. Read-only aliases may inspect and unwrap;
 mutable aliases may additionally set, clear, or replace an unguarded
-container. This does not introduce `ref?`, aliases to `(shared T)?`, stored
+container. This does not introduce `ref?`, produced-owner aliases, stored
 payload aliases, or optional reference values. The implemented
 [array contract](ARRAYS.md#aliases-mutation-and-backing-anchors) admits whole
 array places and exact-class or nested-array elements as call-scoped alias
@@ -409,9 +413,9 @@ full expression; they do not introduce local aliases.
 The implemented
 [compositional optional profile](OPTIONAL_VALUES.md#compositional-optional-types)
 admits aliases whose designated container is a supported inline optional,
-including a nested optional or optional array. Optional shared owners remain
-ineligible because their zero-niche representation is an owning handle rather
-than an inline wrapper. An alias to an optional container borrows the
+including a nested optional or optional array. Optional shared-owner slots are
+also eligible as their exact canonical owning type; they are not treated as
+inline wrappers or implicitly dereferenced. An alias to an optional container borrows the
 always-present wrapper. Passing `value!` from
 an optional array to `ref T[]` or `mut ref T[]` instead creates a checked
 call-scoped payload view: a presence guard pins the wrapper and a backing

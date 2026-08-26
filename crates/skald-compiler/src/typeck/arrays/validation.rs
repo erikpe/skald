@@ -41,49 +41,10 @@ pub(in crate::typeck) fn validate_array_types(
             reject_external_array(program, &function.return_type, diagnostics);
         }
     }
-
-    for interface in program.interfaces.iter() {
-        for requirement in &interface.requirements {
-            for parameter in &requirement.parameters {
-                if is_direct_interface_array(parameter.type_syntax.kind) {
-                    diagnostics.push(
-                        Diagnostic::error(
-                            super::super::program::INVALID_INTERFACE_REQUIREMENT,
-                            "array types are not supported in interface requirements",
-                        )
-                        .with_primary_label(
-                            parameter.type_syntax.span,
-                            "arrays do not participate in interface dispatch contracts",
-                        ),
-                    );
-                }
-            }
-            if is_direct_interface_array(requirement.return_type.kind) {
-                diagnostics.push(
-                    Diagnostic::error(
-                        super::super::program::INVALID_INTERFACE_REQUIREMENT,
-                        "array types are not supported in interface requirements",
-                    )
-                    .with_primary_label(
-                        requirement.return_type.span,
-                        "arrays do not participate in interface dispatch contracts",
-                    ),
-                );
-            }
-        }
-    }
 }
 
 pub(in crate::typeck) const fn is_array_element(ty: Type) -> bool {
     crate::type_capabilities::supports_array_element(super::super::type_category(ty))
-}
-
-fn is_direct_interface_array(kind: ResolvedTypeKind) -> bool {
-    matches!(
-        kind,
-        ResolvedTypeKind::Array(_)
-            | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Array(_))
-    )
 }
 
 fn reject_external_array(

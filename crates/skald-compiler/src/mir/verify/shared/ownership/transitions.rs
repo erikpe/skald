@@ -587,10 +587,16 @@ impl SharedOwnershipAnalysis<'_, '_> {
                 "shared owner adoption has no full-expression boundary",
             );
         }
-        let live_is_exact_result = returned_owner.is_some_and(|owner| {
-            state.live_owners.len() == 1 && state.live_owners.contains(&owner)
+        let owned_live = state.live_owners.iter().copied().filter(|owner| {
+            !self
+                .function
+                .storage(*owner)
+                .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)))
         });
-        if (!state.live_owners.is_empty() && !live_is_exact_result)
+        let owned_live = owned_live.collect::<HashSet<_>>();
+        let live_is_exact_result = returned_owner
+            .is_some_and(|owner| owned_live.len() == 1 && owned_live.contains(&owner));
+        if (!owned_live.is_empty() && !live_is_exact_result)
             || (returned_owner.is_some() && !live_is_exact_result)
         {
             self.error(block.id, "shared owner remains live on normal return");

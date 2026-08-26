@@ -7,8 +7,8 @@ use crate::{
         HirIterationNextCallPlan, HirIterationProtocol, HirIterationReceiver,
         HirIterationReceiverCarrier, HirIterationReceiverLifetime, HirIterationResultPlan,
         HirIterationSpans, HirIterationStateAlias, HirIterationStateCallPlan,
-        HirIterationStatePlan, HirIterationStoredValuePlan, HirIterationValueDestruction,
-        HirIterationValueInitialization, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
+        HirIterationStatePlan, HirIterationStoredValuePlan, HirIterationValueCopy,
+        HirIterationValueDestruction, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
         HirOptionalUnwrapPlan, HirStatement, HirViewTarget, Type,
     },
     resolve::ResolvedForIn,
@@ -150,16 +150,12 @@ impl CallableChecker<'_, '_> {
         state: Type,
         statement: &ResolvedForIn,
     ) -> Option<HirIterationStoredValuePlan> {
-        if is_primitive_value(state) {
-            return Some(trivial_value(state));
-        }
-        self.report_iteration_value_family(
+        self.iteration_value_plan(
             state,
+            false,
             statement.selection.origin_span,
             "iteration state",
-            "the current core requires primitive `State`",
-        );
-        None
+        )
     }
 
     fn check_iteration_item(
@@ -167,46 +163,7 @@ impl CallableChecker<'_, '_> {
         item: Type,
         statement: &ResolvedForIn,
     ) -> Option<HirIterationStoredValuePlan> {
-        if is_primitive_value(item) {
-            return Some(trivial_value(item));
-        }
-        let Type::Class(class) = item else {
-            self.report_iteration_value_family(
-                item,
-                statement.binding_span,
-                "iteration item",
-                "the current core supports primitive or trivially copied exact-class `Item`",
-            );
-            return None;
-        };
-        let capability = self.copy_capabilities.constructor(class);
-        let Some(operation) = capability.selected() else {
-            self.report_unavailable_copy_operation(class, true, statement.binding_span);
-            return None;
-        };
-        let trivially_copied = matches!(
-            capability,
-            crate::hir::HirCopyCapability::Synthesized(copy)
-                if copy.base.is_none()
-                    && copy.fields.iter().all(|field| matches!(
-                        field,
-                        crate::hir::HirSynthesizedFieldCopy::Scalar { .. }
-                    ))
-        );
-        if !trivially_copied {
-            self.report_iteration_value_family(
-                item,
-                statement.binding_span,
-                "iteration item",
-                "non-trivial class item copying is implemented in a later roadmap task",
-            );
-            return None;
-        }
-        Some(HirIterationStoredValuePlan {
-            ty: item,
-            initialization: HirIterationValueInitialization::CopyClass { class, operation },
-            destruction: HirIterationValueDestruction::Class(class),
-        })
+        self.iteration_value_plan(item, true, statement.binding_span, "iteration item")
     }
 
     fn check_iteration_result(
@@ -232,22 +189,127 @@ impl CallableChecker<'_, '_> {
             .get(optional)
             .expect("selected iteration result must have canonical optional metadata");
         debug_assert_eq!(lower_type(self.program, &metadata.payload), item);
-        let (unwrap, destruction) = match item {
+        let (presence, unwrap, destruction) = match item {
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool => (
+                HirOptionalPresenceTestPlan::OuterTag,
                 HirOptionalUnwrapPlan::ExtractScalar,
                 HirOptionalDestructionPlan::Trivial,
             ),
             Type::Class(class) => (
+                HirOptionalPresenceTestPlan::OuterTag,
                 HirOptionalUnwrapPlan::CheckedInlineClass(class),
                 HirOptionalDestructionPlan::Class(class),
             ),
-            _ => return None,
+            Type::Array(array) => (
+                HirOptionalPresenceTestPlan::OuterTag,
+                HirOptionalUnwrapPlan::CheckedInlineArray(array),
+                HirOptionalDestructionPlan::Array(array),
+            ),
+            Type::Shared(target) => (
+                HirOptionalPresenceTestPlan::SharedOwnerNull,
+                HirOptionalUnwrapPlan::SecureSharedOwner(target),
+                HirOptionalDestructionPlan::Shared(target),
+            ),
+            Type::Optional(nested) => (
+                HirOptionalPresenceTestPlan::OuterTag,
+                HirOptionalUnwrapPlan::CheckedNested(nested),
+                HirOptionalDestructionPlan::Optional(nested),
+            ),
+            Type::Unit | Type::Obj | Type::Interface(_) | Type::Function(_) => return None,
         };
         Some(HirIterationResultPlan {
             optional,
             payload: item,
-            presence: HirOptionalPresenceTestPlan::OuterTag,
+            presence,
             unwrap,
+            destruction,
+        })
+    }
+
+    fn iteration_value_plan(
+        &mut self,
+        ty: Type,
+        require_copy: bool,
+        span: crate::source::Span,
+        owner: &'static str,
+    ) -> Option<HirIterationStoredValuePlan> {
+        let (copy, destruction) = match ty {
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool => (
+                Some(HirIterationValueCopy::Trivial),
+                HirIterationValueDestruction::Trivial,
+            ),
+            Type::Class(class) => (
+                self.copy_capabilities
+                    .constructor(class)
+                    .selected()
+                    .map(|operation| HirIterationValueCopy::Class { class, operation }),
+                HirIterationValueDestruction::Class(class),
+            ),
+            Type::Array(array) => (
+                self.copy_capabilities
+                    .array(array)
+                    .lifecycle
+                    .copy
+                    .map(|operation| HirIterationValueCopy::Array { array, operation }),
+                HirIterationValueDestruction::Array(array),
+            ),
+            Type::Shared(target) => (
+                Some(HirIterationValueCopy::Shared(target)),
+                HirIterationValueDestruction::Shared(target),
+            ),
+            Type::Optional(optional) => {
+                let copy = super::super::optional_types::selected_copy_plan(
+                    self.program,
+                    self.copy_capabilities,
+                    optional,
+                )
+                .map(|operation| HirIterationValueCopy::Optional {
+                    optional,
+                    operation,
+                });
+                let plan = iteration_optional_destruction(self.program, optional);
+                (
+                    copy,
+                    HirIterationValueDestruction::Optional { optional, plan },
+                )
+            }
+            Type::Unit | Type::Obj | Type::Interface(_) | Type::Function(_) => {
+                self.report_iteration_value_family(
+                    ty,
+                    span,
+                    owner,
+                    "iteration requires an ordinary owning stored-value type",
+                );
+                return None;
+            }
+        };
+        if require_copy && copy.is_none() {
+            match ty {
+                Type::Class(class) => self.report_unavailable_copy_operation(class, true, span),
+                Type::Array(_) => self.diagnostics.push(
+                    Diagnostic::error(
+                        super::super::arrays::ARRAY_CAPABILITY_UNAVAILABLE,
+                        "array element type is not copy-constructible",
+                    )
+                    .with_primary_label(span, "yielding this item requires a deep array copy"),
+                ),
+                Type::Optional(_) => self.diagnostics.push(
+                    Diagnostic::error(
+                        super::super::COPY_OPERATION_UNAVAILABLE,
+                        "the optional iteration item cannot be copied",
+                    )
+                    .with_primary_label(
+                        span,
+                        "yielding this item requires optional copy capability",
+                    ),
+                ),
+                _ => unreachable!("all other admitted iteration item families are copyable"),
+            }
+            return None;
+        }
+        Some(HirIterationStoredValuePlan {
+            ty,
+            copy,
             destruction,
         })
     }
@@ -389,17 +451,27 @@ fn guarded_optional_write(
     None
 }
 
-fn is_primitive_value(ty: Type) -> bool {
-    matches!(
-        ty,
-        Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
-    )
-}
-
-fn trivial_value(ty: Type) -> HirIterationStoredValuePlan {
-    HirIterationStoredValuePlan {
-        ty,
-        initialization: HirIterationValueInitialization::Trivial,
-        destruction: HirIterationValueDestruction::Trivial,
+fn iteration_optional_destruction(
+    program: &crate::resolve::ResolvedProgram,
+    optional: crate::identity::OptionalTypeId,
+) -> HirOptionalDestructionPlan {
+    match super::super::optional_types::classify_payload(program, optional)
+        .expect("validated optional payload must be a stored value")
+    {
+        super::super::optional_types::OptionalPayloadKind::Primitive(_) => {
+            HirOptionalDestructionPlan::Trivial
+        }
+        super::super::optional_types::OptionalPayloadKind::Class(class) => {
+            HirOptionalDestructionPlan::Class(class)
+        }
+        super::super::optional_types::OptionalPayloadKind::Array(array) => {
+            HirOptionalDestructionPlan::Array(array)
+        }
+        super::super::optional_types::OptionalPayloadKind::Shared(target) => {
+            HirOptionalDestructionPlan::Shared(target)
+        }
+        super::super::optional_types::OptionalPayloadKind::Nested(nested) => {
+            HirOptionalDestructionPlan::Optional(nested)
+        }
     }
 }

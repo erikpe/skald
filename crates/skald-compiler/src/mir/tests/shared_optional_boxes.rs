@@ -153,7 +153,7 @@ fn rejects_malformed_box_field_static_and_call_owner_transfers() {
 
         assert!(has_error(
             &program,
-            "shared owner replacement requires a mutable field or static and matching temporary owner"
+            "shared owner replacement requires a mutable field, static, or alias and matching temporary owner"
         ));
     }
 

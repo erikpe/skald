@@ -1,13 +1,15 @@
 # General-Iteration Compiler Contract
 
 Status: frozen compiler design with syntax, canonical protocol identity,
-nominal resolution, and the complete loop-duration receiver matrix implemented.
+nominal resolution, the complete loop-duration receiver matrix, and the
+complete stored-value state/item matrix implemented.
 Resolution retains exact selected interface, requirement, item/state, local,
 and loop identities. Type checking emits complete structured HIR for exact,
 produced, checked, shared-backed, optional-derived, and array-backed read-only
-receivers with primitive state and primitive or trivially copied exact-class
-items. That matrix lowers to verified cyclic MIR and native code; later
-stored-value families remain gated. The
+receivers. Primitive, exact-class, inline-array, optional, shared-owner,
+optional shared-owner, and optional-box-owner states and items lower through
+their ordinary copy, transfer, and destruction plans to verified cyclic MIR
+and native code. The
 [language status matrix](../language/STATUS.md)
 remains authoritative for implementation maturity.
 
@@ -101,8 +103,11 @@ item, exact call targets and access, a
 mutable alias plan to the exact hidden state, and the canonical result
 `OptionalTypeId` with its one-layer presence, unwrap, and destruction plans.
 The item binding is checked as a read-only owning local while its body is
-checked. Unsupported later receiver or stored-value families produce the
-focused `TYP046` diagnostic before MIR.
+checked. An item must have the ordinary copy capability required to extract it
+from the caller-owned optional result; state initialization can adopt a
+produced non-copyable value. Unsupported storage categories and unavailable
+ordinary copy operations are diagnosed before MIR with their existing
+capability diagnostics.
 
 The loop-duration receiver is distinct from a call-duration alias. Produced
 storage, checked and optional guards, strong shared owners, optional-box roots,
@@ -118,10 +123,11 @@ HIR-to-MIR lowering expands `HirForIn` into ordinary target-independent
 operations. There is no `MirForIn`, iterator opcode, target iterator primitive,
 or runtime service.
 
-This boundary is implemented for the complete receiver matrix. Lowering allocates
-the main regions before their edges, retains one compiler-local state epoch,
-uses repeatable result and item epochs, and emits only existing call, optional,
-lifetime, cleanup, branch, and jump operations.
+This boundary is implemented for the complete receiver and stored-value
+matrices. Lowering allocates the main regions before their edges, retains one
+compiler-local state epoch, uses repeatable result and item epochs, and emits
+only existing call, optional, class, array, shared-owner, lifetime, cleanup,
+branch, and jump operations.
 
 The generated CFG has these semantic regions:
 

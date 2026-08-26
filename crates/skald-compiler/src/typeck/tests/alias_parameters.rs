@@ -77,6 +77,23 @@ fn checks_aliases_across_calls_owners_forwarding_grouping_and_overlap() {
 }
 
 #[test]
+fn shared_and_optional_shared_owners_support_exact_storage_aliases() {
+    let output = check_text(concat!(
+        "class Value { init() {} }\n",
+        "fn replace(mut ref owner: shared Value, mut ref maybe: (shared Value)?) -> unit { owner = new Value(); maybe = none; }\n",
+        "fn inspect(ref owner: shared Value, ref maybe: (shared Value)?) -> unit {}\n",
+        "fn main() -> i64 { var owner: shared Value = new Value(); var maybe: (shared Value)? = owner; inspect(owner, maybe); replace(owner, maybe); return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.expect("owner aliases must produce HIR");
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("SharedPlaceArgument"), "{dump}");
+    assert!(dump.contains("OptionalSharedPlaceArgument"), "{dump}");
+    crate::mir::verify_mir(&crate::mir::lower_hir(&hir))
+        .expect("shared-owner alias calls must verify");
+}
+
+#[test]
 fn enforces_read_only_alias_field_method_and_forwarding_restrictions() {
     let output = check_text(concat!(
         "class Counter {\n",

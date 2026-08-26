@@ -76,3 +76,11 @@ source = "general_iteration_receivers.ska"
 [[test.run]]
 name = "single_evaluation_and_retained_roots"
 expect = { stdout = { inline = "900\n1\n1\n1\n1\n" } }
+
+[[test]]
+name = "general_iteration_value_matrix"
+mode = "run"
+source = "general_iteration_value_matrix.ska"
+[[test.run]]
+name = "stored_values_and_nested_optional_sentinel"
+expect = { stdout = { inline = "10\n11\n20\n40\n40\n41\n61\n100\n100\n70\n70\n80\n81\n81\n91\n90\n" } }

@@ -1,0 +1,251 @@
+import std::io;
+
+from std::iter import Iterable;
+
+
+class Trace {
+    marker: u64;
+
+    init(marker: u64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        std::io::println_u64(self.marker);
+    }
+}
+
+class ClassState implements Iterable<u64, Trace> {
+    init() {}
+
+    fn iter_state() -> Trace {
+        return Trace(10u);
+    }
+
+    fn iter_next(mut ref state: Trace) -> u64? {
+        if (state.marker == 10u) {
+            state.marker = 11u;
+            return 10u;
+        }
+        return none;
+    }
+}
+
+class ArrayState implements Iterable<u64, u64[]> {
+    init() {}
+
+    fn iter_state() -> u64[] {
+        return u64[]{0u};
+    }
+
+    fn iter_next(mut ref state: u64[]) -> u64? {
+        if (state[0] == 0u) {
+            state[0] = 1u;
+            return 20u;
+        }
+        return none;
+    }
+}
+
+class OptionalState implements Iterable<u64, u64?> {
+    init() {}
+
+    fn iter_state() -> u64? {
+        return none;
+    }
+
+    fn iter_next(mut ref state: u64?) -> u64? {
+        return none;
+    }
+}
+
+class SharedState implements Iterable<u64, shared Trace> {
+    init() {}
+
+    fn iter_state() -> shared Trace {
+        return new Trace(40u);
+    }
+
+    fn iter_next(mut ref state: shared Trace) -> u64? {
+        if (state->marker == 40u) {
+            state = new Trace(41u);
+            return 40u;
+        }
+        return none;
+    }
+}
+
+class OptionalOwnerState implements Iterable<u64, (shared Trace)?> {
+    init() {}
+
+    fn iter_state() -> (shared Trace)? {
+        return none;
+    }
+
+    fn iter_next(mut ref state: (shared Trace)?) -> u64? {
+        return none;
+    }
+}
+
+class ArrayItems implements Iterable<u64[], u64> {
+    init() {}
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> u64[]? {
+        if (state == 0u) {
+            state = 1u;
+            return u64[]{60u, 1u};
+        }
+        return none;
+    }
+}
+
+class CopyItem {
+    trace: shared Trace;
+
+    init(marker: u64) {
+        self.trace = new Trace(marker);
+    }
+
+    copy(ref source: CopyItem) {
+        self.trace = source.trace;
+    }
+}
+
+class ClassItems implements Iterable<CopyItem, u64> {
+    init() {}
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> CopyItem? {
+        if (state == 0u) {
+            state = 1u;
+            return CopyItem(100u);
+        }
+        return none;
+    }
+}
+
+class SharedItems implements Iterable<shared Trace, u64> {
+    init() {}
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> (shared Trace)? {
+        if (state == 0u) {
+            state = 1u;
+            return new Trace(70u);
+        }
+        return none;
+    }
+}
+
+class OptionalBoxItems implements Iterable<shared u64?, u64> {
+    init() {}
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> (shared u64?)? {
+        if (state == 0u) {
+            state = 1u;
+            return new u64?(80u);
+        }
+        return none;
+    }
+}
+
+class OptionalOwnerItems implements Iterable<(shared Trace)?, u64> {
+    init() {}
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> (shared Trace)?? {
+        if (state == 0u) {
+            state = 1u;
+            return some(some(new Trace(81u)));
+        }
+        return none;
+    }
+}
+
+class OptionalItems implements Iterable<u64?, u64> {
+    absent_item: u64??;
+    present_item: u64??;
+
+    init() {
+        self.absent_item = some(none);
+        self.present_item = some(some(90u));
+    }
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> u64?? {
+        if (state == 0u) {
+            state = 1u;
+            return self.absent_item;
+        }
+        if (state == 1u) {
+            state = 2u;
+            return self.present_item;
+        }
+        return none;
+    }
+}
+
+fn main() -> i64 {
+    for (item in ClassState()) {
+        std::io::println_u64(item);
+    }
+    for (item in ArrayState()) {
+        std::io::println_u64(item);
+    }
+    for (item in OptionalState()) {
+        std::io::println_u64(item);
+    }
+    for (item in SharedState()) {
+        std::io::println_u64(item);
+    }
+    for (item in OptionalOwnerState()) {
+        std::io::println_u64(item);
+    }
+    for (item in ArrayItems()) {
+        std::io::println_u64(item[0] + item[1]);
+    }
+    for (item in ClassItems()) {
+        std::io::println_u64(item.trace->marker);
+    }
+    for (item in SharedItems()) {
+        std::io::println_u64(item->marker);
+    }
+    for (item in OptionalBoxItems()) {
+        if ((*item) is some) {
+            std::io::println_u64((*item)!);
+        }
+    }
+    for (item in OptionalOwnerItems()) {
+        if (item is some) {
+            std::io::println_u64(item!->marker);
+        }
+    }
+    for (item in OptionalItems()) {
+        if (item is some) {
+            std::io::println_u64(item!);
+        } else {
+            std::io::println_u64(91u);
+        }
+    }
+    return 0;
+}

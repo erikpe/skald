@@ -174,10 +174,8 @@ fn verifier_preserves_the_direct_local_unwrap_transfer_protocol() {
         }
         _ => unreachable!(),
     }
-    assert!(verify_mir(&direct_destination)
-        .unwrap_err()
-        .to_string()
-        .contains("fresh shared owner"));
+    let errors = verify_mir(&direct_destination).unwrap_err().to_string();
+    assert!(errors.contains("fresh shared owner"), "{errors}");
 
     let mut missing_move = program.clone();
     let main = missing_move

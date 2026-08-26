@@ -38,9 +38,10 @@ pub(crate) const fn supports_alias_target(
         | TypeCategory::Obj
         | TypeCategory::Class
         | TypeCategory::Interface
+        | TypeCategory::Shared
         | TypeCategory::Array => true,
         TypeCategory::Optional => optional_payload_supports_alias,
-        TypeCategory::Unit | TypeCategory::Function | TypeCategory::Shared => false,
+        TypeCategory::Unit | TypeCategory::Function => false,
     }
 }
 
@@ -166,6 +167,7 @@ mod tests {
                 TypeCategory::Obj,
                 TypeCategory::Class,
                 TypeCategory::Interface,
+                TypeCategory::Shared,
                 TypeCategory::Array,
             ]
         );

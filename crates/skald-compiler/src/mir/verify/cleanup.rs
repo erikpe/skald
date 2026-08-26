@@ -132,10 +132,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
             }
         }
         for storage in self.function.storage_entries() {
+            let tracked_alias_owner = matches!(storage.ty, MirType::Shared(_))
+                && matches!(storage.kind, MirStorageKind::AliasParameter(_));
             if !matches!(
                 storage.ty,
                 MirType::Class(_) | MirType::Interface(_) | MirType::Obj | MirType::Array(_)
-            ) {
+            ) && !tracked_alias_owner
+            {
                 continue;
             }
             let place = match storage.kind {

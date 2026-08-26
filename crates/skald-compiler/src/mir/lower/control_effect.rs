@@ -100,6 +100,9 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
         HirCallArgument::View(view) => view_source_contains_control_effect(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_control_effect(&copy.source),
         HirCallArgument::OptionalPlace(place) => optional_alias_contains_control_effect(place),
+        HirCallArgument::OptionalSharedPlace(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
         HirCallArgument::Place(_) | HirCallArgument::PrimitivePlace(_) => false,
         HirCallArgument::Shared(transfer) => match &transfer.source {
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
@@ -119,6 +122,7 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
             HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(_)) => true,
             HirSharedSource::Place(_) => false,
         },
+        HirCallArgument::SharedPlace(place) => shared_place_contains_control_effect(place),
         HirCallArgument::Array(initialization) => {
             array_initialization_contains_control_effect(initialization)
         }

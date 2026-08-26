@@ -306,7 +306,7 @@ fn validates_definition_independent_interface_signature_errors_once() {
         .iter()
         .filter(|diagnostic| diagnostic.code == INVALID_GENERIC_INTERFACE_REQUIREMENT)
         .collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 3, "{:?}", output.diagnostics);
+    assert_eq!(diagnostics.len(), 2, "{:?}", output.diagnostics);
     assert_eq!(
         diagnostics
             .iter()
@@ -314,13 +314,9 @@ fn validates_definition_independent_interface_signature_errors_once() {
             .count(),
         2
     );
-    assert_eq!(
-        diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.message.contains("array types"))
-            .count(),
-        1
-    );
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| !diagnostic.message.contains("array types")));
 }
 
 #[test]
