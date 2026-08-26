@@ -166,7 +166,7 @@ authoritative.
 | [OP8](#op8--primitive-read-only-alias-materialization) | Is primitive temporary materialization required? | Yes for arbitrary produced primitive expressions passed to protocol `ref`; `mut ref` remains place-only | **Recommended** |
 | [OP9](#op9--compiler-phase-and-ir-boundaries) | Where is sugar erased? | Semantic selection before HIR; emit existing primitive operations or ordinary interface calls | **Recommended** |
 | [OP10](#op10--inheritance-dispatch-and-manual-use) | How observable are protocols? | Ordinary public class implementations and interface dispatch; primitive implementations remain statically callable through canonical bounds | **Recommended** |
-| [OP11](#op11--diagnostics-dependencies-and-determinism) | How are canonical declarations acquired and errors reported? | Typed compiler dependency on `std::ops`, exact validation, deterministic candidate evidence | **Recommended**, acquisition detail open |
+| [OP11](#op11--diagnostics-dependencies-and-determinism) | How are canonical declarations acquired and errors reported? | Ordinary reachability through explicit protocol references, whole-bundle validation, and deterministic selection evidence; operator syntax adds no module edge | **Confirmed direction** |
 | [OP12](#op12--promotion-and-roadmap-boundary) | When may implementation planning start? | Only after every open decision is settled and the complete contract is promoted | **Recommended** |
 
 ## Proposed standard-library surface
@@ -252,8 +252,9 @@ language protocols visually distinct without adding a new namespace feature.
 
 The protocol declarations are ordinary Skald source. A user class imports and
 implements them normally. A lookalike interface in another module has no
-operator meaning. Missing, inaccessible, or malformed canonical declarations
-are diagnosed rather than replaced silently.
+operator meaning. When the canonical module is reachable, missing,
+inaccessible, or malformed canonical declarations are diagnosed rather than
+replaced silently.
 
 ## OP1 — Protocol ownership and canonical identity
 
@@ -676,22 +677,50 @@ that ordinary calls do not have.
 
 ## OP11 — Diagnostics, dependencies, and determinism
 
-**Question:** How does a source operator acquire `std::ops`, and what evidence
-does selection retain?
+**Question:** How does `std::ops` become reachable, and what evidence does
+operator selection retain?
 
-**Recommended direction:** Operator protocols use the same request-local
-canonical-language-item discipline as general iteration. A valid use records
-typed compiler-dependency evidence without creating a source import binding.
-Explicit imports remain required to name a protocol in `implements` or
-`where`, while `left + right` does not require an otherwise unused import.
+**Confirmed direction:** `std::ops` uses ordinary module reachability through
+explicit protocol references. Naming a protocol in `implements`, `where`, an
+interface type, or a manual bound call requires the ordinary explicit import
+that makes the canonical module reachable. Direct compilation of `std::ops`
+is the other validation trigger. Operator punctuation itself creates no
+compiler-owned module dependency, source import binding, or late module-graph
+expansion.
 
-The acquisition timing remains open. The simplest rule is that every syntax
-use of an overloadable operator requests `std::ops`, even when type checking
-later selects a primitive operation. A more selective rule would avoid that
-dependency for primitive-only programs but would require a safe late module
-acquisition boundary that the current graph pipeline does not have. The draft
-currently recommends the simple syntax-evidence rule unless inspection finds
-a meaningful build or cyclic-dependency cost.
+This is sufficient in Skald's whole-program source model. A user-defined
+operator implementation must name its canonical protocol, and a generic
+operator expression must be authorized by a bound that names the protocol.
+The defining module therefore makes `std::ops` transitively reachable before
+any consumer selects the operation. Consumer code may write `left + right`
+without a redundant local import. If `std::ops` is not reachable, no
+user-defined or bound-selected canonical implementation can exist, so a
+non-primitive expression receives the ordinary unsupported-operator
+diagnostic.
+
+Exact built-in primitive operations neither load nor validate `std::ops`.
+Primitive-only programs retain their existing behavior under `--no-stdlib`,
+and a missing or malformed `std::ops` cannot invalidate an operation already
+selected from the primitive matrix. Primitive satisfaction of an explicitly
+written canonical bound still requires the ordinary import that made that
+bound nameable.
+
+Once reachable, `std::ops` is validated once as the complete frozen canonical
+protocol bundle rather than as independently optional declarations. The
+compiler checks every required public interface, parameter list, requirement,
+receiver mode, explicit parameter, and result from OP1 through OP3. Direct
+canonical-module compilation performs the same validation. A replacement
+standard library must provide the complete matching bundle; declarations are
+never synthesized or silently completed. Provider collisions, missing modules,
+and dependency cycles retain ordinary module diagnostics at the explicit
+reference edge.
+
+Diagnostic precedence is deterministic: module/provider failures precede
+canonical-bundle validation, which precedes operator selection and type
+capability failures. A reachable malformed bundle is diagnosed at its
+declaration or explicit reference, with a relevant operator span retained as
+secondary evidence when applicable. An unreachable bundle is irrelevant to
+primitive-only source.
 
 Diagnostics should distinguish:
 
@@ -706,6 +735,12 @@ Diagnostics should distinguish:
 
 Selection diagnostics retain the operator span, both operand spans and static
 types, the selected or rejected application, and candidate claim/bound spans.
+Module reachability evidence and operator selection evidence remain separate:
+ordinary import spans explain why `std::ops` was loaded, while resolved
+operator evidence records the exact canonical template, closed application,
+requirement, or primitive operation selected. Resolved and HIR dumps expose
+that selection without manufacturing an implicit import edge.
+
 Candidate, specialization, diagnostic, dump, witness, effect, and target order
 must remain independent of hash iteration and module discovery order.
 
@@ -915,8 +950,11 @@ construction nor `for-in` lowering needs to be part of operator overloading.
 
 An eventual roadmap should allocate evidence to each owner, including:
 
-- canonical `std::ops` declaration acquisition, validation, malformed forms,
-  cycles, and same-named lookalikes;
+- ordinary `std::ops` reachability through explicit protocol references,
+  direct-entry and complete-bundle validation, replacement libraries,
+  malformed forms, cycles, provider collisions, and same-named lookalikes;
+- primitive-only operators with `--no-stdlib`, absence of operator-created
+  module edges, and consumer operator use without a redundant local import;
 - class conformance, inheritance, overrides, private/static/mutable mismatch,
   and unsupported multiple applications;
 - unique operand/result selection, read-only RHS view applicability,
@@ -982,7 +1020,8 @@ or supported syntax also require the documented supported-toolchain gate.
 - [ ] Confirm the semantic-selection and HIR erasure boundary.
 - [x] Confirm the current no-method-overloading limitation and future
       extension boundary.
-- [ ] Confirm canonical module acquisition timing and dependency evidence.
+- [x] Confirm ordinary canonical-module reachability, complete-bundle
+      validation, and separate deterministic selection evidence.
 - [ ] Audit generic specialization, interface dispatch, checked and produced
       receivers, shared anchors, static effects, panic traces, dumps,
       determinism, verifier obligations, backend legality, and runtime ABI.
