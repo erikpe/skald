@@ -137,6 +137,21 @@ impl CheckedSharedPointee {
             },
         }
     }
+
+    /// Force a strong owner anchor for a view retained across a loop body.
+    /// Even a syntactically stable binding may be replaced by that body.
+    pub(super) fn into_iteration_source(mut self) -> Self {
+        if let Some(binding) = self.stable_binding() {
+            self.source = CheckedSharedPointeeSource::Anchored(HirSharedSource::Place(
+                HirSharedPlace::Binding {
+                    binding,
+                    target: view_shared_target(self.target),
+                    span: self.span,
+                },
+            ));
+        }
+        self
+    }
 }
 
 impl CallableChecker<'_, '_> {

@@ -48,10 +48,10 @@ impl HirForIn {
     ) -> Self {
         assert_eq!(binding.callable(), loop_id.callable());
         assert_eq!(
-            receiver.view.target,
+            receiver.carrier.target(),
             HirViewTarget::Interface(protocol.interface)
         );
-        assert_eq!(receiver.view.access, HirAccess::ReadOnly);
+        assert_eq!(receiver.carrier.access(), HirAccess::ReadOnly);
         assert_eq!(state.value.ty, protocol.state);
         assert_eq!(state.initialize.result, protocol.state);
         assert_eq!(state.initialize.target.interface, protocol.interface);
@@ -98,8 +98,31 @@ pub struct HirIterationProtocol {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirIterationReceiver {
     pub iterable: Type,
-    pub view: HirObjectView,
+    pub carrier: HirIterationReceiverCarrier,
     pub lifetime: HirIterationReceiverLifetime,
+}
+
+/// The non-owning receiver acquired once before an iteration starts.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirIterationReceiverCarrier {
+    View(HirObjectView),
+    Checked(Box<super::HirCheckedObjectView>),
+}
+
+impl HirIterationReceiverCarrier {
+    pub const fn target(&self) -> HirViewTarget {
+        match self {
+            Self::View(view) => view.target,
+            Self::Checked(view) => view.consumer_target,
+        }
+    }
+
+    pub const fn access(&self) -> HirAccess {
+        match self {
+            Self::View(view) => view.access,
+            Self::Checked(view) => view.consumer_access,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

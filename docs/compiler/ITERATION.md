@@ -1,13 +1,13 @@
 # General-Iteration Compiler Contract
 
 Status: frozen compiler design with syntax, canonical protocol identity,
-nominal resolution, and the initial structured-HIR and ordinary-MIR matrix
-implemented.
+nominal resolution, and the complete loop-duration receiver matrix implemented.
 Resolution retains exact selected interface, requirement, item/state, local,
-and loop identities. Type checking emits complete structured HIR for named
-exact-class and exact-interface receivers with primitive state and primitive or
-trivially copied exact-class items. That core matrix lowers to verified cyclic
-MIR and native code; later receiver/value families remain gated. The
+and loop identities. Type checking emits complete structured HIR for exact,
+produced, checked, shared-backed, optional-derived, and array-backed read-only
+receivers with primitive state and primitive or trivially copied exact-class
+items. That matrix lowers to verified cyclic MIR and native code; later
+stored-value families remain gated. The
 [language status matrix](../language/STATUS.md)
 remains authoritative for implementation maturity.
 
@@ -94,20 +94,23 @@ target-specific layout reaches HIR. Generic-class specialization substitutes
 the definition-site selected interface and requirement identities rather than
 selecting again.
 
-This boundary is implemented for the initial core matrix. `HirForIn` retains
-one loop-duration `HirObjectView`, source-independent stored-value lifecycle
-plans for the hidden state and fresh item, exact call targets and access, a
+This boundary is implemented for the complete frozen receiver matrix.
+`HirForIn` retains an ordinary or checked loop-duration receiver carrier,
+source-independent stored-value lifecycle plans for the hidden state and fresh
+item, exact call targets and access, a
 mutable alias plan to the exact hidden state, and the canonical result
 `OptionalTypeId` with its one-layer presence, unwrap, and destruction plans.
 The item binding is checked as a read-only owning local while its body is
 checked. Unsupported later receiver or stored-value families produce the
 focused `TYP046` diagnostic before MIR.
 
-The loop-duration receiver is distinct from a call-duration alias. It is
+The loop-duration receiver is distinct from a call-duration alias. Produced
+storage, checked and optional guards, strong shared owners, optional-box roots,
+and array backing anchors are promoted into its lexical cleanup bundle. It is
 acquired once before `iter_state`, remains valid across every body execution,
-and is released after state cleanup. Existing view-source classification and
-owner/guard/anchor vocabulary should be reused; any new HIR carrier must state
-its exact lifetime and cleanup ownership.
+and is released after state cleanup. A guarded inline optional root cannot be
+replaced by the body; replaceable shared and array roots remain safe because
+their anchors detach receiver lifetime from the source place.
 
 ## MIR lowering
 
@@ -115,7 +118,7 @@ HIR-to-MIR lowering expands `HirForIn` into ordinary target-independent
 operations. There is no `MirForIn`, iterator opcode, target iterator primitive,
 or runtime service.
 
-This boundary is implemented for the initial core matrix. Lowering allocates
+This boundary is implemented for the complete receiver matrix. Lowering allocates
 the main regions before their edges, retains one compiler-local state epoch,
 uses repeatable result and item epochs, and emits only existing call, optional,
 lifetime, cleanup, branch, and jump operations.

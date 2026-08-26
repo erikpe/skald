@@ -2,8 +2,8 @@
 
 use super::*;
 use crate::hir::{
-    HirForIn, HirIterationValueInitialization, HirOptionalDestructionPlan,
-    HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
+    HirForIn, HirIterationReceiverCarrier, HirIterationValueInitialization,
+    HirOptionalDestructionPlan, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
 };
 
 impl BodyLowerer<'_> {
@@ -36,13 +36,17 @@ impl BodyLowerer<'_> {
         let break_retained_depth = self.cleanup.retained_scope_depth();
         self.cleanup.enter_scope();
 
-        // Core receivers are stable named places or forwarded interface
-        // views. Acquire the view exactly once and retain it for both calls.
-        let receiver = self.lower_object_view(&statement.receiver.view);
-        debug_assert!(
-            !self.full_expression.has_temporaries(),
-            "core iteration receivers must not require call-duration temporaries"
-        );
+        // Acquire one read-only view and promote every supporting carrier from
+        // full-expression duration to this loop's outer lexical scope.
+        let optional_mark = self.optional_view_mark();
+        let mut receiver = match &statement.receiver.carrier {
+            HirIterationReceiverCarrier::View(view) => self.lower_iteration_object_view(view),
+            HirIterationReceiverCarrier::Checked(view) => {
+                self.lower_iteration_checked_object_view(view)
+            }
+        };
+        self.promote_iteration_receiver_resources(optional_mark, statement.spans.iterable_span);
+        receiver.provenance = MirViewProvenance::Ordinary;
 
         let state = self.new_iteration_storage(
             "iteration-state",

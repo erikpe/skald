@@ -254,7 +254,7 @@ impl SharedOwnershipAnalysis<'_, '_> {
             };
             let mut incompatible = false;
             let missing = states.end_condition(condition, |existing, incoming| {
-                if !existing.same_live_state(incoming) {
+                if !existing.merge_live_state(incoming) {
                     incompatible = true;
                     return;
                 }
@@ -296,7 +296,7 @@ impl SharedOwnershipAnalysis<'_, '_> {
             .unwrap_or_else(|_| states.clone());
         flow.merge(target, &selected, |existing, incoming| {
             existing.merge(incoming, |existing, incoming| {
-                if !existing.same_live_state(incoming) {
+                if !existing.merge_live_state(incoming) {
                     if self.reported_joins.insert(target) {
                         self.error(
                             target,

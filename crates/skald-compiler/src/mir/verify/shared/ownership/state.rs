@@ -53,13 +53,54 @@ impl SharedState {
             .retain(|place| place.base.local_storage() != Some(storage));
     }
 
-    pub(super) fn same_live_state(&self, other: &Self) -> bool {
-        self.allocations == other.allocations
-            && self.live_owners == other.live_owners
-            && self.owner_origins == other.owner_origins
-            && self.static_owners == other.static_owners
-            && self.active_checked_views == other.active_checked_views
-            && self.initialized_fields == other.initialized_fields
-            && self.pending_full_expression_boundary == other.pending_full_expression_boundary
+    /// Join two paths whose live owner set agrees while forgetting allocation
+    /// identity for owners that were replaced on only one path.
+    ///
+    /// The owner remains valid, but exact dynamic provenance is no longer
+    /// available after the join. Using the owner's own shared storage as the
+    /// conservative origin preserves liveness without pretending that two
+    /// different allocations are identical.
+    pub(super) fn merge_live_state(&mut self, other: &Self) -> bool {
+        if self.allocations != other.allocations
+            || self.live_owners != other.live_owners
+            || self.owner_origins.keys().collect::<HashSet<_>>()
+                != other.owner_origins.keys().collect::<HashSet<_>>()
+            || self.static_owners != other.static_owners
+            || self.active_checked_views != other.active_checked_views
+            || self.initialized_fields != other.initialized_fields
+            || self.pending_full_expression_boundary != other.pending_full_expression_boundary
+        {
+            return false;
+        }
+        for (&owner, &incoming_origin) in &other.owner_origins {
+            if self.owner_origins.get(&owner) != Some(&incoming_origin) {
+                self.owner_origins.insert(owner, owner);
+            }
+        }
+        true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::identity::{CallableId, FunctionId};
+
+    use super::*;
+
+    #[test]
+    fn joining_replaced_live_owner_forgets_only_its_allocation_identity() {
+        let callable = CallableId::Function(FunctionId::new(0));
+        let owner = StorageId::new(callable, 0);
+        let first = StorageId::new(callable, 1);
+        let second = StorageId::new(callable, 2);
+        let mut left = SharedState::default();
+        left.live_owners.insert(owner);
+        left.owner_origins.insert(owner, first);
+        let mut right = left.clone();
+        right.owner_origins.insert(owner, second);
+
+        assert!(left.merge_live_state(&right));
+        assert_eq!(left.owner_origins.get(&owner), Some(&owner));
+        assert!(left.live_owners.contains(&owner));
     }
 }

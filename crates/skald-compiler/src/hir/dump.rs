@@ -1084,7 +1084,16 @@ impl<'types> HirDumper<'types> {
                 dumper.type_name(statement.receiver.iterable),
                 statement.receiver.lifetime,
             ));
-            dumper.indented(|dumper| dumper.object_view("LoopReceiver", &statement.receiver.view));
+            dumper.indented(|dumper| match &statement.receiver.carrier {
+                HirIterationReceiverCarrier::View(view) => dumper.object_view("LoopReceiver", view),
+                HirIterationReceiverCarrier::Checked(view) => {
+                    let kind = match view.kind {
+                        HirCheckedObjectViewKind::Static => "static",
+                        HirCheckedObjectViewKind::RuntimeTerminate => "runtime-terminate",
+                    };
+                    dumper.object_view(&format!("LoopReceiver Checked {kind}"), &view.view);
+                }
+            });
             dumper.raw_line(&format!(
                 "State initialization={:?} destruction={:?}",
                 statement.state.value.initialization, statement.state.value.destruction,

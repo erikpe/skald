@@ -1,12 +1,13 @@
 # General Iteration
 
 Status: frozen semantic design with source syntax, canonical protocol, nominal
-resolution, and the initial typed-HIR/MIR matrix implemented. The compiler selects
+resolution, and the loop-duration receiver matrix implemented. The compiler selects
 exact closed applications, types the item scope, freezes generic-bound
-selection, and emits structured lifecycle and dispatch plans for named class or
-interface receivers with primitive state and primitive or trivially copied
-exact-class items. That core matrix executes through verified ordinary MIR and
-native code. Broader value and receiver families remain gated.
+selection, and emits structured lifecycle and dispatch plans for exact,
+produced, checked, shared-backed, optional-derived, and array-backed read-only
+receivers with primitive state and primitive or trivially copied exact-class
+items. That matrix executes through verified ordinary MIR and native code.
+Broader stored-value families remain gated.
 The [status matrix](STATUS.md) records implementation maturity.
 
 This document is authoritative for general iteration semantics selected for

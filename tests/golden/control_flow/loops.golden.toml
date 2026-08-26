@@ -68,3 +68,11 @@ source = "general_iteration_lifecycle.ska"
 [[test.run]]
 name = "item_body_and_outer_cleanup"
 expect = { stdout = { inline = "10\n11\n10\n30\n31\n30\n50\n51\n50\n70\n71\n70\n70\n" } }
+
+[[test]]
+name = "general_iteration_receivers"
+mode = "run"
+source = "general_iteration_receivers.ska"
+[[test.run]]
+name = "single_evaluation_and_retained_roots"
+expect = { stdout = { inline = "900\n1\n1\n1\n1\n" } }

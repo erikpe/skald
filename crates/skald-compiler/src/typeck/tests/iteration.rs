@@ -1,8 +1,9 @@
 use super::*;
 use crate::{
     hir::{
-        HirAccess, HirIterationReceiverLifetime, HirIterationValueInitialization,
-        HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan, HirStatement, HirViewSource, Type,
+        HirAccess, HirIterationReceiverCarrier, HirIterationReceiverLifetime,
+        HirIterationValueInitialization, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
+        HirStatement, HirViewSource, Type,
     },
     resolve::{resolve_module_graph, ResolveOutput},
     test_support::{load_module_sources, CANONICAL_ITER_SOURCE},
@@ -55,6 +56,13 @@ fn first_for_in(hir: &crate::hir::HirProgram) -> &crate::hir::HirForIn {
     statement
 }
 
+fn receiver_view(loop_: &crate::hir::HirForIn) -> &crate::hir::HirObjectView {
+    match &loop_.receiver.carrier {
+        HirIterationReceiverCarrier::View(view) => view,
+        HirIterationReceiverCarrier::Checked(view) => &view.view,
+    }
+}
+
 #[test]
 fn primitive_iteration_retains_exact_dispatch_receiver_and_lifecycle_plans() {
     let hir = check_iteration(&format!(
@@ -76,9 +84,9 @@ fn primitive_iteration_retains_exact_dispatch_receiver_and_lifecycle_plans() {
         loop_.receiver.lifetime,
         HirIterationReceiverLifetime::LoopDuration
     );
-    assert_eq!(loop_.receiver.view.access, HirAccess::ReadOnly);
+    assert_eq!(loop_.receiver.carrier.access(), HirAccess::ReadOnly);
     assert!(matches!(
-        loop_.receiver.view.source,
+        receiver_view(loop_).source,
         HirViewSource::Place(_)
     ));
     assert_eq!(loop_.state.advance.state_alias.access, HirAccess::Mutable);
@@ -112,7 +120,7 @@ fn exact_interface_views_and_bound_specializations_keep_selected_dispatch() {
     ));
     let viewed_loop = first_for_in(&viewed);
     assert!(matches!(
-        viewed_loop.receiver.view.source,
+        receiver_view(viewed_loop).source,
         HirViewSource::Forwarded { .. }
     ));
     assert_eq!(
@@ -340,6 +348,158 @@ fn mixed_nested_loops_preserve_only_outer_effects() {
 }
 
 #[test]
+fn loop_duration_receivers_cover_produced_shared_optional_and_array_sources() {
+    let hir = check_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Counter implements Iterable<i64, u64> {\n",
+        "  value: i64; init(value: i64) { self.value = value; }\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "}\n",
+        "fn receivers() -> unit {\n",
+        "  for (item in Counter(1)) {}\n",
+        "  var owner: shared Counter = new Counter(2);\n",
+        "  for (item in *owner) { owner = new Counter(3); break; }\n",
+        "  for (item in *(new Counter(8))) { var independent: i64 = item; }\n",
+        "  var maybe: Counter? = Counter(4);\n",
+        "  for (item in maybe!) { var independent: i64 = item; }\n",
+        "  var box: shared Counter? = new Counter?(Counter(11));\n",
+        "  for (item in (*box)!) { box = new Counter?(Counter(12)); break; }\n",
+        "  var values: Counter[] = Counter[]{Counter(5)};\n",
+        "  for (item in values[0]) { values = Counter[]{Counter(6)}; break; }\n",
+        "  var shared_values: shared Counter[] = new Counter[]{Counter(9)};\n",
+        "  for (item in (*shared_values)[0]) { var independent: i64 = item; }\n",
+        "  var maybe_values: Counter[]? = Counter[]{Counter(10)};\n",
+        "  for (item in maybe_values![0]) { var independent: i64 = item; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let receivers = hir
+        .definitions
+        .iter()
+        .find(|definition| {
+            definition
+                .body
+                .statements
+                .iter()
+                .any(|statement| matches!(statement, HirStatement::ForIn(_)))
+        })
+        .expect("receiver fixture must retain its loops");
+    let sources: Vec<_> = receivers
+        .body
+        .statements
+        .iter()
+        .filter_map(|statement| match statement {
+            HirStatement::ForIn(loop_) => Some(&receiver_view(loop_).source),
+            _ => None,
+        })
+        .collect();
+    assert!(matches!(sources[0], HirViewSource::Produced { .. }));
+    assert!(matches!(sources[1], HirViewSource::AnchoredShared { .. }));
+    assert!(matches!(sources[2], HirViewSource::AnchoredShared { .. }));
+    assert!(matches!(sources[3], HirViewSource::OptionalPayload { .. }));
+    assert!(matches!(
+        sources[4],
+        HirViewSource::OptionalBoxPayload { .. }
+    ));
+    assert!(matches!(sources[5], HirViewSource::ArrayElement(_)));
+    assert!(matches!(sources[6], HirViewSource::ArrayElement(_)));
+    assert!(matches!(sources[7], HirViewSource::ArrayElement(_)));
+
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("all retained receiver families must verify");
+}
+
+#[test]
+fn checked_cast_iteration_retains_cast_and_owner_carriers() {
+    let hir = check_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Base { init() {} }\n",
+        "class Derived extends Base implements Iterable<i64, u64> {\n",
+        "  init() { super(); }\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "}\n",
+        "fn scan(owner: shared Base) -> unit {\n",
+        "  for (item in (Derived) *owner) { var independent: i64 = item; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let loop_ = first_for_in(&hir);
+    let HirIterationReceiverCarrier::Checked(checked) = &loop_.receiver.carrier else {
+        panic!("cast receiver must retain its checked carrier")
+    };
+    assert!(matches!(
+        checked.view.source,
+        HirViewSource::AnchoredShared { .. }
+    ));
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("loop-duration checked cast must verify");
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("checked-cast"), "{dump}");
+    assert!(dump.contains("terminate object-cast-failure"), "{dump}");
+    assert!(dump.contains("end-checked-view"), "{dump}");
+    assert!(dump.contains("shared-release"), "{dump}");
+}
+
+#[test]
+fn inherited_iterable_view_preserves_complete_exact_origin() {
+    let hir = check_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Base implements Iterable<i64, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "}\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "fn scan(value: Derived) -> unit { for (item in value) {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let loop_ = first_for_in(&hir);
+    let view = receiver_view(loop_);
+    assert!(matches!(
+        view.origin.as_ref(),
+        crate::hir::HirObjectOrigin::Exact { dynamic_class, .. }
+            if Type::Class(*dynamic_class) == loop_.receiver.iterable
+    ));
+    assert_eq!(
+        view.target,
+        crate::hir::HirViewTarget::Interface(loop_.protocol.interface)
+    );
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("inherited iterable dispatch must verify");
+}
+
+#[test]
+fn rejects_body_write_that_invalidates_guarded_optional_receiver() {
+    let resolved = resolve_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Counter implements Iterable<i64, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "}\n",
+        "fn scan() -> unit {\n",
+        "  var maybe: Counter? = Counter();\n",
+        "  for (item in maybe!) { maybe = Counter(); }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert!(checked.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == GENERAL_ITERATION_UNSUPPORTED
+            && diagnostic.message.contains("guarded optional")
+    }));
+}
+
+#[test]
 fn core_iteration_lowers_to_verified_deterministic_ordinary_mir() {
     let hir = check_iteration(&format!(
         "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
@@ -416,4 +576,75 @@ fn class_items_and_mixed_loop_exits_lower_to_verified_mir() {
     let dump = crate::mir::dump_mir(&mir);
     assert!(dump.contains("begin-optional-view"), "{dump}");
     assert!(dump.contains("copy-construct"), "{dump}");
+}
+
+#[test]
+fn produced_receiver_cleanup_follows_state_on_every_outer_exit() {
+    let hir = check_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Counter implements Iterable<i64, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "}\n",
+        "fn scan() -> i64 {\n",
+        "  for (item in Counter()) {\n",
+        "    if (item == 1) { break; }\n",
+        "    if (item == 2) { return item; }\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let loop_ = first_for_in(&hir);
+    let crate::identity::CallableId::Function(function) = loop_.loop_id.callable() else {
+        unreachable!()
+    };
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("produced receiver exit matrix must verify");
+    let definition = mir.definitions.get(function).unwrap();
+    let mir_dump = crate::mir::dump_mir(&mir);
+    let receiver = definition
+        .storage
+        .iter()
+        .find(|storage| storage.name.starts_with("temporary"))
+        .expect("produced receiver needs one owning temporary")
+        .id;
+    let state = definition
+        .storage
+        .iter()
+        .find(|storage| storage.name.starts_with("iteration-state"))
+        .expect("iteration needs retained state storage")
+        .id;
+    let mut receiver_cleanups = 0;
+    for block in &definition.body.blocks {
+        for (index, instruction) in block.instructions.iter().enumerate() {
+            let crate::mir::MirInstruction::Cleanup(cleanup) = instruction else {
+                continue;
+            };
+            if cleanup.destination.base.local_storage() != Some(receiver) {
+                continue;
+            }
+            receiver_cleanups += 1;
+            assert!(
+                block.instructions[..index].iter().any(|instruction| {
+                    matches!(
+                        instruction,
+                        crate::mir::MirInstruction::StorageDead(dead) if dead.storage == state
+                    )
+                }),
+                "{mir_dump}"
+            );
+            assert!(block.instructions[index + 1..].iter().any(|instruction| {
+                matches!(
+                    instruction,
+                    crate::mir::MirInstruction::StorageDead(dead) if dead.storage == receiver
+                )
+            }));
+        }
+    }
+    assert_eq!(
+        receiver_cleanups, 3,
+        "exhaustion, break, and return each need cleanup"
+    );
 }

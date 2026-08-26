@@ -39,6 +39,14 @@ impl BodyLowerer<'_> {
     pub(super) fn finish_full_expression(&mut self, span: Span) {
         self.end_optional_views_from(0, span);
         let plan = self.full_expression.take_plan();
+        self.emit_full_expression_plan(plan, span);
+    }
+
+    fn emit_full_expression_plan(
+        &mut self,
+        plan: super::full_expression::FullExpressionPlan,
+        span: Span,
+    ) {
         let requires_boundary = plan.requires_boundary();
         let conditions = plan.conditions.clone();
 
@@ -60,6 +68,97 @@ impl BodyLowerer<'_> {
         }
 
         self.emit_full_expression_temporaries(plan.temporaries, &conditions, span);
+        for registration in plan.storage.into_iter().rev() {
+            self.emit_conditional_registration(
+                registration,
+                &conditions,
+                span,
+                |lowerer, storage| lowerer.end_storage_lifetime(storage, span),
+            );
+        }
+        self.end_path_condition_lifetimes(&conditions, span);
+    }
+
+    pub(super) fn promote_iteration_receiver_resources(
+        &mut self,
+        optional_mark: usize,
+        span: Span,
+    ) {
+        let mut guards = self.take_optional_views_from(optional_mark);
+        guards.reverse();
+        let mut plan = self.full_expression.take_plan();
+        for registration in &plan.storage {
+            let storage = &mut self.storage[registration.value.index()];
+            if storage.kind == super::MirStorageKind::Temporary {
+                storage.kind = super::MirStorageKind::Local;
+            }
+        }
+        // Publishing or copying a shared owner needs an expression boundary
+        // before the loop CFG joins back to its header. Ownership of the
+        // retained carrier is still released by the lexical cleanup plan.
+        if plan.has_shared_effect {
+            self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                temporaries: Vec::new(),
+                span,
+            }));
+            plan.has_shared_effect = false;
+        }
+        if guards.is_empty() && plan.is_empty() {
+            return;
+        }
+        self.cleanup
+            .register_iteration_receiver(IterationReceiverResources { guards, plan });
+    }
+
+    pub(super) fn emit_iteration_receiver_resources(
+        &mut self,
+        resources: IterationReceiverResources,
+        span: Span,
+    ) {
+        self.emit_optional_guards(resources.guards, span);
+        self.emit_retained_expression_plan(resources.plan, span);
+    }
+
+    fn emit_retained_expression_plan(
+        &mut self,
+        plan: super::full_expression::FullExpressionPlan,
+        span: Span,
+    ) {
+        let requires_boundary = plan.requires_boundary();
+        let conditions = plan.conditions.clone();
+        for registration in plan.checked_views.into_iter().rev() {
+            self.emit_conditional_registration(
+                registration,
+                &conditions,
+                span,
+                |lowerer, carrier| {
+                    lowerer.emit(MirInstruction::EndCheckedView(MirCheckedViewEnd {
+                        carrier,
+                        span,
+                    }));
+                },
+            );
+        }
+        for registration in plan.temporaries.into_iter().rev() {
+            self.emit_conditional_registration(
+                registration,
+                &conditions,
+                span,
+                |lowerer, temporary| match temporary {
+                    super::FullExpressionTemporary::Inline(mut cleanup) => {
+                        cleanup.span = span;
+                        lowerer.emit(MirInstruction::Cleanup(cleanup));
+                    }
+                    temporary => lowerer.emit_full_expression_temporary(temporary, span),
+                },
+            );
+        }
+        if requires_boundary {
+            self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                temporaries: Vec::new(),
+                span,
+            }));
+        }
         for registration in plan.storage.into_iter().rev() {
             self.emit_conditional_registration(
                 registration,
@@ -242,19 +341,31 @@ pub(super) enum PlannedCleanup {
         array: crate::identity::ArrayTypeId,
         span: Span,
     },
+    IterationReceiver(IterationReceiverResources),
+}
+
+#[derive(Clone)]
+pub(super) struct IterationReceiverResources {
+    guards: Vec<super::ActiveOptionalGuard>,
+    plan: super::full_expression::FullExpressionPlan,
 }
 
 pub(super) struct PlannedScopeExit {
-    pub(super) cleanups: Vec<PlannedCleanup>,
-    pub(super) storage: Vec<StorageId>,
+    pub(super) actions: Vec<PlannedScopeAction>,
     pub(super) span: Span,
+}
+
+pub(super) enum PlannedScopeAction {
+    Cleanup(PlannedCleanup),
+    StorageDead(StorageId),
 }
 
 impl PlannedScopeExit {
     pub(super) fn requires_optional_check(&self) -> bool {
-        self.cleanups
-            .iter()
-            .any(PlannedCleanup::requires_optional_check)
+        self.actions.iter().any(|action| match action {
+            PlannedScopeAction::Cleanup(cleanup) => cleanup.requires_optional_check(),
+            PlannedScopeAction::StorageDead(_) => false,
+        })
     }
 }
 
@@ -280,6 +391,7 @@ pub(super) struct RetainedScopeDepth(usize);
 #[derive(Default)]
 struct LexicalScope {
     initialized: Vec<InitializedStorage>,
+    iteration_receivers: Vec<IterationReceiverResources>,
     storage: Vec<StorageId>,
 }
 
@@ -389,6 +501,14 @@ impl CleanupPlanner {
             });
     }
 
+    pub(super) fn register_iteration_receiver(&mut self, resources: IterationReceiverResources) {
+        self.scopes
+            .last_mut()
+            .expect("an iteration receiver must belong to an active lexical scope")
+            .iteration_receivers
+            .push(resources);
+    }
+
     pub(super) fn for_current_scope(&self, span: Span) -> PlannedScopeExit {
         let retained = self
             .scopes
@@ -414,23 +534,37 @@ impl CleanupPlanner {
             "retained cleanup depth must belong to the active scope stack"
         );
         PlannedScopeExit {
-            cleanups: self
+            actions: self
                 .scopes
                 .get(retained.0..)
                 .expect("validated retained cleanup depth must slice active scopes")
                 .iter()
                 .rev()
-                .flat_map(|scope| scope.initialized.iter().rev())
-                .map(|local| local.cleanup(span))
-                .collect(),
-            storage: self
-                .scopes
-                .get(retained.0..)
-                .expect("validated retained cleanup depth must slice active scopes")
-                .iter()
-                .rev()
-                .flat_map(|scope| scope.storage.iter().rev())
-                .copied()
+                .flat_map(|scope| {
+                    scope
+                        .initialized
+                        .iter()
+                        .rev()
+                        .map(|local| local.cleanup(span))
+                        .map(PlannedScopeAction::Cleanup)
+                        .chain(
+                            scope
+                                .storage
+                                .iter()
+                                .rev()
+                                .copied()
+                                .map(PlannedScopeAction::StorageDead),
+                        )
+                        .chain(
+                            scope
+                                .iteration_receivers
+                                .iter()
+                                .rev()
+                                .cloned()
+                                .map(PlannedCleanup::IterationReceiver)
+                                .map(PlannedScopeAction::Cleanup),
+                        )
+                })
                 .collect(),
             span,
         }
@@ -495,6 +629,36 @@ mod tests {
         source::SourceDatabase,
     };
 
+    fn cleanup_storage(action: &PlannedScopeAction) -> Option<StorageId> {
+        let PlannedScopeAction::Cleanup(cleanup) = action else {
+            return None;
+        };
+        Some(match cleanup {
+            PlannedCleanup::Inline(cleanup) => cleanup.destination.base.expect_local_storage(),
+            PlannedCleanup::Shared(release) => release.owner,
+            PlannedCleanup::ClassOptional(cleanup) => {
+                cleanup.destination.base.expect_local_storage()
+            }
+            PlannedCleanup::OptionalShared(cleanup) => {
+                cleanup.destination.base.expect_local_storage()
+            }
+            PlannedCleanup::AggregateOptional(cleanup) => {
+                cleanup.destination.base.expect_local_storage()
+            }
+            PlannedCleanup::Array { storage, .. } => *storage,
+            PlannedCleanup::IterationReceiver(_) => {
+                panic!("test fixture has no iteration receiver")
+            }
+        })
+    }
+
+    fn dead_storage(action: &PlannedScopeAction) -> Option<StorageId> {
+        match action {
+            PlannedScopeAction::StorageDead(storage) => Some(*storage),
+            PlannedScopeAction::Cleanup(_) => None,
+        }
+    }
+
     #[test]
     fn plans_inner_scopes_and_locals_in_reverse_without_consuming_state() {
         let callable = CallableId::Function(FunctionId::new(0));
@@ -518,50 +682,28 @@ mod tests {
 
         let all = planner.for_all_scopes(span);
         assert_eq!(
-            all.cleanups
+            all.actions
                 .iter()
-                .map(|cleanup| match cleanup {
-                    PlannedCleanup::Inline(cleanup) =>
-                        cleanup.destination.base.expect_local_storage(),
-                    PlannedCleanup::Shared(release) => release.owner,
-                    PlannedCleanup::ClassOptional(cleanup) => {
-                        cleanup.destination.base.expect_local_storage()
-                    }
-                    PlannedCleanup::OptionalShared(cleanup) => {
-                        cleanup.destination.base.expect_local_storage()
-                    }
-                    PlannedCleanup::AggregateOptional(cleanup) => {
-                        cleanup.destination.base.expect_local_storage()
-                    }
-                    PlannedCleanup::Array { storage, .. } => *storage,
-                })
+                .filter_map(cleanup_storage)
                 .collect::<Vec<_>>(),
             [second_inner, first_inner, outer]
         );
-        assert_eq!(all.storage, [second_inner, first_inner, outer]);
-        assert_eq!(planner.for_current_scope(span).cleanups.len(), 2);
-        assert_eq!(planner.for_current_scope(span).storage.len(), 2);
+        assert_eq!(
+            all.actions
+                .iter()
+                .filter_map(dead_storage)
+                .collect::<Vec<_>>(),
+            [second_inner, first_inner, outer]
+        );
+        assert_eq!(planner.for_current_scope(span).actions.len(), 4);
         let targeted = planner.for_scopes_exiting_to(retain_outer, span);
         let repeated = planner.for_scopes_exiting_to(retain_outer, span);
-        assert_eq!(targeted.storage, [second_inner, first_inner]);
-        assert_eq!(repeated.storage, targeted.storage);
+        assert_eq!(targeted.actions.len(), 4);
+        assert_eq!(repeated.actions.len(), targeted.actions.len());
         planner.leave_scope();
         let outer_exit = planner.for_current_scope(span);
-        assert_eq!(
-            match &outer_exit.cleanups[0] {
-                PlannedCleanup::Inline(cleanup) => cleanup.destination.base.expect_local_storage(),
-                PlannedCleanup::Shared(release) => release.owner,
-                PlannedCleanup::ClassOptional(cleanup) =>
-                    cleanup.destination.base.expect_local_storage(),
-                PlannedCleanup::OptionalShared(cleanup) =>
-                    cleanup.destination.base.expect_local_storage(),
-                PlannedCleanup::AggregateOptional(cleanup) =>
-                    cleanup.destination.base.expect_local_storage(),
-                PlannedCleanup::Array { storage, .. } => *storage,
-            },
-            outer
-        );
-        assert_eq!(outer_exit.storage, [outer]);
+        assert_eq!(cleanup_storage(&outer_exit.actions[0]).unwrap(), outer);
+        assert_eq!(dead_storage(&outer_exit.actions[1]), Some(outer));
     }
 
     #[test]
@@ -587,16 +729,24 @@ mod tests {
         assert_eq!(
             planner
                 .for_scopes_exiting_to(RetainedScopeDepth(0), span)
-                .storage,
+                .actions
+                .iter()
+                .filter_map(dead_storage)
+                .collect::<Vec<_>>(),
             [inner, middle, outer]
         );
         assert_eq!(
-            planner.for_scopes_exiting_to(retain_outer, span).storage,
+            planner
+                .for_scopes_exiting_to(retain_outer, span)
+                .actions
+                .iter()
+                .filter_map(dead_storage)
+                .collect::<Vec<_>>(),
             [inner, middle]
         );
         assert!(planner
             .for_scopes_exiting_to(retain_all, span)
-            .storage
+            .actions
             .is_empty());
     }
 }

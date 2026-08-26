@@ -1266,6 +1266,21 @@ impl BodyLowerer<'_> {
 
     pub(super) fn end_optional_views_from(&mut self, mark: usize, span: crate::source::Span) {
         let guards: Vec<_> = self.active_optional_guards.drain(mark..).rev().collect();
+        self.emit_optional_guards(guards, span);
+    }
+
+    pub(super) fn take_optional_views_from(
+        &mut self,
+        mark: usize,
+    ) -> Vec<super::ActiveOptionalGuard> {
+        self.active_optional_guards.drain(mark..).collect()
+    }
+
+    pub(super) fn emit_optional_guards(
+        &mut self,
+        guards: Vec<super::ActiveOptionalGuard>,
+        span: crate::source::Span,
+    ) {
         for guard in guards {
             self.emit(match guard {
                 super::ActiveOptionalGuard::Inline {

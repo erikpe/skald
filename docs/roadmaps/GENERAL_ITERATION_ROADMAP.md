@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT4` is complete; `IT5` is next.
+Status: in progress. `IT5` is complete; `IT6` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -83,7 +83,7 @@ Every task preserves these cross-cutting decisions:
 | [IT2](#it2--nominal-protocol-selection-and-loop-scopes) | [x] Complete | Exact claims and generic bounds select deterministic protocol evidence before the typed item scope and loop body resolve. |
 | [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [x] Complete | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans for the initial core matrix. |
 | [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [x] Complete | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
-| [IT5](#it5--loop-duration-receiver-composition) | [ ] Planned | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
+| [IT5](#it5--loop-duration-receiver-composition) | [x] Complete | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
 | [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [ ] Planned | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
 | [IT7](#it7--ordinary-vec-adoption) | [ ] Planned | `Vec<T>` implements `Iterable<T, u64>` in ordinary source and composes with generic consumers. |
 | [IT8](#it8--verification-diagnostics-and-determinism-hardening) | [ ] Planned | Negative verifier evidence, stable diagnostics, dumps, and reordered-declaration determinism close trust gaps. |
@@ -412,22 +412,22 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Cover named exact-class places and existing interface views.
-- [ ] Cover inherited/base/interface projections while retaining complete-object
+- [x] Cover named exact-class places and existing interface views.
+- [x] Cover inherited/base/interface projections while retaining complete-object
   provenance and exact dispatch.
-- [ ] Cover compatible produced exact-class expressions with one hidden owning
+- [x] Cover compatible produced exact-class expressions with one hidden owning
   temporary spanning the whole loop.
-- [ ] Cover named, produced, and replaceable shared-owner sources with a secured
+- [x] Cover named, produced, and replaceable shared-owner sources with a secured
   strong anchor that survives body mutation of the original owner place.
-- [ ] Cover checked casts and optional-derived views with guards/anchors whose
+- [x] Cover checked casts and optional-derived views with guards/anchors whose
   validity spans every iteration and outer cleanup edge.
-- [ ] Cover inline/shared/optional array-backed receiver paths admitted by
+- [x] Cover inline/shared/optional array-backed receiver paths admitted by
   ordinary object-view rules, including detached backing anchors.
-- [ ] Reject mutable/consuming receiver requirements and sources that cannot
+- [x] Reject mutable/consuming receiver requirements and sources that cannot
   supply a safe loop-duration read-only interface view.
-- [ ] Permit ordinary independent mutation by the body without adding snapshot
+- [x] Permit ordinary independent mutation by the body without adding snapshot
   or concurrent-modification rules.
-- [ ] Prove receiver release occurs after state cleanup and exactly once on
+- [x] Prove receiver release occurs after state cleanup and exactly once on
   termination, break, and return.
 
 Tests:

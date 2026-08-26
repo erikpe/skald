@@ -27,6 +27,7 @@ pub(super) struct FullExpressionTracker {
     has_shared_effect: bool,
 }
 
+#[derive(Clone)]
 pub(super) struct FullExpressionPlan {
     pub(super) conditions: Vec<MirPathCondition>,
     pub(super) temporaries: Vec<ConditionalRegistration<FullExpressionTemporary>>,
@@ -159,6 +160,14 @@ impl FullExpressionTracker {
 }
 
 impl FullExpressionPlan {
+    pub(super) fn is_empty(&self) -> bool {
+        self.conditions.is_empty()
+            && self.temporaries.is_empty()
+            && self.storage.is_empty()
+            && self.checked_views.is_empty()
+            && !self.has_shared_effect
+    }
+
     pub(super) fn requires_boundary(&self) -> bool {
         !self.conditions.is_empty()
             || !self.temporaries.is_empty()

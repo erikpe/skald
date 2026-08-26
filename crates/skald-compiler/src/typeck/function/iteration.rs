@@ -5,11 +5,11 @@ use crate::{
     hir::{
         HirAccess, HirForIn, HirIterationCallTarget, HirIterationItemPlan,
         HirIterationNextCallPlan, HirIterationProtocol, HirIterationReceiver,
-        HirIterationReceiverLifetime, HirIterationResultPlan, HirIterationSpans,
-        HirIterationStateAlias, HirIterationStateCallPlan, HirIterationStatePlan,
-        HirIterationStoredValuePlan, HirIterationValueDestruction, HirIterationValueInitialization,
-        HirOptionalDestructionPlan, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
-        HirStatement, HirViewTarget, Type,
+        HirIterationReceiverCarrier, HirIterationReceiverLifetime, HirIterationResultPlan,
+        HirIterationSpans, HirIterationStateAlias, HirIterationStateCallPlan,
+        HirIterationStatePlan, HirIterationStoredValuePlan, HirIterationValueDestruction,
+        HirIterationValueInitialization, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
+        HirOptionalUnwrapPlan, HirStatement, HirViewTarget, Type,
     },
     resolve::ResolvedForIn,
 };
@@ -23,7 +23,7 @@ impl CallableChecker<'_, '_> {
     pub(super) fn check_for_in_statement(&mut self, statement: &ResolvedForIn) -> CheckedStatement {
         let item_type = lower_type_kind(statement.selection.item);
         let state_type = lower_type_kind(statement.selection.state);
-        let receiver = self.check_iteration_receiver(statement);
+        let mut receiver = self.check_iteration_receiver(statement);
         let state_value = self.check_iteration_state(state_type, statement);
         let item_value = self.check_iteration_item(item_type, statement);
         let result = self.check_iteration_result(item_type, statement);
@@ -38,6 +38,26 @@ impl CallableChecker<'_, '_> {
         let body = self.check_block(&statement.body);
         let removed = self.read_only_locals.remove(&statement.binding);
         debug_assert!(removed);
+        if let Some(binding) = receiver
+            .as_ref()
+            .and_then(iteration_guarded_optional_binding)
+        {
+            if let Some(span) = guarded_optional_write(&body, binding) {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        GENERAL_ITERATION_UNSUPPORTED,
+                        "loop body cannot replace a guarded optional iteration receiver",
+                    )
+                    .with_primary_label(span, "this write would invalidate the retained payload view")
+                    .with_secondary_label(
+                        statement.iterable.span(),
+                        "the optional payload is retained for the whole loop",
+                    )
+                    .with_note("copy or move the iterable into an independent local before iterating if the original optional must be replaced"),
+                );
+                receiver = None;
+            }
+        }
         let effects = body.effects.clone().through_loop(statement.loop_id);
 
         let hir = receiver.zip(state_value).zip(item_value).zip(result).map(
@@ -103,28 +123,24 @@ impl CallableChecker<'_, '_> {
         &mut self,
         statement: &ResolvedForIn,
     ) -> Option<HirIterationReceiver> {
-        let (iterable, view) = match self.check_core_iteration_view(
-            &statement.iterable,
-            HirViewTarget::Interface(statement.selection.interface),
-        )? {
-            Ok(receiver) => receiver,
-            Err(span) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        GENERAL_ITERATION_UNSUPPORTED,
-                        "this iteration receiver family is not implemented yet",
-                    )
-                    .with_primary_label(
-                        span,
-                        "the current core supports named class and interface-view receivers",
-                    ),
-                );
-                return None;
-            }
+        let target = HirViewTarget::Interface(statement.selection.interface);
+        let (iterable, carrier) = if let Some(cast) = iteration_cast(&statement.iterable) {
+            let mut checked = self.check_object_cast(cast)?;
+            let iterable = view_target_type(checked.view.target);
+            anchor_checked_iteration_source(&mut checked.view);
+            checked.consumer_target = target;
+            checked.consumer_access = HirAccess::ReadOnly;
+            (
+                iterable,
+                HirIterationReceiverCarrier::Checked(Box::new(checked)),
+            )
+        } else {
+            let (iterable, view) = self.check_iteration_view(&statement.iterable, target)?;
+            (iterable, HirIterationReceiverCarrier::View(view))
         };
         Some(HirIterationReceiver {
             iterable,
-            view,
+            carrier,
             lifetime: HirIterationReceiverLifetime::LoopDuration,
         })
     }
@@ -255,6 +271,122 @@ impl CallableChecker<'_, '_> {
             .with_note(note),
         );
     }
+}
+
+fn iteration_cast(
+    expression: &crate::resolve::ResolvedExpression,
+) -> Option<&crate::resolve::ResolvedObjectCastExpr> {
+    match expression {
+        crate::resolve::ResolvedExpression::ObjectCast(cast) => Some(cast),
+        crate::resolve::ResolvedExpression::Grouped(grouped) => iteration_cast(&grouped.expression),
+        _ => None,
+    }
+}
+
+const fn view_target_type(target: HirViewTarget) -> Type {
+    match target {
+        HirViewTarget::Class(class) => Type::Class(class),
+        HirViewTarget::Interface(interface) => Type::Interface(interface),
+        HirViewTarget::Obj => Type::Obj,
+    }
+}
+
+fn anchor_checked_iteration_source(view: &mut crate::hir::HirObjectView) {
+    let crate::hir::HirViewSource::Shared {
+        binding,
+        target,
+        access,
+        projections,
+        span,
+    } = &view.source
+    else {
+        return;
+    };
+    let binding = *binding;
+    let target = *target;
+    let access = *access;
+    let projections = projections.clone();
+    let span = *span;
+    view.source = crate::hir::HirViewSource::AnchoredShared {
+        source: Box::new(crate::hir::HirSharedSource::Place(
+            crate::hir::HirSharedPlace::Binding {
+                binding,
+                target: view_shared_target(target),
+                span,
+            },
+        )),
+        target,
+        access,
+        projections,
+        span,
+    };
+    *view.origin = crate::hir::HirObjectOrigin::AnchoredShared {
+        static_target: target,
+        access,
+        span,
+    };
+}
+
+const fn view_shared_target(target: HirViewTarget) -> crate::hir::HirSharedTarget {
+    match target {
+        HirViewTarget::Class(class) => crate::hir::HirSharedTarget::Class(class),
+        HirViewTarget::Interface(interface) => crate::hir::HirSharedTarget::Interface(interface),
+        HirViewTarget::Obj => crate::hir::HirSharedTarget::Obj,
+    }
+}
+
+fn iteration_guarded_optional_binding(
+    receiver: &HirIterationReceiver,
+) -> Option<crate::identity::BindingId> {
+    let HirIterationReceiverCarrier::View(view) = &receiver.carrier else {
+        return None;
+    };
+    let crate::hir::HirViewSource::OptionalPayload { view, .. } = &view.source else {
+        return None;
+    };
+    let crate::hir::HirOptionalOperand::ClassPlace(place) = &view.source else {
+        return None;
+    };
+    let crate::hir::HirOptionalStorage::Binding(binding) = &place.storage else {
+        return None;
+    };
+    Some(*binding)
+}
+
+fn guarded_optional_write(
+    block: &crate::hir::HirBlock,
+    binding: crate::identity::BindingId,
+) -> Option<crate::source::Span> {
+    for statement in &block.statements {
+        if let crate::hir::HirStatement::ClassOptionalAssignment(assignment) = statement {
+            if matches!(
+                assignment.destination.storage,
+                crate::hir::HirOptionalStorage::Binding(candidate) if candidate == binding
+            ) {
+                return Some(assignment.span);
+            }
+        }
+        let nested = match statement {
+            crate::hir::HirStatement::Conditional(conditional) => conditional
+                .arms
+                .iter()
+                .find_map(|arm| guarded_optional_write(&arm.body, binding))
+                .or_else(|| {
+                    conditional
+                        .else_block
+                        .as_ref()
+                        .and_then(|body| guarded_optional_write(body, binding))
+                }),
+            crate::hir::HirStatement::While(loop_) => guarded_optional_write(&loop_.body, binding),
+            crate::hir::HirStatement::ForIn(loop_) => guarded_optional_write(&loop_.body, binding),
+            crate::hir::HirStatement::Block(block) => guarded_optional_write(block, binding),
+            _ => None,
+        };
+        if nested.is_some() {
+            return nested;
+        }
+    }
+    None
 }
 
 fn is_primitive_value(ty: Type) -> bool {

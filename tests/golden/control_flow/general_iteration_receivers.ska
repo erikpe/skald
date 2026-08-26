@@ -1,0 +1,76 @@
+import std::io;
+
+from std::iter import Iterable;
+
+
+class Counter implements Iterable<u64, u64> {
+    limit: u64;
+
+    init(limit: u64) {
+        self.limit = limit;
+    }
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> u64? {
+        if (state < self.limit) {
+            var item: u64 = state;
+            state = state + 1u;
+            return item;
+        }
+        return none;
+    }
+}
+
+fn make_counter() -> Counter {
+    std::io::println_u64(900u);
+    return Counter(2u);
+}
+
+fn produced_once() -> u64 {
+    var sum: u64 = 0u;
+    for (item in make_counter()) {
+        sum = sum + item;
+    }
+    return sum;
+}
+
+fn replace_shared_owner() -> u64 {
+    var owner: shared Counter = new Counter(2u);
+    var sum: u64 = 0u;
+    for (item in *owner) {
+        sum = sum + item;
+        owner = new Counter(0u);
+    }
+    return sum;
+}
+
+fn replace_optional_root() -> u64 {
+    var maybe: Counter? = Counter(2u);
+    var sum: u64 = 0u;
+    for (item in maybe!) {
+        sum = sum + item;
+        var independent: u64 = item + 10u;
+    }
+    return sum;
+}
+
+fn replace_array_backing() -> u64 {
+    var values: Counter[] = Counter[]{Counter(2u)};
+    var sum: u64 = 0u;
+    for (item in values[0]) {
+        sum = sum + item;
+        values = Counter[]{Counter(0u)};
+    }
+    return sum;
+}
+
+fn main() -> i64 {
+    std::io::println_u64(produced_once());
+    std::io::println_u64(replace_shared_owner());
+    std::io::println_u64(replace_optional_root());
+    std::io::println_u64(replace_array_backing());
+    return 0;
+}

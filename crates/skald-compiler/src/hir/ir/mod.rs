@@ -72,10 +72,10 @@ pub use integer_division::{
 pub use io::HirIoOperation;
 pub use iteration::{
     HirForIn, HirIterationCallTarget, HirIterationItemPlan, HirIterationNextCallPlan,
-    HirIterationProtocol, HirIterationReceiver, HirIterationReceiverLifetime,
-    HirIterationResultPlan, HirIterationSpans, HirIterationStateAlias, HirIterationStateCallPlan,
-    HirIterationStatePlan, HirIterationStoredValuePlan, HirIterationValueDestruction,
-    HirIterationValueInitialization,
+    HirIterationProtocol, HirIterationReceiver, HirIterationReceiverCarrier,
+    HirIterationReceiverLifetime, HirIterationResultPlan, HirIterationSpans,
+    HirIterationStateAlias, HirIterationStateCallPlan, HirIterationStatePlan,
+    HirIterationStoredValuePlan, HirIterationValueDestruction, HirIterationValueInitialization,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,

@@ -29,7 +29,7 @@ impl ViewSourceUse {
     const fn accepts_produced_inline(self) -> bool {
         matches!(
             self,
-            Self::AliasArgument | Self::Cast | Self::CopyConstruction
+            Self::AliasArgument | Self::Iteration | Self::Cast | Self::CopyConstruction
         )
     }
 
@@ -56,7 +56,7 @@ impl ViewSourceUse {
     const fn object_message(self) -> &'static str {
         match self {
             Self::AliasArgument => "alias argument must designate an object",
-            Self::Iteration => "iteration requires a stable class or interface receiver",
+            Self::Iteration => "iteration requires a read-only object receiver",
             Self::TypeTest => "type-test source must designate an object",
             Self::Cast => "object-cast source must designate an object",
             Self::CopyConstruction => "copy-construction source must designate an object",
@@ -68,7 +68,9 @@ impl ViewSourceUse {
             Self::AliasArgument => {
                 "alias argument must use an object place, an explicit shared dereference, or a compatible produced object"
             }
-            Self::Iteration => "iteration currently requires a named class or interface view",
+            Self::Iteration => {
+                "iteration requires an object view that is safe for the whole loop"
+            }
             Self::TypeTest => "type-test source must be an existing object place",
             Self::Cast => "object-cast source must be an existing object place",
             Self::CopyConstruction => {
@@ -110,6 +112,11 @@ pub(super) enum CheckedObjectViewSource {
         view: crate::hir::HirOptionalBoxObjectView,
         projections: Vec<crate::object_path::ObjectProjection>,
     },
+    ArrayElement {
+        element: Box<crate::hir::HirArrayElementPlace>,
+        class: crate::identity::ClassId,
+        span: Span,
+    },
 }
 
 impl CheckedObjectViewSource {
@@ -121,6 +128,7 @@ impl CheckedObjectViewSource {
             Self::Produced { .. } => HirAccess::ReadOnly,
             Self::Optional { view, .. } => view.access,
             Self::OptionalBox { view, .. } => view.access,
+            Self::ArrayElement { element, .. } => element.receiver.access,
         }
     }
 
@@ -132,6 +140,7 @@ impl CheckedObjectViewSource {
             Self::Produced { span, .. } => *span,
             Self::Optional { view, .. } => view.span,
             Self::OptionalBox { view, .. } => view.span,
+            Self::ArrayElement { span, .. } => *span,
         }
     }
 
@@ -144,6 +153,7 @@ impl CheckedObjectViewSource {
             Self::Produced { class, .. } => HirViewTarget::Class(*class),
             Self::Optional { class, .. } => HirViewTarget::Class(*class),
             Self::OptionalBox { view, .. } => view.target,
+            Self::ArrayElement { class, .. } => HirViewTarget::Class(*class),
         }
     }
 
@@ -169,6 +179,7 @@ impl CheckedObjectViewSource {
             Self::Produced { class, .. } => Some(*class),
             Self::Optional { class, .. } => Some(*class),
             Self::OptionalBox { view, .. } => view.source.exact_dynamic_class(),
+            Self::ArrayElement { class, .. } => Some(*class),
         }
     }
 
@@ -267,6 +278,20 @@ impl CheckedObjectViewSource {
             Self::OptionalBox { view, projections } => {
                 super::optional_box_view::into_object_view(view, target, access, projections)
             }
+            Self::ArrayElement {
+                element,
+                class,
+                span,
+            } => HirObjectView {
+                source: HirViewSource::ArrayElement(element),
+                origin: Box::new(HirObjectOrigin::Produced {
+                    dynamic_class: class,
+                    span,
+                }),
+                target,
+                access,
+                span,
+            },
         }
     }
 }
@@ -745,8 +770,33 @@ impl CallableChecker<'_, '_> {
                     CheckedObjectViewSource::Shared(source) => source.set_span(grouped.span),
                     CheckedObjectViewSource::Optional { view, .. } => view.span = grouped.span,
                     CheckedObjectViewSource::OptionalBox { view, .. } => view.span = grouped.span,
+                    CheckedObjectViewSource::ArrayElement { span, .. } => *span = grouped.span,
                 }
                 Some(source)
+            }
+            ResolvedExpression::ArrayProjection(projection) => {
+                let checked = self.check_array_projection(projection)?;
+                let Type::Class(class) = checked.ty else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            source_use.diagnostic_code(),
+                            source_use.object_message(),
+                        )
+                        .with_primary_label(checked.span, "this array element is not a class"),
+                    );
+                    return None;
+                };
+                let crate::hir::HirExpressionKind::ArrayElement(mut element) = checked.kind else {
+                    unreachable!("checked indexed class source must retain its element place")
+                };
+                if element.receiver.ownership == crate::hir::HirArrayReceiverOwnership::Inline {
+                    element.receiver.anchor = crate::hir::HirArrayAnchor::InlineBacking;
+                }
+                Some(CheckedObjectViewSource::ArrayElement {
+                    element,
+                    class,
+                    span: checked.span,
+                })
             }
             ResolvedExpression::FieldAccess(access) => {
                 let field = self
@@ -902,25 +952,24 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    /// Builds the stable named receiver subset admitted by the initial
-    /// general-iteration HIR task. The outer `Option` represents an ordinary
-    /// source error; `Err(span)` identifies a valid but later receiver family.
-    pub(in crate::typeck) fn check_core_iteration_view(
+    /// Builds a read-only loop-duration view using the ordinary object-view
+    /// source rules. Shared bindings are deliberately anchored: the loop body
+    /// may replace the owner binding without invalidating the retained view.
+    pub(in crate::typeck) fn check_iteration_view(
         &mut self,
         expression: &ResolvedExpression,
         target: HirViewTarget,
-    ) -> Option<Result<(Type, HirObjectView), Span>> {
+    ) -> Option<(Type, HirObjectView)> {
         let source = self.check_object_view_source(expression, ViewSourceUse::Iteration)?;
-        let iterable = match &source {
-            CheckedObjectViewSource::Class { place, .. } => Type::Class(place.class()),
-            CheckedObjectViewSource::Interface { interface, .. } => Type::Interface(*interface),
-            _ => return Some(Err(source.span())),
-        };
+        let iterable = view_target_type(source.static_target());
         debug_assert!(source.access().permits(HirAccess::ReadOnly));
-        Some(Ok((
-            iterable,
-            source.into_view(target, HirAccess::ReadOnly),
-        )))
+        let source = match source {
+            CheckedObjectViewSource::Shared(shared) => {
+                CheckedObjectViewSource::Shared(shared.into_iteration_source())
+            }
+            source => source,
+        };
+        Some((iterable, source.into_view(target, HirAccess::ReadOnly)))
     }
 
     fn reject_implicit_shared_view_source(
@@ -1164,9 +1213,13 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (
-                source @ CheckedObjectViewSource::Produced { class, .. },
+                source @ (CheckedObjectViewSource::Produced { .. }
+                | CheckedObjectViewSource::ArrayElement { .. }),
                 expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
             ) => {
+                let HirViewTarget::Class(class) = source.static_target() else {
+                    unreachable!("exact retained sources must have a class target")
+                };
                 if required != HirAccess::ReadOnly {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -1175,7 +1228,7 @@ impl CallableChecker<'_, '_> {
                         )
                         .with_primary_label(
                             source_span,
-                            "this expression produces a temporary object",
+                            "this source provides only a read-only retained view",
                         )
                         .with_secondary_label(parameter.span(), "mutable alias declared here"),
                     );
@@ -1396,6 +1449,14 @@ fn is_object_cast_expression(expression: &ResolvedExpression) -> bool {
         ResolvedExpression::ObjectCast(_) => true,
         ResolvedExpression::Grouped(grouped) => is_object_cast_expression(&grouped.expression),
         _ => false,
+    }
+}
+
+const fn view_target_type(target: HirViewTarget) -> Type {
+    match target {
+        HirViewTarget::Class(class) => Type::Class(class),
+        HirViewTarget::Interface(interface) => Type::Interface(interface),
+        HirViewTarget::Obj => Type::Obj,
     }
 }
 

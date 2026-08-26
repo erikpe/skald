@@ -508,6 +508,18 @@ impl BodyLowerer<'_> {
     }
 
     pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
+        self.lower_object_view_with_retention(view, false)
+    }
+
+    pub(super) fn lower_iteration_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
+        self.lower_object_view_with_retention(view, true)
+    }
+
+    fn lower_object_view_with_retention(
+        &mut self,
+        view: &HirObjectView,
+        retain_replaceable_owner: bool,
+    ) -> MirObjectView {
         let produced_class = match &view.source {
             HirViewSource::Produced { .. } => {
                 let crate::hir::HirObjectOrigin::Produced { dynamic_class, .. } =
@@ -579,7 +591,9 @@ impl BodyLowerer<'_> {
                 projections,
             } => {
                 let owner = match &optional_box.source {
-                    HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
+                    HirSharedSource::Place(HirSharedPlace::Binding { binding, .. })
+                        if !retain_replaceable_owner =>
+                    {
                         self.storage_for_binding(*binding)
                     }
                     source => self.new_shared_anchor(source, optional_box.span),
@@ -696,7 +710,22 @@ impl BodyLowerer<'_> {
         &mut self,
         checked: &crate::hir::HirCheckedObjectView,
     ) -> MirObjectView {
-        let source = self.lower_object_view(&checked.view);
+        self.lower_checked_object_view_with_retention(checked, false)
+    }
+
+    pub(super) fn lower_iteration_checked_object_view(
+        &mut self,
+        checked: &crate::hir::HirCheckedObjectView,
+    ) -> MirObjectView {
+        self.lower_checked_object_view_with_retention(checked, true)
+    }
+
+    fn lower_checked_object_view_with_retention(
+        &mut self,
+        checked: &crate::hir::HirCheckedObjectView,
+        retain_replaceable_owner: bool,
+    ) -> MirObjectView {
+        let source = self.lower_object_view_with_retention(&checked.view, retain_replaceable_owner);
         let direct_static_source = matches!(
             checked.view.source,
             HirViewSource::Place(_)

@@ -413,7 +413,14 @@ impl<'hir> BodyLowerer<'hir> {
     }
 
     fn emit_scope_exit(&mut self, exit: cleanup::PlannedScopeExit) {
-        for cleanup in exit.cleanups {
+        for action in exit.actions {
+            let cleanup = match action {
+                cleanup::PlannedScopeAction::Cleanup(cleanup) => cleanup,
+                cleanup::PlannedScopeAction::StorageDead(storage) => {
+                    self.end_storage_lifetime(storage, exit.span);
+                    continue;
+                }
+            };
             match cleanup {
                 cleanup::PlannedCleanup::Inline(cleanup) => {
                     self.emit(MirInstruction::Cleanup(cleanup))
@@ -439,10 +446,10 @@ impl<'hir> BodyLowerer<'hir> {
                     array,
                     span,
                 })),
+                cleanup::PlannedCleanup::IterationReceiver(resources) => {
+                    self.emit_iteration_receiver_resources(resources, exit.span)
+                }
             }
-        }
-        for storage in exit.storage {
-            self.end_storage_lifetime(storage, exit.span);
         }
     }
 
