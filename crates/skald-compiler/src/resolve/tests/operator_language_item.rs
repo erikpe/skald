@@ -357,7 +357,7 @@ fn valid_replacement_bundle_and_explicit_protocol_use_follow_ordinary_interfaces
 }
 
 #[test]
-fn qualified_protocol_use_is_ordinary_and_class_punctuation_remains_unavailable() {
+fn qualified_protocol_use_authorizes_value_producing_class_punctuation() {
     let app = concat!(
         "import std::ops;\n",
         "class Number implements std::ops::OpAdd<Number, Number> {\n",
@@ -374,5 +374,13 @@ fn qualified_protocol_use_is_ordinary_and_class_punctuation_remains_unavailable(
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     assert!(output.program.operator_language_item.is_some());
     let checked = type_check(&output.program);
-    assert!(checked.has_errors());
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked
+        .hir
+        .expect("qualified canonical conformance must authorize punctuation");
+    let dump = crate::hir::dump_hir(&hir);
+    assert!(dump.contains("ObjectCall interface"), "{dump}");
+    assert!(dump.contains("ObjectResult"), "{dump}");
+    crate::mir::verify_mir(&crate::mir::lower_hir(&hir))
+        .expect("overloaded punctuation must lower through ordinary interface machinery");
 }

@@ -129,13 +129,25 @@ fn rejects_every_noninteger_family_with_focused_actual_type_diagnostics() {
             let diagnostic = output
                 .diagnostics
                 .iter()
-                .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+                .find(|diagnostic| {
+                    diagnostic.code == TYPE_MISMATCH
+                        || diagnostic.code
+                            == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+                })
                 .unwrap();
-            assert!(diagnostic.message.starts_with("bitwise "));
-            assert!(diagnostic
-                .labels
-                .iter()
-                .any(|label| label.message.contains(&format!("type `{actual_type}`"))));
+            if diagnostic.code == TYPE_MISMATCH {
+                assert!(diagnostic.message.starts_with("bitwise "));
+                assert!(diagnostic
+                    .labels
+                    .iter()
+                    .any(|label| label.message.contains(&format!("type `{actual_type}`"))));
+            } else {
+                assert!(parameter == "ref value: Item" && !expression.starts_with('1'));
+                assert!(diagnostic
+                    .labels
+                    .iter()
+                    .any(|label| label.message.contains("static type `Item`")));
+            }
         }
     }
 

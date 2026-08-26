@@ -7,12 +7,14 @@ use crate::{
     resolve::{
         ResolvedExpression, ResolvedInitializerDeclaration, ResolvedObjectReceiver,
         ResolvedParameter, ResolvedParameterBindingMode, ResolvedTypeKind,
+        ResolvedValueOperatorResolution,
     },
     source::Span,
     typeck::{
         expression::class_provides_view,
         program::{
-            lower_type, AMBIGUOUS_INITIALIZER, NO_MATCHING_INITIALIZER, PRIVATE_INITIALIZER_ACCESS,
+            lower_type, lower_type_kind, AMBIGUOUS_INITIALIZER, NO_MATCHING_INITIALIZER,
+            PRIVATE_INITIALIZER_ACCESS,
         },
     },
 };
@@ -343,7 +345,12 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::ByteLiteral(_) => Type::U8,
             ResolvedExpression::StringLiteral(literal) => Type::Class(literal.class),
             ResolvedExpression::Boolean(_) | ResolvedExpression::TypeTest(_) => Type::Bool,
-            ResolvedExpression::Unary(unary) => self.static_expression_type(&unary.operand),
+            ResolvedExpression::Unary(unary) => match &unary.selection {
+                Some(resolution) => resolution
+                    .selected()
+                    .map_or(Type::Unit, |selection| lower_type_kind(selection.output)),
+                None => self.static_expression_type(&unary.operand),
+            },
             ResolvedExpression::Dereference(dereference) => match dereference.target {
                 crate::resolve::ResolvedSharedTarget::Obj => Type::Obj,
                 crate::resolve::ResolvedSharedTarget::Class(class) => Type::Class(class),
@@ -358,6 +365,11 @@ impl CallableChecker<'_, '_> {
                     .and_then(|metadata| metadata.optional)
                     .map_or(Type::Unit, Type::Optional),
             },
+            ResolvedExpression::Binary(binary) if binary.selection.is_some() => binary
+                .selection
+                .as_ref()
+                .and_then(ResolvedValueOperatorResolution::selected)
+                .map_or(Type::Unit, |selection| lower_type_kind(selection.output)),
             ResolvedExpression::Binary(binary) => match binary.operator {
                 crate::resolve::ResolvedBinaryOperator::Equal
                 | crate::resolve::ResolvedBinaryOperator::NotEqual

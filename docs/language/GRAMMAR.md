@@ -831,7 +831,8 @@ and its
 
 ### Implemented primitive-operator expressions
 
-The complete primitive-operator grammar has the following implemented shape:
+Primitive operators and value-producing class protocol operators share the
+following implemented grammar:
 
 ```text
 expression                = logical-or-expression
@@ -908,8 +909,12 @@ operand.
 Existing `//` line-comment recognition remains distinct from division: adjacent
 `//` begins a comment, while `/ /` is two division tokens separated by trivia.
 
-The source semantics and exact operand matrix are defined by the
-[implemented primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
+The source semantics are defined by the
+[implemented primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
+and the staged [interface-based operator-overloading
+contract](OPERATOR_OVERLOADING.md). Value-producing class punctuation is
+implemented; class predicate punctuation and definition-site generic
+selection remain staged.
 The [status matrix](STATUS.md) remains authoritative for compiler support.
 
 ## Syntax errors and nesting

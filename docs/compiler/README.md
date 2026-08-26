@@ -155,13 +155,14 @@ They do not claim support for the explicitly deferred operator and conversion
 work in the [status matrix](../language/STATUS.md#not-implemented).
 
 The staged [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
-defines the next operator extension without changing the executable pipeline.
-Its dependency-free `std::ops` source, complete reachable-bundle validation,
-and exact resolved identity table are implemented. Canonical class uses will
-erase before HIR to ordinary interface calls, canonical
+extends operators without adding a runtime mechanism. Its dependency-free
+`std::ops` source, complete reachable-bundle validation, exact resolved
+identity table, and value-producing class selection are implemented. Selected
+class uses erase before completed HIR to ordinary interface calls; canonical
 primitive-bound uses erase to existing primitive operations, and produced
 primitive read-only arguments use the implemented caller-owned scalar
-temporaries. The remaining operator design adds no overloaded-operator MIR
+temporaries. Predicate and generic-bound punctuation remain staged. The
+remaining operator design adds no overloaded-operator MIR
 node, backend semantic lookup, runtime service, or ABI revision and is not
 implemented yet.
 

@@ -108,8 +108,20 @@ fn rejects_noninteger_left_families_with_actual_types() {
             let diagnostic = output
                 .diagnostics
                 .iter()
-                .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+                .find(|diagnostic| {
+                    diagnostic.code == TYPE_MISMATCH
+                        || diagnostic.code
+                            == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+                })
                 .unwrap();
+            if diagnostic.code != TYPE_MISMATCH {
+                assert_eq!(actual_type, "class c0");
+                assert!(diagnostic
+                    .labels
+                    .iter()
+                    .any(|label| label.message.contains("static type `Item`")));
+                continue;
+            }
             assert!(diagnostic.labels.iter().any(|label| label
                 .message
                 .contains(&format!("left operand has type `{actual_type}`"))));

@@ -66,7 +66,7 @@ matches = [
  --> tests/golden/operators/integer_bitwise_operator_types.ska:16:12""" },
   { name = "complement array", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
  --> tests/golden/operators/integer_bitwise_operator_types.ska:20:12""" },
-  { name = "complement class", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+  { name = "complement class", match = "contains", inline = """error[TYP047]: operator `~` is unsupported for these operands
  --> tests/golden/operators/integer_bitwise_operator_types.ska:24:12""" },
   { name = "complement shared", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
  --> tests/golden/operators/integer_bitwise_operator_types.ska:28:12""" },
@@ -82,7 +82,7 @@ matches = [
  --> tests/golden/operators/integer_bitwise_operator_types.ska:48:17""" },
   { name = "binary array", match = "contains", inline = """error[TYP005]: bitwise `&` requires operands of the same primitive integer type
  --> tests/golden/operators/integer_bitwise_operator_types.ska:52:17""" },
-  { name = "binary class", match = "contains", inline = """error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+  { name = "binary class", match = "contains", inline = """error[TYP047]: operator `|` is unsupported for these operands
  --> tests/golden/operators/integer_bitwise_operator_types.ska:56:17""" },
   { name = "binary shared", match = "contains", inline = """error[TYP005]: bitwise `^` requires operands of the same primitive integer type
  --> tests/golden/operators/integer_bitwise_operator_types.ska:60:17""" },
@@ -116,6 +116,6 @@ matches = [
  --> tests/golden/operators/integer_shift_operator_types.ska:14:9""" },
   { name = "absent operand", match = "contains", inline = """error[TYP005]: shift `<<` requires a primitive integer left operand and a `u64` count
  --> tests/golden/operators/integer_shift_operator_types.ska:15:10""" },
-  { name = "object operand", match = "contains", inline = """error[TYP005]: shift `>>` requires a primitive integer left operand and a `u64` count
+  { name = "object operand", match = "contains", inline = """error[TYP047]: operator `>>` is unsupported for these operands
  --> tests/golden/operators/integer_shift_operator_types.ska:16:13""" },
 ]

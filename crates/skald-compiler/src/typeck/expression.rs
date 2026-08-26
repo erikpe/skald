@@ -26,6 +26,7 @@ mod indirect_call;
 mod io;
 mod logical;
 mod object_view_relation;
+mod operator;
 mod optional_box_view;
 mod place;
 mod primitive;

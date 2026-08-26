@@ -73,6 +73,8 @@ pub const FINAL_FIELD_REPLACEMENT: &str = "TYP043";
 pub const FINAL_STATIC_REPLACEMENT: &str = "TYP044";
 pub const FINAL_STATIC_INITIALIZER_REQUIRED: &str = "TYP045";
 pub const GENERAL_ITERATION_UNSUPPORTED: &str = "TYP046";
+pub const UNSUPPORTED_OPERATOR_APPLICATION: &str = "TYP047";
+pub const AMBIGUOUS_OPERATOR_APPLICATION: &str = "TYP048";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

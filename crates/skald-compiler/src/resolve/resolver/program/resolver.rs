@@ -600,6 +600,12 @@ impl<'ast> ProgramResolver<'ast> {
                                 &generic_interface_specializations,
                             )
                         }),
+                        operator_language_item.as_ref().map(|item| {
+                            OperatorResolutionEnvironment::new(
+                                item,
+                                &generic_interface_specializations,
+                            )
+                        }),
                     ),
                 ),
                 &mut self.type_interner,
@@ -632,6 +638,9 @@ impl<'ast> ProgramResolver<'ast> {
                             &generic_interface_specializations,
                         )
                     }),
+                    operator_language_item.as_ref().map(|item| {
+                        OperatorResolutionEnvironment::new(item, &generic_interface_specializations)
+                    }),
                 ),
             },
             &mut self.type_interner,
@@ -655,6 +664,7 @@ impl<'ast> ProgramResolver<'ast> {
             ),
             string_language_item.as_ref(),
             iterable_language_item.as_ref(),
+            operator_language_item.as_ref(),
             &generic_interface_specializations,
         );
         let mut class_definitions = Vec::with_capacity(class_declarations.len());
@@ -685,6 +695,12 @@ impl<'ast> ProgramResolver<'ast> {
                         ),
                         iterable_language_item.as_ref().map(|item| {
                             IterationResolutionEnvironment::new(
+                                item,
+                                &generic_interface_specializations,
+                            )
+                        }),
+                        operator_language_item.as_ref().map(|item| {
+                            OperatorResolutionEnvironment::new(
                                 item,
                                 &generic_interface_specializations,
                             )
@@ -1095,6 +1111,7 @@ impl<'ast> ProgramResolver<'ast> {
         declarations: BodyDeclarationEnvironment<'_>,
         string_language_item: Option<&ResolvedStringLanguageItem>,
         iterable_language_item: Option<&ResolvedIterableLanguageItem>,
+        operator_language_item: Option<&ResolvedOperatorLanguageItem>,
         generic_interface_specializations: &GenericInterfaceSpecializationTable,
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
         let mut definitions = Vec::with_capacity(declarations.functions.len());
@@ -1126,6 +1143,12 @@ impl<'ast> ProgramResolver<'ast> {
                             ),
                             iterable_language_item.map(|item| {
                                 IterationResolutionEnvironment::new(
+                                    item,
+                                    generic_interface_specializations,
+                                )
+                            }),
+                            operator_language_item.map(|item| {
+                                OperatorResolutionEnvironment::new(
                                     item,
                                     generic_interface_specializations,
                                 )

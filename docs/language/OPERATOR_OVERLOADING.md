@@ -1,9 +1,11 @@
 # Interface-Based Operator Overloading
 
 Status: frozen operator-protocol language design with staged implementation.
-The canonical `std::ops` declarations, whole-bundle validation, and explicit
-ordinary interface use are implemented. Operator punctuation still accepts
-only the [implemented primitive operator
+The canonical `std::ops` declarations, whole-bundle validation, explicit
+ordinary interface use, and value-producing class operator punctuation are
+implemented. Typed equality, ordering, definition-site generic punctuation,
+and compiler-provided primitive protocol evidence remain staged. Exact
+primitive expressions continue to use the [implemented primitive operator
 profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
 This document fixes the complete source-visible contract;
 the [status matrix](STATUS.md) remains authoritative for availability and the
@@ -101,8 +103,9 @@ synthesizing or silently completing declarations.
 
 These declarations are currently usable through ordinary imports,
 `implements`, generic bounds, interface types, and explicit method calls.
-Class operator punctuation remains unavailable until protocol selection is
-implemented.
+Exact classes, inherited and closed-generic class conformances, and exact
+canonical interface views can also use the value-producing punctuation listed
+below. Predicate and definition-site generic punctuation remain staged.
 
 Every requirement has the ordinary implicit read-only receiver. Binary
 protocols take one call-scoped read-only `ref` operand. Value-producing
@@ -176,6 +179,10 @@ operator-interface view, or a type parameter authorized by one or more exact
 declared bounds. `Obj`, unrelated interface views, raw shared handles,
 optionals, arrays, and function values do not gain structural lookup.
 
+The current implementation covers the first three eligible forms. Selection
+from a type parameter's declared bounds is the staged definition-site generic
+slice.
+
 ## Class implementations and generic bounds
 
 A class implements an operator protocol through one ordinary public instance
@@ -230,6 +237,11 @@ var adder: Adder<u64> = Adder<u64>();
 var answer: u64 = adder.add(17u, 25u);
 ```
 
+This definition-site punctuation and its primitive specialization are frozen
+future behavior, not part of the currently implemented class punctuation
+slice. Bounds and manual bound calls remain available through ordinary generic
+interface support.
+
 The operator expression is selected from declared bounds at the template
 definition site. More than one applicable bound is an unranked definition-site
 ambiguity. Specialization realizes the already selected application and never
@@ -240,6 +252,8 @@ members. Primitive satisfaction remains limited to canonical operator
 protocols; other interface bounds retain their existing exact-class rule.
 
 ## Compiler-provided primitive applications
+
+This section specifies staged behavior that is not yet implemented.
 
 For every supported primitive operation, the compiler supplies one static
 application of the corresponding canonical protocol. The set is exactly the

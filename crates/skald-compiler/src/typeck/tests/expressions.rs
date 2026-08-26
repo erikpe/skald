@@ -141,7 +141,7 @@ fn checks_unit_functions_returns_and_call_statements() {
 }
 
 #[test]
-fn checks_invalid_binary_operands_in_source_order() {
+fn diagnoses_unsupported_class_binary_operands_at_the_operator() {
     let source = concat!(
         "class Left { init() {} }\n",
         "class Right { init() {} }\n",
@@ -151,18 +151,24 @@ fn checks_invalid_binary_operands_in_source_order() {
     let diagnostics: Vec<_> = output
         .diagnostics
         .iter()
-        .filter(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION)
+        .filter(|diagnostic| {
+            diagnostic.code == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+        })
         .collect();
 
-    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(diagnostics.len(), 1);
     assert_eq!(
         diagnostics[0].labels[0].span.range().start(),
-        source.find("Left() +").unwrap()
+        source.find("+").unwrap()
     );
-    assert_eq!(
-        diagnostics[1].labels[0].span.range().start(),
-        source.find("Right();").unwrap()
-    );
+    assert!(diagnostics[0]
+        .labels
+        .iter()
+        .any(|label| label.message == "left operand has static type `Left`"));
+    assert!(diagnostics[0]
+        .labels
+        .iter()
+        .any(|label| label.message == "right operand has static type `Right`"));
 }
 
 #[test]

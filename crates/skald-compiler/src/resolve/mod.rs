@@ -63,7 +63,8 @@ pub use ir::{
     ResolvedTemplateFunctionTypeParameter, ResolvedTemplateType, ResolvedTemplateTypeKind,
     ResolvedTopLevelId, ResolvedType, ResolvedTypeKind, ResolvedTypeParameter,
     ResolvedTypeParameterTable, ResolvedTypeParameters, ResolvedTypeTestExpr, ResolvedUnaryExpr,
-    ResolvedUnaryOperator, ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedUnaryOperator, ResolvedUnwrapExpr, ResolvedValueOperatorResolution,
+    ResolvedValueOperatorSelection, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
     ResolvedVisibility, ResolvedWhile,
 };
 pub(crate) use ir::{ClosedGenericRequirementSubject, GenericSpecializationState};

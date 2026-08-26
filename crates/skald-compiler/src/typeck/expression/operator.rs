@@ -1,0 +1,230 @@
+//! Erasure of resolved value-operator selections to ordinary interface calls.
+
+use super::*;
+use crate::{
+    identity::ClassId,
+    resolve::{
+        ResolvedBinaryExpr, ResolvedExpression, ResolvedInterfaceCallExpr,
+        ResolvedInterfaceReceiver, ResolvedObjectCastTargetMode, ResolvedObjectReceiver,
+        ResolvedUnaryExpr, ResolvedValueOperatorResolution, ResolvedValueOperatorSelection,
+    },
+};
+
+impl CallableChecker<'_, '_> {
+    pub(super) fn check_selected_unary_operator(
+        &mut self,
+        unary: &ResolvedUnaryExpr,
+        resolution: &ResolvedValueOperatorResolution,
+    ) -> Option<HirExpression> {
+        let selection = self.require_operator_selection(
+            resolution,
+            unary.operator.spelling(),
+            unary.operator_span,
+            &unary.operand,
+            None,
+        )?;
+        let receiver = self.operator_receiver(&unary.operand, selection)?;
+        self.check_interface_call(&ResolvedInterfaceCallExpr {
+            receiver,
+            interface: selection.interface,
+            requirement: selection.requirement,
+            receiver_span: unary.operand.span(),
+            member_span: unary.operator_span,
+            arguments: Vec::new(),
+            span: unary.span,
+        })
+    }
+
+    pub(super) fn check_selected_binary_operator(
+        &mut self,
+        binary: &ResolvedBinaryExpr,
+        resolution: &ResolvedValueOperatorResolution,
+    ) -> Option<HirExpression> {
+        let selection = self.require_operator_selection(
+            resolution,
+            binary.operator.spelling(),
+            binary.operator_span,
+            &binary.left,
+            Some(&binary.right),
+        )?;
+        let receiver = self.operator_receiver(&binary.left, selection)?;
+        self.check_interface_call(&ResolvedInterfaceCallExpr {
+            receiver,
+            interface: selection.interface,
+            requirement: selection.requirement,
+            receiver_span: binary.left.span(),
+            member_span: binary.operator_span,
+            arguments: vec![(*binary.right).clone()],
+            span: binary.span,
+        })
+    }
+
+    fn require_operator_selection(
+        &mut self,
+        resolution: &ResolvedValueOperatorResolution,
+        spelling: &'static str,
+        operator_span: crate::source::Span,
+        left: &ResolvedExpression,
+        right: Option<&ResolvedExpression>,
+    ) -> Option<ResolvedValueOperatorSelection> {
+        if let Some(selection) = resolution.selected() {
+            return Some(selection);
+        }
+        let left_type = self.static_expression_type(left);
+        let mut diagnostic = if resolution.candidates.is_empty() {
+            Diagnostic::error(
+                crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION,
+                format!("operator `{spelling}` is unsupported for these operands"),
+            )
+            .with_primary_label(
+                operator_span,
+                "no canonical protocol application was selected",
+            )
+        } else {
+            Diagnostic::error(
+                crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION,
+                format!("operator `{spelling}` has multiple applicable protocol applications"),
+            )
+            .with_primary_label(operator_span, "operator selection is ambiguous")
+        }
+        .with_secondary_label(
+            left.span(),
+            format!(
+                "left operand has static type `{}`",
+                self.operator_type_name(left_type)
+            ),
+        );
+        if let Some(right) = right {
+            diagnostic = diagnostic.with_secondary_label(
+                right.span(),
+                format!(
+                    "right operand has static type `{}`",
+                    self.operator_type_name(self.static_expression_type(right))
+                ),
+            );
+        }
+        for candidate in &resolution.candidates {
+            diagnostic = diagnostic.with_secondary_label(
+                candidate.origin_span,
+                format!(
+                    "candidate `{}` application declared here",
+                    candidate.protocol.interface_name()
+                ),
+            );
+        }
+        if self.program.operator_language_item.is_none() {
+            diagnostic = diagnostic.with_note(
+                "the canonical `std::ops` bundle is not reachable through an explicit protocol reference",
+            );
+        }
+        self.diagnostics.push(diagnostic);
+        None
+    }
+
+    fn operator_type_name(&self, ty: Type) -> String {
+        match ty {
+            Type::Class(class) => self
+                .program
+                .class(class)
+                .map(|class| class.name.clone())
+                .unwrap_or_else(|| ty.name().into_owned()),
+            Type::Interface(interface) => self
+                .program
+                .interface(interface)
+                .map(|interface| interface.name.clone())
+                .unwrap_or_else(|| ty.name().into_owned()),
+            _ => self.diagnostic_type_name(ty),
+        }
+    }
+
+    fn operator_receiver(
+        &mut self,
+        expression: &ResolvedExpression,
+        selection: ResolvedValueOperatorSelection,
+    ) -> Option<ResolvedInterfaceReceiver> {
+        match self.static_expression_type(expression) {
+            Type::Class(class) => self
+                .class_operator_receiver(expression.clone(), class)
+                .map(|receiver| ResolvedInterfaceReceiver::Object(Box::new(receiver))),
+            Type::Interface(interface) if interface == selection.interface => {
+                self.interface_operator_receiver(expression.clone(), interface)
+            }
+            actual => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        crate::typeck::program::TYPE_MISMATCH,
+                        "selected operator requires an exact class or canonical interface receiver",
+                    )
+                    .with_primary_label(
+                        expression.span(),
+                        format!(
+                            "left operand has type `{}`",
+                            self.diagnostic_type_name(actual)
+                        ),
+                    )
+                    .with_secondary_label(
+                        selection.origin_span,
+                        "protocol application selected here",
+                    ),
+                );
+                None
+            }
+        }
+    }
+
+    fn class_operator_receiver(
+        &mut self,
+        expression: ResolvedExpression,
+        class: ClassId,
+    ) -> Option<ResolvedObjectReceiver> {
+        match ResolvedObjectReceiver::from_expression(expression, class) {
+            Ok(receiver) => Some(receiver),
+            Err(unsupported) => {
+                self.report_operator_receiver_form(unsupported.span());
+                None
+            }
+        }
+    }
+
+    fn interface_operator_receiver(
+        &mut self,
+        expression: ResolvedExpression,
+        interface: crate::identity::InterfaceId,
+    ) -> Option<ResolvedInterfaceReceiver> {
+        Some(match expression {
+            ResolvedExpression::Binding(binding) => ResolvedInterfaceReceiver::Binding {
+                binding: binding.binding,
+                span: binding.span,
+            },
+            ResolvedExpression::Grouped(grouped) => {
+                return self.interface_operator_receiver(*grouped.expression, interface);
+            }
+            ResolvedExpression::ObjectCast(cast)
+                if cast.target.kind == crate::resolve::ResolvedTypeKind::Interface(interface)
+                    && cast.target_mode == ResolvedObjectCastTargetMode::Plain =>
+            {
+                ResolvedInterfaceReceiver::Cast(Box::new(cast))
+            }
+            ResolvedExpression::Dereference(dereference)
+                if dereference.target
+                    == crate::resolve::ResolvedSharedTarget::Interface(interface) =>
+            {
+                ResolvedInterfaceReceiver::Dereference(Box::new(dereference))
+            }
+            unsupported => {
+                self.report_operator_receiver_form(unsupported.span());
+                return None;
+            }
+        })
+    }
+
+    fn report_operator_receiver_form(&mut self, span: crate::source::Span) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                "this object expression cannot be used as an overloaded operator receiver",
+            )
+            .with_primary_label(span, "unsupported receiver form"),
+        );
+    }
+}

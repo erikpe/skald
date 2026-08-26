@@ -970,12 +970,8 @@ fn generic_interface_bounds_do_not_enable_operators() {
     assert!(output.hir.is_none());
     assert!(
         output.diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == TYPE_MISMATCH
-                && diagnostic.message
-                    == "binary arithmetic requires operands of the same numeric type"
-                && diagnostic.labels.iter().any(|label| {
-                    label.message == "operator cannot be applied to these operand types"
-                })
+            diagnostic.code == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+                && diagnostic.message == "operator `+` is unsupported for these operands"
         }),
         "{:?}",
         output.diagnostics

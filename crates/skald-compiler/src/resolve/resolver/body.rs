@@ -17,6 +17,7 @@ mod call;
 mod dereference;
 mod indirect_call;
 mod iteration;
+mod operator;
 mod place;
 mod statement;
 mod structural_bracket;
@@ -84,16 +85,37 @@ impl<'program> BodyDeclarationEnvironment<'program> {
 pub(super) struct BodyLanguageItemEnvironment<'program> {
     string_literals: StringLiteralResolutionEnvironment<'program>,
     iteration: Option<IterationResolutionEnvironment<'program>>,
+    operators: Option<OperatorResolutionEnvironment<'program>>,
 }
 
 impl<'program> BodyLanguageItemEnvironment<'program> {
     pub(super) const fn new(
         string_literals: StringLiteralResolutionEnvironment<'program>,
         iteration: Option<IterationResolutionEnvironment<'program>>,
+        operators: Option<OperatorResolutionEnvironment<'program>>,
     ) -> Self {
         Self {
             string_literals,
             iteration,
+            operators,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct OperatorResolutionEnvironment<'program> {
+    language_item: &'program ResolvedOperatorLanguageItem,
+    applications: &'program GenericInterfaceSpecializationTable,
+}
+
+impl<'program> OperatorResolutionEnvironment<'program> {
+    pub(super) const fn new(
+        language_item: &'program ResolvedOperatorLanguageItem,
+        applications: &'program GenericInterfaceSpecializationTable,
+    ) -> Self {
+        Self {
+            language_item,
+            applications,
         }
     }
 }
@@ -625,19 +647,22 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                         .map(ResolvedExpression::Dereference);
                 }
                 let operand = self.resolve_expression(&unary.operand)?;
+                let operator = match unary.operator {
+                    syntax::UnaryOperator::Negate => ResolvedUnaryOperator::Negate,
+                    syntax::UnaryOperator::LogicalNot => ResolvedUnaryOperator::LogicalNot,
+                    syntax::UnaryOperator::BitwiseComplement => {
+                        ResolvedUnaryOperator::BitwiseComplement
+                    }
+                    syntax::UnaryOperator::Dereference => {
+                        unreachable!("dereference returned above")
+                    }
+                };
+                let selection = self.select_unary_value_operator(operator, &operand);
                 Some(ResolvedExpression::Unary(ResolvedUnaryExpr {
-                    operator: match unary.operator {
-                        syntax::UnaryOperator::Negate => ResolvedUnaryOperator::Negate,
-                        syntax::UnaryOperator::LogicalNot => ResolvedUnaryOperator::LogicalNot,
-                        syntax::UnaryOperator::BitwiseComplement => {
-                            ResolvedUnaryOperator::BitwiseComplement
-                        }
-                        syntax::UnaryOperator::Dereference => {
-                            unreachable!("dereference returned above")
-                        }
-                    },
+                    operator,
                     operator_span: unary.operator_span,
                     operand: Box::new(operand),
+                    selection,
                     span: unary.span,
                 }))
             }
@@ -646,54 +671,41 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 let right = self.resolve_expression(&binary.right);
                 match (left, right) {
                     (Some(left), Some(right)) => {
+                        let operator = match binary.operator {
+                            syntax::BinaryOperator::Add => ResolvedBinaryOperator::Add,
+                            syntax::BinaryOperator::Subtract => ResolvedBinaryOperator::Subtract,
+                            syntax::BinaryOperator::Multiply => ResolvedBinaryOperator::Multiply,
+                            syntax::BinaryOperator::Divide => ResolvedBinaryOperator::Divide,
+                            syntax::BinaryOperator::Remainder => ResolvedBinaryOperator::Remainder,
+                            syntax::BinaryOperator::ShiftLeft => ResolvedBinaryOperator::ShiftLeft,
+                            syntax::BinaryOperator::ShiftRight => {
+                                ResolvedBinaryOperator::ShiftRight
+                            }
+                            syntax::BinaryOperator::BitwiseAnd => {
+                                ResolvedBinaryOperator::BitwiseAnd
+                            }
+                            syntax::BinaryOperator::BitwiseOr => ResolvedBinaryOperator::BitwiseOr,
+                            syntax::BinaryOperator::BitwiseXor => {
+                                ResolvedBinaryOperator::BitwiseXor
+                            }
+                            syntax::BinaryOperator::Equal => ResolvedBinaryOperator::Equal,
+                            syntax::BinaryOperator::NotEqual => ResolvedBinaryOperator::NotEqual,
+                            syntax::BinaryOperator::LessThan => ResolvedBinaryOperator::LessThan,
+                            syntax::BinaryOperator::LessEqual => ResolvedBinaryOperator::LessEqual,
+                            syntax::BinaryOperator::GreaterThan => {
+                                ResolvedBinaryOperator::GreaterThan
+                            }
+                            syntax::BinaryOperator::GreaterEqual => {
+                                ResolvedBinaryOperator::GreaterEqual
+                            }
+                        };
+                        let selection = self.select_binary_value_operator(operator, &left, &right);
                         Some(ResolvedExpression::Binary(ResolvedBinaryExpr {
                             left: Box::new(left),
-                            operator: match binary.operator {
-                                syntax::BinaryOperator::Add => ResolvedBinaryOperator::Add,
-                                syntax::BinaryOperator::Subtract => {
-                                    ResolvedBinaryOperator::Subtract
-                                }
-                                syntax::BinaryOperator::Multiply => {
-                                    ResolvedBinaryOperator::Multiply
-                                }
-                                syntax::BinaryOperator::Divide => ResolvedBinaryOperator::Divide,
-                                syntax::BinaryOperator::Remainder => {
-                                    ResolvedBinaryOperator::Remainder
-                                }
-                                syntax::BinaryOperator::ShiftLeft => {
-                                    ResolvedBinaryOperator::ShiftLeft
-                                }
-                                syntax::BinaryOperator::ShiftRight => {
-                                    ResolvedBinaryOperator::ShiftRight
-                                }
-                                syntax::BinaryOperator::BitwiseAnd => {
-                                    ResolvedBinaryOperator::BitwiseAnd
-                                }
-                                syntax::BinaryOperator::BitwiseOr => {
-                                    ResolvedBinaryOperator::BitwiseOr
-                                }
-                                syntax::BinaryOperator::BitwiseXor => {
-                                    ResolvedBinaryOperator::BitwiseXor
-                                }
-                                syntax::BinaryOperator::Equal => ResolvedBinaryOperator::Equal,
-                                syntax::BinaryOperator::NotEqual => {
-                                    ResolvedBinaryOperator::NotEqual
-                                }
-                                syntax::BinaryOperator::LessThan => {
-                                    ResolvedBinaryOperator::LessThan
-                                }
-                                syntax::BinaryOperator::LessEqual => {
-                                    ResolvedBinaryOperator::LessEqual
-                                }
-                                syntax::BinaryOperator::GreaterThan => {
-                                    ResolvedBinaryOperator::GreaterThan
-                                }
-                                syntax::BinaryOperator::GreaterEqual => {
-                                    ResolvedBinaryOperator::GreaterEqual
-                                }
-                            },
+                            operator,
                             operator_span: binary.operator_span,
                             right: Box::new(right),
+                            selection,
                             span: binary.span,
                         }))
                     }

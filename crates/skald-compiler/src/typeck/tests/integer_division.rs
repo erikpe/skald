@@ -75,8 +75,20 @@ fn rejects_mixed_and_noninteger_operands_with_focused_actual_types() {
             let diagnostic = output
                 .diagnostics
                 .iter()
-                .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+                .find(|diagnostic| {
+                    diagnostic.code == TYPE_MISMATCH
+                        || diagnostic.code
+                            == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+                })
                 .unwrap();
+            if diagnostic.code != TYPE_MISMATCH {
+                assert_eq!(left_type, "class c0");
+                assert!(diagnostic
+                    .labels
+                    .iter()
+                    .any(|label| label.message.contains("static type `Item`")));
+                continue;
+            }
             assert_eq!(
                 diagnostic.message,
                 if spelling == "/" {

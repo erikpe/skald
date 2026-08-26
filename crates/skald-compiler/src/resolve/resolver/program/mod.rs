@@ -7,7 +7,7 @@ use super::{
     body::{
         resolve_callable_body, resolve_static_initializer_expression, BodyDeclarationEnvironment,
         BodyLanguageItemEnvironment, BodyResolutionEnvironment, BodySpecializationEnvironment,
-        CallableResolutionContext, IterationResolutionEnvironment,
+        CallableResolutionContext, IterationResolutionEnvironment, OperatorResolutionEnvironment,
     },
     *,
 };

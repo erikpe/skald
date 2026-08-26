@@ -102,6 +102,9 @@ impl CallableChecker<'_, '_> {
         &mut self,
         unary: &crate::resolve::ResolvedUnaryExpr,
     ) -> Option<HirExpression> {
+        if let Some(selection) = &unary.selection {
+            return self.check_selected_unary_operator(unary, selection);
+        }
         if unary.operator == ResolvedUnaryOperator::BitwiseComplement {
             return self.check_bitwise_complement(unary);
         }
@@ -193,6 +196,9 @@ impl CallableChecker<'_, '_> {
         &mut self,
         binary: &crate::resolve::ResolvedBinaryExpr,
     ) -> Option<HirExpression> {
+        if let Some(selection) = &binary.selection {
+            return self.check_selected_binary_operator(binary, selection);
+        }
         if let Some(predicate) = comparison_predicate(binary.operator) {
             return self.check_primitive_comparison(binary, predicate);
         }
@@ -244,6 +250,9 @@ impl CallableChecker<'_, '_> {
         &mut self,
         binary: &crate::resolve::ResolvedBinaryExpr,
     ) -> bool {
+        if binary.selection.is_some() {
+            return true;
+        }
         // Comparison, shift, bitwise, division, and remainder checkers already
         // select from static operand types before checking operand values.
         if !matches!(

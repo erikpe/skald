@@ -1,12 +1,15 @@
 # Operator-Protocol Lowering
 
 Status: frozen operator-protocol compiler design with staged implementation.
-Resolution implements the canonical module, validation, and identity product;
-the current executable pipeline still emits only the [implemented primitive
-operator representation](PHASES_AND_IR.md#implemented-primitive-operator-representation).
-This document fixes the remaining compiler boundary for the frozen
-[interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md)
-without claiming accepted class-operator syntax or implementation progress.
+Resolution implements the canonical module, validation, identity product, and
+value-producing class-operator selection. The executable pipeline erases those
+selected applications to ordinary interface calls while retaining the
+[implemented primitive operator
+representation](PHASES_AND_IR.md#implemented-primitive-operator-representation)
+for exact primitive operations. Predicate operators, definition-site generic
+selection, and compiler-provided primitive protocol evidence remain staged.
+This document fixes the complete compiler boundary for the frozen
+[interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md).
 Its ordinary-call produced primitive read-only alias prerequisite is
 implemented independently below.
 
@@ -64,7 +67,9 @@ the ordinary read-only alias relation for `Rhs`. Exactly one application must
 remain. Selection never uses expected result type, conversion ranking,
 exact-match preference, inheritance depth, or specialization arguments.
 
-A resolved operator selection retains:
+A resolved value-operator product retains the canonical protocol and an
+identity-sorted zero, one, or many exact application candidates. Each candidate
+retains:
 
 - the source operator and operand spans and static types;
 - the canonical template and template requirement;
@@ -75,7 +80,9 @@ A resolved operator selection retains:
 - the primitive operation when the exact matrix won before protocol lookup.
 
 Candidate evidence is sorted by canonical interface identity and stable source
-origin. Zero candidates and multiple candidates remain distinct structured
+origin. Type checking accepts exactly one candidate and immediately reuses the
+ordinary interface-call checker, so completed HIR contains no operator-specific
+class node. Zero candidates and multiple candidates remain distinct structured
 diagnostics. Multiple applicable generic bounds fail at template definition;
 specialization does not resolve their ambiguity.
 

@@ -150,54 +150,9 @@ impl CallableResolver<'_, '_> {
         expression: ResolvedExpression,
         class: ClassId,
     ) -> Option<ResolvedObjectReceiver> {
-        Some(match expression {
-            ResolvedExpression::Binding(binding) => ResolvedObjectReceiver::from_place(
-                ResolvedObjectPlace::root(binding.binding, class, binding.span),
-            ),
-            ResolvedExpression::Grouped(grouped) => {
-                return self
-                    .object_receiver_from_resolved_expression(*grouped.expression, class)
-                    .map(|receiver| receiver.with_span(grouped.span));
-            }
-            ResolvedExpression::Dereference(dereference) => {
-                let span = dereference.span;
-                ResolvedObjectReceiver::Dereference {
-                    dereference: Box::new(dereference),
-                    projections: Vec::new(),
-                    class,
-                    span,
-                }
-            }
-            ResolvedExpression::Unwrap(unwrap) => {
-                ResolvedObjectReceiver::from_optional_payload(unwrap, class)
-            }
-            ResolvedExpression::ObjectCast(cast) => ResolvedObjectReceiver::from_cast(cast, class),
-            ResolvedExpression::ArrayProjection(projection) => {
-                let span = projection.span;
-                ResolvedObjectReceiver::ArrayElement {
-                    projection,
-                    projections: Vec::new(),
-                    class,
-                    span,
-                }
-            }
-            ResolvedExpression::FieldAccess(access) => {
-                access
-                    .receiver
-                    .project_field(access.field, class, access.span)
-            }
-            ResolvedExpression::StaticFieldAccess(access) => {
-                return self.object_receiver_from_static_field_access(access);
-            }
-            producer @ (ResolvedExpression::StringLiteral(_)
-            | ResolvedExpression::DirectCall(_)
-            | ResolvedExpression::StaticCall(_)
-            | ResolvedExpression::MethodCall(_)
-            | ResolvedExpression::InterfaceCall(_)
-            | ResolvedExpression::Construct(_)) => {
-                ResolvedObjectReceiver::from_produced(producer, class)
-            }
-            unsupported => {
+        match ResolvedObjectReceiver::from_expression(expression, class) {
+            Ok(receiver) => Some(receiver),
+            Err(unsupported) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_INDEX_PROTOCOL,
@@ -205,8 +160,8 @@ impl CallableResolver<'_, '_> {
                     )
                     .with_primary_label(unsupported.span(), "unsupported receiver form"),
                 );
-                return None;
+                None
             }
-        })
+        }
     }
 }

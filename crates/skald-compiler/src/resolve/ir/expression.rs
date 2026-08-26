@@ -431,6 +431,7 @@ pub struct ResolvedUnaryExpr {
     pub operator: ResolvedUnaryOperator,
     pub operator_span: Span,
     pub operand: Box<ResolvedExpression>,
+    pub selection: Option<super::ResolvedValueOperatorResolution>,
     pub span: Span,
 }
 
@@ -460,6 +461,7 @@ pub struct ResolvedBinaryExpr {
     pub operator: ResolvedBinaryOperator,
     pub operator_span: Span,
     pub right: Box<ResolvedExpression>,
+    pub selection: Option<super::ResolvedValueOperatorResolution>,
     pub span: Span,
 }
 

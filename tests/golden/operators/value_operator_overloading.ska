@@ -1,0 +1,31 @@
+import std::io;
+from std::ops import OpAdd, OpNeg;
+
+class Number implements OpAdd<Number, Number>, OpNeg<i64> {
+    private value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn op_add(ref rhs: Number) -> Number {
+        return Number(self.value + rhs.value);
+    }
+
+    fn op_neg() -> i64 {
+        return -self.value;
+    }
+
+    fn get() -> i64 {
+        return self.value;
+    }
+}
+
+fn main() -> i64 {
+    var left: Number = Number(17);
+    var right: Number = Number(25);
+    var answer: Number = left + right;
+    std::io::println_i64(answer.get());
+    std::io::println_i64(-answer);
+    return 0;
+}

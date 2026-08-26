@@ -539,9 +539,21 @@ impl CallableResolver<'_, '_> {
         expression: &ResolvedExpression,
     ) -> Option<ResolvedTypeKind> {
         match expression {
+            ResolvedExpression::Absent(_) | ResolvedExpression::Present(_) => None,
+            ResolvedExpression::PresenceTest(_) | ResolvedExpression::TypeTest(_) => {
+                Some(ResolvedTypeKind::Bool)
+            }
             ResolvedExpression::StringLiteral(literal) => {
                 Some(ResolvedTypeKind::Class(literal.class))
             }
+            ResolvedExpression::NumericLiteral(literal) => Some(match literal.kind {
+                crate::literal::NumericLiteralKind::I64(_) => ResolvedTypeKind::I64,
+                crate::literal::NumericLiteralKind::U64(_) => ResolvedTypeKind::U64,
+                crate::literal::NumericLiteralKind::U8(_) => ResolvedTypeKind::U8,
+                crate::literal::NumericLiteralKind::F64 => ResolvedTypeKind::F64,
+            }),
+            ResolvedExpression::ByteLiteral(_) => Some(ResolvedTypeKind::U8),
+            ResolvedExpression::Boolean(_) => Some(ResolvedTypeKind::Bool),
             ResolvedExpression::Binding(binding) => self
                 .receiver_class
                 .filter(|_| binding.binding == BindingId::Receiver(self.callable))
@@ -589,6 +601,30 @@ impl CallableResolver<'_, '_> {
             ResolvedExpression::Grouped(grouped) => {
                 self.resolved_expression_type(&grouped.expression)
             }
+            ResolvedExpression::Unary(unary) => match &unary.selection {
+                Some(resolution) => resolution.selected().map(|selection| selection.output),
+                None => self.resolved_expression_type(&unary.operand),
+            },
+            ResolvedExpression::Binary(binary) => match &binary.selection {
+                Some(resolution) => resolution.selected().map(|selection| selection.output),
+                None => match binary.operator {
+                    ResolvedBinaryOperator::Equal
+                    | ResolvedBinaryOperator::NotEqual
+                    | ResolvedBinaryOperator::LessThan
+                    | ResolvedBinaryOperator::LessEqual
+                    | ResolvedBinaryOperator::GreaterThan
+                    | ResolvedBinaryOperator::GreaterEqual => Some(ResolvedTypeKind::Bool),
+                    _ => self.resolved_expression_type(&binary.left),
+                },
+            },
+            ResolvedExpression::Logical(_) => Some(ResolvedTypeKind::Bool),
+            ResolvedExpression::PrimitiveCast(cast) => Some(match cast.target {
+                ResolvedPrimitiveType::I64 => ResolvedTypeKind::I64,
+                ResolvedPrimitiveType::U64 => ResolvedTypeKind::U64,
+                ResolvedPrimitiveType::U8 => ResolvedTypeKind::U8,
+                ResolvedPrimitiveType::F64 => ResolvedTypeKind::F64,
+                ResolvedPrimitiveType::Bool => ResolvedTypeKind::Bool,
+            }),
             ResolvedExpression::ObjectCast(cast) => Some(match cast.target_mode {
                 ResolvedObjectCastTargetMode::Plain => cast.target.kind,
                 ResolvedObjectCastTargetMode::Shared { .. } => {
@@ -687,7 +723,6 @@ impl CallableResolver<'_, '_> {
             ResolvedExpression::Construct(construction) => {
                 Some(ResolvedTypeKind::Class(construction.class))
             }
-            _ => None,
         }
     }
 

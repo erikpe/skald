@@ -395,11 +395,11 @@ This profile does not define:
 - coalescing, conditional, pipeline, range, SIMD, atomic, volatile, or
   concurrency operators.
 
-Interface-based class and generic operator overloading is separately frozen
-below. Each remaining area requires a separate design. No deferred syntax is
-reserved.
+Interface-based operator overloading is separately described below. Its
+value-producing class slice is implemented; each remaining area requires its
+staged roadmap task. No deferred syntax is reserved.
 
-## Frozen interface-based operator overloading
+## Partially implemented interface-based operator overloading
 
 The [interface-based operator-overloading contract](OPERATOR_OVERLOADING.md)
 freezes nominal `std::ops` protocols for eager arithmetic, bitwise, shift,
@@ -409,10 +409,13 @@ requires one unique applicable canonical interface application from the static
 left operand or its definition-site generic bounds. Expected result types,
 implicit conversion, and specificity ranking do not participate.
 
-The frozen design is not implemented. Class-valued operator expressions remain
-invalid under the current compiler, and this document's implemented primitive
-profile remains the exact accepted surface until the status matrix is updated.
-Prefix `!`, `&&`, and `||` remain non-overloadable.
+The value-producing class surface is implemented for unary `-`, unary `~`,
+arithmetic, remainder, bitwise, and shift punctuation. Eligible exact class,
+inherited class, closed-generic class, and exact canonical interface-view
+receivers select one applicable protocol application and erase to its ordinary
+interface call. Exact primitive operations retain their existing profile and
+representation. Typed equality and ordering plus definition-site generic
+selection remain staged. Prefix `!`, `&&`, and `||` remain non-overloadable.
 
 ## Implemented integer bitwise and shift operators
 

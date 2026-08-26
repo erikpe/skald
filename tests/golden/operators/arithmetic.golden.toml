@@ -1,6 +1,14 @@
 schema = 2
 
 [[test]]
+name = "value_operator_overloading"
+mode = "run"
+source = "value_operator_overloading.ska"
+[[test.run]]
+name = "class_output_and_unary_dispatch"
+expect = { stdout = { file = "data/value_operator_overloading.stdout" } }
+
+[[test]]
 name = "floating_division"
 mode = "run"
 source = "floating_division.ska"
@@ -68,7 +76,7 @@ matches = [
  --> tests/golden/operators/integer_division_operator_types.ska:15:9""" },
   { name = "unit division", match = "contains", inline = """error[TYP005]: binary `/` requires operands of the same numeric type
  --> tests/golden/operators/integer_division_operator_types.ska:16:14""" },
-  { name = "object remainder", match = "contains", inline = """error[TYP005]: integer `%` requires operands of the same primitive integer type
+  { name = "object remainder", match = "contains", inline = """error[TYP047]: operator `%` is unsupported for these operands
  --> tests/golden/operators/integer_division_operator_types.ska:17:13""" },
 ]
 

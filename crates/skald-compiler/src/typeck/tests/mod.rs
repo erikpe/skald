@@ -213,6 +213,7 @@ mod iteration;
 mod literals;
 mod object_results;
 mod objects;
+mod operator_overloading;
 mod optional_values;
 mod primitive_binding_assignment;
 mod primitive_casts;

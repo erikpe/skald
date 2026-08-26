@@ -202,14 +202,17 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirObjectSource> {
         if let Some(binary) = binary_value_expression(expression) {
             let checked = self.check_binary_before_object_materialization(binary)?;
-            let _ = require_type(
+            if !require_type(
                 checked.ty,
                 Type::Class(class),
                 checked.span,
                 context,
                 self.diagnostics,
-            );
-            return None;
+            ) {
+                return None;
+            }
+            let producer = lower_object_call(checked, class);
+            return Some(HirObjectSource::Produced(producer));
         }
         if let crate::resolve::ResolvedExpression::StringLiteral(literal) = expression {
             let source = HirObjectSource::Produced(HirObjectProducer::StringLiteral(

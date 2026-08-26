@@ -7,9 +7,10 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [interface-based operator-overloading roadmap](OPERATOR_OVERLOADING_ROADMAP.md)
-is in progress. OO0 produced primitive read-only alias materialization and OO1
-canonical `std::ops` bundle and identity validation are complete. OO2
-value-producing operator selection and HIR erasure is next.
+is in progress. OO0 produced primitive read-only alias materialization, OO1
+canonical `std::ops` bundle and identity validation, and OO2 value-producing
+operator selection and HIR erasure are complete. OO3 typed predicates and the
+complete operator surface are next.
 
 The completed general iteration and generic interfaces roadmaps are preserved
 in the [archive](../archive/README.md).

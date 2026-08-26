@@ -1769,7 +1769,12 @@ impl<'program> ResolvedDumper<'program> {
                     ResolvedUnaryOperator::BitwiseComplement => "BitwiseComplement",
                 };
                 self.line(&format!("Unary {operator}"), unary.span);
-                self.indented(|dumper| dumper.expression(&unary.operand));
+                self.indented(|dumper| {
+                    if let Some(selection) = &unary.selection {
+                        dumper.value_operator_resolution(selection, unary.operator_span);
+                    }
+                    dumper.expression(&unary.operand);
+                });
             }
             ResolvedExpression::Dereference(dereference) => {
                 self.dereference(dereference);
@@ -1795,6 +1800,9 @@ impl<'program> ResolvedDumper<'program> {
                 };
                 self.line(&format!("Binary {operator}"), binary.span);
                 self.indented(|dumper| {
+                    if let Some(selection) = &binary.selection {
+                        dumper.value_operator_resolution(selection, binary.operator_span);
+                    }
                     dumper.expression(&binary.left);
                     dumper.expression(&binary.right);
                 });
@@ -2093,6 +2101,40 @@ impl<'program> ResolvedDumper<'program> {
                 }
             },
         }
+    }
+
+    fn value_operator_resolution(
+        &mut self,
+        resolution: &ResolvedValueOperatorResolution,
+        span: Span,
+    ) {
+        self.line(
+            &format!(
+                "ValueOperatorResolution {:?} candidates {}",
+                resolution.protocol,
+                resolution.candidates.len()
+            ),
+            span,
+        );
+        self.indented(|dumper| {
+            for selection in &resolution.candidates {
+                dumper.value_operator_selection(*selection);
+            }
+        });
+    }
+
+    fn value_operator_selection(&mut self, selection: ResolvedValueOperatorSelection) {
+        self.line(
+            &format!(
+                "ValueOperatorSelection {:?} interface {} requirement {} rhs {:?} output {:?}",
+                selection.protocol,
+                selection.interface,
+                selection.requirement,
+                selection.rhs,
+                selection.output,
+            ),
+            selection.origin_span,
+        );
     }
 
     fn object_place(&mut self, place: &ResolvedObjectPlace) {

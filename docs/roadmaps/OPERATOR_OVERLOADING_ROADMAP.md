@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 and OO1 are complete; OO2 is next.
+Status: **in progress**. OO0 through OO2 are complete; OO3 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -61,7 +61,7 @@ pipelines are the baseline. No other planned feature blocks OO0.
 
 - [x] OO0 — Produced primitive read-only alias materialization
 - [x] OO1 — Canonical `std::ops` bundle and identity validation
-- [ ] OO2 — Value-producing operator selection and HIR erasure
+- [x] OO2 — Value-producing operator selection and HIR erasure
 - [ ] OO3 — Typed equality, ordering, and complete operator surface
 - [ ] OO4 — Receiver, ownership, evaluation, and effect integration
 - [ ] OO5 — Compiler-provided primitive protocol evidence
@@ -174,27 +174,27 @@ not created hidden reachability.
 unary and binary value-producing protocols while preserving primitive
 precedence.
 
-- [ ] Centralize the frozen mapping from unary `-`, unary `~`, arithmetic,
+- [x] Centralize the frozen mapping from unary `-`, unary `~`, arithmetic,
   remainder, bitwise, and shift syntax to canonical template/requirement
   identities; retain source operator and operand spans independently from
   interface method spelling.
-- [ ] Check the current exact primitive matrix first and preserve its existing
+- [x] Check the current exact primitive matrix first and preserve its existing
   HIR operation without requiring `std::ops` reachability.
-- [ ] Otherwise enumerate effective exact applications from an exact class,
+- [x] Otherwise enumerate effective exact applications from an exact class,
   inherited class conformance, specialized generic class, or exact canonical
   operator-interface view and deduplicate identical applications.
-- [ ] Filter binary candidates solely through ordinary read-only alias
+- [x] Filter binary candidates solely through ordinary read-only alias
   applicability for the static RHS source and require exactly one remaining
   application without expected-result or specificity ranking.
-- [ ] Diagnose unsupported and ambiguous selections separately with ordered
+- [x] Diagnose unsupported and ambiguous selections separately with ordered
   application origins and both operand types/spans.
-- [ ] Type the expression from the selected `Output` structural term and apply
+- [x] Type the expression from the selected `Output` structural term and apply
   the existing result-capability checks for its actual consumption context.
-- [ ] Erase a class realization to the existing exact
+- [x] Erase a class realization to the existing exact
   `HirExpressionKind::InterfaceCall`; retain existing primitive operations for
   primitive realizations and reject any unresolved selection before HIR
   completion.
-- [ ] Preserve ordinary method visibility, conformance, inheritance, and
+- [x] Preserve ordinary method visibility, conformance, inheritance, and
   incompatible-multiple-application diagnostics; private or same-named
   structural methods never authorize punctuation.
 

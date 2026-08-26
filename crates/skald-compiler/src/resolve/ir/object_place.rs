@@ -62,6 +62,63 @@ pub enum ResolvedObjectReceiver {
 }
 
 impl ResolvedObjectReceiver {
+    /// Converts one already-resolved exact-class expression into the common
+    /// receiver carrier used by structural sugars and ordinary member calls.
+    pub(crate) fn from_expression(
+        expression: ResolvedExpression,
+        class: ClassId,
+    ) -> Result<Self, Box<ResolvedExpression>> {
+        Ok(match expression {
+            ResolvedExpression::Binding(binding) => Self::from_place(ResolvedObjectPlace::root(
+                binding.binding,
+                class,
+                binding.span,
+            )),
+            ResolvedExpression::Grouped(grouped) => {
+                return Self::from_expression(*grouped.expression, class)
+                    .map(|receiver| receiver.with_span(grouped.span));
+            }
+            ResolvedExpression::Dereference(dereference) => {
+                let span = dereference.span;
+                Self::Dereference {
+                    dereference: Box::new(dereference),
+                    projections: Vec::new(),
+                    class,
+                    span,
+                }
+            }
+            ResolvedExpression::Unwrap(unwrap) => Self::from_optional_payload(unwrap, class),
+            ResolvedExpression::ObjectCast(cast) => Self::from_cast(cast, class),
+            ResolvedExpression::ArrayProjection(projection) => {
+                let span = projection.span;
+                Self::ArrayElement {
+                    projection,
+                    projections: Vec::new(),
+                    class,
+                    span,
+                }
+            }
+            ResolvedExpression::FieldAccess(access) => {
+                access
+                    .receiver
+                    .project_field(access.field, class, access.span)
+            }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                Self::from_static_field(access.field, class, access.span)
+            }
+            producer @ (ResolvedExpression::StringLiteral(_)
+            | ResolvedExpression::DirectCall(_)
+            | ResolvedExpression::IndirectCall(_)
+            | ResolvedExpression::StaticCall(_)
+            | ResolvedExpression::MethodCall(_)
+            | ResolvedExpression::InterfaceCall(_)
+            | ResolvedExpression::Construct(_)
+            | ResolvedExpression::Unary(_)
+            | ResolvedExpression::Binary(_)) => Self::from_produced(producer, class),
+            unsupported => return Err(Box::new(unsupported)),
+        })
+    }
+
     pub fn from_place(place: ResolvedObjectPlace) -> Self {
         Self::BindingPath(place)
     }
