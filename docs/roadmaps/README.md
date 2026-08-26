@@ -17,8 +17,18 @@ No additional implementation roadmap is currently waiting to start.
 
 ## Design proposals
 
-No design proposal is currently active. The completed general iteration design
-and delivery record are preserved in the [archive](../archive/README.md).
+The [operator-overloading design proposal](OPERATOR_OVERLOADING_DESIGN_PROPOSAL.md)
+is an active draft. It explores canonical `std::ops` generic interfaces,
+compiler-provided primitive implementations, exact class and generic-bound
+selection, and read-only primitive temporary materialization. The next design
+work is to confirm the initial protocol/operator surface and settle how typed
+operator equality or ordering should relate to existing `Equatable` and future
+generic ranges. Generic interfaces and general iteration are implemented
+dependencies; no implementation roadmap should be created until the proposal
+is frozen and promoted.
+
+The completed general iteration design and delivery record are preserved in
+the [archive](../archive/README.md).
 
 The confirmed generic interfaces decisions and completed delivery history are
 preserved in the
