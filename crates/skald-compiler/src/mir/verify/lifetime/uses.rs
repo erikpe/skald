@@ -2,7 +2,7 @@
 
 use crate::mir::*;
 
-pub(super) fn visit_instruction_storage(
+pub(in crate::mir::verify) fn visit_instruction_storage(
     instruction: &MirInstruction,
     visit: &mut impl FnMut(StorageId),
 ) {

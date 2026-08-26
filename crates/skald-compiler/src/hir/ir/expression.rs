@@ -279,6 +279,9 @@ pub enum HirCallArgument {
     Array(super::HirArrayInitialize),
     ArrayAlias(super::HirArrayAliasArgument),
     PrimitivePlace(super::HirPrimitivePlace),
+    /// One checked primitive value materialized into caller-owned storage for
+    /// a read-only alias argument.
+    ProducedPrimitiveAlias(HirExpression),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -307,6 +310,7 @@ impl HirCallArgument {
             Self::Array(value) => value.span,
             Self::ArrayAlias(value) => value.span,
             Self::PrimitivePlace(place) => place.span(),
+            Self::ProducedPrimitiveAlias(expression) => expression.span,
         }
     }
 }

@@ -353,6 +353,9 @@ pub enum MirStorageKind {
     /// Compiler-owned scalar home used to preserve block-local MIR values
     /// across checked-cast control-flow edges.
     ScalarSpill,
+    /// Caller-owned scalar storage initialized once for one produced
+    /// read-only primitive alias argument.
+    PrimitiveAlias,
     /// Compiler-owned canonical boolean selecting conditional MIR state.
     PathCondition,
     /// Compiler-owned scalar destination populated only by a successful

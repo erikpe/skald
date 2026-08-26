@@ -878,15 +878,19 @@ before its initializer temporaries are cleaned. On return, the result is
 completed first, then expression temporaries are destroyed, followed by
 lexical locals and owning value parameters.
 
-Produced read-only aliases use this same temporary
-category and boundary. Its exact-class producer initializes one hidden
+Produced object read-only aliases use this same owning temporary category and
+boundary. Its exact-class producer initializes one hidden
 caller-owned temporary directly at the argument position; alias binding adds
 no copy and no callee-owned parameter object. The temporary remains live
 through later arguments and the complete call, then is destroyed with other
-full-expression temporaries. `mut ref`, produced primitives, optional
-containers, arrays, and raw shared handles do not acquire this rule. The
-complete eligibility and non-escape contract is defined by
-[aliases and ownership](ALIASES_AND_OWNERSHIP.md#implemented-produced-read-only-alias-arguments).
+full-expression temporaries. Produced primitives use separate non-owning
+scalar storage with the same bounded call and full-expression lifetime. `mut
+ref`, optional containers, arrays, and raw shared handles do not acquire either
+produced-source rule. The complete eligibility and non-escape contracts are
+defined by the [produced-object
+contract](ALIASES_AND_OWNERSHIP.md#implemented-produced-read-only-alias-arguments)
+and [produced-primitive
+contract](ALIASES_AND_OWNERSHIP.md#implemented-produced-primitive-read-only-alias-arguments).
 
 Grouping does not change an existing place, but it does change whether a fresh
 construction matches the restricted elision forms below.

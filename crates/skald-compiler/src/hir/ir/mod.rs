@@ -140,6 +140,14 @@ pub enum Type {
 }
 
 impl Type {
+    /// Returns whether this is one of Skald's five primitive value types.
+    pub const fn is_primitive(self) -> bool {
+        matches!(
+            self,
+            Self::I64 | Self::U64 | Self::U8 | Self::F64 | Self::Bool
+        )
+    }
+
     pub fn name(self) -> Cow<'static, str> {
         match self {
             Self::I64 => Cow::Borrowed("i64"),

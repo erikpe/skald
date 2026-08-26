@@ -426,6 +426,31 @@ impl BodyLowerer<'_> {
                     };
                     LoweredArgument::Ready(MirArgument::Place(place))
                 }
+                HirCallArgument::ProducedPrimitiveAlias(expression) => {
+                    let value = self
+                        .lower_expression(expression)
+                        .expect("produced primitive alias must produce a scalar value");
+                    let ty = self.lower_type(expression.ty);
+                    debug_assert!(ty.is_primitive());
+                    let storage = StorageId::new(self.input.callable, self.storage.len());
+                    self.storage.push(MirStorage {
+                        id: storage,
+                        source: None,
+                        name: format!("primitive-alias-{}", storage.index()),
+                        kind: MirStorageKind::PrimitiveAlias,
+                        ty,
+                        span: expression.span,
+                    });
+                    self.track_full_expression_storage(storage, expression.span);
+                    self.emit(MirInstruction::Store(MirStore {
+                        destination: MirPlace::base(storage),
+                        value,
+                        authorization: None,
+                        final_authorization: None,
+                        span: expression.span,
+                    }));
+                    LoweredArgument::Ready(MirArgument::Place(MirPlace::base(storage)))
+                }
                 HirCallArgument::View(view) => {
                     LoweredArgument::Ready(MirArgument::View(self.lower_object_view(view)))
                 }

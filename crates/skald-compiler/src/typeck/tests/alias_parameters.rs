@@ -322,13 +322,12 @@ fn rejects_excluded_producer_families_with_parameter_context() {
 
     assert!(output.hir.is_none());
     let diagnostics: Vec<_> = output.diagnostics.iter().collect();
-    assert_eq!(diagnostics.len(), 6, "{diagnostics:#?}");
+    assert_eq!(diagnostics.len(), 5, "{diagnostics:#?}");
     assert_eq!(diagnostics[0].code, TYPE_MISMATCH);
     assert_eq!(diagnostics[1].code, TYPE_MISMATCH);
     assert_eq!(diagnostics[2].code, INVALID_ALIAS_ARGUMENT);
     assert_eq!(diagnostics[3].code, INVALID_ALIAS_ARGUMENT);
-    assert_eq!(diagnostics[4].code, INVALID_ALIAS_ARGUMENT);
-    assert_eq!(diagnostics[5].code, IMPLICIT_SHARED_DEREFERENCE);
+    assert_eq!(diagnostics[4].code, IMPLICIT_SHARED_DEREFERENCE);
     assert!(
         diagnostics.iter().all(|diagnostic| diagnostic
             .labels
@@ -336,6 +335,81 @@ fn rejects_excluded_producer_families_with_parameter_context() {
             .any(|label| label.message.contains("declared here"))),
         "{diagnostics:#?}"
     );
+}
+
+#[test]
+fn materializes_produced_primitive_readonly_aliases_across_call_forms() {
+    let output = check_text(concat!(
+        "interface Reader { fn read(ref value: i64) -> i64; }\n",
+        "class Capture { value: i64; init(ref value: i64) { self.value = value; } }\n",
+        "class Calls implements Reader {\n",
+        "  init() {}\n",
+        "  static fn read_static(ref value: i64) -> i64 { return value; }\n",
+        "  fn read(ref value: i64) -> i64 { return value; }\n",
+        "}\n",
+        "fn read_i64(ref value: i64) -> i64 { return value; }\n",
+        "fn read_u64(ref value: u64) -> u64 { return value; }\n",
+        "fn read_u8(ref value: u8) -> u8 { return value; }\n",
+        "fn read_f64(ref value: f64) -> f64 { return value; }\n",
+        "fn read_bool(ref value: bool) -> bool { return value; }\n",
+        "fn through_interface(ref reader: Reader) -> i64 { return reader.read(40 + 2); }\n",
+        "fn main() -> i64 {\n",
+        "  var calls: Calls = Calls();\n",
+        "  var callback: fn(ref i64) -> i64 = read_i64;\n",
+        "  var capture: Capture = Capture(40 + 2);\n",
+        "  var existing: i64 = 42;\n",
+        "  var observed: i64 = read_i64(existing);\n",
+        "  var flag: bool = read_bool(true && true);\n",
+        "  return read_i64(40 + 2)\n",
+        "    + Calls.read_static(40 + 2)\n",
+        "    + calls.read(40 + 2)\n",
+        "    + callback(40 + 2)\n",
+        "    + through_interface(calls)\n",
+        "    + capture.value\n",
+        "    + (i64) read_u64(40u + 2u)\n",
+        "    + (i64) read_u8(40u8 + 2u8)\n",
+        "    + (i64) read_f64(40.0 + 2.0);\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:#?}", output.diagnostics);
+    let hir = output.hir.expect("valid aliases must produce HIR");
+    let dump = dump_hir(&hir);
+    assert_eq!(
+        dump.matches("ProducedPrimitiveAliasArgument").count(),
+        10,
+        "{dump}"
+    );
+    assert!(dump.contains("PrimitivePlaceArgument binding"), "{dump}");
+    assert!(dump.contains("DirectCall"), "{dump}");
+    assert!(dump.contains("StaticCall"), "{dump}");
+    assert!(dump.contains("MethodCall"), "{dump}");
+    assert!(dump.contains("InterfaceCall"), "{dump}");
+    assert!(dump.contains("IndirectCall"), "{dump}");
+    assert!(dump.contains("Construct"), "{dump}");
+    crate::mir::verify_mir(&crate::mir::lower_hir(&hir))
+        .expect("produced primitive alias calls must lower to verified MIR");
+}
+
+#[test]
+fn rejects_produced_primitives_for_mutable_aliases_and_exact_type_mismatches() {
+    let output = check_text(concat!(
+        "fn mutate(mut ref value: i64) -> unit {}\n",
+        "fn read(ref value: i64) -> unit {}\n",
+        "fn main() -> i64 { mutate(1 + 2); read(1u + 2u); return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 2, "{diagnostics:#?}");
+    assert_eq!(diagnostics[0].code, INVALID_ALIAS_ARGUMENT);
+    assert!(diagnostics[0]
+        .message
+        .contains("requires an existing primitive place"));
+    assert_eq!(diagnostics[1].code, TYPE_MISMATCH);
+    assert!(diagnostics[1]
+        .message
+        .contains("has type `u64` but `i64` is required"));
 }
 
 #[test]

@@ -36,6 +36,14 @@ pub enum MirType {
 }
 
 impl MirType {
+    /// Returns whether this is one of Skald's five primitive value types.
+    pub const fn is_primitive(self) -> bool {
+        matches!(
+            self,
+            Self::I64 | Self::U64 | Self::U8 | Self::F64 | Self::Bool
+        )
+    }
+
     pub const fn is_scalar_value(self) -> bool {
         !matches!(
             self,

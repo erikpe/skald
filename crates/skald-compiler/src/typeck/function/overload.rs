@@ -24,6 +24,7 @@ struct ArgumentAnalysis {
     contextual_optional: Option<ContextualOptionalArgument>,
     object: Option<ObjectArgument>,
     optional_place_access: Option<HirAccess>,
+    primitive_place_access: Option<HirAccess>,
 }
 
 #[derive(Clone, Copy)]
@@ -212,6 +213,7 @@ impl CallableChecker<'_, '_> {
                 contextual_optional: None,
                 object: None,
                 optional_place_access: None,
+                primitive_place_access: None,
             };
         }
         if let Some(contextual_optional) = self.contextual_optional_argument(expression) {
@@ -221,6 +223,7 @@ impl CallableChecker<'_, '_> {
                 contextual_optional: Some(contextual_optional),
                 object: None,
                 optional_place_access: None,
+                primitive_place_access: None,
             };
         }
         let ty = self.static_expression_type(expression);
@@ -238,6 +241,25 @@ impl CallableChecker<'_, '_> {
                         .map(|access| self.rebinding_storage_alias_access(expression, access))
                 })
                 .flatten(),
+            primitive_place_access: ty
+                .is_primitive()
+                .then(|| self.primitive_alias_place_access(expression))
+                .flatten(),
+        }
+    }
+
+    fn primitive_alias_place_access(&self, expression: &ResolvedExpression) -> Option<HirAccess> {
+        match expression {
+            ResolvedExpression::Binding(binding) => {
+                Some(self.static_binding_access(binding.binding))
+            }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                Some(self.rebinding_static_field_alias_access(access.field))
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                self.primitive_alias_place_access(&grouped.expression)
+            }
+            _ => None,
         }
     }
 
@@ -618,6 +640,13 @@ impl CallableChecker<'_, '_> {
                         && argument
                             .optional_place_access
                             .is_some_and(|access| access.permits(required));
+                }
+                if expected.is_primitive() {
+                    return argument.ty == expected
+                        && (required == HirAccess::ReadOnly
+                            || argument
+                                .primitive_place_access
+                                .is_some_and(|access| access.permits(required)));
                 }
                 let Some(object) = argument
                     .object

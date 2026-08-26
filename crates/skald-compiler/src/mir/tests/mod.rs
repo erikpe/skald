@@ -53,6 +53,7 @@ mod objects;
 mod optional_shared_owners;
 mod optional_values;
 mod path_conditions;
+mod primitive_aliases;
 mod primitive_binding_assignment;
 mod primitive_casts;
 mod private_cell_fields;

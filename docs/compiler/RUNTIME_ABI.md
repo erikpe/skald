@@ -530,8 +530,8 @@ adds no public C symbol, runtime-managed protocol value, primitive box,
 dictionary, reflection record, witness service, allocation, or ABI-version
 change. Class protocol operations become ordinary generated interface calls;
 primitive specializations become existing generated primitive operations.
-Produced primitive read-only aliases use caller-owned scalar storage and the
-unchanged internal alias ABI.
+The implemented produced primitive read-only alias prerequisite uses
+caller-owned scalar storage and the unchanged internal alias ABI.
 
 The runtime never receives an operator spelling, canonical protocol identity,
 candidate set, primitive implementation record, or temporary-lifetime plan.

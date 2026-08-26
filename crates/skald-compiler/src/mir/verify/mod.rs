@@ -37,6 +37,7 @@ mod path_conditions;
 mod path_state;
 mod place;
 pub(crate) mod preliminary;
+mod primitive_alias;
 mod primitive_cast;
 mod shared;
 mod shift;

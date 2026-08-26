@@ -1,10 +1,13 @@
 # Interface-Based Operator Overloading
 
-Status: frozen language design, not implemented. The current compiler accepts
+Status: frozen operator-protocol language design, not implemented. The current compiler accepts
 only the [implemented primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
 This document fixes the source-visible contract for a later implementation;
 the [status matrix](STATUS.md) remains authoritative for availability and the
 [implemented grammar](GRAMMAR.md) remains authoritative for accepted source.
+Its ordinary-call produced primitive read-only alias prerequisite is
+implemented separately in [Aliases and
+Ownership](ALIASES_AND_OWNERSHIP.md#implemented-produced-primitive-read-only-alias-arguments).
 
 Operator overloading is nominal sugar over canonical generic interfaces. An
 eager source operator selects either an existing exact primitive operation or
@@ -281,8 +284,8 @@ An overloaded eager binary expression behaves as one ordinary interface call:
    full-expression boundary.
 
 A produced exact-class receiver or RHS uses the existing caller-owned
-temporary rules. The frozen prerequisite extends read-only primitive alias
-binding so any successfully checked produced primitive expression may be
+temporary rules. The implemented ordinary alias rule extends read-only
+primitive binding so any successfully checked produced primitive expression may be
 materialized once in hidden caller-owned scalar storage. An existing
 compatible primitive place still borrows directly. `mut ref` remains
 place-only, and no alias escapes or becomes independently storable.

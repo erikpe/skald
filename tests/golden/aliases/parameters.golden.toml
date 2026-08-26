@@ -24,6 +24,13 @@ source = "primitive_alias_parameter.ska"
 name = "return_value"
 
 [[test]]
+name = "produced_primitive_arguments"
+mode = "run"
+source = "produced_primitive_alias_arguments.ska"
+[[test.run]]
+name = "call_forms_types_and_order"
+
+[[test]]
 name = "produced_arguments"
 mode = "run"
 source = "produced_alias_arguments.ska"
@@ -87,17 +94,33 @@ source = "produced_alias_invalid_sources.ska"
 [test.expect.stderr]
 matches = [
   { name = "unrelated produced object", match = "contains", inline = """error[TYP005]: alias argument has type `Base`, expected `Other`
- --> tests/golden/aliases/produced_alias_invalid_sources.ska:14:15""" },
+ --> tests/golden/aliases/produced_alias_invalid_sources.ska:13:15""" },
   { name = "produced object downcast", match = "contains", inline = """error[TYP005]: alias argument has type `Base`, expected `Derived`
- --> tests/golden/aliases/produced_alias_invalid_sources.ska:15:14""" },
+ --> tests/golden/aliases/produced_alias_invalid_sources.ska:14:14""" },
   { name = "mutable produced object", match = "contains", inline = """error[TYP020]: mutable alias argument requires an existing object place
- --> tests/golden/aliases/produced_alias_invalid_sources.ska:16:12""" },
-  { name = "produced primitive", match = "contains", inline = """error[TYP020]: primitive alias argument must designate an existing primitive place
- --> tests/golden/aliases/produced_alias_invalid_sources.ska:17:15""" },
+ --> tests/golden/aliases/produced_alias_invalid_sources.ska:15:12""" },
   { name = "produced array", match = "contains", inline = """error[TYP020]: array alias argument must designate an existing array or exact element place
- --> tests/golden/aliases/produced_alias_invalid_sources.ska:18:11""" },
+ --> tests/golden/aliases/produced_alias_invalid_sources.ska:16:11""" },
   { name = "produced optional", match = "contains", inline = """error[TYP020]: optional alias argument must designate an existing optional container
- --> tests/golden/aliases/produced_alias_invalid_sources.ska:19:14""" },
+ --> tests/golden/aliases/produced_alias_invalid_sources.ska:17:14""" },
   { name = "implicit shared owner dereference", match = "contains", inline = """error[TYP034]: shared owner must be explicitly dereferenced for object-place use
- --> tests/golden/aliases/produced_alias_invalid_sources.ska:21:15""" },
+ --> tests/golden/aliases/produced_alias_invalid_sources.ska:19:15""" },
+]
+
+[[test]]
+name = "produced_primitive_mutable_invalid"
+mode = "compile-fail"
+source = "produced_primitive_mutable_invalid.ska"
+[test.expect.stderr]
+matches = [
+  { name = "i64", match = "contains", inline = """error[TYP020]: mutable primitive alias argument requires an existing primitive place
+ --> tests/golden/aliases/produced_primitive_mutable_invalid.ska:8:16""" },
+  { name = "u64", match = "contains", inline = """error[TYP020]: mutable primitive alias argument requires an existing primitive place
+ --> tests/golden/aliases/produced_primitive_mutable_invalid.ska:9:16""" },
+  { name = "u8", match = "contains", inline = """error[TYP020]: mutable primitive alias argument requires an existing primitive place
+ --> tests/golden/aliases/produced_primitive_mutable_invalid.ska:10:15""" },
+  { name = "f64", match = "contains", inline = """error[TYP020]: mutable primitive alias argument requires an existing primitive place
+ --> tests/golden/aliases/produced_primitive_mutable_invalid.ska:11:16""" },
+  { name = "bool", match = "contains", inline = """error[TYP020]: mutable primitive alias argument requires an existing primitive place
+ --> tests/golden/aliases/produced_primitive_mutable_invalid.ska:12:17""" },
 ]

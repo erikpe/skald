@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **planned**. OO0 is the next task.
+Status: **in progress**. OO0 is complete; OO1 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -59,7 +59,7 @@ pipelines are the baseline. No other planned feature blocks OO0.
 
 ## Progress
 
-- [ ] OO0 — Produced primitive read-only alias materialization
+- [x] OO0 — Produced primitive read-only alias materialization
 - [ ] OO1 — Canonical `std::ops` bundle and identity validation
 - [ ] OO2 — Value-producing operator selection and HIR erasure
 - [ ] OO3 — Typed equality, ordering, and complete operator surface
@@ -76,23 +76,23 @@ pipelines are the baseline. No other planned feature blocks OO0.
 **Purpose:** Land the independently useful ordinary-call prerequisite before
 operator lowering depends on it.
 
-- [ ] Extend primitive alias argument checking so any successfully checked
+- [x] Extend primitive alias argument checking so any successfully checked
   produced scalar expression of the exact parameter type can satisfy a
   read-only primitive `ref` parameter.
-- [ ] Keep bindings, static fields, and groupings around existing places on the
+- [x] Keep bindings, static fields, and groupings around existing places on the
   current direct `HirPrimitivePlace` path without creating a temporary.
-- [ ] Add one explicit HIR call-argument form for produced primitive alias
+- [x] Add one explicit HIR call-argument form for produced primitive alias
   storage, retaining the checked value, exact primitive type, source span, and
   read-only access contract.
-- [ ] Lower that form into one caller-owned MIR argument storage initialized at
+- [x] Lower that form into one caller-owned MIR argument storage initialized at
   the argument's ordinary left-to-right evaluation position and borrowed until
   the call result is secured.
-- [ ] End the storage exactly once at the enclosing full-expression boundary in
+- [x] End the storage exactly once at the enclosing full-expression boundary in
   reverse cleanup order; prove no mutation, escape, early end, double end, or
   use before initialization.
-- [ ] Continue to reject every produced expression for `mut ref`, even when the
+- [x] Continue to reject every produced expression for `mut ref`, even when the
   expression is a literal or otherwise assignable to the parameter type.
-- [ ] Route ordinary direct, method, interface, indirect, constructor, and
+- [x] Route ordinary direct, method, interface, indirect, constructor, and
   intrinsic-call argument checking through the same capability rather than
   adding an operator-only exception.
 

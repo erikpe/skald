@@ -1,0 +1,99 @@
+from std::test import assert_eq_f64;
+from std::test import assert_eq_i64;
+from std::test import assert_eq_u64;
+from std::test import assert_eq_u8;
+from std::test import assert_true;
+
+interface Reader {
+    fn read(ref value: i64) -> i64;
+}
+
+class Trace {
+    static counter: i64;
+
+    init() {}
+
+    static fn mark(value: i64) -> i64 {
+        Trace.counter = Trace.counter * 10 + value;
+        return value;
+    }
+}
+
+class Calls implements Reader {
+    init() {}
+
+    static fn read_static(ref value: i64) -> i64 {
+        return value;
+    }
+
+    fn read(ref value: i64) -> i64 {
+        return value;
+    }
+}
+
+class Capture {
+    value: i64;
+
+    init(ref value: i64) {
+        self.value = value;
+    }
+}
+
+class Holder {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+fn read_i64(ref value: i64) -> i64 { return value; }
+fn read_u64(ref value: u64) -> u64 { return value; }
+fn read_u8(ref value: u8) -> u8 { return value; }
+fn read_f64(ref value: f64) -> f64 { return value; }
+fn read_bool(ref value: bool) -> bool { return value; }
+fn make_i64() -> i64 { return 42; }
+
+fn through_interface(ref reader: Reader) -> i64 {
+    return reader.read(40 + 2);
+}
+
+fn verify_order(ref first: i64, later: i64) -> unit {
+    assert_eq_i64(Trace.counter, 12);
+    assert_eq_i64(first, 1);
+    assert_eq_i64(later, 2);
+}
+
+fn verify_checked_later(ref first: i64, later: i64) -> unit {
+    assert_eq_i64(first, 3);
+    assert_eq_i64(later, 4);
+}
+
+fn main() -> i64 {
+    var calls: Calls = Calls();
+    var callback: fn(ref i64) -> i64 = read_i64;
+    var capture: Capture = Capture(40 + 2);
+    var holder: Holder = Holder(42);
+    var existing: i64 = 42;
+
+    assert_eq_i64(read_i64(existing), 42);
+    assert_eq_i64(read_i64(40 + 2), 42);
+    assert_eq_i64(read_i64(make_i64()), 42);
+    assert_eq_i64(read_i64((i64) 42u), 42);
+    assert_eq_i64(read_i64(holder.value), 42);
+    assert_eq_i64(Calls.read_static(40 + 2), 42);
+    assert_eq_i64(calls.read(40 + 2), 42);
+    assert_eq_i64(through_interface(calls), 42);
+    assert_eq_i64(callback(40 + 2), 42);
+    assert_eq_i64(capture.value, 42);
+
+    assert_eq_u64(read_u64(40u + 2u), 42u);
+    assert_eq_u8(read_u8(40u8 + 2u8), 42u8);
+    assert_eq_f64(read_f64(40.0 + 2.0), 42.0);
+    assert_true(read_bool(true && true));
+
+    Trace.counter = 0;
+    verify_order(Trace.mark(1), Trace.mark(2));
+    verify_checked_later(Trace.mark(3), (i64) 4.0);
+    return 0;
+}

@@ -5,7 +5,6 @@ class Other { init() {} }
 fn unrelated(ref value: Other) -> unit {}
 fn downcast(ref value: Derived) -> unit {}
 fn mutate(mut ref value: Base) -> unit {}
-fn primitive(ref value: i64) -> unit {}
 fn array(ref value: i64[]) -> unit {}
 fn optional(ref value: Base?) -> unit {}
 fn make_optional() -> Base? { return Base(); }
@@ -14,7 +13,6 @@ fn main() -> i64 {
     unrelated(Base());
     downcast(Base());
     mutate(Base());
-    primitive(1);
     array(i64[]());
     optional(make_optional());
     var owner: shared Base = new Base();

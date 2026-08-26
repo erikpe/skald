@@ -11,8 +11,8 @@ exact-class read-only alias extension is implemented through type checking,
 HIR, verified MIR, and native x86-64 execution. Array-specific descriptor and
 detached-backing behavior belongs to [Arrays](ARRAYS.md). Feature maturity is
 authoritative in the [status matrix](STATUS.md). Produced primitive read-only
-alias materialization is frozen below as a prerequisite for operator
-protocols, but is not implemented.
+alias materialization is implemented below as an independently useful
+ordinary-call capability and as a prerequisite for operator protocols.
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)
@@ -24,9 +24,9 @@ defines object places, copying, and owning-object lifetime.
 
 An implemented alias parameter is a non-owning name for an eligible place.
 Its binding mode is separate from the static target. Existing-place sources
-select storage directly; an accepted produced-object source first materializes
-an owning place in hidden caller storage and then applies the same non-owning
-binding model:
+select storage directly; an accepted produced-object or produced-primitive
+source first materializes hidden caller storage and then applies the same
+non-owning binding model:
 
 ```ska
 fn inspect(ref value: Item) -> i64 {
@@ -98,8 +98,11 @@ Unrelated classes are invalid.
 
 A primitive alias argument may designate an existing primitive local, value
 parameter, forwarded primitive alias parameter, or primitive static field.
-Static selection evaluates no receiver. Primitive fields and produced scalar
-values are not yet primitive alias sources.
+Static selection evaluates no receiver. These existing places borrow
+directly. Any successfully checked produced expression of the exact primitive
+parameter type, including a primitive field read, may instead materialize one
+hidden caller-owned scalar for a read-only `ref`. A produced expression never
+satisfies `mut ref`, which continues to require an existing mutable place.
 
 A fresh inline construction, exact-class object-returning call, canonical
 class literal, or supported cast composition is now an object alias source for
@@ -166,8 +169,9 @@ temporary storage is physically writable during initialization. This keeps
 implicit temporary binding observational. Any future facility for mutating an
 unnamed object would require its own source syntax and contract.
 
-The implemented relaxation does not apply to produced primitives, optional
-containers, arrays, raw shared handles, or implicit shared dereference. Existing
+The implemented object relaxation does not apply to optional containers,
+arrays, raw shared handles, or implicit shared dereference. Produced primitive
+read-only aliases follow their separate scalar rule below. Existing
 inline-optional and array alias rules remain place-based. Shared-backed
 borrowing continues to require explicit `*` or `->` selection and follows its
 existing stable-owner or hidden-anchor rules. The extension also creates no
@@ -235,7 +239,7 @@ Diagnostics distinguish source-category failure from type incompatibility:
 - an otherwise compatible producer passed to `mut ref` is an invalid mutable
   alias source whose diagnostic requires an existing mutable place, rather
   than describing the producer as a read-only place; and
-- excluded primitive, optional, array, and shared-owner families retain their
+- excluded optional, array, and shared-owner families retain their
   family-specific alias or explicit-dereference diagnostics.
 
 Call checking continues through the complete argument list so independent
@@ -244,9 +248,9 @@ uses one produced read-only view. Verified MIR constructs its owner once,
 keeps it live for the complete call, and destroys it once at the enclosing
 full-expression boundary.
 
-## Frozen produced primitive read-only alias arguments
+## Implemented produced primitive read-only alias arguments
 
-The frozen
+The implemented
 [operator-protocol contract](OPERATOR_OVERLOADING.md#evaluation-aliases-and-cleanup)
 requires any successfully checked primitive value expression to bind to a
 compatible read-only primitive `ref` parameter. A literal, call result,
@@ -262,8 +266,14 @@ no source reference value, alias local, escaping or stored alias, external
 alias signature, implicit conversion, or observable permission to mutate
 unnamed storage.
 
-This extension is frozen but not implemented. The implemented primitive-source
-list above remains authoritative until the status matrix promotes the feature.
+Typed HIR distinguishes a direct `HirPrimitivePlace` borrow from a produced
+primitive alias expression. MIR evaluates the latter once, stores its exact
+value in dedicated non-owning scalar storage, passes that storage as the
+ordinary alias argument, and ends it with the enclosing full expression.
+Verification requires exactly one initialization and one read-only call use,
+proves liveness through that call, and rejects mutation, escape, early end,
+duplicate end, wrong type, or use before initialization. The same path serves
+direct, static, method, interface, indirect, and initializer calls.
 
 ## Access propagation
 
@@ -283,6 +293,8 @@ access cannot satisfy a `mut ref` parameter.
 For a produced object alias, the compiler-created temporary
 supplies read-only alias access regardless of the temporary's internal
 initialization capability. It therefore forwards only to another `ref`.
+Produced primitive alias storage supplies the same read-only access and cannot
+be forwarded to `mut ref`.
 
 Through read-only access, code may read primitive fields, call read-only
 methods, use the object as a copy source, and forward the place to another

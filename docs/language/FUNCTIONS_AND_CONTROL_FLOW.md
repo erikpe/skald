@@ -526,8 +526,8 @@ expression boundary. Unary protocol operations evaluate and secure one
 receiver before their call.
 
 Produced exact-class operands use the existing caller-owned object temporary
-rules. Produced primitive RHS expressions use the separately frozen read-only
-scalar alias materialization rule. `mut ref` remains place-only. Operator
+rules. Produced primitive RHS expressions use the implemented read-only scalar
+alias materialization rule. `mut ref` remains place-only. Operator
 methods retain ordinary observable effects and are not implicitly pure.
 
 This ordering is frozen but not implemented for class operators. Existing

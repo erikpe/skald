@@ -448,6 +448,30 @@ optional, array, raw-shared-owner, and implicit-shared-dereference sources keep
 their family-specific diagnostics. Call checking continues through later
 arguments in source order.
 
+## Produced primitive read-only alias representation
+
+The [produced primitive alias
+contract](../language/ALIASES_AND_OWNERSHIP.md#implemented-produced-primitive-read-only-alias-arguments)
+is implemented for ordinary internal calls and initializers without adding
+reference-valued expressions or changing the alias ABI:
+
+- Type checking preserves exact compatible bindings, static fields, and their
+  groupings as direct `HirPrimitivePlace` arguments. Any other successfully
+  checked exact primitive expression may satisfy only a read-only `ref` and is
+  retained as one `HirCallArgument::ProducedPrimitiveAlias` expression.
+- HIR-to-MIR lowering evaluates that expression once at its ordinary
+  left-to-right argument position, stores the value once in dedicated
+  `PrimitiveAlias` scalar storage, and passes its base place as the ordinary
+  alias argument. The full-expression tracker emits `StorageLive` before the
+  store and one reverse-ordered `StorageDead` after the call result is secured.
+- MIR verification requires one matching primitive declaration, lifetime
+  start, initialization, read-only call or initializer borrow, and lifetime
+  end in order. It rejects mutable borrowing, loads, additional uses, writes,
+  escape, early or duplicate end, missing initialization, and wrong type.
+- Direct, static, method, interface, indirect, and initializer call forms all
+  consume the same HIR call-argument capability. Backends need no dedicated
+  branch because verified storage places already use the internal alias ABI.
+
 ## Produced exact-class method-receiver representation
 
 The source-visible
@@ -912,7 +936,7 @@ realizations become existing HIR primitive operations. No unresolved operator
 protocol reaches completed HIR, and MIR gains no overloaded-operator node,
 dispatcher, effect model, backend lookup, or runtime service.
 
-Produced primitive RHS expressions rely on the separately frozen caller-owned
+Produced primitive RHS expressions rely on the implemented caller-owned
 read-only scalar alias temporary. Lowering otherwise reuses existing receiver,
 argument, result, effect, panic, anchor, and reverse full-expression cleanup
 plans. MIR verification proves only the resulting ordinary call or primitive

@@ -6,16 +6,16 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The [interface-based operator-overloading roadmap](OPERATOR_OVERLOADING_ROADMAP.md)
+is in progress. OO0 produced primitive read-only alias materialization is
+complete; OO1 canonical `std::ops` bundle and identity validation is next.
 
 The completed general iteration and generic interfaces roadmaps are preserved
 in the [archive](../archive/README.md).
 
 ## Planned
 
-The [interface-based operator-overloading roadmap](OPERATOR_OVERLOADING_ROADMAP.md)
-is planned, with produced primitive read-only alias materialization as its
-first independently useful task.
+No additional implementation roadmap is currently planned.
 
 ## Design proposals
 

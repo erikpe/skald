@@ -273,6 +273,22 @@ impl Verifier<'_> {
     ) {
         let argument = self.verify_place(site.function, site.block, place);
         if parameter.mode == MirParameterMode::MutableAlias
+            && place.base.local_storage().is_some_and(|storage| {
+                site.function
+                    .storage(storage)
+                    .is_some_and(|storage| storage.kind == MirStorageKind::PrimitiveAlias)
+            })
+        {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} cannot mutably borrow produced primitive alias storage",
+                    site.kind
+                ),
+            );
+        }
+        if parameter.mode == MirParameterMode::MutableAlias
             && !matches!(parameter.ty, MirType::Array(_))
             && self.place_is_final_root(place)
         {

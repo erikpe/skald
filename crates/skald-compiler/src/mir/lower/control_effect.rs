@@ -91,7 +91,10 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
 
 pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) -> bool {
     match argument {
-        HirCallArgument::Value(expression) => expression_contains_control_effect(expression),
+        HirCallArgument::Value(expression)
+        | HirCallArgument::ProducedPrimitiveAlias(expression) => {
+            expression_contains_control_effect(expression)
+        }
         HirCallArgument::Optional { .. } => true,
         HirCallArgument::ClassOptional(_) => true,
         HirCallArgument::OptionalShared(_) => true,

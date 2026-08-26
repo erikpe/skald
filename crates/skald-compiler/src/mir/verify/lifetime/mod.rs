@@ -10,7 +10,7 @@ use super::{
     path_state::{condition_reads, PathStates},
 };
 
-mod uses;
+pub(super) mod uses;
 
 #[cfg(test)]
 mod tests;

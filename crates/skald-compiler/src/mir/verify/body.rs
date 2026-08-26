@@ -75,6 +75,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_checked_shifts(function);
         self.verify_checked_integer_divisions(function);
         self.verify_checked_primitive_casts(function);
+        self.verify_produced_primitive_aliases(function);
         self.verify_cleanup_liveness(function);
         self.verify_storage_lifetimes(function);
         self.verify_shared_ownership(function);
@@ -145,6 +146,7 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::SharedAnchor, None)
                     | (MirStorageKind::CheckedView(_), None)
                     | (MirStorageKind::ScalarSpill, None)
+                    | (MirStorageKind::PrimitiveAlias, None)
                     | (MirStorageKind::PathCondition, None)
                     | (MirStorageKind::OptionalUnwrap, None)
                     | (MirStorageKind::SharedAllocation, None)

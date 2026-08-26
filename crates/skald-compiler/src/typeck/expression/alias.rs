@@ -518,53 +518,77 @@ impl CallableChecker<'_, '_> {
         expected: Type,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
-        let Some((place, actual, access)) = self.primitive_alias_place(expression) else {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_ALIAS_ARGUMENT,
-                    "primitive alias argument must designate an existing primitive place",
-                )
-                .with_primary_label(
-                    expression.span(),
-                    "pass a primitive binding or static field",
-                )
-                .with_secondary_label(parameter.span(), "primitive alias declared here"),
-            );
-            return None;
-        };
-        if actual != expected {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    TYPE_MISMATCH,
-                    format!(
-                        "primitive alias argument has type `{}` but `{}` is required",
-                        actual.name(),
-                        expected.name()
-                    ),
-                )
-                .with_primary_label(place.span, "this place has a different primitive type")
-                .with_secondary_label(
-                    parameter.type_syntax().span,
-                    "alias parameter type declared here",
-                ),
-            );
-            return None;
-        }
         let required = lower_parameter_mode(parameter.binding_mode())
             .required_access()
             .expect("alias parameter mode must require place access");
-        if !access.permits(required) {
+        if let Some((place, actual, access)) = self.primitive_alias_place(expression) {
+            if actual != expected {
+                self.report_primitive_alias_type_mismatch(place.span, actual, expected, parameter);
+                return None;
+            }
+            if !access.permits(required) {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INSUFFICIENT_ALIAS_ACCESS,
+                        "read-only primitive access cannot satisfy a mutable alias parameter",
+                    )
+                    .with_primary_label(place.span, "this place provides read-only access")
+                    .with_secondary_label(parameter.span(), "mutable alias declared here"),
+                );
+                return None;
+            }
+            return Some(HirCallArgument::PrimitivePlace(place));
+        }
+
+        let produced = self.check_expression(expression)?;
+        if required == HirAccess::Mutable {
             self.diagnostics.push(
                 Diagnostic::error(
-                    INSUFFICIENT_ALIAS_ACCESS,
-                    "read-only primitive access cannot satisfy a mutable alias parameter",
+                    INVALID_ALIAS_ARGUMENT,
+                    "mutable primitive alias argument requires an existing primitive place",
                 )
-                .with_primary_label(place.span, "this place provides read-only access")
+                .with_primary_label(
+                    expression.span(),
+                    "this expression produces a primitive value",
+                )
                 .with_secondary_label(parameter.span(), "mutable alias declared here"),
             );
             return None;
         }
-        Some(HirCallArgument::PrimitivePlace(place))
+        if produced.ty != expected {
+            self.report_primitive_alias_type_mismatch(
+                produced.span,
+                produced.ty,
+                expected,
+                parameter,
+            );
+            return None;
+        }
+        Some(HirCallArgument::ProducedPrimitiveAlias(produced))
+    }
+
+    fn report_primitive_alias_type_mismatch(
+        &mut self,
+        span: Span,
+        actual: Type,
+        expected: Type,
+        parameter: &impl CallParameter,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                TYPE_MISMATCH,
+                format!(
+                    "primitive alias argument has type `{}` but `{}` is required",
+                    actual.name(),
+                    expected.name()
+                ),
+            )
+            .with_primary_label(span, "this expression has a different primitive type")
+            .with_secondary_label(
+                parameter.type_syntax().span,
+                "alias parameter type declared here",
+            ),
+        );
     }
 
     fn primitive_alias_place(

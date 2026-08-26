@@ -165,7 +165,8 @@ makes a result source-observable.
   canonical `std::ops` bundle, exact primitive priority, unique nominal class
   and generic-bound selection, static primitive bound evidence, typed versus
   dynamic equality, eager call order, produced primitive read-only alias
-  prerequisite, and unchanged runtime boundary. It is not implemented.
+  prerequisite, and unchanged runtime boundary. The produced-primitive alias
+  prerequisite is implemented; operator protocols remain unimplemented.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations including canonical boolean and integer formatting, exact
@@ -237,7 +238,7 @@ makes a result source-observable.
   contract, plus the separately frozen canonical operator-protocol consumer.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, current inline lifetime, and the
-  frozen produced primitive read-only materialization prerequisite.
+  produced primitive read-only materialization prerequisite.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines the
   implemented non-null shared value, ordinary and exact-class copy allocation,
   owner copy/release, dynamic destruction, cycle, and borrow-anchor semantics

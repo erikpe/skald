@@ -2182,6 +2182,13 @@ impl<'types> HirDumper<'types> {
                 };
                 self.line(&format!("PrimitivePlaceArgument {storage}"), place.span);
             }
+            HirCallArgument::ProducedPrimitiveAlias(expression) => {
+                self.line(
+                    &format!("ProducedPrimitiveAliasArgument : {}", expression.ty.name()),
+                    expression.span,
+                );
+                self.indented(|dumper| dumper.expression(expression));
+            }
         }
     }
 

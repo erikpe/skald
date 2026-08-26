@@ -153,6 +153,12 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
         crate::hir::HirCallArgument::Array(_) => {}
         crate::hir::HirCallArgument::ArrayAlias(_) => {}
         crate::hir::HirCallArgument::PrimitivePlace(_) => {}
+        crate::hir::HirCallArgument::ProducedPrimitiveAlias(expression) => {
+            assert!(matches!(
+                expression.ty,
+                Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+            ));
+        }
     }
 }
 

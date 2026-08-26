@@ -1,10 +1,12 @@
 # Operator-Protocol Lowering
 
-Status: frozen compiler design, not implemented. The current pipeline emits
+Status: frozen operator-protocol compiler design, not implemented. The current pipeline emits
 only the [implemented primitive operator representation](PHASES_AND_IR.md#implemented-primitive-operator-representation).
 This document fixes the future compiler boundary for the frozen
 [interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md)
 without claiming accepted class-operator syntax or implementation progress.
+Its ordinary-call produced primitive read-only alias prerequisite is
+implemented independently below.
 
 The feature is a semantic consumer of canonical generic interfaces and
 existing primitive operations. Source punctuation is selected once before
@@ -112,23 +114,23 @@ invalid.
 
 ## Produced primitive read-only aliases
 
-Before operator protocols can accept arbitrary primitive RHS expressions, the
-ordinary call checker must support produced primitive read-only alias
-materialization. Any successfully checked compatible primitive value
+The ordinary call checker implements produced primitive read-only alias
+materialization independently of operator protocols. Any successfully checked compatible primitive value
 expression may initialize one hidden caller-owned scalar temporary at its
 ordinary argument position. The alias designates that temporary through the
 unchanged internal alias ABI until the call completes; storage ends at the
 enclosing full-expression boundary.
 
 Existing primitive places continue to borrow directly. `mut ref` selection
-continues to require an existing mutable place. HIR must distinguish direct
-place borrowing from produced scalar storage, retain exact type and source
-span, and own one bounded lifetime plan. MIR verification proves initialization
+continues to require an existing mutable place. HIR distinguishes direct
+place borrowing from produced scalar storage and retains the checked
+expression, exact type, and source span. MIR owns one bounded lifetime plan;
+verification proves initialization
 before alias use, liveness through the call, no mutation or escape, and one
 storage end after result securing.
 
-This is an independently useful prerequisite for ordinary calls and should be
-implemented and tested before protocol lowering consumes it.
+This independently useful ordinary-call prerequisite is implemented and
+tested before protocol lowering consumes it.
 
 ## HIR erasure and MIR reuse
 

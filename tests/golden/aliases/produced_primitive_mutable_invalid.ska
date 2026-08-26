@@ -1,0 +1,14 @@
+fn mutate_i64(mut ref value: i64) -> unit {}
+fn mutate_u64(mut ref value: u64) -> unit {}
+fn mutate_u8(mut ref value: u8) -> unit {}
+fn mutate_f64(mut ref value: f64) -> unit {}
+fn mutate_bool(mut ref value: bool) -> unit {}
+
+fn main() -> i64 {
+    mutate_i64(1 + 2);
+    mutate_u64(1u + 2u);
+    mutate_u8(1u8 + 2u8);
+    mutate_f64(1.0 + 2.0);
+    mutate_bool(true && false);
+    return 0;
+}
