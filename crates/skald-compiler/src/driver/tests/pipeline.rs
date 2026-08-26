@@ -292,7 +292,9 @@ fn canonical_standard_library_cycle_obeys_default_replacement_and_disabled_selec
         .unwrap(),
     ] {
         assert!(artifact.report.diagnostics.is_empty());
-        assert_eq!(artifact.report.sources.len(), 11);
+        // Vec is reachable through Str and ordinarily imports canonical
+        // Iterable, so the complete provider graph includes std::iter.
+        assert_eq!(artifact.report.sources.len(), 12);
         assert!(artifact.assembly.contains("call ska_rt_panic"));
     }
 
@@ -368,7 +370,9 @@ fn canonical_io_obeys_default_replacement_and_disabled_selection() {
         .unwrap(),
     ] {
         assert!(artifact.report.diagnostics.is_empty());
-        assert_eq!(artifact.report.sources.len(), 12);
+        // Vec is reachable through Str and ordinarily imports canonical
+        // Iterable, so the complete provider graph includes std::iter.
+        assert_eq!(artifact.report.sources.len(), 13);
         for runtime_symbol in [
             "ska_rt_io_standard_handle",
             "ska_rt_io_open",
@@ -425,7 +429,9 @@ fn installed_process_arguments_reach_verified_assembly_as_ordinary_library_sourc
     let artifact = compile_request_to_assembly(&request).unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert_eq!(artifact.report.sources.len(), 13);
+    // Process arguments reach Vec through Str and therefore also reach the
+    // canonical Iterable declaration imported by Vec.
+    assert_eq!(artifact.report.sources.len(), 14);
     assert!(artifact.assembly.contains(".Lska.fn.std.process.args."));
     assert!(artifact
         .assembly

@@ -1,6 +1,7 @@
 from std::error import panic;
+from std::iter import Iterable;
 
-public class Vec<T> {
+public class Vec<T> implements Iterable<T, u64> {
     private _length: u64;
     private _storage: T?[];
 
@@ -28,6 +29,20 @@ public class Vec<T> {
 
     fn is_empty() -> bool {
         return self._length == 0u;
+    }
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> T? {
+        if (state >= self._length) {
+            return none;
+        }
+
+        var index: u64 = state;
+        state = state + 1u;
+        return self._storage[(i64) index];
     }
 
     mut fn clear() -> unit {

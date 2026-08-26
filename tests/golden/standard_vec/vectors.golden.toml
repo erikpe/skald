@@ -9,6 +9,15 @@ source = "vec_generic.ska"
 name = "complete_element_and_lifecycle_profile"
 
 [[test]]
+name = "iteration"
+mode = "run"
+source = "vec_iteration.ska"
+
+[[test.run]]
+name = "stored_values_generic_dispatch_and_loop_exits"
+expect = { exit = 0 }
+
+[[test]]
 name = "generic_type_shapes"
 mode = "run"
 source = "vec_generic_type_shapes.ska"

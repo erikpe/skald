@@ -6,7 +6,10 @@ use crate::{
         HirViewSource, Type,
     },
     resolve::{resolve_module_graph, ResolveOutput},
-    test_support::{load_module_sources, CANONICAL_ITER_SOURCE},
+    test_support::{
+        load_module_sources, load_module_sources_with_standard_library, lower_hir_to_final_mir,
+        CANONICAL_ITER_SOURCE,
+    },
     typeck::{type_check, COPY_OPERATION_UNAVAILABLE, GENERAL_ITERATION_UNSUPPORTED},
 };
 
@@ -343,6 +346,76 @@ fn stored_value_state_and_item_families_lower_through_their_ordinary_lifecycles(
     assert!(dumps.contains("array-adopt"), "{dumps}");
     assert!(dumps.contains("optional-shared-unwrap"), "{dumps}");
     assert!(dumps.contains("aggregate-optional-initialize"), "{dumps}");
+}
+
+#[test]
+fn terminating_optional_shared_attempt_closes_its_full_expression() {
+    let hir = check_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Items implements Iterable<shared i64?, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> (shared i64?)? { return none; }\n",
+        "}\n",
+        "fn scan(ref values: Items) -> i64 { for (item in values) {} return 0; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let mir = lower_hir_to_final_mir(&hir);
+    crate::mir::verify_mir(&mir)
+        .expect("a terminating optional-shared attempt must close its ownership expression");
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("optional-shared-cleanup"), "{dump}");
+    assert!(dump.contains("end-full-expression"), "{dump}");
+}
+
+#[test]
+fn standard_vec_iteration_uses_ordinary_dispatch_without_iterator_allocation() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[(
+            "app.ska",
+            concat!(
+                "from std::vec import Vec;\n",
+                "fn scan(ref values: Vec<i64>) -> i64 {\n",
+                "  var result: i64 = 0;\n",
+                "  for (item in values) { result = result + item; }\n",
+                "  return result;\n",
+                "}\n",
+                "fn main() -> i64 { return 0; }\n",
+            ),
+        )],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let checked = type_check(&resolved.program);
+    assert!(!checked.has_errors(), "{:?}", checked.diagnostics);
+    let mir = lower_hir_to_final_mir(&checked.hir.expect("Vec loop must produce HIR"));
+    crate::mir::verify_mir(&mir).expect("ordinary Vec iteration MIR must verify");
+
+    let scan = mir
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "scan")
+        .and_then(|declaration| mir.definitions.get(declaration.id))
+        .expect("fixture scan definition must exist");
+    assert!(scan.body.blocks.iter().all(|block| {
+        block.instructions.iter().all(|instruction| {
+            !matches!(
+                instruction,
+                crate::mir::MirInstruction::SharedAllocate(_)
+                    | crate::mir::MirInstruction::Array(
+                        crate::mir::MirArrayInstruction::Allocate { .. }
+                            | crate::mir::MirArrayInstruction::AllocateElements { .. }
+                    )
+            )
+        })
+    }));
+    assert!(scan
+        .storage
+        .iter()
+        .all(|storage| !storage.name.contains("iterator")));
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("call interface"), "{dump}");
 }
 
 #[test]

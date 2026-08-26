@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT6` is complete; `IT7` is next.
+Status: in progress. `IT7` is complete; `IT8` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -85,7 +85,7 @@ Every task preserves these cross-cutting decisions:
 | [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [x] Complete | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
 | [IT5](#it5--loop-duration-receiver-composition) | [x] Complete | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
 | [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [x] Complete | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
-| [IT7](#it7--ordinary-vec-adoption) | [ ] Planned | `Vec<T>` implements `Iterable<T, u64>` in ordinary source and composes with generic consumers. |
+| [IT7](#it7--ordinary-vec-adoption) | [x] Complete | `Vec<T>` implements `Iterable<T, u64>` in ordinary source and composes with generic consumers. |
 | [IT8](#it8--verification-diagnostics-and-determinism-hardening) | [ ] Planned | Negative verifier evidence, stable diagnostics, dumps, and reordered-declaration determinism close trust gaps. |
 | [IT9](#it9--native-boundary-and-release-closure) | [ ] Planned | Native evidence, unchanged runtime/ABI checks, full gates, living status, and archival complete delivery. |
 
@@ -517,19 +517,19 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Make `Vec<T>` claim `Iterable<T, u64>` in ordinary source.
-- [ ] Implement `iter_state` as index-zero state initialization.
-- [ ] Implement `iter_next` using ordinary length, checked storage access,
+- [x] Make `Vec<T>` claim `Iterable<T, u64>` in ordinary source.
+- [x] Implement `iter_state` as index-zero state initialization.
+- [x] Implement `iter_next` using ordinary length, checked storage access,
   exact item production, state increment, and outer optional termination.
-- [ ] State and test the required `T` capabilities through existing generic
+- [x] State and test the required `T` capabilities through existing generic
   contextual requirements; do not add compiler-only Vec privileges.
-- [ ] Iterate empty, singleton, multi-element, nested, optional-element,
+- [x] Iterate empty, singleton, multi-element, nested, optional-element,
   class-element, array-element, and shared-owner-element vectors.
-- [ ] Use a generic consumer bounded by `Iterable<Item, State>` and prove
+- [x] Use a generic consumer bounded by `Iterable<Item, State>` and prove
   definition-site selection plus ordinary interface dispatch.
-- [ ] Observe no iterator/shared allocation attributable to the loop mechanism
+- [x] Observe no iterator/shared allocation attributable to the loop mechanism
   for a primitive Vec loop; ordinary Vec/item behavior may still allocate.
-- [ ] Preserve existing Vec indexing, slicing, copy, mutation, and lifecycle
+- [x] Preserve existing Vec indexing, slicing, copy, mutation, and lifecycle
   tests.
 
 Tests:
@@ -544,6 +544,22 @@ Tests:
 Exit condition: `Vec<T>` is an ordinary conforming implementation, concrete
 and generic loops execute across admitted element types, and no compiler path
 branches on Vec identity.
+
+Completion evidence: ordinary `std::vec::Vec<T>` source now imports and claims
+the canonical `Iterable<T, u64>` application. Its state starts at zero and its
+next method checks logical length, advances once, and returns the checked
+occupied `T?` storage slot directly, preserving `some(none)` for genuine absent
+optional elements. Existing generic contextual inference supplies every item
+copy requirement without a Vec-specific compiler privilege. The native golden
+matrix covers empty, singleton, multi-element, nested, optional, exact-class,
+array, shared-owner, optional-owner, shared-optional-box, inherited, and
+generic-bound loops plus break, continue, and return. Focused final-MIR evidence
+shows ordinary interface dispatch and no iterator, array, or shared allocation
+inside a primitive Vec consumer. The matrix also exposed and fixed the general
+optional-shared terminating-attempt full-expression boundary. All existing Vec
+goldens remain green; the full repository gate, documentation/static checks,
+all 364 golden sources, 2,231 compiler unit tests, and the Rust 1.82 MSRV check
+pass.
 
 ## IT8 — Verification, diagnostics, and determinism hardening
 

@@ -1,0 +1,209 @@
+from std::iter import Iterable;
+from std::test import assert_eq_i64, assert_eq_u64;
+from std::vec import Vec;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+}
+
+class OwnerItem {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Numbers extends Vec<i64> {
+    init() {
+        super();
+    }
+}
+
+class Sum<Source> where Source: Iterable<i64, u64> {
+    init() {}
+
+    fn read(ref values: Source) -> i64 {
+        var result: i64 = 0;
+        for (item in values) {
+            result = result + item;
+        }
+        return result;
+    }
+}
+
+fn primitive_shapes() -> unit {
+    var empty: Vec<i64> = Vec<i64>();
+    var attempts: u64 = 0u;
+    for (item in empty) {
+        attempts = attempts + 1u;
+    }
+    assert_eq_u64(attempts, 0u);
+
+    var singleton: Vec<i64> = Vec<i64>();
+    singleton.push(7);
+    var singleton_sum: i64 = 0;
+    for (item in singleton) {
+        singleton_sum = singleton_sum + item;
+    }
+    assert_eq_i64(singleton_sum, 7);
+
+    var values: Vec<i64> = Vec<i64>();
+    values.push(10);
+    values.push(20);
+    values.push(30);
+    var sum: i64 = 0;
+    for (item in values) {
+        sum = sum + item;
+    }
+    assert_eq_i64(sum, 60);
+}
+
+fn aggregate_shapes() -> unit {
+    var optionals: Vec<i64?> = Vec<i64?>();
+    optionals.push(none);
+    optionals.push(4);
+    var absent: u64 = 0u;
+    var optional_sum: i64 = 0;
+    for (item in optionals) {
+        if (item is some) {
+            optional_sum = optional_sum + item!;
+        } else {
+            absent = absent + 1u;
+        }
+    }
+    assert_eq_u64(absent, 1u);
+    assert_eq_i64(optional_sum, 4);
+
+    var classes: Vec<Item> = Vec<Item>();
+    classes.push(Item(5));
+    classes.push(Item(6));
+    var class_sum: i64 = 0;
+    for (item in classes) {
+        class_sum = class_sum + item.value;
+    }
+    assert_eq_i64(class_sum, 11);
+
+    var arrays: Vec<i64[]> = Vec<i64[]>();
+    arrays.push(i64[]{7, 8});
+    var array_sum: i64 = 0;
+    for (item in arrays) {
+        array_sum = array_sum + item[0] + item[1];
+    }
+    assert_eq_i64(array_sum, 15);
+
+    var first: Vec<i64> = Vec<i64>();
+    first.push(9);
+    first.push(10);
+    var nested: Vec<Vec<i64>> = Vec<Vec<i64>>();
+    nested.push(first);
+    var nested_sum: i64 = 0;
+    for (row in nested) {
+        for (item in row) {
+            nested_sum = nested_sum + item;
+        }
+    }
+    assert_eq_i64(nested_sum, 19);
+}
+
+fn owner_shapes() -> unit {
+    var owners: Vec<shared OwnerItem> = Vec<shared OwnerItem>();
+    owners.push(new OwnerItem(20));
+    owners.push(new OwnerItem(21));
+    var owner_sum: i64 = 0;
+    for (item in owners) {
+        owner_sum = owner_sum + item->value;
+    }
+    assert_eq_i64(owner_sum, 41);
+
+    var optional_owners: Vec<(shared OwnerItem)?> = Vec<(shared OwnerItem)?>();
+    optional_owners.push(none);
+    optional_owners.push(new OwnerItem(22));
+    var present: u64 = 0u;
+    for (item in optional_owners) {
+        if (item is some) {
+            present = present + 1u;
+            assert_eq_i64(item!->value, 22);
+        }
+    }
+    assert_eq_u64(present, 1u);
+
+    var boxes: Vec<shared i64?> = Vec<shared i64?>();
+    boxes.push(new i64?());
+    boxes.push(new i64?(23));
+    var boxed_sum: i64 = 0;
+    for (item in boxes) {
+        if ((*item) is some) {
+            boxed_sum = boxed_sum + (*item)!;
+        }
+    }
+    assert_eq_i64(boxed_sum, 23);
+}
+
+fn inherited_and_generic_dispatch() -> unit {
+    var numbers: Numbers = Numbers();
+    numbers.push(30);
+    numbers.push(31);
+    var inherited_sum: i64 = 0;
+    for (item in numbers) {
+        inherited_sum = inherited_sum + item;
+    }
+    assert_eq_i64(inherited_sum, 61);
+
+    var values: Vec<i64> = Vec<i64>();
+    values.push(40);
+    values.push(41);
+    var sum: Sum<Vec<i64>> = Sum<Vec<i64>>();
+    assert_eq_i64(sum.read(values), 81);
+}
+
+fn exits(ref values: Vec<i64>) -> i64 {
+    var result: i64 = 0;
+    for (item in values) {
+        if (item == 1) {
+            continue;
+        }
+        if (item == 3) {
+            break;
+        }
+        result = result + item;
+    }
+    return result;
+}
+
+fn return_from_loop(ref values: Vec<i64>) -> i64 {
+    for (item in values) {
+        if (item == 2) {
+            return item;
+        }
+    }
+    return -1;
+}
+
+fn loop_exits() -> unit {
+    var values: Vec<i64> = Vec<i64>();
+    values.push(0);
+    values.push(1);
+    values.push(2);
+    values.push(3);
+    values.push(4);
+    assert_eq_i64(exits(values), 2);
+    assert_eq_i64(return_from_loop(values), 2);
+}
+
+fn main() -> i64 {
+    primitive_shapes();
+    aggregate_shapes();
+    owner_shapes();
+    inherited_and_generic_dispatch();
+    loop_exits();
+    return 0;
+}

@@ -266,11 +266,6 @@ impl BodyLowerer<'_> {
         let item = self.local_storage[statement.binding.index()];
         if !matches!(item_copy, HirIterationValueCopy::Shared(_)) {
             self.begin_storage_lifetime(item, statement.spans.binding_span);
-        } else {
-            self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-                temporaries: Vec::new(),
-                span: statement.spans.binding_span,
-            }));
         }
         self.cleanup.register_storage(item);
         match item_copy {
@@ -509,6 +504,15 @@ impl BodyLowerer<'_> {
                         span: statement.spans.span,
                     },
                 ));
+                // The shared-result call and a successful shared unwrap both
+                // establish ownership that must cross exactly one ordinary
+                // full-expression boundary. Put that boundary after result
+                // cleanup so it exists on both the yielded and terminating
+                // attempt paths.
+                self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                    temporaries: Vec::new(),
+                    span: statement.spans.span,
+                }));
             }
         }
         self.end_storage_lifetime(result, statement.spans.span);

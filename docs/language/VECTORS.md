@@ -13,13 +13,15 @@ defined by [Generic classes](GENERIC_CLASSES.md).
 type `T`:
 
 ```text
-public class Vec<T> {
+public class Vec<T> implements Iterable<T, u64> {
     init();
     static fn with_capacity(capacity: u64) -> Vec<T>;
 
     fn len() -> u64;
     fn capacity() -> u64;
     fn is_empty() -> bool;
+    fn iter_state() -> u64;
+    fn iter_next(mut ref state: u64) -> T?;
     mut fn clear() -> unit;
     mut fn push(value: T) -> unit;
     mut fn pop() -> T;
@@ -154,7 +156,8 @@ elements retain the same pointee allocations under independent owner handles.
 ## Language, compiler, and runtime boundary
 
 The vector is ordinary standard-library source composed from classes, arrays,
-optionals, loops, casts, panic, and shared ownership. Its four
+optionals, loops, casts, panic, shared ownership, and the ordinary `Iterable`
+interface. Its four
 [structural bracket](INDEXING_AND_SLICING.md) entry points are ordinary methods:
 the compiler adds no vector identity check, intrinsic, IR instruction, target
 operation, or runtime ABI entry. Closed specializations select those methods
@@ -168,20 +171,26 @@ named replacement's independent vector copy additionally costs time and
 storage proportional to its capacity; a produced slice is transferred without
 a second complete-vector copy.
 
-## Frozen general-iteration adoption
+## General iteration
 
-The separately frozen [general-iteration contract](ITERATION.md) will make
-`Vec<T>` an ordinary `Iterable<T, u64>` implementation. Index zero is its
-initial state; each next call checks the current logical length, copies one
-element through existing Vec capabilities, advances the state, and returns
-outer absence at the end. `for-in` nominal selection, structured HIR, and the
-initial loop execution matrix are implemented, while Vec conformance remains
-pending and adds no vector intrinsic or mandatory iterator allocation.
+`Vec<T>` is an ordinary `Iterable<T, u64>` implementation under the
+[general-iteration contract](ITERATION.md). Index zero is its initial state.
+Each next call checks the current logical length, advances the state, and
+returns the occupied storage slot through ordinary checked array access. The
+slot's outer optional is exactly the iteration result: an unused/end state is
+`none`, while an optional element whose value is absent is `some(none)`.
+
+The same generic contextual analysis that admits the other vector methods
+infers the element-copy capabilities required by `iter_next`; the compiler has
+no vector-specific conformance or capability privilege. Concrete, inherited,
+specialized, and generic-bound vector loops select the ordinary interface
+implementation. Primitive vector loops introduce no iterator object, shared
+allocation, runtime entry point, or vector-specific compiler branch.
 
 ## Deliberate limits
 
 The implemented profile does not include insertion or removal at arbitrary
 positions, append, sorting, function-valued algorithms, capacity reservation
 after construction, explicit shrinking, allocators, or small-vector
-optimization. General iteration is frozen separately as described above;
-ranges, generators, and broader iterator/adaptor APIs remain unspecified.
+optimization. Ranges, generators, and broader iterator/adaptor APIs remain
+unspecified.

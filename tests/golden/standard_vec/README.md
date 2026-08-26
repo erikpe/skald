@@ -16,6 +16,11 @@ positive generic type-shape matrix keeps every specialization in its own
 function within one compilation unit and forces each vector through geometric
 growth.
 
+Iteration coverage exercises empty, singleton, and multi-element vectors;
+optional, exact-class, array, nested-vector, shared-owner, optional-owner, and
+shared-optional-box elements; inherited specialization; generic-bound
+interface dispatch; nested loops; and break, continue, and return cleanup.
+
 `generic_failures.golden.toml` owns contextual rejection of bare interface
 and `Obj` storage, the grammar-level rejection of `unit`, and unavailable
 element lifecycle operations. Resolver-stage failures share one source and

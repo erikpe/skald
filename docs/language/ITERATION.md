@@ -162,12 +162,14 @@ does not add snapshot, fail-fast, or concurrent-modification semantics.
 
 ## Standard-library adoption and cost
 
-The canonical module will be dependency-free so foundational collection
-modules may import it. `std::vec::Vec<T>` will ordinarily claim
-`Iterable<T, u64>`: `iter_state` returns index zero and `iter_next` checks the
-current length, produces the indexed value, and advances the state. Its state
-and loop bookkeeping remain inline and allocation-free under the language
-model. Item production follows `Vec<T>`'s ordinary copy/capability rules.
+The canonical module is dependency-free so foundational collection modules
+may import it. `std::vec::Vec<T>` ordinarily claims `Iterable<T, u64>`:
+`iter_state` returns index zero and `iter_next` checks the current length,
+copies the occupied `T?` storage slot, advances the state, and returns outer
+absence at the end. Genuine optional elements remain distinguishable because
+an occupied slot containing `none` returns `some(none)`. Its state and loop
+bookkeeping remain inline and allocation-free under the language model. Item
+production follows `Vec<T>`'s ordinary inferred copy/capability requirements.
 
 Allocation-free state is a semantic possibility, not a promise that every
 dispatch is devirtualized or every loop is inlined. Devirtualization, range

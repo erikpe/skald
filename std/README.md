@@ -71,9 +71,9 @@ library interfaces without implicit prelude behavior or compiler machinery.
 The dependency-free `std::iter` module provides the canonical generic
 `Iterable<Item, State>` interface. Resolution validates its exact public
 template and requirement identities when the canonical module is requested.
-General `for-in` syntax is parsed and supplies implicit `std::iter` dependency
-evidence. Resolution selects exact nominal applications, including frozen
-generic bounds; structured HIR and lowering remain later compiler work.
+General `for-in` syntax supplies implicit `std::iter` dependency evidence.
+Resolution selects exact nominal applications, including frozen generic
+bounds, and the structured HIR lowers through ordinary calls and cyclic MIR.
 
 The `std::vec` module provides the implemented generic
 [`Vec<T>` vector](../docs/language/VECTORS.md). It owns independent `T?[]`
@@ -82,7 +82,9 @@ method operations. Heterogeneous shared-object code uses `Vec<shared Obj>`.
 The vector provides capacity, geometric growth, checked positive and negative
 indexing through compatibility methods and structural brackets, independent
 logical-length slices, equal-length snapshot slice replacement, push, pop,
-last, replacement, and clear without compiler or runtime machinery.
+last, replacement, clear, and ordinary allocation-free-state
+`Iterable<T, u64>` traversal without Vec-specific compiler or runtime
+machinery.
 
 The `std::map` module provides a generic `Map<K, V>` whose keys implement both
 `Equatable` and `Hashable`. It uses power-of-two open-addressed storage, cached
