@@ -147,9 +147,10 @@ authoritative.
    full-expression cleanup must not depend on whether `+` or `.op_add(...)`
    led to the call.
 9. **The initial surface should be narrow enough to explain completely.**
-   Equality, partial ordering, short-circuit logic, mutation, and conversion
-   each carry contracts beyond simple eager dispatch and should be included
-   only deliberately.
+   Typed equality is deliberately distinct from dynamic `Equatable`;
+   ordering, short-circuit logic, mutation, and conversion each carry
+   contracts beyond simple eager dispatch and should be included only
+   deliberately.
 
 ## Decision register
 
@@ -157,7 +158,7 @@ authoritative.
 |---|---|---|---|
 | [OP1](#op1--protocol-ownership-and-canonical-identity) | Where do protocols live? | Ordinary declarations in canonical `std::ops`, validated and recognized by the compiler | **Recommended** |
 | [OP2](#op2--protocol-shape-and-parameter-modes) | What is the interface shape? | One read-only receiver, a `ref` RHS for binary operators, and explicit generic output | **Recommended** |
-| [OP3](#op3--initial-overloadable-operator-surface) | Which operators overload initially? | Eager algebraic operators first; equality and ordering require an explicit decision below | **Open** |
+| [OP3](#op3--initial-overloadable-operator-surface) | Which operators overload initially? | Eager algebraic operators, typed `OpEq<Rhs>` with derived `!=`, and four direct ordering predicates; prefix `!` is not overloadable | **Confirmed direction** |
 | [OP4](#op4--selection-and-ambiguity) | How is an implementation selected? | Built-in primitive match first; otherwise one canonical application from the left operand whose `ref Rhs` accepts the static RHS; no expected-result filtering | **Recommended**, specificity details open |
 | [OP5](#op5--compiler-provided-primitive-implementations) | How do primitives implement protocols? | Compile-time implementation records mapped to existing primitive operations; no object conformance or witness | **Recommended** |
 | [OP6](#op6--generic-bounds-and-definition-site-selection) | How do generic bounds compose? | Bounds may be satisfied by a class witness or canonical primitive implementation; selected uses specialize to the corresponding realization | **Recommended** |
@@ -180,6 +181,26 @@ public interface OpNeg<Output> {
 
 public interface OpBitNot<Output> {
     fn op_bit_not() -> Output;
+}
+
+public interface OpEq<Rhs> {
+    fn op_eq(ref rhs: Rhs) -> bool;
+}
+
+public interface OpLess<Rhs> {
+    fn op_less(ref rhs: Rhs) -> bool;
+}
+
+public interface OpLessEq<Rhs> {
+    fn op_less_eq(ref rhs: Rhs) -> bool;
+}
+
+public interface OpGreater<Rhs> {
+    fn op_greater(ref rhs: Rhs) -> bool;
+}
+
+public interface OpGreaterEq<Rhs> {
+    fn op_greater_eq(ref rhs: Rhs) -> bool;
 }
 
 public interface OpAdd<Rhs, Output> {
@@ -288,10 +309,12 @@ still have ordinary effects allowed to a read-only receiver, such as reading
 or mutating independently reachable shared state or calling other effectful
 functions.
 
-`Output` is explicit because Skald has no associated types. It may differ from
-the left or right type, provided the closed interface signature permits it as
-an ordinary result. Candidate selection must not infer or choose `Output` from
-an expected destination type.
+`Output` is explicit on value-producing algebraic protocols because Skald has
+no associated types. It may differ from the left or right type, provided the
+closed interface signature permits it as an ordinary result. Candidate
+selection must not infer or choose `Output` from an expected destination type.
+Predicate protocols such as `OpEq<Rhs>` have an exact `bool` result and do not
+carry a redundant `Output` parameter.
 
 ## OP3 — Initial overloadable operator surface
 
@@ -309,27 +332,63 @@ source meaning is one unary or binary call:
 | `%` | `OpRem<Rhs, Output>` | each existing exact integer pair |
 | `&`, `|`, `^` | corresponding bit protocol | each existing exact integer pair |
 | `<<`, `>>` | corresponding shift protocol | each existing integer left type with `u64` RHS |
+| `==` | `OpEq<Rhs>` | each existing exact primitive equality pair |
+| `!=` | one `OpEq<Rhs>` call followed by exact boolean negation | each existing exact primitive inequality pair |
+| `<` | `OpLess<Rhs>` | each existing exact numeric primitive pair |
+| `<=` | `OpLessEq<Rhs>` | each existing exact numeric primitive pair |
+| `>` | `OpGreater<Rhs>` | each existing exact numeric primitive pair |
+| `>=` | `OpGreaterEq<Rhs>` | each existing exact numeric primitive pair |
 
 The primitive implementation set is exactly the existing primitive operator
 matrix. Protocol support neither adds a primitive operation nor changes a
 primitive result.
 
-The following require explicit decisions before freeze:
+Prefix `!` is not overloadable. It remains exact boolean negation and preserves
+Skald's no-truthiness rule. The compiler may use that existing operation when
+deriving `!=` from one `OpEq` result; this does not expose an `OpNot` protocol.
 
-- **Prefix `!`:** keeping it exact-`bool` preserves Skald's no-truthiness
-  rule. An `OpNot<Output>` protocol is mechanically possible, but an arbitrary
-  output would blur logical negation with the separate bitwise `~` operator.
-- **Equality:** a typed `OpEq<Rhs>` could make `==` call `op_eq` and define
-  `!=` as one negation of that result. Skald already has
-  `std::lang::Equatable.equals(ref Obj)` for dynamic hash-key equality.
-  Freezing a second equality protocol needs either a clear distinction and
-  consistency rule or a migration of `Equatable` and `Map`.
-- **Ordering:** a generic `Range<T>` ultimately needs an ordering bound. The
-  choices include one interface with four boolean methods, four one-method
-  interfaces, or a single partial-comparison result. The latter needs a
-  public representation of less/equal/greater/unordered that does not yet
-  exist. This should be settled with range design in mind rather than hidden
-  inside `<` lowering.
+Typed equality and dynamic equality remain separate contracts:
+
+- `OpEq<Rhs>.op_eq(ref rhs: Rhs) -> bool` authorizes `==` for a statically
+  selected RHS domain and permits both class and compiler-provided primitive
+  implementations;
+- `!=` evaluates `op_eq` exactly once and negates that `bool`, so the two
+  operators cannot disagree;
+- `std::lang::Equatable.equals(ref other: Obj)` remains an explicit dynamic,
+  heterogeneous object comparison suitable for current hash-key and
+  object-oriented APIs;
+- `Equatable` does not authorize `==`, `OpEq` does not satisfy `Equatable`, and
+  the compiler inserts no bridge in either direction; and
+- a class may implement both and is responsible for keeping their overlapping
+  domain behavior coherent. Migration of `Map` is separate standard-library
+  work rather than part of operator overloading.
+
+Ordering uses four direct one-method predicate protocols—`OpLess<Rhs>`,
+`OpLessEq<Rhs>`, `OpGreater<Rhs>`, and `OpGreaterEq<Rhs>`—each returning exact
+`bool` without an `Output` parameter. This permits narrow bounds,
+heterogeneous operand pairs, and partial orders, at the cost of making
+consistency among the four implementations a user obligation. A generic
+`Range<T>` can require only `T: OpLess<T>`. The rejected derivations and other
+alternatives are retained below as rationale.
+
+Compiler-provided primitive equality and ordering implementations exactly
+preserve the implemented primitive comparison profile. In particular, `f64`
+uses IEEE-754 unordered numeric comparison rather than bit-representation
+comparison:
+
+| Condition | `==` | `!=` | `<`, `<=`, `>`, `>=` |
+|---|---|---|---|
+| Either operand is NaN | `false` | `true` | `false` |
+| `+0.0` compared with `-0.0` | `true` | `false` | ordinary equal-order results |
+| Finite values and infinities | ordinary numeric result | negated equality | ordinary numeric ordering |
+
+NaN payload, NaN sign, and signed-zero representation do not participate in
+primitive operator selection or results. `std::f64::BoxF64.equals` remains a
+separate explicit bit-representation equality contract used where exact
+binary identity and corresponding hashing are desired. Its behavior does not
+define primitive `f64`, `OpEq<f64>`, or ordering protocol semantics. A user
+class, including `BoxF64`, acquires operator syntax only by explicitly
+implementing the applicable operator protocols.
 
 `&&` and `||` are not overloadable. Their right operand is conditional and
 cannot be represented by an ordinary eager interface call. Postfix optional
@@ -352,8 +411,8 @@ syntax do not exist and are not reserved by this proposal.
    by its declared generic bounds.
 5. Retain candidates whose `ref Rhs` can accept the static right source under
    ordinary read-only alias compatibility.
-6. Require exactly one candidate and take its declared `Output` as the result
-   type.
+6. Require exactly one candidate and take its declared `Output`, or the
+   protocol's fixed `bool`, as the result type.
 
 The expected result type does not filter candidates. There is no implicit
 numeric cast, promotion, literal reinterpretation, owning copy, owner
@@ -399,9 +458,11 @@ from each supported primitive protocol application to one existing primitive
 semantic operation. Conceptually:
 
 ```text
-(canonical OpAdd, [u64, u64]) -> AddU64
-(canonical OpShiftLeft, [u64, u64]) -> ShiftLeftU64
-(canonical OpNeg, [f64]) -> NegateF64
+(u64, canonical OpAdd<u64, u64>) -> AddU64
+(u64, canonical OpShiftLeft<u64, u64>) -> ShiftLeftU64
+(f64, canonical OpNeg<f64>) -> NegateF64
+(u64, canonical OpEq<u64>) -> EqualU64
+(f64, canonical OpLess<f64>) -> LessF64
 ```
 
 The real key must use canonical template and exact type identities rather than
@@ -676,29 +737,53 @@ protocol declarations and validation, primitive implementation evidence and
 bound closure, class operator selection, generic definition-site selection,
 and complete hardening. Those are design observations, not a frozen sequence.
 
-## Equality and ordering design fork
+## Equality and ordering recommendations
 
 The initial proposal should not claim that all punctuation is overloadable
 until these contracts are chosen.
 
-### Equality alternatives
+### Equality recommendation
 
-1. **Keep `==` primitive-only initially.** This avoids conflict and lets the
-   algebraic feature proceed, but generic class equality and a future unified
-   equality story remain separate work.
-2. **Add `OpEq<Rhs>`.** `==` calls `op_eq(ref rhs: Rhs) -> bool`; `!=` calls it
-   once and negates the result. This is statically typed and composes with
-   primitive bounds, but it overlaps the existing dynamic `Equatable`
-   contract.
-3. **Reuse `Equatable`.** This aligns operators with current maps and strings,
-   but its `Obj` RHS is class-oriented, dynamically heterogeneous, and cannot
-   coherently describe primitive bound calls without further redesign.
+The recorded recommendation is `OpEq<Rhs>` for typed operator equality.
+`==` performs one statically selected `op_eq(ref rhs: Rhs) -> bool` call, and
+`!=` performs the same call once followed by exact boolean negation. Primitive
+types receive compiler-provided exact same-type applications matching the
+implemented primitive comparison matrix.
 
-The current recommendation is alternative 1 until a migration or explicit
-separation between dynamic hash-key equality and typed operator equality is
-accepted.
+This supports homogeneous generic comparison directly:
 
-### Ordering alternatives
+```ska
+class Comparer<T> where T: OpEq<T> {
+    init() {}
+
+    fn equal(ref left: T, ref right: T) -> bool {
+        return left == right;
+    }
+}
+```
+
+`Comparer<u64>` specializes to intrinsic primitive equality.
+`Comparer<Point>` uses ordinary interface dispatch when `Point implements
+OpEq<Point>`. Produced primitive arguments rely on OP8, while the two aliases
+inside `equal` forward without another copy or materialization.
+
+`Equatable.equals(ref Obj)` remains explicit dynamic equality and does not
+participate in operator selection. This preserves heterogeneous object
+comparison without making every potentially unrelated object pair valid for
+`==`. A standard-library class may implement both contracts and share private
+comparison logic, but no automatic bridge or semantic-law verification is
+introduced.
+
+Generic-interface invariance remains visible in hierarchies. Inherited
+`OpEq<Base>` is not `OpEq<Derived>`, so it does not satisfy the exact bound of
+`Comparer<Derived>`. A direct `Derived == Derived` may still select inherited
+`OpEq<Base>` through the ordinary read-only RHS up-view recommended by OP4.
+Code requiring open-ended dynamic subclass comparison can instead use
+`Equatable`, compare through an explicit common base view, or use a two-type
+generic bound such as `Left: OpEq<Right>`. The compiler must not special-case
+equality by weakening generic-interface invariance.
+
+### Ordering decision and alternatives
 
 1. **Keep ordering primitive-only initially.** A later range design may then
    add the minimum coherent ordering protocol before generic `Range<T>`.
@@ -712,10 +797,25 @@ accepted.
 4. **One partial-comparison method.** This is cohesive and evaluates once, but
    it requires a public less/equal/greater/unordered result design and
    corresponding lowering that Skald does not currently have.
+5. **Only `OpLess` and `OpLessEq`, with derived greater comparisons.** Boolean
+   complement in the original operand orientation is valid only for a total
+   order: `left > right` as `!(left <= right)` incorrectly returns `true` for
+   unordered pairs such as primitive NaN. Reversing operands preserves partial
+   ordering—`left > right` as `right < left`—but heterogeneous operands then
+   require the right type to implement `OpLess<Left>`, change the dispatch
+   receiver, and need both evaluated operands retained before the call.
 
-The current recommendation is to compare alternatives 2 and 4 during review.
-Ordering should be settled before claiming that a generic `Range<T>` can use
-only these operator protocols.
+The confirmed direction is alternative 3 because it fits the existing
+generic-interface language, keeps `Range<T>` dependent only on
+`T: OpLess<T>`, and does not assume totality or reverse heterogeneous
+implementations. Alternative 2 is less verbose but forces every ordering
+implementation to provide all four methods; alternative 4 is semantically
+cohesive but should wait for a suitable public result type.
+
+Primitive implementations of all four protocols retain the exact existing
+integer and IEEE-754 `f64` predicates. They are direct semantic predicates,
+not boolean complements or reversed protocol calls. This is why unordered
+NaN comparisons remain false for all four ordering operators.
 
 ## Alternatives rejected by the current baseline
 
@@ -771,7 +871,7 @@ Unless an open decision above is resolved differently, the initial feature
 does not include:
 
 - short-circuit `&&` or `||` protocols;
-- truthiness or overloaded conditional conversion;
+- overloaded prefix `!`, truthiness, or overloaded conditional conversion;
 - postfix optional unwrap, explicit shared dereference, casts, type tests,
   indexing, slicing, calls, construction, or assignment protocols;
 - compound assignment, increment, decrement, assignment expressions, or
@@ -782,6 +882,7 @@ does not include:
 - primitive interface views, boxing, witness metadata, dynamic casts, shared
   ownership, or reflection;
 - structural same-named method discovery;
+- automatic bridging between typed `OpEq<Rhs>` and dynamic `Equatable`;
 - method overloading, qualified bound-member disambiguation, associated types,
   default methods, interface inheritance, or generic methods;
 - guaranteed devirtualization, inlining, constant folding, vectorization, or
@@ -804,6 +905,11 @@ An eventual roadmap should allocate evidence to each owner, including:
   and unsupported multiple applications;
 - exact operand/result selection, mixed-type rejection, ambiguity, and absence
   of expected-result filtering;
+- typed `OpEq<Rhs>` selection, one-call derived `!=`, exact primitive equality,
+  and deliberate separation from dynamic `Equatable`;
+- four direct ordering protocols, heterogeneous applications, unordered NaN,
+  signed-zero equality, infinity ordering, and no complement/reversal
+  lowering;
 - arbitrary produced primitive RHS aliases and continued place-only
   `mut ref` behavior;
 - produced/named/checked/shared-backed class receivers and RHS values;
@@ -835,7 +941,14 @@ or supported syntax also require the documented supported-toolchain gate.
       compiler-synthesized protocols.
 - [ ] Confirm read-only receiver, `ref` RHS, and explicit `Output` parameters.
 - [ ] Confirm the initial overloadable operator table.
-- [ ] Decide prefix `!`, equality, inequality, and ordering behavior.
+- [x] Confirm that prefix `!` remains exact-`bool` and is not overloadable.
+- [x] Confirm typed `OpEq<Rhs>`, one-call derived `!=`, exact primitive
+      implementations, and no automatic `Equatable` bridge.
+- [x] Confirm four direct boolean ordering protocols with no complement or
+      reverse-operand derivation.
+- [x] Confirm that compiler-provided `f64` equality and ordering preserve the
+      implemented IEEE-754 numeric predicates rather than `BoxF64` bit
+      equality.
 - [ ] Confirm ordinary read-only alias applicability, exact-match preference,
       remaining specificity, and no expected-result filtering.
 - [ ] Confirm candidate behavior for inherited claims, exact interface views,

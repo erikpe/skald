@@ -21,11 +21,14 @@ The [operator-overloading design proposal](OPERATOR_OVERLOADING_DESIGN_PROPOSAL.
 is an active draft. It explores canonical `std::ops` generic interfaces,
 compiler-provided primitive implementations, exact class and generic-bound
 selection, and read-only primitive temporary materialization. The next design
-work is to confirm the initial protocol/operator surface and settle how typed
-operator equality or ordering should relate to existing `Equatable` and future
-generic ranges. Generic interfaces and general iteration are implemented
-dependencies; no implementation roadmap should be created until the proposal
-is frozen and promoted.
+work is to settle canonical naming, RHS specificity, and language-item
+acquisition. Typed `OpEq<Rhs>` remains separate from dynamic `Equatable` and
+derives `!=` through one negation; prefix `!` itself is not overloadable. Four
+direct boolean protocols own ordering without complement or operand reversal,
+and compiler-provided `f64` implementations preserve existing IEEE-754
+unordered comparison rather than `BoxF64` bit equality. Generic interfaces
+and general iteration are implemented dependencies; no implementation roadmap
+should be created until the proposal is frozen and promoted.
 
 The completed general iteration design and delivery record are preserved in
 the [archive](../archive/README.md).
