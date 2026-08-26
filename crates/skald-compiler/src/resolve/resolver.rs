@@ -81,6 +81,7 @@ pub const INVALID_ITERABLE_LANGUAGE_ITEM: &str = "RES053";
 pub const MISSING_ITERABLE_APPLICATION: &str = "RES054";
 pub const AMBIGUOUS_ITERABLE_APPLICATION: &str = "RES055";
 pub const ITERATION_ITEM_TYPE_MISMATCH: &str = "RES056";
+pub const INVALID_OPERATOR_LANGUAGE_ITEM: &str = "RES057";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

@@ -131,6 +131,61 @@ fn iterable_declaration_spans(units: &[ModuleUnit<'_>], modules: &ProgramModuleT
         .collect()
 }
 
+fn collect_operator_requirement_spans(graph: &ModuleGraph) -> Vec<Span> {
+    let path = ModulePath::try_from("std::ops").expect("canonical operator module path is valid");
+    let Some(target) = graph
+        .find(&path)
+        .map(|module| module.provenance().module_id())
+    else {
+        return Vec::new();
+    };
+    let mut spans = graph
+        .modules()
+        .iter()
+        .flat_map(|module| {
+            module
+                .imports()
+                .iter()
+                .filter(move |edge| edge.target() == target)
+                .flat_map(|edge| edge.import_spans().iter().copied())
+        })
+        .collect::<Vec<_>>();
+    if spans.is_empty() && graph.entry() == target {
+        spans.push(
+            graph
+                .module(target)
+                .expect("selected canonical operator module must be loaded")
+                .ast()
+                .span,
+        );
+    }
+    spans
+}
+
+fn operator_declaration_spans(
+    units: &[ModuleUnit<'_>],
+    modules: &ProgramModuleTable,
+) -> Vec<(String, Span)> {
+    let path = ModulePath::try_from("std::ops").expect("canonical operator module path is valid");
+    let Some(module) = modules.find(&path).map(|entry| entry.module_id()) else {
+        return Vec::new();
+    };
+    let unit = units
+        .iter()
+        .find(|unit| unit.module == module)
+        .expect("every program module has one resolver unit");
+    unit.ast
+        .declarations
+        .iter()
+        .map(|declaration| {
+            (
+                declaration.name().text.to_string(),
+                syntax::TopLevelDeclaration::span(declaration),
+            )
+        })
+        .collect()
+}
+
 impl<'ast> ModuleUnit<'ast> {
     fn new(ast: &'ast syntax::CompilationUnit, module: ModuleId, qualified_enabled: bool) -> Self {
         Self {
@@ -210,6 +265,7 @@ pub(super) struct ProgramResolver<'ast> {
     literal_data: Vec<ResolvedLiteralData>,
     literal_ids: HashMap<Span, LiteralDataId>,
     iterable_requirement_spans: Vec<Span>,
+    operator_requirement_spans: Vec<Span>,
     diagnostics: Diagnostics,
 }
 
@@ -224,6 +280,7 @@ impl<'ast> ProgramResolver<'ast> {
             literal_data: Vec::new(),
             literal_ids: HashMap::new(),
             iterable_requirement_spans: Vec::new(),
+            operator_requirement_spans: Vec::new(),
             diagnostics: Diagnostics::new(),
         }
     }
@@ -231,6 +288,7 @@ impl<'ast> ProgramResolver<'ast> {
     pub(super) fn from_graph(graph: &'ast ModuleGraph) -> Self {
         let (literal_data, literal_ids) = collect_literal_data(graph);
         let iterable_requirement_spans = collect_iterable_requirement_spans(graph);
+        let operator_requirement_spans = collect_operator_requirement_spans(graph);
         Self {
             units: graph
                 .modules()
@@ -244,6 +302,7 @@ impl<'ast> ProgramResolver<'ast> {
             literal_data,
             literal_ids,
             iterable_requirement_spans,
+            operator_requirement_spans,
             diagnostics: Diagnostics::new(),
         }
     }
@@ -345,6 +404,19 @@ impl<'ast> ProgramResolver<'ast> {
             IterableLanguageItemEvidence {
                 requiring_spans: &self.iterable_requirement_spans,
                 declaration_spans: &iterable_declaration_spans,
+            },
+            &mut self.diagnostics,
+        );
+        let operator_declaration_spans = operator_declaration_spans(&self.units, &self.modules);
+        let operator_language_item = validate_operator_language_item(
+            &self.modules,
+            &module_declarations,
+            &interface_templates,
+            &interface_template_semantics,
+            &type_parameters,
+            OperatorLanguageItemEvidence {
+                requiring_spans: &self.operator_requirement_spans,
+                declaration_spans: &operator_declaration_spans,
             },
             &mut self.diagnostics,
         );
@@ -663,6 +735,7 @@ impl<'ast> ProgramResolver<'ast> {
                 optional_types,
                 optional_box_types,
                 iterable_language_item,
+                operator_language_item,
                 string_language_item,
                 literal_data: ResolvedLiteralDataTable::new(self.literal_data),
                 declarations: function_declarations,

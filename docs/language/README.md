@@ -166,7 +166,9 @@ makes a result source-observable.
   and generic-bound selection, static primitive bound evidence, typed versus
   dynamic equality, eager call order, produced primitive read-only alias
   prerequisite, and unchanged runtime boundary. The produced-primitive alias
-  prerequisite is implemented; operator protocols remain unimplemented.
+  prerequisite is implemented. The canonical source protocols, atomic bundle
+  validation, and explicit ordinary interface use are also implemented;
+  punctuation-based protocol selection remains unimplemented.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations including canonical boolean and integer formatting, exact
@@ -235,7 +237,8 @@ makes a result source-observable.
 - [Generic interfaces](GENERIC_INTERFACES.md) defines the implemented explicit
   interface-template surface, closed exact identity, contextual signature
   validity, generic bounds, nominal conformance, ownership, and dispatch
-  contract, plus the separately frozen canonical operator-protocol consumer.
+  contract, plus the staged canonical operator-protocol consumer whose source
+  bundle and resolved identities are implemented ahead of punctuation use.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, current inline lifetime, and the
   produced primitive read-only materialization prerequisite.

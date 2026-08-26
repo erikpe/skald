@@ -14,6 +14,7 @@ mod hierarchy;
 mod iteration;
 mod modules;
 mod object_place;
+mod operator_language_item;
 mod optional_box_types;
 mod optional_types;
 mod shared_targets;
@@ -108,6 +109,10 @@ pub use modules::{
     ResolvedTopLevelId, ResolvedVisibility,
 };
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};
+pub use operator_language_item::{
+    CanonicalOperatorProtocol, CanonicalOperatorProtocolShape, ResolvedOperatorLanguageItem,
+    ResolvedOperatorProtocol, ResolvedOperatorProtocolParameters,
+};
 pub use optional_box_types::{ResolvedOptionalBoxType, ResolvedOptionalBoxTypeTable};
 pub use optional_types::{ResolvedOptionalType, ResolvedOptionalTypeTable};
 pub use shared_targets::{

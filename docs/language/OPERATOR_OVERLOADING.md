@@ -1,8 +1,11 @@
 # Interface-Based Operator Overloading
 
-Status: frozen operator-protocol language design, not implemented. The current compiler accepts
-only the [implemented primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
-This document fixes the source-visible contract for a later implementation;
+Status: frozen operator-protocol language design with staged implementation.
+The canonical `std::ops` declarations, whole-bundle validation, and explicit
+ordinary interface use are implemented. Operator punctuation still accepts
+only the [implemented primitive operator
+profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
+This document fixes the complete source-visible contract;
 the [status matrix](STATUS.md) remains authoritative for availability and the
 [implemented grammar](GRAMMAR.md) remains authoritative for accepted source.
 Its ordinary-call produced primitive read-only alias prerequisite is
@@ -17,7 +20,8 @@ primitives, or introduce a runtime operator service.
 
 ## Canonical `std::ops` protocols
 
-The dependency-free `std::ops` module declares this complete public bundle:
+The installed dependency-free `std::ops` module declares this complete public
+bundle:
 
 ```ska
 public interface OpNeg<Output> {
@@ -94,6 +98,11 @@ names, receiver mutability, parameter modes and types, and result types are
 canonical. A same-named interface elsewhere has no operator meaning. The
 compiler validates the reachable module as one complete bundle rather than
 synthesizing or silently completing declarations.
+
+These declarations are currently usable through ordinary imports,
+`implements`, generic bounds, interface types, and explicit method calls.
+Class operator punctuation remains unavailable until protocol selection is
+implemented.
 
 Every requirement has the ordinary implicit read-only receiver. Binary
 protocols take one call-scoped read-only `ref` operand. Value-producing
@@ -308,7 +317,8 @@ defining module already made the canonical protocol transitively reachable.
 
 Exact primitive operations neither load nor validate `std::ops`, so primitive-
 only programs retain their behavior under `--no-stdlib`. Once reachable, the
-entire canonical bundle is validated. Replacement standard libraries must
+entire canonical bundle is currently validated before body type checking.
+Replacement standard libraries must
 provide that complete contract. Ordinary provider collision, missing-module,
 and dependency-cycle diagnostics precede canonical-bundle validation, which
 precedes operator selection and capability diagnostics.

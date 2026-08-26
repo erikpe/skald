@@ -1,8 +1,10 @@
 # Operator-Protocol Lowering
 
-Status: frozen operator-protocol compiler design, not implemented. The current pipeline emits
-only the [implemented primitive operator representation](PHASES_AND_IR.md#implemented-primitive-operator-representation).
-This document fixes the future compiler boundary for the frozen
+Status: frozen operator-protocol compiler design with staged implementation.
+Resolution implements the canonical module, validation, and identity product;
+the current executable pipeline still emits only the [implemented primitive
+operator representation](PHASES_AND_IR.md#implemented-primitive-operator-representation).
+This document fixes the remaining compiler boundary for the frozen
 [interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md)
 without claiming accepted class-operator syntax or implementation progress.
 Its ordinary-call produced primitive read-only alias prerequisite is
@@ -35,6 +37,16 @@ The validated product records exact `InterfaceTemplateId` and
 protocol by path, spelling, method name, or structural signature. Primitive-
 only programs create no `std::ops` edge and continue to compile with
 `--no-stdlib`.
+
+The implemented resolved product is one fixed-order table keyed by
+`CanonicalOperatorProtocol`. Each entry records its exact
+`InterfaceTemplateId`, parameter identities classified as unary, predicate, or
+binary, and its `InterfaceTemplateRequirementId`. Canonical names and shapes
+are centralized in that key; consumers query the validated table and do not
+repeat path, spelling, arity, or signature recognition. The product is
+published only when all seventeen protocols validate, so no partial bundle can
+reach later phases. Resolved dumps render the table in canonical protocol
+order.
 
 ## Semantic selection
 

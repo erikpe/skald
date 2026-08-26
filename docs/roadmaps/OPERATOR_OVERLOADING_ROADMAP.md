@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 is complete; OO1 is next.
+Status: **in progress**. OO0 and OO1 are complete; OO2 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -60,7 +60,7 @@ pipelines are the baseline. No other planned feature blocks OO0.
 ## Progress
 
 - [x] OO0 — Produced primitive read-only alias materialization
-- [ ] OO1 — Canonical `std::ops` bundle and identity validation
+- [x] OO1 — Canonical `std::ops` bundle and identity validation
 - [ ] OO2 — Value-producing operator selection and HIR erasure
 - [ ] OO3 — Typed equality, ordering, and complete operator surface
 - [ ] OO4 — Receiver, ownership, evaluation, and effect integration
@@ -122,27 +122,27 @@ places retain their direct path, and `mut ref` still requires a mutable place.
 **Purpose:** Establish the source-defined protocol vocabulary and one trusted
 compiler product before punctuation can select it.
 
-- [ ] Add dependency-free `std/std/ops.ska` containing exactly the frozen
+- [x] Add dependency-free `std/std/ops.ska` containing exactly the frozen
   public interface templates, type parameters, requirement names, receiver
   mutability, parameter modes/types, and result types.
-- [ ] Collect evidence only when an ordinary explicit import, qualified
+- [x] Collect evidence only when an ordinary explicit import, qualified
   reference, signature/bound/claim use, or direct `std::ops` entry already
   loads the module; do not add a `CompilerDependencyKind` for operator tokens.
-- [ ] Validate the reachable module once as one complete bundle after module
+- [x] Validate the reachable module once as one complete bundle after module
   provider resolution and before expression type checking.
-- [ ] Record exact `InterfaceTemplateId` and
+- [x] Record exact `InterfaceTemplateId` and
   `InterfaceTemplateRequirementId` values in a resolved operator-language-item
   product; make later consumers use identities rather than path or spelling
   lookup.
-- [ ] Diagnose missing, duplicate, private, wrong-kind, wrong-arity,
+- [x] Diagnose missing, duplicate, private, wrong-kind, wrong-arity,
   wrong-parameter-order, bounded, malformed-receiver, wrong-mode, wrong-type,
   wrong-result, and extra/missing-requirement declarations at their owning
   spans in stable canonical order.
-- [ ] Support replacement standard libraries with the same exact contract and
+- [x] Support replacement standard libraries with the same exact contract and
   preserve ordinary module cycle/provider diagnostics ahead of bundle errors.
-- [ ] Prove that primitive-only programs with operator punctuation still work
+- [x] Prove that primitive-only programs with operator punctuation still work
   under `--no-stdlib` and create no `std::ops` graph edge.
-- [ ] Permit explicit ordinary class implementations, bounds, imports, and
+- [x] Permit explicit ordinary class implementations, bounds, imports, and
   manual method calls against the declarations while punctuation remains gated
   to the currently implemented primitive profile until OO2.
 

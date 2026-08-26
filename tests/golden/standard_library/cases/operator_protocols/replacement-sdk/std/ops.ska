@@ -1,0 +1,67 @@
+public interface OpNeg<Output> {
+    fn op_neg() -> Output;
+}
+
+public interface OpBitNot<Output> {
+    fn op_bit_not() -> Output;
+}
+
+public interface OpEq<Rhs> {
+    fn op_eq(ref rhs: Rhs) -> bool;
+}
+
+public interface OpLess<Rhs> {
+    fn op_less(ref rhs: Rhs) -> bool;
+}
+
+public interface OpLessEq<Rhs> {
+    fn op_less_eq(ref rhs: Rhs) -> bool;
+}
+
+public interface OpGreater<Rhs> {
+    fn op_greater(ref rhs: Rhs) -> bool;
+}
+
+public interface OpGreaterEq<Rhs> {
+    fn op_greater_eq(ref rhs: Rhs) -> bool;
+}
+
+public interface OpAdd<Rhs, Output> {
+    fn op_add(ref rhs: Rhs) -> Output;
+}
+
+public interface OpSub<Rhs, Output> {
+    fn op_sub(ref rhs: Rhs) -> Output;
+}
+
+public interface OpMul<Rhs, Output> {
+    fn op_mul(ref rhs: Rhs) -> Output;
+}
+
+public interface OpDiv<Rhs, Output> {
+    fn op_div(ref rhs: Rhs) -> Output;
+}
+
+public interface OpRem<Rhs, Output> {
+    fn op_rem(ref rhs: Rhs) -> Output;
+}
+
+public interface OpBitAnd<Rhs, Output> {
+    fn op_bit_and(ref rhs: Rhs) -> Output;
+}
+
+public interface OpBitOr<Rhs, Output> {
+    fn op_bit_or(ref rhs: Rhs) -> Output;
+}
+
+public interface OpBitXor<Rhs, Output> {
+    fn op_bit_xor(ref rhs: Rhs) -> Output;
+}
+
+public interface OpShiftLeft<Rhs, Output> {
+    fn op_shift_left(ref rhs: Rhs) -> Output;
+}
+
+public interface OpShiftRight<Rhs, Output> {
+    fn op_shift_right(ref rhs: Rhs) -> Output;
+}

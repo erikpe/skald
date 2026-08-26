@@ -535,6 +535,68 @@ fn modules_without_literals_do_not_require_std_str() {
 }
 
 #[test]
+fn operator_punctuation_never_creates_a_std_ops_dependency() {
+    let workspace = directory("graph-no-operator-dependency");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        "fn main() -> i64 { return ((20 + 1) * 2) - (8 / 4); }\n",
+    );
+    source(&root, "std/ops.ska", "public interface Broken<T> {}\n");
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+
+    assert_eq!(graph.modules().len(), 1);
+    assert!(graph.find(&"std::ops".parse().unwrap()).is_none());
+    assert!(graph.modules()[0].imports().is_empty());
+}
+
+#[test]
+fn explicit_std_ops_reachability_uses_ordinary_provider_and_cycle_diagnostics() {
+    let workspace = directory("graph-operator-provider-rules");
+    let first = workspace.join("first");
+    let second = workspace.join("second");
+    source(
+        &first,
+        "app.ska",
+        "import std::ops;\nfn main() -> i64 { return 0; }\n",
+    );
+
+    let missing = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&first),
+    )
+    .unwrap_err();
+    assert_eq!(codes(&missing), [MISSING_MODULE]);
+
+    source(&first, "std/ops.ska", "public interface Marker<T> {}\n");
+    source(&second, "std/ops.ska", "public interface Marker<T> {}\n");
+    let ambiguous = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[first.clone(), second],
+    )
+    .unwrap_err();
+    assert_eq!(codes(&ambiguous), [AMBIGUOUS_MODULE]);
+
+    source(&first, "std/ops.ska", "import std::ops;\n");
+    let cycle = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[first],
+    )
+    .unwrap_err();
+    assert_eq!(codes(&cycle), [SELF_IMPORT]);
+}
+
+#[test]
 fn canonical_iteration_dependency_uses_ordinary_missing_and_ambiguity_rules() {
     let workspace = directory("graph-iteration-dependency-errors");
     let first = workspace.join("first");

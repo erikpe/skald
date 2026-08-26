@@ -67,6 +67,30 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 item.iter_next_requirement
             ));
         }
+        if let Some(item) = &program.operator_language_item {
+            dumper.heading("OperatorLanguageItem");
+            dumper.indented(|dumper| {
+                for protocol in item.iter() {
+                    let parameters = match protocol.parameters {
+                        ResolvedOperatorProtocolParameters::Unary { output } => {
+                            format!("output {output}")
+                        }
+                        ResolvedOperatorProtocolParameters::Predicate { rhs } => {
+                            format!("rhs {rhs}")
+                        }
+                        ResolvedOperatorProtocolParameters::Binary { rhs, output } => {
+                            format!("rhs {rhs} output {output}")
+                        }
+                    };
+                    dumper.raw_line(&format!(
+                        "{} template {} {parameters} requirement {}",
+                        protocol.kind.interface_name(),
+                        protocol.template,
+                        protocol.requirement
+                    ));
+                }
+            });
+        }
         if !program.literal_data.is_empty() {
             dumper.heading("LiteralData");
             dumper.indented(|dumper| {

@@ -1143,6 +1143,15 @@ spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
 select entries by identity rather than by source spelling.
 
+A reachable canonical `std::ops` module additionally produces one atomic
+`ResolvedOperatorLanguageItem`. Its fixed canonical table records all
+seventeen exact generic-interface templates, structural parameter identities,
+and requirement identities after whole-bundle validation. Ordinary imports or
+direct entry selection alone create reachability; primitive operator tokens
+create no module edge. Malformed bundles publish no partial product, while
+valid declarations remain ordinary generic interfaces for explicit claims,
+bounds, views, and calls. Operator punctuation does not consume this table yet.
+
 External declarations additionally retain their source `FunctionId` while
 referencing a dense compilation-wide `ExternalLinkId`. Resolution allocates
 links in exact symbol order, groups every compatible declaration of that

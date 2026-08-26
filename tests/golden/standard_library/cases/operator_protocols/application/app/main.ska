@@ -1,0 +1,27 @@
+from std::ops import OpAdd;
+
+class Number implements OpAdd<Number, Number> {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn op_add(ref rhs: Number) -> Number {
+        return Number(self.value + rhs.value);
+    }
+}
+
+class Adder<T> where T: OpAdd<T, T> {
+    init() {}
+
+    fn add(ref left: T, ref right: T) -> T {
+        return left.op_add(right);
+    }
+}
+
+fn main() -> i64 {
+    var adder: Adder<Number> = Adder<Number>();
+    var answer: Number = adder.add(Number(17), Number(25));
+    return answer.value;
+}

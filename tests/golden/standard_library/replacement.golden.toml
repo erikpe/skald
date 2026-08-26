@@ -27,6 +27,19 @@ name = "default"
 expect = { exit = 42 }
 
 [[test]]
+name = "operator_protocols"
+mode = "run"
+compiler_args = [
+  "--entry", "app::main",
+  "--module-root", "cases/operator_protocols/application",
+  "--stdlib-root", "cases/operator_protocols/replacement-sdk",
+]
+
+[[test.run]]
+name = "manual_generic_call"
+expect = { exit = 42 }
+
+[[test]]
 name = "io_intrinsics"
 mode = "run"
 compiler_args = [
