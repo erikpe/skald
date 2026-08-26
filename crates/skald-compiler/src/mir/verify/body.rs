@@ -138,6 +138,7 @@ impl<'mir> Verifier<'mir> {
                         Some(BindingId::Parameter(_))
                     )
                     | (MirStorageKind::Local, Some(BindingId::Local(_)))
+                    | (MirStorageKind::Local, None)
                     | (MirStorageKind::Return, None)
                     | (MirStorageKind::Argument, None)
                     | (MirStorageKind::Temporary, None)

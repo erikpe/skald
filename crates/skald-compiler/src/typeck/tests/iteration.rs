@@ -334,13 +334,86 @@ fn mixed_nested_loops_preserve_only_outer_effects() {
     assert!(!iteration.effects.can_continue_to(iteration.loop_id));
     assert!(outer.effects.can_fall_through());
     assert!(!outer.effects.can_break_to(outer.loop_id));
+
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("mixed nested loop MIR must verify");
 }
 
 #[test]
-fn mir_lowering_remains_intentionally_gated_until_it4() {
+fn core_iteration_lowers_to_verified_deterministic_ordinary_mir() {
     let hir = check_iteration(&format!(
         "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
     ));
-    let rejected = std::panic::catch_unwind(|| crate::mir::lower_hir(&hir));
-    assert!(rejected.is_err());
+    let iteration = first_for_in(&hir);
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("core iteration MIR must verify");
+    let crate::identity::CallableId::Function(function) = iteration.loop_id.callable() else {
+        panic!("fixture iteration must belong to a function")
+    };
+    let definition = mir.definitions.get(function).unwrap();
+    let calls = definition
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            crate::mir::MirInstruction::Call(call) => Some(&call.target),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|target| matches!(
+                target,
+                crate::mir::MirCallTarget::Interface(target)
+                    if target.requirement == iteration.protocol.iter_state
+            ))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|target| matches!(
+                target,
+                crate::mir::MirCallTarget::Interface(target)
+                    if target.requirement == iteration.protocol.iter_next
+            ))
+            .count(),
+        1
+    );
+    let dump = crate::mir::dump_mir(&mir);
+    assert_eq!(dump, crate::mir::dump_mir(&crate::mir::lower_hir(&hir)));
+    assert!(dump.contains("call interface"), "{dump}");
+    assert!(dump.contains("optional-presence"), "{dump}");
+    assert!(!dump.contains("ForIn"), "{dump}");
+}
+
+#[test]
+fn class_items_and_mixed_loop_exits_lower_to_verified_mir() {
+    let hir = check_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Items implements Iterable<Item, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> Item? { return none; }\n",
+        "}\n",
+        "fn scan(values: Items) -> i64 {\n",
+        "  for (item in values) {\n",
+        "    while (false) { continue; }\n",
+        "    if (item.value == 1) { continue; }\n",
+        "    if (item.value == 2) { break; }\n",
+        "    return item.value;\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("class-item iteration MIR must verify");
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("begin-optional-view"), "{dump}");
+    assert!(dump.contains("copy-construct"), "{dump}");
 }

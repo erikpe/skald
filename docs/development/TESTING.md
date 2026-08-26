@@ -397,6 +397,7 @@ The complete source-observation matrix has these owners:
 | Immediate, conditional, nested-scope, ownership-heavy, and nested-loop `break` | `break_loops.ska` and `loop_lifecycle_matrix.ska` |
 | Immediate, conditional, nested-scope, ownership-heavy, nearest-loop, and condition-effect `continue` | `continue_loops.ska` and `loop_lifecycle_matrix.ska` |
 | Return cleanup and mixed fallthrough, break, continue, return, and panic effects | `while_loops.ska`, `continue_loops.ska`, and `loop_lifecycle_matrix.ska` |
+| Core nominal iteration call order, zero/repeated attempts, normal completion, continue, break, and return | `general_iteration.ska` |
 
 Colocated MIR hardening tests separately prove that condition-owned storage is
 dead before body or exit, body-owned storage is dead before latch, header, or

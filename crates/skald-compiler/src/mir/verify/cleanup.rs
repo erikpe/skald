@@ -605,9 +605,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
             MirInstruction::CopyConstruct(copy)
                 if self.is_owning_class_place(&copy.destination, copy.class) =>
             {
-                if !self.place_is_live(state, &copy.source) {
-                    self.block_error(block.id, "copy-construction source is not live");
-                }
+                self.require_live_place(block, state, &copy.source, "copy-construction source");
                 self.initialize_place(block, state, &copy.destination);
             }
             MirInstruction::CopyAssign(copy)
@@ -616,9 +614,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 if !self.place_is_live(state, &copy.destination) {
                     self.block_error(block.id, "copy-assignment destination is not live");
                 }
-                if !self.place_is_live(state, &copy.source) {
-                    self.block_error(block.id, "copy-assignment source is not live");
-                }
+                self.require_live_place(block, state, &copy.source, "copy-assignment source");
             }
             MirInstruction::Call(call) => {
                 if let Some(receiver) = &call.receiver {

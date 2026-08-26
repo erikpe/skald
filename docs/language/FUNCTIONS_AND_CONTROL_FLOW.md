@@ -558,7 +558,8 @@ smaller statements. The exact syntax-budget behavior is documented in
 ## Unsupported control flow and callability
 
 General `for-in` iteration is frozen separately in
-[General Iteration](ITERATION.md) but is not implemented. Other loop forms,
+[General Iteration](ITERATION.md); its initial named-receiver, primitive-state,
+primitive/copied-class-item execution matrix is implemented. Other loop forms,
 broader iterator protocols, closures, and lambda literals are neither
 implemented nor frozen. Capture-free function values and calls through
 function-typed expressions are implemented under the separate

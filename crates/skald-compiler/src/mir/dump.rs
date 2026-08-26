@@ -725,6 +725,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             }
             None => match storage.kind {
                 MirStorageKind::Return => output.push_str("<return> "),
+                MirStorageKind::Local => output.push_str("<compiler-local> "),
                 MirStorageKind::Argument => output.push_str("<argument> "),
                 MirStorageKind::Temporary => output.push_str("<temporary> "),
                 MirStorageKind::SharedAnchor => output.push_str("<shared-anchor> "),

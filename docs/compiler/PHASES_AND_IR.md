@@ -1890,10 +1890,9 @@ panic, preserving the established callable-completeness diagnostics.
 MIR cleanup planning exposes an opaque retained lexical-scope depth. Planning
 an edge to that depth is non-consuming and returns cleanup and storage-dead
 work for precisely the exited scopes. The lowering loop context binds a
-`LoopId` to exit and latch block targets plus that retained depth. Current
-`while` lowering installs this context around the body. `break` and
-`continue` lowering query it to select identical exited-scope cleanup and,
-respectively, the exit or latch target.
+`LoopId` to exit and latch block targets plus separate retained depths for
+`break` and `continue`. `while` supplies one shared depth; general iteration
+lets `continue` retain its outer receiver/state scope while `break` exits it.
 
 ### Repeatable MIR storage lifetimes
 
@@ -1956,8 +1955,8 @@ boolean branches, and jumps. It does not introduce a source-specific loop
 terminator and does not reuse the generated array-loop terminator, whose array
 storage and lifecycle invariants are unrelated to source control flow.
 
-Current lowering applies this representation to source `while`, `break`, and
-`continue`.
+Current lowering applies this representation to source `while`, `for-in`,
+`break`, and `continue`.
 It allocates the loop regions before emitting their edges, evaluates and
 finishes the condition full expression in the header, lowers the body as a
 child lexical scope, routes normal completion through a latch, and selects the
@@ -1977,8 +1976,10 @@ control effects. HIR-to-MIR lowering expands that structure into ordinary
 interface calls, mutable state aliases, optional presence and payload
 operations, storage epochs, cleanup, branches, jumps, and the existing
 loop-context destinations. No dedicated iteration operation reaches MIR,
-verification, or a backend. The dedicated source and resolved forms are
-implemented; typed HIR and lower phase products remain pending.
+verification, or a backend. The dedicated source, resolved, and typed-HIR
+forms and the initial named-receiver/primitive-state/primitive-or-copied-class
+item MIR/native matrix are implemented; broader lifecycle composition remains
+pending.
 
 Its canonical protocol foundation is already present before executable body
 resolution: typed module-edge evidence identifies the canonical dependency,

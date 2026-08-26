@@ -454,8 +454,8 @@ The frozen [general-iteration contract](ITERATION.md) has the same boundary.
 Its receiver, state, optional result, item, calls, and cleanup lower to
 ordinary compiler-generated MIR and target code. It adds no runtime symbol,
 iterator allocation service, metadata format, external calling convention, or
-ABI-version change. This statement records the selected future boundary; the
-current compiler does not yet emit general iteration.
+ABI-version change. The implemented core matrix already preserves this
+boundary; later receiver and value families must do the same.
 
 Condition and body expressions may independently use existing runtime
 allocation, deallocation, panic, or byte-I/O entry points under their ordinary

@@ -9,7 +9,8 @@ pub(super) struct LoopContext {
     loop_id: LoopId,
     exit_target: BlockId,
     latch_target: Option<BlockId>,
-    retained_scope_depth: RetainedScopeDepth,
+    break_retained_scope_depth: RetainedScopeDepth,
+    continue_retained_scope_depth: RetainedScopeDepth,
 }
 
 impl LoopContext {
@@ -17,7 +18,8 @@ impl LoopContext {
         loop_id: LoopId,
         exit_target: BlockId,
         latch_target: Option<BlockId>,
-        retained_scope_depth: RetainedScopeDepth,
+        break_retained_scope_depth: RetainedScopeDepth,
+        continue_retained_scope_depth: RetainedScopeDepth,
     ) -> Option<Self> {
         (exit_target.callable() == loop_id.callable()
             && latch_target
@@ -27,7 +29,8 @@ impl LoopContext {
             loop_id,
             exit_target,
             latch_target,
-            retained_scope_depth,
+            break_retained_scope_depth,
+            continue_retained_scope_depth,
         })
     }
 
@@ -43,8 +46,12 @@ impl LoopContext {
         self.latch_target
     }
 
-    pub(super) const fn retained_scope_depth(self) -> RetainedScopeDepth {
-        self.retained_scope_depth
+    pub(super) const fn break_retained_scope_depth(self) -> RetainedScopeDepth {
+        self.break_retained_scope_depth
+    }
+
+    pub(super) const fn continue_retained_scope_depth(self) -> RetainedScopeDepth {
+        self.continue_retained_scope_depth
     }
 }
 
@@ -110,12 +117,14 @@ mod tests {
             BlockId::new(function, 4),
             Some(BlockId::new(function, 3)),
             outer_depth,
+            inner_depth,
         )
         .unwrap();
         let inner = LoopContext::new(
             inner_id,
             BlockId::new(function, 8),
             Some(BlockId::new(function, 7)),
+            inner_depth,
             inner_depth,
         )
         .unwrap();
@@ -124,6 +133,7 @@ mod tests {
             outer_id,
             BlockId::new(foreign, 0),
             Some(BlockId::new(function, 0)),
+            outer_depth,
             outer_depth,
         )
         .is_none());
@@ -139,11 +149,18 @@ mod tests {
             stack.find(outer_id).unwrap().exit_target(),
             outer.exit_target()
         );
+        assert_eq!(outer.break_retained_scope_depth(), outer_depth);
+        assert_eq!(outer.continue_retained_scope_depth(), inner_depth);
         assert_eq!(stack.pop(inner_id), inner);
         assert_eq!(stack.pop(outer_id), outer);
 
-        assert!(
-            LoopContext::new(outer_id, BlockId::new(function, 4), None, outer_depth,).is_some()
-        );
+        assert!(LoopContext::new(
+            outer_id,
+            BlockId::new(function, 4),
+            None,
+            outer_depth,
+            outer_depth,
+        )
+        .is_some());
     }
 }

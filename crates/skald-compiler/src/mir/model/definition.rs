@@ -342,6 +342,8 @@ pub enum MirStorageKind {
     AliasParameter(MirAliasAccess),
     /// Full-expression indirect storage established by a checked object cast.
     CheckedView(MirAliasAccess),
+    /// Repeatable lexical storage. Source locals carry a binding identity;
+    /// compiler-owned loop state and result slots deliberately do not.
     Local,
     /// Caller-owned storage transferred to one callee value parameter.
     Argument,

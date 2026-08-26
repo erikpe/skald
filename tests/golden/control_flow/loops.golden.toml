@@ -52,3 +52,19 @@ source = "while_condition_type.ska"
 match = "starts-with"
 inline = """error[TYP005]: while condition has type `i64` but `bool` is required
  --> tests/golden/control_flow/while_condition_type.ska:2:12"""
+
+[[test]]
+name = "general_iteration"
+mode = "run"
+source = "general_iteration.ska"
+[[test.run]]
+name = "ordinary_iterable_loop_exits"
+expect = { stdout = { inline = "1003\n100\n101\n102\n103\n3\n1005\n100\n101\n102\n103\n2\n1005\n100\n101\n102\n12\n1000\n100\n0\n" } }
+
+[[test]]
+name = "general_iteration_lifecycle"
+mode = "run"
+source = "general_iteration_lifecycle.ska"
+[[test.run]]
+name = "item_body_and_outer_cleanup"
+expect = { stdout = { inline = "10\n11\n10\n30\n31\n30\n50\n51\n50\n70\n71\n70\n70\n" } }

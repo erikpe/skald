@@ -7,13 +7,13 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [general iteration roadmap](GENERAL_ITERATION_ROADMAP.md) is in progress.
-Its canonical dependency-free `std::iter::Iterable<Item, State>` declaration,
-typed compiler-dependency evidence, structural language-item validation,
-exact resolved identities, deterministic dump, and focused tests are complete.
-The `for-in` parser, structured AST, dependency activation, deterministic
-nominal selection, exact resolved protocol evidence, frozen generic-bound
-selection, and loop/item scopes are implemented and validated. `IT3` is next:
-structured typed HIR and core lifecycle plans.
+Its canonical protocol, source syntax, deterministic nominal selection,
+structured typed HIR, and initial ordinary-MIR/native execution matrix are
+implemented and validated. Core named class/interface receivers, primitive
+state, primitive or trivially copied class items, exact call order, repeatable
+storage epochs, and loop-exit cleanup now execute without a dedicated backend
+or runtime iteration concept. `IT5` is next: loop-duration receiver
+composition across the complete frozen receiver matrix.
 
 The completed generic interfaces roadmap is preserved in the
 [archive](../archive/GENERIC_INTERFACES_ROADMAP.md).

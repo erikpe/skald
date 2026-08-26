@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT3` is complete; `IT4` is next.
+Status: in progress. `IT4` is complete; `IT5` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -82,7 +82,7 @@ Every task preserves these cross-cutting decisions:
 | [IT1](#it1--for-in-source-syntax) | [x] Complete | Lexer, parser, AST, recovery, template scanning, and dumps retain the frozen statement shape. |
 | [IT2](#it2--nominal-protocol-selection-and-loop-scopes) | [x] Complete | Exact claims and generic bounds select deterministic protocol evidence before the typed item scope and loop body resolve. |
 | [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [x] Complete | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans for the initial core matrix. |
-| [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [ ] Planned | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
+| [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [x] Complete | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
 | [IT5](#it5--loop-duration-receiver-composition) | [ ] Planned | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
 | [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [ ] Planned | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
 | [IT7](#it7--ordinary-vec-adoption) | [ ] Planned | `Vec<T>` implements `Iterable<T, u64>` in ordinary source and composes with generic consumers. |
@@ -354,25 +354,25 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Allocate deterministic preheader, header, present/body, optional latch,
+- [x] Allocate deterministic preheader, header, present/body, optional latch,
   outer-cleanup, and exit regions before emitting edges.
-- [ ] Evaluate/acquire the receiver once, call `iter_state` once, and begin one
+- [x] Evaluate/acquire the receiver once, call `iter_state` once, and begin one
   state storage epoch before the header.
-- [ ] In the header call `iter_next` once through a mutable alias to the exact
+- [x] In the header call `iter_next` once through a mutable alias to the exact
   state, finish the call result, and test only its outer presence.
-- [ ] On presence, initialize a fresh item from the payload, consume/clean the
+- [x] On presence, initialize a fresh item from the payload, consume/clean the
   result wrapper, then enter the body.
-- [ ] Route normal completion and `continue` through iteration-scope cleanup
+- [x] Route normal completion and `continue` through iteration-scope cleanup
   and the latch; route `break` through outer loop cleanup to the exit.
-- [ ] Compose return cleanup with body/item/result/state/receiver ownership and
+- [x] Compose return cleanup with body/item/result/state/receiver ownership and
   keep panic non-unwinding.
-- [ ] Omit unreachable latches with the same effect criterion as `while` while
+- [x] Omit unreachable latches with the same effect criterion as `while` while
   retaining the conservative source fallthrough rule.
-- [ ] Reuse or extract a private loop-CFG helper only where the `while` and
+- [x] Reuse or extract a private loop-CFG helper only where the `while` and
   iteration invariants truly coincide; keep protocol evaluation explicit.
-- [ ] Introduce no dedicated MIR instruction, terminator, or model identity for
+- [x] Introduce no dedicated MIR instruction, terminator, or model identity for
   iteration.
-- [ ] Pass ordinary MIR verification for calls, aliases, optionals, path state,
+- [x] Pass ordinary MIR verification for calls, aliases, optionals, path state,
   cleanup, and repeatable storage epochs.
 
 Tests:
@@ -388,6 +388,15 @@ Tests:
 Exit condition: the core matrix executes through verified ordinary MIR and
 native code with exact call/cleanup observations and no new backend/runtime
 iteration concept.
+
+Completion evidence: focused source-to-HIR/MIR tests cover primitive and
+trivially copied class items, exact interface calls, deterministic ordinary
+MIR dumps, repeatable result/item storage epochs, nested and mixed `while` and
+`for-in` exits, and separate break/continue cleanup depths. Native control-flow
+goldens cover zero and repeated attempts, normal completion, `continue`,
+`break`, return, exact state/next call counts, and class result/body/item
+cleanup order. Existing `while` goldens remain unchanged. The full repository
+gate, documentation/static checks, and Rust 1.82 MSRV check pass.
 
 ## IT5 — Loop-duration receiver composition
 

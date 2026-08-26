@@ -1,0 +1,69 @@
+import std::io;
+
+from std::iter import Iterable;
+
+
+class Counter implements Iterable<u64, u64> {
+    limit: u64;
+
+    init(limit: u64) {
+        self.limit = limit;
+    }
+
+    fn iter_state() -> u64 {
+        std::io::println_u64(1000u + self.limit);
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> u64? {
+        std::io::println_u64(100u + state);
+        if (state < self.limit) {
+            var item: u64 = state;
+            state = state + 1u;
+            return item;
+        }
+        return none;
+    }
+}
+
+fn complete(limit: u64) -> u64 {
+    var values: Counter = Counter(limit);
+    var sum: u64 = 0u;
+    for (item in values) {
+        sum = sum + item;
+    }
+    return sum;
+}
+
+fn continue_then_break() -> u64 {
+    var values: Counter = Counter(5u);
+    var sum: u64 = 0u;
+    for (item in values) {
+        if (item == 1u) {
+            continue;
+        }
+        if (item == 3u) {
+            break;
+        }
+        sum = sum + item;
+    }
+    return sum;
+}
+
+fn return_from_body() -> u64 {
+    var values: Counter = Counter(5u);
+    for (item in values) {
+        if (item == 2u) {
+            return item + 10u;
+        }
+    }
+    return 0u;
+}
+
+fn main() -> i64 {
+    std::io::println_u64(complete(3u));
+    std::io::println_u64(continue_then_break());
+    std::io::println_u64(return_from_body());
+    std::io::println_u64(complete(0u));
+    return 0;
+}

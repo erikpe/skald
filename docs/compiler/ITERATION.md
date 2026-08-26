@@ -1,12 +1,14 @@
 # General-Iteration Compiler Contract
 
 Status: frozen compiler design with syntax, canonical protocol identity,
-nominal resolution, and the initial structured-HIR matrix implemented.
+nominal resolution, and the initial structured-HIR and ordinary-MIR matrix
+implemented.
 Resolution retains exact selected interface, requirement, item/state, local,
 and loop identities. Type checking emits complete structured HIR for named
 exact-class and exact-interface receivers with primitive state and primitive or
-trivially copied exact-class items. Later receiver/value families and all MIR
-lowering remain gated. The [language status matrix](../language/STATUS.md)
+trivially copied exact-class items. That core matrix lowers to verified cyclic
+MIR and native code; later receiver/value families remain gated. The
+[language status matrix](../language/STATUS.md)
 remains authoritative for implementation maturity.
 
 This document owns the selected phase, lifetime, verification, target, and ABI
@@ -113,8 +115,10 @@ HIR-to-MIR lowering expands `HirForIn` into ordinary target-independent
 operations. There is no `MirForIn`, iterator opcode, target iterator primitive,
 or runtime service.
 
-This boundary is intentionally gated until roadmap task `IT4`; attempting to
-lower a typed `HirForIn` cannot silently omit its calls or lifecycle effects.
+This boundary is implemented for the initial core matrix. Lowering allocates
+the main regions before their edges, retains one compiler-local state epoch,
+uses repeatable result and item epochs, and emits only existing call, optional,
+lifetime, cleanup, branch, and jump operations.
 
 The generated CFG has these semantic regions:
 
@@ -130,8 +134,10 @@ exit:      continue after loop
 Exact block factoring is implementation-private, but call count, evaluation
 order, storage epochs, ownership transfer, and cleanup edges must match this
 shape. Existing `LoopId` lowering contexts supply exit and latch targets for
-both `while` and `for-in`; a shared private CFG helper is appropriate only if
-it keeps source-specific condition and protocol work explicit.
+both `while` and `for-in`. Their private cleanup contract records separate
+retained depths for `break` and `continue`: `while` uses the same depth for
+both, while iteration preserves its outer receiver/state scope only on
+`continue`.
 
 MIR uses ordinary interface-view acquisition, interface calls, mutable aliases,
 optional construction/testing/payload extraction, stored-value initialization,

@@ -11,7 +11,7 @@ impl BodyLowerer<'_> {
             .expect("resolved break target must have an active lowering context");
         let cleanup = self
             .cleanup
-            .for_scopes_exiting_to(context.retained_scope_depth(), statement.span);
+            .for_scopes_exiting_to(context.break_retained_scope_depth(), statement.span);
         self.emit_scope_exit(cleanup);
         self.terminate(MirTerminator::Goto {
             target: context.exit_target(),
@@ -26,7 +26,7 @@ impl BodyLowerer<'_> {
             .expect("resolved continue target must have an active lowering context");
         let cleanup = self
             .cleanup
-            .for_scopes_exiting_to(context.retained_scope_depth(), statement.span);
+            .for_scopes_exiting_to(context.continue_retained_scope_depth(), statement.span);
         self.emit_scope_exit(cleanup);
         self.terminate(MirTerminator::Goto {
             target: context
@@ -71,9 +71,14 @@ impl BodyLowerer<'_> {
         });
 
         let retained_scope_depth = self.cleanup.retained_scope_depth();
-        let context =
-            loop_context::LoopContext::new(statement.loop_id, exit, latch, retained_scope_depth)
-                .expect("typed loop and its MIR targets must share a callable owner");
+        let context = loop_context::LoopContext::new(
+            statement.loop_id,
+            exit,
+            latch,
+            retained_scope_depth,
+            retained_scope_depth,
+        )
+        .expect("typed loop and its MIR targets must share a callable owner");
         self.loop_contexts.push(context);
 
         self.body

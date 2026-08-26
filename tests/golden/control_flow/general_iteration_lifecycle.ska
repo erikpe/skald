@@ -1,0 +1,88 @@
+import std::io;
+
+from std::iter import Iterable;
+
+
+class Item {
+    marker: u64;
+
+    init(marker: u64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        std::io::println_u64(self.marker);
+    }
+}
+
+class Trace {
+    marker: u64;
+
+    init(marker: u64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        std::io::println_u64(self.marker);
+    }
+}
+
+class Items implements Iterable<Item, u64> {
+    marker: u64;
+
+    init(marker: u64) {
+        self.marker = marker;
+    }
+
+    fn iter_state() -> u64 {
+        return 0u;
+    }
+
+    fn iter_next(mut ref state: u64) -> Item? {
+        if (state == 0u) {
+            state = 1u;
+            return Item(self.marker);
+        }
+        return none;
+    }
+}
+
+fn normal() -> unit {
+    var values: Items = Items(10u);
+    for (item in values) {
+        var body: Trace = Trace(11u);
+    }
+}
+
+fn continuing() -> unit {
+    var values: Items = Items(30u);
+    for (item in values) {
+        var body: Trace = Trace(31u);
+        continue;
+    }
+}
+
+fn breaking() -> unit {
+    var values: Items = Items(50u);
+    for (item in values) {
+        var body: Trace = Trace(51u);
+        break;
+    }
+}
+
+fn returning() -> u64 {
+    var values: Items = Items(70u);
+    for (item in values) {
+        var body: Trace = Trace(71u);
+        return item.marker;
+    }
+    return 0u;
+}
+
+fn main() -> i64 {
+    normal();
+    continuing();
+    breaking();
+    std::io::println_u64(returning());
+    return 0;
+}
