@@ -1,5 +1,6 @@
 CC ?= cc
 AR ?= ar
+NM ?= nm
 CFLAGS ?= -O2
 CFLAGS += -std=c11 -Wall -Wextra -Werror -Iinclude
 
@@ -16,6 +17,7 @@ TEST_SUPPORT_HEADER := $(TEST_DIR)/runtime_test_support.h
 TEST_SUPPORT_OBJECT := $(BUILD_DIR)/runtime_test_support.o
 CONTRACT_TEST_SOURCE := $(TEST_DIR)/test_runtime_contract.c
 CONTRACT_TEST_BINARY := $(BUILD_DIR)/test_runtime_contract
+SYMBOL_TEST_SCRIPT := $(TEST_DIR)/check_runtime_symbols.sh
 PANIC_TEST_SOURCE := $(TEST_DIR)/test_runtime_panic.c
 PANIC_TEST_BINARY := $(BUILD_DIR)/test_runtime_panic
 PANIC_NO_ALLOCATION_TEST_SOURCE := $(TEST_DIR)/test_runtime_panic_no_allocation.c
@@ -78,6 +80,7 @@ $(PANIC_NO_ALLOCATION_TEST_BINARY): $(PANIC_NO_ALLOCATION_TEST_SOURCE) $(ARCHIVE
 		-o $(PANIC_NO_ALLOCATION_TEST_BINARY)
 
 test: $(TEST_BINARIES)
+	sh $(SYMBOL_TEST_SCRIPT) "$(NM)" "$(ARCHIVE)"
 	$(CONTRACT_TEST_BINARY)
 	$(ALLOCATION_TEST_BINARY)
 	$(ALLOCATION_FAILURE_TEST_BINARY)

@@ -399,6 +399,15 @@ The complete source-observation matrix has these owners:
 | Return cleanup and mixed fallthrough, break, continue, return, and panic effects | `while_loops.ska`, `continue_loops.ska`, and `loop_lifecycle_matrix.ska` |
 | Core nominal iteration call order, zero/repeated attempts, normal completion, continue, break, and return | `general_iteration.ska` |
 | Produced-once, shared-owner replacement, optional-root mutation, and detached array-backed iteration receivers | `general_iteration_receivers.ska` |
+| Stored-value state/item families and nested optional termination | `general_iteration_value_matrix.ska` |
+| Item/body/receiver cleanup on normal, continue, break, and return exits | `general_iteration_lifecycle.ska` |
+| Inherited, specialized, generic-bound, nested, ownership-heavy, and ordinary Vec iteration | `standard_vec/vec_iteration.ska` and the remaining `standard_vec` iteration cases |
+
+The backend iteration test owns the final boundary assertion that generated
+MIR contains only ordinary calls, optional operations, storage and cleanup,
+and that its deterministic assembly executes natively. Direct runtime tests
+separately pin the exact version-9 archive symbol set; iteration adds no
+runtime harness.
 
 Colocated MIR hardening tests separately prove that condition-owned storage is
 dead before body or exit, body-owned storage is dead before latch, header, or

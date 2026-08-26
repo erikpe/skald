@@ -12,7 +12,8 @@ Run the current runtime suite from the repository root with:
 make runtime-test
 ```
 
-The suite contains seven focused executables:
+The suite first compares the runtime archive's complete defined global symbol
+set with the version-9 ABI, then runs seven focused executables:
 
 - `test_runtime_contract.c` checks link/version compatibility and platform
   requirements;
@@ -42,4 +43,5 @@ Passing tests write nothing to stdout or stderr and compile under C11 with
 `-Wall -Wextra -Werror`.
 
 Exact symbols, signatures, output bytes, versioning rules, and responsibility
-boundaries belong only in the [runtime ABI](../../docs/compiler/RUNTIME_ABI.md).
+boundaries belong only in the [runtime ABI](../../docs/compiler/RUNTIME_ABI.md);
+the symbol-set check is executable evidence for that single authority.

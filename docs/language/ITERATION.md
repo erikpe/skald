@@ -1,7 +1,6 @@
 # General Iteration
 
-Status: frozen semantic design with source syntax, canonical protocol, nominal
-resolution, and the receiver and stored-value matrices implemented. The compiler selects
+Status: implemented contract. The compiler selects
 exact closed applications, types the item scope, freezes generic-bound
 selection, and emits structured lifecycle and dispatch plans for exact,
 produced, checked, shared-backed, optional-derived, and array-backed read-only
@@ -10,8 +9,8 @@ optional shared-owner, and optional-box-owner states and items execute through
 verified ordinary MIR and native code.
 The [status matrix](STATUS.md) records implementation maturity.
 
-This document is authoritative for general iteration semantics selected for
-implementation. The frozen syntax extension is recorded in the
+This document is authoritative for implemented general iteration semantics.
+The accepted syntax is recorded in the
 [grammar](GRAMMAR.md#general-iteration-source-syntax), and compiler
 representation is owned by the
 [general-iteration compiler contract](../compiler/ITERATION.md).
@@ -103,8 +102,8 @@ This selection boundary is implemented for direct and inherited exact-class
 claims, specialized generic-class claims, exact interface views, and generic
 bounds. Candidate sets are canonicalized by closed interface identity.
 Diagnostics distinguish no application, ambiguity, and an exact annotation
-mismatch and retain both use and claim/bound spans. The initial typed-HIR
-construction and ordinary-MIR execution matrix is also implemented.
+mismatch and retain both use and claim/bound spans. The complete typed-HIR
+construction and ordinary-MIR execution matrix is implemented.
 
 Malformed headers recover at their actionable delimiter or component so later
 statements can still be checked. A canonical-interface declaration error points
@@ -187,7 +186,7 @@ observable call and cleanup order above.
 
 ## Deliberate exclusions and extensions
 
-The initial contract does not include operator overloading, numeric ranges or
+The implemented contract does not include operator overloading, numeric ranges or
 `..` syntax, compiler-provided primitive or array conformances, structural
 iteration methods, shared iterator objects, generators, consuming or mutable
 receivers, borrowed items, adapters, patterns, or guaranteed optimization.
@@ -198,7 +197,7 @@ may construct that value before ordinary `for-in` selection. Generator work
 may choose a state that owns a resumable frame. Neither extension changes the
 general loop contract.
 
-The frozen rationale and rejected alternatives are retained in the
-[design proposal](../roadmaps/GENERAL_ITERATION_DESIGN_PROPOSAL.md), and the
+The rationale and rejected alternatives are retained in the
+[design proposal](../archive/GENERAL_ITERATION_DESIGN_PROPOSAL.md), and the
 ordered delivery work is tracked in the
-[implementation roadmap](../roadmaps/GENERAL_ITERATION_ROADMAP.md).
+[implementation roadmap](../archive/GENERAL_ITERATION_ROADMAP.md).

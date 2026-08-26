@@ -75,6 +75,7 @@ mod integer_division;
 mod interface_dispatch;
 mod io;
 mod io_probes;
+mod iteration;
 mod legality;
 mod native_execution;
 mod object_results;

@@ -1,8 +1,8 @@
 # General-Iteration Compiler Contract
 
-Status: frozen compiler design with syntax, canonical protocol identity,
+Status: implemented compiler contract with syntax, canonical protocol identity,
 nominal resolution, the complete loop-duration receiver matrix, and the
-complete stored-value state/item matrix implemented.
+complete stored-value state/item matrix.
 Resolution retains exact selected interface, requirement, item/state, local,
 and loop identities. Type checking emits complete structured HIR for exact,
 produced, checked, shared-backed, optional-derived, and array-backed read-only
@@ -14,7 +14,7 @@ and native code. The
 remains authoritative for implementation maturity.
 
 This document owns the selected phase, lifetime, verification, target, and ABI
-boundaries for the frozen
+boundaries for the implemented
 [general-iteration language contract](../language/ITERATION.md). It constrains
 implementation shape without making target layout or internal Rust types part
 of the language.
@@ -96,7 +96,7 @@ target-specific layout reaches HIR. Generic-class specialization substitutes
 the definition-site selected interface and requirement identities rather than
 selecting again.
 
-This boundary is implemented for the complete frozen receiver matrix.
+This boundary is implemented for the complete receiver matrix.
 `HirForIn` retains an ordinary or checked loop-duration receiver carrier,
 source-independent stored-value lifecycle plans for the hidden state and fresh
 item, exact call targets and access, a
@@ -213,9 +213,9 @@ implementation may allocate because its chosen `State` or method body does;
 the loop mechanism itself requires no allocation. The current runtime marker
 therefore remains unchanged.
 
-## Delivery boundary
+## Implemented profile
 
-Initial delivery includes ordinary exact, inherited, specialized generic, and
+The implemented profile includes ordinary exact, inherited, specialized generic, and
 generic-bound selection; the complete accepted receiver and item families;
 nested optional items; loop exits and cleanup; ordinary `Vec<T>` conformance;
 deterministic diagnostics and dumps; verifier-negative evidence; and native
@@ -223,7 +223,7 @@ x86-64 observations.
 
 Operator interfaces, `Range<T>`, `..`, primitive or array intrinsic
 conformance, generators, borrowed items, and optimization guarantees remain
-separate work. The frozen rationale is preserved in the
-[design proposal](../roadmaps/GENERAL_ITERATION_DESIGN_PROPOSAL.md), and tasks
+separate work. The confirmed rationale is preserved in the
+[design proposal](../archive/GENERAL_ITERATION_DESIGN_PROPOSAL.md), and tasks
 are ordered in the
-[implementation roadmap](../roadmaps/GENERAL_ITERATION_ROADMAP.md).
+[implementation roadmap](../archive/GENERAL_ITERATION_ROADMAP.md).

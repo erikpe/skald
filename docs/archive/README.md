@@ -80,6 +80,7 @@ Archived plans:
 - [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md)
 - [Generic classes](GENERIC_CLASSES_ROADMAP.md)
 - [Generic interfaces](GENERIC_INTERFACES_ROADMAP.md)
+- [General iteration](GENERAL_ITERATION_ROADMAP.md)
 - [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
 - [Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
 - [Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md)
@@ -97,6 +98,7 @@ Resolved string-design inputs:
 Resolved loop-design inputs:
 
 - [While loops design proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md)
+- [General iteration design proposal](GENERAL_ITERATION_DESIGN_PROPOSAL.md)
 
 Resolved operator-design inputs:
 

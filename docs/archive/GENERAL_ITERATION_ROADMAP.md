@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT8` is complete; `IT9` is next.
+Status: complete. General iteration is implemented and archived.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -87,7 +87,7 @@ Every task preserves these cross-cutting decisions:
 | [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [x] Complete | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
 | [IT7](#it7--ordinary-vec-adoption) | [x] Complete | `Vec<T>` implements `Iterable<T, u64>` in ordinary source and composes with generic consumers. |
 | [IT8](#it8--verification-diagnostics-and-determinism-hardening) | [x] Complete | Negative verifier evidence, stable diagnostics, dumps, and reordered-declaration determinism close trust gaps. |
-| [IT9](#it9--native-boundary-and-release-closure) | [ ] Planned | Native evidence, unchanged runtime/ABI checks, full gates, living status, and archival complete delivery. |
+| [IT9](#it9--native-boundary-and-release-closure) | [x] Complete | Native evidence, unchanged runtime/ABI checks, full gates, living status, and archival complete delivery. |
 
 Only one task should be marked in progress at a time. Check an item only after
 its tests and exit condition pass. Discoveries belong in the final section and
@@ -638,21 +638,21 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Add end-to-end native programs for direct, inherited, generic-specialized,
+- [x] Add end-to-end native programs for direct, inherited, generic-specialized,
   bound-selected, receiver-heavy, nested-optional, Vec, mixed-loop, and cleanup
   cases.
-- [ ] Inspect representative MIR/assembly to confirm only ordinary calls,
+- [x] Inspect representative MIR/assembly to confirm only ordinary calls,
   optional operations, branches, jumps, and cleanup cross the backend boundary.
-- [ ] Assert the public runtime header, exported symbols, and ABI marker remain
+- [x] Assert the public runtime header, exported symbols, and ABI marker remain
   unchanged; add no iteration runtime harness.
-- [ ] Run golden expectation and determinism checks for all new programs.
-- [ ] Change the status matrix and focused living docs from frozen/not
+- [x] Run golden expectation and determinism checks for all new programs.
+- [x] Change the status matrix and focused living docs from frozen/not
   implemented to implemented only after every preceding exit condition passes.
-- [ ] Remove the temporary resolution-gate wording from grammar and status
+- [x] Remove the temporary resolution-gate wording from grammar and status
   documentation after selection and lowering are implemented.
-- [ ] Remove stale future-language in loop, generic-interface, Vec, backend,
+- [x] Remove stale future-language in loop, generic-interface, Vec, backend,
   and runtime docs while preserving explicit exclusions.
-- [ ] Mark every roadmap task complete, record final evidence, move the design
+- [x] Mark every roadmap task complete, record final evidence, move the design
   proposal and roadmap to `docs/archive/`, and update both indexes.
 
 Tests and quality gates:
@@ -675,6 +675,22 @@ replacement evidence rather than claiming it passed.
 Exit condition: the complete frozen contract is implemented, verified,
 native, deterministic, documented as current behavior, and archived with no
 operator/range scope added and no runtime ABI change.
+
+Completion evidence: the source-to-native matrix covers direct, inherited,
+specialized, definition-site bound-selected, receiver-heavy, nested-optional,
+Vec, mixed-loop, and cleanup behavior. A focused target test verifies that
+compiler-generated iteration reaches x86-64 only as ordinary verified calls,
+optional operations, storage, branches, jumps, and cleanup, then assembles and
+executes the deterministic result. Runtime tests pin the complete defined
+global symbol set, public header signatures/layouts, ABI version 9, and
+`ska_rt_abi_v9`; no iteration runtime service or harness exists. Living
+language, grammar, compiler, backend, runtime, generic-interface, Vec, status,
+and testing documentation describe the implemented contract and retain its
+explicit exclusions. `make compiler-test`, `make cli-test`, `make docs-test`,
+`make golden-test`, `make golden-determinism-test`, `make runtime-test`, and
+`make test` pass: 2,239 compiler unit tests, 366 golden source programs and
+411 deterministic observations, 47 process-determinism tests, three robustness
+tests, nine CLI tests, and the direct C runtime suite are green.
 
 ## Ordering and pull-request boundaries
 

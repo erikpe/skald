@@ -6,17 +6,10 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [general iteration roadmap](GENERAL_ITERATION_ROADMAP.md) is in progress.
-Its canonical protocol, source syntax, deterministic nominal selection,
-structured typed HIR, and initial ordinary-MIR/native execution matrix are
-implemented and validated. Core named class/interface receivers, primitive
-state, primitive or trivially copied class items, exact call order, repeatable
-storage epochs, and loop-exit cleanup now execute without a dedicated backend
-or runtime iteration concept. `IT5` is next: loop-duration receiver
-composition across the complete frozen receiver matrix.
+No implementation roadmap is currently in progress.
 
-The completed generic interfaces roadmap is preserved in the
-[archive](../archive/GENERIC_INTERFACES_ROADMAP.md).
+The completed general iteration and generic interfaces roadmaps are preserved
+in the [archive](../archive/README.md).
 
 ## Planned
 
@@ -24,15 +17,8 @@ No additional implementation roadmap is currently waiting to start.
 
 ## Design proposals
 
-The frozen [general iteration design proposal](GENERAL_ITERATION_DESIGN_PROPOSAL.md)
-defines nominal `Iterable<Item, State>` selection, structured
-`for (item in iterable)` semantics, loop-duration receiver and state
-lifetimes, optional termination, loop exits, phase boundaries, and ordinary
-`Vec<T>` adoption. Its complete decision register was confirmed on 2026-08-25,
-promoted into focused living language and compiler contracts, and translated
-into the active implementation roadmap above. Operator overloading, numeric
-ranges, range syntax, and intrinsic array conformance remain explicit future
-consumers rather than part of this proposal.
+No design proposal is currently active. The completed general iteration design
+and delivery record are preserved in the [archive](../archive/README.md).
 
 The confirmed generic interfaces decisions and completed delivery history are
 preserved in the

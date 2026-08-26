@@ -610,13 +610,13 @@ for-in-statement = "for" "(" identifier [":" storage-type]
 ```
 
 The parentheses and body block are mandatory. `for-in` is a statement and the
-binding is intended to be visible only in the body. `for` is reserved; `in` is
+binding is visible only in the body. `for` is reserved; `in` is
 contextual only at the delimiter position in a `for` header and remains an
 ordinary identifier elsewhere, including as the binding itself. Syntax
 retains the binding, optional annotation, iterable, body, header delimiters,
-and complete spans. Resolution currently emits one intentional implementation
-gate after selecting an exact nominal application, creating the exact-typed
-item binding, and resolving the body. Structured HIR, execution, and cleanup are owned by
+and complete spans. Resolution selects one exact nominal application, creates
+the exact-typed item binding, and resolves the body. Structured HIR, execution,
+and cleanup are owned by
 [General Iteration](ITERATION.md).
 
 ## Expressions

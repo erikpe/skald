@@ -450,12 +450,12 @@ interprets:
 - loop-carried primitive values; or
 - iteration counts or optimizer loop metadata.
 
-The frozen [general-iteration contract](ITERATION.md) has the same boundary.
+The implemented [general-iteration contract](ITERATION.md) has the same boundary.
 Its receiver, state, optional result, item, calls, and cleanup lower to
 ordinary compiler-generated MIR and target code. It adds no runtime symbol,
 iterator allocation service, metadata format, external calling convention, or
-ABI-version change. The implemented core matrix already preserves this
-boundary; later receiver and value families must do the same.
+ABI-version change. The complete receiver and stored-value matrices preserve
+this boundary.
 
 Condition and body expressions may independently use existing runtime
 allocation, deallocation, panic, or byte-I/O entry points under their ordinary
@@ -469,8 +469,8 @@ growth, unwinding, tracing, or cancellation mechanism. A future iterator or
 concurrency design may use ordinary Skald calls or may justify a separately
 versioned runtime addition, but neither is implied by this loop contract.
 
-Direct runtime ABI tests continue checking the unchanged header, symbols, and
-version marker. Loop behavior, backward branches, and per-iteration cleanup
+Direct runtime ABI tests check the unchanged header, exact archive symbol set,
+and version marker. Loop behavior, backward branches, and per-iteration cleanup
 belong to compiler, backend, assembler, and native golden tests rather than a
 new runtime harness.
 

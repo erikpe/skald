@@ -212,7 +212,7 @@ backend metadata without runtime dictionaries or an ABI change. The
 [conformance matrix](GENERIC_INTERFACES_TEST_MATRIX.md) maps the complete
 contract and its exclusions to executable evidence.
 
-The frozen [general-iteration compiler contract](ITERATION.md) selects one
+The implemented [general-iteration compiler contract](ITERATION.md) selects one
 canonical closed `std::iter::Iterable<Item, State>` application, retains a
 structured source and HIR loop with a loop-duration receiver plan, and lowers
 it to ordinary interface calls, optional operations, ownership cleanup, and
@@ -221,9 +221,9 @@ runtime service, or ABI revision. The canonical dependency-free source module,
 typed module-dependency evidence, structural template validation, exact
 resolved language-item identities, structured source syntax, implicit
 dependency activation, deterministic syntax dumps, nominal protocol selection,
-exact resolved iteration evidence, frozen generic-bound selection, and
-item/loop scopes are implemented. Structured HIR, lifecycle planning, and
-lowering remain pending.
+exact resolved iteration evidence, definition-site generic-bound selection,
+item/loop scopes, structured HIR, lifecycle planning, ordinary-MIR lowering,
+verification, and native execution are implemented.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

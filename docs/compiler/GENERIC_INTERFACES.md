@@ -368,8 +368,8 @@ generic functions or methods, inference, defaults, variance, associated types,
 interface inheritance, default methods, structural conformance, erased
 generics, runtime dictionaries, reflection, runtime specialization, or stable
 separate-compilation template ABI. The separately frozen
-[general-iteration compiler contract](ITERATION.md) is a future consumer of
-the implemented closed-interface machinery.
+[general-iteration compiler contract](ITERATION.md) is an implemented consumer
+of the closed-interface machinery.
 
 The archived
 [design record](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) preserves the
