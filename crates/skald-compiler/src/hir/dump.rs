@@ -885,6 +885,7 @@ impl<'types> HirDumper<'types> {
                     dumper.block(&statement.body);
                 });
             }
+            HirStatement::ForIn(statement) => self.for_in(statement),
             HirStatement::Block(block) => self.block(block),
             HirStatement::ScalarAssignment(assignment) => {
                 match assignment.destination.storage {
@@ -1058,6 +1059,70 @@ impl<'types> HirDumper<'types> {
                 });
             }
         }
+    }
+
+    fn for_in(&mut self, statement: &HirForIn) {
+        self.line(
+            &format!(
+                "ForIn {} binding {} interface {} item {} state {} result {}",
+                statement.loop_id,
+                statement.binding,
+                statement.protocol.interface,
+                self.type_name(statement.protocol.item),
+                self.type_name(statement.protocol.state),
+                statement.protocol.result,
+            ),
+            statement.spans.span,
+        );
+        self.indented(|dumper| {
+            dumper.raw_line(&format!(
+                "Requirements iter_state={} iter_next={}",
+                statement.protocol.iter_state, statement.protocol.iter_next,
+            ));
+            dumper.raw_line(&format!(
+                "Receiver iterable={} lifetime={:?}",
+                dumper.type_name(statement.receiver.iterable),
+                statement.receiver.lifetime,
+            ));
+            dumper.indented(|dumper| dumper.object_view("LoopReceiver", &statement.receiver.view));
+            dumper.raw_line(&format!(
+                "State initialization={:?} destruction={:?}",
+                statement.state.value.initialization, statement.state.value.destruction,
+            ));
+            dumper.raw_line(&format!(
+                "IterState target={}:{} receiver={} result={}",
+                statement.state.initialize.target.interface,
+                statement.state.initialize.target.requirement,
+                access_name(statement.state.initialize.receiver_access),
+                dumper.type_name(statement.state.initialize.result),
+            ));
+            dumper.raw_line(&format!(
+                "IterNext target={}:{} receiver={} state-alias={} {} result={}",
+                statement.state.advance.target.interface,
+                statement.state.advance.target.requirement,
+                access_name(statement.state.advance.receiver_access),
+                access_name(statement.state.advance.state_alias.access),
+                dumper.type_name(statement.state.advance.state_alias.ty),
+                dumper.type_name(statement.state.advance.result),
+            ));
+            dumper.raw_line(&format!(
+                "Result optional={} payload={} presence={:?} unwrap={:?} destruction={:?}",
+                statement.result.optional,
+                dumper.type_name(statement.result.payload),
+                statement.result.presence,
+                statement.result.unwrap,
+                statement.result.destruction,
+            ));
+            dumper.raw_line(&format!(
+                "Item binding={} access={} initialization={:?} destruction={:?}",
+                statement.item.binding,
+                access_name(statement.item.access),
+                statement.item.value.initialization,
+                statement.item.value.destruction,
+            ));
+            dumper.raw_line(&format!("Effects {:?}", statement.effects));
+            dumper.block(&statement.body);
+        });
     }
 
     fn copy_construction(&mut self, copy: &crate::hir::HirCopyConstruction) {

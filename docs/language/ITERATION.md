@@ -1,9 +1,11 @@
 # General Iteration
 
-Status: frozen semantic design with source syntax, canonical protocol, and
-nominal resolution implemented. The compiler selects exact closed applications,
-types the item scope, freezes generic-bound selection, and then stops at an
-intentional type-checking gate until structured iteration HIR is implemented.
+Status: frozen semantic design with source syntax, canonical protocol, nominal
+resolution, and the initial typed-HIR matrix implemented. The compiler selects
+exact closed applications, types the item scope, freezes generic-bound
+selection, and emits structured lifecycle and dispatch plans for named class or
+interface receivers with primitive state and primitive or trivially copied
+exact-class items. Broader value/receiver families and execution remain gated.
 The [status matrix](STATUS.md) records implementation maturity.
 
 This document is authoritative for general iteration semantics selected for
@@ -95,8 +97,8 @@ This selection boundary is implemented for direct and inherited exact-class
 claims, specialized generic-class claims, exact interface views, and generic
 bounds. Candidate sets are canonicalized by closed interface identity.
 Diagnostics distinguish no application, ambiguity, and an exact annotation
-mismatch and retain both use and claim/bound spans. Typed HIR construction and
-execution remain pending.
+mismatch and retain both use and claim/bound spans. The initial typed-HIR
+construction matrix is also implemented; MIR execution remains pending.
 
 ## Execution and termination
 

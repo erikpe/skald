@@ -72,7 +72,7 @@ pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
 pub const FINAL_FIELD_REPLACEMENT: &str = "TYP043";
 pub const FINAL_STATIC_REPLACEMENT: &str = "TYP044";
 pub const FINAL_STATIC_INITIALIZER_REQUIRED: &str = "TYP045";
-pub const GENERAL_ITERATION_TYPING_PENDING: &str = "TYP046";
+pub const GENERAL_ITERATION_UNSUPPORTED: &str = "TYP046";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -488,7 +488,13 @@ fn lower_declaration(
 }
 
 pub(super) fn lower_type(_program: &ResolvedProgram, type_syntax: &ResolvedType) -> Type {
-    match type_syntax.kind {
+    lower_type_kind(type_syntax.kind)
+}
+
+/// Lowers an already closed resolved type identity without manufacturing
+/// source syntax solely to call `lower_type`.
+pub(super) fn lower_type_kind(kind: ResolvedTypeKind) -> Type {
+    match kind {
         ResolvedTypeKind::I64 => Type::I64,
         ResolvedTypeKind::U64 => Type::U64,
         ResolvedTypeKind::U8 => Type::U8,

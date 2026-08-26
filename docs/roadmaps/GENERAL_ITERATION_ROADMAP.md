@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT2` is complete; `IT3` is next.
+Status: in progress. `IT3` is complete; `IT4` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -81,7 +81,7 @@ Every task preserves these cross-cutting decisions:
 | [IT0](#it0--canonical-iterable-language-item) | [x] Complete | Canonical dependency-free `std::iter::Iterable<Item, State>` is loadable, validated, and represented by exact identities. |
 | [IT1](#it1--for-in-source-syntax) | [x] Complete | Lexer, parser, AST, recovery, template scanning, and dumps retain the frozen statement shape. |
 | [IT2](#it2--nominal-protocol-selection-and-loop-scopes) | [x] Complete | Exact claims and generic bounds select deterministic protocol evidence before the typed item scope and loop body resolve. |
-| [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [ ] Planned | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans. |
+| [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [x] Complete | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans for the initial core matrix. |
 | [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [ ] Planned | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
 | [IT5](#it5--loop-duration-receiver-composition) | [ ] Planned | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
 | [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [ ] Planned | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
@@ -293,25 +293,25 @@ trivially copied exact-class `Item`. Later tasks complete every frozen family.
 
 Checklist:
 
-- [ ] Add `HirForIn` with exact loop/binding/interface/requirement identities,
+- [x] Add `HirForIn` with exact loop/binding/interface/requirement identities,
   `Item`, `State`, `Item?`, typed iterable, receiver plan, call plans, state
   initialization, result/payload/item plans, body, spans, and effects.
-- [ ] Type-check exact read-only receiver access for `iter_state` and
+- [x] Type-check exact read-only receiver access for `iter_state` and
   `iter_next`, including exact mutable aliasing of the hidden state.
-- [ ] Reuse stored-value capability analysis for `State` and `Item`; issue
+- [x] Reuse stored-value capability analysis for `State` and `Item`; issue
   source diagnostics rather than lowering assertions for unsupported values.
-- [ ] Reuse the canonical optional type table and one-layer payload extraction
+- [x] Reuse the canonical optional type table and one-layer payload extraction
   rather than constructing an ad hoc sentinel or flattened optional.
-- [ ] Represent receiver acquisition once and distinguish its loop-duration
+- [x] Represent receiver acquisition once and distinguish its loop-duration
   lifetime from ordinary call-duration alias carriers.
-- [ ] Type-check the body with an immutable owning item binding and ordinary
+- [x] Type-check the body with an immutable owning item binding and ordinary
   fresh body scope.
-- [ ] Summarize normal fallthrough, nearest-loop break/continue, outer exits,
+- [x] Summarize normal fallthrough, nearest-loop break/continue, outer exits,
   return, and divergence; always retain possible termination fallthrough for
   definite return.
-- [ ] Extend every exhaustive HIR statement consumer, including cell-write and
+- [x] Extend every exhaustive HIR statement consumer, including cell-write and
   static-effect walkers, without hiding calls or lifecycle effects.
-- [ ] Dump exact selected identities, types, receiver plan, and effects in
+- [x] Dump exact selected identities, types, receiver plan, and effects in
   stable order.
 
 Tests:
@@ -327,6 +327,18 @@ Tests:
 Exit condition: the core matrix reaches complete typed structured HIR with no
 unresolved candidate or generic term and with explicit ownership/effect plans;
 MIR lowering remains gated.
+
+Completion evidence: focused type-check tests cover inferred and annotated
+primitive items, named class and interface receivers, frozen generic-bound
+dispatch, trivially copied class items, canonical optional plans, unavailable
+copy and unsupported state diagnostics, immutable assignment and mutable-alias
+rejection, definite-return and mixed-loop effects, deterministic manual HIR
+reconstruction, recursive cell-write inspection, and the intentional MIR gate.
+The `HirForIn` constructor checks cross-plan identities and types, and the HIR
+dump exposes the selected protocol, receiver lifetime, call/state/result/item
+plans, body, and effects. Interface requirements now reuse the ordinary alias
+type predicate, closing the pre-existing primitive-alias inconsistency required
+by `iter_next(mut ref state: u64)`.
 
 ## IT4 — Ordinary MIR CFG and loop exits
 

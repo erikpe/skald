@@ -201,6 +201,7 @@ mod indirect_calls;
 mod inline_fields;
 mod integer_division;
 mod interfaces;
+mod iteration;
 mod literals;
 mod object_results;
 mod objects;

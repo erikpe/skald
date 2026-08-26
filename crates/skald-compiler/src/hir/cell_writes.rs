@@ -55,6 +55,7 @@ fn collect_block(block: &HirBlock, writes: &mut Vec<HirCellWrite>) {
                 }
             }
             HirStatement::While(statement) => collect_block(&statement.body, writes),
+            HirStatement::ForIn(statement) => collect_block(&statement.body, writes),
             HirStatement::Block(block) => collect_block(block, writes),
             _ => {}
         }

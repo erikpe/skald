@@ -1,11 +1,13 @@
 # General-Iteration Compiler Contract
 
-Status: frozen compiler design with syntax, canonical protocol identity, and
-nominal resolution implemented. Resolution retains exact selected interface,
-requirement, item/state, local, and loop identities. Type checking issues an
-intentional construction-pending diagnostic until structured iteration HIR is
-implemented. The [language status matrix](../language/STATUS.md) remains
-authoritative for implementation maturity.
+Status: frozen compiler design with syntax, canonical protocol identity,
+nominal resolution, and the initial structured-HIR matrix implemented.
+Resolution retains exact selected interface, requirement, item/state, local,
+and loop identities. Type checking emits complete structured HIR for named
+exact-class and exact-interface receivers with primitive state and primitive or
+trivially copied exact-class items. Later receiver/value families and all MIR
+lowering remain gated. The [language status matrix](../language/STATUS.md)
+remains authoritative for implementation maturity.
 
 This document owns the selected phase, lifetime, verification, target, and ABI
 boundaries for the frozen
@@ -90,6 +92,15 @@ target-specific layout reaches HIR. Generic-class specialization substitutes
 the definition-site selected interface and requirement identities rather than
 selecting again.
 
+This boundary is implemented for the initial core matrix. `HirForIn` retains
+one loop-duration `HirObjectView`, source-independent stored-value lifecycle
+plans for the hidden state and fresh item, exact call targets and access, a
+mutable alias plan to the exact hidden state, and the canonical result
+`OptionalTypeId` with its one-layer presence, unwrap, and destruction plans.
+The item binding is checked as a read-only owning local while its body is
+checked. Unsupported later receiver or stored-value families produce the
+focused `TYP046` diagnostic before MIR.
+
 The loop-duration receiver is distinct from a call-duration alias. It is
 acquired once before `iter_state`, remains valid across every body execution,
 and is released after state cleanup. Existing view-source classification and
@@ -101,6 +112,9 @@ its exact lifetime and cleanup ownership.
 HIR-to-MIR lowering expands `HirForIn` into ordinary target-independent
 operations. There is no `MirForIn`, iterator opcode, target iterator primitive,
 or runtime service.
+
+This boundary is intentionally gated until roadmap task `IT4`; attempting to
+lower a typed `HirForIn` cannot silently omit its calls or lifecycle effects.
 
 The generated CFG has these semantic regions:
 

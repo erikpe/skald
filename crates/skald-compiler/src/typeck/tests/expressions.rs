@@ -48,6 +48,7 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 HirStatement::While(statement) => {
                     assert_expression_is_fully_typed(&statement.condition);
                 }
+                HirStatement::ForIn(_) => {}
                 HirStatement::Block(_) => {}
                 HirStatement::BaseInitialization(_)
                 | HirStatement::Break(_)

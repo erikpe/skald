@@ -35,6 +35,9 @@ impl BodyLowerer<'_> {
             HirStatement::Call(statement) => self.lower_call_statement(statement),
             HirStatement::Conditional(conditional) => self.lower_conditional(conditional),
             HirStatement::While(statement) => self.lower_while(statement),
+            HirStatement::ForIn(_) => {
+                unimplemented!("general-iteration MIR lowering is implemented by roadmap task IT4")
+            }
             HirStatement::Block(block) => self.lower_block(block),
             HirStatement::ScalarAssignment(assignment) => {
                 let value = self

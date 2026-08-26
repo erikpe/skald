@@ -19,6 +19,7 @@ use crate::{
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(super) enum ViewSourceUse {
     AliasArgument,
+    Iteration,
     TypeTest,
     Cast,
     CopyConstruction,
@@ -35,6 +36,7 @@ impl ViewSourceUse {
     const fn source_context(self) -> &'static str {
         match self {
             Self::AliasArgument => "alias argument source",
+            Self::Iteration => "iteration receiver",
             Self::TypeTest => "type-test source",
             Self::Cast => "object-cast source",
             Self::CopyConstruction => "copy-construction source",
@@ -44,6 +46,7 @@ impl ViewSourceUse {
     const fn diagnostic_code(self) -> &'static str {
         match self {
             Self::AliasArgument => INVALID_ALIAS_ARGUMENT,
+            Self::Iteration => crate::typeck::program::GENERAL_ITERATION_UNSUPPORTED,
             Self::TypeTest => INVALID_TYPE_TEST,
             Self::Cast => crate::typeck::program::INVALID_OBJECT_CAST,
             Self::CopyConstruction => INVALID_COPY_CONSTRUCTION,
@@ -53,6 +56,7 @@ impl ViewSourceUse {
     const fn object_message(self) -> &'static str {
         match self {
             Self::AliasArgument => "alias argument must designate an object",
+            Self::Iteration => "iteration requires a stable class or interface receiver",
             Self::TypeTest => "type-test source must designate an object",
             Self::Cast => "object-cast source must designate an object",
             Self::CopyConstruction => "copy-construction source must designate an object",
@@ -64,6 +68,7 @@ impl ViewSourceUse {
             Self::AliasArgument => {
                 "alias argument must use an object place, an explicit shared dereference, or a compatible produced object"
             }
+            Self::Iteration => "iteration currently requires a named class or interface view",
             Self::TypeTest => "type-test source must be an existing object place",
             Self::Cast => "object-cast source must be an existing object place",
             Self::CopyConstruction => {
@@ -895,6 +900,27 @@ impl CallableChecker<'_, '_> {
                 None
             }
         }
+    }
+
+    /// Builds the stable named receiver subset admitted by the initial
+    /// general-iteration HIR task. The outer `Option` represents an ordinary
+    /// source error; `Err(span)` identifies a valid but later receiver family.
+    pub(in crate::typeck) fn check_core_iteration_view(
+        &mut self,
+        expression: &ResolvedExpression,
+        target: HirViewTarget,
+    ) -> Option<Result<(Type, HirObjectView), Span>> {
+        let source = self.check_object_view_source(expression, ViewSourceUse::Iteration)?;
+        let iterable = match &source {
+            CheckedObjectViewSource::Class { place, .. } => Type::Class(place.class()),
+            CheckedObjectViewSource::Interface { interface, .. } => Type::Interface(*interface),
+            _ => return Some(Err(source.span())),
+        };
+        debug_assert!(source.access().permits(HirAccess::ReadOnly));
+        Some(Ok((
+            iterable,
+            source.into_view(target, HirAccess::ReadOnly),
+        )))
     }
 
     fn reject_implicit_shared_view_source(

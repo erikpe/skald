@@ -15,7 +15,7 @@ use super::{
     program::{INVALID_OBJECT_CAST, INVALID_OBJECT_CONTEXT, TYPE_MISMATCH},
 };
 
-mod alias;
+pub(super) mod alias;
 mod alias_access;
 mod bit_reinterpretation;
 mod bitwise;

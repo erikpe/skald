@@ -13,6 +13,7 @@ mod expression;
 mod function_type;
 mod integer_division;
 mod io;
+mod iteration;
 mod object;
 mod optional;
 mod optional_box_type;
@@ -69,6 +70,13 @@ pub use integer_division::{
     HirSignedQuotientRounding, HirSignedRemainderSign,
 };
 pub use io::HirIoOperation;
+pub use iteration::{
+    HirForIn, HirIterationCallTarget, HirIterationItemPlan, HirIterationNextCallPlan,
+    HirIterationProtocol, HirIterationReceiver, HirIterationReceiverLifetime,
+    HirIterationResultPlan, HirIterationSpans, HirIterationStateAlias, HirIterationStateCallPlan,
+    HirIterationStatePlan, HirIterationStoredValuePlan, HirIterationValueDestruction,
+    HirIterationValueInitialization,
+};
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,
     HirConstruction, HirConstructionMode, HirCopyAssignment, HirCopyCapability,

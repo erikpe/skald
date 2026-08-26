@@ -663,7 +663,13 @@ impl CallableChecker<'_, '_> {
                 }
                 receiver.access
             }
-            BindingId::Local(_) => HirAccess::Mutable,
+            BindingId::Local(id) => {
+                if self.read_only_locals.contains(&id) {
+                    HirAccess::ReadOnly
+                } else {
+                    HirAccess::Mutable
+                }
+            }
             BindingId::Parameter(id) => {
                 let parameter = self.parameter(id);
                 lower_parameter_mode(parameter.binding_mode)

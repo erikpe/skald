@@ -201,13 +201,7 @@ fn validate_requirement_signature(
             ),
             crate::resolve::ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | crate::resolve::ResolvedParameterBindingMode::MutableAlias { .. } => {
-                matches!(
-                    ty,
-                    crate::hir::Type::Class(_)
-                        | crate::hir::Type::Obj
-                        | crate::hir::Type::Interface(_)
-                        | crate::hir::Type::Optional(_)
-                )
+                super::is_supported_alias_type(program, ty)
             }
         };
         if !valid {

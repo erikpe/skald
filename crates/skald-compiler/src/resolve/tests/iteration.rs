@@ -575,7 +575,7 @@ fn iteration_binding_rejects_duplicate_outer_body_declarations_but_allows_nested
 }
 
 #[test]
-fn type_checking_stops_after_successful_selection_until_structured_hir_lands() {
+fn type_checking_builds_structured_hir_after_successful_selection() {
     let source = format!(
         "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
     );
@@ -586,11 +586,13 @@ fn type_checking_stops_after_successful_selection_until_structured_hir_lands() {
         resolved.diagnostics
     );
     let checked = crate::typeck::type_check(&resolved.program);
-    assert!(checked
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == crate::typeck::GENERAL_ITERATION_TYPING_PENDING));
-    assert!(checked.hir.is_none());
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.expect("selected core iteration must reach HIR");
+    let scan = hir.definitions.iter().next().unwrap();
+    assert!(matches!(
+        scan.body.statements[0],
+        crate::hir::HirStatement::ForIn(_)
+    ));
 }
 
 #[test]

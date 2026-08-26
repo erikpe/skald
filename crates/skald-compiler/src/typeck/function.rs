@@ -21,10 +21,9 @@ use super::{
         direct_call_through_groups, is_call_through_groups, require_type, ObjectPlaceUse,
     },
     program::{
-        lower_type, COPY_OPERATION_UNAVAILABLE, FIELD_INITIALIZATION,
-        GENERAL_ITERATION_TYPING_PENDING, INVALID_CALL_STATEMENT, INVALID_CONSTRUCTION,
-        INVALID_INITIALIZER_BODY, INVALID_OBJECT_CONTEXT, INVALID_RETURN, MISSING_RETURN,
-        READ_ONLY_RECEIVER,
+        lower_type, COPY_OPERATION_UNAVAILABLE, FIELD_INITIALIZATION, INVALID_CALL_STATEMENT,
+        INVALID_CONSTRUCTION, INVALID_INITIALIZER_BODY, INVALID_OBJECT_CONTEXT, INVALID_RETURN,
+        MISSING_RETURN, READ_ONLY_RECEIVER,
     },
 };
 
@@ -32,6 +31,7 @@ mod construction;
 mod copy;
 mod field_write;
 mod initializer;
+mod iteration;
 mod overload;
 mod statement;
 
@@ -83,6 +83,8 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
     pub(super) receiver: Option<ReceiverContext>,
     pub(super) member_body_kind: Option<MemberBodyKind>,
     pub(super) initialized_fields: BTreeSet<FieldId>,
+    /// Loop-produced owning locals are immutable while their body is checked.
+    pub(super) read_only_locals: BTreeSet<crate::identity::LocalId>,
     pub(super) base_initialized: bool,
     pub(super) diagnostics: &'diagnostics mut Diagnostics,
 }
@@ -172,6 +174,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             receiver: None,
             member_body_kind: None,
             initialized_fields: BTreeSet::new(),
+            read_only_locals: BTreeSet::new(),
             base_initialized: true,
             diagnostics,
         }
@@ -234,6 +237,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             receiver: context.receiver,
             member_body_kind: Some(context.body_kind),
             initialized_fields: BTreeSet::new(),
+            read_only_locals: BTreeSet::new(),
             base_initialized,
             diagnostics,
         }
@@ -324,6 +328,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             receiver: None,
             member_body_kind: None,
             initialized_fields: BTreeSet::new(),
+            read_only_locals: BTreeSet::new(),
             base_initialized: true,
             diagnostics,
         }

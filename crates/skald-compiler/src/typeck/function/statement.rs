@@ -19,8 +19,8 @@ use crate::{
 
 use super::{
     direct_call_through_groups, is_call_through_groups, lower_type, require_type, CallableChecker,
-    MemberBodyKind, GENERAL_ITERATION_TYPING_PENDING, INVALID_CALL_STATEMENT,
-    INVALID_INITIALIZER_BODY, INVALID_RETURN, READ_ONLY_RECEIVER,
+    MemberBodyKind, INVALID_CALL_STATEMENT, INVALID_INITIALIZER_BODY, INVALID_RETURN,
+    READ_ONLY_RECEIVER,
 };
 
 impl CallableChecker<'_, '_> {
@@ -77,19 +77,7 @@ impl CallableChecker<'_, '_> {
                 self.check_conditional_statement(conditional)
             }
             ResolvedStatement::While(statement) => self.check_while_statement(statement),
-            ResolvedStatement::ForIn(statement) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        GENERAL_ITERATION_TYPING_PENDING,
-                        "general iteration HIR construction is not implemented yet",
-                    )
-                    .with_primary_label(
-                        statement.for_span,
-                        "protocol selection succeeded; typed loop planning is pending",
-                    ),
-                );
-                CheckedStatement::falls_through(None)
-            }
+            ResolvedStatement::ForIn(statement) => self.check_for_in_statement(statement),
             ResolvedStatement::Block(block) => self.check_nested_block_statement(block),
             ResolvedStatement::ScalarBindingAssignment(assignment) => {
                 self.check_scalar_binding_assignment(assignment)
@@ -920,6 +908,10 @@ pub(super) struct CheckedStatement {
 }
 
 impl CheckedStatement {
+    pub(super) fn with_effects(hir: Option<HirStatement>, effects: HirControlEffects) -> Self {
+        Self { hir, effects }
+    }
+
     pub(super) fn falls_through(hir: Option<HirStatement>) -> Self {
         Self {
             hir,
