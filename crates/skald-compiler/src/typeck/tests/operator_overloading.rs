@@ -114,6 +114,126 @@ fn main() -> i64 {
 }
 
 #[test]
+fn operator_outputs_reuse_every_ordinary_result_capability() {
+    let hir = check_operator_source(
+        r#"
+from std::ops import OpAdd, OpNeg;
+
+class Product {
+    value: i64;
+    init(value: i64) { self.value = value; }
+}
+class Box<T> {
+    value: T;
+    init(value: T) { self.value = value; }
+}
+fn increment(value: i64) -> i64 { return value + 1; }
+
+class Signed implements OpAdd<Signed, i64> {
+    init() {}
+    fn op_add(ref rhs: Signed) -> i64 { return 1; }
+}
+class Unsigned implements OpAdd<Unsigned, u64> {
+    init() {}
+    fn op_add(ref rhs: Unsigned) -> u64 { return 2u; }
+}
+class Byte implements OpAdd<Byte, u8> {
+    init() {}
+    fn op_add(ref rhs: Byte) -> u8 { return 3u8; }
+}
+class Floating implements OpAdd<Floating, f64> {
+    init() {}
+    fn op_add(ref rhs: Floating) -> f64 { return 4.5; }
+}
+class Flag implements OpAdd<Flag, bool> {
+    init() {}
+    fn op_add(ref rhs: Flag) -> bool { return true; }
+}
+class ObjectFactory implements OpAdd<ObjectFactory, Product> {
+    init() {}
+    fn op_add(ref rhs: ObjectFactory) -> Product { return Product(6); }
+}
+class SharedFactory implements OpAdd<SharedFactory, shared Product> {
+    init() {}
+    fn op_add(ref rhs: SharedFactory) -> shared Product { return new Product(7); }
+}
+class OptionalFactory implements OpAdd<OptionalFactory, i64?> {
+    init() {}
+    fn op_add(ref rhs: OptionalFactory) -> i64? { return 8; }
+}
+class ArrayFactory implements OpAdd<ArrayFactory, i64[]> {
+    init() {}
+    fn op_add(ref rhs: ArrayFactory) -> i64[] { return i64[]{9}; }
+}
+class FunctionFactory implements OpAdd<FunctionFactory, fn(i64) -> i64> {
+    init() {}
+    fn op_add(ref rhs: FunctionFactory) -> fn(i64) -> i64 { return increment; }
+}
+class GenericFactory implements OpAdd<GenericFactory, Box<i64>> {
+    init() {}
+    fn op_add(ref rhs: GenericFactory) -> Box<i64> { return Box<i64>(10); }
+}
+class UnaryFactory implements OpNeg<Product> {
+    init() {}
+    fn op_neg() -> Product { return Product(11); }
+}
+
+fn consume(value: i64) -> i64 { return value; }
+fn returned(ref left: ObjectFactory, ref right: ObjectFactory) -> Product {
+    return left + right;
+}
+fn returned_shared(ref left: SharedFactory, ref right: SharedFactory) -> shared Product {
+    return left + right;
+}
+fn returned_optional(ref left: OptionalFactory, ref right: OptionalFactory) -> i64? {
+    return left + right;
+}
+fn returned_array(ref left: ArrayFactory, ref right: ArrayFactory) -> i64[] {
+    return left + right;
+}
+fn returned_function(ref left: FunctionFactory, ref right: FunctionFactory) -> fn(i64) -> i64 {
+    return left + right;
+}
+fn returned_generic(ref left: GenericFactory, ref right: GenericFactory) -> Box<i64> {
+    return left + right;
+}
+
+fn main() -> i64 {
+    var signed: i64 = consume(Signed() + Signed()) + 10;
+    var unsigned: u64 = Unsigned() + Unsigned();
+    var byte: u8 = Byte() + Byte();
+    var floating: f64 = Floating() + Floating();
+    var flag: bool = Flag() + Flag();
+    var product: Product = returned(ObjectFactory(), ObjectFactory());
+    var owner: shared Product = returned_shared(SharedFactory(), SharedFactory());
+    var maybe: i64? = returned_optional(OptionalFactory(), OptionalFactory());
+    var values: i64[] = returned_array(ArrayFactory(), ArrayFactory());
+    var callback: fn(i64) -> i64 = returned_function(FunctionFactory(), FunctionFactory());
+    var boxed: Box<i64> = returned_generic(GenericFactory(), GenericFactory());
+    var unary_product: Product = -UnaryFactory();
+    if (!flag || floating < 4.0) { return 1; }
+    return signed + (i64) unsigned + (i64) byte + product.value + owner->value
+        + maybe! + values[0] + callback(1) + boxed.value + unary_product.value;
+}
+"#,
+    );
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("InterfaceCall").count(), 9, "{dump}");
+    for result in [
+        "ObjectResult",
+        "SharedCallResult",
+        "OptionalProduced",
+        "ArrayInitialization adopt",
+        "fn(i64) -> i64",
+        "app::Box<i64>",
+    ] {
+        assert!(dump.contains(result), "missing `{result}`:\n{dump}");
+    }
+    let mir = crate::test_support::lower_hir_to_final_mir(&hir);
+    crate::mir::verify_mir(&mir).expect("every operator result capability must lower and verify");
+}
+
+#[test]
 fn inherited_closed_generic_and_exact_interface_receivers_are_eligible() {
     let hir = check_operator_source(
         r#"
@@ -151,6 +271,105 @@ fn main() -> i64 {
     );
     let dump = dump_hir(&hir);
     assert!(dump.matches("InterfaceCall").count() >= 3, "{dump}");
+}
+
+#[test]
+fn operator_receivers_reuse_the_complete_ordinary_carrier_matrix() {
+    let hir = check_operator_source(
+        r#"
+from std::ops import OpAdd;
+
+class Number implements OpAdd<Number, i64> {
+    static stored: Number = Number(10);
+    private value: i64;
+
+    init(value: i64) { self.value = value; }
+    fn op_add(ref rhs: Number) -> i64 { return self.value + rhs.value; }
+    fn through_self(ref rhs: Number) -> i64 { return self + rhs; }
+}
+
+class Holder {
+    value: Number;
+    maybe: Number?;
+    init(value: i64) {
+        self.value = Number(value);
+        self.maybe = Number(value + 1);
+    }
+}
+
+fn through_local(ref right: Number) -> i64 {
+    var left: Number = Number(1);
+    return left + right;
+}
+fn through_field(ref holder: Holder, ref right: Number) -> i64 { return holder.value + right; }
+fn through_static(ref right: Number) -> i64 { return Number.stored + right; }
+fn through_produced(ref right: Number) -> i64 { return Number(2) + right; }
+fn through_checked(ref value: Obj, ref right: Number) -> i64 { return ((Number) value) + right; }
+fn through_shared(shared_left: shared Number, ref right: Number) -> i64 { return (*shared_left) + right; }
+fn through_optional(ref holder: Holder, ref right: Number) -> i64 { return holder.maybe! + right; }
+fn through_array(ref values: Number[], ref right: Number) -> i64 { return values[0] + right; }
+fn through_interface(ref left: OpAdd<Number, i64>, ref right: Number) -> i64 { return left + right; }
+fn through_checked_interface(ref value: Obj, ref right: Number) -> i64 {
+    return ((OpAdd<Number, i64>) value) + right;
+}
+fn through_shared_interface(shared_left: shared OpAdd<Number, i64>, ref right: Number) -> i64 {
+    return (*shared_left) + right;
+}
+fn through_optional_interface(box: shared OpAdd<Number, i64>?, ref right: Number) -> i64 {
+    return (*box)! + right;
+}
+
+fn main() -> i64 { return 0; }
+"#,
+    );
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("InterfaceCall").count(), 13, "{dump}");
+    for carrier in [
+        "StaticView",
+        "ProducedView",
+        "CheckedViewArgument",
+        "ArrayElementPlace",
+        "CheckedOptionalBoxPayload",
+    ] {
+        assert!(dump.contains(carrier), "missing `{carrier}`:\n{dump}");
+    }
+}
+
+#[test]
+fn ineligible_left_types_do_not_gain_implicit_operator_crossings() {
+    let source = r#"
+from std::ops import OpAdd;
+
+interface Other { fn other() -> i64; }
+class Number implements OpAdd<Number, i64>, Other {
+    init() {}
+    fn op_add(ref rhs: Number) -> i64 { return 1; }
+    fn other() -> i64 { return 2; }
+}
+fn make() -> Number { return Number(); }
+
+fn raw_shared(left: shared Number, ref right: Number) -> i64 { return left + right; }
+fn unrelated(ref left: Other, ref right: Number) -> i64 { return left + right; }
+fn erased(ref left: Obj, ref right: Number) -> i64 { return left + right; }
+fn optional(left: Number?, ref right: Number) -> i64 { return left + right; }
+fn array(left: Number[], ref right: Number) -> i64 { return left + right; }
+fn function(left: fn() -> Number, ref right: Number) -> i64 { return left + right; }
+fn discard(ref left: Number, ref right: Number) -> unit { left + right; }
+fn main() -> i64 { return 0; }
+"#;
+    let resolved = resolve_operator_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert!(checked.diagnostics.len() >= 7, "{:?}", checked.diagnostics);
+    assert!(checked
+        .diagnostics
+        .iter()
+        .any(|diagnostic| { diagnostic.code == crate::typeck::program::INVALID_CALL_STATEMENT }));
 }
 
 #[test]

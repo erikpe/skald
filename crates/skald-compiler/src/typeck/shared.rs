@@ -174,6 +174,18 @@ impl CallableChecker<'_, '_> {
                     Box::new(call),
                 )))
             }
+            ResolvedExpression::Unary(_) | ResolvedExpression::Binary(_)
+                if super::expression::is_selected_operator_expression(expression) =>
+            {
+                let call = self.check_expression(expression)?;
+                if !matches!(call.ty, Type::Shared(_)) {
+                    self.report_non_shared_source(expression, cast_source);
+                    return None;
+                }
+                Some(HirSharedSource::Produced(HirSharedProducer::Call(
+                    Box::new(call),
+                )))
+            }
             ResolvedExpression::Grouped(grouped) => {
                 self.check_shared_source(&grouped.expression, cast_source)
             }
@@ -588,6 +600,14 @@ impl CallableChecker<'_, '_> {
                     }
                     _ => None,
                 }),
+            ResolvedExpression::Unary(_) | ResolvedExpression::Binary(_)
+                if super::expression::is_selected_operator_expression(expression) =>
+            {
+                match self.static_expression_type(expression) {
+                    Type::Shared(target) => Some(target),
+                    _ => None,
+                }
+            }
             ResolvedExpression::Grouped(grouped) => {
                 self.resolved_shared_target(&grouped.expression)
             }

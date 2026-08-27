@@ -162,10 +162,11 @@ Selected class uses erase before completed HIR to ordinary interface calls;
 overloaded `!=` negates one secured equality call, while canonical
 primitive-bound uses erase to existing primitive operations, and produced
 primitive read-only arguments use the implemented caller-owned scalar
-temporaries. Generic-bound punctuation remains staged. The remaining operator
-design adds no overloaded-operator MIR
-node, backend semantic lookup, runtime service, or ABI revision and is not
-implemented yet.
+temporaries. Ordinary receiver carriers, result owners, dispatch, evaluation,
+cleanup, panic traces, static effects, and target retention are shared without
+operator-specific lower IR. Generic-bound punctuation remains staged. The
+remaining operator design adds no overloaded-operator MIR node, backend
+semantic lookup, runtime service, or ABI revision and is not implemented yet.
 
 The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)

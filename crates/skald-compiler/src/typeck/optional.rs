@@ -1027,6 +1027,9 @@ fn is_optional_producer(expression: &ResolvedExpression) -> bool {
         | ResolvedExpression::MethodCall(_)
         | ResolvedExpression::InterfaceCall(_)
         | ResolvedExpression::Unwrap(_) => true,
+        ResolvedExpression::Unary(_) | ResolvedExpression::Binary(_) => {
+            super::expression::is_selected_operator_expression(expression)
+        }
         ResolvedExpression::Grouped(grouped) => is_optional_producer(&grouped.expression),
         _ => false,
     }

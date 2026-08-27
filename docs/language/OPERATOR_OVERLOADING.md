@@ -3,7 +3,9 @@
 Status: frozen operator-protocol language design with staged implementation.
 The canonical `std::ops` declarations, whole-bundle validation, explicit
 ordinary interface use, and the complete non-generic class operator surface
-are implemented. Definition-site generic punctuation and compiler-provided
+are implemented, including ordinary receiver carriers, dispatch, ownership,
+evaluation, cleanup, result capabilities, panic traces, and static effects.
+Definition-site generic punctuation and compiler-provided
 primitive protocol evidence remain staged. Exact
 primitive expressions continue to use the [implemented primitive operator
 profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
@@ -312,6 +314,17 @@ primitive binding so any successfully checked produced primitive expression may 
 materialized once in hidden caller-owned scalar storage. An existing
 compatible primitive place still borrows directly. `mut ref` remains
 place-only, and no alias escapes or becomes independently storable.
+
+The implemented non-generic path accepts the same receiver carriers as the
+equivalent ordinary interface call: locals, fields, statics, `self`, aliases,
+produced exact-class values, checked class or exact-interface views, explicit
+shared dereference, explicit optional unwrap, and array-element class places.
+Raw shared handles, optionals, `Obj`, unrelated interface views, arrays, and
+function values do not cross to a receiver implicitly. Primitive, class,
+shared, optional, array, function, and specialized-generic results retain
+their ordinary assignment, nesting, argument, return, copy/adoption, anchor,
+and cleanup rules. As with every expression statement, a non-`unit` result
+cannot be silently discarded.
 
 Operator methods are read-only with respect to their receiver but are not
 implicitly pure, total, constant, commutative, associative, or symmetric.

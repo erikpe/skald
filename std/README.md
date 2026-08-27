@@ -84,7 +84,9 @@ it reachable; operator punctuation creates no dependency. Classes can already
 use the declarations through ordinary claims, bounds, interface types, and
 manual method calls. The complete non-generic punctuation surface selects
 eligible class applications when the module is already reachable and erases
-them to ordinary interface calls. Definition-site generic selection and static
+them to ordinary interface calls, including ordinary receiver carriers,
+result ownership, dispatch, evaluation, cleanup, effects, and target
+retention. Definition-site generic selection and static
 primitive protocol evidence remain staged; the complete design adds no runtime
 service.
 

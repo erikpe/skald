@@ -39,6 +39,7 @@ mod type_operations;
 pub(in crate::typeck) use object_view_relation::{
     class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
 };
+pub(in crate::typeck) use operator::is_selected_operator_expression;
 pub(in crate::typeck) use place::{CheckedReceiverCarrier, ObjectPlaceUse};
 
 pub(in crate::typeck) trait CallParameter {

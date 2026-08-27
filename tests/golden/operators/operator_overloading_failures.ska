@@ -1,0 +1,31 @@
+import std::process;
+from std::error import panic;
+from std::ops import OpAdd;
+from std::str import Str;
+
+class Bomb implements OpAdd<Bomb, i64> {
+    init() {}
+
+    fn op_add(ref rhs: Bomb) -> i64 {
+        panic("operator failure");
+        return 0;
+    }
+}
+
+fn punctuation(ref left: Bomb, ref right: Bomb) -> i64 {
+    return left + right;
+}
+
+fn explicit(ref left: Bomb, ref right: Bomb) -> i64 {
+    return left.op_add(right);
+}
+
+fn main() -> i64 {
+    var args: Str[] = std::process::args();
+    var left: Bomb = Bomb();
+    var right: Bomb = Bomb();
+    if (args[1].equals("punctuation")) {
+        return punctuation(left, right);
+    }
+    return explicit(left, right);
+}

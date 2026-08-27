@@ -11,6 +11,7 @@ mod generic_requirements;
 mod generic_specializations;
 mod generic_templates;
 mod hierarchy;
+mod interface_receiver;
 mod iteration;
 mod modules;
 mod object_place;

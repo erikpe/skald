@@ -7,7 +7,10 @@ those selected applications to ordinary interface calls while retaining the
 [implemented primitive operator
 representation](PHASES_AND_IR.md#implemented-primitive-operator-representation)
 for exact primitive operations. Overloaded `!=` wraps one selected `OpEq` call
-in the existing exact boolean negation. Definition-site generic selection and
+in the existing exact boolean negation. Receiver carriers, result-capability
+owners, MIR evaluation and cleanup, dispatch, static effects, target
+retention, panic traces, and native lowering are integrated through their
+ordinary call paths. Definition-site generic selection and
 compiler-provided primitive protocol evidence remain staged.
 This document fixes the complete compiler boundary for the frozen
 [interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md).
@@ -194,6 +197,15 @@ contracts. Primitive realizations keep exactly the existing evaluation,
 failure, IEEE-754, and cleanup semantics. Transformations may inline or
 devirtualize only without changing observable evaluation, calls, effects,
 failure, result, or cleanup.
+
+The implementation uses one resolved exact-interface receiver conversion for
+bindings, groupings, checked casts, explicit shared dereference, and the final
+unwrap of view-only shared optional boxes. Exact-class operators use the
+ordinary complete-object receiver carrier. Selected operator expressions are
+identified once as call-shaped producers for shared and optional result
+owners; class, array, function, scalar, and specialized-generic results keep
+their existing call-result paths. No result family has an operator-specific
+ownership representation.
 
 ## Diagnostics, dumps, and determinism
 

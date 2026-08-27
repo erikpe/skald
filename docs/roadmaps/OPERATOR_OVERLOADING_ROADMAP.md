@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 through OO3 are complete; OO4 is next.
+Status: **in progress**. OO0 through OO4 are complete; OO5 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -63,7 +63,7 @@ pipelines are the baseline. No other planned feature blocks OO0.
 - [x] OO1 — Canonical `std::ops` bundle and identity validation
 - [x] OO2 — Value-producing operator selection and HIR erasure
 - [x] OO3 — Typed equality, ordering, and complete operator surface
-- [ ] OO4 — Receiver, ownership, evaluation, and effect integration
+- [x] OO4 — Receiver, ownership, evaluation, and effect integration
 - [ ] OO5 — Compiler-provided primitive protocol evidence
 - [ ] OO6 — Generic definition-site selection and specialization
 - [ ] OO7 — Diagnostics, verification, and determinism hardening
@@ -271,25 +271,25 @@ remain non-overloadable.
 **Purpose:** Make protocol punctuation exactly call-equivalent across Skald's
 complete object, argument, result, lifetime, and dispatch matrix.
 
-- [ ] Reuse ordinary receiver checking for locals, fields, statics, `self`,
+- [x] Reuse ordinary receiver checking for locals, fields, statics, `self`,
   aliases, produced exact-class values, checked views, explicit dereference,
   explicit optional unwrap, and exact interface views; reject raw shared,
   unrelated interface, `Obj`, optional, array, and function left types.
-- [ ] Preserve direct, inherited, virtual override, and interface witness
+- [x] Preserve direct, inherited, virtual override, and interface witness
   dispatch, including ordinary access and shared-anchor behavior.
-- [ ] Secure the left receiver once, then evaluate and secure the RHS once,
+- [x] Secure the left receiver once, then evaluate and secure the RHS once,
   bind its read-only alias, issue one call, secure the result, and clean up in
   reverse full-expression order. Unary calls secure one receiver once.
-- [ ] Exercise direct RHS places, OO0 produced primitive storage, class/view
+- [x] Exercise direct RHS places, OO0 produced primitive storage, class/view
   aliases, produced exact-class carriers, inheritance projections, and checked
   view anchors through the existing call argument machinery.
-- [ ] Exercise every supported primitive, class, shared, optional, array,
+- [x] Exercise every supported primitive, class, shared, optional, array,
   function, and specialized-generic `Output` capability through assignment,
   nesting, argument passing, discard, return, and failure paths.
-- [ ] Preserve ordinary target-directed copies, moves/adoption, owner retention,
+- [x] Preserve ordinary target-directed copies, moves/adoption, owner retention,
   alias lifetime, produced receiver destruction, call-result securing, panic
   traces, and reverse cleanup without operator-specific ownership rules.
-- [ ] Feed interface-call targets into existing static-effect, reachable-target,
+- [x] Feed interface-call targets into existing static-effect, reachable-target,
   body-retention, devirtualization, and artifact-order owners exactly as an
   equivalent explicit call.
 

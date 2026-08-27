@@ -1,12 +1,51 @@
 schema = 2
 
 [[test]]
+name = "call_equivalence_operator_overloading"
+mode = "run"
+source = "call_equivalence_operator_overloading.ska"
+[[test.run]]
+name = "evaluation_dispatch_carriers_aliases_and_cleanup"
+expect = { stdout = { file = "data/call_equivalence_operator_overloading.stdout" } }
+
+[[test]]
+name = "operator_overloading_failures"
+mode = "run"
+source = "operator_overloading_failures.ska"
+[[test.run]]
+name = "punctuation_trace"
+args = ["punctuation"]
+expect = { exit = "failure", stderr = { inline = """panic: operator failure
+stacktrace:
+  at operator_overloading_failures::Bomb.op_add (tests/golden/operators/operator_overloading_failures.ska:10:9)
+  at operator_overloading_failures::punctuation (tests/golden/operators/operator_overloading_failures.ska:16:12)
+  at operator_overloading_failures::main (tests/golden/operators/operator_overloading_failures.ska:28:16)
+""" } }
+[[test.run]]
+name = "explicit_trace"
+args = ["explicit"]
+expect = { exit = "failure", stderr = { inline = """panic: operator failure
+stacktrace:
+  at operator_overloading_failures::Bomb.op_add (tests/golden/operators/operator_overloading_failures.ska:10:9)
+  at operator_overloading_failures::explicit (tests/golden/operators/operator_overloading_failures.ska:20:12)
+  at operator_overloading_failures::main (tests/golden/operators/operator_overloading_failures.ska:30:12)
+""" } }
+
+[[test]]
 name = "value_operator_overloading"
 mode = "run"
 source = "value_operator_overloading.ska"
 [[test.run]]
 name = "class_output_and_unary_dispatch"
 expect = { stdout = { file = "data/value_operator_overloading.stdout" } }
+
+[[test]]
+name = "result_operator_overloading"
+mode = "run"
+source = "result_operator_overloading.ska"
+[[test.run]]
+name = "class_shared_optional_array_function_and_generic_results"
+expect = { stdout = { file = "data/result_operator_overloading.stdout" } }
 
 [[test]]
 name = "floating_division"

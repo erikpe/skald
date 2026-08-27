@@ -1,0 +1,95 @@
+import std::io;
+from std::ops import OpAdd;
+
+class Trace implements OpAdd<Trace, i64> {
+    static events: i64;
+    private value: i64;
+
+    init(value: i64) { self.value = value; }
+
+    fn op_add(ref rhs: Trace) -> i64 {
+        Trace.events = Trace.events * 10 + 3;
+        return self.value + rhs.value;
+    }
+}
+
+fn make_left() -> Trace {
+    Trace.events = Trace.events * 10 + 1;
+    return Trace(17);
+}
+
+fn make_right() -> Trace {
+    Trace.events = Trace.events * 10 + 2;
+    return Trace(25);
+}
+
+class Tracked implements OpAdd<Tracked, i64> {
+    private value: i64;
+
+    init(value: i64) { self.value = value; }
+
+    fn op_add(ref rhs: Tracked) -> i64 {
+        std::io::println_i64(300);
+        return self.value + rhs.value;
+    }
+
+    destroy { std::io::println_i64(-self.value); }
+}
+
+class Base implements OpAdd<Base, i64> {
+    init() {}
+    virtual fn op_add(ref rhs: Base) -> i64 { return 10; }
+}
+
+class Inherited extends Base {
+    init() { super(); }
+}
+
+class Overridden extends Base {
+    init() { super(); }
+    override fn op_add(ref rhs: Base) -> i64 { return 30; }
+}
+
+class Scalar implements OpAdd<i64, i64> {
+    init() {}
+    fn op_add(ref rhs: i64) -> i64 { return rhs; }
+}
+
+fn through_interface(ref left: OpAdd<Base, i64>, ref right: Base) -> i64 {
+    return left + right;
+}
+
+fn through_checked(ref left: Obj, ref right: Base) -> i64 {
+    return ((OpAdd<Base, i64>) left) + right;
+}
+
+fn self_alias(ref value: Trace) -> i64 { return value + value; }
+
+fn main() -> i64 {
+    Trace.events = 0;
+    std::io::println_i64(make_left() + make_right());
+    std::io::println_i64(Trace.events);
+    std::io::println_i64(self_alias(Trace(20)));
+
+    var cleanup_result: i64 = Tracked(1) + Tracked(2);
+    std::io::println_i64(cleanup_result);
+
+    var base: Base = Base();
+    var inherited: Inherited = Inherited();
+    var overridden: Overridden = Overridden();
+    std::io::println_i64(base + base);
+    std::io::println_i64(inherited + inherited);
+    std::io::println_i64(overridden + overridden);
+    std::io::println_i64(through_interface(overridden, overridden));
+    std::io::println_i64(through_checked(overridden, overridden));
+    std::io::println_i64(Overridden() + Overridden());
+
+    var owner: shared Overridden = new Overridden();
+    std::io::println_i64((*owner) + overridden);
+    var exact_box: shared Overridden? = new Overridden?(Overridden());
+    var view_box: shared OpAdd<Base, i64>? = exact_box;
+    std::io::println_i64((*view_box)! + overridden);
+
+    std::io::println_i64(Scalar() + (20 + 2));
+    return 0;
+}

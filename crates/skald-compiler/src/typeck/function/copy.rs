@@ -740,6 +740,12 @@ fn is_object_call_source(expression: &crate::resolve::ResolvedExpression) -> boo
         | crate::resolve::ResolvedExpression::StaticCall(_)
         | crate::resolve::ResolvedExpression::MethodCall(_)
         | crate::resolve::ResolvedExpression::InterfaceCall(_) => true,
+        crate::resolve::ResolvedExpression::Unary(_)
+        | crate::resolve::ResolvedExpression::Binary(_)
+            if super::super::expression::is_selected_operator_expression(expression) =>
+        {
+            true
+        }
         crate::resolve::ResolvedExpression::Grouped(grouped) => {
             is_object_call_source(&grouped.expression)
         }

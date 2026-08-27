@@ -330,6 +330,7 @@ impl CallableChecker<'_, '_> {
                     .map(|optional| {
                         super::super::optional_types::payload_type(self.program, optional)
                     })
+                    .or_else(|| self.static_optional_box_object_unwrap_type(unwrap))
                     .unwrap_or(Type::Unit)
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
@@ -481,6 +482,45 @@ impl CallableChecker<'_, '_> {
                 }
             }
         }
+    }
+
+    /// Recovers the non-storable object leaf exposed by the final explicit
+    /// unwrap of a shared optional box.
+    fn static_optional_box_object_unwrap_type(
+        &self,
+        unwrap: &crate::resolve::ResolvedUnwrapExpr,
+    ) -> Option<Type> {
+        fn root(
+            expression: &ResolvedExpression,
+            depth: usize,
+        ) -> Option<(crate::identity::OptionalBoxTypeId, usize)> {
+            match expression {
+                ResolvedExpression::Dereference(dereference) => {
+                    let crate::resolve::ResolvedSharedTarget::OptionalBox(target) =
+                        dereference.target
+                    else {
+                        return None;
+                    };
+                    Some((target, depth))
+                }
+                ResolvedExpression::Unwrap(unwrap) => root(&unwrap.source, depth.checked_add(1)?),
+                ResolvedExpression::Grouped(grouped) => root(&grouped.expression, depth),
+                _ => None,
+            }
+        }
+
+        let (target, depth) = root(&unwrap.source, 1)?;
+        let metadata = self.program.optional_box_types.get(target)?;
+        if metadata.optional_depth != depth {
+            return None;
+        }
+        Some(match metadata.object_leaf? {
+            crate::resolve::ResolvedObjectTarget::Class(class) => Type::Class(class),
+            crate::resolve::ResolvedObjectTarget::Interface(interface) => {
+                Type::Interface(interface)
+            }
+            crate::resolve::ResolvedObjectTarget::Obj => Type::Obj,
+        })
     }
 
     fn object_argument(&self, expression: &ResolvedExpression) -> Option<ObjectArgument> {

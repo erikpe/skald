@@ -5,10 +5,32 @@ use crate::{
     identity::ClassId,
     resolve::{
         ResolvedBinaryExpr, ResolvedExpression, ResolvedInterfaceCallExpr,
-        ResolvedInterfaceReceiver, ResolvedObjectCastTargetMode, ResolvedObjectReceiver,
-        ResolvedOperatorResolution, ResolvedOperatorSelection, ResolvedUnaryExpr,
+        ResolvedInterfaceReceiver, ResolvedObjectReceiver, ResolvedOperatorResolution,
+        ResolvedOperatorSelection, ResolvedUnaryExpr,
     },
 };
+
+/// Whether this source expression is known to erase to one ordinary
+/// interface call. Result-capability owners use this instead of duplicating
+/// operator protocol selection rules.
+pub(in crate::typeck) fn is_selected_operator_expression(expression: &ResolvedExpression) -> bool {
+    match expression {
+        ResolvedExpression::Unary(unary) => unary
+            .selection
+            .as_ref()
+            .and_then(ResolvedOperatorResolution::selected)
+            .is_some(),
+        ResolvedExpression::Binary(binary) => binary
+            .selection
+            .as_ref()
+            .and_then(ResolvedOperatorResolution::selected)
+            .is_some(),
+        ResolvedExpression::Grouped(grouped) => {
+            is_selected_operator_expression(&grouped.expression)
+        }
+        _ => false,
+    }
+}
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_selected_unary_operator(
@@ -203,31 +225,13 @@ impl CallableChecker<'_, '_> {
         expression: ResolvedExpression,
         interface: crate::identity::InterfaceId,
     ) -> Option<ResolvedInterfaceReceiver> {
-        Some(match expression {
-            ResolvedExpression::Binding(binding) => ResolvedInterfaceReceiver::Binding {
-                binding: binding.binding,
-                span: binding.span,
-            },
-            ResolvedExpression::Grouped(grouped) => {
-                return self.interface_operator_receiver(*grouped.expression, interface);
-            }
-            ResolvedExpression::ObjectCast(cast)
-                if cast.target.kind == crate::resolve::ResolvedTypeKind::Interface(interface)
-                    && cast.target_mode == ResolvedObjectCastTargetMode::Plain =>
-            {
-                ResolvedInterfaceReceiver::Cast(Box::new(cast))
-            }
-            ResolvedExpression::Dereference(dereference)
-                if dereference.target
-                    == crate::resolve::ResolvedSharedTarget::Interface(interface) =>
-            {
-                ResolvedInterfaceReceiver::Dereference(Box::new(dereference))
-            }
-            unsupported => {
+        match ResolvedInterfaceReceiver::from_expression(expression, interface) {
+            Ok((receiver, _)) => Some(receiver),
+            Err(unsupported) => {
                 self.report_operator_receiver_form(unsupported.span());
-                return None;
+                None
             }
-        })
+        }
     }
 
     fn report_operator_receiver_form(&mut self, span: crate::source::Span) {

@@ -103,35 +103,9 @@ impl CallableResolver<'_, '_> {
         expression: ResolvedExpression,
         interface: InterfaceId,
     ) -> Option<(ResolvedInterfaceReceiver, Span)> {
-        let span = expression.span();
-        let receiver = match expression {
-            ResolvedExpression::Binding(binding) => ResolvedInterfaceReceiver::Binding {
-                binding: binding.binding,
-                span: binding.span,
-            },
-            ResolvedExpression::Grouped(grouped) => {
-                let (receiver, _) = self
-                    .interface_receiver_from_resolved_expression(*grouped.expression, interface)?;
-                return Some((receiver, grouped.span));
-            }
-            ResolvedExpression::ObjectCast(cast)
-                if cast.target.kind == ResolvedTypeKind::Interface(interface)
-                    && cast.target_mode == ResolvedObjectCastTargetMode::Plain =>
-            {
-                ResolvedInterfaceReceiver::Cast(Box::new(cast))
-            }
-            ResolvedExpression::Dereference(dereference)
-                if dereference.target == ResolvedSharedTarget::Interface(interface) =>
-            {
-                ResolvedInterfaceReceiver::Dereference(Box::new(dereference))
-            }
-            ResolvedExpression::Unwrap(unwrap)
-                if self.resolved_optional_box_object_leaf(&unwrap)
-                    == Some(ResolvedObjectTarget::Interface(interface)) =>
-            {
-                ResolvedInterfaceReceiver::OptionalBoxPayload(Box::new(unwrap))
-            }
-            unsupported => {
+        match ResolvedInterfaceReceiver::from_expression(expression, interface) {
+            Ok(receiver) => Some(receiver),
+            Err(unsupported) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_INDEX_PROTOCOL,
@@ -139,10 +113,9 @@ impl CallableResolver<'_, '_> {
                     )
                     .with_primary_label(unsupported.span(), "unsupported interface receiver form"),
                 );
-                return None;
+                None
             }
-        };
-        Some((receiver, span))
+        }
     }
 
     fn object_receiver_from_resolved_expression(

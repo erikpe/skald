@@ -1,0 +1,60 @@
+import std::io;
+from std::ops import OpAdd;
+
+class Product {
+    value: i64;
+    init(value: i64) { self.value = value; }
+}
+
+class Box<T> {
+    value: T;
+    init(value: T) { self.value = value; }
+}
+
+fn increment(value: i64) -> i64 { return value + 1; }
+
+class ObjectFactory implements OpAdd<ObjectFactory, Product> {
+    init() {}
+    fn op_add(ref rhs: ObjectFactory) -> Product { return Product(6); }
+}
+
+class SharedFactory implements OpAdd<SharedFactory, shared Product> {
+    init() {}
+    fn op_add(ref rhs: SharedFactory) -> shared Product { return new Product(7); }
+}
+
+class OptionalFactory implements OpAdd<OptionalFactory, i64?> {
+    init() {}
+    fn op_add(ref rhs: OptionalFactory) -> i64? { return 8; }
+}
+
+class ArrayFactory implements OpAdd<ArrayFactory, i64[]> {
+    init() {}
+    fn op_add(ref rhs: ArrayFactory) -> i64[] { return i64[]{9}; }
+}
+
+class FunctionFactory implements OpAdd<FunctionFactory, fn(i64) -> i64> {
+    init() {}
+    fn op_add(ref rhs: FunctionFactory) -> fn(i64) -> i64 { return increment; }
+}
+
+class GenericFactory implements OpAdd<GenericFactory, Box<i64>> {
+    init() {}
+    fn op_add(ref rhs: GenericFactory) -> Box<i64> { return Box<i64>(10); }
+}
+
+fn main() -> i64 {
+    var product: Product = ObjectFactory() + ObjectFactory();
+    var owner: shared Product = SharedFactory() + SharedFactory();
+    var maybe: i64? = OptionalFactory() + OptionalFactory();
+    var values: i64[] = ArrayFactory() + ArrayFactory();
+    var callback: fn(i64) -> i64 = FunctionFactory() + FunctionFactory();
+    var boxed: Box<i64> = GenericFactory() + GenericFactory();
+    std::io::println_i64(product.value);
+    std::io::println_i64(owner->value);
+    std::io::println_i64(maybe!);
+    std::io::println_i64(values[0]);
+    std::io::println_i64(callback(10));
+    std::io::println_i64(boxed.value);
+    return 0;
+}
