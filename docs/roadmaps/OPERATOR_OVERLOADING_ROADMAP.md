@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 through OO2 are complete; OO3 is next.
+Status: **in progress**. OO0 through OO3 are complete; OO4 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -62,7 +62,7 @@ pipelines are the baseline. No other planned feature blocks OO0.
 - [x] OO0 — Produced primitive read-only alias materialization
 - [x] OO1 — Canonical `std::ops` bundle and identity validation
 - [x] OO2 — Value-producing operator selection and HIR erasure
-- [ ] OO3 — Typed equality, ordering, and complete operator surface
+- [x] OO3 — Typed equality, ordering, and complete operator surface
 - [ ] OO4 — Receiver, ownership, evaluation, and effect integration
 - [ ] OO5 — Compiler-provided primitive protocol evidence
 - [ ] OO6 — Generic definition-site selection and specialization
@@ -225,24 +225,24 @@ representation.
 **Purpose:** Complete source-visible protocol coverage with the frozen typed
 predicate model and prove that non-overloadable logical syntax remains closed.
 
-- [ ] Add `==` and `!=` selection through `OpEq<Rhs>` with exact `bool` result;
+- [x] Add `==` and `!=` selection through `OpEq<Rhs>` with exact `bool` result;
   lower overloaded `!=` to one secured `op_eq` result followed by the existing
   exact boolean negation.
-- [ ] Add independent direct selection for `OpLess`, `OpLessEq`, `OpGreater`,
+- [x] Add independent direct selection for `OpLess`, `OpLessEq`, `OpGreater`,
   and `OpGreaterEq`; do not derive either greater predicate from a reversed or
   negated lesser predicate.
-- [ ] Reuse OO2's candidate enumeration, RHS alias compatibility,
+- [x] Reuse OO2's candidate enumeration, RHS alias compatibility,
   deduplication, ambiguity, and static-left eligibility without adding
   predicate-specific ranking.
-- [ ] Keep exact primitive equality and ordering on their existing path,
+- [x] Keep exact primitive equality and ordering on their existing path,
   including IEEE-754 NaN, zero, infinity, and comparison-result behavior for
   `f64`.
-- [ ] Keep `Equatable.equals(ref Obj)` a separate explicit dynamic comparison
+- [x] Keep `Equatable.equals(ref Obj)` a separate explicit dynamic comparison
   API with no satisfaction, selection, or fallback relation to `OpEq`.
-- [ ] Explicitly retain exact-`bool` prefix `!`, short-circuit `&&` and `||`,
+- [x] Explicitly retain exact-`bool` prefix `!`, short-circuit `&&` and `||`,
   eager primitive boolean bitwise operators, and all other excluded syntax
   without protocol lookup.
-- [ ] Cover the entire frozen punctuation-to-protocol table from one exhaustive
+- [x] Cover the entire frozen punctuation-to-protocol table from one exhaustive
   compiler mapping so a future syntax addition cannot silently acquire an
   overload meaning.
 

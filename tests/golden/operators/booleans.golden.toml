@@ -72,7 +72,7 @@ matches = [
  --> tests/golden/operators/eager_boolean_operator_types.ska:44:17""" },
   { name = "optional equality", match = "contains", inline = """error[TYP005]: binary `==` requires operands of the same supported primitive type
  --> tests/golden/operators/eager_boolean_operator_types.ska:52:17""" },
-  { name = "class equality", match = "contains", inline = """error[TYP005]: binary `==` requires operands of the same supported primitive type
+  { name = "class equality", match = "contains", inline = """error[TYP047]: operator `==` is unsupported for these operands
  --> tests/golden/operators/eager_boolean_operator_types.ska:56:17""" },
 ]
 

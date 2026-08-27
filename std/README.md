@@ -82,11 +82,11 @@ interfaces. The source bundle and whole-bundle identity validation are
 implemented. Ordinary explicit protocol imports or direct entry selection make
 it reachable; operator punctuation creates no dependency. Classes can already
 use the declarations through ordinary claims, bounds, interface types, and
-manual method calls. Value-producing punctuation selects eligible class
-applications when the module is already reachable and erases them to ordinary
-interface calls. Predicate punctuation, definition-site generic selection,
-and static primitive protocol evidence remain staged; the complete design adds
-no runtime service.
+manual method calls. The complete non-generic punctuation surface selects
+eligible class applications when the module is already reachable and erases
+them to ordinary interface calls. Definition-site generic selection and static
+primitive protocol evidence remain staged; the complete design adds no runtime
+service.
 
 The `std::vec` module provides the implemented generic
 [`Vec<T>` vector](../docs/language/VECTORS.md). It owns independent `T?[]`

@@ -1771,7 +1771,7 @@ impl<'program> ResolvedDumper<'program> {
                 self.line(&format!("Unary {operator}"), unary.span);
                 self.indented(|dumper| {
                     if let Some(selection) = &unary.selection {
-                        dumper.value_operator_resolution(selection, unary.operator_span);
+                        dumper.operator_resolution(selection, unary.operator_span);
                     }
                     dumper.expression(&unary.operand);
                 });
@@ -1801,7 +1801,7 @@ impl<'program> ResolvedDumper<'program> {
                 self.line(&format!("Binary {operator}"), binary.span);
                 self.indented(|dumper| {
                     if let Some(selection) = &binary.selection {
-                        dumper.value_operator_resolution(selection, binary.operator_span);
+                        dumper.operator_resolution(selection, binary.operator_span);
                     }
                     dumper.expression(&binary.left);
                     dumper.expression(&binary.right);
@@ -2103,14 +2103,10 @@ impl<'program> ResolvedDumper<'program> {
         }
     }
 
-    fn value_operator_resolution(
-        &mut self,
-        resolution: &ResolvedValueOperatorResolution,
-        span: Span,
-    ) {
+    fn operator_resolution(&mut self, resolution: &ResolvedOperatorResolution, span: Span) {
         self.line(
             &format!(
-                "ValueOperatorResolution {:?} candidates {}",
+                "OperatorResolution {:?} candidates {}",
                 resolution.protocol,
                 resolution.candidates.len()
             ),
@@ -2118,15 +2114,15 @@ impl<'program> ResolvedDumper<'program> {
         );
         self.indented(|dumper| {
             for selection in &resolution.candidates {
-                dumper.value_operator_selection(*selection);
+                dumper.operator_selection(*selection);
             }
         });
     }
 
-    fn value_operator_selection(&mut self, selection: ResolvedValueOperatorSelection) {
+    fn operator_selection(&mut self, selection: ResolvedOperatorSelection) {
         self.line(
             &format!(
-                "ValueOperatorSelection {:?} interface {} requirement {} rhs {:?} output {:?}",
+                "OperatorSelection {:?} interface {} requirement {} rhs {:?} output {:?}",
                 selection.protocol,
                 selection.interface,
                 selection.requirement,

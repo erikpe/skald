@@ -2,12 +2,13 @@
 
 Status: frozen operator-protocol compiler design with staged implementation.
 Resolution implements the canonical module, validation, identity product, and
-value-producing class-operator selection. The executable pipeline erases those
-selected applications to ordinary interface calls while retaining the
+complete non-generic class-operator selection. The executable pipeline erases
+those selected applications to ordinary interface calls while retaining the
 [implemented primitive operator
 representation](PHASES_AND_IR.md#implemented-primitive-operator-representation)
-for exact primitive operations. Predicate operators, definition-site generic
-selection, and compiler-provided primitive protocol evidence remain staged.
+for exact primitive operations. Overloaded `!=` wraps one selected `OpEq` call
+in the existing exact boolean negation. Definition-site generic selection and
+compiler-provided primitive protocol evidence remain staged.
 This document fixes the complete compiler boundary for the frozen
 [interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md).
 Its ordinary-call produced primitive read-only alias prerequisite is
@@ -67,7 +68,7 @@ the ordinary read-only alias relation for `Rhs`. Exactly one application must
 remain. Selection never uses expected result type, conversion ranking,
 exact-match preference, inheritance depth, or specialization arguments.
 
-A resolved value-operator product retains the canonical protocol and an
+A resolved operator product retains the canonical protocol and an
 identity-sorted zero, one, or many exact application candidates. Each candidate
 retains:
 

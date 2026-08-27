@@ -831,7 +831,7 @@ and its
 
 ### Implemented primitive-operator expressions
 
-Primitive operators and value-producing class protocol operators share the
+Primitive operators and non-generic class protocol operators share the
 following implemented grammar:
 
 ```text
@@ -912,9 +912,8 @@ Existing `//` line-comment recognition remains distinct from division: adjacent
 The source semantics are defined by the
 [implemented primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
 and the staged [interface-based operator-overloading
-contract](OPERATOR_OVERLOADING.md). Value-producing class punctuation is
-implemented; class predicate punctuation and definition-site generic
-selection remain staged.
+contract](OPERATOR_OVERLOADING.md). The complete non-generic class punctuation
+surface is implemented; definition-site generic selection remains staged.
 The [status matrix](STATUS.md) remains authoritative for compiler support.
 
 ## Syntax errors and nesting

@@ -4,8 +4,8 @@ Status: authoritative for implemented type, value, literal, and expression
 semantics, the implemented primitive operator profile, the implemented
 complete explicit primitive cast matrix, and the exact type rule for primitive
 binding reassignment. It also owns the frozen interface-based
-operator-selection boundary without claiming current compiler support. The [status
-matrix](STATUS.md) is authoritative for feature maturity, and the [implemented
+operator-selection boundary and its implemented non-generic class surface. The
+[status matrix](STATUS.md) is authoritative for feature maturity, and the [implemented
 grammar](GRAMMAR.md) defines accepted source syntax.
 
 ## Type model
@@ -396,8 +396,8 @@ This profile does not define:
   concurrency operators.
 
 Interface-based operator overloading is separately described below. Its
-value-producing class slice is implemented; each remaining area requires its
-staged roadmap task. No deferred syntax is reserved.
+complete non-generic class surface is implemented; each remaining area
+requires its staged roadmap task. No deferred syntax is reserved.
 
 ## Partially implemented interface-based operator overloading
 
@@ -409,13 +409,15 @@ requires one unique applicable canonical interface application from the static
 left operand or its definition-site generic bounds. Expected result types,
 implicit conversion, and specificity ranking do not participate.
 
-The value-producing class surface is implemented for unary `-`, unary `~`,
-arithmetic, remainder, bitwise, and shift punctuation. Eligible exact class,
-inherited class, closed-generic class, and exact canonical interface-view
-receivers select one applicable protocol application and erase to its ordinary
-interface call. Exact primitive operations retain their existing profile and
-representation. Typed equality and ordering plus definition-site generic
-selection remain staged. Prefix `!`, `&&`, and `||` remain non-overloadable.
+The complete non-generic class surface is implemented for unary `-`, unary
+`~`, arithmetic, remainder, bitwise, shifts, typed equality, and all four
+direct ordering predicates. Eligible exact class, inherited class,
+closed-generic class, and exact canonical interface-view receivers select one
+applicable protocol application and erase to its ordinary interface call.
+Overloaded `!=` negates one `OpEq` result; `Equatable.equals` remains separate.
+Exact primitive operations retain their existing profile and representation.
+Definition-site generic selection remains staged. Prefix `!`, `&&`, and `||`
+remain non-overloadable.
 
 ## Implemented integer bitwise and shift operators
 

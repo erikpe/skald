@@ -1,4 +1,4 @@
-//! Erasure of resolved value-operator selections to ordinary interface calls.
+//! Erasure of resolved operator selections to ordinary interface calls.
 
 use super::*;
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     resolve::{
         ResolvedBinaryExpr, ResolvedExpression, ResolvedInterfaceCallExpr,
         ResolvedInterfaceReceiver, ResolvedObjectCastTargetMode, ResolvedObjectReceiver,
-        ResolvedUnaryExpr, ResolvedValueOperatorResolution, ResolvedValueOperatorSelection,
+        ResolvedOperatorResolution, ResolvedOperatorSelection, ResolvedUnaryExpr,
     },
 };
 
@@ -14,7 +14,7 @@ impl CallableChecker<'_, '_> {
     pub(super) fn check_selected_unary_operator(
         &mut self,
         unary: &ResolvedUnaryExpr,
-        resolution: &ResolvedValueOperatorResolution,
+        resolution: &ResolvedOperatorResolution,
     ) -> Option<HirExpression> {
         let selection = self.require_operator_selection(
             resolution,
@@ -38,7 +38,7 @@ impl CallableChecker<'_, '_> {
     pub(super) fn check_selected_binary_operator(
         &mut self,
         binary: &ResolvedBinaryExpr,
-        resolution: &ResolvedValueOperatorResolution,
+        resolution: &ResolvedOperatorResolution,
     ) -> Option<HirExpression> {
         let selection = self.require_operator_selection(
             resolution,
@@ -48,7 +48,7 @@ impl CallableChecker<'_, '_> {
             Some(&binary.right),
         )?;
         let receiver = self.operator_receiver(&binary.left, selection)?;
-        self.check_interface_call(&ResolvedInterfaceCallExpr {
+        let call = self.check_interface_call(&ResolvedInterfaceCallExpr {
             receiver,
             interface: selection.interface,
             requirement: selection.requirement,
@@ -56,17 +56,29 @@ impl CallableChecker<'_, '_> {
             member_span: binary.operator_span,
             arguments: vec![(*binary.right).clone()],
             span: binary.span,
+        })?;
+        if binary.operator != crate::resolve::ResolvedBinaryOperator::NotEqual {
+            return Some(call);
+        }
+        debug_assert_eq!(call.ty, Type::Bool);
+        Some(HirExpression {
+            kind: HirExpressionKind::Unary {
+                operation: crate::hir::HirUnaryOperation::LogicalNotBool,
+                operand: Box::new(call),
+            },
+            ty: Type::Bool,
+            span: binary.span,
         })
     }
 
     fn require_operator_selection(
         &mut self,
-        resolution: &ResolvedValueOperatorResolution,
+        resolution: &ResolvedOperatorResolution,
         spelling: &'static str,
         operator_span: crate::source::Span,
         left: &ResolvedExpression,
         right: Option<&ResolvedExpression>,
-    ) -> Option<ResolvedValueOperatorSelection> {
+    ) -> Option<ResolvedOperatorSelection> {
         if let Some(selection) = resolution.selected() {
             return Some(selection);
         }
@@ -140,7 +152,7 @@ impl CallableChecker<'_, '_> {
     fn operator_receiver(
         &mut self,
         expression: &ResolvedExpression,
-        selection: ResolvedValueOperatorSelection,
+        selection: ResolvedOperatorSelection,
     ) -> Option<ResolvedInterfaceReceiver> {
         match self.static_expression_type(expression) {
             Type::Class(class) => self

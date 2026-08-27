@@ -2,9 +2,9 @@
 
 Status: frozen operator-protocol language design with staged implementation.
 The canonical `std::ops` declarations, whole-bundle validation, explicit
-ordinary interface use, and value-producing class operator punctuation are
-implemented. Typed equality, ordering, definition-site generic punctuation,
-and compiler-provided primitive protocol evidence remain staged. Exact
+ordinary interface use, and the complete non-generic class operator surface
+are implemented. Definition-site generic punctuation and compiler-provided
+primitive protocol evidence remain staged. Exact
 primitive expressions continue to use the [implemented primitive operator
 profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
 This document fixes the complete source-visible contract;
@@ -104,8 +104,8 @@ synthesizing or silently completing declarations.
 These declarations are currently usable through ordinary imports,
 `implements`, generic bounds, interface types, and explicit method calls.
 Exact classes, inherited and closed-generic class conformances, and exact
-canonical interface views can also use the value-producing punctuation listed
-below. Predicate and definition-site generic punctuation remain staged.
+canonical interface views can also use all overloadable punctuation listed
+below. Definition-site generic punctuation remains staged.
 
 Every requirement has the ordinary implicit read-only receiver. Binary
 protocols take one call-scoped read-only `ref` operand. Value-producing

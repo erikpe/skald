@@ -657,7 +657,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                         unreachable!("dereference returned above")
                     }
                 };
-                let selection = self.select_unary_value_operator(operator, &operand);
+                let selection = self.select_unary_operator(operator, &operand);
                 Some(ResolvedExpression::Unary(ResolvedUnaryExpr {
                     operator,
                     operator_span: unary.operator_span,
@@ -699,7 +699,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                                 ResolvedBinaryOperator::GreaterEqual
                             }
                         };
-                        let selection = self.select_binary_value_operator(operator, &left, &right);
+                        let selection = self.select_binary_operator(operator, &left, &right);
                         Some(ResolvedExpression::Binary(ResolvedBinaryExpr {
                             left: Box::new(left),
                             operator,

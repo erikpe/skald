@@ -114,7 +114,7 @@ pub use operator_language_item::{
     CanonicalOperatorProtocol, CanonicalOperatorProtocolShape, ResolvedOperatorLanguageItem,
     ResolvedOperatorProtocol, ResolvedOperatorProtocolParameters,
 };
-pub use operator_selection::{ResolvedValueOperatorResolution, ResolvedValueOperatorSelection};
+pub use operator_selection::{ResolvedOperatorResolution, ResolvedOperatorSelection};
 pub use optional_box_types::{ResolvedOptionalBoxType, ResolvedOptionalBoxTypeTable};
 pub use optional_types::{ResolvedOptionalType, ResolvedOptionalTypeTable};
 pub use shared_targets::{

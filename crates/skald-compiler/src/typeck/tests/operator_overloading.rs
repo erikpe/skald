@@ -1,7 +1,10 @@
 use super::*;
 use crate::{
     identity::FunctionId,
-    resolve::{dump_resolved, resolve_module_graph},
+    resolve::{
+        dump_resolved, resolve_module_graph, CanonicalOperatorProtocol, ResolvedBinaryOperator,
+        ResolvedUnaryOperator,
+    },
     test_support::{load_module_sources, CANONICAL_OPS_SOURCE},
 };
 
@@ -75,13 +78,13 @@ fn main() -> i64 { return 0; }
         resolved.diagnostics
     );
     let resolved_dump = dump_resolved(&resolved.program);
-    assert_eq!(resolved_dump.matches("ValueOperatorSelection").count(), 12);
+    assert_eq!(resolved_dump.matches("OperatorSelection").count(), 12);
 
     let checked = crate::typeck::type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir_dump = dump_hir(&checked.hir.unwrap());
     assert_eq!(hir_dump.matches("InterfaceCall").count(), 12, "{hir_dump}");
-    assert!(!hir_dump.contains("ValueOperatorSelection"), "{hir_dump}");
+    assert!(!hir_dump.contains("OperatorSelection"), "{hir_dump}");
 }
 
 #[test]
@@ -212,7 +215,7 @@ fn main() -> i64 { return 0; }
         resolved.diagnostics
     );
     let dump = dump_resolved(&resolved.program);
-    assert_eq!(dump.matches("ValueOperatorSelection").count(), 2, "{dump}");
+    assert_eq!(dump.matches("OperatorSelection").count(), 2, "{dump}");
 
     let checked = crate::typeck::type_check(&resolved.program);
     assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
@@ -230,13 +233,41 @@ fn primitive_precedence_remains_the_existing_hir_with_reachable_protocols() {
         resolved.diagnostics
     );
     assert!(
-        !dump_resolved(&resolved.program).contains("ValueOperatorResolution"),
+        !dump_resolved(&resolved.program).contains("OperatorResolution"),
         "primitive punctuation must not consult canonical applications"
     );
     let checked = crate::typeck::type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let dump = dump_hir(&checked.hir.unwrap());
     assert!(dump.contains("Binary AddI64"), "{dump}");
+    assert!(!dump.contains("InterfaceCall"), "{dump}");
+}
+
+#[test]
+fn primitive_predicates_retain_exact_comparison_hir_with_reachable_protocols() {
+    let source = r#"
+from std::ops import OpEq, OpLess, OpLessEq, OpGreater, OpGreaterEq;
+fn compare(left: f64, right: f64) -> bool {
+    return (left == right) || (left != right) || (left < right) || (left <= right) || (left > right) || (left >= right);
+}
+fn boolean_equal(left: bool, right: bool) -> bool { return left == right; }
+fn main() -> i64 { return 0; }
+"#;
+    let resolved = resolve_operator_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    assert!(
+        !dump_resolved(&resolved.program).contains("OperatorResolution"),
+        "exact primitive comparisons must not consult canonical applications"
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let dump = dump_hir(&checked.hir.unwrap());
+    assert_eq!(dump.matches("FloatingComparison").count(), 6, "{dump}");
+    assert_eq!(dump.matches("BooleanComparison").count(), 1, "{dump}");
     assert!(!dump.contains("InterfaceCall"), "{dump}");
 }
 
@@ -276,6 +307,53 @@ fn main() -> i64 { return 0; }
     let duplicate = resolution
         .selected()
         .expect("source must select one canonical application");
+    resolution.candidates.push(duplicate);
+
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
+    assert_eq!(
+        checked.diagnostics.iter().next().unwrap().code,
+        crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION
+    );
+}
+
+#[test]
+fn multiple_predicate_applications_are_diagnosed_before_hir_completion() {
+    let source = r#"
+from std::ops import OpEq;
+class Number implements OpEq<Number> {
+    init() {}
+    fn op_eq(ref rhs: Number) -> bool { return true; }
+}
+fn equal(ref left: Number, ref right: Number) -> bool { return left == right; }
+fn main() -> i64 { return 0; }
+"#;
+    let mut resolved = resolve_operator_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let definition = resolved
+        .program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .expect("equality function must have a resolved body");
+    let crate::resolve::ResolvedStatement::Return(returned) = &mut definition.body.statements[0]
+    else {
+        panic!("expected return statement");
+    };
+    let Some(crate::resolve::ResolvedExpression::Binary(binary)) = &mut returned.value else {
+        panic!("expected selected comparison expression");
+    };
+    let resolution = binary
+        .selection
+        .as_mut()
+        .expect("class predicate must retain candidate resolution");
+    let duplicate = resolution
+        .selected()
+        .expect("source must select one equality application");
     resolution.candidates.push(duplicate);
 
     let checked = crate::typeck::type_check(&resolved.program);
@@ -348,4 +426,232 @@ fn main() -> i64 { return 0; }
         checked.diagnostics.iter().next().unwrap().code,
         crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
     );
+}
+
+#[test]
+fn every_overloadable_punctuation_maps_exhaustively_to_its_canonical_protocol() {
+    assert_eq!(
+        [
+            ResolvedUnaryOperator::Negate.protocol(),
+            ResolvedUnaryOperator::LogicalNot.protocol(),
+            ResolvedUnaryOperator::BitwiseComplement.protocol(),
+        ],
+        [
+            Some(CanonicalOperatorProtocol::Neg),
+            None,
+            Some(CanonicalOperatorProtocol::BitNot),
+        ]
+    );
+    assert_eq!(
+        [
+            ResolvedBinaryOperator::Add.protocol(),
+            ResolvedBinaryOperator::Subtract.protocol(),
+            ResolvedBinaryOperator::Multiply.protocol(),
+            ResolvedBinaryOperator::Divide.protocol(),
+            ResolvedBinaryOperator::Remainder.protocol(),
+            ResolvedBinaryOperator::ShiftLeft.protocol(),
+            ResolvedBinaryOperator::ShiftRight.protocol(),
+            ResolvedBinaryOperator::BitwiseAnd.protocol(),
+            ResolvedBinaryOperator::BitwiseOr.protocol(),
+            ResolvedBinaryOperator::BitwiseXor.protocol(),
+            ResolvedBinaryOperator::Equal.protocol(),
+            ResolvedBinaryOperator::NotEqual.protocol(),
+            ResolvedBinaryOperator::LessThan.protocol(),
+            ResolvedBinaryOperator::LessEqual.protocol(),
+            ResolvedBinaryOperator::GreaterThan.protocol(),
+            ResolvedBinaryOperator::GreaterEqual.protocol(),
+        ],
+        [
+            CanonicalOperatorProtocol::Add,
+            CanonicalOperatorProtocol::Sub,
+            CanonicalOperatorProtocol::Mul,
+            CanonicalOperatorProtocol::Div,
+            CanonicalOperatorProtocol::Rem,
+            CanonicalOperatorProtocol::ShiftLeft,
+            CanonicalOperatorProtocol::ShiftRight,
+            CanonicalOperatorProtocol::BitAnd,
+            CanonicalOperatorProtocol::BitOr,
+            CanonicalOperatorProtocol::BitXor,
+            CanonicalOperatorProtocol::Eq,
+            CanonicalOperatorProtocol::Eq,
+            CanonicalOperatorProtocol::Less,
+            CanonicalOperatorProtocol::LessEq,
+            CanonicalOperatorProtocol::Greater,
+            CanonicalOperatorProtocol::GreaterEq,
+        ]
+    );
+}
+
+#[test]
+fn predicates_select_direct_protocols_and_not_equal_negates_one_equality_call() {
+    let source = r#"
+from std::ops import OpEq, OpLess, OpLessEq, OpGreater, OpGreaterEq;
+
+class Number implements OpEq<Number>, OpLess<Number>, OpLessEq<Number>, OpGreater<Number>, OpGreaterEq<Number> {
+    init() {}
+    fn op_eq(ref rhs: Number) -> bool { return true; }
+    fn op_less(ref rhs: Number) -> bool { return true; }
+    fn op_less_eq(ref rhs: Number) -> bool { return false; }
+    fn op_greater(ref rhs: Number) -> bool { return true; }
+    fn op_greater_eq(ref rhs: Number) -> bool { return false; }
+}
+
+fn compare(ref left: Number, ref right: Number) -> bool {
+    var equal: bool = left == right;
+    var different: bool = left != right;
+    var less: bool = left < right;
+    var less_equal: bool = left <= right;
+    var greater: bool = left > right;
+    var greater_equal: bool = left >= right;
+    return equal && !different && less && !less_equal && greater && !greater_equal;
+}
+fn main() -> i64 { return 0; }
+"#;
+    let resolved = resolve_operator_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let resolved_dump = dump_resolved(&resolved.program);
+    assert_eq!(resolved_dump.matches("OperatorSelection Eq").count(), 2);
+    for protocol in ["Less", "LessEq", "Greater", "GreaterEq"] {
+        assert_eq!(
+            resolved_dump
+                .matches(&format!("OperatorSelection {protocol} interface"))
+                .count(),
+            1,
+            "{resolved_dump}"
+        );
+    }
+
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let dump = dump_hir(&checked.hir.unwrap());
+    assert_eq!(dump.matches("InterfaceCall").count(), 6, "{dump}");
+    // Three source `!` expressions plus the one derived overloaded `!=`.
+    assert_eq!(dump.matches("Unary LogicalNotBool").count(), 4, "{dump}");
+}
+
+#[test]
+fn predicate_rhs_uses_ordinary_base_and_interface_view_compatibility() {
+    let hir = check_operator_source(
+        r#"
+from std::ops import OpEq, OpLess;
+
+interface Marker { fn marker() -> i64; }
+class Base { init() {} }
+class Derived extends Base implements Marker {
+    init() { super(); }
+    fn marker() -> i64 { return 0; }
+}
+class Comparer implements OpEq<Base>, OpLess<Marker> {
+    init() {}
+    fn op_eq(ref rhs: Base) -> bool { return true; }
+    fn op_less(ref rhs: Marker) -> bool { return false; }
+}
+
+fn compare(ref left: Comparer, ref right: Derived) -> bool {
+    return (left == right) && !(left < right);
+}
+fn main() -> i64 { return 0; }
+"#,
+    );
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("InterfaceCall").count(), 2, "{dump}");
+}
+
+#[test]
+fn dynamic_equatable_and_typed_operator_equality_remain_independent() {
+    let source = r#"
+from std::lang import Equatable;
+from std::ops import OpEq;
+
+class DynamicOnly implements Equatable {
+    init() {}
+    fn equals(ref other: Obj) -> bool { return true; }
+}
+class TypedOnly implements OpEq<TypedOnly> {
+    init() {}
+    fn op_eq(ref rhs: TypedOnly) -> bool { return true; }
+}
+
+fn dynamic_explicit(ref left: DynamicOnly, ref right: DynamicOnly) -> bool {
+    return left.equals(right);
+}
+fn dynamic_punctuation(ref left: DynamicOnly, ref right: DynamicOnly) -> bool {
+    return left == right;
+}
+fn typed_punctuation(ref left: TypedOnly, ref right: TypedOnly) -> bool {
+    return left == right;
+}
+fn main() -> i64 { return 0; }
+"#;
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            ("app.ska", source),
+            ("std/ops.ska", CANONICAL_OPS_SOURCE),
+            (
+                "std/lang.ska",
+                "public interface Equatable { fn equals(ref other: Obj) -> bool; }\n",
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
+    assert_eq!(
+        checked.diagnostics.iter().next().unwrap().code,
+        crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+    );
+}
+
+#[test]
+fn logical_syntax_never_consults_operator_protocols() {
+    let source = r#"
+from std::ops import OpEq, OpBitAnd;
+class Flag implements OpEq<Flag>, OpBitAnd<Flag, bool> {
+    init() {}
+    fn op_eq(ref rhs: Flag) -> bool { return true; }
+    fn op_bit_and(ref rhs: Flag) -> bool { return true; }
+}
+fn not_flag(ref value: Flag) -> bool { return !value; }
+fn and_flag(ref left: Flag, ref right: Flag) -> bool { return left && right; }
+fn or_flag(ref left: Flag, ref right: Flag) -> bool { return left || right; }
+fn main() -> i64 { return 0; }
+"#;
+    let resolved = resolve_operator_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    assert!(
+        !dump_resolved(&resolved.program).contains("OperatorResolution"),
+        "excluded logical syntax must not acquire protocol evidence"
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert_eq!(
+        checked
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == crate::typeck::program::TYPE_MISMATCH)
+            .count(),
+        3,
+        "{:?}",
+        checked.diagnostics
+    );
+    assert!(!checked.diagnostics.iter().any(|diagnostic| matches!(
+        diagnostic.code,
+        crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+            | crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION
+    )));
 }

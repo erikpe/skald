@@ -1,4 +1,4 @@
-//! Definition-site selections for value-producing operator punctuation.
+//! Canonical selections for overloadable operator punctuation.
 
 use crate::{
     identity::{InterfaceId, InterfaceRequirementId},
@@ -10,11 +10,11 @@ use super::{
 };
 
 impl ResolvedUnaryOperator {
-    /// Returns the canonical value-producing protocol selected by this syntax.
+    /// Returns the canonical protocol selected by this syntax.
     ///
     /// Logical negation is deliberately absent: prefix `!` is never
     /// overloadable.
-    pub const fn value_protocol(self) -> Option<CanonicalOperatorProtocol> {
+    pub const fn protocol(self) -> Option<CanonicalOperatorProtocol> {
         match self {
             Self::Negate => Some(CanonicalOperatorProtocol::Neg),
             Self::BitwiseComplement => Some(CanonicalOperatorProtocol::BitNot),
@@ -32,28 +32,24 @@ impl ResolvedUnaryOperator {
 }
 
 impl ResolvedBinaryOperator {
-    /// Returns the canonical value-producing protocol selected by this syntax.
-    ///
-    /// Predicate protocols are introduced by the following roadmap slice and
-    /// therefore remain absent here.
-    pub const fn value_protocol(self) -> Option<CanonicalOperatorProtocol> {
+    /// Returns the canonical protocol selected by this syntax.
+    pub const fn protocol(self) -> CanonicalOperatorProtocol {
         match self {
-            Self::Add => Some(CanonicalOperatorProtocol::Add),
-            Self::Subtract => Some(CanonicalOperatorProtocol::Sub),
-            Self::Multiply => Some(CanonicalOperatorProtocol::Mul),
-            Self::Divide => Some(CanonicalOperatorProtocol::Div),
-            Self::Remainder => Some(CanonicalOperatorProtocol::Rem),
-            Self::ShiftLeft => Some(CanonicalOperatorProtocol::ShiftLeft),
-            Self::ShiftRight => Some(CanonicalOperatorProtocol::ShiftRight),
-            Self::BitwiseAnd => Some(CanonicalOperatorProtocol::BitAnd),
-            Self::BitwiseOr => Some(CanonicalOperatorProtocol::BitOr),
-            Self::BitwiseXor => Some(CanonicalOperatorProtocol::BitXor),
-            Self::Equal
-            | Self::NotEqual
-            | Self::LessThan
-            | Self::LessEqual
-            | Self::GreaterThan
-            | Self::GreaterEqual => None,
+            Self::Add => CanonicalOperatorProtocol::Add,
+            Self::Subtract => CanonicalOperatorProtocol::Sub,
+            Self::Multiply => CanonicalOperatorProtocol::Mul,
+            Self::Divide => CanonicalOperatorProtocol::Div,
+            Self::Remainder => CanonicalOperatorProtocol::Rem,
+            Self::ShiftLeft => CanonicalOperatorProtocol::ShiftLeft,
+            Self::ShiftRight => CanonicalOperatorProtocol::ShiftRight,
+            Self::BitwiseAnd => CanonicalOperatorProtocol::BitAnd,
+            Self::BitwiseOr => CanonicalOperatorProtocol::BitOr,
+            Self::BitwiseXor => CanonicalOperatorProtocol::BitXor,
+            Self::Equal | Self::NotEqual => CanonicalOperatorProtocol::Eq,
+            Self::LessThan => CanonicalOperatorProtocol::Less,
+            Self::LessEqual => CanonicalOperatorProtocol::LessEq,
+            Self::GreaterThan => CanonicalOperatorProtocol::Greater,
+            Self::GreaterEqual => CanonicalOperatorProtocol::GreaterEq,
         }
     }
 
@@ -84,7 +80,7 @@ impl ResolvedBinaryOperator {
 /// This is resolution evidence only. Successful type checking erases it to an
 /// ordinary interface call and no operator-specific node survives in HIR.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ResolvedValueOperatorSelection {
+pub struct ResolvedOperatorSelection {
     pub protocol: CanonicalOperatorProtocol,
     pub interface: InterfaceId,
     pub requirement: InterfaceRequirementId,
@@ -98,13 +94,13 @@ pub struct ResolvedValueOperatorSelection {
 /// Keeping zero and multiple candidates in resolved IR lets type checking
 /// report operator failures alongside independent primitive type errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedValueOperatorResolution {
+pub struct ResolvedOperatorResolution {
     pub protocol: CanonicalOperatorProtocol,
-    pub candidates: Vec<ResolvedValueOperatorSelection>,
+    pub candidates: Vec<ResolvedOperatorSelection>,
 }
 
-impl ResolvedValueOperatorResolution {
-    pub fn selected(&self) -> Option<ResolvedValueOperatorSelection> {
+impl ResolvedOperatorResolution {
+    pub fn selected(&self) -> Option<ResolvedOperatorSelection> {
         let [selection] = self.candidates.as_slice() else {
             return None;
         };

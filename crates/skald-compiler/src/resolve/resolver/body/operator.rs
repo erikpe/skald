@@ -1,29 +1,29 @@
-//! Canonical candidate resolution for value-producing operator punctuation.
+//! Canonical candidate resolution for overloadable operator punctuation.
 
 use super::*;
 
 impl CallableResolver<'_, '_> {
-    pub(super) fn select_unary_value_operator(
+    pub(super) fn select_unary_operator(
         &self,
         operator: ResolvedUnaryOperator,
         operand: &ResolvedExpression,
-    ) -> Option<ResolvedValueOperatorResolution> {
-        let protocol = operator.value_protocol()?;
+    ) -> Option<ResolvedOperatorResolution> {
+        let protocol = operator.protocol()?;
         let left = self.resolved_expression_type(operand)?;
         matches!(
             left,
             ResolvedTypeKind::Class(_) | ResolvedTypeKind::Interface(_)
         )
-        .then(|| self.resolve_value_operator(protocol, left, None))
+        .then(|| self.resolve_operator(protocol, left, None))
     }
 
-    pub(super) fn select_binary_value_operator(
+    pub(super) fn select_binary_operator(
         &self,
         operator: ResolvedBinaryOperator,
         left: &ResolvedExpression,
         right: &ResolvedExpression,
-    ) -> Option<ResolvedValueOperatorResolution> {
-        let protocol = operator.value_protocol()?;
+    ) -> Option<ResolvedOperatorResolution> {
+        let protocol = operator.protocol();
         let left_type = self.resolved_expression_type(left)?;
         if !matches!(
             left_type,
@@ -31,24 +31,27 @@ impl CallableResolver<'_, '_> {
         ) {
             return None;
         }
-        Some(self.resolve_value_operator(protocol, left_type, self.resolved_expression_type(right)))
+        Some(self.resolve_operator(protocol, left_type, self.resolved_expression_type(right)))
     }
 
-    fn resolve_value_operator(
+    fn resolve_operator(
         &self,
         protocol: CanonicalOperatorProtocol,
         left: ResolvedTypeKind,
         right: Option<ResolvedTypeKind>,
-    ) -> ResolvedValueOperatorResolution {
+    ) -> ResolvedOperatorResolution {
         let Some(environment) = self.environment.language_items.operators else {
-            return ResolvedValueOperatorResolution {
+            return ResolvedOperatorResolution {
                 protocol,
                 candidates: Vec::new(),
             };
         };
         let canonical = environment.language_item.get(protocol);
-        let mut candidates = self.value_operator_candidates(left, canonical, environment);
-        if canonical.kind.shape() == CanonicalOperatorProtocolShape::Binary {
+        let mut candidates = self.operator_candidates(left, canonical, environment);
+        if matches!(
+            canonical.kind.shape(),
+            CanonicalOperatorProtocolShape::Predicate | CanonicalOperatorProtocolShape::Binary
+        ) {
             candidates.retain(|candidate| {
                 candidate.rhs.zip(right).is_some_and(|(expected, actual)| {
                     self.readonly_alias_type_compatible(actual, expected)
@@ -57,18 +60,18 @@ impl CallableResolver<'_, '_> {
         }
         candidates.sort_by_key(|candidate| candidate.interface);
         candidates.dedup_by_key(|candidate| candidate.interface);
-        ResolvedValueOperatorResolution {
+        ResolvedOperatorResolution {
             protocol,
             candidates,
         }
     }
 
-    fn value_operator_candidates(
+    fn operator_candidates(
         &self,
         left: ResolvedTypeKind,
         canonical: &ResolvedOperatorProtocol,
         environment: OperatorResolutionEnvironment<'_>,
-    ) -> Vec<ResolvedValueOperatorSelection> {
+    ) -> Vec<ResolvedOperatorSelection> {
         let applications = match left {
             ResolvedTypeKind::Class(class) => std::iter::once(class)
                 .chain(
@@ -120,9 +123,14 @@ impl CallableResolver<'_, '_> {
                         };
                         (Some(*rhs), *output)
                     }
-                    CanonicalOperatorProtocolShape::Predicate => return None,
+                    CanonicalOperatorProtocolShape::Predicate => {
+                        let [rhs] = application.key.arguments.as_slice() else {
+                            return None;
+                        };
+                        (Some(*rhs), ResolvedTypeKind::Bool)
+                    }
                 };
-                Some(ResolvedValueOperatorSelection {
+                Some(ResolvedOperatorSelection {
                     protocol: canonical.kind,
                     interface,
                     requirement,

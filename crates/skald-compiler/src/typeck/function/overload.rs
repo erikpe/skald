@@ -6,8 +6,8 @@ use crate::{
     literal::NumericLiteralKind,
     resolve::{
         ResolvedExpression, ResolvedInitializerDeclaration, ResolvedObjectReceiver,
-        ResolvedParameter, ResolvedParameterBindingMode, ResolvedTypeKind,
-        ResolvedValueOperatorResolution,
+        ResolvedOperatorResolution, ResolvedParameter, ResolvedParameterBindingMode,
+        ResolvedTypeKind,
     },
     source::Span,
     typeck::{
@@ -368,7 +368,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Binary(binary) if binary.selection.is_some() => binary
                 .selection
                 .as_ref()
-                .and_then(ResolvedValueOperatorResolution::selected)
+                .and_then(ResolvedOperatorResolution::selected)
                 .map_or(Type::Unit, |selection| lower_type_kind(selection.output)),
             ResolvedExpression::Binary(binary) => match binary.operator {
                 crate::resolve::ResolvedBinaryOperator::Equal

@@ -167,9 +167,9 @@ makes a result source-observable.
   dynamic equality, eager call order, produced primitive read-only alias
   prerequisite, and unchanged runtime boundary. The produced-primitive alias
   prerequisite is implemented. The canonical source protocols, atomic bundle
-  validation, explicit ordinary interface use, and value-producing class
-  punctuation are also implemented. Predicate punctuation, definition-site
-  generic selection, and primitive protocol evidence remain staged.
+  validation, explicit ordinary interface use, and the complete non-generic
+  class punctuation surface are also implemented. Definition-site generic
+  selection and primitive protocol evidence remain staged.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations including canonical boolean and integer formatting, exact

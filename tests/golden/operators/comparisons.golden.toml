@@ -1,6 +1,14 @@
 schema = 1
 
 [[test]]
+name = "predicate_operator_overloading"
+mode = "run"
+source = "predicate_operator_overloading.ska"
+[[test.run]]
+name = "direct_predicates_and_single_equality_call"
+expect = { stdout = { file = "data/predicate_operator_overloading.stdout" } }
+
+[[test]]
 name = "floating_comparisons"
 mode = "run"
 source = "floating_comparisons.ska"

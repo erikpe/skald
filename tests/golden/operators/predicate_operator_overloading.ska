@@ -1,0 +1,46 @@
+import std::io;
+from std::ops import OpEq, OpLess, OpLessEq, OpGreater, OpGreaterEq;
+
+class Number implements OpEq<Number>, OpLess<Number>, OpLessEq<Number>, OpGreater<Number>, OpGreaterEq<Number> {
+    static equality_calls: i64;
+    private value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn op_eq(ref rhs: Number) -> bool {
+        Number.equality_calls = Number.equality_calls + 1;
+        return self.value == rhs.value;
+    }
+
+    fn op_less(ref rhs: Number) -> bool {
+        return true;
+    }
+
+    fn op_less_eq(ref rhs: Number) -> bool {
+        return false;
+    }
+
+    fn op_greater(ref rhs: Number) -> bool {
+        return true;
+    }
+
+    fn op_greater_eq(ref rhs: Number) -> bool {
+        return false;
+    }
+}
+
+fn main() -> i64 {
+    var left: Number = Number(17);
+    var right: Number = Number(25);
+
+    std::io::println_bool(left == right);
+    std::io::println_bool(left != right);
+    std::io::println_i64(Number.equality_calls);
+    std::io::println_bool(left < right);
+    std::io::println_bool(left <= right);
+    std::io::println_bool(left > right);
+    std::io::println_bool(left >= right);
+    return 0;
+}
