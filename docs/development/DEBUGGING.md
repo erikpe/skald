@@ -115,6 +115,19 @@ primary application span plus template, requirement, candidate, or nested
 obligation context; repeated requests for a failed closed key must extend that
 single diagnostic rather than emit another primary cause.
 
+When the frozen [generic-range compiler contract](../compiler/RANGES.md) is
+implemented, inspect explicit ranges as ordinary closed `Range<T>` classes and
+`Iterable<T, T>` calls. For `lower .. upper`, follow the source range node to
+its exact resolved range, initializer, ordering, and successor identities,
+then confirm that typed HIR contains ordinary class construction with the
+non-forgeable canonical syntax origin. An immediately consumed integer syntax
+range may instead select the structured fused `HirForIn` plan; its preliminary
+MIR should contain only ordered endpoint initialization, scalar comparison,
+item initialization, increment-before-body, loop edges, and cleanup. Explicit
+constructors and stored or class ranges must retain ordinary construction,
+interface calls, and optional-result flow. MIR and assembly should never look
+up a range by name or contain a range-specific runtime operation.
+
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and
 retains index/slice shape, omitted bounds, punctuation, and ordinary versus

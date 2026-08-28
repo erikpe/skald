@@ -1,11 +1,11 @@
 # Generic Ranges and Tight Range Loops Design Proposal
 
-Status: active design proposal. The `Successor<Output>` direction, ordinary
-generic `Range<T>`, opt-in class ranges, half-open `..` syntax, and final
-primitive range-loop optimization were confirmed as the core direction on
-2026-08-28. The detailed phase, diagnostic, and performance boundaries below
-remain subject to review before promotion into living contracts. This record
-does not make ranges or `..` valid source.
+Status: frozen design proposal. RANGE1 through RANGE10 were confirmed together
+on 2026-08-28 and promoted into the focused
+[language](../language/RANGES.md) and [compiler](../compiler/RANGES.md)
+contracts before roadmap creation. The
+[status matrix](../language/STATUS.md) remains authoritative for compiler
+availability while implementation is pending.
 
 This proposal covers the remaining three layers after implemented general
 iteration and interface-based operator overloading:
@@ -22,12 +22,12 @@ ordinary generic `Range<T>` class. Discrete primitive types receive static
 compiler-provided successor evidence. Exact classes such as `BigInteger` opt
 in through ordinary nominal implementations. Range syntax constructs the
 canonical class rather than defining a second loop mechanism, and the final
-optimization recognizes only semantically exact canonical primitive ranges
-before emitting existing verified MIR.
+optimization recognizes only immediately consumed, syntax-origin canonical
+primitive ranges before emitting existing verified MIR.
 
 The [status matrix](../language/STATUS.md) remains authoritative for compiler
 availability. The [implemented grammar](../language/GRAMMAR.md) remains the
-accepted source surface until this proposal is promoted and implemented.
+accepted source surface until the frozen range contract is implemented.
 
 ## Intended outcomes and sequence
 
@@ -74,8 +74,8 @@ implicit numeric conversion, or an overloadable range operator.
 
 ### Final layer: tight primitive range loops
 
-A direct canonical integer range consumed immediately by `for-in` should
-lower to the semantic equivalent of:
+An immediate concise integer range consumed by `for-in` should lower to the
+semantic equivalent of:
 
 ```ska
 var range_end: u64 = upper;
@@ -188,16 +188,16 @@ remain authoritative.
 
 | ID | Question | Current direction | State |
 |---|---|---|---|
-| [RANGE1](#range1--canonical-module-and-protocol-ownership) | Where do range declarations live? | Canonical `std::range` source, with exact compiler-recognized `Successor` and `Range` identities | **Confirmed direction** |
-| [RANGE2](#range2--successor-contract) | How does an implicit unit range advance? | `Successor<Output>` with an exact `T: Successor<T>` bound | **Confirmed direction** |
-| [RANGE3](#range3--generic-range-shape-and-semantics) | How does the explicit class iterate? | Half-open ascending `Range<T> implements Iterable<T, T>` using `OpLess<T>` and `Successor<T>` | **Confirmed direction** |
-| [RANGE4](#range4--primitive-evidence-and-class-opt-in) | Which types may use a range? | Static `u8`, `u64`, and `i64` evidence plus ordinary exact-class conformance; no `f64` evidence | **Confirmed direction** |
-| [RANGE5](#range5--range-expression-syntax-and-typing) | What does `..` mean? | A low-precedence, non-associative expression constructing canonical `Range<T>` from exact same-typed endpoints | **Confirmed direction** |
-| [RANGE6](#range6--dependencies-selection-and-phase-boundaries) | Where is syntax resolved and erased? | Syntax acquires `std::range`, retains canonical construction through typed HIR, then uses ordinary construction or a selected fused loop plan | **Proposed detail** |
-| [RANGE7](#range7--evaluation-lifetimes-and-failures) | What is observable? | One left-to-right bound evaluation, ordinary range/item lifecycle, half-open termination, and existing loop cleanup | **Proposed detail** |
-| [RANGE8](#range8--tight-loop-eligibility-and-lowering) | Which loops may be fused? | Immediate exact canonical `Range<u8|u64|i64>` values only; emit ordinary scalar MIR with no interface or optional protocol traffic | **Proposed detail** |
-| [RANGE9](#range9--performance-acceptance) | What does “approach handwritten `while`” require? | Equivalent hot-loop operation shape, no calls or allocation, plus a recorded median native comparison within 10% on the reference procedure | **Proposed detail** |
-| [RANGE10](#range10--diagnostics-determinism-and-promotion) | How is the feature hardened and promoted? | Focused canonical, syntax, specialization, lifecycle, verifier, native, assembly, benchmark, and determinism evidence before living contracts and a roadmap | **Proposed detail** |
+| [RANGE1](#range1--canonical-module-and-protocol-ownership) | Where do range declarations live? | Canonical `std::range` source, with exact compiler-recognized `Successor` and `Range` identities | **Confirmed** |
+| [RANGE2](#range2--successor-contract) | How does an implicit unit range advance? | `Successor<Output>` with an exact `T: Successor<T>` bound | **Confirmed** |
+| [RANGE3](#range3--generic-range-shape-and-semantics) | How does the explicit class iterate? | Half-open ascending `Range<T> implements Iterable<T, T>` using `OpLess<T>` and `Successor<T>` | **Confirmed** |
+| [RANGE4](#range4--primitive-evidence-and-class-opt-in) | Which types may use a range? | Static `u8`, `u64`, and `i64` evidence plus ordinary exact-class conformance; no `f64` evidence | **Confirmed** |
+| [RANGE5](#range5--range-expression-syntax-and-typing) | What does `..` mean? | A low-precedence, non-associative expression constructing canonical `Range<T>` from exact same-typed endpoints | **Confirmed** |
+| [RANGE6](#range6--dependencies-selection-and-phase-boundaries) | Where is syntax resolved and erased? | Syntax acquires `std::range`, then erases to ordinary class-construction HIR with non-forgeable canonical syntax provenance | **Confirmed** |
+| [RANGE7](#range7--evaluation-lifetimes-and-failures) | What is observable? | One left-to-right bound evaluation, ordinary range/item lifecycle, half-open termination, and existing loop cleanup | **Confirmed** |
+| [RANGE8](#range8--tight-loop-eligibility-and-lowering) | Which loops may be fused? | Immediately consumed exact `u8`, `u64`, or `i64` `..` syntax only; explicit constructors and stored values remain ordinary | **Confirmed** |
+| [RANGE9](#range9--performance-acceptance) | What does “approach handwritten `while`” require? | Equivalent hot-loop operation shape, no calls or allocation, plus a recorded median native comparison within 10% on the reference procedure | **Confirmed** |
+| [RANGE10](#range10--diagnostics-determinism-and-promotion) | How is the feature hardened and promoted? | Focused canonical, syntax, specialization, lifecycle, verifier, native, assembly, benchmark, and determinism evidence precede release closure | **Confirmed** |
 
 ## Proposed standard-library surface
 
@@ -466,7 +466,7 @@ The phase flow should be:
     -> source-shaped range syntax with both operands and complete spans
     -> resolved canonical Range template, initializer, bounds, and primitive
        or class realizations
-    -> typed HIR canonical range construction
+    -> ordinary typed HIR class construction with canonical syntax provenance
     -> ordinary class construction when stored, passed, or otherwise consumed
     -> ordinary HirForIn protocol plan, or an eligible primitive range-loop plan
     -> existing verified scalar/call/optional/lifecycle MIR
@@ -482,12 +482,14 @@ realization kinds, source spans, and the resulting exact class identity. No
 name lookup, structural protocol selection, unresolved type parameter, or
 candidate set may survive completed HIR.
 
-HIR may retain a dedicated canonical range-construction expression or an
-equivalent explicit provenance record on ordinary construction. The durable
-requirement is that ordinary value consumers receive exact `Range<T>`
-semantics while an immediately consuming `HirForIn` can select a verified
+HIR uses ordinary exact class construction with one compiler-owned,
+non-forgeable canonical range-syntax origin. That origin retains the `..`
+span, exact range template/class/initializer, endpoint type, ordering, and
+successor identities. Ordinary value consumers therefore reuse construction
+semantics, while an immediately consuming `HirForIn` can select a verified
 primitive range execution plan without rediscovering source spelling or
-standard-library names.
+standard-library names. Explicit `Range<T>(lower, upper)` construction has the
+ordinary construction origin and is never upgraded by shape recognition.
 
 ## RANGE7 — Evaluation, lifetimes, and failures
 
@@ -533,9 +535,8 @@ without cascading through fabricated source.
 The final performance layer should select a primitive range-loop plan only
 when all of these facts are known before MIR:
 
-- the iterable is an immediately consumed canonical range construction,
-  either `lower .. upper` or the exact canonical two-argument
-  `Range<T>(lower, upper)` construction;
+- the iterable is an immediately consumed canonical `lower .. upper`
+  construction carrying the exact non-forgeable syntax origin;
 - `T` is exactly `u8`, `u64`, or `i64`;
 - ordering and successor close to the compiler-provided canonical primitive
   realizations;
@@ -545,8 +546,10 @@ when all of these facts are known before MIR:
   optional, or other boundaries that make the range value independently
   observable.
 
-A range stored in a variable and later iterated remains on the ordinary
-protocol path in the initial optimization. Class-valued ranges, generic type
+Explicit `Range<T>(lower, upper)` and a range stored in a variable and later
+iterated remain on the ordinary protocol path in the initial optimization.
+Skipping an ordinary explicit initializer requires a later frozen semantic
+boundary or proof-producing optimization. Class-valued ranges, generic type
 parameters, lookalike classes, inherited claims, interface views, and custom
 iterables are never fused merely because their methods resemble a range.
 
@@ -653,17 +656,20 @@ The complete repository gates remain `make check`, `make msrv-check` when Rust
 targets or supported syntax change, and `git diff --check`. Performance
 measurements remain the separate documented procedure from RANGE9.
 
-Before implementation planning starts, the confirmed decisions should be
-promoted into focused living contracts:
+The confirmed decisions are promoted into focused living contracts:
 
-- `docs/language/RANGES.md` for source semantics and standard-library use;
-- `docs/compiler/RANGES.md` for canonical identity, phase ownership, primitive
+- [`docs/language/RANGES.md`](../language/RANGES.md) for source semantics and
+  standard-library use;
+- [`docs/compiler/RANGES.md`](../compiler/RANGES.md) for canonical identity,
+  phase ownership, primitive
   realization, HIR plans, MIR, verification, and performance evidence;
 - the grammar, iteration, generic-interface, operator, control-flow, status,
   testing, and debugging documents at their existing authoritative boundaries;
   and
-- a PR-sized implementation roadmap ordered by explicit range foundations,
-  syntax, complete ordinary execution, then fusion and performance evidence.
+- the
+  [PR-sized implementation roadmap](../roadmaps/GENERIC_RANGES_ROADMAP.md),
+  ordered by explicit range foundations, syntax, complete ordinary execution,
+  then fusion and performance evidence.
 
 ## Deliberate exclusions and later extensions
 
@@ -693,20 +699,25 @@ must settle zero step, direction, overshoot, wrapping, heterogeneous step
 types, and termination without changing the already frozen meaning of
 half-open `lower .. upper`.
 
-## Review questions before freezing
+## Resolved representation and acceptance questions
 
-The core language direction is confirmed. Review should concentrate on the
-remaining representation and acceptance details:
+The final review confirmed three details:
 
-1. Should typed HIR represent canonical range construction as a dedicated
-   expression or ordinary construction plus non-forgeable provenance?
-2. Should the first fusion profile include direct explicit
-   `Range<T>(lower, upper)` as proposed, or only `lower .. upper` until
-   canonical-constructor semantic validation is sufficiently narrow?
-3. Is the structural hot-loop contract plus a recorded 10% median threshold
-   the right interpretation of “approach handwritten `while`,” or should the
-   benchmark threshold be tightened after a baseline is measured?
+1. Syntax and resolution retain a dedicated range expression, but typed HIR
+   uses ordinary exact class construction with compiler-owned, non-forgeable
+   canonical syntax provenance. A dedicated range-construction HIR node is not
+   introduced without later evidence that ordinary construction cannot carry
+   a required ownership or evaluation plan.
+2. The first fusion profile accepts only an immediately consumed `lower ..
+   upper` expression. Explicit `Range<T>(lower, upper)`, stored ranges, and
+   values crossing another observable boundary remain ordinary iterables until
+   a separately justified optimization can preserve initializer semantics.
+3. Deterministic MIR and assembly structure is the durable performance
+   contract. A recorded median within 10% of matched handwritten `while` is
+   the initial reference-procedure completion threshold, remains outside
+   `make check`, and may be tightened later from stable evidence without
+   changing source semantics.
 
-These questions do not reopen `Successor<T>`, half-open ascending semantics,
-class opt-in, exact endpoint typing, or the one-protocol `Iterable<T, T>`
-direction.
+These decisions complete the frozen `Successor<T>`, half-open ascending,
+class opt-in, exact endpoint typing, ordinary `Iterable<T, T>`, syntax, phase,
+and performance contract.

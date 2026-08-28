@@ -151,6 +151,11 @@ makes a result source-observable.
   `Iterable<Item, State>` protocol, `for-in` selection and binding, one-time
   receiver and state setup, optional termination, lifetimes, loop exits, and
   standard-library adoption boundary.
+- [Generic ranges](RANGES.md) freezes the planned canonical
+  `Successor<Output>` protocol, ordinary `Range<T> implements Iterable<T, T>`,
+  half-open exact-typed `..` expression, class opt-in, primitive successor
+  evidence, evaluation and cleanup, and initial tight integer-loop profile.
+  These forms are not yet accepted or executable.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, operator availability, and the
   complete implemented primitive operator profile and complete explicit

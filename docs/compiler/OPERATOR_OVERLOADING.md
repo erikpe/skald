@@ -270,3 +270,8 @@ their narrowest executable owners.
 
 The archived [design record](../archive/OPERATOR_OVERLOADING_DESIGN_PROPOSAL.md)
 preserves the alternatives and rationale.
+
+The frozen [generic-range compiler contract](RANGES.md) reuses exact
+`OpLess<T>` primitive and class realizations and plans a separate canonical
+successor registry. Range syntax and fusion do not add an operator protocol or
+change this lowering boundary.

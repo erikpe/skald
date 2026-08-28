@@ -221,9 +221,12 @@ nested optional items; loop exits and cleanup; ordinary `Vec<T>` conformance;
 deterministic diagnostics and dumps; verifier-negative evidence; and native
 x86-64 observations.
 
-Operator interfaces, `Range<T>`, `..`, primitive or array intrinsic
-conformance, generators, borrowed items, and optimization guarantees remain
-separate work. The confirmed rationale is preserved in the
+The frozen [generic-range compiler contract](RANGES.md) separately defines
+canonical `Range<T>`, `..`, primitive successor evidence, and one immediate
+integer syntax-fusion plan over this implemented foundation. Primitive or
+array intrinsic iterable conformance, generators, borrowed items, and broader
+optimization guarantees remain separate work. The confirmed iteration
+rationale is preserved in the
 [design proposal](../archive/GENERAL_ITERATION_DESIGN_PROPOSAL.md), and tasks
 are ordered in the
 [implementation roadmap](../archive/GENERAL_ITERATION_ROADMAP.md).

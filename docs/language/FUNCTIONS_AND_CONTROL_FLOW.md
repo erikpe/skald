@@ -391,10 +391,12 @@ requirement. Later constant folding may remove an executable false edge but
 does not change source acceptance or definite-return diagnostics.
 
 The general `for (item in expression)` statement and nominal state-based
-iteration protocol have a separate
-[frozen contract](ITERATION.md). They are not accepted by the current
-compiler. `do while`, an unconditional `loop` form, loop expressions,
-value-carrying `break`, loop `else`, and labels remain unfrozen.
+iteration protocol are implemented under their separate
+[contract](ITERATION.md). The frozen [generic-range contract](RANGES.md) plans
+ordinary `Range<T>` values and `..` expressions as consumers of that same loop
+form; they are not yet accepted. `do while`, an unconditional `loop` form,
+loop expressions, value-carrying `break`, loop `else`, and labels remain
+unfrozen.
 
 ## Returns and definite return
 

@@ -429,6 +429,20 @@ through deterministic verification. Equivalent split and renumbered loop CFGs
 must survive the pass boundary and x86-64 lowering without canonical-layout or
 source-loop recognition.
 
+The frozen [generic-range contracts](../language/RANGES.md) add an ordered
+future coverage layer without changing current gates. Canonical successor
+tests will own declaration validation and the exact `u8`/`u64`/`i64` static
+realization matrix. Explicit `Range<T>` goldens will own half-open primitive
+and opted-in class behavior through ordinary iteration. Syntax tests will own
+`..` longest match, lowest precedence, non-associativity, recovery, and exact
+endpoint typing. HIR tests will distinguish ordinary construction carrying
+canonical syntax provenance from explicit construction. Fused-loop MIR and
+assembly tests will own the call-free, optional-free scalar shape, while
+`tests/benchmarks/range_loop` will record the separate matched-`while` median
+without joining `make check`. The active
+[implementation roadmap](../roadmaps/GENERIC_RANGES_ROADMAP.md) assigns each
+layer to its delivery task.
+
 Primitive integer operation coverage keeps the closed matrices explicit.
 Type-check and MIR tests enumerate all eighteen same-type comparisons and all
 nine casts, while rejection tests enumerate every ordered mixed integer pair,

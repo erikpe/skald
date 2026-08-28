@@ -1075,3 +1075,8 @@ results, and slicing. Shared-owner casts execute without allocating or copying
 payload.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-cast semantics.
+
+The frozen [generic-range contract](RANGES.md) plans a lowest-precedence,
+non-associative `lower .. upper` expression. It is deliberately absent from
+the implemented expression production above until the range-syntax task lands;
+the current lexer and parser therefore reject it.

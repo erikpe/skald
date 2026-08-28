@@ -199,11 +199,13 @@ an exact class. Bounds do not lift through `shared`, make a bare interface
 view satisfy itself, or authorize structural conformance. Multiple bounds are
 conjunctive.
 
-The frozen
+The implemented
 [operator-protocol contract](OPERATOR_OVERLOADING.md#class-implementations-and-generic-bounds)
-adds one deliberately narrow future exception: a primitive may satisfy a
-canonical `std::ops` bound through compiler-owned static evidence. This does
-not change the current compiler or generalize ordinary interface bounds.
+adds one deliberately narrow exception: a supported primitive may satisfy an
+exact canonical `std::ops` bound through compiler-owned static evidence. This
+does not generalize ordinary interface bounds or create primitive object
+conformance. The frozen [generic-range contract](RANGES.md) plans a second
+closed exception for exact canonical `Successor<u8|u64|i64>` bounds only.
 
 A body may select a member on a parameter only through a declared bound. The
 selection is fixed to the named interface requirement at the template's
@@ -341,8 +343,9 @@ Several applicable bounds are an unranked definition-site ambiguity. Manual
 bound requirement calls use the same realization, while direct primitive
 member syntax remains invalid.
 
-This consumer is frozen but not implemented. The current implemented generic-
-interface contract still accepts exact-class bound satisfaction only.
+This operator consumer is implemented. Canonical operator bounds accept the
+documented closed primitive evidence; other implemented interface bounds still
+require exact-class conformance.
 
 ## Exclusions and future consumers
 
@@ -363,12 +366,12 @@ The frozen initial profile excludes:
   specialization; and
 - separate-compilation or stable package ABI for templates.
 
-The separately frozen
-[general-iteration contract](ITERATION.md) uses this implemented foundation for
-`Iterable<Item, State>`. The separately frozen operator contract defines its
-canonical protocols, primitive-only evidence exception, source selection, and
-lowering boundary. Range semantics and optimization guarantees remain
-separate work.
+The separately implemented [general-iteration contract](ITERATION.md) uses
+this foundation for `Iterable<Item, State>`. The implemented operator contract
+defines its canonical protocols, primitive-only evidence exception, source
+selection, and lowering boundary. The frozen [generic-range contract](RANGES.md)
+defines the planned canonical successor exception, `Range<T>`, syntax, and
+narrow optimization boundary without changing general interface identity.
 
 The [generic-interface compiler contract](../compiler/GENERIC_INTERFACES.md)
 defines template identities, specialization, phase boundaries, witness

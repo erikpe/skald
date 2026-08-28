@@ -101,6 +101,10 @@ Resolved loop-design inputs:
 - [While loops design proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md)
 - [General iteration design proposal](GENERAL_ITERATION_DESIGN_PROPOSAL.md)
 
+Resolved range-design inputs:
+
+- [Generic ranges and tight range loops design proposal](GENERIC_RANGES_DESIGN_PROPOSAL.md)
+
 Resolved operator-design inputs:
 
 - [Primitive operator semantics design proposal](OPERATORS_DESIGN_PROPOSAL.md)

@@ -180,22 +180,26 @@ bookkeeping remain inline and allocation-free under the language model. Item
 production follows `Vec<T>`'s ordinary inferred copy/capability requirements.
 
 Allocation-free state is a semantic possibility, not a promise that every
-dispatch is devirtualized or every loop is inlined. Devirtualization, range
-fast paths, and vectorization are later optimizations that must preserve the
-observable call and cleanup order above.
+dispatch is devirtualized or every loop is inlined. The frozen
+[generic-range contract](RANGES.md) defines one later, syntax-origin primitive
+fast path that must remain observationally equivalent to canonical ordinary
+range iteration. Broader devirtualization and vectorization remain later
+optimizations.
 
 ## Deliberate exclusions and extensions
 
-The implemented contract does not include operator overloading, numeric ranges or
-`..` syntax, compiler-provided primitive or array conformances, structural
-iteration methods, shared iterator objects, generators, consuming or mutable
-receivers, borrowed items, adapters, patterns, or guaranteed optimization.
+The implemented iteration contract does not itself include numeric ranges,
+`..` syntax, compiler-provided primitive or array iterable conformances,
+structural iteration methods, shared iterator objects, generators, consuming
+or mutable receivers, borrowed items, adapters, patterns, or general
+optimization guarantees.
 
-These are extension points rather than competing loop protocols. A future
-`Range<T>` may implement this same `Iterable<T, T>` interface, and range syntax
-may construct that value before ordinary `for-in` selection. Generator work
-may choose a state that owns a resumable frame. Neither extension changes the
-general loop contract.
+These are extension points rather than competing loop protocols. The frozen
+range contract uses this exact `Iterable<T, T>` interface and makes `..`
+construct its canonical ordinary range before `for-in` selection. Its narrow
+immediate integer fusion preserves the same item values, advance-before-body
+order, exits, and cleanup. Generator work may choose a state that owns a
+resumable frame. Neither extension changes general iterable selection.
 
 The rationale and rejected alternatives are retained in the
 [design proposal](../archive/GENERAL_ITERATION_DESIGN_PROPOSAL.md), and the

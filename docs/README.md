@@ -44,6 +44,9 @@ Use the authority closest to the behavior:
 - the implemented nominal `Iterable<Item, State>` protocol, `for-in` selection,
   termination, and source-visible loop lifetimes belong in
   [general iteration](language/ITERATION.md);
+- the frozen canonical `Successor<Output>` and `Range<T>` contract, half-open
+  `..` expression, exact class opt-in, and tight primitive range-loop profile
+  belong in [generic ranges](language/RANGES.md);
 - exact classes, inline containment, receivers, ordinary initializer
   overloading, explicit copy construction, and object places belong in
   [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
@@ -77,6 +80,10 @@ Use the authority closest to the behavior:
 - implemented canonical iteration identity, structured HIR, receiver ownership,
   MIR expansion, verification, target, and ABI boundaries belong in the
   [general-iteration compiler contract](compiler/ITERATION.md);
+- frozen canonical range identities, primitive successor realization,
+  ordinary-construction HIR provenance, immediate integer loop fusion, and
+  performance acceptance belong in the
+  [generic-range compiler contract](compiler/RANGES.md);
 - frozen multiple-file providers, filesystem resolution, entry selection,
   identities, loading, and linkage belong in the
   [module-system compiler contract](compiler/MODULE_SYSTEM.md);
