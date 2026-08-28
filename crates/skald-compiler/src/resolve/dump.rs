@@ -2194,15 +2194,20 @@ impl<'program> ResolvedDumper<'program> {
     fn operator_resolution(&mut self, resolution: &ResolvedOperatorResolution, span: Span) {
         self.line(
             &format!(
-                "OperatorResolution {:?} candidates {}",
+                "OperatorResolution {:?} candidates {} incompatible-rhs {}",
                 resolution.protocol,
-                resolution.candidates.len()
+                resolution.candidates.len(),
+                resolution.incompatible_rhs.len(),
             ),
             span,
         );
         self.indented(|dumper| {
             for selection in &resolution.candidates {
                 dumper.operator_selection(*selection);
+            }
+            for selection in &resolution.incompatible_rhs {
+                dumper.line("IncompatibleRhs", selection.origin_span);
+                dumper.indented(|dumper| dumper.operator_selection(*selection));
             }
         });
     }

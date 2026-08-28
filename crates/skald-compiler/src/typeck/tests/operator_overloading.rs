@@ -215,6 +215,28 @@ fn generic_operator_ambiguity_and_missing_bound_fail_at_definition_site() {
 }
 
 #[test]
+fn generic_operator_rhs_incompatibility_has_ordered_bound_evidence() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Apply<T, R> where T: OpAdd<T, T> {\n\
+           init() {}\n\
+           fn add(ref left: T, ref right: R) -> T { return left + right; }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    let diagnostic = resolved
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == crate::resolve::INCOMPATIBLE_GENERIC_OPERATOR_RHS)
+        .expect("incompatible structural RHS must have a focused diagnostic");
+    assert_eq!(diagnostic.labels.len(), 2, "{diagnostic:?}");
+    assert_eq!(
+        diagnostic.labels[1].message,
+        "candidate operator bound with incompatible `Rhs` declared here"
+    );
+}
+
+#[test]
 fn unsupported_primitive_operator_bound_fails_without_a_fake_witness() {
     let resolved = resolve_operator_source(
         "from std::ops import OpRem;\n\
@@ -819,13 +841,26 @@ fn main() -> i64 { return 0; }
         "{:?}",
         resolved.diagnostics
     );
+    let resolved_dump = dump_resolved(&resolved.program);
+    assert!(
+        resolved_dump.contains("OperatorResolution Add candidates 0 incompatible-rhs 1"),
+        "{resolved_dump}"
+    );
+    assert!(resolved_dump.contains("IncompatibleRhs"), "{resolved_dump}");
     let checked = crate::typeck::type_check(&resolved.program);
     let diagnostics = checked.diagnostics.iter().collect::<Vec<_>>();
     assert_eq!(diagnostics.len(), 2, "{:?}", checked.diagnostics);
-    assert!(diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code
-            == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION));
+    assert_eq!(
+        diagnostics[0].code,
+        crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+    );
+    assert_eq!(
+        diagnostics[1].code,
+        crate::typeck::program::INCOMPATIBLE_OPERATOR_RHS
+    );
+    assert!(diagnostics[1].labels.iter().any(|label| label
+        .message
+        .contains("candidate requires read-only `Rhs` `Number`")));
 }
 
 #[test]
@@ -956,6 +991,47 @@ fn main() -> i64 { return 0; }
     assert_eq!(
         checked.diagnostics.iter().next().unwrap().code,
         crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION
+    );
+}
+
+#[test]
+fn malformed_resolved_operator_mapping_is_diagnosed_before_interface_erasure() {
+    let source = r#"
+from std::ops import OpAdd;
+class Number implements OpAdd<Number, i64> {
+    init() {}
+    fn op_add(ref rhs: Number) -> i64 { return 1; }
+}
+fn add(ref left: Number, ref right: Number) -> i64 { return left + right; }
+fn main() -> i64 { return 0; }
+"#;
+    let mut resolved = resolve_operator_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let definition = resolved
+        .program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let crate::resolve::ResolvedStatement::Return(returned) = &mut definition.body.statements[0]
+    else {
+        panic!("expected return statement");
+    };
+    let Some(crate::resolve::ResolvedExpression::Binary(binary)) = &mut returned.value else {
+        panic!("expected selected binary expression");
+    };
+    binary.selection.as_mut().unwrap().candidates[0].requirement =
+        crate::identity::InterfaceRequirementId::new(crate::identity::InterfaceId::new(99), 0);
+
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
+    assert_eq!(
+        checked.diagnostics.iter().next().unwrap().code,
+        crate::typeck::INVALID_OPERATOR_SELECTION
     );
 }
 

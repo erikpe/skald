@@ -165,9 +165,13 @@ primitive-bound uses erase to existing primitive operations, and produced
 primitive read-only arguments use the implemented caller-owned scalar
 temporaries. Ordinary receiver carriers, result owners, dispatch, evaluation,
 cleanup, panic traces, static effects, and target retention are shared without
-operator-specific lower IR. Generic-bound punctuation remains staged. The
-remaining operator design adds no overloaded-operator MIR node, backend
-semantic lookup, runtime service, or ABI revision and is not implemented yet.
+operator-specific lower IR. Generic-bound punctuation and manual canonical
+bound calls are implemented for class witnesses and primitive intrinsics.
+Diagnostics, resolved/HIR erasure, MIR trust boundaries, artifact surfaces,
+independent-process ordering, and bounded malformed/deep source generation are
+hardened. Release documentation and compatibility-matrix closure remain
+staged; the implementation adds no overloaded-operator MIR node, backend
+semantic lookup, runtime service, or ABI revision.
 
 The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)

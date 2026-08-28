@@ -11,8 +11,10 @@ use skald_compiler::{
     diagnostics::render_diagnostics,
     driver::compile_source_to_assembly,
     lexer::lex,
+    resolve::resolve,
     source::SourceDatabase,
     syntax::{parse, EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
+    typeck::type_check,
 };
 
 const DEFAULT_GENERATED_CASES: usize = 256;
@@ -34,8 +36,41 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     exercise_optional_syntax_mutations();
     exercise_array_syntax_mutations();
     exercise_generic_syntax_mutations();
+    exercise_operator_syntax_mutations();
     exercise_for_in_syntax_mutations();
     exercise_byte_literal_mutations();
+}
+
+fn exercise_operator_syntax_mutations() {
+    const SEEDS: &[&str] = &[
+        "fn main() -> i64 { return -(1 + 2 * 3) + (4 << 1); }",
+        "fn compare(left: u64, right: u64) -> bool { return /* left */ left <= right && left != right; } fn main() -> i64 { return 0; }",
+        "interface OpAdd<Rhs, Output> { fn op_add(ref rhs: Rhs) -> Output; } class Adder<T> where T: OpAdd<T, T> { fn add(ref left: T, ref right: T) -> T { return left + /* rhs */ right; } }",
+        "class Box<T> { value: T; } fn nested(ref value: Box<Box<u64>>) -> u64 { return value.value.value + 1u; } fn main() -> i64 { return 0; }",
+    ];
+    const INSERTIONS: &[&str] = &[
+        "+", "-", "*", "/", "%", "==", "!=", "<=", ">=", "<<", ">>", "~", "/*x*/", "(", ")", "<",
+        ">", ",", ";",
+    ];
+
+    for (seed_index, seed) in SEEDS.iter().enumerate() {
+        for index in 0..seed.len() {
+            let mut deletion = (*seed).to_owned();
+            deletion.remove(index);
+            assert_deterministic_frontend_recovery(
+                &format!("operator-{seed_index}-delete-{index}"),
+                &deletion,
+            );
+        }
+        for index in 0..=seed.len() {
+            let mut insertion = (*seed).to_owned();
+            insertion.insert_str(index, INSERTIONS[index % INSERTIONS.len()]);
+            assert_deterministic_frontend_recovery(
+                &format!("operator-{seed_index}-insert-{index}"),
+                &insertion,
+            );
+        }
+    }
 }
 
 fn exercise_for_in_syntax_mutations() {
@@ -150,6 +185,36 @@ fn bounded_source_loops_compile_deterministically_without_pipeline_panics() {
         assert_eq!(
             first.assembly, second.assembly,
             "generated loop case {index} was nondeterministic"
+        );
+    }
+}
+
+#[test]
+fn bounded_deep_operator_and_generic_sources_compile_deterministically() {
+    for depth in 1..=16 {
+        let mut nested_type = "u64".to_owned();
+        let mut nested_value = "1u".to_owned();
+        for _ in 0..depth {
+            nested_value = format!("Box<{nested_type}>({nested_value})");
+            nested_type = format!("Box<{nested_type}>");
+        }
+        let chain = (1..=depth)
+            .map(|value| format!(" + {value}u"))
+            .collect::<String>();
+        let source = format!(
+            "class Box<T> {{ value: T; init(value: T) {{ self.value = value; }} }} \
+             fn observe(ref value: u64) -> u64 {{ return value; }} \
+             fn main() -> i64 {{ var nested: {nested_type} = {nested_value}; \
+             return (i64) observe(1u{chain}); }}"
+        );
+        let name = format!("generated-operator-generic-{depth}.ska");
+        let first = compile_source_to_assembly(&name, &source, Target::X86_64SysV)
+            .unwrap_or_else(|error| panic!("generated operator case {depth} failed: {error:?}"));
+        let second = compile_source_to_assembly(&name, &source, Target::X86_64SysV)
+            .unwrap_or_else(|error| panic!("repeated operator case {depth} failed: {error:?}"));
+        assert_eq!(
+            first.assembly, second.assembly,
+            "generated operator case {depth} was nondeterministic"
         );
     }
 }
@@ -352,12 +417,28 @@ fn run_frontend_case(name: &str, text: &str) -> Vec<&'static str> {
     let _lexed_rendering = render_diagnostics(&sources, &lexed.diagnostics);
     let _parsed_rendering = render_diagnostics(&sources, &parsed.diagnostics);
 
-    lexed
+    let mut codes = lexed
         .diagnostics
         .iter()
         .chain(parsed.diagnostics.iter())
         .map(|diagnostic| diagnostic.code)
-        .collect()
+        .collect::<Vec<_>>();
+    if lexed.diagnostics.is_empty() && parsed.diagnostics.is_empty() {
+        let resolved = resolve(&parsed.ast);
+        let _resolved_rendering = render_diagnostics(&sources, &resolved.diagnostics);
+        codes.extend(
+            resolved
+                .diagnostics
+                .iter()
+                .map(|diagnostic| diagnostic.code),
+        );
+        if resolved.diagnostics.is_empty() {
+            let checked = type_check(&resolved.program);
+            let _type_rendering = render_diagnostics(&sources, &checked.diagnostics);
+            codes.extend(checked.diagnostics.iter().map(|diagnostic| diagnostic.code));
+        }
+    }
+    codes
 }
 
 fn generated_case_count() -> usize {

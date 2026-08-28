@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 through OO6 are complete; OO7 is next.
+Status: **in progress**. OO0 through OO7 are complete; OO8 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -65,8 +65,8 @@ pipelines are the baseline. No other planned feature blocks OO0.
 - [x] OO3 — Typed equality, ordering, and complete operator surface
 - [x] OO4 — Receiver, ownership, evaluation, and effect integration
 - [x] OO5 — Compiler-provided primitive protocol evidence
-- [ ] OO6 — Generic definition-site selection and specialization
-- [ ] OO7 — Diagnostics, verification, and determinism hardening
+- [x] OO6 — Generic definition-site selection and specialization
+- [x] OO7 — Diagnostics, verification, and determinism hardening
 - [ ] OO8 — Documentation, compatibility matrix, and release closure
 
 ## PR-sized implementation sequence
@@ -420,28 +420,28 @@ specialization-time semantic lookup.
 **Purpose:** Audit every trust boundary and adversarial combination after the
 complete semantic path exists, without adding a lower-level operator feature.
 
-- [ ] Establish stable diagnostic precedence: module/provider failures,
+- [x] Establish stable diagnostic precedence: module/provider failures,
   canonical-bundle validation, generic definition-site selection, closed
   selection/applicability, result capability, then ordinary call/lifecycle
   failures.
-- [ ] Give malformed protocols, unsupported operands, ambiguous applications,
+- [x] Give malformed protocols, unsupported operands, ambiguous applications,
   RHS alias incompatibility, unsatisfied primitive bounds, invalid results, and
   internal mapping mismatches distinct diagnostics with exact ordered origins.
-- [ ] Extend resolved dumps with canonical identities and selected primitive or
+- [x] Extend resolved dumps with canonical identities and selected primitive or
   protocol evidence; show only existing primitive operations or exact interface
   calls in HIR dumps.
-- [ ] Add preliminary/final MIR mutation tests proving malformed injected
+- [x] Add preliminary/final MIR mutation tests proving malformed injected
   calls, primitive operations, produced alias temporaries, cleanup, targets,
   and metadata are rejected by existing owners; add only narrowly missing
   invariants and no operator MIR node.
-- [ ] Audit static effects, reachable targets, retained bodies, virtual and
+- [x] Audit static effects, reachable targets, retained bodies, virtual and
   interface dispatch tables, panic traces, target legality, public symbols,
   runtime references, and assembly artifacts for explicit-call or intrinsic
   equivalence.
-- [ ] Prove all declaration, candidate, bound, application, specialization,
+- [x] Prove all declaration, candidate, bound, application, specialization,
   witness, diagnostic, dump, effect, target, and artifact order is independent
   of hash iteration, module import order, provider discovery, and process.
-- [ ] Run bounded generative malformed-source and mutation coverage across
+- [x] Run bounded generative malformed-source and mutation coverage across
   operator chains, nested generics, aliases, comments, delimiters, and recovery.
 
 **Primary implementation areas:** diagnostics catalog, resolve/HIR/MIR dumps,

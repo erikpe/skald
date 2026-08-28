@@ -302,7 +302,9 @@ No backend receives source punctuation, unresolved protocol identity,
 candidate set, primitive conformance object, or operator-specific dispatch
 operation. The feature adds no calling convention, layout rule, public symbol,
 runtime entry point, or target-specific semantic selection. This boundary is
-frozen but not implemented.
+implemented and covered by reordered independent-process assembly, symbol,
+runtime-reference, and native operator fixtures; release closure remains
+staged.
 
 ## Frozen complete primitive cast target boundary
 

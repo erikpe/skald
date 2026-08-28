@@ -50,6 +50,7 @@ mod object_fixtures;
 mod object_results;
 mod object_temporaries;
 mod objects;
+mod operator_realization;
 mod optional_shared_owners;
 mod optional_values;
 mod path_conditions;

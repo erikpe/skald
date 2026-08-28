@@ -75,6 +75,8 @@ pub const FINAL_STATIC_INITIALIZER_REQUIRED: &str = "TYP045";
 pub const GENERAL_ITERATION_UNSUPPORTED: &str = "TYP046";
 pub const UNSUPPORTED_OPERATOR_APPLICATION: &str = "TYP047";
 pub const AMBIGUOUS_OPERATOR_APPLICATION: &str = "TYP048";
+pub const INCOMPATIBLE_OPERATOR_RHS: &str = "TYP049";
+pub const INVALID_OPERATOR_SELECTION: &str = "TYP050";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

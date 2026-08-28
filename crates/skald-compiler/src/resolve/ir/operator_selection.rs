@@ -97,6 +97,12 @@ pub struct ResolvedOperatorSelection {
 pub struct ResolvedOperatorResolution {
     pub protocol: CanonicalOperatorProtocol,
     pub candidates: Vec<ResolvedOperatorSelection>,
+    /// Canonical applications rejected only by read-only RHS alias binding.
+    ///
+    /// These are not selectable candidates. Retaining their stable origins
+    /// lets type checking distinguish an incompatible RHS from an operand
+    /// type with no canonical application at all.
+    pub incompatible_rhs: Vec<ResolvedOperatorSelection>,
 }
 
 impl ResolvedOperatorResolution {

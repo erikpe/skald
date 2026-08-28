@@ -4,10 +4,12 @@ use super::*;
 use crate::{
     identity::ClassId,
     resolve::{
-        ResolvedBinaryExpr, ResolvedExpression, ResolvedInterfaceCallExpr,
-        ResolvedInterfaceReceiver, ResolvedObjectReceiver, ResolvedOperatorResolution,
-        ResolvedOperatorSelection, ResolvedUnaryExpr,
+        CanonicalOperatorProtocol, CanonicalOperatorProtocolShape, ResolvedBinaryExpr,
+        ResolvedExpression, ResolvedInterfaceCallExpr, ResolvedInterfaceReceiver,
+        ResolvedObjectReceiver, ResolvedOperatorResolution, ResolvedOperatorSelection,
+        ResolvedUnaryExpr,
     },
+    typeck::program::lower_type_kind,
 };
 
 /// Whether this source expression is known to erase to one ordinary
@@ -40,6 +42,10 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirExpression> {
         let selection = self.require_operator_selection(
             resolution,
+            unary
+                .operator
+                .protocol()
+                .expect("selected unary operator is overloadable"),
             unary.operator.spelling(),
             unary.operator_span,
             &unary.operand,
@@ -64,6 +70,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirExpression> {
         let selection = self.require_operator_selection(
             resolution,
+            binary.operator.protocol(),
             binary.operator.spelling(),
             binary.operator_span,
             &binary.left,
@@ -96,16 +103,40 @@ impl CallableChecker<'_, '_> {
     fn require_operator_selection(
         &mut self,
         resolution: &ResolvedOperatorResolution,
+        expected_protocol: CanonicalOperatorProtocol,
         spelling: &'static str,
         operator_span: crate::source::Span,
         left: &ResolvedExpression,
         right: Option<&ResolvedExpression>,
     ) -> Option<ResolvedOperatorSelection> {
         if let Some(selection) = resolution.selected() {
-            return Some(selection);
+            if self.operator_selection_is_valid(resolution, selection, expected_protocol) {
+                return Some(selection);
+            }
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::program::INVALID_OPERATOR_SELECTION,
+                    "resolved operator selection has inconsistent canonical mapping evidence",
+                )
+                .with_primary_label(
+                    operator_span,
+                    "invalid operator selection reaches type checking",
+                )
+                .with_secondary_label(
+                    selection.origin_span,
+                    "inconsistent application selected here",
+                ),
+            );
+            return None;
         }
         let left_type = self.static_expression_type(left);
-        let mut diagnostic = if resolution.candidates.is_empty() {
+        let mut diagnostic = if !resolution.incompatible_rhs.is_empty() {
+            Diagnostic::error(
+                crate::typeck::program::INCOMPATIBLE_OPERATOR_RHS,
+                format!("operator `{spelling}` cannot bind its right operand to any canonical application"),
+            )
+            .with_primary_label(operator_span, "right operand is incompatible with every declared `Rhs`")
+        } else if resolution.candidates.is_empty() {
             Diagnostic::error(
                 crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION,
                 format!("operator `{spelling}` is unsupported for these operands"),
@@ -146,6 +177,17 @@ impl CallableChecker<'_, '_> {
                 ),
             );
         }
+        for candidate in &resolution.incompatible_rhs {
+            let expected = candidate
+                .rhs
+                .map(lower_type_kind)
+                .map(|ty| self.operator_type_name(ty))
+                .unwrap_or_else(|| "<missing>".to_owned());
+            diagnostic = diagnostic.with_secondary_label(
+                candidate.origin_span,
+                format!("candidate requires read-only `Rhs` `{expected}`"),
+            );
+        }
         if self.program.operator_language_item.is_none() {
             diagnostic = diagnostic.with_note(
                 "the canonical `std::ops` bundle is not reachable through an explicit protocol reference",
@@ -153,6 +195,63 @@ impl CallableChecker<'_, '_> {
         }
         self.diagnostics.push(diagnostic);
         None
+    }
+
+    fn operator_selection_is_valid(
+        &self,
+        resolution: &ResolvedOperatorResolution,
+        selection: ResolvedOperatorSelection,
+        expected_protocol: CanonicalOperatorProtocol,
+    ) -> bool {
+        if resolution.protocol != expected_protocol || selection.protocol != expected_protocol {
+            return false;
+        }
+        let Some(canonical) = self
+            .program
+            .operator_language_item
+            .as_ref()
+            .map(|language_item| language_item.get(expected_protocol))
+        else {
+            return false;
+        };
+        let Some(application) = self
+            .program
+            .generic_interface_specializations
+            .for_interface(selection.interface)
+        else {
+            return false;
+        };
+        if application.key.template != canonical.template
+            || !application.requirement_mappings.iter().any(|mapping| {
+                mapping.template == canonical.requirement && mapping.closed == selection.requirement
+            })
+        {
+            return false;
+        }
+        let Some(interface) = self.program.interface(selection.interface) else {
+            return false;
+        };
+        let Some(requirement) = interface
+            .requirements
+            .get(selection.requirement.index())
+            .filter(|requirement| requirement.id == selection.requirement)
+        else {
+            return false;
+        };
+        if requirement.return_type.kind != selection.output {
+            return false;
+        }
+        match expected_protocol.shape() {
+            CanonicalOperatorProtocolShape::Unary => {
+                selection.rhs.is_none() && requirement.parameters.is_empty()
+            }
+            CanonicalOperatorProtocolShape::Predicate | CanonicalOperatorProtocolShape::Binary => {
+                let [parameter] = requirement.parameters.as_slice() else {
+                    return false;
+                };
+                selection.rhs == Some(parameter.type_syntax.kind)
+            }
+        }
     }
 
     fn operator_type_name(&self, ty: Type) -> String {

@@ -60,6 +60,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             return;
         };
         let canonical = language_item.get(protocol);
+        let mut incompatible_rhs = Vec::new();
         let mut candidates = self
             .bounds
             .iter()
@@ -79,13 +80,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     return None;
                 }
                 let (rhs, output) = structural_arguments(canonical.kind, arguments, span)?;
-                if let Some(expected) = rhs.as_ref() {
-                    let actual = right?;
-                    if !readonly_alias_compatible(actual, expected) {
-                        return None;
-                    }
-                }
-                Some(ResolvedTemplateOperatorSelection {
+                let selection = ResolvedTemplateOperatorSelection {
                     syntax,
                     parameter,
                     bound,
@@ -95,7 +90,15 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     output,
                     origin_span: candidate.interface_span,
                     span,
-                })
+                };
+                if let Some(expected) = selection.rhs.as_ref() {
+                    let actual = right?;
+                    if !readonly_alias_compatible(actual, expected) {
+                        incompatible_rhs.push(selection);
+                        return None;
+                    }
+                }
+                Some(selection)
             })
             .collect::<Vec<_>>();
         candidates.sort_by_key(|candidate| candidate.bound);
@@ -103,9 +106,37 @@ impl TemplateBodyResolver<'_, '_, '_> {
             [selection] => self
                 .selections
                 .push(ResolvedTemplateSelection::Operator(selection.clone())),
+            [] if !incompatible_rhs.is_empty() => {
+                self.report_incompatible_operator_rhs(syntax, &incompatible_rhs)
+            }
             [] => self.report_unsupported_operator(parameter, syntax),
             candidates => self.report_ambiguous_operator(syntax, candidates),
         }
+    }
+
+    fn report_incompatible_operator_rhs(
+        &mut self,
+        syntax: ResolvedTemplateOperatorSyntax,
+        candidates: &[ResolvedTemplateOperatorSelection],
+    ) {
+        let mut diagnostic = Diagnostic::error(
+            super::super::super::super::INCOMPATIBLE_GENERIC_OPERATOR_RHS,
+            format!(
+                "operator `{}` cannot bind its right operand to any declared bound",
+                operator_spelling(syntax)
+            ),
+        )
+        .with_primary_label(
+            operator_span(syntax),
+            "right operand is incompatible with every declared `Rhs`",
+        );
+        for candidate in candidates {
+            diagnostic = diagnostic.with_secondary_label(
+                candidate.origin_span,
+                "candidate operator bound with incompatible `Rhs` declared here",
+            );
+        }
+        self.diagnostics.push(diagnostic);
     }
 
     pub(super) fn operator_output(&self, span: Span) -> Option<ResolvedTemplateType> {

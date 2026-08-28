@@ -319,6 +319,45 @@ fn simultaneous_bundle_defects_are_reported_in_canonical_order() {
 }
 
 #[test]
+fn canonical_bundle_failures_precede_generic_operator_selection_failures() {
+    let malformed = replace_once(
+        CANONICAL_OPS_SOURCE,
+        "op_add(ref rhs: Rhs) -> Output",
+        "op_add(rhs: Rhs) -> Output",
+    );
+    let app = concat!(
+        "from std::ops import OpAdd;\n",
+        "class Broken<T> where T: OpAdd<T, T> {\n",
+        "  fn add(ref left: T, ref right: T) -> T { return left + right; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[("app.ska", app), ("std/ops.ska", malformed.as_str())],
+    );
+    let output = resolve_module_graph(&graph);
+    let codes = output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        codes.first(),
+        Some(&INVALID_OPERATOR_LANGUAGE_ITEM),
+        "{codes:?}"
+    );
+    assert!(
+        codes
+            .iter()
+            .skip(1)
+            .all(|code| *code == UNSUPPORTED_GENERIC_OPERATOR_APPLICATION),
+        "{codes:?}"
+    );
+    assert!(output.program.operator_language_item.is_none());
+}
+
+#[test]
 fn valid_replacement_bundle_and_explicit_protocol_use_follow_ordinary_interfaces() {
     let app = concat!(
         "from std::ops import OpAdd;\n",

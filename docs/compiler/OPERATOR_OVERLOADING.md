@@ -1,6 +1,7 @@
 # Operator-Protocol Lowering
 
-Status: frozen operator-protocol compiler design with staged hardening.
+Status: frozen operator-protocol compiler design with implemented hardening and
+staged release closure.
 Resolution implements the canonical module, validation, identity product, and
 complete non-generic class-operator selection. The executable pipeline erases
 those selected applications to ordinary interface calls while retaining the
@@ -230,10 +231,15 @@ failures. They retain operator and operand spans, static types, and ordered
 claim or bound origins.
 
 Resolved dumps expose canonical language-item identities and each selected
-primitive or protocol application. HIR dumps expose the resulting existing
+primitive or protocol application. Applications rejected only by read-only
+RHS binding remain non-candidates but are dumped with their canonical identity
+and ordered declaration origin. HIR dumps expose the resulting existing
 operation or exact interface call; they need no enduring source-operator tag
 after erasure. Import spans explain module reachability separately from
-operator-selection evidence.
+operator-selection evidence. Before erasure, type checking validates the
+selected protocol, interface, requirement, RHS, and output mapping so malformed
+injected resolved evidence becomes a focused diagnostic rather than reaching
+an ordinary-call invariant.
 
 Module, declaration, template, application, requirement, candidate,
 specialization, witness, diagnostic, dump, static-effect, target, and artifact
@@ -248,6 +254,13 @@ public symbol, runtime-managed value, allocation, reflection record, or runtime
 ABI revision. Class calls use existing witness dispatch; primitive
 specializations use the same instructions and checked control flow as direct
 primitive syntax. The runtime never observes a protocol identity.
+
+Hardening covers independent-process full-pipeline dumps under reordered source
+creation and provider roots, preliminary and final MIR mutations, public-symbol
+and runtime-reference snapshots, and bounded malformed/deep operator and
+generic source generation. MIR mutations remain owned by the ordinary call,
+primitive-operation, cleanup, target, metadata, and alias-lifetime verifiers;
+there is no operator-specific MIR verifier or backend path.
 
 An implementation roadmap must cover canonical-bundle and replacement-library
 validation; class, inheritance, override, interface-view and generic-bound

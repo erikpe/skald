@@ -536,7 +536,9 @@ caller-owned scalar storage and the unchanged internal alias ABI.
 The runtime never receives an operator spelling, canonical protocol identity,
 candidate set, primitive implementation record, or temporary-lifetime plan.
 Compiler, verifier, backend, linker-surface, and native tests own all eventual
-implementation evidence. The compatibility marker remains `ska_rt_abi_v9`.
+implementation evidence. Those hardening tests now cover class and primitive
+generic realizations, public-symbol absence, and runtime-reference snapshots.
+The compatibility marker remains `ska_rt_abi_v9`.
 
 Any future addition outside a separately frozen boundary must first have a
 source-language contract, then define its runtime ownership, failure behavior,

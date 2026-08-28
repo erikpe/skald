@@ -26,6 +26,7 @@ impl CallableResolver<'_, '_> {
                     output,
                     origin_span,
                 }],
+                incompatible_rhs: Vec::new(),
             }),
             ClosedGenericOperatorSelection::PrimitiveIntrinsic { operation } => {
                 debug_assert_eq!(operation.protocol(), protocol);
@@ -75,25 +76,33 @@ impl CallableResolver<'_, '_> {
             return ResolvedOperatorResolution {
                 protocol,
                 candidates: Vec::new(),
+                incompatible_rhs: Vec::new(),
             };
         };
         let canonical = environment.language_item.get(protocol);
         let mut candidates = self.operator_candidates(left, canonical, environment);
+        let mut incompatible_rhs = Vec::new();
         if matches!(
             canonical.kind.shape(),
             CanonicalOperatorProtocolShape::Predicate | CanonicalOperatorProtocolShape::Binary
         ) {
-            candidates.retain(|candidate| {
-                candidate.rhs.zip(right).is_some_and(|(expected, actual)| {
-                    self.readonly_alias_type_compatible(actual, expected)
-                })
-            });
+            let (applicable, incompatible): (Vec<_>, Vec<_>) =
+                candidates.into_iter().partition(|candidate| {
+                    candidate.rhs.zip(right).is_some_and(|(expected, actual)| {
+                        self.readonly_alias_type_compatible(actual, expected)
+                    })
+                });
+            candidates = applicable;
+            incompatible_rhs = incompatible;
         }
         candidates.sort_by_key(|candidate| candidate.interface);
         candidates.dedup_by_key(|candidate| candidate.interface);
+        incompatible_rhs.sort_by_key(|candidate| candidate.interface);
+        incompatible_rhs.dedup_by_key(|candidate| candidate.interface);
         ResolvedOperatorResolution {
             protocol,
             candidates,
+            incompatible_rhs,
         }
     }
 

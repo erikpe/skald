@@ -942,9 +942,10 @@ argument, result, effect, panic, anchor, and reverse full-expression cleanup
 plans. MIR verification proves only the resulting ordinary call or primitive
 operation and rejects injected unresolved or mismatched realization evidence.
 
-This representation is frozen but not implemented. The
+This representation and its verifier hardening are implemented. Release
+closure remains staged; the
 [implemented primitive representation](#implemented-primitive-operator-representation)
-remains the current compiler boundary.
+continues to own every primitive realization.
 
 ## Frozen complete primitive cast representation
 
