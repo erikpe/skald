@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 through OO5 are complete; OO6 is next.
+Status: **in progress**. OO0 through OO6 are complete; OO7 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -367,28 +367,28 @@ has changed.
 **Purpose:** Make canonical operator bounds useful inside generic bodies while
 freezing meaning before concrete type arguments are known.
 
-- [ ] Extend generic-template body analysis with source-shaped unary/binary
+- [x] Extend generic-template body analysis with source-shaped unary/binary
   operator selections retaining operator/operand spans, bounded parameter,
   exact structural protocol application, template requirement identity,
   structural `Rhs`/`Output`, and bound origin.
-- [ ] Select from exact declared bounds at template definition, applying the
+- [x] Select from exact declared bounds at template definition, applying the
   same RHS alias compatibility and unranked zero/multiple-candidate rules as
   closed selection; diagnose ambiguity before any specialization request.
-- [ ] Keep exact primitive syntax in a generic body unavailable unless the
+- [x] Keep exact primitive syntax in a generic body unavailable unless the
   static structural operands and declared bounds authorize the operation.
-- [ ] Close an already selected application to either an ordinary
+- [x] Close an already selected application to either an ordinary
   `ClassWitness { interface, requirement }` realization or OO5
   `PrimitiveIntrinsic { operation }` realization.
-- [ ] Generate an existing HIR interface call for class specializations and an
+- [x] Generate an existing HIR interface call for class specializations and an
   existing primitive HIR operation for primitive specializations; never leave
   a structural or protocol placeholder in completed HIR.
-- [ ] Reuse the same realization for manual bound calls such as
+- [x] Reuse the same realization for manual bound calls such as
   `left.op_add(right)`, including primitive specializations, while continuing
   to reject direct primitive member syntax outside bound-authorized templates.
-- [ ] Preserve exact definition-module lookup, closed generic class
+- [x] Preserve exact definition-module lookup, closed generic class
   conformances, inherited claims, requirement mapping, receiver/RHS aliases,
   result capabilities, static effects, and cleanup.
-- [ ] Prove specialization never reselects based on concrete members,
+- [x] Prove specialization never reselects based on concrete members,
   conformances, result context, or a more specific concrete RHS relation.
 
 **Primary implementation areas:** generic-template expression analysis and

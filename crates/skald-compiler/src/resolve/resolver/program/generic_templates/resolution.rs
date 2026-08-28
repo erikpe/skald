@@ -9,6 +9,7 @@ pub(crate) struct TemplateInterfaceEnvironment<'program> {
     interfaces: &'program ResolvedInterfaceDeclarationTable,
     semantics: &'program ResolvedInterfaceTemplateSemanticTable,
     iterable: Option<&'program ResolvedIterableLanguageItem>,
+    operators: Option<&'program ResolvedOperatorLanguageItem>,
 }
 
 impl<'program> TemplateInterfaceEnvironment<'program> {
@@ -16,11 +17,13 @@ impl<'program> TemplateInterfaceEnvironment<'program> {
         interfaces: &'program ResolvedInterfaceDeclarationTable,
         semantics: &'program ResolvedInterfaceTemplateSemanticTable,
         iterable: Option<&'program ResolvedIterableLanguageItem>,
+        operators: Option<&'program ResolvedOperatorLanguageItem>,
     ) -> Self {
         Self {
             interfaces,
             semantics,
             iterable,
+            operators,
         }
     }
 }
@@ -223,6 +226,7 @@ pub(crate) fn resolve_class_template_semantics(
             interface_environment.interfaces,
             interface_environment.semantics,
             interface_environment.iterable,
+            interface_environment.operators,
             lookup,
             &fields,
             &member_names,

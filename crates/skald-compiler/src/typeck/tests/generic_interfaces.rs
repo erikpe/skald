@@ -37,7 +37,9 @@ fn generic_interface_bound_call_closes_to_ordinary_dispatch() {
         "{resolved_dump}"
     );
     assert!(
-        resolved_dump.contains("ClosedBoundSelection 0 interface i0 requirement i0:requirement0"),
+        resolved_dump.contains(
+            "ClosedBoundSelection 0 class-witness interface i0 requirement i0:requirement0"
+        ),
         "{resolved_dump}"
     );
     assert!(
@@ -950,7 +952,7 @@ fn closed_generic_interfaces_remain_invariant_and_nominal() {
 
 #[test]
 fn generic_interface_bounds_do_not_enable_operators() {
-    let output = check_text(
+    let output = crate::test_support::resolve_source(
         "interface Add<T> { fn add(value: T) -> T; }\n\
          class Number implements Add<Number> {\n\
            value: i64;\n\
@@ -967,11 +969,10 @@ fn generic_interface_bounds_do_not_enable_operators() {
          fn main() -> i64 { return 0; }\n",
     );
 
-    assert!(output.hir.is_none());
     assert!(
         output.diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
-                && diagnostic.message == "operator `+` is unsupported for these operands"
+            diagnostic.code == crate::resolve::UNSUPPORTED_GENERIC_OPERATOR_APPLICATION
+                && diagnostic.message == "operator `+` is not authorized for type parameter `T`"
         }),
         "{:?}",
         output.diagnostics
@@ -979,5 +980,5 @@ fn generic_interface_bounds_do_not_enable_operators() {
     assert!(!output
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT));
+        .any(|diagnostic| diagnostic.code == crate::resolve::INVALID_CALL_TARGET));
 }

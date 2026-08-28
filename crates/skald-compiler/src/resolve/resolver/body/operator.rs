@@ -3,6 +3,37 @@
 use super::*;
 
 impl CallableResolver<'_, '_> {
+    pub(super) fn specialized_operator_selection(
+        &self,
+        span: Span,
+        protocol: CanonicalOperatorProtocol,
+    ) -> Option<Option<ResolvedOperatorResolution>> {
+        let closed = self.environment.specialization?.operator_selection(span)?;
+        Some(match closed {
+            ClosedGenericOperatorSelection::ClassWitness {
+                interface,
+                requirement,
+                rhs,
+                output,
+                origin_span,
+            } => Some(ResolvedOperatorResolution {
+                protocol,
+                candidates: vec![ResolvedOperatorSelection {
+                    protocol,
+                    interface,
+                    requirement,
+                    rhs,
+                    output,
+                    origin_span,
+                }],
+            }),
+            ClosedGenericOperatorSelection::PrimitiveIntrinsic { operation } => {
+                debug_assert_eq!(operation.protocol(), protocol);
+                None
+            }
+        })
+    }
+
     pub(super) fn select_unary_operator(
         &self,
         operator: ResolvedUnaryOperator,

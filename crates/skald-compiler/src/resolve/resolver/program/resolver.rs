@@ -441,6 +441,7 @@ impl<'ast> ProgramResolver<'ast> {
                         &interfaces,
                         &interface_template_semantics,
                         iterable_language_item.as_ref(),
+                        operator_language_item.as_ref(),
                     ),
                     &mut self.diagnostics,
                 ));
@@ -487,6 +488,7 @@ impl<'ast> ProgramResolver<'ast> {
                 &template_semantics,
                 &mut generic_specializations,
                 &generic_interface_specializations,
+                operator_language_item.as_ref(),
             );
         }
         let lookups = lookups

@@ -539,6 +539,7 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                     requirement,
                                     member_name,
                                     span,
+                                    ..
                                 } => dumper.line(
                                     &format!(
                                         "Selection bound-member {parameter} bound {bound} {} {} member {member_name}",
@@ -546,6 +547,22 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                         render_template_bound_requirement(*requirement),
                                     ),
                                     *span,
+                                ),
+                                ResolvedTemplateSelection::Operator(selection) => dumper.line(
+                                    &format!(
+                                        "Selection operator {} {} bound {} {} requirement {} rhs {} output {}",
+                                        render_template_operator_syntax(selection.syntax),
+                                        selection.parameter,
+                                        selection.bound,
+                                        selection.protocol.interface_name(),
+                                        selection.requirement,
+                                        selection
+                                            .rhs
+                                            .as_ref()
+                                            .map_or("-".to_owned(), render_template_type),
+                                        render_template_type(&selection.output),
+                                    ),
+                                    selection.span,
                                 ),
                                 ResolvedTemplateSelection::Iteration {
                                     parameter,
@@ -1048,6 +1065,13 @@ fn render_template_selection_kind(kind: ResolvedTemplateDependentSelectionKind) 
     }
 }
 
+fn render_template_operator_syntax(syntax: ResolvedTemplateOperatorSyntax) -> &'static str {
+    match syntax {
+        ResolvedTemplateOperatorSyntax::Unary { operator, .. } => operator.spelling(),
+        ResolvedTemplateOperatorSyntax::Binary { operator, .. } => operator.spelling(),
+    }
+}
+
 fn render_template_member(member: Option<&str>) -> String {
     member.map_or_else(String::new, |member| format!(" member {member}"))
 }
@@ -1149,10 +1173,43 @@ impl<'program> ResolvedDumper<'program> {
                 }
                 for (index, selection) in specialization.closed_bound_members.iter().enumerate() {
                     if let Some(selection) = selection {
-                        dumper.raw_line(&format!(
-                            "ClosedBoundSelection {index} interface {} requirement {}",
-                            selection.interface, selection.requirement,
-                        ));
+                        match selection {
+                            ClosedGenericBoundMember::Interface {
+                                interface,
+                                requirement,
+                            } => dumper.raw_line(&format!(
+                                "ClosedBoundSelection {index} class-witness interface {interface} requirement {requirement}",
+                            )),
+                            ClosedGenericBoundMember::PrimitiveIntrinsic { operation } => {
+                                dumper.raw_line(&format!(
+                                    "ClosedBoundSelection {index} primitive-intrinsic {}",
+                                    operation.semantic_name(),
+                                ));
+                            }
+                        }
+                    }
+                }
+                for (index, selection) in specialization
+                    .closed_operator_selections
+                    .iter()
+                    .enumerate()
+                {
+                    if let Some(selection) = selection {
+                        match selection {
+                            ClosedGenericOperatorSelection::ClassWitness {
+                                interface,
+                                requirement,
+                                ..
+                            } => dumper.raw_line(&format!(
+                                "ClosedOperatorSelection {index} class-witness interface {interface} requirement {requirement}",
+                            )),
+                            ClosedGenericOperatorSelection::PrimitiveIntrinsic { operation } => {
+                                dumper.raw_line(&format!(
+                                    "ClosedOperatorSelection {index} primitive-intrinsic {}",
+                                    operation.semantic_name(),
+                                ));
+                            }
+                        }
                     }
                 }
                 for (index, selection) in specialization

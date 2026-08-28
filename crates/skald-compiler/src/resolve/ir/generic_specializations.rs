@@ -5,7 +5,10 @@ use crate::{
     source::Span,
 };
 
-use super::{GenericInterfaceInstanceKey, ResolvedSharedTarget, ResolvedTypeKind};
+use super::{
+    GenericInterfaceInstanceKey, ResolvedPrimitiveOperatorOperation, ResolvedSharedTarget,
+    ResolvedTypeKind,
+};
 
 /// Canonical identity input for one closed generic class.
 ///
@@ -63,13 +66,33 @@ pub(crate) struct GenericSpecialization {
     pub(crate) closed_interface_claims: Vec<Option<InterfaceId>>,
     pub(crate) closed_interface_bounds: Vec<Option<InterfaceId>>,
     pub(crate) closed_bound_members: Vec<Option<ClosedGenericBoundMember>>,
+    pub(crate) closed_operator_selections: Vec<Option<ClosedGenericOperatorSelection>>,
     pub(crate) closed_iteration_selections: Vec<Option<ClosedGenericIterationSelection>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct ClosedGenericBoundMember {
-    pub(crate) interface: InterfaceId,
-    pub(crate) requirement: InterfaceRequirementId,
+pub(crate) enum ClosedGenericBoundMember {
+    Interface {
+        interface: InterfaceId,
+        requirement: InterfaceRequirementId,
+    },
+    PrimitiveIntrinsic {
+        operation: ResolvedPrimitiveOperatorOperation,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ClosedGenericOperatorSelection {
+    ClassWitness {
+        interface: InterfaceId,
+        requirement: InterfaceRequirementId,
+        rhs: Option<ResolvedTypeKind>,
+        output: ResolvedTypeKind,
+        origin_span: Span,
+    },
+    PrimitiveIntrinsic {
+        operation: ResolvedPrimitiveOperatorOperation,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -1,0 +1,37 @@
+import std::io;
+from std::ops import OpAdd;
+
+class Number implements OpAdd<Number, Number> {
+    private value: u64;
+
+    init(value: u64) { self.value = value; }
+
+    fn op_add(ref rhs: Number) -> Number {
+        return Number(self.value + rhs.value);
+    }
+
+    fn get() -> u64 { return self.value; }
+}
+
+class Adder<T> where T: OpAdd<T, T> {
+    init() {}
+
+    fn punctuation(ref left: T, ref right: T) -> T {
+        return left + right;
+    }
+
+    fn manual(ref left: T, ref right: T) -> T {
+        return left.op_add(right);
+    }
+}
+
+fn main() -> i64 {
+    var primitive: Adder<u64> = Adder<u64>();
+    std::io::println_u64(primitive.punctuation(17u, 25u));
+    std::io::println_u64(primitive.manual(20u, 22u));
+
+    var objects: Adder<Number> = Adder<Number>();
+    std::io::println_u64(objects.punctuation(Number(19u), Number(23u)).get());
+    std::io::println_u64(objects.manual(Number(21u), Number(21u)).get());
+    return 0;
+}

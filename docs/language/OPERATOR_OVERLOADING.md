@@ -1,13 +1,14 @@
 # Interface-Based Operator Overloading
 
-Status: frozen operator-protocol language design with staged implementation.
+Status: frozen operator-protocol language design with staged hardening.
 The canonical `std::ops` declarations, whole-bundle validation, explicit
-ordinary interface use, and the complete non-generic class operator surface
+ordinary interface use, the complete class operator surface, and definition-
+site generic-bound operator selection
 are implemented, including ordinary receiver carriers, dispatch, ownership,
 evaluation, cleanup, result capabilities, panic traces, and static effects.
-Compiler-provided primitive protocol evidence now satisfies exact canonical
-generic bounds. Definition-site generic punctuation and primitive
-specialization remain staged. Exact
+Compiler-provided primitive protocol evidence satisfies exact canonical
+generic bounds and closes generic punctuation or manual bound calls directly
+to existing primitive operations. Exact
 primitive expressions continue to use the [implemented primitive operator
 profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
 This document fixes the complete source-visible contract;
@@ -109,7 +110,7 @@ These declarations are currently usable through ordinary imports,
 Exact classes, inherited and closed-generic class conformances, and exact
 canonical interface views can also use all overloadable punctuation listed
 below. Supported primitive arguments can satisfy exact canonical operator
-bounds; definition-site generic punctuation remains staged.
+bounds, including definition-site generic punctuation and manual calls.
 
 Every requirement has the ordinary implicit read-only receiver. Binary
 protocols take one call-scoped read-only `ref` operand. Value-producing
@@ -183,9 +184,9 @@ operator-interface view, or a type parameter authorized by one or more exact
 declared bounds. `Obj`, unrelated interface views, raw shared handles,
 optionals, arrays, and function values do not gain structural lookup.
 
-The current implementation covers the first three eligible forms. Selection
-from a type parameter's declared bounds is the staged definition-site generic
-slice.
+The implementation covers all four eligible forms. Selection from a type
+parameter's declared bounds occurs once at template definition and is retained
+through specialization.
 
 ## Class implementations and generic bounds
 
@@ -241,10 +242,10 @@ var adder: Adder<u64> = Adder<u64>();
 var answer: u64 = adder.add(17u, 25u);
 ```
 
-This definition-site punctuation and its primitive specialization are frozen
-future behavior, not part of the currently implemented class punctuation
-slice. Bounds and manual bound calls remain available through ordinary generic
-interface support.
+This definition-site punctuation and its primitive specialization are
+implemented. Bounds and manual bound calls use the same retained selection;
+class arguments close to ordinary interface dispatch and supported primitive
+arguments close to existing primitive operations.
 
 The operator expression is selected from declared bounds at the template
 definition site. More than one applicable bound is an unranked definition-site
@@ -264,9 +265,8 @@ changes a result type, wrapping rule, failure, short-circuit rule, or IEEE-754
 behavior. Unsupported cells, such as `OpRem<f64, f64>`, remain unsatisfied.
 
 This evidence now satisfies canonical class-template and interface-template
-bounds. Specializing a bound-selected operator or manual requirement call to
-the existing primitive operation remains part of the staged generic-operator
-work. The evidence
+bounds. A bound-selected operator or manual requirement call specializes to
+the existing primitive operation. The evidence
 does not make a primitive an object, create an interface view or witness-table
 entry, permit primitive/interface casts or shared ownership, authorize
 unrelated primitive conformances, or allow user replacement of the built-in

@@ -1,11 +1,13 @@
 //! Closure of definition-site bound selections to ordinary interface IDs.
 
 use super::*;
+use crate::identity::TypeParameterId;
 
 pub(in crate::resolve::resolver::program) fn close_bound_member_selections(
     semantics: &ResolvedClassTemplateSemanticTable,
     class_specializations: &mut GenericSpecializationTable,
     interface_specializations: &GenericInterfaceSpecializationTable,
+    operator_language_item: Option<&ResolvedOperatorLanguageItem>,
 ) {
     for specialization in class_specializations.iter_mut() {
         if !matches!(
@@ -20,16 +22,68 @@ pub(in crate::resolve::resolver::program) fn close_bound_member_selections(
         for (selection_index, selection) in semantics.selections.iter().enumerate() {
             match selection {
                 ResolvedTemplateSelection::BoundMember {
-                    bound, requirement, ..
+                    parameter,
+                    bound,
+                    requirement,
+                    ..
                 } => {
                     let interface = closed_bound_interface(specialization, *bound);
-                    let requirement =
-                        close_requirement(interface, *requirement, interface_specializations);
-                    specialization.closed_bound_members[selection_index] =
-                        Some(ClosedGenericBoundMember {
+                    let template_requirement = *requirement;
+                    let requirement = close_requirement(
+                        interface,
+                        template_requirement,
+                        interface_specializations,
+                    );
+                    let operation = primitive_bound_operation(
+                        specialization,
+                        *parameter,
+                        interface,
+                        template_requirement,
+                        interface_specializations,
+                        operator_language_item,
+                    );
+                    let receiver = specialization.key.arguments[parameter.index()];
+                    let closed = if is_primitive(receiver) {
+                        operation.map(|operation| ClosedGenericBoundMember::PrimitiveIntrinsic {
+                            operation,
+                        })
+                    } else {
+                        Some(ClosedGenericBoundMember::Interface {
                             interface,
                             requirement,
-                        });
+                        })
+                    };
+                    specialization.closed_bound_members[selection_index] = closed;
+                }
+                ResolvedTemplateSelection::Operator(selection) => {
+                    let interface = closed_bound_interface(specialization, selection.bound);
+                    let requirement = close_requirement(
+                        interface,
+                        ResolvedTemplateBoundRequirement::Generic(selection.requirement),
+                        interface_specializations,
+                    );
+                    let application = interface_specializations
+                        .for_interface(interface)
+                        .expect("generic operator bounds close to materialized interfaces");
+                    let (rhs, output) =
+                        closed_operator_arguments(selection.protocol, &application.key.arguments);
+                    let receiver = specialization.key.arguments[selection.parameter.index()];
+                    let operation =
+                        primitive_operator_operation(receiver, selection.protocol, rhs, output);
+                    specialization.closed_operator_selections[selection_index] =
+                        if is_primitive(receiver) {
+                            operation.map(|operation| {
+                                ClosedGenericOperatorSelection::PrimitiveIntrinsic { operation }
+                            })
+                        } else {
+                            Some(ClosedGenericOperatorSelection::ClassWitness {
+                                interface,
+                                requirement,
+                                rhs,
+                                output,
+                                origin_span: selection.origin_span,
+                            })
+                        };
                 }
                 ResolvedTemplateSelection::Iteration {
                     bound,
@@ -67,6 +121,68 @@ pub(in crate::resolve::resolver::program) fn close_bound_member_selections(
                 | ResolvedTemplateSelection::DefinitionSite { .. }
                 | ResolvedTemplateSelection::ArgumentDependent { .. } => {}
             }
+        }
+    }
+}
+
+const fn is_primitive(ty: ResolvedTypeKind) -> bool {
+    matches!(
+        ty,
+        ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool
+    )
+}
+
+fn primitive_bound_operation(
+    specialization: &GenericSpecialization,
+    parameter: TypeParameterId,
+    interface: InterfaceId,
+    requirement: ResolvedTemplateBoundRequirement,
+    interface_specializations: &GenericInterfaceSpecializationTable,
+    operator_language_item: Option<&ResolvedOperatorLanguageItem>,
+) -> Option<ResolvedPrimitiveOperatorOperation> {
+    let ResolvedTemplateBoundRequirement::Generic(requirement) = requirement else {
+        return None;
+    };
+    let language_item = operator_language_item?;
+    let protocol = language_item
+        .iter()
+        .find(|protocol| protocol.requirement == requirement)?;
+    let application = interface_specializations.for_interface(interface)?;
+    let (rhs, output) = closed_operator_arguments(protocol.kind, &application.key.arguments);
+    primitive_operator_operation(
+        specialization.key.arguments[parameter.index()],
+        protocol.kind,
+        rhs,
+        output,
+    )
+}
+
+fn closed_operator_arguments(
+    protocol: CanonicalOperatorProtocol,
+    arguments: &[ResolvedTypeKind],
+) -> (Option<ResolvedTypeKind>, ResolvedTypeKind) {
+    match protocol.shape() {
+        CanonicalOperatorProtocolShape::Unary => {
+            let [output] = arguments else {
+                unreachable!("validated unary operator applications have one argument")
+            };
+            (None, *output)
+        }
+        CanonicalOperatorProtocolShape::Binary => {
+            let [rhs, output] = arguments else {
+                unreachable!("validated binary operator applications have two arguments")
+            };
+            (Some(*rhs), *output)
+        }
+        CanonicalOperatorProtocolShape::Predicate => {
+            let [rhs] = arguments else {
+                unreachable!("validated predicate operator applications have one argument")
+            };
+            (Some(*rhs), ResolvedTypeKind::Bool)
         }
     }
 }

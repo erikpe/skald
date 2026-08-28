@@ -911,9 +911,9 @@ Existing `//` line-comment recognition remains distinct from division: adjacent
 
 The source semantics are defined by the
 [implemented primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
-and the staged [interface-based operator-overloading
-contract](OPERATOR_OVERLOADING.md). The complete non-generic class punctuation
-surface is implemented; definition-site generic selection remains staged.
+and the [interface-based operator-overloading
+contract](OPERATOR_OVERLOADING.md). The complete class punctuation surface and
+definition-site generic selection are implemented.
 The [status matrix](STATUS.md) remains authoritative for compiler support.
 
 ## Syntax errors and nesting

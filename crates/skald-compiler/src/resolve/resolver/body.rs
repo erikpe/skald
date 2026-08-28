@@ -167,13 +167,7 @@ impl<'program> BodySpecializationEnvironment<'program> {
             .flatten()
     }
 
-    fn bound_member(
-        self,
-        span: Span,
-    ) -> Option<(
-        crate::identity::InterfaceId,
-        crate::identity::InterfaceRequirementId,
-    )> {
+    fn bound_member(self, span: Span) -> Option<ClosedGenericBoundMember> {
         self.semantics
             .selections
             .iter()
@@ -189,7 +183,20 @@ impl<'program> BodySpecializationEnvironment<'program> {
                 if *selection_span != span {
                     return None;
                 }
-                closed.map(|closed| (closed.interface, closed.requirement))
+                *closed
+            })
+    }
+
+    fn operator_selection(self, span: Span) -> Option<ClosedGenericOperatorSelection> {
+        self.semantics
+            .selections
+            .iter()
+            .zip(&self.specialization.closed_operator_selections)
+            .find_map(|(selection, closed)| {
+                let ResolvedTemplateSelection::Operator(selection) = selection else {
+                    return None;
+                };
+                (selection.span == span).then_some(*closed).flatten()
             })
     }
 
@@ -657,7 +664,10 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                         unreachable!("dereference returned above")
                     }
                 };
-                let selection = self.select_unary_operator(operator, &operand);
+                let selection = operator.protocol().and_then(|protocol| {
+                    self.specialized_operator_selection(unary.span, protocol)
+                        .unwrap_or_else(|| self.select_unary_operator(operator, &operand))
+                });
                 Some(ResolvedExpression::Unary(ResolvedUnaryExpr {
                     operator,
                     operator_span: unary.operator_span,
@@ -699,7 +709,11 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                                 ResolvedBinaryOperator::GreaterEqual
                             }
                         };
-                        let selection = self.select_binary_operator(operator, &left, &right);
+                        let selection = self
+                            .specialized_operator_selection(binary.span, operator.protocol())
+                            .unwrap_or_else(|| {
+                                self.select_binary_operator(operator, &left, &right)
+                            });
                         Some(ResolvedExpression::Binary(ResolvedBinaryExpr {
                             left: Box::new(left),
                             operator,

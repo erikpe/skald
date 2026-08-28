@@ -32,6 +32,206 @@ fn check_operator_source(source: &str) -> crate::hir::HirProgram {
     checked.hir.expect("valid operator source must produce HIR")
 }
 
+#[test]
+fn generic_operator_bound_closes_to_primitive_intrinsic() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Adder<T> where T: OpAdd<T, T> {\n\
+           init() {}\n\
+           fn punctuation(ref left: T, ref right: T) -> T { return left + right; }\n\
+           fn manual(ref left: T, ref right: T) -> T { return left.op_add(right); }\n\
+         }\n\
+         fn use(ref value: Adder<u64>) -> unit {}\n\
+         fn answer() -> u64 {\n\
+           var adder: Adder<u64> = Adder<u64>();\n\
+           return adder.punctuation(17u, 25u);\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let resolved_dump = dump_resolved(&resolved.program);
+    assert!(
+        resolved_dump.contains("ClosedOperatorSelection 0 primitive-intrinsic AddU64"),
+        "{resolved_dump}"
+    );
+    assert!(
+        resolved_dump.contains("ClosedBoundSelection 1 primitive-intrinsic AddU64"),
+        "{resolved_dump}"
+    );
+
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = crate::hir::dump_hir(&checked.hir.expect("valid generic operators produce HIR"));
+    assert_eq!(hir.matches("AddU64").count(), 2, "{hir}");
+    assert!(!hir.contains("InterfaceCall"), "{hir}");
+}
+
+#[test]
+fn generic_operator_bound_closes_to_class_witness_without_reselection() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Value implements OpAdd<Value, Value> {\n\
+           init() {}\n\
+           fn op_add(ref rhs: Value) -> Value { return Value(); }\n\
+         }\n\
+         class Adder<T> where T: OpAdd<T, T> {\n\
+           init() {}\n\
+           fn add(ref left: T, ref right: T) -> T { return left + right; }\n\
+           fn manual(ref left: T, ref right: T) -> T { return left.op_add(right); }\n\
+         }\n\
+         fn use(ref value: Adder<Value>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let resolved_dump = dump_resolved(&resolved.program);
+    assert!(
+        resolved_dump.contains("ClosedOperatorSelection 0 class-witness"),
+        "{resolved_dump}"
+    );
+    assert!(
+        resolved_dump.contains("ClosedBoundSelection 1 class-witness"),
+        "{resolved_dump}"
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = crate::hir::dump_hir(&checked.hir.expect("valid generic operators produce HIR"));
+    assert_eq!(hir.matches("ObjectCall interface").count(), 2, "{hir}");
+}
+
+#[test]
+fn generic_operator_selection_supports_structural_rhs_and_output() {
+    let hir = check_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Right { init() {} }\n\
+         class Output { init() {} }\n\
+         class Left implements OpAdd<Right, Output> {\n\
+           init() {}\n\
+           fn op_add(ref rhs: Right) -> Output { return Output(); }\n\
+         }\n\
+         class Apply<L, R, O> where L: OpAdd<R, O> {\n\
+           init() {}\n\
+           fn apply(ref left: L, ref right: R) -> O { return left + right; }\n\
+         }\n\
+         fn use(ref value: Apply<Left, Right, Output>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    let dump = crate::hir::dump_hir(&hir);
+    assert!(dump.contains("ObjectCall interface"), "{dump}");
+    assert!(dump.contains("ObjectResult"), "{dump}");
+}
+
+#[test]
+fn generic_operator_bounds_cover_unary_algebraic_equality_and_ordering() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpNeg, OpBitNot, OpEq, OpLess, OpDiv;\n\
+         class Negate<T> where T: OpNeg<T> {\n\
+           init() {}\n\
+           fn apply(ref value: T) -> T { return -value; }\n\
+         }\n\
+         class Complement<T> where T: OpBitNot<T> {\n\
+           init() {}\n\
+           fn apply(ref value: T) -> T { return ~value; }\n\
+         }\n\
+         class Equal<T> where T: OpEq<T> {\n\
+           init() {}\n\
+           fn apply(ref left: T, ref right: T) -> bool { return left == right; }\n\
+         }\n\
+         class Less<T> where T: OpLess<T> {\n\
+           init() {}\n\
+           fn apply(ref left: T, ref right: T) -> bool { return left < right; }\n\
+         }\n\
+         class Divide<T> where T: OpDiv<T, T> {\n\
+           init() {}\n\
+           fn apply(ref left: T, ref right: T) -> T { return left / right; }\n\
+         }\n\
+         fn use(ref n: Negate<i64>, ref c: Complement<u64>, ref e: Equal<u64>, ref l: Less<f64>, ref d: Divide<u64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let dump = dump_resolved(&resolved.program);
+    for operation in [
+        "NegateI64",
+        "BitwiseComplementU64",
+        "EqualU64",
+        "LessF64",
+        "DivideU64",
+    ] {
+        assert!(dump.contains(operation), "missing {operation} in:\n{dump}");
+    }
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+}
+
+#[test]
+fn generic_operator_ambiguity_and_missing_bound_fail_at_definition_site() {
+    let ambiguous = resolve_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Base { init() {} }\n\
+         class Ambiguous<T> where T: OpAdd<Base, T>, T: OpAdd<Obj, T> {\n\
+           init() {}\n\
+           fn add(ref left: T, ref right: Base) -> T { return left + right; }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(ambiguous.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == crate::resolve::AMBIGUOUS_GENERIC_OPERATOR_APPLICATION
+    }));
+
+    let missing = resolve_operator_source(
+        "from std::ops import OpAdd, OpSub;\n\
+         class Missing<T> where T: OpSub<T, T> {\n\
+           init() {}\n\
+           fn add(ref left: T, ref right: T) -> T { return left + right; }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(missing.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == crate::resolve::UNSUPPORTED_GENERIC_OPERATOR_APPLICATION
+    }));
+
+    let foreign = resolve_operator_source(
+        "interface FakeAdd<R, O> { fn op_add(ref rhs: R) -> O; }\n\
+         class Foreign<T> where T: FakeAdd<T, T> {\n\
+           init() {}\n\
+           fn add(ref left: T, ref right: T) -> T { return left + right; }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(foreign.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == crate::resolve::UNSUPPORTED_GENERIC_OPERATOR_APPLICATION
+    }));
+}
+
+#[test]
+fn unsupported_primitive_operator_bound_fails_without_a_fake_witness() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpRem;\n\
+         class Remainder<T> where T: OpRem<T, T> {\n\
+           init() {}\n\
+           fn apply(ref left: T, ref right: T) -> T { return left % right; }\n\
+         }\n\
+         fn use(ref value: Remainder<f64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(resolved
+        .diagnostics
+        .iter()
+        .any(|diagnostic| { diagnostic.code == crate::resolve::UNSATISFIED_GENERIC_REQUIREMENT }));
+    assert!(!dump_resolved(&resolved.program).contains("class-witness"));
+}
+
 fn primitive_application(
     protocol: CanonicalOperatorProtocol,
     rhs: Option<crate::resolve::ResolvedPrimitiveType>,

@@ -2,6 +2,8 @@
 
 use super::*;
 
+mod primitive_operator;
+
 impl CallableResolver<'_, '_> {
     pub(super) fn resolve_specialized_static_value(
         &mut self,
@@ -467,6 +469,17 @@ impl CallableResolver<'_, '_> {
                 arguments,
                 span: call.span,
             }),
+            CallTarget::PrimitiveOperator {
+                receiver,
+                operation,
+                member_span,
+            } => self.resolve_primitive_operator_call(
+                receiver,
+                operation,
+                member_span,
+                arguments,
+                call.span,
+            )?,
             CallTarget::Indirect {
                 callee,
                 function_type,
@@ -841,19 +854,34 @@ impl CallableResolver<'_, '_> {
                 }
             }
             syntax::Expression::MemberAccess(member) => {
-                if let Some((interface, requirement)) = self
+                if let Some(selection) = self
                     .environment
                     .specialization
                     .and_then(|specialization| specialization.bound_member(member.span))
                 {
-                    let receiver = self.resolve_member_object_receiver(member)?;
-                    return Some(CallTarget::Interface {
-                        receiver: ResolvedInterfaceReceiver::Object(Box::new(receiver)),
-                        interface,
-                        requirement,
-                        receiver_span: member.receiver.span(),
-                        member_span: member.member.span,
-                    });
+                    return match selection {
+                        ClosedGenericBoundMember::Interface {
+                            interface,
+                            requirement,
+                        } => {
+                            let receiver = self.resolve_member_object_receiver(member)?;
+                            Some(CallTarget::Interface {
+                                receiver: ResolvedInterfaceReceiver::Object(Box::new(receiver)),
+                                interface,
+                                requirement,
+                                receiver_span: member.receiver.span(),
+                                member_span: member.member.span,
+                            })
+                        }
+                        ClosedGenericBoundMember::PrimitiveIntrinsic { operation } => {
+                            let receiver = self.resolve_expression(&member.receiver)?;
+                            Some(CallTarget::PrimitiveOperator {
+                                receiver,
+                                operation,
+                                member_span: member.member.span,
+                            })
+                        }
+                    };
                 }
                 if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {
                     match self.class_receiver(&member.receiver) {
@@ -1438,6 +1466,11 @@ enum CallTarget {
         interface: crate::identity::InterfaceId,
         requirement: crate::identity::InterfaceRequirementId,
         receiver_span: Span,
+        member_span: Span,
+    },
+    PrimitiveOperator {
+        receiver: ResolvedExpression,
+        operation: ResolvedPrimitiveOperatorOperation,
         member_span: Span,
     },
     Indirect {

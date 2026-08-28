@@ -380,9 +380,10 @@ dictionary, cast, shared interface owner, or runtime representation. Multiple
 applicable operator bounds remain an unranked definition-site error. Manual
 bound calls and punctuation share the same specialization evidence.
 
-Static primitive bound satisfaction is implemented. Definition-site bound-call
-and punctuation realization through the primitive operation remains staged;
-ordinary class bound calls continue to use their existing witness path.
+Static primitive bound satisfaction and definition-site bound-call and
+punctuation realization are implemented. Primitive applications use their
+existing operation; class applications continue through the ordinary witness
+path.
 
 ## Deliberate exclusions
 

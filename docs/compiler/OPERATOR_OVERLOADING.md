@@ -1,6 +1,6 @@
 # Operator-Protocol Lowering
 
-Status: frozen operator-protocol compiler design with staged implementation.
+Status: frozen operator-protocol compiler design with staged hardening.
 Resolution implements the canonical module, validation, identity product, and
 complete non-generic class-operator selection. The executable pipeline erases
 those selected applications to ordinary interface calls while retaining the
@@ -11,8 +11,8 @@ in the existing exact boolean negation. Receiver carriers, result-capability
 owners, MIR evaluation and cleanup, dispatch, static effects, target
 retention, panic traces, and native lowering are integrated through their
 ordinary call paths. The compiler-provided primitive registry and exact
-canonical generic-bound satisfaction are implemented; definition-site generic
-selection and primitive intrinsic realization remain staged.
+canonical generic-bound satisfaction, definition-site generic selection, and
+class-witness/primitive-intrinsic realization are implemented.
 This document fixes the complete compiler boundary for the frozen
 [interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md).
 Its ordinary-call produced primitive read-only alias prerequisite is
@@ -130,12 +130,17 @@ OperatorImplementation =
   | PrimitiveIntrinsic { operation }
 ```
 
-The private Rust representation may differ, but this distinction survives
-until specialized body checking chooses its HIR form. Definition-time operator
+The resolved representation retains this distinction until specialized body
+checking chooses its HIR form. Definition-time operator
 selection records the template requirement and structural operands. Closing a
 class argument maps it to an ordinary exact interface and witness call;
 closing a supported primitive maps it to the existing primitive operation.
-No specialization searches concrete members or conformances again.
+No specialization searches concrete members or conformances again. Generated
+bodies consult span-keyed closed selections: class witnesses reconstruct one
+exact ordinary resolved interface call, while primitive intrinsics reconstruct
+the corresponding ordinary resolved primitive expression. Typed HIR therefore
+contains neither a structural type-parameter operation nor a protocol
+placeholder.
 
 Manual bound calls use the same selected evidence. A primitive-specialized
 `left.op_add(right)` in a bound-authorized template becomes the corresponding

@@ -530,6 +530,25 @@ pub(crate) fn primitive_operator_evidence(
         })
 }
 
+pub(crate) fn primitive_operator_operation(
+    receiver: ResolvedTypeKind,
+    protocol: CanonicalOperatorProtocol,
+    rhs: Option<ResolvedTypeKind>,
+    output: ResolvedTypeKind,
+) -> Option<ResolvedPrimitiveOperatorOperation> {
+    let receiver = primitive_type(receiver)?;
+    PRIMITIVE_OPERATOR_REGISTRY
+        .iter()
+        .copied()
+        .find(|evidence| {
+            evidence.receiver == receiver
+                && evidence.protocol == protocol
+                && evidence.rhs.map(ResolvedTypeKind::from) == rhs
+                && ResolvedTypeKind::from(evidence.output) == output
+        })
+        .map(|evidence| evidence.operation)
+}
+
 pub(crate) fn canonical_operator_application(
     program: &ResolvedProgram,
     interface: InterfaceId,

@@ -8,6 +8,8 @@ use super::requirements::{
 use super::*;
 use crate::identity::TypeParameterId;
 
+mod operator;
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn resolve_template_body(
     member: &syntax::ClassMember,
@@ -17,6 +19,7 @@ pub(super) fn resolve_template_body(
     interfaces: &ResolvedInterfaceDeclarationTable,
     interface_semantics: &ResolvedInterfaceTemplateSemanticTable,
     iterable_language_item: Option<&ResolvedIterableLanguageItem>,
+    operator_language_item: Option<&ResolvedOperatorLanguageItem>,
     lookup: ModuleLookup<'_>,
     fields: &HashMap<String, ResolvedTemplateType>,
     member_names: &HashMap<String, usize>,
@@ -57,6 +60,7 @@ pub(super) fn resolve_template_body(
         interfaces,
         interface_semantics,
         iterable_language_item,
+        operator_language_item,
         lookup,
         fields,
         member_names,
@@ -85,6 +89,7 @@ struct TemplateBodyResolver<'semantic, 'lookup, 'diagnostics> {
     interfaces: &'semantic ResolvedInterfaceDeclarationTable,
     interface_semantics: &'semantic ResolvedInterfaceTemplateSemanticTable,
     iterable_language_item: Option<&'semantic ResolvedIterableLanguageItem>,
+    operator_language_item: Option<&'semantic ResolvedOperatorLanguageItem>,
     lookup: ModuleLookup<'lookup>,
     fields: &'semantic HashMap<String, ResolvedTemplateType>,
     member_names: &'semantic HashMap<String, usize>,
@@ -267,10 +272,14 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     }
                 }
             }
-            syntax::Expression::Unary(expression) => self.visit_expression(&expression.operand),
+            syntax::Expression::Unary(expression) => {
+                self.visit_expression(&expression.operand);
+                self.select_unary_operator(expression);
+            }
             syntax::Expression::Binary(expression) => {
                 self.visit_expression(&expression.left);
                 self.visit_expression(&expression.right);
+                self.select_binary_operator(expression);
             }
             syntax::Expression::Logical(expression) => {
                 self.visit_expression(&expression.left);
@@ -684,6 +693,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                                 bound_index,
                                 ResolvedTemplateBoundRequirement::Ordinary(requirement.id),
                                 requirement.name_span,
+                                None,
                             ));
                         }
                     }
@@ -699,6 +709,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                                 bound_index,
                                 ResolvedTemplateBoundRequirement::Generic(requirement.id),
                                 requirement.name_span,
+                                Some(requirement.return_type.clone()),
                             ));
                         }
                     }
@@ -707,13 +718,14 @@ impl TemplateBodyResolver<'_, '_, '_> {
         }
 
         match candidates.as_slice() {
-            [(bound, requirement, _)] => {
+            [(bound, requirement, _, output)] => {
                 self.selections
                     .push(ResolvedTemplateSelection::BoundMember {
                         parameter,
                         bound: *bound,
                         requirement: *requirement,
                         member_name: member.text.to_string(),
+                        output: output.clone(),
                         span,
                     });
             }
@@ -750,7 +762,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     ),
                 )
                 .with_primary_label(member.span, "bound member selection is ambiguous");
-                for (_, _, requirement_span) in candidates {
+                for (_, _, requirement_span, _) in candidates {
                     diagnostic = diagnostic.with_secondary_label(
                         *requirement_span,
                         "candidate interface requirement declared here",
@@ -996,6 +1008,23 @@ impl TemplateBodyResolver<'_, '_, '_> {
 
     fn type_of_expression(&self, expression: &syntax::Expression) -> Option<ResolvedTemplateType> {
         match expression {
+            syntax::Expression::NumericLiteral(literal) => Some(ResolvedTemplateType {
+                kind: match literal.kind {
+                    crate::literal::NumericLiteralKind::I64(_) => ResolvedTemplateTypeKind::I64,
+                    crate::literal::NumericLiteralKind::U64(_) => ResolvedTemplateTypeKind::U64,
+                    crate::literal::NumericLiteralKind::U8(_) => ResolvedTemplateTypeKind::U8,
+                    crate::literal::NumericLiteralKind::F64 => ResolvedTemplateTypeKind::F64,
+                },
+                span: literal.span,
+            }),
+            syntax::Expression::ByteLiteral(literal) => Some(ResolvedTemplateType {
+                kind: ResolvedTemplateTypeKind::U8,
+                span: literal.span,
+            }),
+            syntax::Expression::Boolean(boolean) => Some(ResolvedTemplateType {
+                kind: ResolvedTemplateTypeKind::Bool,
+                span: boolean.span,
+            }),
             syntax::Expression::Identifier(identifier) if !identifier.name.is_qualified() => {
                 self.lookup_binding(identifier.name.text.as_str()).cloned()
             }
@@ -1027,8 +1056,23 @@ impl TemplateBodyResolver<'_, '_, '_> {
                         .get(access.member.text.as_str())
                         .cloned()
                 }
+                syntax::Expression::MemberAccess(access) => {
+                    self.selections
+                        .iter()
+                        .rev()
+                        .find_map(|selection| match selection {
+                            ResolvedTemplateSelection::BoundMember { span, output, .. }
+                                if *span == access.span =>
+                            {
+                                output.clone()
+                            }
+                            _ => None,
+                        })
+                }
                 _ => None,
             },
+            syntax::Expression::Unary(unary) => self.operator_output(unary.span),
+            syntax::Expression::Binary(binary) => self.operator_output(binary.span),
             _ => None,
         }
     }

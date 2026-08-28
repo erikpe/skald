@@ -82,10 +82,10 @@ pub use generic_requirements::{
     GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
 };
 pub(crate) use generic_specializations::{
-    ClosedGenericBoundMember, ClosedGenericIterationSelection, ClosedGenericRequirementSubject,
-    GenericApplicationOrigin, GenericClassInstanceKey, GenericSpecialization,
-    GenericSpecializationKey, GenericSpecializationProvenance, GenericSpecializationState,
-    GenericSpecializationTable, GenericSpecializationTransition,
+    ClosedGenericBoundMember, ClosedGenericIterationSelection, ClosedGenericOperatorSelection,
+    ClosedGenericRequirementSubject, GenericApplicationOrigin, GenericClassInstanceKey,
+    GenericSpecialization, GenericSpecializationKey, GenericSpecializationProvenance,
+    GenericSpecializationState, GenericSpecializationTable, GenericSpecializationTransition,
 };
 pub use generic_templates::{
     ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedInterfaceTemplate,
@@ -100,7 +100,8 @@ pub use generic_templates::{
 pub(crate) use generic_templates::{
     ResolvedClassTemplateSemanticTable, ResolvedClassTemplateSemantics, ResolvedTemplateBound,
     ResolvedTemplateBoundRequirement, ResolvedTemplateConstructionMode,
-    ResolvedTemplateDependentSelectionKind, ResolvedTemplateSelection, ResolvedTemplateTypeUse,
+    ResolvedTemplateDependentSelectionKind, ResolvedTemplateOperatorSelection,
+    ResolvedTemplateOperatorSyntax, ResolvedTemplateSelection, ResolvedTemplateTypeUse,
     ResolvedTemplateTypeUseContext,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
@@ -120,7 +121,8 @@ pub use operator_selection::{ResolvedOperatorResolution, ResolvedOperatorSelecti
 pub use optional_box_types::{ResolvedOptionalBoxType, ResolvedOptionalBoxTypeTable};
 pub use optional_types::{ResolvedOptionalType, ResolvedOptionalTypeTable};
 pub(crate) use primitive_operator_evidence::{
-    canonical_operator_application, primitive_operator_evidence, primitive_operator_registry,
+    canonical_operator_application, primitive_operator_evidence, primitive_operator_operation,
+    primitive_operator_registry, ResolvedPrimitiveOperatorOperation,
 };
 pub use shared_targets::{
     ResolvedObjectTarget, ResolvedSharedTarget, ResolvedSharedTargetCategory,

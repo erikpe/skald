@@ -464,10 +464,10 @@ operator feature creates no hidden overload set or operator-only specificity
 relation. Compiler-provided primitive protocol evidence is static and never
 enters this object conformance or dispatch model.
 
-Class-valued operator expressions and static primitive satisfaction of exact
-canonical operator bounds are implemented. Primitive evidence still never
-enters the polymorphism, witness, ownership, cast, or dispatch surface;
-definition-site generic operator realization remains staged.
+Class-valued operator expressions, static primitive satisfaction of exact
+canonical operator bounds, and definition-site generic operator realization
+are implemented. Primitive evidence still never enters the polymorphism,
+witness, ownership, cast, or dispatch surface.
 
 ## Exclusions
 

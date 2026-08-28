@@ -10,8 +10,9 @@ use crate::{
 };
 
 use super::{
-    GenericRequirement, ResolvedFunctionTypeParameterMode, ResolvedInterfaceClaim,
-    ResolvedTopLevelId, ResolvedVisibility,
+    CanonicalOperatorProtocol, GenericRequirement, ResolvedBinaryOperator,
+    ResolvedFunctionTypeParameterMode, ResolvedInterfaceClaim, ResolvedTopLevelId,
+    ResolvedUnaryOperator, ResolvedVisibility,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -562,6 +563,34 @@ pub(crate) enum ResolvedTemplateBoundRequirement {
     Generic(InterfaceTemplateRequirementId),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ResolvedTemplateOperatorSyntax {
+    Unary {
+        operator: ResolvedUnaryOperator,
+        operator_span: Span,
+        operand_span: Span,
+    },
+    Binary {
+        operator: ResolvedBinaryOperator,
+        operator_span: Span,
+        left_span: Span,
+        right_span: Span,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedTemplateOperatorSelection {
+    pub(crate) syntax: ResolvedTemplateOperatorSyntax,
+    pub(crate) parameter: TypeParameterId,
+    pub(crate) bound: usize,
+    pub(crate) protocol: CanonicalOperatorProtocol,
+    pub(crate) requirement: InterfaceTemplateRequirementId,
+    pub(crate) rhs: Option<ResolvedTemplateType>,
+    pub(crate) output: ResolvedTemplateType,
+    pub(crate) origin_span: Span,
+    pub(crate) span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ResolvedTemplateSelection {
     TopLevel {
@@ -590,8 +619,10 @@ pub(crate) enum ResolvedTemplateSelection {
         bound: usize,
         requirement: ResolvedTemplateBoundRequirement,
         member_name: String,
+        output: Option<ResolvedTemplateType>,
         span: Span,
     },
+    Operator(ResolvedTemplateOperatorSelection),
     Iteration {
         parameter: TypeParameterId,
         bound: usize,

@@ -1,6 +1,14 @@
 schema = 2
 
 [[test]]
+name = "generic_operator_overloading"
+mode = "run"
+source = "generic_operator_overloading.ska"
+[[test.run]]
+name = "primitive_intrinsics_and_class_witnesses"
+expect = { stdout = { file = "data/generic_operator_overloading.stdout" } }
+
+[[test]]
 name = "call_equivalence_operator_overloading"
 mode = "run"
 source = "call_equivalence_operator_overloading.ska"
