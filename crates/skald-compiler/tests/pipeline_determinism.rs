@@ -1413,7 +1413,10 @@ fn range_module_phase_dump(variant: usize) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
-    assert!(dump_hir(&hir).contains("CanonicalRangeSyntax"));
+    let hir_dump = dump_hir(&hir);
+    assert!(hir_dump.contains("CanonicalRangeSyntax"));
+    assert!(hir_dump.contains("PrimitiveRange endpoint=u64"));
+    assert!(hir_dump.contains("Protocol interface="));
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     let planned = plan_static_lifetimes(preliminary).unwrap();
@@ -1432,7 +1435,7 @@ fn range_module_phase_dump(variant: usize) -> String {
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
             resolved_dump,
-            dump_hir(&hir),
+            hir_dump,
             preliminary_dump,
             planned_dump,
             dump_mir(&final_mir),

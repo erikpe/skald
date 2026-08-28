@@ -61,6 +61,7 @@ mod private_cell_fields;
 mod produced_aliases;
 mod produced_fields;
 mod produced_receivers;
+mod range_iteration;
 mod robustness;
 mod shared;
 mod shared_optional_boxes;

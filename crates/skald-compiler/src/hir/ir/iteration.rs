@@ -1,4 +1,4 @@
-//! Structured general-iteration plans retained until ordinary MIR lowering.
+//! Structured protocol and immediate-range iteration plans retained until MIR lowering.
 
 use crate::{
     identity::{
@@ -9,9 +9,10 @@ use crate::{
 };
 
 use super::{
-    HirAccess, HirArrayCopyElement, HirBlock, HirControlEffects, HirObjectView,
-    HirOptionalCopyPlan, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
-    HirOptionalUnwrapPlan, HirSelectedCopyOperation, HirSharedTarget, HirViewTarget, Type,
+    HirAccess, HirArrayCopyElement, HirBinaryOperation, HirBlock, HirCanonicalRangeOrigin,
+    HirControlEffects, HirExpression, HirIntegerType, HirObjectView, HirOptionalCopyPlan,
+    HirOptionalDestructionPlan, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
+    HirPrimitiveComparison, HirSelectedCopyOperation, HirSharedTarget, HirViewTarget, Type,
 };
 
 /// One completely selected and typed `for-in` statement.
@@ -23,11 +24,7 @@ use super::{
 pub struct HirForIn {
     pub loop_id: LoopId,
     pub binding: LocalId,
-    pub protocol: HirIterationProtocol,
-    pub receiver: HirIterationReceiver,
-    pub state: HirIterationStatePlan,
-    pub result: HirIterationResultPlan,
-    pub item: HirIterationItemPlan,
+    pub plan: HirForInPlan,
     pub body: HirBlock,
     pub effects: HirControlEffects,
     pub spans: HirIterationSpans,
@@ -76,15 +73,128 @@ impl HirForIn {
         Self {
             loop_id,
             binding,
-            protocol,
-            receiver,
-            state,
-            result,
-            item,
+            plan: HirForInPlan::Protocol(Box::new(HirProtocolIterationPlan {
+                protocol,
+                receiver,
+                state,
+                result,
+                item,
+            })),
             body,
             effects,
             spans,
         }
+    }
+
+    pub fn new_primitive_range(
+        loop_id: LoopId,
+        binding: LocalId,
+        plan: HirPrimitiveRangeIterationPlan,
+        body: HirBlock,
+        spans: HirIterationSpans,
+    ) -> Self {
+        assert_eq!(binding.callable(), loop_id.callable());
+        assert_eq!(plan.item.binding, binding);
+        assert_eq!(plan.item.access, HirAccess::ReadOnly);
+        assert_eq!(plan.item.value.ty, plan.integer.operand_type());
+        assert_eq!(plan.item.value.copy, Some(HirIterationValueCopy::Trivial));
+        assert_eq!(
+            plan.item.value.destruction,
+            HirIterationValueDestruction::Trivial
+        );
+        plan.assert_valid();
+
+        let effects = body.effects.clone().through_loop(loop_id);
+        Self {
+            loop_id,
+            binding,
+            plan: HirForInPlan::PrimitiveRange(Box::new(plan)),
+            body,
+            effects,
+            spans,
+        }
+    }
+
+    pub const fn protocol_plan(&self) -> Option<&HirProtocolIterationPlan> {
+        match &self.plan {
+            HirForInPlan::Protocol(plan) => Some(plan),
+            HirForInPlan::PrimitiveRange(_) => None,
+        }
+    }
+
+    pub fn protocol_plan_mut(&mut self) -> Option<&mut HirProtocolIterationPlan> {
+        match &mut self.plan {
+            HirForInPlan::Protocol(plan) => Some(plan),
+            HirForInPlan::PrimitiveRange(_) => None,
+        }
+    }
+
+    pub const fn primitive_range_plan(&self) -> Option<&HirPrimitiveRangeIterationPlan> {
+        match &self.plan {
+            HirForInPlan::Protocol(_) => None,
+            HirForInPlan::PrimitiveRange(plan) => Some(plan),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirForInPlan {
+    Protocol(Box<HirProtocolIterationPlan>),
+    PrimitiveRange(Box<HirPrimitiveRangeIterationPlan>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirProtocolIterationPlan {
+    pub protocol: HirIterationProtocol,
+    pub receiver: HirIterationReceiver,
+    pub state: HirIterationStatePlan,
+    pub result: HirIterationResultPlan,
+    pub item: HirIterationItemPlan,
+}
+
+/// One immediate canonical integer range lowered without materializing the
+/// ordinary `Range<T>` value or its general-iteration protocol traffic.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirPrimitiveRangeIterationPlan {
+    pub origin: HirCanonicalRangeOrigin,
+    pub lower: HirExpression,
+    pub upper: HirExpression,
+    pub integer: HirIntegerType,
+    pub comparison: HirPrimitiveComparison,
+    pub increment: HirBinaryOperation,
+    pub item: HirIterationItemPlan,
+}
+
+impl HirPrimitiveRangeIterationPlan {
+    fn assert_valid(&self) {
+        let ty = self.integer.operand_type();
+        assert_eq!(self.origin.endpoint_type, ty);
+        assert_eq!(self.lower.ty, ty);
+        assert_eq!(self.upper.ty, ty);
+        assert_eq!(
+            self.comparison,
+            HirPrimitiveComparison {
+                predicate: super::HirComparisonPredicate::LessThan,
+                operand: super::HirComparisonOperand::Integer(self.integer),
+            }
+        );
+        assert_eq!(self.increment, range_increment(self.integer));
+        assert_eq!(
+            self.origin.ordering.realization,
+            super::HirRangeProtocolRealization::PrimitiveIntrinsic(ty)
+        );
+        assert_eq!(
+            self.origin.successor.realization,
+            super::HirRangeProtocolRealization::PrimitiveIntrinsic(ty)
+        );
+    }
+}
+
+const fn range_increment(integer: HirIntegerType) -> HirBinaryOperation {
+    match integer {
+        HirIntegerType::I64 => HirBinaryOperation::AddI64,
+        HirIntegerType::U64 => HirBinaryOperation::AddU64,
+        HirIntegerType::U8 => HirBinaryOperation::AddU8,
     }
 }
 

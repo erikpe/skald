@@ -1,0 +1,14 @@
+schema = 2
+
+[[test]]
+name = "concise_range_failure"
+mode = "run"
+source = "concise_range_failure.ska"
+
+[[test.run]]
+name = "body_panic_attribution"
+expect = { exit = "failure", stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at concise_range_failure::fail (tests/golden/ranges/concise_range_failure.ska:2:12)
+  at concise_range_failure::main (tests/golden/ranges/concise_range_failure.ska:7:16)
+""" } }

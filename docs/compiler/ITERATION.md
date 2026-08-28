@@ -202,10 +202,12 @@ growth without adding an iteration-specific recursion path.
 ## Target and ABI boundary
 
 Backends receive only verified ordinary MIR calls, optional operations,
-lifetime operations, and cyclic CFG. Existing interface witness metadata and
-internal calling conventions realize protocol calls. State and item layout use
-their ordinary exact types. Backend loop handling remains insensitive to
-source loop kind and lexical cleanup depth.
+scalar operations, lifetime operations, and cyclic CFG. Existing interface
+witness metadata and internal calling conventions realize protocol calls.
+Eligible immediate primitive ranges have already erased to scalar storage,
+comparison, increment, and control flow. State and item layout use their
+ordinary exact types. Backend loop handling remains insensitive to source loop
+kind and lexical cleanup depth.
 
 General iteration adds no public runtime symbol, metadata format, allocation
 rule, external C calling convention, or ABI-version change. A library
@@ -222,8 +224,8 @@ explicit `Range<T>` conformance; deterministic diagnostics and dumps;
 verifier-negative evidence; and native x86-64 observations.
 
 The [generic-range compiler contract](RANGES.md) uses this foundation for its
-implemented explicit `Range<T>` path and separately defines planned `..`
-syntax and one immediate integer syntax-fusion plan. Primitive or
+implemented explicit `Range<T>` path, concise `..` syntax, and immediate
+integer syntax-fusion plan. Primitive or
 array intrinsic iterable conformance, generators, borrowed items, and broader
 optimization guarantees remain separate work. The confirmed iteration
 rationale is preserved in the

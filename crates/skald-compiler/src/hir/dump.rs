@@ -1063,75 +1063,118 @@ impl<'types> HirDumper<'types> {
 
     fn for_in(&mut self, statement: &HirForIn) {
         self.line(
-            &format!(
-                "ForIn {} binding {} interface {} item {} state {} result {}",
-                statement.loop_id,
-                statement.binding,
-                statement.protocol.interface,
-                self.type_name(statement.protocol.item),
-                self.type_name(statement.protocol.state),
-                statement.protocol.result,
-            ),
+            &format!("ForIn {} binding {}", statement.loop_id, statement.binding),
             statement.spans.span,
         );
         self.indented(|dumper| {
-            dumper.raw_line(&format!(
-                "Requirements iter_state={} iter_next={}",
-                statement.protocol.iter_state, statement.protocol.iter_next,
-            ));
-            dumper.raw_line(&format!(
-                "Receiver iterable={} lifetime={:?}",
-                dumper.type_name(statement.receiver.iterable),
-                statement.receiver.lifetime,
-            ));
-            dumper.indented(|dumper| match &statement.receiver.carrier {
-                HirIterationReceiverCarrier::View(view) => dumper.object_view("LoopReceiver", view),
-                HirIterationReceiverCarrier::Checked(view) => {
-                    let kind = match view.kind {
-                        HirCheckedObjectViewKind::Static => "static",
-                        HirCheckedObjectViewKind::RuntimeTerminate => "runtime-terminate",
-                    };
-                    dumper.object_view(&format!("LoopReceiver Checked {kind}"), &view.view);
-                }
-            });
-            dumper.raw_line(&format!(
-                "State copy={:?} destruction={:?}",
-                statement.state.value.copy, statement.state.value.destruction,
-            ));
-            dumper.raw_line(&format!(
-                "IterState target={}:{} receiver={} result={}",
-                statement.state.initialize.target.interface,
-                statement.state.initialize.target.requirement,
-                access_name(statement.state.initialize.receiver_access),
-                dumper.type_name(statement.state.initialize.result),
-            ));
-            dumper.raw_line(&format!(
-                "IterNext target={}:{} receiver={} state-alias={} {} result={}",
-                statement.state.advance.target.interface,
-                statement.state.advance.target.requirement,
-                access_name(statement.state.advance.receiver_access),
-                access_name(statement.state.advance.state_alias.access),
-                dumper.type_name(statement.state.advance.state_alias.ty),
-                dumper.type_name(statement.state.advance.result),
-            ));
-            dumper.raw_line(&format!(
-                "Result optional={} payload={} presence={:?} unwrap={:?} destruction={:?}",
-                statement.result.optional,
-                dumper.type_name(statement.result.payload),
-                statement.result.presence,
-                statement.result.unwrap,
-                statement.result.destruction,
-            ));
-            dumper.raw_line(&format!(
-                "Item binding={} access={} copy={:?} destruction={:?}",
-                statement.item.binding,
-                access_name(statement.item.access),
-                statement.item.value.copy,
-                statement.item.value.destruction,
-            ));
+            match &statement.plan {
+                HirForInPlan::Protocol(plan) => dumper.protocol_iteration_plan(plan),
+                HirForInPlan::PrimitiveRange(plan) => dumper.primitive_range_plan(plan),
+            }
             dumper.raw_line(&format!("Effects {:?}", statement.effects));
             dumper.block(&statement.body);
         });
+    }
+
+    fn protocol_iteration_plan(&mut self, plan: &HirProtocolIterationPlan) {
+        self.raw_line(&format!(
+            "Protocol interface={} item={} state={} result={}",
+            plan.protocol.interface,
+            self.type_name(plan.protocol.item),
+            self.type_name(plan.protocol.state),
+            plan.protocol.result,
+        ));
+        self.raw_line(&format!(
+            "Requirements iter_state={} iter_next={}",
+            plan.protocol.iter_state, plan.protocol.iter_next,
+        ));
+        self.raw_line(&format!(
+            "Receiver iterable={} lifetime={:?}",
+            self.type_name(plan.receiver.iterable),
+            plan.receiver.lifetime,
+        ));
+        self.indented(|dumper| match &plan.receiver.carrier {
+            HirIterationReceiverCarrier::View(view) => dumper.object_view("LoopReceiver", view),
+            HirIterationReceiverCarrier::Checked(view) => {
+                let kind = match view.kind {
+                    HirCheckedObjectViewKind::Static => "static",
+                    HirCheckedObjectViewKind::RuntimeTerminate => "runtime-terminate",
+                };
+                dumper.object_view(&format!("LoopReceiver Checked {kind}"), &view.view);
+            }
+        });
+        self.raw_line(&format!(
+            "State copy={:?} destruction={:?}",
+            plan.state.value.copy, plan.state.value.destruction,
+        ));
+        self.raw_line(&format!(
+            "IterState target={}:{} receiver={} result={}",
+            plan.state.initialize.target.interface,
+            plan.state.initialize.target.requirement,
+            access_name(plan.state.initialize.receiver_access),
+            self.type_name(plan.state.initialize.result),
+        ));
+        self.raw_line(&format!(
+            "IterNext target={}:{} receiver={} state-alias={} {} result={}",
+            plan.state.advance.target.interface,
+            plan.state.advance.target.requirement,
+            access_name(plan.state.advance.receiver_access),
+            access_name(plan.state.advance.state_alias.access),
+            self.type_name(plan.state.advance.state_alias.ty),
+            self.type_name(plan.state.advance.result),
+        ));
+        self.raw_line(&format!(
+            "Result optional={} payload={} presence={:?} unwrap={:?} destruction={:?}",
+            plan.result.optional,
+            self.type_name(plan.result.payload),
+            plan.result.presence,
+            plan.result.unwrap,
+            plan.result.destruction,
+        ));
+        self.iteration_item(&plan.item);
+    }
+
+    fn primitive_range_plan(&mut self, plan: &HirPrimitiveRangeIterationPlan) {
+        self.raw_line(&format!(
+            "PrimitiveRange endpoint={} compare={:?} increment={:?}",
+            plan.integer.name(),
+            plan.comparison,
+            plan.increment,
+        ));
+        self.raw_line(&format!(
+            "CanonicalRangeSyntax template={} class={} initializer={} iterable={}",
+            plan.origin.range_template,
+            plan.origin.range_class,
+            plan.origin.initializer,
+            plan.origin.iterable,
+        ));
+        self.indented(|dumper| {
+            dumper.range_protocol_evidence(
+                "Ordering",
+                plan.origin.ordering,
+                plan.origin.operator_span,
+            );
+            dumper.range_protocol_evidence(
+                "Successor",
+                plan.origin.successor,
+                plan.origin.operator_span,
+            );
+            dumper.line("Lower", plan.lower.span);
+            dumper.indented(|dumper| dumper.expression(&plan.lower));
+            dumper.line("Upper", plan.upper.span);
+            dumper.indented(|dumper| dumper.expression(&plan.upper));
+        });
+        self.iteration_item(&plan.item);
+    }
+
+    fn iteration_item(&mut self, item: &HirIterationItemPlan) {
+        self.raw_line(&format!(
+            "Item binding={} access={} copy={:?} destruction={:?}",
+            item.binding,
+            access_name(item.access),
+            item.value.copy,
+            item.value.destruction,
+        ));
     }
 
     fn copy_construction(&mut self, copy: &crate::hir::HirCopyConstruction) {

@@ -39,6 +39,7 @@ mod place;
 pub(crate) mod preliminary;
 mod primitive_alias;
 mod primitive_cast;
+mod scalar_initialization;
 mod shared;
 mod shift;
 mod sink;

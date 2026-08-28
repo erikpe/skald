@@ -21,6 +21,9 @@ use super::{
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_for_in_statement(&mut self, statement: &ResolvedForIn) -> CheckedStatement {
+        if self.is_primitive_range_iteration_candidate(statement) {
+            return self.check_primitive_range_for_in_statement(statement);
+        }
         let item_type = lower_type_kind(statement.selection.item);
         let state_type = lower_type_kind(statement.selection.state);
         let mut receiver = self.check_iteration_receiver(statement);

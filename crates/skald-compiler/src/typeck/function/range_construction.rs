@@ -174,7 +174,11 @@ impl CallableChecker<'_, '_> {
             && valid_realization(origin.endpoint_type, origin.successor)
     }
 
-    fn report_invalid_range_origin(&mut self, span: crate::source::Span, message: &'static str) {
+    pub(super) fn report_invalid_range_origin(
+        &mut self,
+        span: crate::source::Span,
+        message: &'static str,
+    ) {
         self.diagnostics.push(
             Diagnostic::error(
                 INVALID_RANGE_CONSTRUCTION_ORIGIN,

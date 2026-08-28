@@ -131,10 +131,12 @@ primitive-intrinsic or class-witness identities. Typed HIR must contain
 ordinary class construction plus its verified, non-forgeable
 `CanonicalRangeSyntax` origin. Explicit constructors have an `Explicit`
 origin, and stored or class ranges retain ordinary construction, interface
-calls, and optional-result flow. MIR and assembly never look up a range by
-name or contain a range-specific runtime operation. After immediate integer
-fusion lands, only a directly consumed canonical primitive syntax origin may
-select the structured fused `HirForIn` plan.
+calls, and optional-result flow. A directly consumed eligible primitive origin
+prints a `PrimitiveRange` `HirForIn` plan; a `Protocol` plan identifies every
+ordinary boundary. MIR and assembly never look up a range by name or contain a
+range-specific runtime operation: the fused plan is visible only as
+`range-current`/`range-end` scalar storage, comparison, increment, and cyclic
+control flow.
 
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and

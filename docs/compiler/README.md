@@ -251,9 +251,10 @@ and ordinary `Range<T>` class, while three static integer realizations use
 existing operations. Explicit ranges run through generic construction,
 general iteration, lifecycle, and native code without primitive object
 conformance, new lower IR, runtime service, or ABI change. Lowest-precedence
-`..` resolution, ordinary class-construction HIR with non-forgeable syntax
-provenance, immediate syntax-only primitive loop fusion, structural
-performance evidence, and the matched benchmark remain planned.
+`..` resolution and ordinary class-construction HIR retain non-forgeable syntax
+provenance. Immediately consumed exact integer syntax loops select a structured
+fusion plan and erase to existing scalar MIR. Structural performance closure
+and the matched benchmark remain planned.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

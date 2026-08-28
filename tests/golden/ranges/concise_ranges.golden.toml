@@ -7,4 +7,4 @@ source = "concise_ranges.ska"
 
 [[test.run]]
 name = "ordinary_construction_iteration_and_endpoint_order"
-expect = { stdout = { inline = "101\n102\n2\n3\n4\n18\n27\n36\n5\n254\n1\n1\n2\n2\n3\n3\n" } }
+expect = { stdout = { inline = "101\n102\n2\n3\n4\n18\n27\n36\n5\n254\n-2\n-1\n0\n7\n-99\n-99\n8\n18446744073709551614\n9223372036854775806\n1\n1\n2\n2\n3\n3\n" } }

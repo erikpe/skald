@@ -41,12 +41,15 @@ nesting budget. Module and resolution tests own compiler dependency evidence,
 generic specialization requests, exact endpoint matching, canonical
 initializer/protocol identities, primitive versus class realizations, and
 stable dumps. Type-check and HIR tests own exact construction-origin
-correspondence, explicit-versus-syntax distinction, mutation rejection, and
-ordinary consumer plans. Existing construction, iteration, lifecycle, MIR,
-and backend owners verify the erased ordinary path. Native goldens cover
-primitive and class ranges, stored and direct use, evaluation order, and loop
-exits; cross-process tests pin complete phase determinism. Immediate-loop
-fusion remains a later, separately tested plan.
+correspondence, explicit-versus-syntax distinction, ordinary-versus-fused
+execution-plan selection, excluded boundaries, and mutation rejection. MIR
+tests own the scalar fused shape, endpoint and item epochs,
+advance-before-body order, control targets, cleanup, and absence of
+protocol/optional traffic. Existing construction, iteration, lifecycle, and
+backend owners verify both erased paths. Native goldens cover primitive and
+class ranges, stored and direct use, evaluation order, boundaries, mixed
+nesting, all exits, and panic attribution; cross-process tests pin complete
+phase determinism.
 
 Optional-value coverage spans type/capability/containment tests, HIR and MIR
 shape and verifier tests, target layout tests, and native lifecycle tests.

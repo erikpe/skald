@@ -54,6 +54,17 @@ behavior is separate from the target-independent phase model and is defined by
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
+`HirForIn` carries one exhaustive execution plan. `Protocol` retains the
+selected iterable receiver, state, optional result, item lifecycle, and call
+plans. `PrimitiveRange` is selected only for an immediately consumed canonical
+`u8`, `u64`, or `i64` syntax origin and retains ordered endpoints, exact
+comparison/increment operations, and the item epoch. Preliminary-MIR lowering
+erases the latter to current/end scalar storage, one less-than branch, one
+same-typed increment before source body entry, ordinary jumps, and explicit
+cleanup. No range aggregate, optional, protocol call, range MIR operation, or
+range identity survives that boundary; subsequent static-effect, lifecycle,
+pipeline, verification, and backend phases remain source-loop agnostic.
+
 The frozen [generic-class specialization contract](GENERIC_CLASSES.md) inserts
 a template-resolution and deterministic closed-specialization responsibility
 between syntax/module declaration collection and the ordinary resolved

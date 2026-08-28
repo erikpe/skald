@@ -1085,4 +1085,5 @@ non-associative `lower .. upper` expression. The lexer chooses `..` before
 member-access `.`, including without whitespace after integer and floating
 literals. Parsing, canonical range resolution, ordinary typed construction,
 general iteration, lifecycle, and native execution are implemented.
-Immediate primitive-loop fusion remains planned.
+Directly consumed exact `u8`, `u64`, and `i64` ranges additionally use the
+implemented scalar loop-fusion profile.

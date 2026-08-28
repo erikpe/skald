@@ -34,6 +34,7 @@ mod initializer;
 mod iteration;
 mod overload;
 mod range_construction;
+mod range_iteration;
 mod statement;
 
 pub(super) use copy::is_ungrouped_object_call;

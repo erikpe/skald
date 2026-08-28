@@ -4,11 +4,14 @@ use super::*;
 use crate::hir::{
     HirForIn, HirIterationReceiverCarrier, HirIterationStoredValuePlan, HirIterationValueCopy,
     HirIterationValueDestruction, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
-    HirOptionalUnwrapPlan, Type,
+    HirOptionalUnwrapPlan, HirProtocolIterationPlan, Type,
 };
 
 impl BodyLowerer<'_> {
-    pub(super) fn lower_for_in(&mut self, statement: &HirForIn) {
+    pub(super) fn lower_protocol_for_in(&mut self, statement: &HirForIn) {
+        let plan = statement
+            .protocol_plan()
+            .expect("protocol iteration lowering requires a protocol plan");
         let reaches_latch = statement.body.effects.can_fall_through()
             || statement.body.effects.can_continue_to(statement.loop_id);
 
@@ -22,7 +25,7 @@ impl BodyLowerer<'_> {
         let outer_cleanup = self.body.allocate_block(statement.spans.span);
         let exit = self.body.allocate_block(statement.spans.span);
         let access_failure = self.body.allocate_block(statement.spans.binding_span);
-        let item_copy = statement
+        let item_copy = plan
             .item
             .value
             .copy
@@ -42,7 +45,7 @@ impl BodyLowerer<'_> {
         // Acquire one read-only view and promote every supporting carrier from
         // full-expression duration to this loop's outer lexical scope.
         let optional_mark = self.optional_view_mark();
-        let mut receiver = match &statement.receiver.carrier {
+        let mut receiver = match &plan.receiver.carrier {
             HirIterationReceiverCarrier::View(view) => self.lower_iteration_object_view(view),
             HirIterationReceiverCarrier::Checked(view) => {
                 self.lower_iteration_checked_object_view(view)
@@ -54,14 +57,14 @@ impl BodyLowerer<'_> {
         let state = self.new_iteration_storage(
             "iteration-state",
             MirStorageKind::Local,
-            self.lower_type(statement.protocol.state),
+            self.lower_type(plan.protocol.state),
             statement.spans.iterable_span,
         );
         self.begin_storage_lifetime(state, statement.spans.iterable_span);
         self.cleanup.register_storage(state);
         self.emit_iteration_state_call(statement, receiver.clone(), state);
-        self.register_iteration_value(state, &statement.state.value);
-        let state_array_anchor = match statement.protocol.state {
+        self.register_iteration_value(state, &plan.state.value);
+        let state_array_anchor = match plan.protocol.state {
             Type::Array(array) => Some((
                 self.new_iteration_storage(
                     "iteration-state-array-anchor",
@@ -77,14 +80,14 @@ impl BodyLowerer<'_> {
         let result = self.new_iteration_storage(
             "iteration-result",
             MirStorageKind::Local,
-            MirType::Optional(statement.result.optional),
+            MirType::Optional(plan.result.optional),
             statement.spans.span,
         );
         let scalar_payload = matches!(item_copy, HirIterationValueCopy::Trivial).then(|| {
             self.new_iteration_storage(
                 "iteration-payload",
                 MirStorageKind::OptionalUnwrap,
-                self.lower_type(statement.protocol.item),
+                self.lower_type(plan.protocol.item),
                 statement.spans.binding_span,
             )
         });
@@ -109,13 +112,13 @@ impl BodyLowerer<'_> {
             }));
         }
         let optional_shared_result = matches!(
-            statement.result.destruction,
+            plan.result.destruction,
             HirOptionalDestructionPlan::Shared(_)
         );
         self.emit(MirInstruction::Call(MirCall {
             target: MirCallTarget::Interface(MirInterfaceCallTarget {
-                interface: statement.state.advance.target.interface,
-                requirement: statement.state.advance.target.requirement,
+                interface: plan.state.advance.target.interface,
+                requirement: plan.state.advance.target.requirement,
             }),
             receiver: Some(receiver.clone().into()),
             arguments: vec![MirArgument::Place(MirPlace::base(state))],
@@ -132,7 +135,7 @@ impl BodyLowerer<'_> {
             self.end_storage_lifetime(anchor, statement.spans.span);
         }
         debug_assert!(matches!(
-            statement.result.presence,
+            plan.result.presence,
             HirOptionalPresenceTestPlan::OuterTag | HirOptionalPresenceTestPlan::SharedOwnerNull
         ));
         let is_present = self.assign(
@@ -155,10 +158,7 @@ impl BodyLowerer<'_> {
             .expect("allocated iteration presence block must be selectable");
         match item_copy {
             HirIterationValueCopy::Trivial => {
-                debug_assert_eq!(
-                    statement.result.unwrap,
-                    HirOptionalUnwrapPlan::ExtractScalar
-                );
+                debug_assert_eq!(plan.result.unwrap, HirOptionalUnwrapPlan::ExtractScalar);
                 let payload = scalar_payload.expect("scalar iteration item needs payload storage");
                 self.begin_storage_lifetime(payload, statement.spans.binding_span);
                 self.terminate(MirTerminator::OptionalUnwrap {
@@ -171,12 +171,12 @@ impl BodyLowerer<'_> {
             }
             HirIterationValueCopy::Class { class, .. } => {
                 debug_assert_eq!(
-                    statement.result.unwrap,
+                    plan.result.unwrap,
                     HirOptionalUnwrapPlan::CheckedInlineClass(class)
                 );
                 self.terminate(MirTerminator::BeginOptionalView {
                     begin: MirOptionalViewBegin {
-                        optional: statement.result.optional,
+                        optional: plan.result.optional,
                         guard: payload_guard.expect("class iteration item needs a payload guard"),
                         source: MirPlace::base(result),
                         payload: MirType::Class(class),
@@ -191,14 +191,14 @@ impl BodyLowerer<'_> {
             }
             HirIterationValueCopy::Shared(target) => {
                 debug_assert_eq!(
-                    statement.result.unwrap,
+                    plan.result.unwrap,
                     HirOptionalUnwrapPlan::SecureSharedOwner(target)
                 );
                 let item = self.local_storage[statement.binding.index()];
                 self.begin_storage_lifetime(item, statement.spans.binding_span);
                 self.terminate(MirTerminator::OptionalSharedUnwrap {
                     unwrap: MirOptionalSharedUnwrap {
-                        optional: statement.result.optional,
+                        optional: plan.result.optional,
                         source: MirPlace::base(result),
                         destination: item,
                         target: lower_shared_target(target),
@@ -211,7 +211,7 @@ impl BodyLowerer<'_> {
             }
             HirIterationValueCopy::Array { array, .. } => {
                 debug_assert_eq!(
-                    statement.result.unwrap,
+                    plan.result.unwrap,
                     HirOptionalUnwrapPlan::CheckedInlineArray(array)
                 );
                 self.terminate(MirTerminator::Goto {
@@ -221,7 +221,7 @@ impl BodyLowerer<'_> {
             }
             HirIterationValueCopy::Optional { optional, .. } => {
                 debug_assert_eq!(
-                    statement.result.unwrap,
+                    plan.result.unwrap,
                     HirOptionalUnwrapPlan::CheckedNested(optional)
                 );
                 self.terminate(MirTerminator::Goto {
@@ -273,7 +273,7 @@ impl BodyLowerer<'_> {
                 let payload = scalar_payload.expect("scalar iteration item needs payload storage");
                 let value = self.assign(
                     MirRvalueKind::Load(MirPlace::base(payload)),
-                    self.lower_type(statement.protocol.item),
+                    self.lower_type(plan.protocol.item),
                     statement.spans.binding_span,
                 );
                 self.end_storage_lifetime(payload, statement.spans.binding_span);
@@ -290,7 +290,7 @@ impl BodyLowerer<'_> {
                     .push(ActiveOptionalGuard::Inline {
                         guard: payload_guard.expect("class iteration item needs a payload guard"),
                         source: MirPlace::base(result),
-                        optional: statement.result.optional,
+                        optional: plan.result.optional,
                         payload: MirType::Class(class),
                     });
                 self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
@@ -305,8 +305,7 @@ impl BodyLowerer<'_> {
             HirIterationValueCopy::Array { array, operation } => {
                 let produced = self.lower_array_copy_from_place(
                     array,
-                    MirPlace::base(result)
-                        .project_aggregate_optional_payload(statement.result.optional),
+                    MirPlace::base(result).project_aggregate_optional_payload(plan.result.optional),
                     lower_array_copy_element(operation),
                     statement.spans.binding_span,
                 );
@@ -336,13 +335,12 @@ impl BodyLowerer<'_> {
                 self.lower_optional_copy_initialize_at(
                     MirPlace::base(item),
                     optional,
-                    MirPlace::base(result)
-                        .project_aggregate_optional_payload(statement.result.optional),
+                    MirPlace::base(result).project_aggregate_optional_payload(plan.result.optional),
                     statement.spans.binding_span,
                 );
             }
         }
-        self.register_iteration_value(item, &statement.item.value);
+        self.register_iteration_value(item, &plan.item.value);
         self.cleanup_iteration_result(statement, result);
         self.lower_block(&statement.body);
         if !self.body.is_current_terminated() {
@@ -381,7 +379,7 @@ impl BodyLowerer<'_> {
             .expect("allocated iteration exit must be selectable");
     }
 
-    fn new_iteration_storage(
+    pub(super) fn new_iteration_storage(
         &mut self,
         name: &str,
         kind: MirStorageKind,
@@ -406,14 +404,17 @@ impl BodyLowerer<'_> {
         receiver: MirObjectView,
         state: StorageId,
     ) {
-        let ty = statement.state.value.ty;
+        let plan = statement
+            .protocol_plan()
+            .expect("iteration state calls require a protocol plan");
+        let ty = plan.state.value.ty;
         let scalar = matches!(
             ty,
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
         );
         let shared = matches!(ty, Type::Shared(_))
             || matches!(
-                statement.state.value.destruction,
+                plan.state.value.destruction,
                 HirIterationValueDestruction::Optional {
                     plan: HirOptionalDestructionPlan::Shared(_),
                     ..
@@ -421,14 +422,14 @@ impl BodyLowerer<'_> {
             );
         let result = scalar.then(|| {
             self.new_value(
-                self.lower_type(statement.protocol.state),
+                self.lower_type(plan.protocol.state),
                 statement.spans.iterable_span,
             )
         });
         self.emit(MirInstruction::Call(MirCall {
             target: MirCallTarget::Interface(MirInterfaceCallTarget {
-                interface: statement.state.initialize.target.interface,
-                requirement: statement.state.initialize.target.requirement,
+                interface: plan.state.initialize.target.interface,
+                requirement: plan.state.initialize.target.requirement,
             }),
             receiver: Some(receiver.into()),
             arguments: Vec::new(),
@@ -478,11 +479,14 @@ impl BodyLowerer<'_> {
     }
 
     fn cleanup_iteration_result(&mut self, statement: &HirForIn, result: StorageId) {
-        match statement.result.destruction {
+        let plan: &HirProtocolIterationPlan = statement
+            .protocol_plan()
+            .expect("iteration-result cleanup requires a protocol plan");
+        match plan.result.destruction {
             HirOptionalDestructionPlan::Trivial => {}
             HirOptionalDestructionPlan::Class(class) => {
                 self.emit_class_optional_cleanup(MirClassOptionalCleanup {
-                    optional: statement.result.optional,
+                    optional: plan.result.optional,
                     destination: MirPlace::base(result),
                     class,
                     span: statement.spans.span,
@@ -490,7 +494,7 @@ impl BodyLowerer<'_> {
             }
             HirOptionalDestructionPlan::Array(_) | HirOptionalDestructionPlan::Optional(_) => {
                 self.emit_aggregate_optional_cleanup(MirAggregateOptionalCleanup {
-                    optional: statement.result.optional,
+                    optional: plan.result.optional,
                     destination: MirPlace::base(result),
                     span: statement.spans.span,
                 });
@@ -498,7 +502,7 @@ impl BodyLowerer<'_> {
             HirOptionalDestructionPlan::Shared(target) => {
                 self.emit(MirInstruction::OptionalSharedCleanup(
                     MirOptionalSharedCleanup {
-                        optional: statement.result.optional,
+                        optional: plan.result.optional,
                         destination: MirPlace::base(result),
                         target: lower_shared_target(target),
                         span: statement.spans.span,

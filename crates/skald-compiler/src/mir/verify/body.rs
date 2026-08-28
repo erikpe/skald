@@ -82,6 +82,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_optional_initialization(function);
         self.verify_optional_guards(function);
         self.verify_array_ownership(function);
+        self.verify_scalar_initialization(function);
         self.verify_function_value_provenance(function);
 
         for value in function.values() {

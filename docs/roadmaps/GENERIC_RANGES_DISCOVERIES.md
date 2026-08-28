@@ -62,3 +62,28 @@ body errors and repeated-request context must remain deterministic. Address
 this as a general generic-diagnostic improvement after the active range
 roadmap, with existing generic-class and generic-interface failure goldens as
 regression coverage.
+
+## Refine fusion provenance inside specialized generic bodies
+
+**Priority:** low.
+
+**Problem:** RG4 conservatively keeps every range loop in a specialized
+generic class body on the protocol path. This correctly excludes ranges whose
+endpoint values depend on a generic parameter, but also misses an optimization
+for a wholly concrete literal range that happens to appear in the same body.
+Source semantics and eligibility safety are unaffected; only this incidental
+optimization opportunity is lost.
+
+**Evidence:** `typeck/function/range_iteration.rs` tests the specialized class
+owner before accepting an immediate primitive range. The RG4 negative matrix
+proves that a `T`-origin range specialized to `u64` remains ordinary.
+
+**Likely owner:** resolved/type-checked expression provenance for specialized
+generic bodies, not range lowering or MIR verification.
+
+**Useful boundary:** Record whether each closed endpoint expression depends on
+a substituted type or value producer. Permit fusion only when both endpoints
+are independently concrete and all other immediate-origin requirements hold.
+Do not infer this from the post-substitution primitive type or from source
+spelling. Implement only if representative generic code demonstrates a useful
+miss; the conservative rule is long-term sound.

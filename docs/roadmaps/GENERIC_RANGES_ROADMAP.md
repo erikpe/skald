@@ -1,6 +1,6 @@
 # Generic Ranges and Tight Range Loops Roadmap
 
-Status: in progress; RG4 is next.
+Status: in progress; RG5 is next.
 
 This roadmap implements the frozen
 [language contract](../language/RANGES.md) and
@@ -53,7 +53,7 @@ and determinism pipelines are the baseline. No other roadmap blocks RG0.
 - [x] RG1 — Explicit generic `Range<T>` values and iteration
 - [x] RG2 — Range punctuation, grammar, and resolved canonical construction
 - [x] RG3 — Concise range expression HIR and complete ordinary execution
-- [ ] RG4 — Immediate primitive range-loop fusion
+- [x] RG4 — Immediate primitive range-loop fusion
 - [ ] RG5 — Performance evidence, hardening, and release closure
 
 ## PR-sized implementation sequence
@@ -262,28 +262,28 @@ and all supported forms execute natively without fusion.
 **Purpose:** Remove protocol overhead only where typed canonical syntax proves
 the exact scalar loop while retaining the ordinary range path as reference.
 
-- [ ] Extend structured `HirForIn` execution planning with an immediate
+- [x] Extend structured `HirForIn` execution planning with an immediate
   primitive range variant selected only from exact canonical syntax origin.
-- [ ] Require exact `u8`, `u64`, or `i64`, compiler-provided comparison and
+- [x] Require exact `u8`, `u64`, or `i64`, compiler-provided comparison and
   successor realizations, canonical `Range<T>: Iterable<T, T>`, and no
   observable intervening boundary.
-- [ ] Keep explicit `Range<T>(...)`, stored ranges, classes, generic parameters,
+- [x] Keep explicit `Range<T>(...)`, stored ranges, classes, generic parameters,
   interface views, inherited claims, and lookalikes on the ordinary protocol
   plan, with negative eligibility tests for each.
-- [ ] Retain ordered endpoint evaluation, hidden current/end scalars, fresh item
+- [x] Retain ordered endpoint evaluation, hidden current/end scalars, fresh item
   epochs, primitive compare and increment operations, advance-before-body,
   loop identities, exits, cleanup depths, effects, and spans in HIR.
-- [ ] Lower the plan directly to existing scalar storage, comparison,
+- [x] Lower the plan directly to existing scalar storage, comparison,
   assignment, branch, jump, and cleanup MIR without constructing a range or
   optional result.
-- [ ] Verify equal/descending first exit, maximum-endpoint safety, normal body,
+- [x] Verify equal/descending first exit, maximum-endpoint safety, normal body,
   continue, break, return, nested fused/unfused loops, and panic attribution.
-- [ ] Add mutation tests for wrong origin/type/operation, missing endpoint or
+- [x] Add mutation tests for wrong origin/type/operation, missing endpoint or
   item epochs, update-after-body, invalid loop targets, cleanup imbalance, and
   forbidden interface/optional traffic.
-- [ ] Preserve ordinary static effects, phase determinism, backend legality,
+- [x] Preserve ordinary static effects, phase determinism, backend legality,
   runtime symbol set, and ABI version.
-- [ ] Update range, iteration, phase, backend, status, testing, and debugging
+- [x] Update range, iteration, phase, backend, status, testing, and debugging
   documents to the implemented fusion profile.
 
 **Primary implementation areas:** `HirForIn` execution plans and dumps,

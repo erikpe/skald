@@ -1,12 +1,12 @@
 # Generic Ranges and Concise Range Expressions
 
 Status: frozen language contract; explicit and concise generic ranges
-implemented. The
-canonical `Successor<Output>` protocol, ordinary `Range<T>` class, class
+implemented through immediate primitive-loop fusion. The canonical
+`Successor<Output>` protocol, ordinary `Range<T>` class, class
 opt-in, static integer realizations, explicit half-open iteration, `..`
 syntax, exact canonical resolution, ordinary construction lowering, and
-native execution are implemented. The initial primitive tight-loop profile
-remains planned. The
+native execution, and the initial `u8`/`u64`/`i64` tight-loop profile are
+implemented. Measured handwritten-`while` parity remains planned. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains authoritative for accepted
 source syntax.
@@ -258,7 +258,7 @@ for (i in lower .. upper) {
 ```
 
 For exact `u8`, `u64`, or `i64` endpoints with canonical primitive ordering
-and successor evidence, the compiler may omit the materialized range,
+and successor evidence, the compiler omits the materialized range,
 interface calls, and optional result. It must preserve endpoint evaluation,
 half-open comparison, item value, advance-before-body order, loop exits, and
 cleanup while emitting ordinary scalar control flow.

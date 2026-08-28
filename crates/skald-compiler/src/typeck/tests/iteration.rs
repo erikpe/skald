@@ -65,7 +65,12 @@ fn first_for_in(hir: &crate::hir::HirProgram) -> &crate::hir::HirForIn {
 }
 
 fn receiver_view(loop_: &crate::hir::HirForIn) -> &crate::hir::HirObjectView {
-    match &loop_.receiver.carrier {
+    match &loop_
+        .protocol_plan()
+        .expect("general-iteration fixture requires a protocol plan")
+        .receiver
+        .carrier
+    {
         HirIterationReceiverCarrier::View(view) => view,
         HirIterationReceiverCarrier::Checked(view) => &view.view,
     }
@@ -78,33 +83,138 @@ fn primitive_iteration_retains_exact_dispatch_receiver_and_lifecycle_plans() {
     ));
     let loop_ = first_for_in(&hir);
 
-    assert_eq!(loop_.protocol.item, Type::I64);
-    assert_eq!(loop_.protocol.state, Type::U64);
     assert_eq!(
-        loop_.protocol.iter_state.interface(),
-        loop_.protocol.interface
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .item,
+        Type::I64
     );
     assert_eq!(
-        loop_.protocol.iter_next.interface(),
-        loop_.protocol.interface
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .state,
+        Type::U64
     );
     assert_eq!(
-        loop_.receiver.lifetime,
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .iter_state
+            .interface(),
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .interface
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .iter_next
+            .interface(),
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .interface
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .receiver
+            .lifetime,
         HirIterationReceiverLifetime::LoopDuration
     );
-    assert_eq!(loop_.receiver.carrier.access(), HirAccess::ReadOnly);
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .receiver
+            .carrier
+            .access(),
+        HirAccess::ReadOnly
+    );
     assert!(matches!(
         receiver_view(loop_).source,
         HirViewSource::Place(_)
     ));
-    assert_eq!(loop_.state.advance.state_alias.access, HirAccess::Mutable);
-    assert_eq!(loop_.state.advance.state_alias.ty, Type::U64);
-    assert_eq!(loop_.result.presence, HirOptionalPresenceTestPlan::OuterTag);
-    assert_eq!(loop_.result.unwrap, HirOptionalUnwrapPlan::ExtractScalar);
-    assert_eq!(loop_.result.payload, Type::I64);
-    assert_eq!(loop_.item.access, HirAccess::ReadOnly);
-    assert_eq!(loop_.item.binding, loop_.binding);
-    assert_eq!(loop_.item.value.copy, Some(HirIterationValueCopy::Trivial));
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .state
+            .advance
+            .state_alias
+            .access,
+        HirAccess::Mutable
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .state
+            .advance
+            .state_alias
+            .ty,
+        Type::U64
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .result
+            .presence,
+        HirOptionalPresenceTestPlan::OuterTag
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .result
+            .unwrap,
+        HirOptionalUnwrapPlan::ExtractScalar
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .result
+            .payload,
+        Type::I64
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .item
+            .access,
+        HirAccess::ReadOnly
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .item
+            .binding,
+        loop_.binding
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .item
+            .value
+            .copy,
+        Some(HirIterationValueCopy::Trivial)
+    );
 
     let dump = dump_hir(&hir);
     assert_eq!(dump, dump_hir(&hir));
@@ -129,8 +239,18 @@ fn exact_interface_views_and_bound_specializations_keep_selected_dispatch() {
         HirViewSource::Forwarded { .. }
     ));
     assert_eq!(
-        viewed_loop.receiver.iterable,
-        Type::Interface(viewed_loop.protocol.interface)
+        viewed_loop
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .receiver
+            .iterable,
+        Type::Interface(
+            viewed_loop
+                .protocol_plan()
+                .expect("fixture requires a protocol plan")
+                .protocol
+                .interface
+        )
     );
 
     let bound = check_iteration(concat!(
@@ -156,11 +276,34 @@ fn exact_interface_views_and_bound_specializations_keep_selected_dispatch() {
             _ => None,
         })
         .expect("specialized bound body must retain structured iteration");
-    assert_eq!(loop_.protocol.item, Type::I64);
-    assert_eq!(loop_.protocol.state, Type::U64);
     assert_eq!(
-        loop_.protocol.iter_next.interface(),
-        loop_.protocol.interface
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .item,
+        Type::I64
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .state,
+        Type::U64
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .iter_next
+            .interface(),
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .protocol
+            .interface
     );
 }
 
@@ -178,16 +321,32 @@ fn trivial_exact_class_items_select_copy_and_one_layer_optional_plans() {
         "fn main() -> i64 { return 0; }\n",
     ));
     let loop_ = first_for_in(&hir);
-    let Type::Class(item) = loop_.protocol.item else {
+    let Type::Class(item) = loop_
+        .protocol_plan()
+        .expect("fixture requires a protocol plan")
+        .protocol
+        .item
+    else {
         panic!("expected exact class item")
     };
     assert!(matches!(
-        loop_.item.value.copy,
+        loop_.protocol_plan().expect("fixture requires a protocol plan").item.value.copy,
         Some(HirIterationValueCopy::Class { class, .. }) if class == item
     ));
-    assert_eq!(loop_.result.payload, Type::Class(item));
     assert_eq!(
-        loop_.result.unwrap,
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .result
+            .payload,
+        Type::Class(item)
+    );
+    assert_eq!(
+        loop_
+            .protocol_plan()
+            .expect("fixture requires a protocol plan")
+            .result
+            .unwrap,
         HirOptionalUnwrapPlan::CheckedInlineClass(item)
     );
 }
@@ -526,34 +685,38 @@ fn manually_rebuilt_hir_enforces_identity_invariants_and_dumps_deterministically
         "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
     ));
     let original = first_for_in(&hir).clone();
+    let original_plan = original
+        .protocol_plan()
+        .expect("general-iteration fixture requires a protocol plan")
+        .clone();
     let rebuilt = crate::hir::HirForIn::new(
         original.loop_id,
         original.binding,
-        original.protocol,
-        original.receiver.clone(),
-        original.state.clone(),
-        original.result,
-        original.item,
+        original_plan.protocol,
+        original_plan.receiver.clone(),
+        original_plan.state.clone(),
+        original_plan.result,
+        original_plan.item,
         original.body.clone(),
         original.spans,
     );
     assert_eq!(rebuilt, original);
     assert_eq!(dump_hir(&hir), dump_hir(&hir));
 
-    let assert_rejected = |name: &str, mutate: fn(&mut crate::hir::HirForIn)| {
-        let mut candidate = original.clone();
+    let assert_rejected = |name: &str, mutate: fn(&mut crate::hir::HirProtocolIterationPlan)| {
+        let mut candidate = original_plan.clone();
         mutate(&mut candidate);
         let rejected = std::panic::catch_unwind(|| {
             crate::hir::HirForIn::new(
-                candidate.loop_id,
-                candidate.binding,
+                original.loop_id,
+                original.binding,
                 candidate.protocol,
                 candidate.receiver,
                 candidate.state,
                 candidate.result,
                 candidate.item,
-                candidate.body,
-                candidate.spans,
+                original.body.clone(),
+                original.spans,
             )
         });
         assert!(rejected.is_err(), "{name} must be rejected before MIR");
@@ -697,7 +860,12 @@ fn checked_cast_iteration_retains_cast_and_owner_carriers() {
         "fn main() -> i64 { return 0; }\n",
     ));
     let loop_ = first_for_in(&hir);
-    let HirIterationReceiverCarrier::Checked(checked) = &loop_.receiver.carrier else {
+    let HirIterationReceiverCarrier::Checked(checked) = &loop_
+        .protocol_plan()
+        .expect("fixture requires a protocol plan")
+        .receiver
+        .carrier
+    else {
         panic!("cast receiver must retain its checked carrier")
     };
     assert!(matches!(
@@ -731,11 +899,17 @@ fn inherited_iterable_view_preserves_complete_exact_origin() {
     assert!(matches!(
         view.origin.as_ref(),
         crate::hir::HirObjectOrigin::Exact { dynamic_class, .. }
-            if Type::Class(*dynamic_class) == loop_.receiver.iterable
+            if Type::Class(*dynamic_class) == loop_.protocol_plan().expect("fixture requires a protocol plan").receiver.iterable
     ));
     assert_eq!(
         view.target,
-        crate::hir::HirViewTarget::Interface(loop_.protocol.interface)
+        crate::hir::HirViewTarget::Interface(
+            loop_
+                .protocol_plan()
+                .expect("fixture requires a protocol plan")
+                .protocol
+                .interface
+        )
     );
     let mir = crate::mir::lower_hir(&hir);
     crate::mir::verify_mir(&mir).expect("inherited iterable dispatch must verify");
@@ -804,7 +978,7 @@ fn core_iteration_lowers_to_verified_deterministic_ordinary_mir() {
             .filter(|target| matches!(
                 target,
                 crate::mir::MirCallTarget::Interface(target)
-                    if target.requirement == iteration.protocol.iter_state
+                    if target.requirement == iteration.protocol_plan().expect("fixture requires a protocol plan").protocol.iter_state
             ))
             .count(),
         1
@@ -815,7 +989,7 @@ fn core_iteration_lowers_to_verified_deterministic_ordinary_mir() {
             .filter(|target| matches!(
                 target,
                 crate::mir::MirCallTarget::Interface(target)
-                    if target.requirement == iteration.protocol.iter_next
+                    if target.requirement == iteration.protocol_plan().expect("fixture requires a protocol plan").protocol.iter_next
             ))
             .count(),
         1

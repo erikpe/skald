@@ -13,9 +13,15 @@ fn resolve_range_source(source: &str) -> crate::resolve::ResolveOutput {
 }
 
 #[test]
-fn concise_range_uses_the_ordinary_iteration_plan() {
-    let resolved =
-        resolve_range_source("fn main() -> i64 { for (item in 1u .. 3u) {} return 0; }\n");
+fn immediate_integer_ranges_select_the_fused_structured_plan() {
+    let resolved = resolve_range_source(concat!(
+        "fn main() -> i64 {\n",
+        "  for (byte in 1u8 .. 3u8) {}\n",
+        "  for (wide in (1u .. 3u)) {}\n",
+        "  for (signed in -2 .. 1) {}\n",
+        "  return 0;\n",
+        "}\n",
+    ));
     assert!(
         resolved.diagnostics.is_empty(),
         "{:?}",
@@ -25,9 +31,13 @@ fn concise_range_uses_the_ordinary_iteration_plan() {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let dump = dump_hir(&checked.hir.expect("concise range must produce HIR"));
-    assert!(dump.contains("ForIn"), "{dump}");
-    assert!(dump.contains("CanonicalRangeSyntax"), "{dump}");
-    assert!(!dump.contains("RangeLoop"), "{dump}");
+    assert_eq!(
+        dump.matches("PrimitiveRange endpoint=").count(),
+        3,
+        "{dump}"
+    );
+    assert_eq!(dump.matches("CanonicalRangeSyntax").count(), 3, "{dump}");
+    assert!(!dump.contains("Protocol interface="), "{dump}");
 }
 
 fn check_range_source(source: &str) -> crate::hir::HirProgram {
@@ -92,6 +102,53 @@ fn concise_class_ranges_retain_ordinary_witness_and_lifecycle_plans() {
     let mir = lower_hir(&hir);
     verify_mir(&mir).expect("class range must lower through ordinary witness iteration");
     assert!(dump_mir(&mir).contains("call interface"));
+}
+
+#[test]
+fn fusion_excludes_every_non_immediate_or_nonprimitive_iteration_boundary() {
+    let hir = check_range_source(concat!(
+        "from std::iter import Iterable;\n",
+        "from std::ops import OpLess;\n",
+        "from std::range import Range, Successor;\n",
+        "class Value implements OpLess<Value>, Successor<Value> {\n",
+        "  value: i64; init(value: i64) { self.value = value; }\n",
+        "  fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n",
+        "  fn successor() -> Value { return Value(self.value + 1); }\n",
+        "}\n",
+        "class Counter implements Iterable<u64, u64> {\n",
+        "  init() {} fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> u64? { return none; }\n",
+        "}\n",
+        "class Derived extends Counter { init() { super(); } }\n",
+        "class Scanner<T> where T: OpLess<T>, T: Successor<T> {\n",
+        "  init() {} fn scan(start: T, end: T) -> unit { for (item in start .. end) {} }\n",
+        "}\n",
+        "fn retain_specialization(ref scanner: Scanner<u64>) -> unit {}\n",
+        "fn interface_loop(ref values: Iterable<u64, u64>) -> unit {\n",
+        "  for (item in values) {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  for (item in 0u .. 2u) {}\n",
+        "  for (item in Range<u64>(0u, 2u)) {}\n",
+        "  var stored: Range<u64> = 0u .. 2u; for (item in stored) {}\n",
+        "  for (item in Value(0) .. Value(2)) {}\n",
+        "  var counter: Counter = Counter(); for (item in counter) {}\n",
+        "  var derived: Derived = Derived(); for (item in derived) {}\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let dump = dump_hir(&hir);
+    assert_eq!(
+        dump.matches("PrimitiveRange endpoint=").count(),
+        1,
+        "{dump}"
+    );
+    assert_eq!(dump.matches("Protocol interface=").count(), 7, "{dump}");
+    assert_eq!(
+        dump.matches("CanonicalRangeSyntax").count(),
+        4,
+        "direct, stored, class, and generic syntax must retain provenance: {dump}"
+    );
 }
 
 #[test]
@@ -179,10 +236,9 @@ fn canonical_range_origin_rejects_missing_forged_and_inconsistent_evidence() {
 }
 
 #[test]
-fn checked_hir_range_origin_rejects_shape_and_realization_mutations() {
+fn primitive_range_plan_rejects_shape_operation_and_realization_mutations() {
     use crate::hir::{
-        HirConstructionOrigin, HirIterationReceiverCarrier, HirObjectProducer,
-        HirRangeProtocolRealization, HirStatement, HirViewSource, Type,
+        HirBinaryOperation, HirComparisonPredicate, HirRangeProtocolRealization, HirStatement, Type,
     };
 
     let hir = check_range_source("fn main() -> i64 { for (value in 1u .. 3u) {} return 0; }\n");
@@ -190,37 +246,42 @@ fn checked_hir_range_origin_rejects_shape_and_realization_mutations() {
     let HirStatement::ForIn(loop_) = &definition.body.statements[0] else {
         panic!("expected range loop");
     };
-    let HirIterationReceiverCarrier::View(view) = &loop_.receiver.carrier else {
-        panic!("expected ordinary produced range view");
-    };
-    let HirViewSource::Produced { producer, .. } = &view.source else {
-        panic!("expected produced range receiver");
-    };
-    let HirObjectProducer::Construct(construction) = producer.as_ref() else {
-        panic!("expected ordinary construction producer");
-    };
-    assert!(construction.canonical_range_origin().is_some());
+    let plan = loop_
+        .primitive_range_plan()
+        .expect("immediate integer syntax must select primitive range iteration")
+        .clone();
 
-    let mut wrong_class = construction.clone();
-    wrong_class.class = crate::identity::ClassId::new(wrong_class.class.index() + 1);
-    assert!(wrong_class.canonical_range_origin().is_none());
-
-    let mut wrong_initializer = construction.clone();
-    let crate::hir::HirConstructionMode::Initialize { initializer, .. } =
-        &mut wrong_initializer.mode
-    else {
-        unreachable!()
-    };
-    *initializer = crate::identity::InitializerId::new(construction.class, 99);
-    assert!(wrong_initializer.canonical_range_origin().is_none());
-
-    let mut wrong_realization = construction.clone();
-    let HirConstructionOrigin::CanonicalRangeSyntax(origin) = &mut wrong_realization.origin else {
-        unreachable!()
-    };
-    origin.endpoint_type = Type::U8;
-    origin.successor.realization = HirRangeProtocolRealization::PrimitiveIntrinsic(Type::U64);
-    assert!(wrong_realization.canonical_range_origin().is_none());
+    let assert_rejected =
+        |name: &str, mutate: fn(&mut crate::hir::HirPrimitiveRangeIterationPlan)| {
+            let mut candidate = plan.clone();
+            mutate(&mut candidate);
+            let rejected = std::panic::catch_unwind(|| {
+                crate::hir::HirForIn::new_primitive_range(
+                    loop_.loop_id,
+                    loop_.binding,
+                    candidate,
+                    loop_.body.clone(),
+                    loop_.spans,
+                )
+            });
+            assert!(rejected.is_err(), "{name} must be rejected before MIR");
+        };
+    assert_rejected("wrong endpoint type", |candidate| {
+        candidate.origin.endpoint_type = Type::U8;
+    });
+    assert_rejected("wrong primitive realization", |candidate| {
+        candidate.origin.successor.realization =
+            HirRangeProtocolRealization::PrimitiveIntrinsic(Type::U8);
+    });
+    assert_rejected("wrong comparison", |candidate| {
+        candidate.comparison.predicate = HirComparisonPredicate::LessEqual;
+    });
+    assert_rejected("wrong increment", |candidate| {
+        candidate.increment = HirBinaryOperation::SubtractU64;
+    });
+    assert_rejected("wrong item epoch type", |candidate| {
+        candidate.item.value.ty = Type::U8;
+    });
 }
 
 #[test]

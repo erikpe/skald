@@ -461,6 +461,14 @@ Compiler-generated direct, inherited, specialized, and bound-selected loops
 exercise this boundary through deterministic assembly, assembler acceptance,
 and native execution tests.
 
+Eligible immediate primitive ranges reach the same boundary without interface
+or optional operations: they are already ordinary current/end scalar storage,
+integer comparison and increment, lifetime markers, branches, and jumps. The
+backend neither recognizes a range nor receives canonical range metadata. This
+adds no target opcode, symbol, calling convention, runtime service, or ABI
+revision; explicit, stored, class, generic-bound, view, inherited, and
+lookalike ranges continue through the protocol path above.
+
 ## Implemented standard I/O target boundary
 
 Standard I/O has five dedicated verified MIR operations which the x86-64

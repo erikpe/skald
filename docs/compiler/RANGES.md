@@ -1,19 +1,20 @@
 # Generic-Range Compiler Contract
 
-Status: frozen compiler contract; explicit and concise generic ranges
-implemented through ordinary execution.
+Status: implemented compiler contract through immediate primitive-loop fusion;
+performance acceptance remains in progress.
 Resolution validates the canonical declaration bundle, closes exact integer
 bounds to existing operations, and compiles explicit `Range<T>` values through
 ordinary construction and general iteration. `..` has source AST,
 compiler-dependency, exact resolved and HIR construction evidence,
-diagnostics, ordinary lifecycle and native execution. Primitive loop fusion
-and performance evidence remain planned. This document owns those
+diagnostics, ordinary lifecycle and native execution. Immediate `u8`, `u64`,
+and `i64` syntax loops use the scalar fusion described below; measured
+handwritten-`while` parity remains planned. This document owns those
 identities and target/ABI constraints for the
 [generic-range language contract](../language/RANGES.md).
 
-The implemented grammar and ordinary pipeline include range expressions. The
-fusion plan and benchmark guarantee described below are not yet compiler
-behavior.
+The implemented grammar and pipeline include range expressions and the narrow
+fusion profile below. The benchmark guarantee remains an acceptance target,
+not yet completed evidence.
 
 ## Canonical module and identities
 
@@ -110,12 +111,13 @@ operation, backend branch, runtime symbol, or ABI change. It provides:
 - ordinary `for-in` executes through the existing `HirForIn` protocol plan and
   verified MIR.
 
-This ordinary path is the implemented semantic reference for concise range
-syntax and future fusion.
+This ordinary path remains the implemented semantic reference for concise
+range syntax and immediate primitive fusion.
 
 ## Range syntax and resolution
 
-Status: implemented through resolved IR and ordinary typed HIR.
+Status: implemented through resolved IR, typed HIR, and both ordinary and
+fused loop execution plans.
 
 Lexing adds a longest-match `..` token before `.` while preserving numeric
 literal and member-access tokenization. Parsing adds a source-shaped,
@@ -178,9 +180,9 @@ result. Ordinary explicit `Range<T>(lower, upper)` has the normal construction
 origin and is not upgraded by shape recognition.
 
 Non-loop consumers lower the canonical range-syntax construction through the
-ordinary class path. In the current implementation, `HirForIn` also uses the
-ordinary protocol plan. RG4 may use the origin of an immediately consumed
-expression to select the frozen primitive fusion plan.
+ordinary class path. `HirForIn` selects a structured primitive-range plan only
+for an immediately consumed eligible expression; all other consumers and
+loops use the ordinary protocol plan.
 Grouping that remains part of the same immediate expression may preserve the
 origin; storage, copying, arguments, results, aliases, optionals, owners,
 interface views, calls, or other independently observable boundaries erase
