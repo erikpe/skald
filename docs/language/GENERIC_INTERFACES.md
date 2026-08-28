@@ -204,7 +204,7 @@ The implemented
 adds one deliberately narrow exception: a supported primitive may satisfy an
 exact canonical `std::ops` bound through compiler-owned static evidence. This
 does not generalize ordinary interface bounds or create primitive object
-conformance. The frozen [generic-range contract](RANGES.md) plans a second
+conformance. The [generic-range contract](RANGES.md) implements a second
 closed exception for exact canonical `Successor<u8|u64|i64>` bounds only.
 
 A body may select a member on a parameter only through a declared bound. The
@@ -369,8 +369,8 @@ The frozen initial profile excludes:
 The separately implemented [general-iteration contract](ITERATION.md) uses
 this foundation for `Iterable<Item, State>`. The implemented operator contract
 defines its canonical protocols, primitive-only evidence exception, source
-selection, and lowering boundary. The frozen [generic-range contract](RANGES.md)
-defines the planned canonical successor exception, `Range<T>`, syntax, and
+selection, and lowering boundary. The [generic-range contract](RANGES.md)
+defines the implemented canonical successor exception plus planned `Range<T>`, syntax, and
 narrow optimization boundary without changing general interface identity.
 
 The [generic-interface compiler contract](../compiler/GENERIC_INTERFACES.md)

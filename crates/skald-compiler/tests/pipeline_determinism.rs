@@ -148,6 +148,8 @@ const GENERIC_INTERFACE_TEST_NAME: &str =
 const GENERIC_OPERATOR_HELPER_OUTPUT: &str = "SKALD_GENERIC_OPERATOR_DETERMINISM_OUTPUT";
 const GENERIC_OPERATOR_TEST_NAME: &str =
     "generic_operator_phase_products_are_deterministic_across_processes";
+const SUCCESSOR_HELPER_OUTPUT: &str = "SKALD_SUCCESSOR_DETERMINISM_OUTPUT";
+const SUCCESSOR_TEST_NAME: &str = "successor_phase_products_are_deterministic_across_processes";
 const GENERIC_INTERFACE_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_GENERIC_INTERFACE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME: &str =
@@ -705,6 +707,25 @@ fn generic_operator_phase_products_are_deterministic_across_processes() {
         "generic-operator-products",
         GENERIC_OPERATOR_HELPER_OUTPUT,
         GENERIC_OPERATOR_TEST_NAME,
+        PERMUTATION_HELPER_VARIANT,
+    );
+}
+
+#[test]
+fn successor_phase_products_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(SUCCESSOR_HELPER_OUTPUT) {
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
+        fs::write(output, successor_module_phase_dump(variant)).unwrap();
+        return;
+    }
+
+    assert_cross_process_variants(
+        "successor-products",
+        SUCCESSOR_HELPER_OUTPUT,
+        SUCCESSOR_TEST_NAME,
         PERMUTATION_HELPER_VARIANT,
     );
 }
@@ -1301,6 +1322,107 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
             preliminary_dump,
             planned_dump,
             final_dump,
+            assembly,
+        ),
+    )
+}
+
+fn successor_module_phase_dump(variant: usize) -> String {
+    let fixture = ModuleFixture::new("successor-products", variant);
+    let application = fixture.path.join("application");
+    let standard_library = fixture.path.join("standard-library");
+    let mut sources = vec![
+        (
+            application.join("app.ska"),
+            "import model;\n\
+             fn main() -> i64 {\n\
+               var primitive: model::Advance<u64> = model::Advance<u64>();\n\
+               var objects: model::Advance<model::Value> = model::Advance<model::Value>();\n\
+               return (i64) primitive.next(16u) + (i64) objects.next(model::Value(24u)).get();\n\
+             }\n",
+        ),
+        (
+            application.join("model.ska"),
+            "from std::range import Successor;\n\
+             public class Value implements Successor<Value> {\n\
+               private value: u64;\n\
+               init(value: u64) { self.value = value; }\n\
+               fn successor() -> Value { return Value(self.value + 1u); }\n\
+               fn get() -> u64 { return self.value; }\n\
+             }\n\
+             public class Advance<T> where T: Successor<T> {\n\
+               init() {}\n\
+               fn next(value: T) -> T { return value.successor(); }\n\
+             }\n",
+        ),
+    ];
+    sources.extend(
+        canonical_standard_library_sources(&[])
+            .into_iter()
+            .map(|(relative, source)| (standard_library.join(relative), source)),
+    );
+    if variant != 0 {
+        sources.reverse();
+    }
+    for (path, source) in sources {
+        write_source(&path, source);
+    }
+
+    let configurations = if variant == 0 {
+        vec![
+            ProviderRootConfiguration::standard_library(standard_library),
+            ProviderRootConfiguration::module_root(application),
+        ]
+    } else {
+        vec![
+            ProviderRootConfiguration::module_root(application),
+            ProviderRootConfiguration::standard_library(standard_library),
+        ]
+    };
+    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let graph = load_module_graph(
+        &EntrySelector::Module("app".parse().unwrap()),
+        &fixture.path,
+        &providers,
+    )
+    .unwrap();
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let resolved_dump = dump_resolved(&resolved.program);
+    assert!(resolved_dump.contains("AddOneU64"), "{resolved_dump}");
+    assert!(
+        resolved_dump.contains("ClosedBoundSelection 0 class-witness"),
+        "{resolved_dump}"
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.unwrap();
+    let preliminary = lower_preliminary_hir(&hir);
+    let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let planned = plan_static_lifetimes(preliminary).unwrap();
+    let planned_dump = dump_planned_mir(&planned);
+    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&final_mir),
+    )
+    .unwrap();
+    assert!(!assembly.contains("skald_rt_range"), "{assembly}");
+
+    normalize_fixture_paths(
+        &fixture.path,
+        format!(
+            "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
+            dump_module_graph(&graph),
+            resolved_dump,
+            dump_hir(&hir),
+            preliminary_dump,
+            planned_dump,
+            dump_mir(&final_mir),
             assembly,
         ),
     )

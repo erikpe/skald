@@ -1,6 +1,6 @@
 # Generic Ranges and Tight Range Loops Roadmap
 
-Status: planned; RG0 is next.
+Status: in progress; RG1 is next.
 
 This roadmap implements the frozen
 [language contract](../language/RANGES.md) and
@@ -49,7 +49,7 @@ and determinism pipelines are the baseline. No other roadmap blocks RG0.
 
 ## Progress
 
-- [ ] RG0 — Canonical successor protocol and primitive realizations
+- [x] RG0 — Canonical successor protocol and primitive realizations
 - [ ] RG1 — Explicit generic `Range<T>` values and iteration
 - [ ] RG2 — Range punctuation, grammar, and resolved canonical construction
 - [ ] RG3 — Concise range expression HIR and complete ordinary execution
@@ -63,27 +63,27 @@ and determinism pipelines are the baseline. No other roadmap blocks RG0.
 **Purpose:** Establish the source-defined advancement vocabulary and the narrow
 primitive-bound realization before `Range<T>` depends on either.
 
-- [ ] Add canonical `std/std/range.ska` with the exact public
+- [x] Add canonical `std/std/range.ska` with the exact public
   `Successor<Output>` interface while keeping `Range<T>` absent or gated until
   RG1.
-- [ ] Add a request-local range-language-item product that validates canonical
+- [x] Add a request-local range-language-item product that validates canonical
   module, interface-template, parameter, requirement, receiver, and result
   identities from ordinary explicit reachability.
-- [ ] Keep same-named foreign declarations unrelated and preserve provider,
+- [x] Keep same-named foreign declarations unrelated and preserve provider,
   visibility, module-cycle, and malformed-canonical diagnostics in stable
   order.
-- [ ] Extend the static primitive-bound realization boundary with exactly
+- [x] Extend the static primitive-bound realization boundary with exactly
   `Successor<u8>`, `Successor<u64>`, and `Successor<i64>` mapped to existing
   wrapping addition-by-one operations.
-- [ ] Reuse cohesive class-witness/primitive-intrinsic specialization machinery
+- [x] Reuse cohesive class-witness/primitive-intrinsic specialization machinery
   without generalizing ordinary primitive interface conformance.
-- [ ] Support definition-site manual successor calls for class and primitive
+- [x] Support definition-site manual successor calls for class and primitive
   specializations while direct primitive member syntax remains invalid.
-- [ ] Exclude `f64`, `bool`, `unit`, interface views, owners, and noncanonical
+- [x] Exclude `f64`, `bool`, `unit`, interface views, owners, and noncanonical
   protocols from primitive satisfaction.
-- [ ] Expose deterministic canonical identities and realization evidence in
+- [x] Expose deterministic canonical identities and realization evidence in
   resolved dumps and focused diagnostics.
-- [ ] Update generic-interface, operator-protocol, range, status, testing, and
+- [x] Update generic-interface, operator-protocol, range, status, testing, and
   debugging documentation to the delivered protocol-only profile.
 
 **Primary implementation areas:** `std/std/range.ska`, standard-library source

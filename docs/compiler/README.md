@@ -246,14 +246,15 @@ item/loop scopes, structured HIR, lifecycle planning, ordinary-MIR lowering,
 verification, and native execution are implemented.
 
 The frozen [generic-range compiler contract](RANGES.md) builds on that
-implemented boundary. It defines canonical `std::range` and
-`Successor<Output>` identities, three static integer successor realizations,
-ordinary explicit `Range<T>` execution, lowest-precedence `..` resolution,
-erasure to ordinary class-construction HIR with non-forgeable syntax
-provenance, and immediate syntax-only primitive range-loop fusion to existing
-scalar MIR. Deterministic MIR and assembly structure is the durable
-performance contract; a separate matched benchmark owns the initial 10%
-median completion threshold. None of this range profile is implemented yet.
+implemented boundary. Its dependency-free canonical `std::range` successor
+protocol, request-local identities, and three static integer realizations are
+implemented. Definition-site bound calls close to ordinary class witnesses or
+existing wrapping addition by one, with no primitive object conformance, new
+lower IR, runtime service, or ABI change. Ordinary explicit `Range<T>`
+execution, lowest-precedence `..` resolution, ordinary class-construction HIR
+with non-forgeable syntax provenance, immediate syntax-only primitive loop
+fusion, structural performance contract, and separate matched benchmark
+remain planned.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

@@ -6,18 +6,21 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress. The completed interface-
-based operator-overloading, general-iteration, and generic-interface roadmaps
-are preserved in the [archive](../archive/README.md).
+The [generic ranges and tight range loops roadmap](GENERIC_RANGES_ROADMAP.md)
+is in progress. Its canonical successor protocol and primitive realizations
+are implemented; ordinary explicit `Range<T>` values are next. It then
+delivers `..` syntax and ordinary execution, immediate integer range-loop
+fusion, and measured handwritten-`while` parity. It depends on the completed
+generic-interface, general-iteration, and interface-based operator-overloading
+work.
+
+The completed interface-based operator-overloading, general-iteration, and
+generic-interface roadmaps are preserved in the
+[archive](../archive/README.md).
 
 ## Planned
 
-The [generic ranges and tight range loops roadmap](GENERIC_RANGES_ROADMAP.md)
-is planned; canonical successor protocols and primitive realizations are next.
-It delivers ordinary explicit `Range<T>` values first, `..` syntax and ordinary
-execution second, and immediate integer range-loop fusion plus measured
-handwritten-`while` parity last. It depends on the completed generic-interface,
-general-iteration, and interface-based operator-overloading work.
+No other implementation roadmap is currently planned.
 
 ## Design proposals
 

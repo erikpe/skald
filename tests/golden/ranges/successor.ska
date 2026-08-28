@@ -1,0 +1,33 @@
+import std::io;
+from std::range import Successor;
+
+class Value implements Successor<Value> {
+    private _value: u64;
+
+    init(value: u64) { self._value = value; }
+
+    fn successor() -> Value { return Value(self._value + 1u); }
+
+    fn get() -> u64 { return self._value; }
+}
+
+class Advance<T> where T: Successor<T> {
+    init() {}
+
+    fn next(value: T) -> T { return value.successor(); }
+}
+
+fn main() -> i64 {
+    var bytes: Advance<u8> = Advance<u8>();
+    var unsigned: Advance<u64> = Advance<u64>();
+    var signed: Advance<i64> = Advance<i64>();
+    var values: Advance<Value> = Advance<Value>();
+
+    std::io::println_u8(bytes.next(17u8));
+    std::io::println_u64(unsigned.next(23u));
+    std::io::println_u8(bytes.next(255u8));
+    std::io::println_u64(unsigned.next(18446744073709551615u));
+    std::io::println_i64(signed.next(9223372036854775807));
+    std::io::println_u64(values.next(Value(42u)).get());
+    return 0;
+}

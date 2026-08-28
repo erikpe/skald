@@ -3,7 +3,29 @@
 use super::*;
 
 impl CallableResolver<'_, '_> {
-    pub(super) fn resolve_primitive_operator_call(
+    pub(super) fn resolve_primitive_bound_call(
+        &mut self,
+        receiver: ResolvedExpression,
+        operation: ResolvedPrimitiveBoundOperation,
+        member_span: Span,
+        arguments: Vec<ResolvedExpression>,
+        span: Span,
+    ) -> Option<ResolvedExpression> {
+        match operation {
+            ResolvedPrimitiveBoundOperation::Operator(operation) => self
+                .resolve_primitive_operator_call(receiver, operation, member_span, arguments, span),
+            ResolvedPrimitiveBoundOperation::Successor(primitive) => self
+                .resolve_primitive_successor_call(
+                    receiver,
+                    primitive,
+                    member_span,
+                    arguments,
+                    span,
+                ),
+        }
+    }
+
+    fn resolve_primitive_operator_call(
         &mut self,
         receiver: ResolvedExpression,
         operation: ResolvedPrimitiveOperatorOperation,
@@ -54,6 +76,56 @@ impl CallableResolver<'_, '_> {
                 None
             }
         }
+    }
+
+    fn resolve_primitive_successor_call(
+        &mut self,
+        receiver: ResolvedExpression,
+        primitive: ResolvedPrimitiveType,
+        member_span: Span,
+        arguments: Vec<ResolvedExpression>,
+        span: Span,
+    ) -> Option<ResolvedExpression> {
+        if !arguments.is_empty() {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_CALL_TARGET,
+                    "successor requirement expects no arguments",
+                )
+                .with_primary_label(member_span, "wrong number of arguments"),
+            );
+            return None;
+        }
+        let (kind, spelling) = match primitive {
+            ResolvedPrimitiveType::I64 => (
+                crate::literal::NumericLiteralKind::I64(crate::literal::IntegerRadix::Decimal),
+                "1",
+            ),
+            ResolvedPrimitiveType::U64 => (
+                crate::literal::NumericLiteralKind::U64(crate::literal::IntegerRadix::Decimal),
+                "1u",
+            ),
+            ResolvedPrimitiveType::U8 => (
+                crate::literal::NumericLiteralKind::U8(crate::literal::IntegerRadix::Decimal),
+                "1u8",
+            ),
+            ResolvedPrimitiveType::F64 | ResolvedPrimitiveType::Bool => {
+                unreachable!("successor evidence is integer-only")
+            }
+        };
+        let one = ResolvedExpression::NumericLiteral(ResolvedNumericLiteralExpr {
+            kind,
+            spelling: spelling.to_owned(),
+            span: member_span,
+        });
+        Some(ResolvedExpression::Binary(ResolvedBinaryExpr {
+            left: Box::new(receiver),
+            operator: ResolvedBinaryOperator::Add,
+            operator_span: member_span,
+            right: Box::new(one),
+            selection: None,
+            span,
+        }))
     }
 }
 

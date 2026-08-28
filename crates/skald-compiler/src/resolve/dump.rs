@@ -122,6 +122,26 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if let Some(item) = &program.range_language_item {
+            dumper.raw_line(&format!(
+                "RangeLanguageItem successor-template {} output-parameter {} requirement {}",
+                item.successor_template,
+                item.successor_output_parameter,
+                item.successor_requirement
+            ));
+            dumper.heading("PrimitiveSuccessorEvidence");
+            dumper.indented(|dumper| {
+                for evidence in primitive_successor_registry() {
+                    dumper.raw_line(&format!(
+                        "{} canonical Successor<{}> template {} -> {}",
+                        evidence.primitive().name(),
+                        evidence.primitive().name(),
+                        item.successor_template,
+                        evidence.operation().semantic_name()
+                    ));
+                }
+            });
+        }
         if !program.literal_data.is_empty() {
             dumper.heading("LiteralData");
             dumper.indented(|dumper| {

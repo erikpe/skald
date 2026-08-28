@@ -2,7 +2,7 @@
 
 use super::*;
 
-mod primitive_operator;
+mod primitive_bound;
 
 impl CallableResolver<'_, '_> {
     pub(super) fn resolve_specialized_static_value(
@@ -469,11 +469,11 @@ impl CallableResolver<'_, '_> {
                 arguments,
                 span: call.span,
             }),
-            CallTarget::PrimitiveOperator {
+            CallTarget::PrimitiveBoundIntrinsic {
                 receiver,
                 operation,
                 member_span,
-            } => self.resolve_primitive_operator_call(
+            } => self.resolve_primitive_bound_call(
                 receiver,
                 operation,
                 member_span,
@@ -875,7 +875,7 @@ impl CallableResolver<'_, '_> {
                         }
                         ClosedGenericBoundMember::PrimitiveIntrinsic { operation } => {
                             let receiver = self.resolve_expression(&member.receiver)?;
-                            Some(CallTarget::PrimitiveOperator {
+                            Some(CallTarget::PrimitiveBoundIntrinsic {
                                 receiver,
                                 operation,
                                 member_span: member.member.span,
@@ -1468,9 +1468,9 @@ enum CallTarget {
         receiver_span: Span,
         member_span: Span,
     },
-    PrimitiveOperator {
+    PrimitiveBoundIntrinsic {
         receiver: ResolvedExpression,
-        operation: ResolvedPrimitiveOperatorOperation,
+        operation: ResolvedPrimitiveBoundOperation,
         member_span: Span,
     },
     Indirect {

@@ -186,6 +186,57 @@ fn operator_declaration_spans(
         .collect()
 }
 
+fn collect_range_requirement_spans(graph: &ModuleGraph) -> Vec<Span> {
+    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
+    let Some(target) = graph
+        .find(&path)
+        .map(|module| module.provenance().module_id())
+    else {
+        return Vec::new();
+    };
+    let mut spans = graph
+        .modules()
+        .iter()
+        .flat_map(|module| {
+            module
+                .imports()
+                .iter()
+                .filter(move |edge| edge.target() == target)
+                .flat_map(|edge| edge.import_spans().iter().copied())
+        })
+        .collect::<Vec<_>>();
+    if spans.is_empty() && graph.entry() == target {
+        spans.push(
+            graph
+                .module(target)
+                .expect("selected canonical range module must be loaded")
+                .ast()
+                .span,
+        );
+    }
+    spans
+}
+
+fn successor_declaration_spans(
+    units: &[ModuleUnit<'_>],
+    modules: &ProgramModuleTable,
+) -> Vec<Span> {
+    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
+    let Some(module) = modules.find(&path).map(|entry| entry.module_id()) else {
+        return Vec::new();
+    };
+    let unit = units
+        .iter()
+        .find(|unit| unit.module == module)
+        .expect("every program module has one resolver unit");
+    unit.ast
+        .declarations
+        .iter()
+        .filter(|declaration| declaration.name().text == "Successor")
+        .map(syntax::TopLevelDeclaration::span)
+        .collect()
+}
+
 impl<'ast> ModuleUnit<'ast> {
     fn new(ast: &'ast syntax::CompilationUnit, module: ModuleId, qualified_enabled: bool) -> Self {
         Self {
@@ -266,6 +317,7 @@ pub(super) struct ProgramResolver<'ast> {
     literal_ids: HashMap<Span, LiteralDataId>,
     iterable_requirement_spans: Vec<Span>,
     operator_requirement_spans: Vec<Span>,
+    range_requirement_spans: Vec<Span>,
     diagnostics: Diagnostics,
 }
 
@@ -281,6 +333,7 @@ impl<'ast> ProgramResolver<'ast> {
             literal_ids: HashMap::new(),
             iterable_requirement_spans: Vec::new(),
             operator_requirement_spans: Vec::new(),
+            range_requirement_spans: Vec::new(),
             diagnostics: Diagnostics::new(),
         }
     }
@@ -289,6 +342,7 @@ impl<'ast> ProgramResolver<'ast> {
         let (literal_data, literal_ids) = collect_literal_data(graph);
         let iterable_requirement_spans = collect_iterable_requirement_spans(graph);
         let operator_requirement_spans = collect_operator_requirement_spans(graph);
+        let range_requirement_spans = collect_range_requirement_spans(graph);
         Self {
             units: graph
                 .modules()
@@ -303,6 +357,7 @@ impl<'ast> ProgramResolver<'ast> {
             literal_ids,
             iterable_requirement_spans,
             operator_requirement_spans,
+            range_requirement_spans,
             diagnostics: Diagnostics::new(),
         }
     }
@@ -420,6 +475,19 @@ impl<'ast> ProgramResolver<'ast> {
             },
             &mut self.diagnostics,
         );
+        let successor_declaration_spans = successor_declaration_spans(&self.units, &self.modules);
+        let range_language_item = validate_range_language_item(
+            &self.modules,
+            &module_declarations,
+            &interface_templates,
+            &interface_template_semantics,
+            &type_parameters,
+            RangeLanguageItemEvidence {
+                requiring_spans: &self.range_requirement_spans,
+                successor_declaration_spans: &successor_declaration_spans,
+            },
+            &mut self.diagnostics,
+        );
         let mut template_semantics = Vec::new();
         for unit in &self.units {
             let lookup = lookups.for_unit(unit, &self.modules);
@@ -489,6 +557,7 @@ impl<'ast> ProgramResolver<'ast> {
                 &mut generic_specializations,
                 &generic_interface_specializations,
                 operator_language_item.as_ref(),
+                range_language_item.as_ref(),
             );
         }
         let lookups = lookups
@@ -754,6 +823,7 @@ impl<'ast> ProgramResolver<'ast> {
                 optional_box_types,
                 iterable_language_item,
                 operator_language_item,
+                range_language_item,
                 string_language_item,
                 literal_data: ResolvedLiteralDataTable::new(self.literal_data),
                 declarations: function_declarations,

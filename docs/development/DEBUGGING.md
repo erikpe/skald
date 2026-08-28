@@ -115,7 +115,14 @@ primary application span plus template, requirement, candidate, or nested
 obligation context; repeated requests for a failed closed key must extend that
 single diagnostic rather than emit another primary cause.
 
-When the frozen [generic-range compiler contract](../compiler/RANGES.md) is
+For the implemented successor foundation, inspect resolved output for one
+`RangeLanguageItem` and three `PrimitiveSuccessorEvidence` rows. A specialized
+class bound call should show either a `ClosedBoundSelection` class witness or
+an `AddOneU8`, `AddOneU64`, or `AddOneI64` primitive intrinsic. The latter must
+already be an ordinary `Add*` expression in typed HIR; no successor operation
+may reach MIR or the backend.
+
+When the remaining [generic-range compiler contract](../compiler/RANGES.md) is
 implemented, inspect explicit ranges as ordinary closed `Range<T>` classes and
 `Iterable<T, T>` calls. For `lower .. upper`, follow the source range node to
 its exact resolved range, initializer, ordering, and successor identities,

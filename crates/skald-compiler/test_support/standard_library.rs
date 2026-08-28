@@ -18,12 +18,13 @@ pub const CANONICAL_ITER_SOURCE: &str = include_str!("../../../std/std/iter.ska"
 pub const CANONICAL_LANG_SOURCE: &str = include_str!("../../../std/std/lang.ska");
 pub const CANONICAL_OPS_SOURCE: &str = include_str!("../../../std/std/ops.ska");
 pub const CANONICAL_PROCESS_SOURCE: &str = include_str!("../../../std/std/process.ska");
+pub const CANONICAL_RANGE_SOURCE: &str = include_str!("../../../std/std/range.ska");
 pub const CANONICAL_TEST_SOURCE: &str = include_str!("../../../std/std/test.ska");
 pub const CANONICAL_U64_SOURCE: &str = include_str!("../../../std/std/u64.ska");
 pub const CANONICAL_U8_SOURCE: &str = include_str!("../../../std/std/u8.ska");
 pub const CANONICAL_VEC_SOURCE: &str = include_str!("../../../std/std/vec.ska");
 
-const CANONICAL_SOURCES: [(&str, &str); 19] = [
+const CANONICAL_SOURCES: [(&str, &str); 20] = [
     ("std/str.ska", CANONICAL_STR_SOURCE),
     (
         "std/str/format_integer.ska",
@@ -45,6 +46,7 @@ const CANONICAL_SOURCES: [(&str, &str); 19] = [
     ("std/lang.ska", CANONICAL_LANG_SOURCE),
     ("std/ops.ska", CANONICAL_OPS_SOURCE),
     ("std/process.ska", CANONICAL_PROCESS_SOURCE),
+    ("std/range.ska", CANONICAL_RANGE_SOURCE),
     ("std/test.ska", CANONICAL_TEST_SOURCE),
     ("std/u64.ska", CANONICAL_U64_SOURCE),
     ("std/u8.ska", CANONICAL_U8_SOURCE),

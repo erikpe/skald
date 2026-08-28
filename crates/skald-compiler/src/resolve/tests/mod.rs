@@ -62,6 +62,7 @@ mod primitive_casts;
 mod private_cell_fields;
 mod produced_fields;
 mod produced_receivers;
+mod range_language_item;
 mod shared_ownership;
 mod shifts;
 mod short_circuit_boolean;

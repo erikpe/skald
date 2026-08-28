@@ -228,6 +228,7 @@ mod short_circuit_boolean;
 mod static_fields;
 mod static_methods;
 mod structural_indexing;
+mod successor;
 mod type_operations;
 mod value_parameters;
 mod while_loops;

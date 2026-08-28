@@ -6,8 +6,8 @@ use crate::{
 };
 
 use super::{
-    GenericInterfaceInstanceKey, ResolvedPrimitiveOperatorOperation, ResolvedSharedTarget,
-    ResolvedTypeKind,
+    GenericInterfaceInstanceKey, ResolvedPrimitiveBoundOperation,
+    ResolvedPrimitiveOperatorOperation, ResolvedSharedTarget, ResolvedTypeKind,
 };
 
 /// Canonical identity input for one closed generic class.
@@ -77,7 +77,7 @@ pub(crate) enum ClosedGenericBoundMember {
         requirement: InterfaceRequirementId,
     },
     PrimitiveIntrinsic {
-        operation: ResolvedPrimitiveOperatorOperation,
+        operation: ResolvedPrimitiveBoundOperation,
     },
 }
 

@@ -396,7 +396,7 @@ separate-compilation template ABI. The separately implemented
 [general-iteration compiler contract](ITERATION.md) is an implemented consumer
 of the closed-interface machinery. Operator protocols and their narrow
 primitive-evidence exception are owned by the separately implemented contract
-above. The frozen [generic-range compiler contract](RANGES.md) plans one
+above. The [generic-range compiler contract](RANGES.md) implements one
 additional closed canonical successor realization for `u8`, `u64`, and `i64`;
 it does not broaden ordinary primitive interface conformance.
 

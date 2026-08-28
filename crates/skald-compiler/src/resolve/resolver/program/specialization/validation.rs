@@ -401,6 +401,7 @@ pub(super) fn exact_bound_is_satisfied(
         | ResolvedTypeKind::F64
         | ResolvedTypeKind::Bool => {
             primitive_operator_evidence(program, argument, interface).is_some()
+                || primitive_successor_evidence(program, argument, interface).is_some()
         }
         ResolvedTypeKind::Unit
         | ResolvedTypeKind::Obj
@@ -413,7 +414,7 @@ pub(super) fn exact_bound_is_satisfied(
 }
 
 pub(super) const fn bound_satisfaction_note() -> &'static str {
-    "generic bounds accept exact classes with effective nominal conformance and primitives with compiler-provided evidence for an exact canonical operator application"
+    "generic bounds accept exact classes with effective nominal conformance and primitives only through compiler-provided evidence for an exact canonical operator application or a supported exact canonical successor application"
 }
 
 pub(super) fn bound_failure_label(
@@ -434,6 +435,15 @@ pub(super) fn bound_failure_label(
         | ResolvedTypeKind::Bool
             if canonical_operator_application(program, interface_id) => format!(
             "{} has no compiler-provided evidence for the exact canonical application `{interface}`",
+            argument_kind_name(argument)
+        ),
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool
+            if canonical_successor_application(program, interface_id) => format!(
+            "{} has no compiler-provided evidence for the exact canonical successor application `{interface}`",
             argument_kind_name(argument)
         ),
         _ => format!(

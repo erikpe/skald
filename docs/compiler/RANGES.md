@@ -1,32 +1,42 @@
 # Generic-Range Compiler Contract
 
-Status: frozen compiler contract; not implemented. This document owns the
-canonical identities, primitive successor realization, range-expression phase
-flow, ordinary-construction HIR provenance, primitive loop-fusion boundary,
-verification, performance evidence, target, and ABI constraints for the
+Status: frozen compiler contract; successor foundation implemented. Resolution
+validates the canonical successor protocol and closes exact integer bounds to
+existing addition. The generic range class, range-expression phase flow,
+ordinary-construction HIR provenance, primitive loop-fusion boundary,
+performance evidence, and associated verification remain planned. This
+document owns those identities and target/ABI constraints for the
 [generic-range language contract](../language/RANGES.md).
 
 The implemented grammar remains unchanged until the syntax task lands. No
-range declaration, expression, HIR provenance, fusion plan, or benchmark
-guarantee described here is currently compiler behavior.
+`Range<T>` declaration, range expression, HIR provenance, fusion plan, or
+benchmark guarantee described here is currently compiler behavior.
 
 ## Canonical module and identities
 
-The canonical `std::range` module is ordinary standard-library source that
-imports `std::iter::Iterable` and `std::ops::OpLess`. Resolution validates:
+The current canonical `std::range` module is dependency-free ordinary
+standard-library source. Explicit reachability or direct entry compilation
+validates:
 
 - one public `Successor<Output>` interface template;
-- one read-only zero-argument `successor() -> Output` requirement;
+- one parameter named `Output`; and
+- one read-only zero-argument `successor() -> Output` requirement.
+
+The resulting request-local product retains the exact module, template,
+parameter, requirement, declaration, and requiring-span identities. Resolved
+dumps render that product and the three primitive realizations in stable
+order. Same-named foreign declarations are ordinary unrelated source.
+
+The next milestone imports `std::iter::Iterable` and `std::ops::OpLess` and
+extends validation with:
+
 - one public `Range<T>` class template;
 - its exact `OpLess<T>` and `Successor<T>` bounds;
 - its exact `Iterable<T, T>` claim; and
 - the ordinary public `init(T, T)` selected by range syntax.
 
-The validated product retains exact module, interface template, requirement,
-class template, initializer, bound, and conformance identities. Later phases
-must consume those identities rather than rediscovering `std::range`,
-`Successor`, `Range`, `successor`, or `init` by spelling. A lookalike module or
-declaration is ordinary unrelated source.
+Later phases consume exact identities rather than rediscovering `std::range`,
+`Successor`, `Range`, `successor`, or `init` by spelling.
 
 Successfully parsed `..` supplies typed `CompilerDependencyKind` evidence for
 `std::range` at the operator span without creating an import binding. Explicit
@@ -41,7 +51,7 @@ declaration and semantic contract.
 
 ## Primitive successor realization
 
-The compiler adds one closed static registry for:
+The compiler owns one closed static registry for:
 
 ```text
 (u8,  Successor<u8>)  -> existing AddU8-by-one operation
@@ -70,12 +80,17 @@ primitive addition. Direct primitive member syntax remains unresolved. No
 primitive interface view, witness metadata, box, cast, owner, reflection
 record, runtime dispatch, or ABI representation is created.
 
-The range registry should reuse cohesive static-bound realization
-infrastructure shared with canonical operators, while keeping protocol keys
-and admissible primitive cells explicitly closed. It must not generalize all
-ordinary interface bounds to arbitrary primitive satisfaction.
+The registry reuses one cohesive primitive-bound realization boundary with
+canonical operators while keeping protocol keys and admissible cells
+explicitly closed. Bound-selected primitive successor calls erase during
+resolution to an ordinary same-typed addition of one. They therefore reach
+typed HIR, MIR, verification, and the backend only as the existing addition
+operation. Ordinary interface bounds are not generalized to arbitrary
+primitive satisfaction.
 
 ## Explicit generic range pipeline
+
+Status: not implemented; this is the next range milestone.
 
 Explicit `Range<T>(start, end)` is ordinary generic class construction.
 Template resolution, closed specialization, initializer selection, field

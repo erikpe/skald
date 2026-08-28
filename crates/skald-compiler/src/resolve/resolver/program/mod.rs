@@ -24,6 +24,7 @@ mod interface;
 mod intrinsic_registry;
 mod iterable_language_item;
 mod operator_language_item;
+mod range_language_item;
 mod resolver;
 mod specialization;
 mod static_initializer;
@@ -48,6 +49,7 @@ use interface::{collect_interface_declarations, resolve_interface_claims};
 use intrinsic_registry::{intrinsic_for_declaration, validate_intrinsic_declarations};
 use iterable_language_item::{validate_iterable_language_item, IterableLanguageItemEvidence};
 use operator_language_item::{validate_operator_language_item, OperatorLanguageItemEvidence};
+use range_language_item::{validate_range_language_item, RangeLanguageItemEvidence};
 use resolver::{
     resolve_parameter_binding_mode, resolve_parameters, resolve_result_type, resolved_visibility,
     ProgramResolver,

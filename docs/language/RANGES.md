@@ -1,8 +1,10 @@
 # Generic Ranges and Concise Range Expressions
 
-Status: frozen language contract; not implemented. The canonical generic
-range, `Successor<Output>` protocol, half-open `..` expression, class opt-in,
-and initial primitive tight-loop profile are settled. The
+Status: frozen language contract; successor foundation implemented. The
+canonical `Successor<Output>` protocol, class opt-in, and static `u8`, `u64`,
+and `i64` realizations are implemented. The ordinary generic range, half-open
+`..` expression, and initial primitive tight-loop profile remain settled but
+not implemented. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains authoritative for accepted
 source until the range-syntax task lands.
@@ -15,7 +17,20 @@ acceptance are owned by the
 
 ## Canonical standard-library contract
 
-Ranges use ordinary declarations in the canonical `std::range` module:
+The installed dependency-free `std::range` module currently contains:
+
+```ska
+public interface Successor<Output> {
+    fn successor() -> Output;
+}
+```
+
+Explicit import or direct compilation validates that exact public template,
+parameter, read-only zero-argument requirement, and result identity. A
+same-named interface, method, or module elsewhere is unrelated.
+
+The next range milestone extends that same module to the complete frozen
+declaration bundle:
 
 ```ska
 from std::iter import Iterable;
@@ -52,9 +67,9 @@ where T: OpLess<T>, T: Successor<T>
 }
 ```
 
-The declarations are library-defined but compiler-recognized by exact module,
-template, requirement, initializer, bound, and conformance identities. A
-same-named interface, class, method, or module elsewhere is unrelated.
+The future `Range<T>` class will likewise be compiler-recognized by exact
+template, initializer, bound, and conformance identities. A same-named class
+elsewhere remains unrelated.
 
 `Successor<Output>` has a read-only receiver and produces a new owning value.
 A same-type range requires `T: Successor<T>`. Whenever `value < end`, a
@@ -70,6 +85,8 @@ implementation can repeat values or fail to terminate, just as an arbitrary
 `Iterable` implementation can produce an unbounded sequence.
 
 ## Explicit generic ranges
+
+Status: not implemented; this is the next range milestone.
 
 The explicit form imports and constructs the ordinary canonical class:
 

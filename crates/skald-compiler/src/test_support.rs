@@ -30,7 +30,7 @@ use crate::{
 mod standard_library;
 pub(crate) use standard_library::{
     canonical_standard_library_sources, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
-    CANONICAL_ITER_SOURCE, CANONICAL_OPS_SOURCE, CANONICAL_STR_SOURCE,
+    CANONICAL_ITER_SOURCE, CANONICAL_OPS_SOURCE, CANONICAL_RANGE_SOURCE, CANONICAL_STR_SOURCE,
 };
 
 static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
@@ -572,7 +572,7 @@ mod tests {
     #[test]
     fn canonical_standard_library_closure_is_complete_and_overridable() {
         let canonical = canonical_standard_library_sources(&[]);
-        assert_eq!(canonical.len(), 19);
+        assert_eq!(canonical.len(), 20);
         let canonical_source = |path| {
             canonical
                 .iter()
@@ -582,6 +582,7 @@ mod tests {
         assert_eq!(canonical_source("std/str.ska"), CANONICAL_STR_SOURCE);
         assert_eq!(canonical_source("std/iter.ska"), CANONICAL_ITER_SOURCE);
         assert_eq!(canonical_source("std/ops.ska"), CANONICAL_OPS_SOURCE);
+        assert_eq!(canonical_source("std/range.ska"), CANONICAL_RANGE_SOURCE);
         for path in [
             "std/f64.ska",
             "std/hash.ska",

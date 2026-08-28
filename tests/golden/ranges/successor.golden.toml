@@ -1,0 +1,9 @@
+schema = 2
+
+[[test]]
+name = "successor"
+mode = "run"
+source = "successor.ska"
+[[test.run]]
+name = "primitive_intrinsics_wrapping_and_class_witness"
+expect = { stdout = { inline = "18\n24\n0\n0\n-9223372036854775808\n43\n" } }

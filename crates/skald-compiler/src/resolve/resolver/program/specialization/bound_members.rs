@@ -8,6 +8,7 @@ pub(in crate::resolve::resolver::program) fn close_bound_member_selections(
     class_specializations: &mut GenericSpecializationTable,
     interface_specializations: &GenericInterfaceSpecializationTable,
     operator_language_item: Option<&ResolvedOperatorLanguageItem>,
+    range_language_item: Option<&ResolvedRangeLanguageItem>,
 ) {
     for specialization in class_specializations.iter_mut() {
         if !matches!(
@@ -41,6 +42,7 @@ pub(in crate::resolve::resolver::program) fn close_bound_member_selections(
                         template_requirement,
                         interface_specializations,
                         operator_language_item,
+                        range_language_item,
                     );
                     let receiver = specialization.key.arguments[parameter.index()];
                     let closed = if is_primitive(receiver) {
@@ -143,22 +145,33 @@ fn primitive_bound_operation(
     requirement: ResolvedTemplateBoundRequirement,
     interface_specializations: &GenericInterfaceSpecializationTable,
     operator_language_item: Option<&ResolvedOperatorLanguageItem>,
-) -> Option<ResolvedPrimitiveOperatorOperation> {
+    range_language_item: Option<&ResolvedRangeLanguageItem>,
+) -> Option<ResolvedPrimitiveBoundOperation> {
     let ResolvedTemplateBoundRequirement::Generic(requirement) = requirement else {
         return None;
     };
-    let language_item = operator_language_item?;
-    let protocol = language_item
-        .iter()
-        .find(|protocol| protocol.requirement == requirement)?;
-    let application = interface_specializations.for_interface(interface)?;
-    let (rhs, output) = closed_operator_arguments(protocol.kind, &application.key.arguments);
-    primitive_operator_operation(
-        specialization.key.arguments[parameter.index()],
-        protocol.kind,
-        rhs,
-        output,
-    )
+    let receiver = specialization.key.arguments[parameter.index()];
+    if let Some(protocol) = operator_language_item
+        .into_iter()
+        .flat_map(ResolvedOperatorLanguageItem::iter)
+        .find(|protocol| protocol.requirement == requirement)
+    {
+        let application = interface_specializations.for_interface(interface)?;
+        let (rhs, output) = closed_operator_arguments(protocol.kind, &application.key.arguments);
+        return primitive_operator_operation(receiver, protocol.kind, rhs, output)
+            .map(ResolvedPrimitiveBoundOperation::Operator);
+    }
+    let range = range_language_item?;
+    (range.successor_requirement == requirement)
+        .then(|| {
+            primitive_successor_operation(
+                receiver,
+                interface,
+                range.successor_template,
+                interface_specializations,
+            )
+        })
+        .flatten()
 }
 
 fn closed_operator_arguments(

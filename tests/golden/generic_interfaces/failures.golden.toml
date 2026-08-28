@@ -122,7 +122,7 @@ inline = """error[RES048]: type argument for `Reader<Item>` does not satisfy `So
    |
 7 | class Reader<Source>
    |       ------ template declared here
-  = note: generic bounds accept exact classes with effective nominal conformance and primitives with compiler-provided evidence for an exact canonical operator application
+  = note: generic bounds accept exact classes with effective nominal conformance and primitives only through compiler-provided evidence for an exact canonical operator application or a supported exact canonical successor application
 """
 
 [[test]]
