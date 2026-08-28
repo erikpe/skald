@@ -253,8 +253,8 @@ general iteration, lifecycle, and native code without primitive object
 conformance, new lower IR, runtime service, or ABI change. Lowest-precedence
 `..` resolution and ordinary class-construction HIR retain non-forgeable syntax
 provenance. Immediately consumed exact integer syntax loops select a structured
-fusion plan and erase to existing scalar MIR. Structural performance closure
-and the matched benchmark remain planned.
+fusion plan and erase to existing scalar MIR. Exact MIR and assembly shape plus
+the recorded matched benchmark establish handwritten-`while` parity.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

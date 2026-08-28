@@ -6,6 +6,8 @@ supported Rust toolchains, and local/external validation. See
 [Debugging the Compiler](DEBUGGING.md) for inspection workflows.
 The reproducible enabled-versus-omitted trace measurement is documented in
 [Panic Runtime Trace Performance](PANIC_RUNTIME_TRACE_PERFORMANCE.md).
+The fused-range acceptance measurement is documented in
+[Tight Range-Loop Performance](RANGE_LOOP_PERFORMANCE.md).
 
 ## Prerequisites
 
@@ -18,8 +20,8 @@ Skald development currently requires:
 - a C11 compiler driver; and
 - a static archiver.
 
-The optional panic runtime-trace benchmark additionally requires Python 3;
-neither normal builds nor repository validation use Python.
+The optional performance benchmarks additionally require Python 3; neither
+normal builds nor repository validation use Python.
 
 Production compiler crates and the documentation checker have no third-party
 crate dependencies. The `skald-golden` repository tool is the narrow
@@ -73,6 +75,11 @@ measurement procedure, not a timing gate, and is intentionally excluded from
 vector growth, structural-copy, pop, and clear workload. It reports compile,
 native-runtime, and artifact-size observations without imposing a timing
 threshold or joining `make check`.
+
+`make range-loop-benchmark` compares immediate `u8`, `u64`, and `i64` ranges
+with matched handwritten `while` loops and enforces the documented maximum
+10% median range overhead. It remains outside `make check`; deterministic MIR,
+assembly, and native-result tests are the ordinary correctness gates.
 
 ## Minimum supported Rust version
 

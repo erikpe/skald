@@ -46,3 +46,17 @@ python3 scripts/measure_generic_vec.py --compiler target/debug/skac --json
 It is a reproducible measurement procedure, not a timing correctness gate.
 Artifacts remain under the ignored `build/measurements/generic-vec/`
 directory.
+
+`measure_range_loops.py` compiles matched `u8`, `u64`, and `i64` fused-range
+and handwritten-`while` workloads, validates their checksums, records assembly
+profiles and artifact sizes, and reports interleaved repeated median timings:
+
+```sh
+make range-loop-benchmark
+python3 scripts/measure_range_loops.py --compiler target/debug/skac --json
+```
+
+The Make target enforces the documented maximum 10% range overhead. Timing is
+deliberately outside `make check`; deterministic MIR and assembly-shape tests
+are the correctness gates. Artifacts remain under the ignored
+`build/measurements/range-loop/` directory.

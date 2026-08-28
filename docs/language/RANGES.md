@@ -5,8 +5,8 @@ implemented through immediate primitive-loop fusion. The canonical
 `Successor<Output>` protocol, ordinary `Range<T>` class, class
 opt-in, static integer realizations, explicit half-open iteration, `..`
 syntax, exact canonical resolution, ordinary construction lowering, and
-native execution, and the initial `u8`/`u64`/`i64` tight-loop profile are
-implemented. Measured handwritten-`while` parity remains planned. The
+native execution, the initial `u8`/`u64`/`i64` tight-loop profile, and recorded
+handwritten-`while` performance acceptance are implemented. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains authoritative for accepted
 source syntax.
@@ -272,9 +272,9 @@ constructor-semantic boundary.
 The durable performance promise is structural: the fused hot loop has no
 interface or runtime call, optional wrapper, allocation, ownership operation,
 or loop-carried range aggregate; it performs one termination comparison and
-one same-typed induction increment beyond the source body. A documented
-reference benchmark must additionally place its median time within 10% of the
-matched handwritten `while` loop before the performance milestone is complete.
+one same-typed induction increment beyond the source body. The documented
+reference benchmark places every integer profile's median time within 10% of
+the matched handwritten `while` loop.
 Wall time is acceptance evidence, not a portable language guarantee or noisy
 repository correctness gate.
 
@@ -302,4 +302,4 @@ upper`.
 The rationale and rejected alternatives are preserved in the
 [design record](../archive/GENERIC_RANGES_DESIGN_PROPOSAL.md). Delivery order
 and acceptance belong to the
-[implementation roadmap](../roadmaps/GENERIC_RANGES_ROADMAP.md).
+[archived implementation roadmap](../archive/GENERIC_RANGES_ROADMAP.md).

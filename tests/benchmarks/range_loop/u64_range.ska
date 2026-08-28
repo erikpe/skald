@@ -1,0 +1,10 @@
+fn main() -> i64 {
+    var checksum: u64 = 0u;
+    for (item in 0u .. 20000000u) {
+        checksum = checksum + item;
+    }
+    if (checksum != 199999990000000u) {
+        return 1;
+    }
+    return 0;
+}

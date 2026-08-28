@@ -667,7 +667,7 @@ The confirmed decisions are promoted into focused living contracts:
   testing, and debugging documents at their existing authoritative boundaries;
   and
 - the
-  [PR-sized implementation roadmap](../roadmaps/GENERIC_RANGES_ROADMAP.md),
+  [PR-sized implementation roadmap](GENERIC_RANGES_ROADMAP.md),
   ordered by explicit range foundations, syntax, complete ordinary execution,
   then fusion and performance evidence.
 

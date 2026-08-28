@@ -1,0 +1,14 @@
+fn main() -> i64 {
+    var checksum: i64 = 0;
+    var current: i64 = -10000000;
+    var end: i64 = 10000000;
+    while (current < end) {
+        var item: i64 = current;
+        current = current + 1;
+        checksum = checksum + item;
+    }
+    if (checksum != -10000000) {
+        return 1;
+    }
+    return 0;
+}

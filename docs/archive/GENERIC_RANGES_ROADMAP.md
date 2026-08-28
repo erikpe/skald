@@ -1,11 +1,11 @@
 # Generic Ranges and Tight Range Loops Roadmap
 
-Status: in progress; RG5 is next.
+Status: complete.
 
 This roadmap implements the frozen
 [language contract](../language/RANGES.md) and
 [compiler contract](../compiler/RANGES.md). The
-[archived design record](../archive/GENERIC_RANGES_DESIGN_PROPOSAL.md)
+[archived design record](GENERIC_RANGES_DESIGN_PROPOSAL.md)
 preserves alternatives and rationale. This roadmap owns delivery order and
 acceptance without reopening the confirmed successor, half-open range, syntax,
 HIR provenance, initial fusion-eligibility, or performance decisions.
@@ -54,7 +54,7 @@ and determinism pipelines are the baseline. No other roadmap blocks RG0.
 - [x] RG2 — Range punctuation, grammar, and resolved canonical construction
 - [x] RG3 — Concise range expression HIR and complete ordinary execution
 - [x] RG4 — Immediate primitive range-loop fusion
-- [ ] RG5 — Performance evidence, hardening, and release closure
+- [x] RG5 — Performance evidence, hardening, and release closure
 
 ## PR-sized implementation sequence
 
@@ -312,30 +312,30 @@ runtime range mechanism exists.
 close the feature with complete deterministic, compatibility, and living
 documentation evidence.
 
-- [ ] Add target-independent structural tests proving one comparison, one
+- [x] Add target-independent structural tests proving one comparison, one
   same-typed induction increment, no call/optional/owner/runtime operation,
   and no loop-carried range aggregate in representative fused loops.
-- [ ] Add x86-64 assembly-shape comparisons against matched handwritten
+- [x] Add x86-64 assembly-shape comparisons against matched handwritten
   `while` without freezing registers, labels, offsets, or incidental complete
   instruction sequences.
-- [ ] Create `tests/benchmarks/range_loop` with matched `u8`, `u64`, and `i64`
+- [x] Create `tests/benchmarks/range_loop` with matched `u8`, `u64`, and `i64`
   range/while programs, deterministic work and checksum, documented build and
   measurement procedure, code-size and hot-loop inspection, and repeated
   median timing.
-- [ ] Record a reference result whose range median is within 10% of the matched
+- [x] Record a reference result whose range median is within 10% of the matched
   `while` median; investigate structural or fixed overhead when it is not.
-- [ ] Keep wall time outside `make check`; make deterministic MIR, assembly,
+- [x] Keep wall time outside `make check`; make deterministic MIR, assembly,
   native-result, and documentation checks the repository gates.
-- [ ] Complete the source-to-native positive, failure, effect, lifecycle,
+- [x] Complete the source-to-native positive, failure, effect, lifecycle,
   primitive/class, explicit/syntax, fused/unfused, boundary, nesting, and exit
   conformance matrix.
-- [ ] Harden bounded malformed/deep source, malicious resolved/HIR/MIR
+- [x] Harden bounded malformed/deep source, malicious resolved/HIR/MIR
   mutations, provider/source/import reordering, independent-process dumps and
   artifacts, runtime-symbol snapshots, and ABI neutrality.
-- [ ] Audit range-owned compiler modules and functions for cohesive facades and
+- [x] Audit range-owned compiler modules and functions for cohesive facades and
   record out-of-scope findings in an indexed discovery document rather than
   extending closure.
-- [ ] Promote every living document to the implemented profile, remove stale
+- [x] Promote every living document to the implemented profile, remove stale
   rollout wording and roadmap codes outside historical files, run full gates,
   then archive this completed roadmap and repair indexes and links.
 

@@ -38,7 +38,37 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     exercise_generic_syntax_mutations();
     exercise_operator_syntax_mutations();
     exercise_for_in_syntax_mutations();
+    exercise_range_syntax_mutations();
     exercise_byte_literal_mutations();
+}
+
+fn exercise_range_syntax_mutations() {
+    const SEEDS: &[&str] = &[
+        "fn main() -> i64 { for (item in 0u .. 8u) { if (item == 4u) { continue; } } return 0; }",
+        "fn main() -> i64 { var values: Range<u64> = (1u .. 4u); for (item in values) {} return 0; }",
+        "fn main() -> i64 { for (outer in 0u8 .. 4u8) { for (inner in -2 .. 2) {} } return 0; }",
+        "fn main() -> i64 { var broken: u64 = (1u ..) .. (.. 3u); return 0; }",
+    ];
+    const INSERTIONS: &[&str] = &["..", ".", "(", ")", "in", "for", "{", "}", ";", "u"];
+
+    for (seed_index, seed) in SEEDS.iter().enumerate() {
+        for index in 0..seed.len() {
+            let mut deletion = (*seed).to_owned();
+            deletion.remove(index);
+            assert_deterministic_frontend_recovery(
+                &format!("range-{seed_index}-delete-{index}"),
+                &deletion,
+            );
+        }
+        for index in 0..=seed.len() {
+            let mut insertion = (*seed).to_owned();
+            insertion.insert_str(index, INSERTIONS[index % INSERTIONS.len()]);
+            assert_deterministic_frontend_recovery(
+                &format!("range-{seed_index}-insert-{index}"),
+                &insertion,
+            );
+        }
+    }
 }
 
 fn exercise_operator_syntax_mutations() {

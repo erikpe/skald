@@ -52,26 +52,50 @@ fn assert_rejected(label: &str, program: &MirProgram) {
 #[test]
 fn fused_integer_matrix_contains_only_scalar_loop_machinery() {
     let program = lowered(concat!(
-        "fn scan() -> unit {\n",
-        "  for (byte in 1u8 .. 3u8) {}\n",
-        "  for (wide in (1u .. 3u)) {}\n",
-        "  for (signed in -2 .. 1) {}\n",
-        "}\n",
+        "fn bytes() -> unit { for (item in 1u8 .. 3u8) {} }\n",
+        "fn unsigned() -> unit { for (item in (1u .. 3u)) {} }\n",
+        "fn signed() -> unit { for (item in -2 .. 1) {} }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
     verify_mir(&program).expect("fused integer matrix must verify");
-    let function = program
-        .definitions
-        .get(function_id(&program, "scan"))
-        .unwrap();
+    assert_tight_range_shape(
+        &program,
+        "bytes",
+        MirIntegerType::U8,
+        MirBinaryOperation::AddU8,
+        MirType::U8,
+    );
+    assert_tight_range_shape(
+        &program,
+        "unsigned",
+        MirIntegerType::U64,
+        MirBinaryOperation::AddU64,
+        MirType::U64,
+    );
+    assert_tight_range_shape(
+        &program,
+        "signed",
+        MirIntegerType::I64,
+        MirBinaryOperation::AddI64,
+        MirType::I64,
+    );
+}
 
+fn assert_tight_range_shape(
+    program: &MirProgram,
+    name: &str,
+    integer: MirIntegerType,
+    increment: MirBinaryOperation,
+    scalar: MirType,
+) {
+    let function = program.definitions.get(function_id(program, name)).unwrap();
     assert_eq!(
         function
             .storage
             .iter()
             .filter(|storage| storage.name.starts_with("range-current"))
             .count(),
-        3
+        1
     );
     assert_eq!(
         function
@@ -79,47 +103,61 @@ fn fused_integer_matrix_contains_only_scalar_loop_machinery() {
             .iter()
             .filter(|storage| storage.name.starts_with("range-end"))
             .count(),
-        3
+        1
+    );
+    assert!(
+        function.storage.iter().all(|storage| storage.ty == scalar),
+        "a tight range function must contain scalar storage only: {:?}",
+        function.storage
     );
 
-    let mut comparisons = Vec::new();
-    let mut increments = Vec::new();
-    for instruction in function
-        .body
-        .blocks
-        .iter()
-        .flat_map(|block| &block.instructions)
-    {
-        match instruction {
-            MirInstruction::Assign(assignment) => match assignment.rvalue.kind {
-                MirRvalueKind::PrimitiveComparison { operation, .. } => comparisons.push(operation),
-                MirRvalueKind::Binary { operation, .. }
-                    if matches!(
-                        operation,
-                        MirBinaryOperation::AddI64
-                            | MirBinaryOperation::AddU64
-                            | MirBinaryOperation::AddU8
-                    ) =>
-                {
-                    increments.push(operation)
+    let mut comparisons = 0;
+    let mut increments = 0;
+    for block in &function.body.blocks {
+        assert!(matches!(
+            block.terminator,
+            Some(
+                MirTerminator::Branch { .. }
+                    | MirTerminator::Goto { .. }
+                    | MirTerminator::Return { .. }
+            )
+        ));
+        for instruction in &block.instructions {
+            match instruction {
+                MirInstruction::StorageLive(_)
+                | MirInstruction::StorageDead(_)
+                | MirInstruction::Store(_)
+                | MirInstruction::EndFullExpression(_) => {}
+                MirInstruction::Assign(assignment) => match assignment.rvalue.kind {
+                    MirRvalueKind::PrimitiveComparison { operation, .. } => {
+                        assert_eq!(operation.predicate, MirComparisonPredicate::LessThan);
+                        assert_eq!(operation.operand, MirComparisonOperand::Integer(integer));
+                        comparisons += 1;
+                    }
+                    MirRvalueKind::Binary { operation, .. } => {
+                        assert_eq!(operation, increment);
+                        increments += 1;
+                    }
+                    MirRvalueKind::Load(_)
+                    | MirRvalueKind::ConstantI64(_)
+                    | MirRvalueKind::ConstantU64(_)
+                    | MirRvalueKind::ConstantU8(_)
+                    | MirRvalueKind::Unary {
+                        operation: MirUnaryOperation::NegateI64,
+                        ..
+                    } => {}
+                    ref unexpected => {
+                        panic!("tight range `{name}` contains unexpected rvalue {unexpected:?}")
+                    }
+                },
+                unexpected => {
+                    panic!("tight range `{name}` contains forbidden instruction {unexpected:?}")
                 }
-                MirRvalueKind::OptionalPresence { .. } => {
-                    panic!("fused range loop must not test an optional result")
-                }
-                _ => {}
-            },
-            MirInstruction::Call(_) | MirInstruction::OptionalSharedCleanup(_) => {
-                panic!("fused range loop must not contain protocol or optional traffic")
             }
-            _ => {}
         }
     }
-    assert_eq!(comparisons.len(), 3);
-    assert!(comparisons.iter().all(|operation| {
-        operation.predicate == MirComparisonPredicate::LessThan
-            && matches!(operation.operand, MirComparisonOperand::Integer(_))
-    }));
-    assert_eq!(increments.len(), 3);
+    assert_eq!(comparisons, 1, "tight range must have one comparison");
+    assert_eq!(increments, 1, "tight range must have one increment");
 }
 
 #[test]

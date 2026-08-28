@@ -374,7 +374,7 @@ devirtualization, or new runtime ABI behavior.
 
 Generic ranges and `..` have a separate frozen
 [language contract](RANGES.md). Its canonical successor protocol and integer
-evidence are implemented independently; future ranges reuse `OpLess<T>` but do
+evidence are implemented independently; ranges reuse `OpLess<T>` but do
 not extend the operator protocol surface or make `..` overloadable.
 
 The implemented compiler representation and verification obligations are

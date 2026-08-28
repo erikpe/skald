@@ -1,13 +1,14 @@
 # Generic Ranges Follow-up Discoveries
 
-Status: pending after the generic ranges and tight range loops roadmap.
+Status: pending follow-up work.
 
 ## Replace syntax-level range request inference with a semantic request pass
 
 **Priority:** high.
 
 **Problem:** Generic class specializations are currently fixed before ordinary
-function and class bodies are resolved. RG2 therefore discovers
+function and class bodies are resolved. The concise-range frontend therefore
+discovers
 `Range<T>` requests with a deliberately small source-type closer. It covers
 literals, declared locals and parameters, constructors, casts, local and
 imported function results, common primitive expressions, and closed
@@ -19,7 +20,8 @@ would have identified `T`.
 
 **Evidence:**
 `resolve/resolver/program/specialization/requests/source_request_scanner.rs`
-contains the conservative `static_type` bridge. RG2 resolved tests cover the
+contains the conservative `static_type` bridge. Concise-range resolved tests
+cover the
 literal, class-construction, local/imported-call, and closed generic-template
 request families.
 
@@ -33,8 +35,9 @@ with the ordinary expression-selection rules, collect exact `Range<T>` keys,
 iterate inner-to-outer for nested ranges, and then perform normal body
 resolution once. Remove the syntax-level result inference rather than growing
 a second operator, call, inheritance, and method type system. Preserve
-source-order diagnostics and specialization provenance at the `..` span. RG3
-keeps this as a documented specialization-discovery limitation rather than
+source-order diagnostics and specialization provenance at the `..` span. The
+implemented concise-expression path keeps this as a documented
+specialization-discovery limitation rather than
 growing a second method and operator type system.
 
 ## Suppress dependent body diagnostics for unsatisfied specializations
@@ -67,15 +70,16 @@ regression coverage.
 
 **Priority:** low.
 
-**Problem:** RG4 conservatively keeps every range loop in a specialized
-generic class body on the protocol path. This correctly excludes ranges whose
-endpoint values depend on a generic parameter, but also misses an optimization
-for a wholly concrete literal range that happens to appear in the same body.
+**Problem:** Immediate fusion conservatively keeps every range loop in a
+specialized generic class body on the protocol path. This correctly excludes
+ranges whose endpoint values depend on a generic parameter, but also misses an
+optimization for a wholly concrete literal range that happens to appear in the
+same body.
 Source semantics and eligibility safety are unaffected; only this incidental
 optimization opportunity is lost.
 
 **Evidence:** `typeck/function/range_iteration.rs` tests the specialized class
-owner before accepting an immediate primitive range. The RG4 negative matrix
+owner before accepting an immediate primitive range. The fusion negative matrix
 proves that a `T`-origin range specialized to `u64` remains ordinary.
 
 **Likely owner:** resolved/type-checked expression provenance for specialized
@@ -87,3 +91,31 @@ are independently concrete and all other immediate-origin requirements hold.
 Do not infer this from the post-substitution primitive type or from source
 spelling. Implement only if representative generic code demonstrates a useful
 miss; the conservative rule is long-term sound.
+
+## Prune unused canonical range artifacts after fused-only use
+
+**Priority:** medium.
+
+**Problem:** A source module using only an immediately fused range still
+activates the canonical `std::range` dependency and emits reachable generic
+range declarations and bodies into textual assembly. The system linker removes
+nearly all of this fixed material from the executable, and the fused source
+function has the intended tight shape, but assembly emission and inspection
+carry avoidable noise and work.
+
+**Evidence:** The recorded tight-loop benchmark found range assembly files
+roughly 6 KiB larger than their matched `while` files while linked executables
+were only 80 bytes larger. Source-function mnemonic profiles were identical
+except for the specified cold cleanup jump, and median execution differed by
+at most 0.102%, isolating the issue to whole-program artifact retention rather
+than the hot loop.
+
+**Likely owner:** closed-world callable/declaration reachability before backend
+emission, not range eligibility, HIR lowering, or target instruction selection.
+
+**Useful boundary:** Teach the existing retention analysis to distinguish
+language-item declarations needed to validate and type an erased operation
+from bodies and metadata still needed by final MIR. Preserve complete
+deterministic dumps before erasure, replacement-standard-library validation,
+explicit/stored range execution, and any specialization reachable from an
+ordinary path. Do not add a range-specific backend filter.

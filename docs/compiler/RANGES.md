@@ -1,20 +1,19 @@
 # Generic-Range Compiler Contract
 
-Status: implemented compiler contract through immediate primitive-loop fusion;
-performance acceptance remains in progress.
+Status: implemented compiler contract through immediate primitive-loop fusion
+and handwritten-`while` performance acceptance.
 Resolution validates the canonical declaration bundle, closes exact integer
 bounds to existing operations, and compiles explicit `Range<T>` values through
 ordinary construction and general iteration. `..` has source AST,
 compiler-dependency, exact resolved and HIR construction evidence,
 diagnostics, ordinary lifecycle and native execution. Immediate `u8`, `u64`,
-and `i64` syntax loops use the scalar fusion described below; measured
-handwritten-`while` parity remains planned. This document owns those
+and `i64` syntax loops use the scalar fusion described below; deterministic
+shape and recorded timings establish handwritten-`while` parity. This document owns those
 identities and target/ABI constraints for the
 [generic-range language contract](../language/RANGES.md).
 
-The implemented grammar and pipeline include range expressions and the narrow
-fusion profile below. The benchmark guarantee remains an acceptance target,
-not yet completed evidence.
+The implemented grammar and pipeline include range expressions, the narrow
+fusion profile below, and its completed structural and benchmark evidence.
 
 ## Canonical module and identities
 
@@ -299,12 +298,13 @@ Target-independent MIR tests own exact semantic operation counts. Backend
 tests compare assembly shape without freezing registers, labels, stack
 offsets, or the complete incidental instruction sequence.
 
-A documented `tests/benchmarks/range_loop` procedure compiles matched syntax
-range and handwritten `while` programs under identical compiler, runtime,
-toolchain, trace, work-count, and host conditions. It records code size,
-hot-loop instruction shape, and repeated successful wall time. The median
-range time must be within 10% of the matched `while` median before the final
-performance milestone is complete.
+A documented
+[range-loop performance procedure](../development/RANGE_LOOP_PERFORMANCE.md)
+compiles matched syntax range and handwritten `while` programs under identical
+compiler, runtime, toolchain, trace, work-count, and host conditions. It
+records code size, hot-loop instruction shape, and repeated successful wall
+time. The recorded medians for all three integer types are within 10% of their
+matched `while` medians.
 
 The structural requirements are the durable deterministic contract. Wall time
 is recorded acceptance evidence and is not added to `make check`. The
@@ -337,4 +337,5 @@ Coverage ownership is:
 
 The rationale is preserved in the
 [design record](../archive/GENERIC_RANGES_DESIGN_PROPOSAL.md), and delivery is
-ordered by the [implementation roadmap](../roadmaps/GENERIC_RANGES_ROADMAP.md).
+recorded by the
+[archived implementation roadmap](../archive/GENERIC_RANGES_ROADMAP.md).

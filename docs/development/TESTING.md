@@ -446,26 +446,19 @@ through deterministic verification. Equivalent split and renumbered loop CFGs
 must survive the pass boundary and x86-64 lowering without canonical-layout or
 source-loop recognition.
 
-The frozen [generic-range contracts](../language/RANGES.md) have an ordered
-coverage layer. Colocated resolution and primitive-registry tests own
-canonical successor and range declaration validation, identity and dump
-determinism, lookalike exclusion, and the exact `u8`/`u64`/`i64` static
-realization matrix.
-Type and HIR tests own class-witness versus primitive-intrinsic closure and
-reject unsupported types, owners, views, wrong applications, and direct
-primitive members. `tests/golden/ranges` owns native manual successor behavior,
-explicit half-open primitive and opted-in class ranges, boundary and exit
-semantics, lifecycle effects, and capability failures through ordinary
-iteration. The pipeline-determinism suite permutes source and provider order
-through assembly. Syntax tests will own
-`..` longest match, lowest precedence, non-associativity, recovery, and exact
-endpoint typing. HIR tests will distinguish ordinary construction carrying
-canonical syntax provenance from explicit construction. Fused-loop MIR and
-assembly tests will own the call-free, optional-free scalar shape, while
-`tests/benchmarks/range_loop` will record the separate matched-`while` median
-without joining `make check`. The active
-[implementation roadmap](../roadmaps/GENERIC_RANGES_ROADMAP.md) assigns each
-remaining layer to its delivery task.
+The implemented [generic-range contracts](../language/RANGES.md) have an
+ordered coverage layer. Colocated syntax, resolution, primitive-registry,
+type, and HIR tests own punctuation/recovery, canonical declaration
+validation, identity and dump determinism, exact realization, construction
+provenance, fusion eligibility, and excluded boundaries. MIR and x86-64 tests
+own the call-free, optional-free scalar shape, malicious mutations, and matched
+handwritten-`while` instruction profile. `tests/golden/ranges` owns the
+source-to-native primitive/class, explicit/syntax, ordinary/fused, boundary,
+nested, exit, lifecycle, effect, diagnostic, and failure matrix. Pipeline and
+golden determinism permute source/provider order and independent processes;
+runtime tests own the unchanged ABI and exact symbol set. The separate
+[performance procedure](RANGE_LOOP_PERFORMANCE.md) records matched medians
+without joining `make check`.
 
 Primitive integer operation coverage keeps the closed matrices explicit.
 Type-check and MIR tests enumerate all eighteen same-type comparisons and all
