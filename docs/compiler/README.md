@@ -157,7 +157,8 @@ work in the [status matrix](../language/STATUS.md#not-implemented).
 The staged [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
 extends operators without adding a runtime mechanism. Its dependency-free
 `std::ops` source, complete reachable-bundle validation, exact resolved
-identity table, and complete non-generic class selection are implemented.
+identity table, complete non-generic class selection, and closed primitive
+bound-evidence registry are implemented.
 Selected class uses erase before completed HIR to ordinary interface calls;
 overloaded `!=` negates one secured equality call, while canonical
 primitive-bound uses erase to existing primitive operations, and produced

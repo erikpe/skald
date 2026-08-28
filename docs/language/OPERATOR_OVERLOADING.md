@@ -5,8 +5,9 @@ The canonical `std::ops` declarations, whole-bundle validation, explicit
 ordinary interface use, and the complete non-generic class operator surface
 are implemented, including ordinary receiver carriers, dispatch, ownership,
 evaluation, cleanup, result capabilities, panic traces, and static effects.
-Definition-site generic punctuation and compiler-provided
-primitive protocol evidence remain staged. Exact
+Compiler-provided primitive protocol evidence now satisfies exact canonical
+generic bounds. Definition-site generic punctuation and primitive
+specialization remain staged. Exact
 primitive expressions continue to use the [implemented primitive operator
 profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
 This document fixes the complete source-visible contract;
@@ -107,7 +108,8 @@ These declarations are currently usable through ordinary imports,
 `implements`, generic bounds, interface types, and explicit method calls.
 Exact classes, inherited and closed-generic class conformances, and exact
 canonical interface views can also use all overloadable punctuation listed
-below. Definition-site generic punctuation remains staged.
+below. Supported primitive arguments can satisfy exact canonical operator
+bounds; definition-site generic punctuation remains staged.
 
 Every requirement has the ordinary implicit read-only receiver. Binary
 protocols take one call-scoped read-only `ref` operand. Value-producing
@@ -255,16 +257,16 @@ protocols; other interface bounds retain their existing exact-class rule.
 
 ## Compiler-provided primitive applications
 
-This section specifies staged behavior that is not yet implemented.
-
 For every supported primitive operation, the compiler supplies one static
 application of the corresponding canonical protocol. The set is exactly the
 implemented primitive matrix: it neither creates a new primitive operation nor
 changes a result type, wrapping rule, failure, short-circuit rule, or IEEE-754
 behavior. Unsupported cells, such as `OpRem<f64, f64>`, remain unsatisfied.
 
-This evidence may satisfy a canonical bound and specialize a bound-selected
-operator or manual requirement call to the existing primitive operation. It
+This evidence now satisfies canonical class-template and interface-template
+bounds. Specializing a bound-selected operator or manual requirement call to
+the existing primitive operation remains part of the staged generic-operator
+work. The evidence
 does not make a primitive an object, create an interface view or witness-table
 entry, permit primitive/interface casts or shared ownership, authorize
 unrelated primitive conformances, or allow user replacement of the built-in

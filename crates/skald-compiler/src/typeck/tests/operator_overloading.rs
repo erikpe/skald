@@ -32,6 +32,228 @@ fn check_operator_source(source: &str) -> crate::hir::HirProgram {
     checked.hir.expect("valid operator source must produce HIR")
 }
 
+fn primitive_application(
+    protocol: CanonicalOperatorProtocol,
+    rhs: Option<crate::resolve::ResolvedPrimitiveType>,
+    output: crate::resolve::ResolvedPrimitiveType,
+) -> String {
+    let name = protocol.interface_name();
+    match protocol.shape() {
+        crate::resolve::CanonicalOperatorProtocolShape::Unary => {
+            format!("{name}<{}>", output.name())
+        }
+        crate::resolve::CanonicalOperatorProtocolShape::Predicate => format!(
+            "{name}<{}>",
+            rhs.expect("predicate evidence has an RHS").name()
+        ),
+        crate::resolve::CanonicalOperatorProtocolShape::Binary => format!(
+            "{name}<{}, {}>",
+            rhs.expect("binary evidence has an RHS").name(),
+            output.name()
+        ),
+    }
+}
+
+fn protocol_spelling(protocol: CanonicalOperatorProtocol) -> &'static str {
+    match protocol {
+        CanonicalOperatorProtocol::Neg => "-",
+        CanonicalOperatorProtocol::BitNot => "~",
+        CanonicalOperatorProtocol::Eq => "==",
+        CanonicalOperatorProtocol::Less => "<",
+        CanonicalOperatorProtocol::LessEq => "<=",
+        CanonicalOperatorProtocol::Greater => ">",
+        CanonicalOperatorProtocol::GreaterEq => ">=",
+        CanonicalOperatorProtocol::Add => "+",
+        CanonicalOperatorProtocol::Sub => "-",
+        CanonicalOperatorProtocol::Mul => "*",
+        CanonicalOperatorProtocol::Div => "/",
+        CanonicalOperatorProtocol::Rem => "%",
+        CanonicalOperatorProtocol::BitAnd => "&",
+        CanonicalOperatorProtocol::BitOr => "|",
+        CanonicalOperatorProtocol::BitXor => "^",
+        CanonicalOperatorProtocol::ShiftLeft => "<<",
+        CanonicalOperatorProtocol::ShiftRight => ">>",
+    }
+}
+
+#[test]
+fn every_primitive_operator_cell_satisfies_its_exact_canonical_bound() {
+    let mut source = String::from("import std::ops;\n");
+    for (index, evidence) in crate::resolve::primitive_operator_registry()
+        .iter()
+        .copied()
+        .enumerate()
+    {
+        let application =
+            primitive_application(evidence.protocol(), evidence.rhs(), evidence.output());
+        let receiver = evidence.receiver().name();
+        source.push_str(&format!(
+            "class Evidence{index}<T> where T: std::ops::{application} {{ init() {{}} }}\n\
+             fn use{index}(ref value: Evidence{index}<{receiver}>) -> unit {{}}\n"
+        ));
+    }
+    source.push_str("fn main() -> i64 { return 0; }\n");
+
+    let resolved = resolve_operator_source(&source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "all registry cells must satisfy their bounds: {:?}",
+        resolved.diagnostics
+    );
+    let dump = dump_resolved(&resolved.program);
+    assert_eq!(dump.matches(" canonical Op").count(), 60, "{dump}");
+    assert!(
+        dump.contains("i64 canonical OpShiftLeft<u64, i64>"),
+        "{dump}"
+    );
+    assert!(dump.contains("f64 canonical OpEq<f64>"), "{dump}");
+
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir_dump = dump_hir(&checked.hir.unwrap());
+    assert!(!hir_dump.contains("Conformances"), "{hir_dump}");
+}
+
+#[test]
+fn primitive_registry_matches_the_complete_direct_operation_matrix() {
+    let mut source = String::new();
+    for (index, evidence) in crate::resolve::primitive_operator_registry()
+        .iter()
+        .copied()
+        .enumerate()
+    {
+        let receiver = evidence.receiver().name();
+        let output = evidence.output().name();
+        let spelling = protocol_spelling(evidence.protocol());
+        match evidence.rhs() {
+            None => source.push_str(&format!(
+                "fn direct{index}(left: {receiver}) -> {output} {{ return {spelling}left; }}\n"
+            )),
+            Some(rhs) => source.push_str(&format!(
+                "fn direct{index}(left: {receiver}, right: {}) -> {output} {{ return left {spelling} right; }}\n",
+                rhs.name()
+            )),
+        }
+    }
+    source.push_str("fn main() -> i64 { return 0; }\n");
+
+    let resolved = resolve_operator_source(&source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let dump = dump_hir(&checked.hir.unwrap());
+    assert!(!dump.contains("InterfaceCall"), "{dump}");
+    assert_eq!(dump.matches("Unary ").count(), 5, "{dump}");
+    assert_eq!(dump.matches("Comparison ").count(), 21, "{dump}");
+    assert_eq!(dump.matches("Binary ").count(), 22, "{dump}");
+    assert_eq!(dump.matches("CheckedIntegerDivision ").count(), 6, "{dump}");
+    assert_eq!(dump.matches("CheckedShift ").count(), 6, "{dump}");
+}
+
+#[test]
+fn canonical_primitive_evidence_also_satisfies_generic_interface_bounds() {
+    let resolved = resolve_operator_source(
+        r#"
+import std::ops;
+interface Envelope<T> where T: std::ops::OpAdd<T, T> {}
+fn use(ref value: Envelope<u64>) -> unit {}
+fn main() -> i64 { return 0; }
+"#,
+    );
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+}
+
+#[test]
+fn primitive_evidence_rejects_unsupported_wrong_and_noncanonical_bounds() {
+    let source = r#"
+import std::ops;
+
+interface OpAdd<Rhs, Output> { fn op_add(ref rhs: Rhs) -> Output; }
+interface Marker {}
+
+class Unsupported<T> where T: std::ops::OpRem<T, T> { init() {} }
+class WrongRhs<T> where T: std::ops::OpAdd<i64, T> { init() {} }
+class WrongOutput<T> where T: std::ops::OpAdd<T, bool> { init() {} }
+class Foreign<T> where T: OpAdd<T, T> { init() {} }
+class Unrelated<T> where T: Marker { init() {} }
+
+fn unsupported(ref value: Unsupported<f64>) -> unit {}
+fn wrong_rhs(ref value: WrongRhs<u64>) -> unit {}
+fn wrong_output(ref value: WrongOutput<u64>) -> unit {}
+fn foreign(ref value: Foreign<u64>) -> unit {}
+fn unrelated(ref value: Unrelated<u64>) -> unit {}
+fn main() -> i64 { return 0; }
+"#;
+    let resolved = resolve_operator_source(source);
+    let failures = resolved
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == crate::resolve::UNSATISFIED_GENERIC_REQUIREMENT)
+        .collect::<Vec<_>>();
+    assert_eq!(failures.len(), 5, "{:?}", resolved.diagnostics);
+    assert_eq!(
+        failures
+            .iter()
+            .filter(|failure| failure.labels.iter().any(|label| {
+                label.message.contains(
+                    "has no compiler-provided evidence for the exact canonical application",
+                )
+            }))
+            .count(),
+        3
+    );
+    assert!(failures.iter().all(|failure| failure
+        .notes
+        .iter()
+        .any(|note| { note.contains("exact canonical operator application") })));
+}
+
+#[test]
+fn primitive_evidence_does_not_create_members_views_or_type_test_relations() {
+    let cases = [
+        r#"
+from std::ops import OpAdd;
+fn invalid(value: u64) -> u64 { return value.op_add(value); }
+fn main() -> i64 { return 0; }
+"#,
+        r#"
+from std::ops import OpAdd;
+fn take(ref value: OpAdd<u64, u64>) -> unit {}
+fn invalid(value: u64) -> unit { take(value); }
+fn main() -> i64 { return 0; }
+"#,
+        r#"
+from std::ops import OpAdd;
+fn invalid(value: u64) -> bool { return value is OpAdd<u64, u64>; }
+fn main() -> i64 { return 0; }
+"#,
+    ];
+
+    for source in cases {
+        let resolved = resolve_operator_source(source);
+        if resolved.diagnostics.is_empty() {
+            let checked = crate::typeck::type_check(&resolved.program);
+            assert!(
+                checked.hir.is_none(),
+                "primitive view unexpectedly accepted: {source}"
+            );
+            assert!(!checked.diagnostics.is_empty(), "{source}");
+        } else {
+            assert!(resolved.program.classes.is_empty(), "{source}");
+        }
+    }
+}
+
 #[test]
 fn every_value_protocol_selects_once_and_erases_to_an_interface_call() {
     let source = r#"

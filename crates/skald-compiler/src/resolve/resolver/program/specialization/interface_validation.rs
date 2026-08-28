@@ -19,7 +19,7 @@ pub(in crate::resolve::resolver::program) fn validate_interface_specializations(
     }
 
     let failures = crate::typeck::failed_interface_specialization_requirements(program);
-    let bound_failures = failed_nominal_interface_bounds(program);
+    let bound_failures = failed_exact_interface_bounds(program);
     let duplicate_bound_failures = duplicate_closed_interface_bounds(program);
     if failures.is_empty() && bound_failures.is_empty() && duplicate_bound_failures.is_empty() {
         return;
@@ -161,18 +161,17 @@ pub(in crate::resolve::resolver::program) fn validate_interface_specializations(
         )
         .with_primary_label(
             origin.span,
-            format!(
-                "{} does not provide effective nominal conformance to `{}`",
-                super::validation::argument_kind_name(argument),
-                required.name
+            super::validation::bound_failure_label(
+                program,
+                argument,
+                required_interface,
+                &required.name,
             ),
         )
         .with_secondary_label(bound.span, "bound declared here")
         .with_secondary_label(required.name_span, "required interface declared here")
         .with_secondary_label(template.name_span, "generic interface declared here")
-        .with_note(
-            "generic bounds accept only exact class arguments with direct or inherited declared conformance",
-        );
+        .with_note(super::validation::bound_satisfaction_note());
         for repeated in specialization.provenance.origins.iter().skip(1) {
             diagnostic = diagnostic.with_secondary_label(
                 repeated.span,
@@ -194,7 +193,7 @@ pub(in crate::resolve::resolver::program) fn validate_interface_specializations(
     program.interfaces = ordinary_interfaces;
 }
 
-fn failed_nominal_interface_bounds(program: &ResolvedProgram) -> Vec<(InterfaceId, usize)> {
+fn failed_exact_interface_bounds(program: &ResolvedProgram) -> Vec<(InterfaceId, usize)> {
     let mut failures = Vec::new();
     for specialization in program.generic_interface_specializations.iter() {
         let GenericInterfaceSpecializationState::Complete(interface) = specialization.state else {
@@ -214,23 +213,8 @@ fn failed_nominal_interface_bounds(program: &ResolvedProgram) -> Vec<(InterfaceI
                 continue;
             }
             let argument = specialization.key.arguments[bound.parameter.index()];
-            let satisfied = match argument {
-                ResolvedTypeKind::Class(class) => {
-                    super::validation::effective_nominal_conformance(program, class, required)
-                }
-                ResolvedTypeKind::I64
-                | ResolvedTypeKind::U64
-                | ResolvedTypeKind::U8
-                | ResolvedTypeKind::F64
-                | ResolvedTypeKind::Bool
-                | ResolvedTypeKind::Unit
-                | ResolvedTypeKind::Obj
-                | ResolvedTypeKind::Function(_)
-                | ResolvedTypeKind::Interface(_)
-                | ResolvedTypeKind::Shared(_)
-                | ResolvedTypeKind::Optional(_)
-                | ResolvedTypeKind::Array(_) => false,
-            };
+            let satisfied =
+                super::validation::exact_bound_is_satisfied(program, argument, required);
             if !satisfied {
                 failures.push((interface, bound_index));
             }

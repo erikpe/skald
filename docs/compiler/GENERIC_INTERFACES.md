@@ -214,16 +214,16 @@ metadata, static effects, or target artifacts.
 
 A template bound retains its subject parameter plus an ordinary or structural
 interface application. Closing the enclosing template substitutes the right
-side, requests its interface specialization, and checks exact nominal
-conformance of the exact class argument. Class-template and interface-template
-bounds share this rule. Structurally distinct bounds that become the same
+side, requests its interface specialization, and checks either exact nominal
+conformance of an exact class argument or compiler-owned evidence for an exact
+canonical primitive operator application. Class-template and interface-template
+bounds share this query. Structurally distinct bounds that become the same
 subject/application pair after substitution are rejected as duplicate closed
-bounds without repeating the nominal-failure cascade.
+bounds without repeating the satisfaction-failure cascade.
 
-The frozen [operator-protocol compiler contract](OPERATOR_OVERLOADING.md)
-adds one future canonical-only realization: a supported primitive may satisfy
-a `std::ops` bound through static primitive evidence. The implemented general
-bound algorithm remains exact-class-only until that feature lands.
+The canonical-only primitive extension does not apply to other interfaces,
+unsupported operator cells, foreign same-named templates, or applications
+with different `Rhs` or `Output` arguments.
 
 Definition-time member lookup through a parameter-bearing bound selects one
 `InterfaceTemplateRequirementId`. Specialization closes the interface
@@ -380,13 +380,13 @@ dictionary, cast, shared interface owner, or runtime representation. Multiple
 applicable operator bounds remain an unranked definition-site error. Manual
 bound calls and punctuation share the same specialization evidence.
 
-This integration is frozen but not implemented. The current generic-interface
-pipeline and verifier continue to require ordinary class conformance for every
-implemented bound.
+Static primitive bound satisfaction is implemented. Definition-site bound-call
+and punctuation realization through the primitive operation remains staged;
+ordinary class bound calls continue to use their existing witness path.
 
 ## Deliberate exclusions
 
-This compiler contract does not itself provide primitive conformances,
+This compiler contract does not itself provide object-level primitive conformances,
 iteration protocols or loop lowering,
 generic functions or methods, inference, defaults, variance, associated types,
 interface inheritance, default methods, structural conformance, erased

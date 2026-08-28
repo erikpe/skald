@@ -90,6 +90,37 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                     ));
                 }
             });
+            dumper.heading("PrimitiveOperatorEvidence");
+            dumper.indented(|dumper| {
+                for evidence in primitive_operator_registry() {
+                    let protocol = item.get(evidence.protocol());
+                    let application = match protocol.kind.shape() {
+                        CanonicalOperatorProtocolShape::Unary => format!(
+                            "{}<{}>",
+                            protocol.kind.interface_name(),
+                            evidence.output().name()
+                        ),
+                        CanonicalOperatorProtocolShape::Predicate => format!(
+                            "{}<{}>",
+                            protocol.kind.interface_name(),
+                            evidence.rhs().expect("predicate evidence has an RHS").name()
+                        ),
+                        CanonicalOperatorProtocolShape::Binary => format!(
+                            "{}<{}, {}>",
+                            protocol.kind.interface_name(),
+                            evidence.rhs().expect("binary evidence has an RHS").name(),
+                            evidence.output().name()
+                        ),
+                    };
+                    dumper.raw_line(&format!(
+                        "{} canonical {} template {} -> {}",
+                        evidence.receiver().name(),
+                        application,
+                        protocol.template,
+                        evidence.operation.semantic_name()
+                    ));
+                }
+            });
         }
         if !program.literal_data.is_empty() {
             dumper.heading("LiteralData");

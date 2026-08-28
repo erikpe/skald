@@ -10,8 +10,9 @@ for exact primitive operations. Overloaded `!=` wraps one selected `OpEq` call
 in the existing exact boolean negation. Receiver carriers, result-capability
 owners, MIR evaluation and cleanup, dispatch, static effects, target
 retention, panic traces, and native lowering are integrated through their
-ordinary call paths. Definition-site generic selection and
-compiler-provided primitive protocol evidence remain staged.
+ordinary call paths. The compiler-provided primitive registry and exact
+canonical generic-bound satisfaction are implemented; definition-site generic
+selection and primitive intrinsic realization remain staged.
 This document fixes the complete compiler boundary for the frozen
 [interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md).
 Its ordinary-call produced primitive read-only alias prerequisite is
@@ -108,7 +109,13 @@ The complete mapping is mechanically validated against the canonical bundle
 and existing primitive matrix. There is no entry for an unsupported primitive
 cell and source cannot add, override, or orphan one.
 
-Primitive evidence is a static bound-satisfaction and specialization fact,
+The implemented resolved registry contains sixty cells across `i64`, `u64`,
+`u8`, `f64`, and `bool`. Its application key is derived from each semantic
+operation, validation rejects missing, duplicate, unsupported, or inconsistent
+cells, and resolved dumps render the registry in canonical order. Both class-
+template and interface-template exact-bound validation query this same product.
+
+Primitive evidence is a static bound-satisfaction and future specialization fact,
 not `ResolvedInterfaceType` object conformance. It never enters complete-object
 metadata, witness tables, casts, interface views, shared ownership, reflection,
 or dynamic dispatch. Ordinary non-operator bounds remain exact-class-only.

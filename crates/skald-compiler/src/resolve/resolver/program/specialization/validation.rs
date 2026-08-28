@@ -10,7 +10,7 @@ pub(crate) fn validate_specialization_requirements(
     ordinary_hierarchy: ResolvedClassHierarchy,
     ordinary_classes: ResolvedClassDeclarationTable,
 ) {
-    let bound_failures = failed_nominal_bounds(program);
+    let bound_failures = failed_exact_bounds(program);
     let duplicate_bound_failures = duplicate_closed_bounds(program);
     let requirement_failures = crate::typeck::failed_specialization_requirements(program);
     if bound_failures.is_empty()
@@ -56,25 +56,20 @@ pub(crate) fn validate_specialization_requirements(
             .expect("requested specialization retains an origin");
         let application_name = application_name(program, specialization);
         let mut diagnostic = Diagnostic::error(
-                super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
-                format!(
-                    "type argument for `{application_name}` does not satisfy `{}`'s bound",
-                    parameter.name
-                ),
-            )
-            .with_primary_label(
-                origin.span,
-                format!(
-                    "{} does not provide effective nominal conformance to `{}`",
-                    argument_kind_name(argument), interface.name
-                ),
-            )
-            .with_secondary_label(bound.span, "bound declared here")
-            .with_secondary_label(interface.name_span, "interface declared here")
-            .with_secondary_label(template.name_span, "template declared here")
-            .with_note(
-                "generic bounds accept only exact class arguments with direct or inherited declared conformance",
-            );
+            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
+            format!(
+                "type argument for `{application_name}` does not satisfy `{}`'s bound",
+                parameter.name
+            ),
+        )
+        .with_primary_label(
+            origin.span,
+            bound_failure_label(program, argument, interface_id, &interface.name),
+        )
+        .with_secondary_label(bound.span, "bound declared here")
+        .with_secondary_label(interface.name_span, "interface declared here")
+        .with_secondary_label(template.name_span, "template declared here")
+        .with_note(bound_satisfaction_note());
         diagnostic = add_repeated_application_origins(diagnostic, specialization);
         diagnostics.push(diagnostic);
     }
@@ -321,7 +316,7 @@ fn add_lifecycle_path(
     diagnostic
 }
 
-fn failed_nominal_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
+fn failed_exact_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
     let mut failures = Vec::new();
     for specialization in program.generic_specializations.iter() {
         let GenericSpecializationState::Complete(class) = specialization.state else {
@@ -341,23 +336,7 @@ fn failed_nominal_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
                 continue;
             }
             let argument = specialization.key.arguments[bound.parameter.index()];
-            let satisfied = match argument {
-                ResolvedTypeKind::Class(argument_class) => {
-                    effective_nominal_conformance(program, argument_class, interface)
-                }
-                ResolvedTypeKind::I64
-                | ResolvedTypeKind::U64
-                | ResolvedTypeKind::U8
-                | ResolvedTypeKind::F64
-                | ResolvedTypeKind::Bool
-                | ResolvedTypeKind::Unit
-                | ResolvedTypeKind::Obj
-                | ResolvedTypeKind::Function(_)
-                | ResolvedTypeKind::Interface(_)
-                | ResolvedTypeKind::Shared(_)
-                | ResolvedTypeKind::Optional(_)
-                | ResolvedTypeKind::Array(_) => false,
-            };
+            let satisfied = exact_bound_is_satisfied(program, argument, interface);
             if !satisfied {
                 failures.push((class, bound_index));
             }
@@ -405,6 +384,63 @@ pub(super) fn effective_nominal_conformance(
                     .any(|claim| claim.interface.ordinary() == Some(interface))
             })
         })
+}
+
+pub(super) fn exact_bound_is_satisfied(
+    program: &ResolvedProgram,
+    argument: ResolvedTypeKind,
+    interface: InterfaceId,
+) -> bool {
+    match argument {
+        ResolvedTypeKind::Class(argument_class) => {
+            effective_nominal_conformance(program, argument_class, interface)
+        }
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool => {
+            primitive_operator_evidence(program, argument, interface).is_some()
+        }
+        ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Function(_)
+        | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Shared(_)
+        | ResolvedTypeKind::Optional(_)
+        | ResolvedTypeKind::Array(_) => false,
+    }
+}
+
+pub(super) const fn bound_satisfaction_note() -> &'static str {
+    "generic bounds accept exact classes with effective nominal conformance and primitives with compiler-provided evidence for an exact canonical operator application"
+}
+
+pub(super) fn bound_failure_label(
+    program: &ResolvedProgram,
+    argument: ResolvedTypeKind,
+    interface_id: InterfaceId,
+    interface: &str,
+) -> String {
+    match argument {
+        ResolvedTypeKind::Class(_) => format!(
+            "{} does not provide effective nominal conformance to `{interface}`",
+            argument_kind_name(argument)
+        ),
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool
+            if canonical_operator_application(program, interface_id) => format!(
+            "{} has no compiler-provided evidence for the exact canonical application `{interface}`",
+            argument_kind_name(argument)
+        ),
+        _ => format!(
+            "{} cannot satisfy the exact interface bound `{interface}`",
+            argument_kind_name(argument)
+        ),
+    }
 }
 
 pub(super) const fn argument_kind_name(argument: ResolvedTypeKind) -> &'static str {

@@ -19,6 +19,7 @@ mod operator_language_item;
 mod operator_selection;
 mod optional_box_types;
 mod optional_types;
+mod primitive_operator_evidence;
 mod shared_targets;
 mod strings;
 mod type_names;
@@ -118,6 +119,9 @@ pub use operator_language_item::{
 pub use operator_selection::{ResolvedOperatorResolution, ResolvedOperatorSelection};
 pub use optional_box_types::{ResolvedOptionalBoxType, ResolvedOptionalBoxTypeTable};
 pub use optional_types::{ResolvedOptionalType, ResolvedOptionalTypeTable};
+pub(crate) use primitive_operator_evidence::{
+    canonical_operator_application, primitive_operator_evidence, primitive_operator_registry,
+};
 pub use shared_targets::{
     ResolvedObjectTarget, ResolvedSharedTarget, ResolvedSharedTargetCategory,
 };

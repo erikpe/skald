@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 through OO4 are complete; OO5 is next.
+Status: **in progress**. OO0 through OO5 are complete; OO6 is next.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
@@ -64,7 +64,7 @@ pipelines are the baseline. No other planned feature blocks OO0.
 - [x] OO2 — Value-producing operator selection and HIR erasure
 - [x] OO3 — Typed equality, ordering, and complete operator surface
 - [x] OO4 — Receiver, ownership, evaluation, and effect integration
-- [ ] OO5 — Compiler-provided primitive protocol evidence
+- [x] OO5 — Compiler-provided primitive protocol evidence
 - [ ] OO6 — Generic definition-site selection and specialization
 - [ ] OO7 — Diagnostics, verification, and determinism hardening
 - [ ] OO8 — Documentation, compatibility matrix, and release closure
@@ -319,25 +319,25 @@ evaluation, dispatch, effects, result ownership, failure, and cleanup.
 **Purpose:** Represent supported primitive operations as canonical static bound
 evidence without changing the object model or direct primitive expressions.
 
-- [ ] Add one closed declarative registry keyed by receiver primitive type and
+- [x] Add one closed declarative registry keyed by receiver primitive type and
   exact canonical closed operator application, with an existing
   target-independent primitive semantic operation as each value.
-- [ ] Generate or mechanically validate the registry against the frozen
+- [x] Generate or mechanically validate the registry against the frozen
   operator table, validated canonical identities, and implemented primitive
   matrix so missing, extra, duplicate, wrong-result, and unsupported cells
   cannot drift silently.
-- [ ] Extend exact generic-bound satisfaction to accept registry evidence only
+- [x] Extend exact generic-bound satisfaction to accept registry evidence only
   for canonical operator templates; retain exact-class nominal satisfaction
   for every other interface bound.
-- [ ] Store primitive evidence outside resolved object/interface conformance,
+- [x] Store primitive evidence outside resolved object/interface conformance,
   witness metadata, complete-object layouts, cast/test relations, shared
   ownership, reflection, and runtime-visible tables.
-- [ ] Prohibit source declarations from replacing, supplementing, or creating
+- [x] Prohibit source declarations from replacing, supplementing, or creating
   primitive applications and keep direct primitive member syntax invalid.
-- [ ] Preserve exact direct-operation semantics for every mapped cell,
+- [x] Preserve exact direct-operation semantics for every mapped cell,
   including checked integer division/remainder, shift legality, wrapping
   arithmetic, comparison, and IEEE-754 behavior.
-- [ ] Expose stable resolved dumps for canonical primitive evidence and focused
+- [x] Expose stable resolved dumps for canonical primitive evidence and focused
   validation failures without changing HIR for direct primitive expressions.
 
 **Primary implementation areas:** canonical operator language-item product,

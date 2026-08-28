@@ -170,8 +170,9 @@ makes a result source-observable.
   validation, explicit ordinary interface use, and the complete non-generic
   class punctuation surface are also implemented. That surface reuses the
   complete ordinary receiver, dispatch, result ownership, evaluation,
-  cleanup, panic-trace, and static-effect paths. Definition-site generic
-  selection and primitive protocol evidence remain staged.
+  cleanup, panic-trace, and static-effect paths. Static primitive evidence for
+  exact canonical operator bounds is implemented without object conformance.
+  Definition-site generic selection and primitive realization remain staged.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations including canonical boolean and integer formatting, exact

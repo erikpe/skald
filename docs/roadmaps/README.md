@@ -8,8 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The [interface-based operator-overloading roadmap](OPERATOR_OVERLOADING_ROADMAP.md)
 is in progress. OO0 produced primitive read-only alias materialization through
-OO4 receiver, ownership, evaluation, and effect integration are complete.
-OO5 compiler-provided primitive protocol evidence is next.
+OO5 compiler-provided primitive protocol evidence are complete. OO6 generic
+definition-site selection and specialization is next.
 
 The completed general iteration and generic interfaces roadmaps are preserved
 in the [archive](../archive/README.md).

@@ -8,6 +8,8 @@ mod ir;
 mod resolver;
 
 pub use dump::dump_resolved;
+#[cfg(test)]
+pub(crate) use ir::primitive_operator_registry;
 pub use ir::{
     CanonicalOperatorProtocol, CanonicalOperatorProtocolShape, GenericAliasAccess,
     GenericCapability, GenericInterfaceApplicationOrigin, GenericInterfaceInstanceKey,
