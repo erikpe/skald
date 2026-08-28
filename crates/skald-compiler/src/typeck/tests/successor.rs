@@ -1,16 +1,11 @@
 use crate::{
     resolve::{dump_resolved, resolve_module_graph, UNSATISFIED_GENERIC_REQUIREMENT},
-    test_support::{load_module_sources, CANONICAL_RANGE_SOURCE},
+    test_support::load_module_sources_with_standard_library,
 };
 
 fn resolve_successor_source(source: &str) -> crate::resolve::ResolveOutput {
-    let (_workspace, graph) = load_module_sources(
-        "app",
-        &[
-            ("app.ska", source),
-            ("std/range.ska", CANONICAL_RANGE_SOURCE),
-        ],
-    );
+    let (_workspace, graph) =
+        load_module_sources_with_standard_library("app", &[("app.ska", source)]);
     resolve_module_graph(&graph)
 }
 

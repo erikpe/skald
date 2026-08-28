@@ -179,6 +179,12 @@ an occupied slot containing `none` returns `some(none)`. Its state and loop
 bookkeeping remain inline and allocation-free under the language model. Item
 production follows `Vec<T>`'s ordinary inferred copy/capability requirements.
 
+`std::range::Range<T>` ordinarily claims `Iterable<T, T>`. Its state is the
+next candidate value: it copies the start once, compares before each yield,
+advances before body entry, and returns outer absence at the half-open end.
+Primitive and opted-in exact-class ranges retain the same general receiver,
+optional-result, item-epoch, exit, and cleanup rules described above.
+
 Allocation-free state is a semantic possibility, not a promise that every
 dispatch is devirtualized or every loop is inlined. The frozen
 [generic-range contract](RANGES.md) defines one later, syntax-origin primitive
@@ -188,14 +194,16 @@ optimizations.
 
 ## Deliberate exclusions and extensions
 
-The implemented iteration contract does not itself include numeric ranges,
-`..` syntax, compiler-provided primitive or array iterable conformances,
+The iteration mechanism does not intrinsically discover numeric ranges.
+Ordinary explicit numeric and class ranges are supplied by the implemented
+`std::range::Range<T>` library conformance. `..` syntax, compiler-provided
+primitive or array iterable conformances,
 structural iteration methods, shared iterator objects, generators, consuming
 or mutable receivers, borrowed items, adapters, patterns, or general
 optimization guarantees.
 
-These are extension points rather than competing loop protocols. The frozen
-range contract uses this exact `Iterable<T, T>` interface and makes `..`
+These are extension points rather than competing loop protocols. The range
+contract uses this exact `Iterable<T, T>` interface and will make `..`
 construct its canonical ordinary range before `for-in` selection. Its narrow
 immediate integer fusion preserves the same item values, advance-before-body
 order, exits, and cleanup. Generator work may choose a state that owns a

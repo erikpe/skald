@@ -124,10 +124,16 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
         }
         if let Some(item) = &program.range_language_item {
             dumper.raw_line(&format!(
-                "RangeLanguageItem successor-template {} output-parameter {} requirement {}",
+                "RangeLanguageItem successor-template {} output-parameter {} requirement {} range-template {} parameter {} initializer-member {} bounds {} {} iterable-claim {}",
                 item.successor_template,
                 item.successor_output_parameter,
-                item.successor_requirement
+                item.successor_requirement,
+                item.range_template,
+                item.range_parameter,
+                item.range_initializer_member,
+                item.range_ordering_bound,
+                item.range_successor_bound,
+                item.range_iterable_claim
             ));
             dumper.heading("PrimitiveSuccessorEvidence");
             dumper.indented(|dumper| {

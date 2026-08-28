@@ -1,6 +1,6 @@
 # Generic Ranges and Tight Range Loops Roadmap
 
-Status: in progress; RG1 is next.
+Status: in progress; RG2 is next.
 
 This roadmap implements the frozen
 [language contract](../language/RANGES.md) and
@@ -50,7 +50,7 @@ and determinism pipelines are the baseline. No other roadmap blocks RG0.
 ## Progress
 
 - [x] RG0 — Canonical successor protocol and primitive realizations
-- [ ] RG1 — Explicit generic `Range<T>` values and iteration
+- [x] RG1 — Explicit generic `Range<T>` values and iteration
 - [ ] RG2 — Range punctuation, grammar, and resolved canonical construction
 - [ ] RG3 — Concise range expression HIR and complete ordinary execution
 - [ ] RG4 — Immediate primitive range-loop fusion
@@ -113,24 +113,24 @@ object or runtime representation exists.
 **Purpose:** Deliver the complete ordinary library abstraction before new
 syntax or optimization can depend on it.
 
-- [ ] Add the frozen public `Range<T>` class, final endpoint fields,
+- [x] Add the frozen public `Range<T>` class, final endpoint fields,
   `OpLess<T>` and `Successor<T>` bounds, `Iterable<T, T>` claim, initializer,
   `iter_state`, and `iter_next` implementation to `std::range`.
-- [ ] Extend canonical validation with exact range class-template,
+- [x] Extend canonical validation with exact range class-template,
   initializer, bound, and iterable-claim identities needed by later syntax.
-- [ ] Compile primitive range specializations through static ordering and
+- [x] Compile primitive range specializations through static ordering and
   successor realizations and class specializations through ordinary witnesses.
-- [ ] Preserve half-open ascending semantics, empty equal/descending ranges,
+- [x] Preserve half-open ascending semantics, empty equal/descending ranges,
   maximum primitive endpoints, compare-before-yield, and advance-before-body.
-- [ ] Exercise ordinary construction, storage, copying where available,
+- [x] Exercise ordinary construction, storage, copying where available,
   arguments/results, nesting, generic-bound consumers, and complete item/state
   capabilities without range-specific HIR or MIR.
-- [ ] Execute exact-class ranges with copy, assignment, destruction, successor
+- [x] Execute exact-class ranges with copy, assignment, destruction, successor
   effects, optional results, and normal/continue/break/return cleanup through
   general iteration.
-- [ ] Add explicit primitive and representative `BigInteger`-like class range
+- [x] Add explicit primitive and representative `BigInteger`-like class range
   goldens, including malformed conformance and capability failures.
-- [ ] Update the standard-library inventory, range authorities, iteration
+- [x] Update the standard-library inventory, range authorities, iteration
   adoption boundary, status, test map, and debugging guidance to the explicit
   implemented profile while keeping `..` rejected.
 

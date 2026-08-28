@@ -431,14 +431,16 @@ source-loop recognition.
 
 The frozen [generic-range contracts](../language/RANGES.md) have an ordered
 coverage layer. Colocated resolution and primitive-registry tests own
-canonical successor declaration validation, identity and dump determinism,
-lookalike exclusion, and the exact `u8`/`u64`/`i64` static realization matrix.
+canonical successor and range declaration validation, identity and dump
+determinism, lookalike exclusion, and the exact `u8`/`u64`/`i64` static
+realization matrix.
 Type and HIR tests own class-witness versus primitive-intrinsic closure and
 reject unsupported types, owners, views, wrong applications, and direct
 primitive members. `tests/golden/ranges` owns native manual successor behavior,
-including maximum-value wrapping; the pipeline-determinism suite permutes
-source and provider order through assembly. Explicit `Range<T>` goldens will own half-open primitive
-and opted-in class behavior through ordinary iteration. Syntax tests will own
+explicit half-open primitive and opted-in class ranges, boundary and exit
+semantics, lifecycle effects, and capability failures through ordinary
+iteration. The pipeline-determinism suite permutes source and provider order
+through assembly. Syntax tests will own
 `..` longest match, lowest precedence, non-associativity, recovery, and exact
 endpoint typing. HIR tests will distinguish ordinary construction carrying
 canonical syntax provenance from explicit construction. Fused-loop MIR and

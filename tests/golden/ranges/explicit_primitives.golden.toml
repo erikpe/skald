@@ -1,0 +1,10 @@
+schema = 2
+
+[[test]]
+name = "explicit_primitives"
+mode = "run"
+source = "explicit_primitives.ska"
+
+[[test.run]]
+name = "ordinary_generic_range_values"
+expect = { stdout = { inline = "9\n-5\n117\n0\n0\n18446744073709551614\n254\n9223372036854775806\n4\n5\n8\n" } }

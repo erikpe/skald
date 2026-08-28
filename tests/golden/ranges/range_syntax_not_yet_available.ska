@@ -1,0 +1,4 @@
+fn main() -> i64 {
+    var values: u64 = 1u .. 3u;
+    return 0;
+}

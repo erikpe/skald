@@ -303,10 +303,12 @@ place as `mut ref`.
 
 Through mutable access, code may additionally write primitive fields, call
 mutable methods, and forward the place as either alias mode. A mutable alias
-still cannot be rebound or used as a whole-object replacement destination.
-That prohibition applies to the alias root and to every class subobject
-projected from it. Supported field mutation and method calls do not rebind the
-alias or end the object's lifetime.
+still cannot be rebound. For an exact-class `mut ref`, assignment to the
+complete referent runs ordinary copy assignment in the existing object storage
+without rebinding the alias or changing object identity. A read-only alias and
+class subobjects projected from an alias remain invalid whole-object
+assignment destinations. Supported field mutation, copy assignment, and
+method calls do not end the referent's lifetime.
 
 [Structural bracket calls](INDEXING_AND_SLICING.md) use this same access
 propagation. Index and slice getters are read-only method calls; setters are

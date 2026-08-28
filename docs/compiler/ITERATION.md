@@ -215,15 +215,15 @@ therefore remains unchanged.
 
 ## Implemented profile
 
-The implemented profile includes ordinary exact, inherited, specialized generic, and
-generic-bound selection; the complete accepted receiver and item families;
-nested optional items; loop exits and cleanup; ordinary `Vec<T>` conformance;
-deterministic diagnostics and dumps; verifier-negative evidence; and native
-x86-64 observations.
+The implemented profile includes ordinary exact, inherited, specialized
+generic, and generic-bound selection; the complete accepted receiver and item
+families; nested optional items; loop exits and cleanup; ordinary `Vec<T>` and
+explicit `Range<T>` conformance; deterministic diagnostics and dumps;
+verifier-negative evidence; and native x86-64 observations.
 
-The frozen [generic-range compiler contract](RANGES.md) separately defines
-canonical `Range<T>`, `..`, primitive successor evidence, and one immediate
-integer syntax-fusion plan over this implemented foundation. Primitive or
+The [generic-range compiler contract](RANGES.md) uses this foundation for its
+implemented explicit `Range<T>` path and separately defines planned `..`
+syntax and one immediate integer syntax-fusion plan. Primitive or
 array intrinsic iterable conformance, generators, borrowed items, and broader
 optimization guarantees remain separate work. The confirmed iteration
 rationale is preserved in the

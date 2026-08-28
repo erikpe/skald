@@ -803,10 +803,12 @@ parameter, or a class field reached through a mutable owning root or live
 mutable `self`.
 
 The complete `self` object cannot be replaced from within its member body.
-An alias parameter cannot be rebound, and whole-object replacement through an
-alias-rooted path is unsupported even when the alias is mutable. These rules
-do not prevent mutation of primitive fields or supported nested operations
-through `mut ref`.
+An alias parameter itself cannot be rebound. Assignment to the complete
+referent of an exact-class `mut ref` parameter is supported and runs ordinary
+copy assignment in that existing storage without changing its identity. A
+read-only alias and a projected object path rooted at an alias remain invalid
+whole-object destinations. These rules do not prevent mutation of primitive
+fields or supported nested operations through `mut ref`.
 
 The source must be a live or produced object of the exact destination class.
 The selected assignment operation runs once. Assignment does not destroy,

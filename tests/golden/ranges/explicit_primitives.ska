@@ -1,0 +1,91 @@
+import std::io;
+from std::range import Range;
+
+fn make_range(start: u64, end: u64) -> Range<u64> {
+    return Range<u64>(start, end);
+}
+
+fn sum_range(values: Range<u64>) -> u64 {
+    var total: u64 = 0u;
+    for (value in values) {
+        total = total + value;
+    }
+    return total;
+}
+
+fn first_value(values: Range<u64>) -> u64 {
+    for (value in values) {
+        return value;
+    }
+    return 0u;
+}
+
+fn main() -> i64 {
+    var bytes: u64 = 0u;
+    for (value in Range<u8>(2u8, 5u8)) {
+        bytes = bytes + (u64) value;
+    }
+    std::io::println_u64(bytes);
+
+    var signed: i64 = 0;
+    for (value in Range<i64>(-3, 2)) {
+        signed = signed + value;
+    }
+    std::io::println_i64(signed);
+
+    var stored: Range<u64> = make_range(17u, 23u);
+    var copied: Range<u64> = stored;
+    std::io::println_u64(sum_range(copied));
+
+    var equal_count: u64 = 0u;
+    for (value in Range<u64>(9u, 9u)) {
+        equal_count = equal_count + value;
+    }
+    std::io::println_u64(equal_count);
+
+    var descending_count: u64 = 0u;
+    for (value in Range<u64>(9u, 3u)) {
+        descending_count = descending_count + value;
+    }
+    std::io::println_u64(descending_count);
+
+    var maximum: u64 = 0u;
+    for (value in Range<u64>(18446744073709551614u, 18446744073709551615u)) {
+        maximum = value;
+    }
+    std::io::println_u64(maximum);
+
+    var byte_maximum: u8 = 0u8;
+    for (value in Range<u8>(254u8, 255u8)) {
+        byte_maximum = value;
+    }
+    std::io::println_u8(byte_maximum);
+
+    var signed_maximum: i64 = 0;
+    for (value in Range<i64>(9223372036854775806, 9223372036854775807)) {
+        signed_maximum = value;
+    }
+    std::io::println_i64(signed_maximum);
+
+    var nested: u64 = 0u;
+    for (outer in Range<u8>(0u8, 2u8)) {
+        for (inner in Range<u64>(0u, 2u)) {
+            nested = nested + (u64) outer + inner;
+        }
+    }
+    std::io::println_u64(nested);
+
+    var exited: u64 = 0u;
+    for (value in Range<u64>(0u, 6u)) {
+        if (value == 1u) {
+            continue;
+        }
+        if (value == 4u) {
+            break;
+        }
+        exited = exited + value;
+    }
+    std::io::println_u64(exited);
+    std::io::println_u64(first_value(Range<u64>(8u, 10u)));
+    return 0;
+}

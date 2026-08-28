@@ -1,0 +1,13 @@
+from std::ops import OpLess;
+from std::range import Range, Successor;
+
+class OrderedOnly implements OpLess<OrderedOnly> {
+    init() {}
+    fn op_less(ref rhs: OrderedOnly) -> bool { return false; }
+}
+
+fn reject_float(ref values: Range<f64>) -> unit {}
+fn reject_bool(ref values: Range<bool>) -> unit {}
+fn reject_missing_successor(ref values: Range<OrderedOnly>) -> unit {}
+
+fn main() -> i64 { return 0; }

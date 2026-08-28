@@ -1,39 +1,36 @@
 # Generic-Range Compiler Contract
 
-Status: frozen compiler contract; successor foundation implemented. Resolution
-validates the canonical successor protocol and closes exact integer bounds to
-existing addition. The generic range class, range-expression phase flow,
-ordinary-construction HIR provenance, primitive loop-fusion boundary,
-performance evidence, and associated verification remain planned. This
-document owns those identities and target/ABI constraints for the
+Status: frozen compiler contract; explicit generic ranges implemented.
+Resolution validates the canonical declaration bundle, closes exact integer
+bounds to existing operations, and compiles explicit `Range<T>` values through
+ordinary construction and general iteration. Range-expression phase flow,
+ordinary-construction HIR provenance, primitive loop fusion, and performance
+evidence remain planned. This document owns those identities and target/ABI
+constraints for the
 [generic-range language contract](../language/RANGES.md).
 
 The implemented grammar remains unchanged until the syntax task lands. No
-`Range<T>` declaration, range expression, HIR provenance, fusion plan, or
-benchmark guarantee described here is currently compiler behavior.
+range expression, range-syntax HIR provenance, fusion plan, or benchmark
+guarantee described here is currently compiler behavior.
 
 ## Canonical module and identities
 
-The current canonical `std::range` module is dependency-free ordinary
-standard-library source. Explicit reachability or direct entry compilation
+The canonical `std::range` module imports only the foundational `std::iter`
+and `std::ops` protocols. Explicit reachability or direct entry compilation
 validates:
 
 - one public `Successor<Output>` interface template;
 - one parameter named `Output`; and
-- one read-only zero-argument `successor() -> Output` requirement.
+- one read-only zero-argument `successor() -> Output` requirement;
+- one public `Range<T>` class template;
+- its exact `OpLess<T>` and `Successor<T>` bounds;
+- its exact `Iterable<T, T>` claim; and
+- its public owning `init(start: T, end: T)` initializer.
 
 The resulting request-local product retains the exact module, template,
 parameter, requirement, declaration, and requiring-span identities. Resolved
 dumps render that product and the three primitive realizations in stable
 order. Same-named foreign declarations are ordinary unrelated source.
-
-The next milestone imports `std::iter::Iterable` and `std::ops::OpLess` and
-extends validation with:
-
-- one public `Range<T>` class template;
-- its exact `OpLess<T>` and `Successor<T>` bounds;
-- its exact `Iterable<T, T>` claim; and
-- the ordinary public `init(T, T)` selected by range syntax.
 
 Later phases consume exact identities rather than rediscovering `std::range`,
 `Successor`, `Range`, `successor`, or `init` by spelling.
@@ -90,7 +87,7 @@ primitive satisfaction.
 
 ## Explicit generic range pipeline
 
-Status: not implemented; this is the next range milestone.
+Status: implemented.
 
 Explicit `Range<T>(start, end)` is ordinary generic class construction.
 Template resolution, closed specialization, initializer selection, field
@@ -98,8 +95,8 @@ initialization, inferred capabilities, `Iterable<T, T>` conformance, method
 bodies, witness metadata, receiver ownership, optional result handling, and
 loop cleanup reuse their existing owners.
 
-The explicit range milestone adds no syntax, range HIR node, MIR operation,
-backend branch, runtime symbol, or ABI change. It is complete only when:
+The explicit range implementation adds no syntax, range HIR node, MIR
+operation, backend branch, runtime symbol, or ABI change. It provides:
 
 - primitive specializations realize both `OpLess<T>` and `Successor<T>`
   statically;
@@ -111,7 +108,8 @@ backend branch, runtime symbol, or ABI change. It is complete only when:
 - ordinary `for-in` executes through the existing `HirForIn` protocol plan and
   verified MIR.
 
-This ordinary path is the semantic reference for range syntax and fusion.
+This ordinary path is the implemented semantic reference for future range
+syntax and fusion.
 
 ## Range syntax and resolution
 

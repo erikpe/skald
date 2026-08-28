@@ -1,0 +1,90 @@
+import std::io;
+from std::ops import OpLess;
+from std::range import Range, Successor;
+
+class BigInteger implements OpLess<BigInteger>, Successor<BigInteger> {
+    private static _successors: u64;
+    private static _assignments: u64;
+    private static _destroyed: u64;
+    private _value: i64;
+
+    init(value: i64) {
+        self._value = value;
+    }
+
+    copy(ref source: BigInteger) {
+        self._value = source._value;
+    }
+
+    assign(ref source: BigInteger) {
+        self._value = source._value;
+        BigInteger._assignments = BigInteger._assignments + 1u;
+    }
+
+    destroy {
+        BigInteger._destroyed = BigInteger._destroyed + 1u;
+    }
+
+    fn op_less(ref rhs: BigInteger) -> bool {
+        return self._value < rhs._value;
+    }
+
+    fn successor() -> BigInteger {
+        BigInteger._successors = BigInteger._successors + 1u;
+        return BigInteger(self._value + 1);
+    }
+
+    fn value() -> i64 {
+        return self._value;
+    }
+
+    static fn successors() -> u64 {
+        return BigInteger._successors;
+    }
+
+    static fn assignments() -> u64 {
+        return BigInteger._assignments;
+    }
+
+    static fn destroyed() -> u64 {
+        return BigInteger._destroyed;
+    }
+}
+
+fn first(values: Range<BigInteger>) -> i64 {
+    for (value in values) {
+        return value.value();
+    }
+    return -1;
+}
+
+fn main() -> i64 {
+    var stored: Range<BigInteger> = Range<BigInteger>(BigInteger(2), BigInteger(5));
+    var copied: Range<BigInteger> = stored;
+    var assigned: Range<BigInteger> = Range<BigInteger>(BigInteger(0), BigInteger(0));
+    assigned = copied;
+
+    for (value in assigned) {
+        std::io::println_i64(value.value());
+        std::io::println_u64(BigInteger.successors());
+        std::io::println_u64(BigInteger.assignments());
+    }
+
+    for (value in Range<BigInteger>(BigInteger(9), BigInteger(7))) {
+        std::io::println_i64(value.value());
+    }
+    std::io::println_i64(first(Range<BigInteger>(BigInteger(11), BigInteger(13))));
+
+    for (value in Range<BigInteger>(BigInteger(20), BigInteger(24))) {
+        if (value.value() == 20) {
+            continue;
+        }
+        if (value.value() == 22) {
+            break;
+        }
+    }
+    std::io::println_u64(BigInteger.successors());
+    std::io::println_u64(BigInteger.assignments());
+    std::io::println_u64(BigInteger.destroyed());
+    return 0;
+}

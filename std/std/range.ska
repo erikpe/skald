@@ -1,3 +1,32 @@
+from std::iter import Iterable;
+from std::ops import OpLess;
+
 public interface Successor<Output> {
     fn successor() -> Output;
+}
+
+public class Range<T> implements Iterable<T, T>
+where T: OpLess<T>, T: Successor<T>
+{
+    private final _start: T;
+    private final _end: T;
+
+    init(start: T, end: T) {
+        self._start = start;
+        self._end = end;
+    }
+
+    fn iter_state() -> T {
+        return self._start;
+    }
+
+    fn iter_next(mut ref state: T) -> T? {
+        if (!(state < self._end)) {
+            return none;
+        }
+
+        var item: T = state;
+        state = state.successor();
+        return some(item);
+    }
 }

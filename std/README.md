@@ -75,13 +75,14 @@ General `for-in` syntax supplies implicit `std::iter` dependency evidence.
 Resolution selects exact nominal applications, including frozen generic
 bounds, and the structured HIR lowers through ordinary calls and cyclic MIR.
 
-The dependency-free `std::range` module currently provides the canonical
-generic `Successor<Output>` interface. Resolution validates its exact public
-template and requirement identities when explicitly reachable. Exact classes
-implement it ordinarily; definition-site generic bound calls over `u8`,
-`u64`, and `i64` use compiler-provided static addition-by-one evidence without
-creating primitive interface objects or runtime support. The ordinary
-`Range<T>` class and range syntax are not installed yet.
+The `std::range` module imports the foundational iteration and ordering
+protocols, provides canonical `Successor<Output>`, and implements ordinary
+half-open ascending `Range<T> implements Iterable<T, T>`. Resolution validates
+their exact identities when explicitly reachable. Exact classes implement
+ordering and successor ordinarily; definition-site generic bound calls over
+`u8`, `u64`, and `i64` use compiler-provided static evidence without creating
+primitive interface objects or runtime support. Concise range syntax is not
+installed yet.
 
 The implemented [operator-overloading contract](../docs/language/OPERATOR_OVERLOADING.md)
 assigns the dependency-free `std::ops` module one complete canonical bundle of

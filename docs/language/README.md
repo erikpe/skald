@@ -152,11 +152,11 @@ makes a result source-observable.
   receiver and state setup, optional termination, lifetimes, loop exits, and
   standard-library adoption boundary.
 - [Generic ranges](RANGES.md) defines the implemented canonical
-  `Successor<Output>` protocol and integer evidence plus the frozen planned
-  ordinary `Range<T> implements Iterable<T, T>`,
-  half-open exact-typed `..` expression, class opt-in, primitive successor
-  evidence, evaluation and cleanup, and initial tight integer-loop profile.
-  Successor bounds and calls are executable; range values and syntax are not.
+  `Successor<Output>` protocol, integer evidence, and ordinary explicit
+  `Range<T> implements Iterable<T, T>` values plus the frozen planned
+  half-open exact-typed `..` expression, construction provenance, and initial
+  tight integer-loop profile. Explicit ranges are executable; concise syntax
+  and fusion are not.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, operator availability, and the
   complete implemented primitive operator profile and complete explicit

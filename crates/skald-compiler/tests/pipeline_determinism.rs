@@ -148,8 +148,9 @@ const GENERIC_INTERFACE_TEST_NAME: &str =
 const GENERIC_OPERATOR_HELPER_OUTPUT: &str = "SKALD_GENERIC_OPERATOR_DETERMINISM_OUTPUT";
 const GENERIC_OPERATOR_TEST_NAME: &str =
     "generic_operator_phase_products_are_deterministic_across_processes";
-const SUCCESSOR_HELPER_OUTPUT: &str = "SKALD_SUCCESSOR_DETERMINISM_OUTPUT";
-const SUCCESSOR_TEST_NAME: &str = "successor_phase_products_are_deterministic_across_processes";
+const EXPLICIT_RANGE_HELPER_OUTPUT: &str = "SKALD_EXPLICIT_RANGE_DETERMINISM_OUTPUT";
+const EXPLICIT_RANGE_TEST_NAME: &str =
+    "explicit_range_phase_products_are_deterministic_across_processes";
 const GENERIC_INTERFACE_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_GENERIC_INTERFACE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME: &str =
@@ -712,20 +713,20 @@ fn generic_operator_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn successor_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(SUCCESSOR_HELPER_OUTPUT) {
+fn explicit_range_phase_products_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(EXPLICIT_RANGE_HELPER_OUTPUT) {
         let variant = env::var(PERMUTATION_HELPER_VARIANT)
             .unwrap()
             .parse()
             .unwrap();
-        fs::write(output, successor_module_phase_dump(variant)).unwrap();
+        fs::write(output, explicit_range_module_phase_dump(variant)).unwrap();
         return;
     }
 
     assert_cross_process_variants(
-        "successor-products",
-        SUCCESSOR_HELPER_OUTPUT,
-        SUCCESSOR_TEST_NAME,
+        "explicit-range-products",
+        EXPLICIT_RANGE_HELPER_OUTPUT,
+        EXPLICIT_RANGE_TEST_NAME,
         PERMUTATION_HELPER_VARIANT,
     );
 }
@@ -1327,26 +1328,32 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
     )
 }
 
-fn successor_module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("successor-products", variant);
+fn explicit_range_module_phase_dump(variant: usize) -> String {
+    let fixture = ModuleFixture::new("explicit-range-products", variant);
     let application = fixture.path.join("application");
     let standard_library = fixture.path.join("standard-library");
     let mut sources = vec![
         (
             application.join("app.ska"),
             "import model;\n\
+             from std::range import Range;\n\
              fn main() -> i64 {\n\
                var primitive: model::Advance<u64> = model::Advance<u64>();\n\
                var objects: model::Advance<model::Value> = model::Advance<model::Value>();\n\
-               return (i64) primitive.next(16u) + (i64) objects.next(model::Value(24u)).get();\n\
+               var total: i64 = (i64) primitive.next(16u) + (i64) objects.next(model::Value(24u)).get();\n\
+               for (value in Range<u64>(2u, 5u)) { total = total + (i64) value; }\n\
+               for (value in Range<model::Value>(model::Value(6u), model::Value(8u))) { total = total + (i64) value.get(); }\n\
+               return total;\n\
              }\n",
         ),
         (
             application.join("model.ska"),
-            "from std::range import Successor;\n\
-             public class Value implements Successor<Value> {\n\
+            "from std::ops import OpLess;\n\
+             from std::range import Successor;\n\
+             public class Value implements OpLess<Value>, Successor<Value> {\n\
                private value: u64;\n\
                init(value: u64) { self.value = value; }\n\
+               fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n\
                fn successor() -> Value { return Value(self.value + 1u); }\n\
                fn get() -> u64 { return self.value; }\n\
              }\n\

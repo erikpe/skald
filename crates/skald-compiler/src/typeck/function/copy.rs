@@ -650,7 +650,12 @@ impl CallableChecker<'_, '_> {
             BindingId::Receiver(_) => true,
             BindingId::Parameter(id) => {
                 let parameter = self.parameter(id);
-                if parameter.binding_mode == crate::resolve::ResolvedParameterBindingMode::Value {
+                if parameter.binding_mode == crate::resolve::ResolvedParameterBindingMode::Value
+                    || (matches!(
+                        parameter.binding_mode,
+                        crate::resolve::ResolvedParameterBindingMode::MutableAlias { .. }
+                    ) && destination.projections().is_empty())
+                {
                     true
                 } else {
                     self.diagnostics.push(
@@ -660,7 +665,7 @@ impl CallableChecker<'_, '_> {
                         )
                         .with_primary_label(
                             destination.span(),
-                            "assign an owning local, value parameter, or mutable `self` field",
+                            "assign an owning place or the complete referent of a mutable alias",
                         ),
                     );
                     false

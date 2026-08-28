@@ -1,0 +1,10 @@
+schema = 2
+
+[[test]]
+name = "explicit_classes"
+mode = "run"
+source = "explicit_classes.ska"
+
+[[test.run]]
+name = "ordinary_class_witnesses_and_advance_before_body"
+expect = { stdout = { inline = "2\n1\n3\n3\n2\n4\n4\n3\n5\n11\n7\n9\n60\n" } }

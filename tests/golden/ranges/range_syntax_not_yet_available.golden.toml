@@ -1,0 +1,10 @@
+schema = 2
+
+[[test]]
+name = "range_syntax_not_yet_available"
+mode = "compile-fail"
+source = "range_syntax_not_yet_available.ska"
+
+[test.expect.stderr]
+match = "contains"
+inline = "expected a member name after `.`"

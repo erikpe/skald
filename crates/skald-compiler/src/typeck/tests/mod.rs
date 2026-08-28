@@ -198,6 +198,7 @@ mod destructors;
 mod diagnostics;
 mod dumps;
 mod eager_boolean_operators;
+mod explicit_ranges;
 mod expressions;
 mod final_fields;
 mod floating_division;

@@ -1,10 +1,10 @@
 # Generic Ranges and Concise Range Expressions
 
-Status: frozen language contract; successor foundation implemented. The
-canonical `Successor<Output>` protocol, class opt-in, and static `u8`, `u64`,
-and `i64` realizations are implemented. The ordinary generic range, half-open
-`..` expression, and initial primitive tight-loop profile remain settled but
-not implemented. The
+Status: frozen language contract; explicit generic ranges implemented. The
+canonical `Successor<Output>` protocol, ordinary `Range<T>` class, class
+opt-in, static integer realizations, and explicit half-open iteration are
+implemented. The concise `..` expression and initial primitive tight-loop
+profile remain settled but not implemented. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains authoritative for accepted
 source until the range-syntax task lands.
@@ -17,20 +17,7 @@ acceptance are owned by the
 
 ## Canonical standard-library contract
 
-The installed dependency-free `std::range` module currently contains:
-
-```ska
-public interface Successor<Output> {
-    fn successor() -> Output;
-}
-```
-
-Explicit import or direct compilation validates that exact public template,
-parameter, read-only zero-argument requirement, and result identity. A
-same-named interface, method, or module elsewhere is unrelated.
-
-The next range milestone extends that same module to the complete frozen
-declaration bundle:
+The installed `std::range` module contains the complete declaration bundle:
 
 ```ska
 from std::iter import Iterable;
@@ -67,9 +54,9 @@ where T: OpLess<T>, T: Successor<T>
 }
 ```
 
-The future `Range<T>` class will likewise be compiler-recognized by exact
-template, initializer, bound, and conformance identities. A same-named class
-elsewhere remains unrelated.
+Explicit reachability validates the exact successor and range templates,
+parameters, initializer, bounds, and iterable claim. Same-named declarations
+elsewhere are unrelated.
 
 `Successor<Output>` has a read-only receiver and produces a new owning value.
 A same-type range requires `T: Successor<T>`. Whenever `value < end`, a
@@ -86,7 +73,8 @@ implementation can repeat values or fail to terminate, just as an arbitrary
 
 ## Explicit generic ranges
 
-Status: not implemented; this is the next range milestone.
+Status: implemented through ordinary generic construction and general
+iteration.
 
 The explicit form imports and constructs the ordinary canonical class:
 
@@ -169,7 +157,7 @@ implements OpAdd<BigInteger, BigInteger>,
 }
 ```
 
-The class can then use both explicit and concise ranges:
+The class can use explicit ranges now; the concise equivalent remains planned:
 
 ```ska
 from std::range import Range;
@@ -177,8 +165,8 @@ from std::range import Range;
 for (i in Range<BigInteger>(BigInteger(17u), BigInteger(23u))) {
 }
 
-for (i in BigInteger(17u) .. BigInteger(23u)) {
-}
+// Planned concise equivalent:
+// for (i in BigInteger(17u) .. BigInteger(23u)) {}
 ```
 
 Class comparisons and successors use ordinary witness dispatch. Endpoint

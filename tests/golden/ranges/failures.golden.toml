@@ -1,0 +1,13 @@
+schema = 2
+
+[[test]]
+name = "failures"
+mode = "compile-fail"
+source = "failures.ska"
+
+[test.expect.stderr]
+matches = [
+  { name = "float bound", match = "contains", inline = "type argument for `std::range::Range<f64>` does not satisfy `T`'s bound" },
+  { name = "bool bound", match = "contains", inline = "type argument for `std::range::Range<bool>` does not satisfy `T`'s bound" },
+  { name = "class successor bound", match = "contains", inline = "type argument for `std::range::Range<failures::OrderedOnly>` does not satisfy `T`'s bound" },
+]

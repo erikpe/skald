@@ -237,6 +237,25 @@ fn successor_declaration_spans(
         .collect()
 }
 
+fn range_declarations<'ast>(
+    units: &'ast [ModuleUnit<'ast>],
+    modules: &ProgramModuleTable,
+) -> Vec<&'ast syntax::TopLevelDeclaration> {
+    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
+    let Some(module) = modules.find(&path).map(|entry| entry.module_id()) else {
+        return Vec::new();
+    };
+    let unit = units
+        .iter()
+        .find(|unit| unit.module == module)
+        .expect("every program module has one resolver unit");
+    unit.ast
+        .declarations
+        .iter()
+        .filter(|declaration| declaration.name().text == "Range")
+        .collect()
+}
+
 impl<'ast> ModuleUnit<'ast> {
     fn new(ast: &'ast syntax::CompilationUnit, module: ModuleId, qualified_enabled: bool) -> Self {
         Self {
@@ -476,16 +495,14 @@ impl<'ast> ProgramResolver<'ast> {
             &mut self.diagnostics,
         );
         let successor_declaration_spans = successor_declaration_spans(&self.units, &self.modules);
-        let range_language_item = validate_range_language_item(
+        let successor_language_item = validate_successor_language_item(
             &self.modules,
             &module_declarations,
             &interface_templates,
             &interface_template_semantics,
             &type_parameters,
-            RangeLanguageItemEvidence {
-                requiring_spans: &self.range_requirement_spans,
-                successor_declaration_spans: &successor_declaration_spans,
-            },
+            &self.range_requirement_spans,
+            &successor_declaration_spans,
             &mut self.diagnostics,
         );
         let mut template_semantics = Vec::new();
@@ -516,6 +533,22 @@ impl<'ast> ProgramResolver<'ast> {
             }
         }
         let template_semantics = ResolvedClassTemplateSemanticTable::new(template_semantics);
+        let range_declarations = range_declarations(&self.units, &self.modules);
+        let range_language_item = validate_range_language_item(
+            &self.modules,
+            &module_declarations,
+            &class_templates,
+            &template_semantics,
+            &type_parameters,
+            iterable_language_item.as_ref(),
+            operator_language_item.as_ref(),
+            successor_language_item,
+            RangeLanguageItemEvidence {
+                requiring_spans: &self.range_requirement_spans,
+                range_declarations: &range_declarations,
+            },
+            &mut self.diagnostics,
+        );
         let ordinary_class_count = self.units.iter().map(|unit| unit.class_work.len()).sum();
         let discovery = discover_specializations(
             SpecializationDiscoveryInput::new(

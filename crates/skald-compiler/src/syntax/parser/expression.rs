@@ -528,8 +528,8 @@ impl Parser<'_> {
     fn finish_member_access(&mut self, receiver: Expression) -> Option<Expression> {
         let operator = self.advance();
         let member = self.parse_name(match operator.kind {
-            TokenKind::Dot => "expected a member name after `.`",
-            TokenKind::Arrow => "expected a member name after `->`",
+            TokenKind::Dot => "a member name after `.`",
+            TokenKind::Arrow => "a member name after `->`",
             _ => unreachable!("member parser accepted a non-member operator"),
         })?;
         let span = self.cover(receiver.span(), member.span);

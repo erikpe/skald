@@ -7,12 +7,19 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [generic ranges and tight range loops roadmap](GENERIC_RANGES_ROADMAP.md)
-is in progress. Its canonical successor protocol and primitive realizations
-are implemented; ordinary explicit `Range<T>` values are next. It then
-delivers `..` syntax and ordinary execution, immediate integer range-loop
-fusion, and measured handwritten-`while` parity. It depends on the completed
+is in progress. Its canonical successor protocol, primitive realizations, and
+ordinary explicit `Range<T>` values are implemented; range punctuation is
+next. It then delivers `..` syntax and ordinary execution, immediate integer
+range-loop fusion, and measured handwritten-`while` parity. It depends on the completed
 generic-interface, general-iteration, and interface-based operator-overloading
 work.
+
+## Pending discoveries
+
+The [generic-ranges discoveries](GENERIC_RANGES_DISCOVERIES.md) record a
+general generic-specialization diagnostic cascade found while implementing
+explicit class ranges. It is intentionally deferred until after the active
+range roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the

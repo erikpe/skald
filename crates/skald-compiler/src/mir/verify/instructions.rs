@@ -691,7 +691,15 @@ impl Verifier<'_> {
         let alias_root = matches!(destination_place.base, MirPlaceBase::AliasParameter(_))
             || destination_storage
                 .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)));
-        if alias_root && (construction || !projects_into_array_element_storage(destination_place)) {
+        let complete_mutable_alias_assignment = !construction
+            && destination_place.projections.is_empty()
+            && destination.is_some_and(|place| {
+                place.access == MirAliasAccess::Mutable && place.ty == MirType::Class(class)
+            });
+        if alias_root
+            && !complete_mutable_alias_assignment
+            && (construction || !projects_into_array_element_storage(destination_place))
+        {
             self.block_error(
                 function.callable(),
                 block.id,

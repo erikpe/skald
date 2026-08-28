@@ -368,6 +368,21 @@ fn diagnoses_object_assignment_outside_the_supported_destination_and_source_boun
 }
 
 #[test]
+fn complete_mutable_alias_referents_support_exact_copy_assignment() {
+    let output = check_text(concat!(
+        "class Value { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn replace(mut ref target: Value, source: Value) -> unit { target = source; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output
+        .hir
+        .expect("mutable alias copy assignment must produce HIR");
+    crate::mir::verify_mir(&crate::mir::lower_hir(&hir))
+        .expect("mutable alias copy assignment must produce valid MIR");
+}
+
+#[test]
 fn rejects_invalid_copy_body_liveness_access_and_returns() {
     let output = check_text(concat!(
         "class Broken {\n",
