@@ -60,6 +60,61 @@ impl<'semantic, 'interner, 'diagnostics>
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn resume(
+        class_semantics: &'semantic ResolvedClassTemplateSemanticTable,
+        interface_semantics: &'semantic ResolvedInterfaceTemplateSemanticTable,
+        class_templates: &'semantic ResolvedClassTemplateTable,
+        interface_templates: &'semantic ResolvedInterfaceTemplateTable,
+        interner: &'interner mut ResolvedTypeInterner,
+        diagnostics: &'diagnostics mut Diagnostics,
+        ordinary_class_count: usize,
+        ordinary_interface_count: usize,
+        range_template: Option<ClassTemplateId>,
+        discovery: GenericApplicationDiscovery,
+    ) -> Self {
+        let class_entries = discovery.class_specializations.into_entries();
+        let interface_entries = discovery.interface_specializations.into_entries();
+        let class_indices = class_entries
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| (entry.key.clone(), index))
+            .collect();
+        let interface_indices = interface_entries
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| (entry.key.clone(), index))
+            .collect();
+        let next_class = class_entries
+            .iter()
+            .filter_map(GenericSpecialization::class)
+            .map(|class| class.index() + 1)
+            .fold(ordinary_class_count, usize::max);
+        let next_interface = interface_entries
+            .iter()
+            .filter_map(GenericInterfaceSpecialization::interface)
+            .map(|interface| interface.index() + 1)
+            .fold(ordinary_interface_count, usize::max);
+        Self {
+            class_semantics,
+            interface_semantics,
+            class_templates,
+            interface_templates,
+            interner,
+            diagnostics,
+            class_entries,
+            class_indices,
+            interface_entries,
+            interface_indices,
+            active: Vec::new(),
+            rejected_edges: HashSet::new(),
+            specialization_failures: 0,
+            next_class,
+            next_interface,
+            range_template,
+        }
+    }
+
     pub(super) fn finish(mut self) -> GenericApplicationDiscovery {
         debug_assert!(self.active.is_empty());
         for entry in &mut self.interface_entries {

@@ -129,6 +129,17 @@ Generic template source scanning, logical-depth accounting, AST traversal,
 dumps, and every expression consumer must visit both endpoints without adding
 a recursive parser path that weakens the existing syntax budget.
 
+Specialization request discovery keeps explicit generic type applications in
+the source scanner. Concise ranges use a separate semantic probe after
+ordinary callable signatures, class declarations, interface claims, and the
+ordinary hierarchy are available. The probe reuses ordinary expression,
+method, and operator selection with isolated diagnostics, function-reference
+state, and compound-type interning; it records exact `Range<T>` keys at each
+`..` span and repeats only while an inner request exposes a new enclosing
+endpoint type. Specialized declarations and real bodies are then materialized
+and resolved once from the completed request set. Thus method and overloaded
+operator results can select `T` without a second source-level type system.
+
 Resolution evaluates neither endpoint. It resolves both in source order,
 requires one exact static type `T`, requests and validates canonical
 `Range<T>`, closes its bounds, and selects its canonical `init(T, T)`. The

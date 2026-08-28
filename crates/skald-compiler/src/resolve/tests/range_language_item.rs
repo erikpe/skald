@@ -260,6 +260,114 @@ fn concise_range_requests_follow_imported_function_result_types() {
 }
 
 #[test]
+fn concise_range_requests_follow_method_result_types() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "from std::ops import OpLess;\n",
+        "from std::range import Successor;\n",
+        "class Endpoint implements OpLess<Endpoint>, Successor<Endpoint> {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn op_less(ref rhs: Endpoint) -> bool { return self.value < rhs.value; }\n",
+        "  fn successor() -> Endpoint { return Endpoint(self.value + 1); }\n",
+        "}\n",
+        "class Factory {\n",
+        "  init() {}\n",
+        "  fn endpoint(value: i64) -> Endpoint { return Endpoint(value); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var factory: Factory = Factory();\n",
+        "  for (item in factory.endpoint(1) .. factory.endpoint(3)) {}\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("realization class-witness"), "{dump}");
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+}
+
+#[test]
+fn concise_range_requests_follow_overloaded_operator_result_types() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "from std::ops import OpAdd, OpLess;\n",
+        "from std::range import Successor;\n",
+        "class Endpoint implements OpLess<Endpoint>, Successor<Endpoint> {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn op_less(ref rhs: Endpoint) -> bool { return self.value < rhs.value; }\n",
+        "  fn successor() -> Endpoint { return Endpoint(self.value + 1); }\n",
+        "}\n",
+        "class Factory implements OpAdd<Factory, Endpoint> {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn op_add(ref rhs: Factory) -> Endpoint { return Endpoint(self.value + rhs.value); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var lower: Factory = Factory(1);\n",
+        "  var upper: Factory = Factory(2);\n",
+        "  for (item in (lower + lower) .. (upper + upper)) {}\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("realization class-witness"), "{dump}");
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+}
+
+#[test]
+fn nested_concise_range_requests_are_discovered_inner_to_outer() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "fn main() -> i64 {\n",
+        "  var nested: Range<Range<u64>> = (1u .. 2u) .. (3u .. 4u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(
+        output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT),
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(!output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == UNSUPPORTED_RANGE_APPLICATION));
+}
+
+#[test]
+fn semantic_range_request_probe_does_not_publish_body_diagnostics() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "class Factory { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var factory: Factory = Factory();\n",
+        "  for (item in factory.missing() .. factory.missing()) {}\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNKNOWN_MEMBER)
+            .count(),
+        2,
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(!output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == UNSUPPORTED_RANGE_APPLICATION));
+}
+
+#[test]
 fn unsupported_primitive_range_reports_the_failed_canonical_bound_without_a_resolver_cascade() {
     let (_graph, output) =
         resolve_range_syntax("fn main() -> i64 { for (item in 1.0 .. 3.0) {} return 0; }\n");

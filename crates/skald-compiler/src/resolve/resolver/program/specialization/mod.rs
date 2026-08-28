@@ -19,7 +19,8 @@ pub(super) use interface_declarations::{
 };
 pub(super) use interface_validation::validate_interface_specializations;
 pub(super) use requests::{
-    discover_specializations, GenericTemplateDiscoveryInput, SpecializationDiscoveryInput,
+    discover_specializations, extend_with_semantic_range_requests, GenericApplicationDiscovery,
+    GenericTemplateDiscoveryInput, SpecializationDiscoveryInput,
 };
 pub(super) use validation::validate_specialization_requirements;
 

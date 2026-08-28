@@ -45,6 +45,10 @@ pub(super) struct ModuleLookup<'program> {
 }
 
 impl<'program> ModuleLookup<'program> {
+    pub(super) const fn current(self) -> ModuleId {
+        self.current
+    }
+
     pub(super) fn new(
         current: ModuleId,
         top_levels: &'program HashMap<String, TopLevelSymbol>,

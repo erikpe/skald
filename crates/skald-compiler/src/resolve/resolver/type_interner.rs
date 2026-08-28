@@ -32,7 +32,7 @@ struct OptionalBoxKey {
 ///
 /// Resolution interns children before parents. `ResolvedTypeKind` contains
 /// only semantic identities, so source spans never affect equality or keys.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(super) struct ResolvedTypeInterner {
     function_ids: HashMap<FunctionTypeKey, FunctionTypeId>,
     functions: Vec<ResolvedFunctionType>,

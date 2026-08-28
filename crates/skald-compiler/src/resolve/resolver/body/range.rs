@@ -29,6 +29,14 @@ impl CallableResolver<'_, '_> {
             return None;
         }
 
+        if let Some(requests) = self.environment.range_requests {
+            requests.record(SemanticRangeRequest {
+                module: self.environment.lookup.current(),
+                endpoint: lower_type,
+                span: range.operator_span,
+            });
+        }
+
         let environment = self.environment.language_items.range?;
         let range_class = self
             .environment
@@ -69,6 +77,17 @@ impl CallableResolver<'_, '_> {
             || specialization.key.arguments.as_slice() != [lower_type]
         {
             return None;
+        }
+        if self.environment.range_requests.is_some() {
+            return Some(ResolvedExpression::Construct(ResolvedConstructExpr {
+                class: range_class,
+                callee_span: range.operator_span,
+                mode: ResolvedConstructionMode::Initialize {
+                    arguments: vec![lower, upper],
+                },
+                origin: ResolvedConstructionOrigin::Explicit,
+                span: range.span,
+            }));
         }
         let class = self
             .environment

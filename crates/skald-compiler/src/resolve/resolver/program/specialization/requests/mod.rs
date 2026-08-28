@@ -12,6 +12,7 @@ use syntax_type_closer::SyntaxTypeCloser;
 use super::super::resolver::{ModuleUnit, ProgramLookupTables};
 use super::*;
 
+#[derive(Clone, Copy)]
 pub(crate) struct SpecializationDiscoveryInput<'program, 'ast> {
     units: &'program [ModuleUnit<'ast>],
     modules: &'program crate::module::ProgramModuleTable,
@@ -21,6 +22,7 @@ pub(crate) struct SpecializationDiscoveryInput<'program, 'ast> {
     ordinary_interface_count: usize,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct GenericTemplateDiscoveryInput<'program> {
     class_semantics: &'program ResolvedClassTemplateSemanticTable,
     interface_semantics: &'program ResolvedInterfaceTemplateSemanticTable,
@@ -62,6 +64,14 @@ impl<'program, 'ast> SpecializationDiscoveryInput<'program, 'ast> {
             ordinary_interface_count,
         }
     }
+
+    pub(crate) fn lookups_with_specializations(
+        self,
+        classes: &'program GenericSpecializationTable,
+        interfaces: &'program GenericInterfaceSpecializationTable,
+    ) -> ProgramLookupTables<'program> {
+        self.lookups.with_specializations(classes, interfaces)
+    }
 }
 
 pub(crate) struct GenericApplicationDiscovery {
@@ -75,12 +85,6 @@ pub(crate) fn discover_specializations(
     interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> GenericApplicationDiscovery {
-    let function_results = input
-        .units
-        .iter()
-        .flat_map(ModuleUnit::function_result_syntaxes)
-        .map(|(function, result)| (function, result.clone()))
-        .collect::<HashMap<_, _>>();
     let mut owner = SpecializationCoordinator::new(
         input.templates.class_semantics,
         input.templates.interface_semantics,
@@ -94,12 +98,44 @@ pub(crate) fn discover_specializations(
     );
     for unit in input.units {
         let lookup = input.lookups.for_unit(unit, input.modules);
-        SourceRequestScanner::new(
-            SyntaxTypeCloser::new(&mut owner, lookup, unit.module),
-            range_language_item.map(|item| item.range_template),
-            &function_results,
-        )
-        .visit_unit(unit.ast);
+        SourceRequestScanner::new(SyntaxTypeCloser::new(&mut owner, lookup, unit.module))
+            .visit_unit(unit.ast);
+    }
+    owner.finish()
+}
+
+pub(crate) fn extend_with_semantic_range_requests(
+    input: SpecializationDiscoveryInput<'_, '_>,
+    range_language_item: Option<&ResolvedRangeLanguageItem>,
+    discovery: GenericApplicationDiscovery,
+    requests: &[crate::resolve::resolver::body::SemanticRangeRequest],
+    interner: &mut ResolvedTypeInterner,
+    diagnostics: &mut Diagnostics,
+) -> GenericApplicationDiscovery {
+    let Some(range_template) = range_language_item.map(|item| item.range_template) else {
+        return discovery;
+    };
+    let mut owner = SpecializationCoordinator::resume(
+        input.templates.class_semantics,
+        input.templates.interface_semantics,
+        input.templates.classes,
+        input.templates.interfaces,
+        interner,
+        diagnostics,
+        input.ordinary_class_count,
+        input.ordinary_interface_count,
+        Some(range_template),
+        discovery,
+    );
+    for request in requests {
+        let _ = owner.request_class(
+            range_template,
+            vec![request.endpoint],
+            GenericApplicationOrigin {
+                module: request.module,
+                span: request.span,
+            },
+        );
     }
     owner.finish()
 }

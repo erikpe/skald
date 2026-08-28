@@ -27,6 +27,7 @@ mod iterable_language_item;
 mod operator_language_item;
 mod range_language_item;
 mod resolver;
+mod semantic_range_requests;
 mod specialization;
 mod static_initializer;
 mod string_language_item;
@@ -57,10 +58,14 @@ use resolver::{
     resolve_parameter_binding_mode, resolve_parameters, resolve_result_type, resolved_visibility,
     ProgramResolver,
 };
+use semantic_range_requests::{
+    complete_semantic_range_specializations, SemanticRangeCompletionInput,
+};
 use specialization::{
-    close_bound_member_selections, discover_specializations, generated_class_work,
-    materialize_interface_declarations, specialize_bodies, specialize_declarations,
-    validate_interface_specializations, validate_specialization_requirements,
+    close_bound_member_selections, discover_specializations, extend_with_semantic_range_requests,
+    generated_class_work, materialize_interface_declarations, specialize_bodies,
+    specialize_declarations, validate_interface_specializations,
+    validate_specialization_requirements, GenericApplicationDiscovery,
     GenericTemplateDiscoveryInput, InterfaceMaterializationInput, SpecializationBodyInput,
     SpecializationDeclarationInput, SpecializationDiscoveryInput,
 };

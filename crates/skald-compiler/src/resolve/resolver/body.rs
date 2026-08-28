@@ -1,13 +1,13 @@
 //! Callable-body resolution facade and shared expression/name resolution.
 
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
     identity::{
         BindingId, CallableId, ClassId, FieldId, FunctionTypeId, InterfaceId,
-        InterfaceRequirementId, LiteralDataId, LoopId, MethodId, StaticFieldId,
+        InterfaceRequirementId, LiteralDataId, LoopId, MethodId, ModuleId, StaticFieldId,
     },
     source::{Span, TextRange},
 };
@@ -56,6 +56,32 @@ pub(super) struct BodyResolutionEnvironment<'program> {
     has_module_context: bool,
     language_items: BodyLanguageItemEnvironment<'program>,
     specialization: Option<BodySpecializationEnvironment<'program>>,
+    range_requests: Option<&'program SemanticRangeRequestCollector>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct SemanticRangeRequest {
+    pub(super) module: ModuleId,
+    pub(super) endpoint: ResolvedTypeKind,
+    pub(super) span: Span,
+}
+
+#[derive(Default)]
+pub(super) struct SemanticRangeRequestCollector {
+    requests: RefCell<Vec<SemanticRangeRequest>>,
+}
+
+impl SemanticRangeRequestCollector {
+    pub(super) fn record(&self, request: SemanticRangeRequest) {
+        let mut requests = self.requests.borrow_mut();
+        if !requests.contains(&request) {
+            requests.push(request);
+        }
+    }
+
+    pub(super) fn into_requests(self) -> Vec<SemanticRangeRequest> {
+        self.requests.into_inner()
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -293,6 +319,7 @@ impl<'program> BodyResolutionEnvironment<'program> {
             has_module_context,
             language_items,
             specialization: None,
+            range_requests: None,
         }
     }
 
@@ -301,6 +328,14 @@ impl<'program> BodyResolutionEnvironment<'program> {
         specialization: BodySpecializationEnvironment<'program>,
     ) -> Self {
         self.specialization = Some(specialization);
+        self
+    }
+
+    pub(super) const fn with_range_request_collector(
+        mut self,
+        collector: &'program SemanticRangeRequestCollector,
+    ) -> Self {
+        self.range_requests = Some(collector);
         self
     }
 }

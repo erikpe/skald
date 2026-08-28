@@ -141,6 +141,10 @@ impl GenericSpecializationTable {
         self.entries.iter_mut()
     }
 
+    pub(crate) fn into_entries(self) -> Vec<GenericSpecialization> {
+        self.entries
+    }
+
     /// Used by declaration specialization to publish the complete class behind
     /// an already allocated specialization identity.
     #[allow(dead_code)]

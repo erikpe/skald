@@ -1,42 +1,20 @@
 //! Source-order discovery of explicit generic applications in the AST.
 
 use super::syntax_type_closer::SyntaxTypeCloser;
-use std::collections::HashMap;
 
-use crate::{
-    identity::{ClassTemplateId, FunctionId},
-    resolve::{ResolvedSharedTarget, ResolvedTypeKind},
-    syntax,
-};
+use crate::syntax;
 
-pub(super) struct SourceRequestScanner<
-    'resolver,
-    'semantic,
-    'interner,
-    'diagnostics,
-    'lookup,
-    'syntax,
-> {
+pub(super) struct SourceRequestScanner<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup> {
     resolver: SyntaxTypeCloser<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>,
-    range_template: Option<ClassTemplateId>,
-    scopes: Vec<HashMap<String, ResolvedTypeKind>>,
-    function_results: &'syntax HashMap<FunctionId, syntax::TypeSyntax>,
 }
 
-impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
-    SourceRequestScanner<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
+impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
+    SourceRequestScanner<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
 {
     pub(super) fn new(
         resolver: SyntaxTypeCloser<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>,
-        range_template: Option<ClassTemplateId>,
-        function_results: &'syntax HashMap<FunctionId, syntax::TypeSyntax>,
     ) -> Self {
-        Self {
-            resolver,
-            range_template,
-            scopes: Vec::new(),
-            function_results,
-        }
+        Self { resolver }
     }
 
     pub(super) fn visit_unit(&mut self, unit: &syntax::CompilationUnit) {
@@ -132,20 +110,10 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
     }
 
     fn begin_callable(&mut self, parameters: &[syntax::Parameter]) {
-        self.scopes.push(HashMap::new());
-        for parameter in parameters {
-            if let Some(ty) = self.resolver.close(&parameter.type_syntax) {
-                self.scopes
-                    .last_mut()
-                    .expect("callable scope exists")
-                    .insert(parameter.name.text.to_string(), ty);
-            }
-        }
+        self.visit_parameters(parameters);
     }
 
-    fn end_callable(&mut self) {
-        self.scopes.pop().expect("callable scope exists");
-    }
+    fn end_callable(&mut self) {}
 
     fn visit_type(&mut self, syntax: &syntax::TypeSyntax) {
         let _ = self.resolver.close(syntax);
@@ -156,11 +124,9 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
     }
 
     fn visit_block(&mut self, block: &syntax::Block) {
-        self.scopes.push(HashMap::new());
         for statement in &block.statements {
             self.visit_statement(statement);
         }
-        self.scopes.pop().expect("block scope exists");
     }
 
     fn visit_statement(&mut self, statement: &syntax::Statement) {
@@ -170,12 +136,7 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
             }
             syntax::Statement::Local(statement) => {
                 self.visit_expression(&statement.initializer);
-                if let Some(ty) = self.resolver.close(&statement.type_syntax) {
-                    self.scopes
-                        .last_mut()
-                        .expect("local declaration occurs in a scope")
-                        .insert(statement.name.text.to_string(), ty);
-                }
+                self.visit_type(&statement.type_syntax);
             }
             syntax::Statement::Return(statement) => {
                 if let Some(value) = &statement.value {
@@ -248,17 +209,6 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
             syntax::Expression::Range(expression) => {
                 self.visit_expression(&expression.lower);
                 self.visit_expression(&expression.upper);
-                let lower = self.static_type(&expression.lower);
-                let upper = self.static_type(&expression.upper);
-                if let (Some(template), Some(lower), Some(upper)) =
-                    (self.range_template, lower, upper)
-                {
-                    if lower == upper {
-                        let _ =
-                            self.resolver
-                                .request_range(template, lower, expression.operator_span);
-                    }
-                }
             }
             syntax::Expression::TypeTest(expression) => {
                 self.visit_expression(&expression.source);
@@ -340,103 +290,4 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
             self.visit_expression(expression);
         }
     }
-
-    fn static_type(&mut self, expression: &syntax::Expression) -> Option<ResolvedTypeKind> {
-        match expression {
-            syntax::Expression::NumericLiteral(literal) => Some(match literal.kind {
-                crate::literal::NumericLiteralKind::I64(_) => ResolvedTypeKind::I64,
-                crate::literal::NumericLiteralKind::U64(_) => ResolvedTypeKind::U64,
-                crate::literal::NumericLiteralKind::U8(_) => ResolvedTypeKind::U8,
-                crate::literal::NumericLiteralKind::F64 => ResolvedTypeKind::F64,
-            }),
-            syntax::Expression::ByteLiteral(_) => Some(ResolvedTypeKind::U8),
-            syntax::Expression::Boolean(_)
-            | syntax::Expression::Logical(_)
-            | syntax::Expression::TypeTest(_)
-            | syntax::Expression::PresenceTest(_) => Some(ResolvedTypeKind::Bool),
-            syntax::Expression::Identifier(identifier) if !identifier.name.is_qualified() => self
-                .scopes
-                .iter()
-                .rev()
-                .find_map(|scope| scope.get(identifier.name.text.as_str()).copied()),
-            syntax::Expression::Unary(unary) => self
-                .static_type(&unary.operand)
-                .filter(|kind| is_primitive_value(*kind)),
-            syntax::Expression::Binary(binary) => match binary.operator {
-                syntax::BinaryOperator::Equal
-                | syntax::BinaryOperator::NotEqual
-                | syntax::BinaryOperator::LessThan
-                | syntax::BinaryOperator::LessEqual
-                | syntax::BinaryOperator::GreaterThan
-                | syntax::BinaryOperator::GreaterEqual => Some(ResolvedTypeKind::Bool),
-                syntax::BinaryOperator::ShiftLeft | syntax::BinaryOperator::ShiftRight => {
-                    let left = self.static_type(&binary.left)?;
-                    let right = self.static_type(&binary.right)?;
-                    (is_integer_value(left) && right == ResolvedTypeKind::U64).then_some(left)
-                }
-                _ => {
-                    let left = self.static_type(&binary.left)?;
-                    let right = self.static_type(&binary.right)?;
-                    (left == right && is_primitive_value(left)).then_some(left)
-                }
-            },
-            syntax::Expression::PrimitiveCast(cast) => Some(match cast.target {
-                syntax::PrimitiveType::I64 => ResolvedTypeKind::I64,
-                syntax::PrimitiveType::U64 => ResolvedTypeKind::U64,
-                syntax::PrimitiveType::U8 => ResolvedTypeKind::U8,
-                syntax::PrimitiveType::F64 => ResolvedTypeKind::F64,
-                syntax::PrimitiveType::Bool => ResolvedTypeKind::Bool,
-            }),
-            syntax::Expression::ObjectCast(cast) => self.resolver.close_named(&cast.target, false),
-            syntax::Expression::Allocation(allocation) => {
-                let target = self.resolver.close_named(&allocation.target, false)?;
-                ResolvedSharedTarget::from_direct_type(target).map(ResolvedTypeKind::Shared)
-            }
-            syntax::Expression::ArrayConstruction(construction) => {
-                self.resolver.close(&construction.array_type)
-            }
-            syntax::Expression::Call(call) => {
-                if let Some(ty) = self.resolver.constructor_type(&call.callee) {
-                    return Some(ty);
-                }
-                let syntax::Expression::Identifier(identifier) = call.callee.as_ref() else {
-                    return None;
-                };
-                let function = self.resolver.function(&identifier.name)?;
-                let result = self.function_results.get(&function)?.clone();
-                self.resolver.close(&result)
-            }
-            syntax::Expression::Grouped(grouped) => self.static_type(&grouped.expression),
-            syntax::Expression::Range(range) => {
-                let lower = self.static_type(&range.lower)?;
-                let upper = self.static_type(&range.upper)?;
-                if lower != upper {
-                    return None;
-                }
-                let template = self.range_template?;
-                self.resolver
-                    .request_range(template, lower, range.operator_span)
-                    .map(ResolvedTypeKind::Class)
-            }
-            _ => None,
-        }
-    }
-}
-
-const fn is_integer_value(kind: ResolvedTypeKind) -> bool {
-    matches!(
-        kind,
-        ResolvedTypeKind::I64 | ResolvedTypeKind::U64 | ResolvedTypeKind::U8
-    )
-}
-
-const fn is_primitive_value(kind: ResolvedTypeKind) -> bool {
-    matches!(
-        kind,
-        ResolvedTypeKind::I64
-            | ResolvedTypeKind::U64
-            | ResolvedTypeKind::U8
-            | ResolvedTypeKind::F64
-            | ResolvedTypeKind::Bool
-    )
 }

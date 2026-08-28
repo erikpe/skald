@@ -21,9 +21,9 @@ pub(super) const fn resolved_visibility(visibility: syntax::Visibility) -> Resol
 }
 
 #[derive(Clone, Copy)]
-struct FunctionWorkItem {
-    id: FunctionId,
-    ast_index: usize,
+pub(super) struct FunctionWorkItem {
+    pub(super) id: FunctionId,
+    pub(super) ast_index: usize,
 }
 
 #[derive(Clone, Copy)]
@@ -40,31 +40,12 @@ pub(super) struct ModuleUnit<'ast> {
     pub(super) module: ModuleId,
     qualified_enabled: bool,
     top_levels: HashMap<String, TopLevelSymbol>,
-    function_work: Vec<FunctionWorkItem>,
+    pub(super) function_work: Vec<FunctionWorkItem>,
     pub(super) class_work: Vec<(ClassId, usize)>,
     pub(super) template_work: Vec<ClassTemplateWorkItem>,
     interface_work: Vec<(InterfaceId, usize)>,
     pub(super) interface_template_work: Vec<InterfaceTemplateWorkItem>,
     declarations: Vec<ResolvedModuleDeclaration>,
-}
-
-impl<'ast> ModuleUnit<'ast> {
-    pub(super) fn function_result_syntaxes(
-        &self,
-    ) -> impl Iterator<Item = (FunctionId, &'ast syntax::TypeSyntax)> + '_ {
-        self.function_work.iter().map(|item| {
-            let result = match &self.ast.declarations[item.ast_index] {
-                syntax::TopLevelDeclaration::Function(function) => &function.return_type,
-                syntax::TopLevelDeclaration::ExternalFunction(function) => &function.return_type,
-                syntax::TopLevelDeclaration::IntrinsicFunction(function) => &function.return_type,
-                syntax::TopLevelDeclaration::Class(_)
-                | syntax::TopLevelDeclaration::Interface(_) => {
-                    unreachable!("function work references a callable declaration")
-                }
-            };
-            (item.id, result)
-        })
-    }
 }
 
 fn collect_literal_data(
@@ -634,6 +615,7 @@ impl<'ast> ProgramResolver<'ast> {
         let mut generic_specializations = discovery.class_specializations;
         let mut generic_interface_specializations = discovery.interface_specializations;
         let ordinary_interfaces = interfaces.clone();
+        let mut provisional_diagnostics = Diagnostics::new();
         let materialized_interfaces = materialize_interface_declarations(
             InterfaceMaterializationInput {
                 units: &self.units,
@@ -645,7 +627,7 @@ impl<'ast> ProgramResolver<'ast> {
                 type_interner: &self.type_interner,
             },
             &mut generic_interface_specializations,
-            &mut self.diagnostics,
+            &mut provisional_diagnostics,
         );
         if materialized_interfaces.valid {
             interfaces.extend(materialized_interfaces.declarations);
@@ -657,6 +639,7 @@ impl<'ast> ProgramResolver<'ast> {
                 range_language_item.as_ref(),
             );
         }
+        self.diagnostics.append(provisional_diagnostics);
         let lookups = lookups
             .with_specializations(&generic_specializations, &generic_interface_specializations);
         let function_declarations =
@@ -690,6 +673,89 @@ impl<'ast> ProgramResolver<'ast> {
             build_class_hierarchy(&class_declarations, &class_symbols, &mut diagnostics)
         };
         let ordinary_classes = class_declarations.clone();
+        let semantic_discovery_input = SpecializationDiscoveryInput::new(
+            &self.units,
+            &self.modules,
+            ProgramLookupTables {
+                bindings: &module_bindings,
+                ordinary_bindings: &ordinary_bindings,
+                declarations: &module_declarations,
+                module_spans: &module_spans,
+                class_templates: &class_templates,
+                type_parameters: &type_parameters,
+                specializations: None,
+                interface_specializations: None,
+            },
+            GenericTemplateDiscoveryInput::new(
+                &template_semantics,
+                &interface_template_semantics,
+                &class_templates,
+                &interface_templates,
+            ),
+            ordinary_class_count,
+            ordinary_interfaces.len(),
+        );
+        let discovery = complete_semantic_range_specializations(
+            SemanticRangeCompletionInput {
+                units: &self.units,
+                modules: &self.modules,
+                discovery: semantic_discovery_input,
+                template_semantics: &template_semantics,
+                functions: &function_declarations,
+                classes: &class_declarations,
+                class_symbols: &class_symbols,
+                class_work: &class_work,
+                interfaces: &interfaces,
+                has_module_context: self.has_module_context,
+                literal_ids: &self.literal_ids,
+                range_expression_spans: &self.range_expression_spans,
+                iterable: iterable_language_item.as_ref(),
+                operators: operator_language_item.as_ref(),
+                range: range_language_item.as_ref(),
+            },
+            GenericApplicationDiscovery {
+                class_specializations: generic_specializations,
+                interface_specializations: generic_interface_specializations,
+            },
+            &mut self.type_interner,
+            &mut self.diagnostics,
+        );
+        generic_specializations = discovery.class_specializations;
+        generic_interface_specializations = discovery.interface_specializations;
+        interfaces = ordinary_interfaces.clone();
+        let materialized_interfaces = materialize_interface_declarations(
+            InterfaceMaterializationInput {
+                units: &self.units,
+                modules: &self.modules,
+                templates: &interface_templates,
+                semantics: &interface_template_semantics,
+                class_specializations: &generic_specializations,
+                ordinary_interfaces: &interfaces,
+                type_interner: &self.type_interner,
+            },
+            &mut generic_interface_specializations,
+            &mut self.diagnostics,
+        );
+        if materialized_interfaces.valid {
+            interfaces.extend(materialized_interfaces.declarations);
+            close_bound_member_selections(
+                &template_semantics,
+                &mut generic_specializations,
+                &generic_interface_specializations,
+                operator_language_item.as_ref(),
+                range_language_item.as_ref(),
+            );
+        }
+        let lookups = ProgramLookupTables {
+            bindings: &module_bindings,
+            ordinary_bindings: &ordinary_bindings,
+            declarations: &module_declarations,
+            module_spans: &module_spans,
+            class_templates: &class_templates,
+            type_parameters: &type_parameters,
+            specializations: Some(&generic_specializations),
+            interface_specializations: Some(&generic_interface_specializations),
+        };
         let specialized = specialize_declarations(
             SpecializationDeclarationInput::new(
                 &self.units,

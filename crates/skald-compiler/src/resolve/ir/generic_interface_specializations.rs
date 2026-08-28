@@ -94,6 +94,10 @@ impl GenericInterfaceSpecializationTable {
         self.entries.iter()
     }
 
+    pub(crate) fn into_entries(self) -> Vec<GenericInterfaceSpecialization> {
+        self.entries
+    }
+
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
