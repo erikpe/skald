@@ -208,6 +208,52 @@ fn body_operation_requirements_report_application_and_template_origins() {
     assert!(output.program.class_definitions.is_empty());
 }
 
+#[test]
+fn unavailable_bound_witness_suppresses_only_its_dependent_body_diagnostic() {
+    let output = resolve_source(
+        "interface Advance<T> { fn advance() -> T; }\n\
+         class Empty<T> { init() {} }\n\
+         class Walker<T> where T: Advance<T> {\n\
+           fn walk(ref value: T) -> T { return value.advance(); }\n\
+           fn independent() -> u64 { return Empty<T>.missing(); }\n\
+         }\n\
+         fn first(ref value: Walker<u64>) -> unit {}\n\
+         fn second(ref value: Walker<u64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let bound_diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| {
+            diagnostic.code == super::super::super::UNSATISFIED_GENERIC_REQUIREMENT
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(bound_diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert!(bound_diagnostics[0].labels.iter().any(|label| {
+        label.message == "the same invalid generic application is also used here"
+    }));
+    assert!(
+        output.diagnostics.iter().all(|diagnostic| {
+            !diagnostic
+                .labels
+                .iter()
+                .any(|label| label.message == "member access requires an object")
+        }),
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(
+        output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.labels.iter().any(|label| {
+                label.message == "this application uses a generic class with an invalid body"
+            })
+        }),
+        "the independent closed-body error must remain: {:?}",
+        output.diagnostics
+    );
+}
+
 fn generic_body_diagnostics(output: &crate::resolve::ResolveOutput) -> usize {
     output.diagnostics.len()
 }

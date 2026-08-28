@@ -195,6 +195,14 @@ pub(super) struct BodySpecializationEnvironment<'program> {
     specialization: &'program GenericSpecialization,
 }
 
+#[derive(Clone, Copy)]
+enum SpecializedBoundMember {
+    Closed(ClosedGenericBoundMember),
+    /// Template resolution selected this bound member, so ordinary member
+    /// lookup must not reinterpret a failed closed witness and emit a cascade.
+    Unavailable,
+}
+
 impl<'program> BodySpecializationEnvironment<'program> {
     pub(super) const fn new(
         semantics: &'program ResolvedClassTemplateSemantics,
@@ -215,7 +223,7 @@ impl<'program> BodySpecializationEnvironment<'program> {
             .flatten()
     }
 
-    fn bound_member(self, span: Span) -> Option<ClosedGenericBoundMember> {
+    fn bound_member(self, span: Span) -> Option<SpecializedBoundMember> {
         self.semantics
             .selections
             .iter()
@@ -231,7 +239,10 @@ impl<'program> BodySpecializationEnvironment<'program> {
                 if *selection_span != span {
                     return None;
                 }
-                *closed
+                Some(closed.map_or(
+                    SpecializedBoundMember::Unavailable,
+                    SpecializedBoundMember::Closed,
+                ))
             })
     }
 

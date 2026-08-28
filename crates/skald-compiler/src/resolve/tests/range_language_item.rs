@@ -386,6 +386,32 @@ fn unsupported_primitive_range_reports_the_failed_canonical_bound_without_a_reso
 }
 
 #[test]
+fn explicit_unsupported_ranges_do_not_publish_dependent_bound_member_diagnostics() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "from std::range import Range;\n",
+        "fn reject_float(ref values: Range<f64>) -> unit {}\n",
+        "fn reject_bool(ref values: Range<bool>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(
+        output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT),
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(
+        output
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code != INVALID_MEMBER_SELECTION),
+        "{:?}",
+        output.diagnostics
+    );
+}
+
+#[test]
 fn concise_syntax_validates_replacement_canonical_range_declarations() {
     let broken = replace_once(CANONICAL_RANGE_SOURCE, "public class Range", "class Range");
     let (_workspace, graph) = load_module_sources_with_standard_library_overrides(

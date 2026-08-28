@@ -862,10 +862,10 @@ impl CallableResolver<'_, '_> {
                     .and_then(|specialization| specialization.bound_member(member.span))
                 {
                     return match selection {
-                        ClosedGenericBoundMember::Interface {
+                        SpecializedBoundMember::Closed(ClosedGenericBoundMember::Interface {
                             interface,
                             requirement,
-                        } => {
+                        }) => {
                             let receiver = self.resolve_member_object_receiver(member)?;
                             Some(CallTarget::Interface {
                                 receiver: ResolvedInterfaceReceiver::Object(Box::new(receiver)),
@@ -875,7 +875,9 @@ impl CallableResolver<'_, '_> {
                                 member_span: member.member.span,
                             })
                         }
-                        ClosedGenericBoundMember::PrimitiveIntrinsic { operation } => {
+                        SpecializedBoundMember::Closed(
+                            ClosedGenericBoundMember::PrimitiveIntrinsic { operation },
+                        ) => {
                             let receiver = self.resolve_expression(&member.receiver)?;
                             Some(CallTarget::PrimitiveBoundIntrinsic {
                                 receiver,
@@ -883,6 +885,7 @@ impl CallableResolver<'_, '_> {
                                 member_span: member.member.span,
                             })
                         }
+                        SpecializedBoundMember::Unavailable => None,
                     };
                 }
                 if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {

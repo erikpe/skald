@@ -268,6 +268,13 @@ emit independently ordered cascades. Queue traversal, ID assignment,
 diagnostics, dumps, static planning, and emitted artifacts follow stable
 module, declaration, member, and argument order rather than hash iteration.
 
+When an unsatisfied bound leaves a definition-site bound selection without a
+closed witness, specialized body resolution stops that dependent operation
+without reinterpreting it as ordinary member syntax. The owning bound
+diagnostic remains the primary cause. Resolution continues through the rest of
+the generated body so independent closed-body errors are still reported, and
+repeated requests retain their ordinary deterministic origin context.
+
 ## Closed class integration
 
 A generated class uses ordinary member identities derived from its `ClassId`.
