@@ -16,8 +16,16 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
-No design proposal is currently active. The frozen interface-based operator-
-overloading contract is promoted into the
+The [generic ranges and tight range loops design proposal](GENERIC_RANGES_DESIGN_PROPOSAL.md)
+is active. Its core direction is confirmed: ordinary `Range<T>` uses canonical
+`Successor<T>` and `Iterable<T, T>`, `..` constructs that same half-open range
+for exact primitive or opted-in class endpoints, and a final narrow primitive
+fusion approaches handwritten `while` performance through ordinary verified
+MIR. Review of the typed-HIR provenance boundary, explicit-construction fusion,
+and performance threshold is next. It depends on the completed generic-
+interface, general-iteration, and interface-based operator-overloading work.
+
+The frozen interface-based operator-overloading contract is promoted into the
 [language](../language/OPERATOR_OVERLOADING.md) and
 [compiler](../compiler/OPERATOR_OVERLOADING.md) documentation, and its
 decision record is preserved in the [archive](../archive/README.md).
