@@ -609,8 +609,17 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                     ),
                                     *span,
                                 ),
-                                ResolvedTemplateSelection::Range { endpoint, span } => dumper.line(
-                                    &format!("Selection range endpoint {}", render_template_type(endpoint)),
+                                ResolvedTemplateSelection::Range {
+                                    endpoint,
+                                    endpoint_provenance,
+                                    span,
+                                } => dumper.line(
+                                    &format!(
+                                        "Selection range endpoint {} provenance lower={} upper={}",
+                                        render_template_type(endpoint),
+                                        endpoint_provenance[0].name(),
+                                        endpoint_provenance[1].name(),
+                                    ),
                                     *span,
                                 ),
                             }
@@ -2213,11 +2222,13 @@ impl<'program> ResolvedDumper<'program> {
                             };
                         self.line(
                             &format!(
-                                "RangeConstruction template {} class {} initializer {} endpoint {} iterable {}",
+                                "RangeConstruction template {} class {} initializer {} endpoint {} provenance lower={} upper={} iterable {}",
                                 range.range_template,
                                 range.range_class,
                                 range.initializer,
                                 self.render_type_kind(range.endpoint_type),
+                                range.endpoint_provenance[0].name(),
+                                range.endpoint_provenance[1].name(),
                                 range.iterable,
                             ),
                             construct.span,

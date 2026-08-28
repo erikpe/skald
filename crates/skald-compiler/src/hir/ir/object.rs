@@ -276,6 +276,7 @@ pub struct HirCanonicalRangeOrigin {
     pub range_class: ClassId,
     pub initializer: InitializerId,
     pub endpoint_type: super::Type,
+    pub endpoint_provenance: [crate::resolve::ResolvedRangeEndpointProvenance; 2],
     pub ordering: HirRangeProtocolEvidence,
     pub successor: HirRangeProtocolEvidence,
     pub iterable: InterfaceId,

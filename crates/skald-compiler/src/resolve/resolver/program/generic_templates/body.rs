@@ -9,6 +9,7 @@ use super::*;
 use crate::identity::TypeParameterId;
 
 mod operator;
+mod provenance;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn resolve_template_body(
@@ -67,7 +68,18 @@ pub(super) fn resolve_template_body(
         member_results,
         has_direct_base,
         field_writes_assign,
-        scopes: vec![callable_parameters.clone()],
+        scopes: vec![callable_parameters
+            .iter()
+            .map(|(name, ty)| {
+                (
+                    name.clone(),
+                    TemplateBinding {
+                        ty: ty.clone(),
+                        depends_on_parameter: ty.depends_on_parameter(),
+                    },
+                )
+            })
+            .collect()],
         callable_result: callable_result.cloned(),
         type_uses,
         requirements,
@@ -96,12 +108,18 @@ struct TemplateBodyResolver<'semantic, 'lookup, 'diagnostics> {
     member_results: &'semantic HashMap<String, ResolvedTemplateType>,
     has_direct_base: bool,
     field_writes_assign: bool,
-    scopes: Vec<HashMap<String, ResolvedTemplateType>>,
+    scopes: Vec<HashMap<String, TemplateBinding>>,
     callable_result: Option<ResolvedTemplateType>,
     type_uses: &'semantic mut Vec<ResolvedTemplateTypeUse>,
     requirements: &'semantic mut Vec<GenericRequirement>,
     selections: &'semantic mut Vec<ResolvedTemplateSelection>,
     diagnostics: &'diagnostics mut Diagnostics,
+}
+
+#[derive(Clone)]
+struct TemplateBinding {
+    ty: ResolvedTemplateType,
+    depends_on_parameter: bool,
 }
 
 impl TemplateBodyResolver<'_, '_, '_> {
@@ -139,7 +157,9 @@ impl TemplateBodyResolver<'_, '_, '_> {
                         );
                     }
                     push_destruction(self.requirements, &term, self.member);
-                    self.declare_binding(&local.name, term, "local binding");
+                    let depends_on_parameter = term.depends_on_parameter()
+                        || self.expression_depends_on_parameter(&local.initializer);
+                    self.declare_binding(&local.name, term, depends_on_parameter, "local binding");
                 }
             }
             syntax::Statement::Return(statement) => {
@@ -212,6 +232,13 @@ impl TemplateBodyResolver<'_, '_, '_> {
             syntax::Statement::ObjectAssignment(statement) => {
                 self.visit_expression(&statement.place);
                 self.visit_expression(&statement.value);
+                if self.expression_depends_on_parameter(&statement.value) {
+                    if let syntax::Expression::Identifier(identifier) = &statement.place {
+                        if !identifier.name.is_qualified() {
+                            self.mark_binding_parameter_dependent(identifier.name.text.as_str());
+                        }
+                    }
+                }
                 if let Some(term) = self.type_of_expression(&statement.place) {
                     self.record_requirement(
                         &term,
@@ -294,6 +321,10 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     if lower.semantically_eq(&upper) {
                         self.selections.push(ResolvedTemplateSelection::Range {
                             endpoint: lower,
+                            endpoint_provenance: [
+                                self.range_endpoint_provenance(&expression.lower),
+                                self.range_endpoint_provenance(&expression.upper),
+                            ],
                             span: expression.operator_span,
                         });
                     }
@@ -861,8 +892,19 @@ impl TemplateBodyResolver<'_, '_, '_> {
         Some(resolved)
     }
 
-    fn lookup_binding(&self, name: &str) -> Option<&ResolvedTemplateType> {
+    fn lookup_binding(&self, name: &str) -> Option<&TemplateBinding> {
         self.scopes.iter().rev().find_map(|scope| scope.get(name))
+    }
+
+    fn mark_binding_parameter_dependent(&mut self, name: &str) {
+        if let Some(binding) = self
+            .scopes
+            .iter_mut()
+            .rev()
+            .find_map(|scope| scope.get_mut(name))
+        {
+            binding.depends_on_parameter = true;
+        }
     }
 
     fn visit_iteration(&mut self, statement: &syntax::ForInStatement) {
@@ -987,7 +1029,14 @@ impl TemplateBodyResolver<'_, '_, '_> {
             span: statement.for_span,
         });
         self.scopes.push(HashMap::new());
-        self.declare_binding(&statement.binding, item, "iteration binding");
+        let depends_on_parameter = item.depends_on_parameter()
+            || self.expression_depends_on_parameter(&statement.iterable);
+        self.declare_binding(
+            &statement.binding,
+            item,
+            depends_on_parameter,
+            "iteration binding",
+        );
         for statement in &statement.body.statements {
             self.visit_statement(statement);
         }
@@ -1000,6 +1049,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
         &mut self,
         name: &syntax::Name,
         ty: ResolvedTemplateType,
+        depends_on_parameter: bool,
         binding_kind: &'static str,
     ) -> bool {
         let scope = self
@@ -1016,7 +1066,13 @@ impl TemplateBodyResolver<'_, '_, '_> {
             );
             return false;
         }
-        scope.insert(name.text.to_string(), ty);
+        scope.insert(
+            name.text.to_string(),
+            TemplateBinding {
+                ty,
+                depends_on_parameter,
+            },
+        );
         true
     }
 
@@ -1039,9 +1095,9 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 kind: ResolvedTemplateTypeKind::Bool,
                 span: boolean.span,
             }),
-            syntax::Expression::Identifier(identifier) if !identifier.name.is_qualified() => {
-                self.lookup_binding(identifier.name.text.as_str()).cloned()
-            }
+            syntax::Expression::Identifier(identifier) if !identifier.name.is_qualified() => self
+                .lookup_binding(identifier.name.text.as_str())
+                .map(|binding| binding.ty.clone()),
             syntax::Expression::Grouped(grouped) => self.type_of_expression(&grouped.expression),
             syntax::Expression::MemberAccess(access)
                 if matches!(access.receiver.as_ref(), syntax::Expression::SelfValue(_)) =>

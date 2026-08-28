@@ -178,6 +178,7 @@ HirConstructionOrigin::CanonicalRangeSyntax {
     range_class,
     initializer,
     endpoint_type,
+    endpoint_provenance: [lower, upper],
     ordering,
     successor,
 }
@@ -231,6 +232,7 @@ The initial fused plan is eligible only when:
 
 - `HirForIn` immediately consumes a construction whose origin is exactly
   `CanonicalRangeSyntax`;
+- both endpoints carry specialization-independent semantic provenance;
 - the endpoint, item, and state type is exactly `u8`, `u64`, or `i64`;
 - ordering and successor are the compiler-provided canonical primitive
   realizations;
@@ -238,6 +240,17 @@ The initial fused plan is eligible only when:
   `Iterable<T, T>`; and
 - no storage, copy, argument, result, alias, optional, owner, view, call, or
   other observable boundary intervenes.
+
+Generic-template analysis records endpoint provenance before substitution. A
+closed endpoint is specialization-dependent when its type or value producer
+depends on a template parameter, including transitive local bindings and
+bound-selected operations whose concrete result type itself is fixed. Such a
+range remains on the ordinary protocol path even if substitution later yields
+an eligible integer. A range whose two endpoints are independently concrete,
+such as literals or concrete parameters in the same specialized body, may
+fuse under the remaining rules. Type checking validates this provenance
+against the template semantic selection; it is never reconstructed from the
+post-substitution type or source spelling.
 
 Ordinary explicit `Range<T>(lower, upper)` is deliberately ineligible in the
 initial profile. Skipping an ordinary constructor would require a separately
@@ -277,7 +290,8 @@ agnostic.
 Resolved and HIR verification must reject wrong canonical identities,
 endpoint/result types, initializer mappings, bound realizations, forged range
 origins, explicit constructions mislabeled as syntax, and fusion across an
-observable boundary.
+observable boundary. Fused-plan construction additionally rejects either
+endpoint being marked specialization-dependent.
 
 Preliminary and final MIR verification sees only ordinary operations. Focused
 mutation tests must reject wrong scalar types, missing endpoint initialization,

@@ -1142,10 +1142,12 @@ impl<'types> HirDumper<'types> {
             plan.increment,
         ));
         self.raw_line(&format!(
-            "CanonicalRangeSyntax template={} class={} initializer={} iterable={}",
+            "CanonicalRangeSyntax template={} class={} initializer={} provenance=({}, {}) iterable={}",
             plan.origin.range_template,
             plan.origin.range_class,
             plan.origin.initializer,
+            plan.origin.endpoint_provenance[0].name(),
+            plan.origin.endpoint_provenance[1].name(),
             plan.origin.iterable,
         ));
         self.indented(|dumper| {
@@ -2028,11 +2030,13 @@ impl<'types> HirDumper<'types> {
         {
             self.line(
                 &format!(
-                    "CanonicalRangeSyntax template={} class={} initializer={} endpoint={} iterable={}",
+                    "CanonicalRangeSyntax template={} class={} initializer={} endpoint={} provenance=({}, {}) iterable={}",
                     origin.range_template,
                     origin.range_class,
                     origin.initializer,
                     origin.endpoint_type.name(),
+                    origin.endpoint_provenance[0].name(),
+                    origin.endpoint_provenance[1].name(),
                     origin.iterable,
                 ),
                 origin.operator_span,

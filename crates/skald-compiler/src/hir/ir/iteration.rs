@@ -169,6 +169,12 @@ impl HirPrimitiveRangeIterationPlan {
     fn assert_valid(&self) {
         let ty = self.integer.operand_type();
         assert_eq!(self.origin.endpoint_type, ty);
+        assert!(self.origin.endpoint_provenance.iter().all(|provenance| {
+            matches!(
+                provenance,
+                crate::resolve::ResolvedRangeEndpointProvenance::SpecializationIndependent
+            )
+        }));
         assert_eq!(self.lower.ty, ty);
         assert_eq!(self.upper.ty, ty);
         assert_eq!(

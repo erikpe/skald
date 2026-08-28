@@ -11,8 +11,8 @@ use crate::{
 
 use super::{
     CanonicalOperatorProtocol, GenericRequirement, ResolvedBinaryOperator,
-    ResolvedFunctionTypeParameterMode, ResolvedInterfaceClaim, ResolvedTopLevelId,
-    ResolvedUnaryOperator, ResolvedVisibility,
+    ResolvedFunctionTypeParameterMode, ResolvedInterfaceClaim, ResolvedRangeEndpointProvenance,
+    ResolvedTopLevelId, ResolvedUnaryOperator, ResolvedVisibility,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -634,6 +634,7 @@ pub(crate) enum ResolvedTemplateSelection {
     },
     Range {
         endpoint: ResolvedTemplateType,
+        endpoint_provenance: [ResolvedRangeEndpointProvenance; 2],
         span: Span,
     },
 }

@@ -122,6 +122,7 @@ fn fusion_excludes_every_non_immediate_or_nonprimitive_iteration_boundary() {
         "class Derived extends Counter { init() { super(); } }\n",
         "class Scanner<T> where T: OpLess<T>, T: Successor<T> {\n",
         "  init() {} fn scan(start: T, end: T) -> unit { for (item in start .. end) {} }\n",
+        "  fn concrete() -> unit { for (item in 4u .. 6u) {} }\n",
         "}\n",
         "fn retain_specialization(ref scanner: Scanner<u64>) -> unit {}\n",
         "fn interface_loop(ref values: Iterable<u64, u64>) -> unit {\n",
@@ -140,14 +141,55 @@ fn fusion_excludes_every_non_immediate_or_nonprimitive_iteration_boundary() {
     let dump = dump_hir(&hir);
     assert_eq!(
         dump.matches("PrimitiveRange endpoint=").count(),
-        1,
+        2,
         "{dump}"
     );
     assert_eq!(dump.matches("Protocol interface=").count(), 7, "{dump}");
     assert_eq!(
         dump.matches("CanonicalRangeSyntax").count(),
-        4,
-        "direct, stored, class, and generic syntax must retain provenance: {dump}"
+        5,
+        "direct, stored, class, and both generic syntax ranges must retain provenance: {dump}"
+    );
+}
+
+#[test]
+fn specialized_generic_ranges_fuse_only_independently_concrete_endpoints() {
+    let hir = check_range_source(concat!(
+        "from std::ops import OpAdd;\n",
+        "class Source implements OpAdd<Source, u64> {\n",
+        "  raw: u64; init(value: u64) { self.raw = value; }\n",
+        "  fn op_add(ref rhs: Source) -> u64 { return self.raw + rhs.raw; }\n",
+        "}\n",
+        "class Scanner<T> where T: OpAdd<T, u64> {\n",
+        "  init() {}\n",
+        "  fn dependent(ref lower: T, ref upper: T) -> unit {\n",
+        "    for (item in (lower + upper) .. (upper + lower)) {}\n",
+        "  }\n",
+        "  fn transitive(ref lower: T, ref upper: T) -> unit {\n",
+        "    var endpoint: u64 = 0u; endpoint = lower + upper;\n",
+        "    for (item in endpoint .. endpoint) {}\n",
+        "  }\n",
+        "  fn concrete() -> unit { for (item in 1u .. 3u) {} }\n",
+        "}\n",
+        "fn retain(ref scanner: Scanner<Source>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    verify_mir(&lower_hir(&hir))
+        .expect("mixed specialized range plans must lower through verified MIR");
+    let dump = dump_hir(&hir);
+    assert_eq!(
+        dump.matches("PrimitiveRange endpoint=").count(),
+        1,
+        "{dump}"
+    );
+    assert_eq!(dump.matches("Protocol interface=").count(), 2, "{dump}");
+    assert!(
+        dump.contains("provenance=(specialization-dependent, specialization-dependent)"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("provenance=(independent, independent)"),
+        "{dump}"
     );
 }
 
@@ -228,6 +270,17 @@ fn canonical_range_origin_rejects_missing_forged_and_inconsistent_evidence() {
     };
     assert_rejected(&wrong_realization);
 
+    let forged_provenance = move |program: &mut crate::resolve::ResolvedProgram| {
+        let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) =
+            &mut construction_at(program, entry, 0).origin
+        else {
+            unreachable!()
+        };
+        origin.endpoint_provenance[0] =
+            crate::resolve::ResolvedRangeEndpointProvenance::SpecializationDependent;
+    };
+    assert_rejected(&forged_provenance);
+
     let forged = move |program: &mut crate::resolve::ResolvedProgram| {
         let origin = construction_at(program, entry, 0).origin.clone();
         construction_at(program, entry, 1).origin = origin;
@@ -272,6 +325,10 @@ fn primitive_range_plan_rejects_shape_operation_and_realization_mutations() {
     assert_rejected("wrong primitive realization", |candidate| {
         candidate.origin.successor.realization =
             HirRangeProtocolRealization::PrimitiveIntrinsic(Type::U8);
+    });
+    assert_rejected("specialization-dependent endpoint", |candidate| {
+        candidate.origin.endpoint_provenance[0] =
+            crate::resolve::ResolvedRangeEndpointProvenance::SpecializationDependent;
     });
     assert_rejected("wrong comparison", |candidate| {
         candidate.comparison.predicate = HirComparisonPredicate::LessEqual;

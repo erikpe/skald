@@ -347,7 +347,7 @@ impl<'semantic, 'interner, 'diagnostics>
             vec![None; semantics.selections.len()];
         self.class_entries[index].closed_range_selections = vec![None; semantics.selections.len()];
         for (selection_index, selection) in semantics.selections.iter().enumerate() {
-            let ResolvedTemplateSelection::Range { endpoint, span } = selection else {
+            let ResolvedTemplateSelection::Range { endpoint, span, .. } = selection else {
                 continue;
             };
             let Some(range_template) = self.range_template else {

@@ -59,18 +59,21 @@ pub use ir::{
     ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable, ResolvedOrdinaryBindings,
     ResolvedParameter, ResolvedParameterBindingMode, ResolvedPresenceTestExpr,
     ResolvedPresenceTestKind, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedProgram,
-    ResolvedRangeLanguageItem, ResolvedRangeProtocolEvidence, ResolvedRangeProtocolRealization,
-    ResolvedReceiverAccess, ResolvedReturn, ResolvedScalarBindingAssignment,
-    ResolvedSharedAssignment, ResolvedSharedTarget, ResolvedSharedTargetCategory,
-    ResolvedStatement, ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr,
-    ResolvedStaticFieldAssignment, ResolvedStaticFieldDeclaration, ResolvedStaticFieldInitializer,
-    ResolvedStringLanguageItem, ResolvedStringLiteralExpr, ResolvedTemplateFunctionTypeParameter,
-    ResolvedTemplateType, ResolvedTemplateTypeKind, ResolvedTopLevelId, ResolvedType,
-    ResolvedTypeKind, ResolvedTypeParameter, ResolvedTypeParameterTable, ResolvedTypeParameters,
-    ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
-    ResolvedVirtualFamily, ResolvedVirtualFamilyTable, ResolvedVisibility, ResolvedWhile,
+    ResolvedRangeEndpointProvenance, ResolvedRangeLanguageItem, ResolvedRangeProtocolEvidence,
+    ResolvedRangeProtocolRealization, ResolvedReceiverAccess, ResolvedReturn,
+    ResolvedScalarBindingAssignment, ResolvedSharedAssignment, ResolvedSharedTarget,
+    ResolvedSharedTargetCategory, ResolvedStatement, ResolvedStaticCallExpr,
+    ResolvedStaticFieldAccessExpr, ResolvedStaticFieldAssignment, ResolvedStaticFieldDeclaration,
+    ResolvedStaticFieldInitializer, ResolvedStringLanguageItem, ResolvedStringLiteralExpr,
+    ResolvedTemplateFunctionTypeParameter, ResolvedTemplateType, ResolvedTemplateTypeKind,
+    ResolvedTopLevelId, ResolvedType, ResolvedTypeKind, ResolvedTypeParameter,
+    ResolvedTypeParameterTable, ResolvedTypeParameters, ResolvedTypeTestExpr, ResolvedUnaryExpr,
+    ResolvedUnaryOperator, ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedVisibility, ResolvedWhile,
 };
-pub(crate) use ir::{ClosedGenericRequirementSubject, GenericSpecializationState};
+pub(crate) use ir::{
+    ClosedGenericRequirementSubject, GenericSpecializationState, ResolvedTemplateSelection,
+};
 pub(crate) use resolver::resolve_with_source_path;
 pub use resolver::{
     resolve, resolve_module_graph, ResolveOutput, AMBIGUOUS_GENERIC_BOUND_MEMBER,

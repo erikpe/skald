@@ -492,12 +492,28 @@ pub struct ResolvedLogicalExpr {
 pub struct ResolvedCanonicalRangeOrigin {
     pub operator_span: Span,
     pub endpoint_type: super::ResolvedTypeKind,
+    pub endpoint_provenance: [ResolvedRangeEndpointProvenance; 2],
     pub range_template: crate::identity::ClassTemplateId,
     pub range_class: ClassId,
     pub initializer: InitializerId,
     pub ordering: ResolvedRangeProtocolEvidence,
     pub successor: ResolvedRangeProtocolEvidence,
     pub iterable: InterfaceId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedRangeEndpointProvenance {
+    SpecializationIndependent,
+    SpecializationDependent,
+}
+
+impl ResolvedRangeEndpointProvenance {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::SpecializationIndependent => "independent",
+            Self::SpecializationDependent => "specialization-dependent",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

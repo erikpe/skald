@@ -203,6 +203,12 @@ enum SpecializedBoundMember {
     Unavailable,
 }
 
+#[derive(Clone, Copy)]
+struct SpecializedRangeSelection {
+    class: ClassId,
+    endpoint_provenance: [ResolvedRangeEndpointProvenance; 2],
+}
+
 impl<'program> BodySpecializationEnvironment<'program> {
     pub(super) const fn new(
         semantics: &'program ResolvedClassTemplateSemantics,
@@ -246,15 +252,27 @@ impl<'program> BodySpecializationEnvironment<'program> {
             })
     }
 
-    fn range_class(self, span: Span) -> Option<ClassId> {
+    fn range_selection(self, span: Span) -> Option<SpecializedRangeSelection> {
         self.semantics
             .selections
             .iter()
             .zip(&self.specialization.closed_range_selections)
             .find_map(|(selection, closed)| {
-                matches!(selection, ResolvedTemplateSelection::Range { span: selection_span, .. } if *selection_span == span)
-                    .then_some(*closed)
-                    .flatten()
+                let ResolvedTemplateSelection::Range {
+                    endpoint_provenance,
+                    span: selection_span,
+                    ..
+                } = selection
+                else {
+                    return None;
+                };
+                if *selection_span != span {
+                    return None;
+                }
+                Some(SpecializedRangeSelection {
+                    class: (*closed)?,
+                    endpoint_provenance: *endpoint_provenance,
+                })
             })
     }
 

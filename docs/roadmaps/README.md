@@ -11,8 +11,7 @@ No implementation roadmap is currently in progress.
 ## Pending discoveries
 
 The [generic-ranges discoveries](GENERIC_RANGES_DISCOVERIES.md) record deferred
-concrete provenance inside generic bodies and pruning of unused canonical
-range artifacts.
+pruning of unused canonical range artifacts.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the

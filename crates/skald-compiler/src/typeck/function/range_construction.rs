@@ -86,6 +86,7 @@ impl CallableChecker<'_, '_> {
             range_class: origin.range_class,
             initializer: origin.initializer,
             endpoint_type: lower_type_kind(origin.endpoint_type),
+            endpoint_provenance: origin.endpoint_provenance,
             ordering: lower_protocol_evidence(origin.ordering),
             successor: lower_protocol_evidence(origin.successor),
             iterable: origin.iterable,
@@ -112,6 +113,7 @@ impl CallableChecker<'_, '_> {
                 .contains(&origin.operator_span)
             || initializer != origin.initializer
             || origin.range_template != language_item.range_template
+            || Some(origin.endpoint_provenance) != self.expected_endpoint_provenance(origin)
             || arguments.len() != 2
             || arguments.iter().any(|argument| {
                 self.static_expression_type(argument) != lower_type_kind(origin.endpoint_type)
@@ -172,6 +174,36 @@ impl CallableChecker<'_, '_> {
             )
             && valid_realization(origin.endpoint_type, origin.ordering)
             && valid_realization(origin.endpoint_type, origin.successor)
+    }
+
+    fn expected_endpoint_provenance(
+        &self,
+        origin: &ResolvedCanonicalRangeOrigin,
+    ) -> Option<[crate::resolve::ResolvedRangeEndpointProvenance; 2]> {
+        let independent =
+            [crate::resolve::ResolvedRangeEndpointProvenance::SpecializationIndependent; 2];
+        let Some(owner) = self.class_owner else {
+            return Some(independent);
+        };
+        let Some(specialization) = self.program.generic_specializations.for_class(owner) else {
+            return Some(independent);
+        };
+        let semantics = self
+            .program
+            .template_semantics
+            .get(specialization.key.template)
+            .expect("specialized class owner references template semantics");
+        semantics
+            .selections
+            .iter()
+            .find_map(|selection| match selection {
+                crate::resolve::ResolvedTemplateSelection::Range {
+                    endpoint_provenance,
+                    span,
+                    ..
+                } if *span == origin.operator_span => Some(*endpoint_provenance),
+                _ => None,
+            })
     }
 
     pub(super) fn report_invalid_range_origin(

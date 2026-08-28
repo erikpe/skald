@@ -65,9 +65,10 @@ pub use expression::{
     ResolvedNumericLiteralExpr, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
     ResolvedOptionalBoxAllocationExpr, ResolvedOptionalBoxInitializer, ResolvedPresenceTestExpr,
     ResolvedPresenceTestKind, ResolvedPresentExpr, ResolvedPrimitiveCastExpr,
-    ResolvedPrimitiveType, ResolvedRangeProtocolEvidence, ResolvedRangeProtocolRealization,
-    ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr,
-    ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
+    ResolvedPrimitiveType, ResolvedRangeEndpointProvenance, ResolvedRangeProtocolEvidence,
+    ResolvedRangeProtocolRealization, ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr,
+    ResolvedStringLiteralExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedUnwrapExpr,
 };
 pub use function_references::{
     ResolvedAddressTakenCallable, ResolvedAddressTakenCallableTable, ResolvedFunctionReferenceExpr,

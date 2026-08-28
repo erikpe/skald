@@ -38,10 +38,12 @@ impl CallableResolver<'_, '_> {
         }
 
         let environment = self.environment.language_items.range?;
-        let range_class = self
+        let specialized_selection = self
             .environment
             .specialization
-            .and_then(|specialization| specialization.range_class(range.operator_span))
+            .and_then(|specialization| specialization.range_selection(range.operator_span));
+        let range_class = specialized_selection
+            .map(|selection| selection.class)
             .or_else(|| {
                 self.environment
                     .lookup
@@ -133,6 +135,10 @@ impl CallableResolver<'_, '_> {
                 ResolvedCanonicalRangeOrigin {
                     operator_span: range.operator_span,
                     endpoint_type: lower_type,
+                    endpoint_provenance: specialized_selection.map_or(
+                        [ResolvedRangeEndpointProvenance::SpecializationIndependent; 2],
+                        |selection| selection.endpoint_provenance,
+                    ),
                     range_template: environment.language_item.range_template,
                     range_class,
                     initializer,

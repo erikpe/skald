@@ -17,13 +17,18 @@ use super::{CallableChecker, CheckedStatement};
 
 impl CallableChecker<'_, '_> {
     pub(super) fn is_primitive_range_iteration_candidate(&self, statement: &ResolvedForIn) -> bool {
-        let in_specialized_generic_body = self.class_owner.is_some_and(|class| {
-            self.program
-                .generic_specializations
-                .for_class(class)
-                .is_some()
-        });
-        !in_specialized_generic_body && primitive_range_construction(&statement.iterable).is_some()
+        primitive_range_construction(&statement.iterable).is_some_and(|construction| {
+            let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) = &construction.origin
+            else {
+                return false;
+            };
+            origin.endpoint_provenance.iter().all(|provenance| {
+                matches!(
+                    provenance,
+                    crate::resolve::ResolvedRangeEndpointProvenance::SpecializationIndependent
+                )
+            })
+        })
     }
 
     pub(super) fn check_primitive_range_for_in_statement(
