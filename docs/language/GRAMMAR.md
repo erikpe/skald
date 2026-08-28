@@ -831,7 +831,7 @@ and its
 
 ### Implemented primitive-operator expressions
 
-Primitive operators and non-generic class protocol operators share the
+Primitive operators and class or generic-bound protocol operators share the
 following implemented grammar:
 
 ```text

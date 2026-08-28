@@ -1,7 +1,6 @@
 # Operator-Protocol Lowering
 
-Status: frozen operator-protocol compiler design with implemented hardening and
-staged release closure.
+Status: implemented operator-protocol compiler contract.
 Resolution implements the canonical module, validation, identity product, and
 complete non-generic class-operator selection. The executable pipeline erases
 those selected applications to ordinary interface calls while retaining the
@@ -14,7 +13,7 @@ retention, panic traces, and native lowering are integrated through their
 ordinary call paths. The compiler-provided primitive registry and exact
 canonical generic-bound satisfaction, definition-site generic selection, and
 class-witness/primitive-intrinsic realization are implemented.
-This document fixes the complete compiler boundary for the frozen
+This document defines the complete compiler boundary for the implemented
 [interface-based operator-overloading language contract](../language/OPERATOR_OVERLOADING.md).
 Its ordinary-call produced primitive read-only alias prerequisite is
 implemented independently below.
@@ -116,7 +115,7 @@ operation, validation rejects missing, duplicate, unsupported, or inconsistent
 cells, and resolved dumps render the registry in canonical order. Both class-
 template and interface-template exact-bound validation query this same product.
 
-Primitive evidence is a static bound-satisfaction and future specialization fact,
+Primitive evidence is a static bound-satisfaction and specialization fact,
 not `ResolvedInterfaceType` object conformance. It never enters complete-object
 metadata, witness tables, casts, interface views, shared ownership, reflection,
 or dynamic dispatch. Ordinary non-operator bounds remain exact-class-only.
@@ -170,7 +169,7 @@ tested before protocol lowering consumes it.
 
 ## HIR erasure and MIR reuse
 
-The frozen phase flow is:
+The implemented phase flow is:
 
 ```text
 source operator
@@ -262,15 +261,12 @@ generic source generation. MIR mutations remain owned by the ordinary call,
 primitive-operation, cleanup, target, metadata, and alias-lifetime verifiers;
 there is no operator-specific MIR verifier or backend path.
 
-An implementation roadmap must cover canonical-bundle and replacement-library
-validation; class, inheritance, override, interface-view and generic-bound
-selection; unsupported multiple applications; produced primitive read-only
-aliases; definition-site and primitive specialization; evaluation, effects,
-panic and cleanup; resolved/HIR/MIR mutation verification; target legality;
-runtime-symbol absence; native behavior; and reordered independent-process
-determinism. Every implementation task uses proportionate focused checks and
-the repository `make check` gate; Rust or supported-syntax changes also use the
-documented supported-toolchain gate.
+The
+[operator-overloading conformance matrix](OPERATOR_OVERLOADING_TEST_MATRIX.md)
+maps canonical and replacement bundles, receiver and result families,
+definition-site and primitive specialization, failures, cleanup, exclusions,
+verified phase boundaries, artifacts, native behavior, and determinism to
+their narrowest executable owners.
 
 The archived [design record](../archive/OPERATOR_OVERLOADING_DESIGN_PROPOSAL.md)
 preserves the alternatives and rationale.

@@ -12,6 +12,11 @@ specialization so observations stay explicit. Native panic stderr uses
 stable prefixes that allow future stack traces; compile diagnostics match
 their stable leading identity and location.
 
+The cross-layer ownership map is the
+[operator-overloading conformance matrix](../../../docs/compiler/OPERATOR_OVERLOADING_TEST_MATRIX.md).
+It links these native observations to the canonical declaration, resolution,
+type-check, HIR, MIR, verifier, artifact, exclusion, and determinism owners.
+
 Run this group with `scripts/golden.sh --filter 'operators/**'` and audit
 compiler determinism with `scripts/golden.sh --determinism compile --filter
 'operators/**'`.

@@ -1,11 +1,13 @@
 # Interface-Based Operator Overloading Roadmap
 
-Status: **in progress**. OO0 through OO7 are complete; OO8 is next.
+Status: **complete**. OO0 through OO8 delivered the implemented operator-
+overloading contract, compatibility matrix, native and deterministic evidence,
+and ABI-neutral release closure.
 
 This roadmap implements the frozen
 [language contract](../language/OPERATOR_OVERLOADING.md) and
 [compiler lowering contract](../compiler/OPERATOR_OVERLOADING.md). The
-[archived design record](../archive/OPERATOR_OVERLOADING_DESIGN_PROPOSAL.md)
+[archived design record](OPERATOR_OVERLOADING_DESIGN_PROPOSAL.md)
 preserves rejected alternatives and rationale; this roadmap owns delivery
 order and acceptance and does not reopen those decisions.
 
@@ -67,7 +69,7 @@ pipelines are the baseline. No other planned feature blocks OO0.
 - [x] OO5 — Compiler-provided primitive protocol evidence
 - [x] OO6 — Generic definition-site selection and specialization
 - [x] OO7 — Diagnostics, verification, and determinism hardening
-- [ ] OO8 — Documentation, compatibility matrix, and release closure
+- [x] OO8 — Documentation, compatibility matrix, and release closure
 
 ## PR-sized implementation sequence
 
@@ -468,22 +470,22 @@ deterministic, and no operator-specific backend/runtime surface exists.
 **Purpose:** Prove the frozen contract is completely delivered, remove staging
 language, and leave one maintainable source of truth.
 
-- [ ] Audit the canonical interface/operator/primitive table mechanically
+- [x] Audit the canonical interface/operator/primitive table mechanically
   against standard-library declarations, compiler selection, primitive
   evidence, tests, and documented surface.
-- [ ] Complete the receiver, RHS alias, output category, direct/inherited/
+- [x] Complete the receiver, RHS alias, output category, direct/inherited/
   interface dispatch, generic class/primitive, replacement-library,
   `--no-stdlib`, equality/ordering, failure, cleanup, and unsupported-case
   matrix without duplicating tests already owned by earlier tasks.
-- [ ] Promote the grammar, status matrix, language index, compiler phases/IR,
+- [x] Promote the grammar, status matrix, language index, compiler phases/IR,
   module-system, generic-interface, alias, standard-library, and testing docs to
   implemented wording with exact cross-links and examples.
-- [ ] Confirm prefix `!`, `&&`, `||`, `Equatable`, ordinary method overloading,
+- [x] Confirm prefix `!`, `&&`, `||`, `Equatable`, ordinary method overloading,
   unsupported primitive cells, implicit shared/optional crossings, direct
   primitive members, and out-of-scope range/iteration work remain unchanged.
-- [ ] Record any real actionable follow-up discovered during delivery in a
+- [x] Record any real actionable follow-up discovered during delivery in a
   separate indexed discovery document rather than expanding this roadmap.
-- [ ] Run the complete ordinary and extended repository gates, update progress
+- [x] Run the complete ordinary and extended repository gates, update progress
   after each task's actual merge, mark the feature implemented only when all
   acceptance criteria pass, then archive this completed roadmap and update both
   roadmap indexes.

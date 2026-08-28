@@ -365,9 +365,9 @@ The concrete phase-by-phase workflow and focused commands are documented in
 [Debugging the Compiler](../development/DEBUGGING.md#follow-the-pipeline), and
 test placement remains governed by [Testing](../development/TESTING.md#test-layers).
 
-## Frozen operator-protocol specialization
+## Implemented operator-protocol specialization
 
-The frozen [operator-protocol compiler contract](OPERATOR_OVERLOADING.md)
+The implemented [operator-protocol compiler contract](OPERATOR_OVERLOADING.md)
 extends definition-site bound selection without changing ordinary generic-
 interface identity. A canonical operator bound closes to either an ordinary
 class witness or one compiler-owned primitive operation. The template records
@@ -392,10 +392,11 @@ iteration protocols or loop lowering,
 generic functions or methods, inference, defaults, variance, associated types,
 interface inheritance, default methods, structural conformance, erased
 generics, runtime dictionaries, reflection, runtime specialization, or stable
-separate-compilation template ABI. The separately frozen
+separate-compilation template ABI. The separately implemented
 [general-iteration compiler contract](ITERATION.md) is an implemented consumer
 of the closed-interface machinery. Operator protocols and their narrow
-primitive-evidence exception are owned by the separately frozen contract above.
+primitive-evidence exception are owned by the separately implemented contract
+above.
 
 The archived
 [design record](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) preserves the

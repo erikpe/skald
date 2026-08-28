@@ -154,11 +154,11 @@ cleanup, verified compiler-known failures, and mechanical target realization.
 They do not claim support for the explicitly deferred operator and conversion
 work in the [status matrix](../language/STATUS.md#not-implemented).
 
-The staged [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
+The implemented [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
 extends operators without adding a runtime mechanism. Its dependency-free
 `std::ops` source, complete reachable-bundle validation, exact resolved
-identity table, complete non-generic class selection, and closed primitive
-bound-evidence registry are implemented.
+identity table, complete class and generic-bound selection, and closed
+primitive bound-evidence registry are implemented.
 Selected class uses erase before completed HIR to ordinary interface calls;
 overloaded `!=` negates one secured equality call, while canonical
 primitive-bound uses erase to existing primitive operations, and produced
@@ -169,9 +169,10 @@ operator-specific lower IR. Generic-bound punctuation and manual canonical
 bound calls are implemented for class witnesses and primitive intrinsics.
 Diagnostics, resolved/HIR erasure, MIR trust boundaries, artifact surfaces,
 independent-process ordering, and bounded malformed/deep source generation are
-hardened. Release documentation and compatibility-matrix closure remain
-staged; the implementation adds no overloaded-operator MIR node, backend
-semantic lookup, runtime service, or ABI revision.
+hardened. The [conformance matrix](OPERATOR_OVERLOADING_TEST_MATRIX.md) maps
+the complete contract to its owner tests. The implementation adds no
+overloaded-operator MIR node, backend semantic lookup, runtime service, or ABI
+revision.
 
 The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)

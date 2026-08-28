@@ -6,13 +6,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [interface-based operator-overloading roadmap](OPERATOR_OVERLOADING_ROADMAP.md)
-is in progress. OO0 produced primitive read-only alias materialization through
-OO5 compiler-provided primitive protocol evidence are complete. OO6 generic
-definition-site selection and specialization is next.
-
-The completed general iteration and generic interfaces roadmaps are preserved
-in the [archive](../archive/README.md).
+No implementation roadmap is currently in progress. The completed interface-
+based operator-overloading, general-iteration, and generic-interface roadmaps
+are preserved in the [archive](../archive/README.md).
 
 ## Planned
 

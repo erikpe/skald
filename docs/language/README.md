@@ -161,14 +161,14 @@ makes a result source-observable.
   x86-64 backend. The twenty-two non-failing primitive cast cells use pure
   MIR; the three checked `f64`-to-integer cells use explicit verified control
   flow. Every cell is accepted from source and executes inline on x86-64.
-- [Interface-based operator overloading](OPERATOR_OVERLOADING.md) freezes the
+- [Interface-based operator overloading](OPERATOR_OVERLOADING.md) defines the implemented
   canonical `std::ops` bundle, exact primitive priority, unique nominal class
   and generic-bound selection, static primitive bound evidence, typed versus
   dynamic equality, eager call order, produced primitive read-only alias
   prerequisite, and unchanged runtime boundary. The produced-primitive alias
-  prerequisite is implemented. The canonical source protocols, atomic bundle
-  validation, explicit ordinary interface use, and the complete class
-  punctuation surface are also implemented. That surface reuses the
+  prerequisite. The canonical source protocols, atomic bundle validation,
+  explicit ordinary interface use, and the complete class punctuation surface
+  reuse the
   complete ordinary receiver, dispatch, result ownership, evaluation,
   cleanup, panic-trace, and static-effect paths. Static primitive evidence for
   exact canonical operator bounds is implemented without object conformance.
@@ -242,8 +242,8 @@ makes a result source-observable.
 - [Generic interfaces](GENERIC_INTERFACES.md) defines the implemented explicit
   interface-template surface, closed exact identity, contextual signature
   validity, generic bounds, nominal conformance, ownership, and dispatch
-  contract, plus the staged canonical operator-protocol consumer whose source
-  bundle and resolved identities are implemented ahead of punctuation use.
+  contract, including the implemented canonical operator-protocol consumer
+  for class and primitive generic-bound specialization.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, current inline lifetime, and the
   produced primitive read-only materialization prerequisite.

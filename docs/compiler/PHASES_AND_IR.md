@@ -918,9 +918,9 @@ selection, branch shape, instruction sequence, and optimization algorithm
 remain private. The operator profile adds no public runtime ABI entry point
 beyond the existing common panic reporter.
 
-## Frozen interface-based operator representation
+## Implemented interface-based operator representation
 
-The frozen [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
+The implemented [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
 extends semantic selection while preserving the existing phase boundary.
 Syntax and resolution retain source operator shape and evidence. Semantic
 selection chooses either an exact existing primitive operation or one unique
@@ -942,8 +942,7 @@ argument, result, effect, panic, anchor, and reverse full-expression cleanup
 plans. MIR verification proves only the resulting ordinary call or primitive
 operation and rejects injected unresolved or mismatched realization evidence.
 
-This representation and its verifier hardening are implemented. Release
-closure remains staged; the
+This representation and its verifier hardening are implemented. The
 [implemented primitive representation](#implemented-primitive-operator-representation)
 continues to own every primitive realization.
 
@@ -1151,7 +1150,9 @@ and requirement identities after whole-bundle validation. Ordinary imports or
 direct entry selection alone create reachability; primitive operator tokens
 create no module edge. Malformed bundles publish no partial product, while
 valid declarations remain ordinary generic interfaces for explicit claims,
-bounds, views, and calls. Operator punctuation does not consume this table yet.
+bounds, views, and calls. Class and generic-bound operator selection consumes
+this table by identity; completed HIR retains only the resulting ordinary
+interface call or existing primitive operation.
 
 External declarations additionally retain their source `FunctionId` while
 referencing a dense compilation-wide `ExternalLinkId`. Resolution allocates

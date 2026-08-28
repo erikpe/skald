@@ -1275,11 +1275,19 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
         .lines()
         .filter(|line| line.starts_with(".globl "))
         .collect::<Vec<_>>();
-    assert_eq!(public_symbols, [".globl main"], "{assembly}");
+    let pre_operator_public_symbol_baseline = [".globl main"];
     assert_eq!(
-        assembly.matches("call ska_rt_abi_v9").count(),
-        1,
-        "{assembly}"
+        public_symbols, pre_operator_public_symbol_baseline,
+        "operator protocols must not change the public symbol surface:\n{assembly}"
+    );
+    let runtime_references = assembly
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("call ska_rt_"))
+        .collect::<Vec<_>>();
+    let pre_operator_runtime_reference_baseline = ["abi_v9"];
+    assert_eq!(
+        runtime_references, pre_operator_runtime_reference_baseline,
+        "operator protocols must not add a runtime ABI service:\n{assembly}"
     );
     assert!(assembly.contains(".method.op_add."), "{assembly}");
 

@@ -22,6 +22,18 @@ phase while permuting source and provider-root order. Generic templates must
 never consume ordinary `InterfaceId` values; only successful closed
 applications do.
 
+Operator-overloading coverage follows the same owner boundaries without
+introducing an operator-specific lower-IR suite. Resolution tests own the
+canonical `std::ops` bundle and exact identities; type-check/HIR tests own
+primitive priority, nominal selection, aliases, outputs, exclusions, and
+erasure to existing operations or interface calls. Existing MIR and backend
+owners verify those realized forms, while native goldens and cross-process
+integration tests own call equivalence, failure traces, artifacts, ABI
+neutrality, and determinism. The
+[operator-overloading conformance matrix](../compiler/OPERATOR_OVERLOADING_TEST_MATRIX.md)
+is the authoritative traceability map and should be extended by linking the
+narrowest new owner test rather than repeating a scenario at every layer.
+
 Optional-value coverage spans type/capability/containment tests, HIR and MIR
 shape and verifier tests, target layout tests, and native lifecycle tests.
 Exact-class optional native tests use side-effect-visible destructors to catch

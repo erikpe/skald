@@ -9,6 +9,8 @@ use crate::{
 };
 
 const APP_IMPORT: &str = "import std::ops;\nfn main() -> i64 { return 0; }\n";
+const OPERATOR_LANGUAGE_CONTRACT: &str =
+    include_str!("../../../../../docs/language/OPERATOR_OVERLOADING.md");
 const OP_ADD: &str = concat!(
     "public interface OpAdd<Rhs, Output> {\n",
     "    fn op_add(ref rhs: Rhs) -> Output;\n",
@@ -29,8 +31,21 @@ fn replace_once(source: &str, before: &str, after: &str) -> String {
     source.replacen(before, after, 1)
 }
 
+fn first_skald_block(markdown: &str) -> &str {
+    markdown
+        .split_once("```ska\n")
+        .and_then(|(_, rest)| rest.split_once("\n```").map(|(block, _)| block))
+        .expect("operator language contract must contain its canonical Skald declarations")
+}
+
 #[test]
 fn canonical_operator_bundle_retains_exact_protocol_identities() {
+    assert_eq!(
+        first_skald_block(OPERATOR_LANGUAGE_CONTRACT),
+        CANONICAL_OPS_SOURCE.trim_end(),
+        "the documented canonical declarations must exactly match std/std/ops.ska"
+    );
+
     let output = resolve_operator_module(CANONICAL_OPS_SOURCE);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let item = output

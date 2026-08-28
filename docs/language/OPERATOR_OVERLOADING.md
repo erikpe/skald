@@ -1,6 +1,6 @@
 # Interface-Based Operator Overloading
 
-Status: frozen operator-protocol language design with staged hardening.
+Status: implemented operator-protocol language contract.
 The canonical `std::ops` declarations, whole-bundle validation, explicit
 ordinary interface use, the complete class operator surface, and definition-
 site generic-bound operator selection
@@ -11,7 +11,7 @@ generic bounds and closes generic punctuation or manual bound calls directly
 to existing primitive operations. Exact
 primitive expressions continue to use the [implemented primitive operator
 profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
-This document fixes the complete source-visible contract;
+This document defines the complete implemented source-visible contract;
 the [status matrix](STATUS.md) remains authoritative for availability and the
 [implemented grammar](GRAMMAR.md) remains authoritative for accepted source.
 Its ordinary-call produced primitive read-only alias prerequisite is
@@ -120,7 +120,7 @@ parameter.
 
 ## Operator surface
 
-The frozen overloadable surface is:
+The implemented overloadable surface is:
 
 | Source | Canonical protocol |
 |---|---|
@@ -363,15 +363,17 @@ is independent of hash and module-discovery order.
 
 ## Deliberate exclusions
 
-The frozen initial feature does not add short-circuit protocols, truthiness,
-overloaded prefix `!`, compound assignment, increment or decrement, implicit
-conversion, contextual literals, user-defined primitive implementations,
+The implemented initial feature does not add short-circuit protocols,
+truthiness, overloaded prefix `!`, compound assignment, increment or
+decrement, implicit conversion, contextual literals, user-defined primitive
+implementations,
 orphan implementations, primitive interface objects, method overloading,
 associated types, default methods, interface inheritance, generic methods,
 conversion protocols, range syntax, `Range<T>`, generator changes, guaranteed
 devirtualization, or new runtime ABI behavior.
 
-The frozen compiler representation and implementation obligations are defined
-by [Operator-Protocol Lowering](../compiler/OPERATOR_OVERLOADING.md). The
+The implemented compiler representation and verification obligations are
+defined by [Operator-Protocol Lowering](../compiler/OPERATOR_OVERLOADING.md).
+The
 archived [design record](../archive/OPERATOR_OVERLOADING_DESIGN_PROPOSAL.md)
 preserves the alternatives and rationale.

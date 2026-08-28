@@ -27,7 +27,7 @@ fn assembly_output_runs_the_real_pipeline_through_the_binary() {
 
     let output = Command::new(env!("CARGO_BIN_EXE_skac"))
         .arg(&source)
-        .args(["--emit", "asm", "-o"])
+        .args(["--no-stdlib", "--emit", "asm", "-o"])
         .arg(&assembly)
         .output()
         .expect("failed to execute skac");
