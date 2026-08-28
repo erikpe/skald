@@ -148,9 +148,8 @@ const GENERIC_INTERFACE_TEST_NAME: &str =
 const GENERIC_OPERATOR_HELPER_OUTPUT: &str = "SKALD_GENERIC_OPERATOR_DETERMINISM_OUTPUT";
 const GENERIC_OPERATOR_TEST_NAME: &str =
     "generic_operator_phase_products_are_deterministic_across_processes";
-const EXPLICIT_RANGE_HELPER_OUTPUT: &str = "SKALD_EXPLICIT_RANGE_DETERMINISM_OUTPUT";
-const EXPLICIT_RANGE_TEST_NAME: &str =
-    "explicit_range_phase_products_are_deterministic_across_processes";
+const RANGE_HELPER_OUTPUT: &str = "SKALD_RANGE_DETERMINISM_OUTPUT";
+const RANGE_TEST_NAME: &str = "range_phase_products_are_deterministic_across_processes";
 const GENERIC_INTERFACE_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_GENERIC_INTERFACE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME: &str =
@@ -713,20 +712,20 @@ fn generic_operator_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn explicit_range_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(EXPLICIT_RANGE_HELPER_OUTPUT) {
+fn range_phase_products_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(RANGE_HELPER_OUTPUT) {
         let variant = env::var(PERMUTATION_HELPER_VARIANT)
             .unwrap()
             .parse()
             .unwrap();
-        fs::write(output, explicit_range_module_phase_dump(variant)).unwrap();
+        fs::write(output, range_module_phase_dump(variant)).unwrap();
         return;
     }
 
     assert_cross_process_variants(
         "explicit-range-products",
-        EXPLICIT_RANGE_HELPER_OUTPUT,
-        EXPLICIT_RANGE_TEST_NAME,
+        RANGE_HELPER_OUTPUT,
+        RANGE_TEST_NAME,
         PERMUTATION_HELPER_VARIANT,
     );
 }
@@ -1328,8 +1327,8 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
     )
 }
 
-fn explicit_range_module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("explicit-range-products", variant);
+fn range_module_phase_dump(variant: usize) -> String {
+    let fixture = ModuleFixture::new("range-products", variant);
     let application = fixture.path.join("application");
     let standard_library = fixture.path.join("standard-library");
     let mut sources = vec![
@@ -1343,6 +1342,8 @@ fn explicit_range_module_phase_dump(variant: usize) -> String {
                var total: i64 = (i64) primitive.next(16u) + (i64) objects.next(model::Value(24u)).get();\n\
                for (value in Range<u64>(2u, 5u)) { total = total + (i64) value; }\n\
                for (value in Range<model::Value>(model::Value(6u), model::Value(8u))) { total = total + (i64) value.get(); }\n\
+               for (value in 8u .. 10u) { total = total + (i64) value; }\n\
+               for (value in model::Value(10u) .. model::Value(12u)) { total = total + (i64) value.get(); }\n\
                return total;\n\
              }\n",
         ),
@@ -1400,6 +1401,10 @@ fn explicit_range_module_phase_dump(variant: usize) -> String {
         resolved.diagnostics
     );
     let resolved_dump = dump_resolved(&resolved.program);
+    assert!(
+        resolved_dump.contains("RangeConstruction template"),
+        "{resolved_dump}"
+    );
     assert!(resolved_dump.contains("AddOneU64"), "{resolved_dump}");
     assert!(
         resolved_dump.contains("ClosedBoundSelection 0 class-witness"),
@@ -1408,6 +1413,7 @@ fn explicit_range_module_phase_dump(variant: usize) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
+    assert!(dump_hir(&hir).contains("CanonicalRangeSyntax"));
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     let planned = plan_static_lifetimes(preliminary).unwrap();

@@ -1,0 +1,84 @@
+import std::io;
+from std::ops import OpLess;
+from std::range import Range, Successor;
+
+class Value implements OpLess<Value>, Successor<Value> {
+    private static _successors: u64;
+    private _value: i64;
+
+    init(value: i64) {
+        self._value = value;
+    }
+
+    fn op_less(ref rhs: Value) -> bool {
+        return self._value < rhs._value;
+    }
+
+    fn successor() -> Value {
+        Value._successors = Value._successors + 1u;
+        return Value(self._value + 1);
+    }
+
+    fn value() -> i64 {
+        return self._value;
+    }
+
+    static fn successors() -> u64 {
+        return Value._successors;
+    }
+}
+
+fn traced_lower() -> u64 {
+    std::io::println_u64(101u);
+    return 2u;
+}
+
+fn traced_upper() -> u64 {
+    std::io::println_u64(102u);
+    return 5u;
+}
+
+fn make_range(start: u64, end: u64) -> Range<u64> {
+    return start .. end;
+}
+
+fn sum(ref values: Range<u64>) -> u64 {
+    var total: u64 = 0u;
+    for (value in values) {
+        total = total + value;
+    }
+    return total;
+}
+
+fn main() -> i64 {
+    for (value in traced_lower() .. traced_upper()) {
+        std::io::println_u64(value);
+    }
+
+    var stored: Range<u64> = 5u .. 8u;
+    std::io::println_u64(sum(stored));
+    std::io::println_u64(sum(8u .. 11u));
+    std::io::println_u64(sum(make_range(11u, 14u)));
+
+    var exited: u64 = 0u;
+    for (value in (0u .. 6u)) {
+        if (value == 1u) {
+            continue;
+        }
+        if (value == 4u) {
+            break;
+        }
+        exited = exited + value;
+    }
+    std::io::println_u64(exited);
+
+    for (value in 254u8 .. 255u8) {
+        std::io::println_u8(value);
+    }
+
+    for (value in Value(1) .. Value(4)) {
+        std::io::println_i64(value.value());
+        std::io::println_u64(Value.successors());
+    }
+    return 0;
+}

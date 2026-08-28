@@ -392,7 +392,6 @@ impl CallableChecker<'_, '_> {
                 }
             },
             ResolvedExpression::Logical(_) => Type::Bool,
-            ResolvedExpression::Range(range) => Type::Class(range.range_class),
             ResolvedExpression::PrimitiveCast(cast) => match cast.target {
                 crate::resolve::ResolvedPrimitiveType::I64 => Type::I64,
                 crate::resolve::ResolvedPrimitiveType::U64 => Type::U64,

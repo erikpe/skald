@@ -1,6 +1,6 @@
 # Generic Ranges and Tight Range Loops Roadmap
 
-Status: in progress; RG3 is next.
+Status: in progress; RG4 is next.
 
 This roadmap implements the frozen
 [language contract](../language/RANGES.md) and
@@ -52,7 +52,7 @@ and determinism pipelines are the baseline. No other roadmap blocks RG0.
 - [x] RG0 — Canonical successor protocol and primitive realizations
 - [x] RG1 — Explicit generic `Range<T>` values and iteration
 - [x] RG2 — Range punctuation, grammar, and resolved canonical construction
-- [ ] RG3 — Concise range expression HIR and complete ordinary execution
+- [x] RG3 — Concise range expression HIR and complete ordinary execution
 - [ ] RG4 — Immediate primitive range-loop fusion
 - [ ] RG5 — Performance evidence, hardening, and release closure
 
@@ -211,28 +211,28 @@ is unchanged, and no unresolved range reaches HIR.
 **Purpose:** Make `..` a first-class exact `Range<T>` value in every ordinary
 consumer while preserving the provenance required by later fusion.
 
-- [ ] Lower resolved range syntax to existing exact class-construction HIR with
+- [x] Lower resolved range syntax to existing exact class-construction HIR with
   ordinary initializer, argument, destination, result, effect, ownership, and
   cleanup plans.
-- [ ] Add one non-forgeable `CanonicalRangeSyntax` construction origin carrying
+- [x] Add one non-forgeable `CanonicalRangeSyntax` construction origin carrying
   exact operator span, range template/class/initializer, endpoint type,
   ordering, and successor identities.
-- [ ] Validate complete correspondence between the origin and construction;
+- [x] Validate complete correspondence between the origin and construction;
   never label explicit `Range<T>(...)` or lookalike construction as syntax.
-- [ ] Preserve origin through semantically transparent grouping only and erase
+- [x] Preserve origin through semantically transparent grouping only and erase
   fusion eligibility across storage, copy, call, argument/result, alias,
   owner, optional, or interface-view boundaries.
-- [ ] Lower every non-immediate or nonprimitive use through ordinary
+- [x] Lower every non-immediate or nonprimitive use through ordinary
   construction, `HirForIn`, interface, optional, lifecycle, MIR, and backend
   paths.
-- [ ] Prove lower-before-upper exactly-once evaluation, initialization after
+- [x] Prove lower-before-upper exactly-once evaluation, initialization after
   both endpoints, result security, reverse cleanup, and class effects and
   failures in arbitrary expression consumers.
-- [ ] Add HIR/resolved mutation tests for forged identity, wrong endpoint,
+- [x] Add HIR/resolved mutation tests for forged identity, wrong endpoint,
   wrong initializer, wrong result, and invalid primitive/class realization.
-- [ ] Add concise primitive and class native goldens matching explicit range
+- [x] Add concise primitive and class native goldens matching explicit range
   semantics, including stored ranges and loop exits.
-- [ ] Promote status and living documentation to complete concise range
+- [x] Promote status and living documentation to complete concise range
   expression execution while retaining ordinary loop performance until RG4.
 
 **Primary implementation areas:** type checking for range expressions and

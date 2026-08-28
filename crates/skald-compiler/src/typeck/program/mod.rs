@@ -77,7 +77,7 @@ pub const UNSUPPORTED_OPERATOR_APPLICATION: &str = "TYP047";
 pub const AMBIGUOUS_OPERATOR_APPLICATION: &str = "TYP048";
 pub const INCOMPATIBLE_OPERATOR_RHS: &str = "TYP049";
 pub const INVALID_OPERATOR_SELECTION: &str = "TYP050";
-pub const RANGE_HIR_PENDING: &str = "TYP051";
+pub const INVALID_RANGE_CONSTRUCTION_ORIGIN: &str = "TYP052";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -94,21 +94,6 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    for span in &program.range_expression_spans {
-        diagnostics.push(
-            Diagnostic::error(
-                RANGE_HIR_PENDING,
-                "concise range expressions are resolved but not executable yet",
-            )
-            .with_primary_label(*span, "typed HIR construction lowering is not implemented"),
-        );
-    }
-    if !program.range_expression_spans.is_empty() {
-        return TypeCheckOutput {
-            hir: None,
-            diagnostics,
-        };
-    }
     let optional_types_valid =
         super::optional_validation::validate_optional_types(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);

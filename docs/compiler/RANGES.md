@@ -1,19 +1,19 @@
 # Generic-Range Compiler Contract
 
-Status: frozen compiler contract; explicit generic ranges and concise-range
-frontend implemented.
+Status: frozen compiler contract; explicit and concise generic ranges
+implemented through ordinary execution.
 Resolution validates the canonical declaration bundle, closes exact integer
 bounds to existing operations, and compiles explicit `Range<T>` values through
-ordinary construction and general iteration. `..` now has source AST,
-compiler-dependency, exact resolved construction evidence, diagnostics, and a
-dedicated pre-HIR gate. Ordinary-construction HIR provenance, primitive loop
-fusion, and performance evidence remain planned. This document owns those
+ordinary construction and general iteration. `..` has source AST,
+compiler-dependency, exact resolved and HIR construction evidence,
+diagnostics, ordinary lifecycle and native execution. Primitive loop fusion
+and performance evidence remain planned. This document owns those
 identities and target/ABI constraints for the
 [generic-range language contract](../language/RANGES.md).
 
-The implemented grammar includes range expressions. No range-syntax HIR
-provenance, fusion plan, or benchmark guarantee described below is currently
-compiler behavior.
+The implemented grammar and ordinary pipeline include range expressions. The
+fusion plan and benchmark guarantee described below are not yet compiler
+behavior.
 
 ## Canonical module and identities
 
@@ -110,13 +110,12 @@ operation, backend branch, runtime symbol, or ABI change. It provides:
 - ordinary `for-in` executes through the existing `HirForIn` protocol plan and
   verified MIR.
 
-This ordinary path is the implemented semantic reference for future range
-syntax and fusion.
+This ordinary path is the implemented semantic reference for concise range
+syntax and future fusion.
 
 ## Range syntax and resolution
 
-Status: implemented through resolved IR; completed typed HIR is deliberately
-blocked until the next roadmap task.
+Status: implemented through resolved IR and ordinary typed HIR.
 
 Lexing adds a longest-match `..` token before `.` while preserving numeric
 literal and member-access tokenization. Parsing adds a source-shaped,
@@ -146,10 +145,10 @@ promotion, common-base inference, structural lookup, constructor search on
 `T`, or overload protocol search. Candidate, bound, diagnostic, request, and
 dump order remains deterministic.
 
-After successful resolution, type checking emits the dedicated range-HIR-
-pending diagnostic at every range operator and creates no HIR program. This
-phase gate prevents an unresolved or partially lowered range from reaching
-ordinary expression consumers or the general-iteration fallback.
+After successful resolution, type checking verifies the complete canonical
+identity correspondence and lowers the result as ordinary class
+construction. Invalid or forged provenance is rejected before HIR is
+created.
 
 ## Typed HIR representation
 
@@ -179,8 +178,9 @@ result. Ordinary explicit `Range<T>(lower, upper)` has the normal construction
 origin and is not upgraded by shape recognition.
 
 Non-loop consumers lower the canonical range-syntax construction through the
-ordinary class path. When `HirForIn` immediately consumes the expression,
-type checking may use its origin to select the frozen primitive fusion plan.
+ordinary class path. In the current implementation, `HirForIn` also uses the
+ordinary protocol plan. RG4 may use the origin of an immediately consumed
+expression to select the frozen primitive fusion plan.
 Grouping that remains part of the same immediate expression may preserve the
 origin; storage, copying, arguments, results, aliases, optionals, owners,
 interface views, calls, or other independently observable boundaries erase

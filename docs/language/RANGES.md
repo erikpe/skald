@@ -1,12 +1,12 @@
 # Generic Ranges and Concise Range Expressions
 
-Status: frozen language contract; explicit generic ranges and the concise
-range frontend implemented. The
+Status: frozen language contract; explicit and concise generic ranges
+implemented. The
 canonical `Successor<Output>` protocol, ordinary `Range<T>` class, class
 opt-in, static integer realizations, explicit half-open iteration, `..`
-syntax, and exact canonical resolution are implemented. Concise range values
-stop at an intentional typed-HIR gate until ordinary construction lowering is
-implemented; the initial primitive tight-loop profile remains planned. The
+syntax, exact canonical resolution, ordinary construction lowering, and
+native execution are implemented. The initial primitive tight-loop profile
+remains planned. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains authoritative for accepted
 source syntax.
@@ -159,8 +159,7 @@ implements OpAdd<BigInteger, BigInteger>,
 }
 ```
 
-The class can use explicit ranges now; its concise equivalent is accepted and
-resolved but is not executable until range-expression HIR lowering lands:
+The class can use both explicit and concise ranges:
 
 ```ska
 from std::range import Range;
@@ -168,8 +167,8 @@ from std::range import Range;
 for (i in Range<BigInteger>(BigInteger(17u), BigInteger(23u))) {
 }
 
-// Frontend-only concise equivalent:
-// for (i in BigInteger(17u) .. BigInteger(23u)) {}
+for (i in BigInteger(17u) .. BigInteger(23u)) {
+}
 ```
 
 Class comparisons and successors use ordinary witness dispatch. Endpoint
@@ -179,8 +178,8 @@ does not apply to class ranges.
 
 ## Concise `..` expression
 
-Status: syntax and canonical resolution implemented; typed HIR intentionally
-gated.
+Status: implemented through ordinary construction, iteration, and native
+execution.
 
 The frozen syntax adds one lowest-precedence, non-associative expression tier:
 
@@ -220,12 +219,13 @@ Successfully parsed range syntax acquires `std::range` as a compiler
 dependency without creating a source import binding. An explicit import is
 still required to name `Range` or `Successor` directly.
 
-The resolved expression retains exact endpoint, range-template,
+The resolved construction retains exact endpoint, range-template,
 specialization, initializer, `OpLess<T>`, `Successor<T>`, iterable-claim, and
-primitive-intrinsic or class-witness identities. Until ordinary construction
-HIR is implemented, any successfully resolved range expression reports the
-dedicated range-HIR-pending diagnostic before general expression or `for-in`
-type checking begins.
+primitive-intrinsic or class-witness identities. Typed HIR erases the syntax
+to ordinary exact-class construction while retaining compiler-owned canonical
+syntax provenance for later immediate-loop optimization. Explicit
+`Range<T>(...)` construction and lookalike classes never acquire that
+provenance.
 
 ## Evaluation, iteration, and cleanup
 

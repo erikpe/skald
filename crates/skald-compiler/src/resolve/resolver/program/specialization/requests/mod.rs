@@ -75,6 +75,12 @@ pub(crate) fn discover_specializations(
     interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> GenericApplicationDiscovery {
+    let function_results = input
+        .units
+        .iter()
+        .flat_map(ModuleUnit::function_result_syntaxes)
+        .map(|(function, result)| (function, result.clone()))
+        .collect::<HashMap<_, _>>();
     let mut owner = SpecializationCoordinator::new(
         input.templates.class_semantics,
         input.templates.interface_semantics,
@@ -91,6 +97,7 @@ pub(crate) fn discover_specializations(
         SourceRequestScanner::new(
             SyntaxTypeCloser::new(&mut owner, lookup, unit.module),
             range_language_item.map(|item| item.range_template),
+            &function_results,
         )
         .visit_unit(unit.ast);
     }

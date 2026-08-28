@@ -78,14 +78,15 @@ pub use iteration::{
     HirIterationStoredValuePlan, HirIterationValueCopy, HirIterationValueDestruction,
 };
 pub use object::{
-    HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,
-    HirConstruction, HirConstructionMode, HirCopyAssignment, HirCopyCapability,
-    HirCopyConstruction, HirFieldAssignment, HirFieldConstruction, HirFieldCopyAssignment,
-    HirFieldCopyConstruction, HirFieldPlace, HirFieldWriteAuthorization, HirMethodReceiver,
-    HirObjectCall, HirObjectCallTarget, HirObjectInitialization, HirObjectOrigin, HirObjectPath,
-    HirObjectPlace, HirObjectProducer, HirObjectReceiver, HirObjectReturn, HirObjectSlice,
-    HirObjectSource, HirObjectView, HirSelectedCopyOperation, HirSynthesizedCopy,
-    HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
+    HirBaseCopy, HirBaseInitialization, HirCanonicalRangeOrigin, HirCheckedObjectView,
+    HirCheckedObjectViewKind, HirConstruction, HirConstructionMode, HirConstructionOrigin,
+    HirCopyAssignment, HirCopyCapability, HirCopyConstruction, HirFieldAssignment,
+    HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace,
+    HirFieldWriteAuthorization, HirMethodReceiver, HirObjectCall, HirObjectCallTarget,
+    HirObjectInitialization, HirObjectOrigin, HirObjectPath, HirObjectPlace, HirObjectProducer,
+    HirObjectReceiver, HirObjectReturn, HirObjectSlice, HirObjectSource, HirObjectView,
+    HirRangeProtocolEvidence, HirRangeProtocolRealization, HirSelectedCopyOperation,
+    HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
 pub use optional::{
     HirAggregateOptionalAssignment, HirCheckedOptionalView, HirClassOptionalAssignment,

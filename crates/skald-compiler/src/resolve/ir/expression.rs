@@ -25,7 +25,6 @@ pub enum ResolvedExpression {
     Dereference(ResolvedDereferenceExpr),
     Binary(ResolvedBinaryExpr),
     Logical(ResolvedLogicalExpr),
-    Range(Box<ResolvedRangeExpr>),
     TypeTest(ResolvedTypeTestExpr),
     PresenceTest(ResolvedPresenceTestExpr),
     Unwrap(ResolvedUnwrapExpr),
@@ -62,7 +61,6 @@ impl ResolvedExpression {
             Self::Dereference(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::Logical(expression) => expression.span,
-            Self::Range(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::PresenceTest(expression) => expression.span,
             Self::Unwrap(expression) => expression.span,
@@ -389,7 +387,14 @@ pub struct ResolvedConstructExpr {
     pub class: ClassId,
     pub callee_span: Span,
     pub mode: ResolvedConstructionMode,
+    pub origin: ResolvedConstructionOrigin,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedConstructionOrigin {
+    Explicit,
+    CanonicalRangeSyntax(ResolvedCanonicalRangeOrigin),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -484,10 +489,8 @@ pub struct ResolvedLogicalExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedRangeExpr {
-    pub lower: Box<ResolvedExpression>,
+pub struct ResolvedCanonicalRangeOrigin {
     pub operator_span: Span,
-    pub upper: Box<ResolvedExpression>,
     pub endpoint_type: super::ResolvedTypeKind,
     pub range_template: crate::identity::ClassTemplateId,
     pub range_class: ClassId,
@@ -495,7 +498,6 @@ pub struct ResolvedRangeExpr {
     pub ordering: ResolvedRangeProtocolEvidence,
     pub successor: ResolvedRangeProtocolEvidence,
     pub iterable: InterfaceId,
-    pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

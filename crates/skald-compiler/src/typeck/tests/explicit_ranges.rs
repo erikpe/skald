@@ -3,7 +3,7 @@ use crate::{
     mir::{dump_mir, lower_hir, verify_mir},
     resolve::{dump_resolved, resolve_module_graph, ResolvedCopyOperation},
     test_support::load_module_sources_with_standard_library,
-    typeck::{type_check, COPY_OPERATION_UNAVAILABLE, RANGE_HIR_PENDING},
+    typeck::{type_check, COPY_OPERATION_UNAVAILABLE, INVALID_RANGE_CONSTRUCTION_ORIGIN},
 };
 
 fn resolve_range_source(source: &str) -> crate::resolve::ResolveOutput {
@@ -13,7 +13,7 @@ fn resolve_range_source(source: &str) -> crate::resolve::ResolveOutput {
 }
 
 #[test]
-fn concise_range_stops_at_the_explicit_frontend_hir_gate() {
+fn concise_range_uses_the_ordinary_iteration_plan() {
     let resolved =
         resolve_range_source("fn main() -> i64 { for (item in 1u .. 3u) {} return 0; }\n");
     assert!(
@@ -23,17 +23,11 @@ fn concise_range_stops_at_the_explicit_frontend_hir_gate() {
     );
 
     let checked = type_check(&resolved.program);
-    assert!(checked.hir.is_none());
-    assert_eq!(
-        checked
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == RANGE_HIR_PENDING)
-            .count(),
-        1,
-        "{:?}",
-        checked.diagnostics,
-    );
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let dump = dump_hir(&checked.hir.expect("concise range must produce HIR"));
+    assert!(dump.contains("ForIn"), "{dump}");
+    assert!(dump.contains("CanonicalRangeSyntax"), "{dump}");
+    assert!(!dump.contains("RangeLoop"), "{dump}");
 }
 
 fn check_range_source(source: &str) -> crate::hir::HirProgram {
@@ -45,7 +39,188 @@ fn check_range_source(source: &str) -> crate::hir::HirProgram {
     );
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    checked.hir.expect("valid explicit ranges must produce HIR")
+    checked.hir.expect("valid ranges must produce HIR")
+}
+
+#[test]
+fn concise_ranges_reuse_ordinary_construction_in_value_consumers() {
+    let hir = check_range_source(concat!(
+        "from std::range import Range;\n",
+        "class Holder {\n",
+        "  values: Range<u64>;\n",
+        "  init(start: u64, end: u64) { self.values = start .. end; }\n",
+        "}\n",
+        "fn produce(start: u64, end: u64) -> Range<u64> { return start .. end; }\n",
+        "fn consume(values: Range<u64>) -> u64 {\n",
+        "  var total: u64 = 0u; for (value in values) { total = total + value; } return total;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var stored: Range<u64> = 1u .. 4u;\n",
+        "  var holder: Holder = Holder(2u, 5u);\n",
+        "  var direct: u64 = consume(3u .. 6u);\n",
+        "  var produced: u64 = consume(produce(4u, 7u));\n",
+        "  var field: u64 = consume(holder.values);\n",
+        "  for (value in (5u .. 8u)) {}\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("CanonicalRangeSyntax").count(), 5, "{dump}");
+    assert!(dump.contains("ForIn"), "{dump}");
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).expect("concise range consumers must lower through ordinary verified MIR");
+    let mir_dump = dump_mir(&mir);
+    assert!(!mir_dump.contains("RangeLoop"));
+    assert!(!mir_dump.contains("skald_rt_range"));
+}
+
+#[test]
+fn concise_class_ranges_retain_ordinary_witness_and_lifecycle_plans() {
+    let hir = check_range_source(concat!(
+        "from std::ops import OpLess;\n",
+        "from std::range import Successor;\n",
+        "class Value implements OpLess<Value>, Successor<Value> {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n",
+        "  fn successor() -> Value { return Value(self.value + 1); }\n",
+        "}\n",
+        "fn main() -> i64 { for (value in Value(1) .. Value(4)) {} return 0; }\n",
+    ));
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("realization=class-witness"), "{dump}");
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).expect("class range must lower through ordinary witness iteration");
+    assert!(dump_mir(&mir).contains("call interface"));
+}
+
+#[test]
+fn canonical_range_origin_rejects_missing_forged_and_inconsistent_evidence() {
+    use crate::resolve::{
+        ResolvedConstructionOrigin, ResolvedExpression, ResolvedRangeProtocolRealization,
+        ResolvedStatement, ResolvedTypeKind,
+    };
+
+    let resolved = resolve_range_source(concat!(
+        "from std::range import Range;\n",
+        "fn main() -> i64 {\n",
+        "  var concise: Range<u64> = 1u .. 3u;\n",
+        "  var explicit: Range<u64> = Range<u64>(1u, 3u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let entry = resolved.program.entry_function.unwrap();
+
+    let assert_rejected = |mutate: &dyn Fn(&mut crate::resolve::ResolvedProgram)| {
+        let mut program = resolved.program.clone();
+        mutate(&mut program);
+        let checked = type_check(&program);
+        assert!(checked.hir.is_none());
+        assert!(
+            checked
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == INVALID_RANGE_CONSTRUCTION_ORIGIN),
+            "{:?}",
+            checked.diagnostics,
+        );
+    };
+
+    fn construction_at(
+        program: &mut crate::resolve::ResolvedProgram,
+        entry: crate::identity::FunctionId,
+        statement: usize,
+    ) -> &mut crate::resolve::ResolvedConstructExpr {
+        let definition = program.definitions.get_mut_for_test(entry).unwrap();
+        let ResolvedStatement::Local(local) = &mut definition.body.statements[statement] else {
+            panic!("expected local declaration");
+        };
+        let ResolvedExpression::Construct(construction) = &mut local.initializer else {
+            panic!("expected construction");
+        };
+        construction
+    }
+
+    let missing = move |program: &mut crate::resolve::ResolvedProgram| {
+        construction_at(program, entry, 0).origin = ResolvedConstructionOrigin::Explicit;
+    };
+    assert_rejected(&missing);
+
+    let wrong_endpoint = move |program: &mut crate::resolve::ResolvedProgram| {
+        let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) =
+            &mut construction_at(program, entry, 0).origin
+        else {
+            unreachable!()
+        };
+        origin.endpoint_type = ResolvedTypeKind::U8;
+    };
+    assert_rejected(&wrong_endpoint);
+
+    let wrong_realization = move |program: &mut crate::resolve::ResolvedProgram| {
+        let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) =
+            &mut construction_at(program, entry, 0).origin
+        else {
+            unreachable!()
+        };
+        origin.successor.realization = ResolvedRangeProtocolRealization::ClassWitness;
+    };
+    assert_rejected(&wrong_realization);
+
+    let forged = move |program: &mut crate::resolve::ResolvedProgram| {
+        let origin = construction_at(program, entry, 0).origin.clone();
+        construction_at(program, entry, 1).origin = origin;
+    };
+    assert_rejected(&forged);
+}
+
+#[test]
+fn checked_hir_range_origin_rejects_shape_and_realization_mutations() {
+    use crate::hir::{
+        HirConstructionOrigin, HirIterationReceiverCarrier, HirObjectProducer,
+        HirRangeProtocolRealization, HirStatement, HirViewSource, Type,
+    };
+
+    let hir = check_range_source("fn main() -> i64 { for (value in 1u .. 3u) {} return 0; }\n");
+    let definition = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::ForIn(loop_) = &definition.body.statements[0] else {
+        panic!("expected range loop");
+    };
+    let HirIterationReceiverCarrier::View(view) = &loop_.receiver.carrier else {
+        panic!("expected ordinary produced range view");
+    };
+    let HirViewSource::Produced { producer, .. } = &view.source else {
+        panic!("expected produced range receiver");
+    };
+    let HirObjectProducer::Construct(construction) = producer.as_ref() else {
+        panic!("expected ordinary construction producer");
+    };
+    assert!(construction.canonical_range_origin().is_some());
+
+    let mut wrong_class = construction.clone();
+    wrong_class.class = crate::identity::ClassId::new(wrong_class.class.index() + 1);
+    assert!(wrong_class.canonical_range_origin().is_none());
+
+    let mut wrong_initializer = construction.clone();
+    let crate::hir::HirConstructionMode::Initialize { initializer, .. } =
+        &mut wrong_initializer.mode
+    else {
+        unreachable!()
+    };
+    *initializer = crate::identity::InitializerId::new(construction.class, 99);
+    assert!(wrong_initializer.canonical_range_origin().is_none());
+
+    let mut wrong_realization = construction.clone();
+    let HirConstructionOrigin::CanonicalRangeSyntax(origin) = &mut wrong_realization.origin else {
+        unreachable!()
+    };
+    origin.endpoint_type = Type::U8;
+    origin.successor.realization = HirRangeProtocolRealization::PrimitiveIntrinsic(Type::U64);
+    assert!(wrong_realization.canonical_range_origin().is_none());
 }
 
 #[test]

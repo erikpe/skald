@@ -4,53 +4,42 @@ use super::syntax_type_closer::SyntaxTypeCloser;
 use std::collections::HashMap;
 
 use crate::{
-    identity::ClassTemplateId,
+    identity::{ClassTemplateId, FunctionId},
     resolve::{ResolvedSharedTarget, ResolvedTypeKind},
     syntax,
 };
 
-pub(super) struct SourceRequestScanner<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup> {
+pub(super) struct SourceRequestScanner<
+    'resolver,
+    'semantic,
+    'interner,
+    'diagnostics,
+    'lookup,
+    'syntax,
+> {
     resolver: SyntaxTypeCloser<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>,
     range_template: Option<ClassTemplateId>,
     scopes: Vec<HashMap<String, ResolvedTypeKind>>,
-    function_results: HashMap<String, syntax::TypeSyntax>,
+    function_results: &'syntax HashMap<FunctionId, syntax::TypeSyntax>,
 }
 
-impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
-    SourceRequestScanner<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
+impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
+    SourceRequestScanner<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup, 'syntax>
 {
     pub(super) fn new(
         resolver: SyntaxTypeCloser<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>,
         range_template: Option<ClassTemplateId>,
+        function_results: &'syntax HashMap<FunctionId, syntax::TypeSyntax>,
     ) -> Self {
         Self {
             resolver,
             range_template,
             scopes: Vec::new(),
-            function_results: HashMap::new(),
+            function_results,
         }
     }
 
     pub(super) fn visit_unit(&mut self, unit: &syntax::CompilationUnit) {
-        for declaration in &unit.declarations {
-            let (name, result) = match declaration {
-                syntax::TopLevelDeclaration::Function(function) => {
-                    (&function.name, &function.return_type)
-                }
-                syntax::TopLevelDeclaration::ExternalFunction(function) => {
-                    (&function.name, &function.return_type)
-                }
-                syntax::TopLevelDeclaration::IntrinsicFunction(function) => {
-                    (&function.name, &function.return_type)
-                }
-                syntax::TopLevelDeclaration::Class(_)
-                | syntax::TopLevelDeclaration::Interface(_) => {
-                    continue;
-                }
-            };
-            self.function_results
-                .insert(name.text.to_string(), result.clone());
-        }
         for declaration in &unit.declarations {
             self.visit_declaration(declaration);
         }
@@ -413,13 +402,8 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
                 let syntax::Expression::Identifier(identifier) = call.callee.as_ref() else {
                     return None;
                 };
-                if identifier.name.is_qualified() {
-                    return None;
-                }
-                let result = self
-                    .function_results
-                    .get(identifier.name.text.as_str())?
-                    .clone();
+                let function = self.resolver.function(&identifier.name)?;
+                let result = self.function_results.get(&function)?.clone();
                 self.resolver.close(&result)
             }
             syntax::Expression::Grouped(grouped) => self.static_type(&grouped.expression),

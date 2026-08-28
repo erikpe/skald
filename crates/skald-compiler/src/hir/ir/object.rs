@@ -2,8 +2,8 @@
 
 use crate::{
     identity::{
-        BindingId, ClassId, CopyAssignmentId, CopyConstructorId, FieldId, FunctionId,
-        InitializerId, InterfaceId, MethodId,
+        BindingId, ClassId, ClassTemplateId, CopyAssignmentId, CopyConstructorId, FieldId,
+        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId,
     },
     object_path::ObjectPath,
     source::Span,
@@ -259,7 +259,39 @@ pub struct HirObjectSlice {
 pub struct HirConstruction {
     pub class: ClassId,
     pub mode: HirConstructionMode,
+    pub origin: HirConstructionOrigin,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirConstructionOrigin {
+    Explicit,
+    CanonicalRangeSyntax(HirCanonicalRangeOrigin),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCanonicalRangeOrigin {
+    pub operator_span: Span,
+    pub range_template: ClassTemplateId,
+    pub range_class: ClassId,
+    pub initializer: InitializerId,
+    pub endpoint_type: super::Type,
+    pub ordering: HirRangeProtocolEvidence,
+    pub successor: HirRangeProtocolEvidence,
+    pub iterable: InterfaceId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirRangeProtocolEvidence {
+    pub interface: InterfaceId,
+    pub requirement: InterfaceRequirementId,
+    pub realization: HirRangeProtocolRealization,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirRangeProtocolRealization {
+    ClassWitness,
+    PrimitiveIntrinsic(super::Type),
 }
 
 impl HirConstruction {
@@ -276,6 +308,50 @@ impl HirConstruction {
             HirConstructionMode::Copy { .. } => None,
         }
     }
+
+    /// Returns canonical concise-range provenance only when it agrees with
+    /// this ordinary construction's stable HIR shape. Later optimizations use
+    /// this checked boundary instead of trusting a source-origin tag alone.
+    pub fn canonical_range_origin(&self) -> Option<&HirCanonicalRangeOrigin> {
+        let HirConstructionOrigin::CanonicalRangeSyntax(origin) = &self.origin else {
+            return None;
+        };
+        let HirConstructionMode::Initialize {
+            initializer,
+            arguments,
+        } = &self.mode
+        else {
+            return None;
+        };
+        (self.class == origin.range_class
+            && *initializer == origin.initializer
+            && arguments.len() == 2
+            && valid_range_realization(origin.endpoint_type, origin.ordering.realization)
+            && valid_range_realization(origin.endpoint_type, origin.successor.realization))
+        .then_some(origin)
+    }
+}
+
+const fn valid_range_realization(
+    ty: super::Type,
+    realization: HirRangeProtocolRealization,
+) -> bool {
+    matches!(
+        (ty, realization),
+        (
+            super::Type::I64,
+            HirRangeProtocolRealization::PrimitiveIntrinsic(super::Type::I64)
+        ) | (
+            super::Type::U64,
+            HirRangeProtocolRealization::PrimitiveIntrinsic(super::Type::U64)
+        ) | (
+            super::Type::U8,
+            HirRangeProtocolRealization::PrimitiveIntrinsic(super::Type::U8)
+        ) | (
+            super::Type::Class(_),
+            HirRangeProtocolRealization::ClassWitness
+        )
+    )
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -9,19 +9,19 @@ Status: pending after the generic ranges and tight range loops roadmap.
 **Problem:** Generic class specializations are currently fixed before ordinary
 function and class bodies are resolved. RG2 therefore discovers
 `Range<T>` requests with a deliberately small source-type closer. It covers
-literals, declared locals and parameters, constructors, casts, local function
-results, common primitive expressions, and closed generic-template terms, but
-cannot in general know the result of imported calls, method calls, or an
-overloaded operator whose output differs from its receiver. A semantically
-valid range using one of those producers can consequently receive the focused
-unsupported-range diagnostic before ordinary endpoint resolution would have
-identified `T`.
+literals, declared locals and parameters, constructors, casts, local and
+imported function results, common primitive expressions, and closed
+generic-template terms, but cannot in general know the result of method calls
+or an overloaded operator whose output differs from its receiver. A
+semantically valid range using one of those producers can consequently receive
+the focused unsupported-range diagnostic before ordinary endpoint resolution
+would have identified `T`.
 
 **Evidence:**
 `resolve/resolver/program/specialization/requests/source_request_scanner.rs`
 contains the conservative `static_type` bridge. RG2 resolved tests cover the
-literal, class-construction, local-call, and closed generic-template request
-families.
+literal, class-construction, local/imported-call, and closed generic-template
+request families.
 
 **Likely owner:** generic-specialization discovery and program phase ordering,
 not range syntax or ordinary body resolution.
@@ -33,8 +33,9 @@ with the ordinary expression-selection rules, collect exact `Range<T>` keys,
 iterate inner-to-outer for nested ranges, and then perform normal body
 resolution once. Remove the syntax-level result inference rather than growing
 a second operator, call, inheritance, and method type system. Preserve
-source-order diagnostics and specialization provenance at the `..` span. This
-should be addressed before RG3 admits concise ranges to executable HIR.
+source-order diagnostics and specialization provenance at the `..` span. RG3
+keeps this as a documented specialization-discovery limitation rather than
+growing a second method and operator type system.
 
 ## Suppress dependent body diagnostics for unsatisfied specializations
 

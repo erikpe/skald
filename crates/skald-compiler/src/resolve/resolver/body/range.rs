@@ -104,27 +104,34 @@ impl CallableResolver<'_, '_> {
             .map(ResolvedRangeProtocolRealization::PrimitiveIntrinsic)
             .unwrap_or(ResolvedRangeProtocolRealization::ClassWitness);
 
-        Some(ResolvedExpression::Range(Box::new(ResolvedRangeExpr {
-            lower: Box::new(lower),
-            operator_span: range.operator_span,
-            upper: Box::new(upper),
-            endpoint_type: lower_type,
-            range_template: environment.language_item.range_template,
-            range_class,
-            initializer,
-            ordering: ResolvedRangeProtocolEvidence {
-                interface: ordering_interface,
-                requirement: ordering_requirement,
-                realization,
+        Some(ResolvedExpression::Construct(ResolvedConstructExpr {
+            class: range_class,
+            callee_span: range.operator_span,
+            mode: ResolvedConstructionMode::Initialize {
+                arguments: vec![lower, upper],
             },
-            successor: ResolvedRangeProtocolEvidence {
-                interface: successor_interface,
-                requirement: successor_requirement,
-                realization,
-            },
-            iterable,
+            origin: ResolvedConstructionOrigin::CanonicalRangeSyntax(
+                ResolvedCanonicalRangeOrigin {
+                    operator_span: range.operator_span,
+                    endpoint_type: lower_type,
+                    range_template: environment.language_item.range_template,
+                    range_class,
+                    initializer,
+                    ordering: ResolvedRangeProtocolEvidence {
+                        interface: ordering_interface,
+                        requirement: ordering_requirement,
+                        realization,
+                    },
+                    successor: ResolvedRangeProtocolEvidence {
+                        interface: successor_interface,
+                        requirement: successor_requirement,
+                        realization,
+                    },
+                    iterable,
+                },
+            ),
             span: range.span,
-        })))
+        }))
     }
 }
 

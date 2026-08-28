@@ -1980,6 +1980,25 @@ impl<'types> HirDumper<'types> {
     }
 
     fn construction(&mut self, construction: &HirConstruction) {
+        if let crate::hir::HirConstructionOrigin::CanonicalRangeSyntax(origin) =
+            &construction.origin
+        {
+            self.line(
+                &format!(
+                    "CanonicalRangeSyntax template={} class={} initializer={} endpoint={} iterable={}",
+                    origin.range_template,
+                    origin.range_class,
+                    origin.initializer,
+                    origin.endpoint_type.name(),
+                    origin.iterable,
+                ),
+                origin.operator_span,
+            );
+            self.indented(|dumper| {
+                dumper.range_protocol_evidence("Ordering", origin.ordering, origin.operator_span);
+                dumper.range_protocol_evidence("Successor", origin.successor, origin.operator_span);
+            });
+        }
         match &construction.mode {
             HirConstructionMode::Initialize {
                 initializer,
@@ -2006,6 +2025,27 @@ impl<'types> HirDumper<'types> {
                 });
             }
         }
+    }
+
+    fn range_protocol_evidence(
+        &mut self,
+        name: &str,
+        evidence: crate::hir::HirRangeProtocolEvidence,
+        span: Span,
+    ) {
+        let realization = match evidence.realization {
+            crate::hir::HirRangeProtocolRealization::ClassWitness => "class-witness".to_owned(),
+            crate::hir::HirRangeProtocolRealization::PrimitiveIntrinsic(ty) => {
+                format!("primitive-{}", ty.name())
+            }
+        };
+        self.line(
+            &format!(
+                "{name} interface={} requirement={} realization={realization}",
+                evidence.interface, evidence.requirement,
+            ),
+            span,
+        );
     }
 
     fn object_call(&mut self, call: &HirObjectCall) {

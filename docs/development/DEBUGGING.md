@@ -125,19 +125,16 @@ may reach MIR or the backend. Explicit ranges should appear as ordinary closed
 `Range<T>` classes, construction, `Iterable<T, T>` calls, optional results,
 and general `ForIn` control flow.
 
-For implemented frontend-only `lower .. upper`, follow the source range node
-to its exact resolved range, initializer, ordering, successor, iterable, and
-primitive-intrinsic or class-witness identities. A successful frontend case
-then stops with `TYP051`; no HIR program should be produced. Once ordinary
-range construction lowering lands, confirm that typed HIR contains ordinary
-class construction with the non-forgeable canonical syntax origin. An
-immediately consumed integer syntax
-range may instead select the structured fused `HirForIn` plan; its preliminary
-MIR should contain only ordered endpoint initialization, scalar comparison,
-item initialization, increment-before-body, loop edges, and cleanup. Explicit
-constructors and stored or class ranges must retain ordinary construction,
-interface calls, and optional-result flow. MIR and assembly should never look
-up a range by name or contain a range-specific runtime operation.
+For implemented `lower .. upper`, follow the source range node to its exact
+resolved construction, initializer, ordering, successor, iterable, and
+primitive-intrinsic or class-witness identities. Typed HIR must contain
+ordinary class construction plus its verified, non-forgeable
+`CanonicalRangeSyntax` origin. Explicit constructors have an `Explicit`
+origin, and stored or class ranges retain ordinary construction, interface
+calls, and optional-result flow. MIR and assembly never look up a range by
+name or contain a range-specific runtime operation. After immediate integer
+fusion lands, only a directly consumed canonical primitive syntax origin may
+select the structured fused `HirForIn` plan.
 
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and

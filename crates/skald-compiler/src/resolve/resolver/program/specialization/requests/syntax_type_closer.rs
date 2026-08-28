@@ -63,6 +63,14 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
         }
     }
 
+    pub(super) fn function(&mut self, name: &syntax::Name) -> Option<FunctionId> {
+        let symbol = self.select(name, false)?;
+        match symbol.kind {
+            TopLevelSymbolKind::Function(function) => Some(function),
+            _ => None,
+        }
+    }
+
     fn close_with_lookup_diagnostics(
         &mut self,
         syntax: &syntax::TypeSyntax,

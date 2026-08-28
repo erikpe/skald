@@ -111,8 +111,11 @@ fn concise_integer_range_activates_canonical_module_and_retains_resolved_evidenc
     let ResolvedStatement::ForIn(loop_) = &main.body.statements[0] else {
         panic!("expected resolved for-in");
     };
-    let ResolvedExpression::Range(range) = &loop_.iterable else {
+    let ResolvedExpression::Construct(construction) = &loop_.iterable else {
         panic!("expected resolved range evidence");
+    };
+    let ResolvedConstructionOrigin::CanonicalRangeSyntax(range) = &construction.origin else {
+        panic!("expected canonical range construction origin");
     };
     assert_eq!(range.endpoint_type, ResolvedTypeKind::U64);
     assert_eq!(
@@ -135,7 +138,7 @@ fn concise_integer_range_activates_canonical_module_and_retains_resolved_evidenc
     ));
 
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("Range template"), "{dump}");
+    assert!(dump.contains("RangeConstruction template"), "{dump}");
     assert!(dump.contains("realization primitive-u64"), "{dump}");
     assert_eq!(dump, dump_resolved(&output.program));
 }
@@ -184,8 +187,11 @@ fn concise_class_range_selects_nominal_ordering_and_successor_witnesses() {
     let ResolvedStatement::ForIn(loop_) = &main.body.statements[0] else {
         panic!("expected for-in");
     };
-    let ResolvedExpression::Range(range) = &loop_.iterable else {
+    let ResolvedExpression::Construct(construction) = &loop_.iterable else {
         panic!("expected concise range");
+    };
+    let ResolvedConstructionOrigin::CanonicalRangeSyntax(range) = &construction.origin else {
+        panic!("expected canonical range construction origin");
     };
     assert!(matches!(range.endpoint_type, ResolvedTypeKind::Class(_)));
     assert_eq!(
@@ -216,7 +222,7 @@ fn generic_template_range_requests_close_for_each_concrete_endpoint_type() {
         dump.contains("Selection range endpoint template0:type0"),
         "{dump}"
     );
-    assert!(dump.contains("Range template"), "{dump}");
+    assert!(dump.contains("RangeConstruction template"), "{dump}");
 }
 
 #[test]
@@ -230,6 +236,27 @@ fn concise_range_requests_follow_endpoint_function_result_types() {
     let dump = dump_resolved(&output.program);
     assert!(dump.contains("endpoint u8"), "{dump}");
     assert!(dump.contains("realization primitive-u8"), "{dump}");
+}
+
+#[test]
+fn concise_range_requests_follow_imported_function_result_types() {
+    let mut sources = vec![
+        (
+            "app.ska",
+            "from util import lower, upper;\nfn main() -> i64 { for (item in lower() .. upper()) {} return 0; }\n",
+        ),
+        (
+            "util.ska",
+            "public fn lower() -> u64 { return 1u; }\npublic fn upper() -> u64 { return 3u; }\n",
+        ),
+    ];
+    sources.extend(canonical_standard_library_sources(&[]));
+    let (_workspace, graph) = load_module_sources("app", &sources);
+    let output = resolve_module_graph(&graph);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("endpoint u64"), "{dump}");
 }
 
 #[test]

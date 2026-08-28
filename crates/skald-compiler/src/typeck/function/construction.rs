@@ -116,6 +116,7 @@ impl CallableChecker<'_, '_> {
         let mode = match &construction.mode {
             crate::resolve::ResolvedConstructionMode::Initialize { arguments } => {
                 let initializer_id = self.select_construction_initializer(construction)?;
+                let origin = self.check_construction_origin(construction, initializer_id)?;
                 let initializer = self
                     .program
                     .initializer(initializer_id)
@@ -128,24 +129,31 @@ impl CallableChecker<'_, '_> {
                     None,
                     None,
                 )?;
-                crate::hir::HirConstructionMode::Initialize {
-                    initializer: initializer_id,
-                    arguments,
-                }
+                (
+                    crate::hir::HirConstructionMode::Initialize {
+                        initializer: initializer_id,
+                        arguments,
+                    },
+                    origin,
+                )
             }
-            crate::resolve::ResolvedConstructionMode::Copy { copy_span, source } => self
-                .check_copy_construction_mode(
+            crate::resolve::ResolvedConstructionMode::Copy { copy_span, source } => {
+                let origin = self.check_construction_origin_without_initializer(construction)?;
+                let mode = self.check_copy_construction_mode(
                     construction.class,
                     source,
                     construction.callee_span,
                     construction.span,
                     *copy_span,
                     "copy construction",
-                )?,
+                )?;
+                (mode, origin)
+            }
         };
         Some(HirConstruction {
             class: construction.class,
-            mode,
+            mode: mode.0,
+            origin: mode.1,
             span: construction.span,
         })
     }

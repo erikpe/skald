@@ -12,7 +12,7 @@ use crate::{
 
 use super::{
     function::CallableChecker,
-    program::{INVALID_OBJECT_CAST, INVALID_OBJECT_CONTEXT, RANGE_HIR_PENDING, TYPE_MISMATCH},
+    program::{INVALID_OBJECT_CAST, INVALID_OBJECT_CONTEXT, TYPE_MISMATCH},
 };
 
 pub(super) mod alias;
@@ -204,19 +204,6 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::Binary(binary) => self.check_binary_expression(binary),
             ResolvedExpression::Logical(logical) => self.check_logical_expression(logical),
-            ResolvedExpression::Range(range) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        RANGE_HIR_PENDING,
-                        "concise range expressions are resolved but not executable yet",
-                    )
-                    .with_primary_label(
-                        range.operator_span,
-                        "typed HIR construction lowering is not implemented",
-                    ),
-                );
-                None
-            }
             ResolvedExpression::TypeTest(test) => self.check_type_test(test),
             ResolvedExpression::PrimitiveCast(cast) => self.check_primitive_cast(cast),
             ResolvedExpression::ObjectCast(cast) => {

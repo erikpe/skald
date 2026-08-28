@@ -1,0 +1,10 @@
+schema = 2
+
+[[test]]
+name = "concise_ranges"
+mode = "run"
+source = "concise_ranges.ska"
+
+[[test.run]]
+name = "ordinary_construction_iteration_and_endpoint_order"
+expect = { stdout = { inline = "101\n102\n2\n3\n4\n18\n27\n36\n5\n254\n1\n1\n2\n2\n3\n3\n" } }

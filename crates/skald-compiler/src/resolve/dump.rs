@@ -1936,51 +1936,6 @@ impl<'program> ResolvedDumper<'program> {
                     dumper.expression(&logical.right);
                 });
             }
-            ResolvedExpression::Range(range) => {
-                let realization = |evidence: ResolvedRangeProtocolEvidence| match evidence
-                    .realization
-                {
-                    ResolvedRangeProtocolRealization::ClassWitness => "class-witness".to_owned(),
-                    ResolvedRangeProtocolRealization::PrimitiveIntrinsic(primitive) => {
-                        format!("primitive-{}", primitive.name())
-                    }
-                };
-                self.line(
-                    &format!(
-                        "Range template {} class {} initializer {} endpoint {} iterable {}",
-                        range.range_template,
-                        range.range_class,
-                        range.initializer,
-                        self.render_type_kind(range.endpoint_type),
-                        range.iterable,
-                    ),
-                    range.span,
-                );
-                self.indented(|dumper| {
-                    dumper.line(
-                        &format!(
-                            "Ordering interface {} requirement {} realization {}",
-                            range.ordering.interface,
-                            range.ordering.requirement,
-                            realization(range.ordering),
-                        ),
-                        range.operator_span,
-                    );
-                    dumper.line(
-                        &format!(
-                            "Successor interface {} requirement {} realization {}",
-                            range.successor.interface,
-                            range.successor.requirement,
-                            realization(range.successor),
-                        ),
-                        range.operator_span,
-                    );
-                    dumper.heading("Lower");
-                    dumper.indented(|dumper| dumper.expression(&range.lower));
-                    dumper.heading("Upper");
-                    dumper.indented(|dumper| dumper.expression(&range.upper));
-                });
-            }
             ResolvedExpression::TypeTest(test) => {
                 self.line(
                     &format!(
@@ -2244,6 +2199,56 @@ impl<'program> ResolvedDumper<'program> {
             }
             ResolvedExpression::Construct(construct) => match &construct.mode {
                 ResolvedConstructionMode::Initialize { arguments } => {
+                    if let ResolvedConstructionOrigin::CanonicalRangeSyntax(range) =
+                        &construct.origin
+                    {
+                        let realization =
+                            |evidence: ResolvedRangeProtocolEvidence| match evidence.realization {
+                                ResolvedRangeProtocolRealization::ClassWitness => {
+                                    "class-witness".to_owned()
+                                }
+                                ResolvedRangeProtocolRealization::PrimitiveIntrinsic(primitive) => {
+                                    format!("primitive-{}", primitive.name())
+                                }
+                            };
+                        self.line(
+                            &format!(
+                                "RangeConstruction template {} class {} initializer {} endpoint {} iterable {}",
+                                range.range_template,
+                                range.range_class,
+                                range.initializer,
+                                self.render_type_kind(range.endpoint_type),
+                                range.iterable,
+                            ),
+                            construct.span,
+                        );
+                        self.indented(|dumper| {
+                            dumper.line(
+                                &format!(
+                                    "Ordering interface {} requirement {} realization {}",
+                                    range.ordering.interface,
+                                    range.ordering.requirement,
+                                    realization(range.ordering),
+                                ),
+                                range.operator_span,
+                            );
+                            dumper.line(
+                                &format!(
+                                    "Successor interface {} requirement {} realization {}",
+                                    range.successor.interface,
+                                    range.successor.requirement,
+                                    realization(range.successor),
+                                ),
+                                range.operator_span,
+                            );
+                            for (heading, argument) in ["Lower", "Upper"].into_iter().zip(arguments)
+                            {
+                                dumper.heading(heading);
+                                dumper.indented(|dumper| dumper.expression(argument));
+                            }
+                        });
+                        return;
+                    }
                     self.line(&format!("Construct {}", construct.class), construct.span);
                     self.indented(|dumper| {
                         for argument in arguments {

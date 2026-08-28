@@ -33,6 +33,7 @@ mod field_write;
 mod initializer;
 mod iteration;
 mod overload;
+mod range_construction;
 mod statement;
 
 pub(super) use copy::is_ungrouped_object_call;

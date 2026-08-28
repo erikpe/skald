@@ -58,7 +58,7 @@ pub struct ResolvedProgram {
     pub operator_language_item: Option<super::ResolvedOperatorLanguageItem>,
     pub range_language_item: Option<super::ResolvedRangeLanguageItem>,
     /// Successful concise-range operator spans retained as compiler-owned
-    /// dependency provenance and as the pre-HIR rollout gate.
+    /// dependency provenance and for construction-origin validation.
     pub range_expression_spans: Vec<Span>,
     pub string_language_item: Option<super::ResolvedStringLanguageItem>,
     pub literal_data: super::ResolvedLiteralDataTable,

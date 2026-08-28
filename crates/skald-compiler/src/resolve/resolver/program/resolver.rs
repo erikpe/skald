@@ -48,6 +48,25 @@ pub(super) struct ModuleUnit<'ast> {
     declarations: Vec<ResolvedModuleDeclaration>,
 }
 
+impl<'ast> ModuleUnit<'ast> {
+    pub(super) fn function_result_syntaxes(
+        &self,
+    ) -> impl Iterator<Item = (FunctionId, &'ast syntax::TypeSyntax)> + '_ {
+        self.function_work.iter().map(|item| {
+            let result = match &self.ast.declarations[item.ast_index] {
+                syntax::TopLevelDeclaration::Function(function) => &function.return_type,
+                syntax::TopLevelDeclaration::ExternalFunction(function) => &function.return_type,
+                syntax::TopLevelDeclaration::IntrinsicFunction(function) => &function.return_type,
+                syntax::TopLevelDeclaration::Class(_)
+                | syntax::TopLevelDeclaration::Interface(_) => {
+                    unreachable!("function work references a callable declaration")
+                }
+            };
+            (item.id, result)
+        })
+    }
+}
+
 fn collect_literal_data(
     graph: &ModuleGraph,
 ) -> (Vec<ResolvedLiteralData>, HashMap<Span, LiteralDataId>) {
