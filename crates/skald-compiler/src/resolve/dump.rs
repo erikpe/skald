@@ -609,6 +609,10 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                     ),
                                     *span,
                                 ),
+                                ResolvedTemplateSelection::Range { endpoint, span } => dumper.line(
+                                    &format!("Selection range endpoint {}", render_template_type(endpoint)),
+                                    *span,
+                                ),
                             }
                         }
                     });
@@ -1930,6 +1934,51 @@ impl<'program> ResolvedDumper<'program> {
                 self.indented(|dumper| {
                     dumper.expression(&logical.left);
                     dumper.expression(&logical.right);
+                });
+            }
+            ResolvedExpression::Range(range) => {
+                let realization = |evidence: ResolvedRangeProtocolEvidence| match evidence
+                    .realization
+                {
+                    ResolvedRangeProtocolRealization::ClassWitness => "class-witness".to_owned(),
+                    ResolvedRangeProtocolRealization::PrimitiveIntrinsic(primitive) => {
+                        format!("primitive-{}", primitive.name())
+                    }
+                };
+                self.line(
+                    &format!(
+                        "Range template {} class {} initializer {} endpoint {} iterable {}",
+                        range.range_template,
+                        range.range_class,
+                        range.initializer,
+                        self.render_type_kind(range.endpoint_type),
+                        range.iterable,
+                    ),
+                    range.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line(
+                        &format!(
+                            "Ordering interface {} requirement {} realization {}",
+                            range.ordering.interface,
+                            range.ordering.requirement,
+                            realization(range.ordering),
+                        ),
+                        range.operator_span,
+                    );
+                    dumper.line(
+                        &format!(
+                            "Successor interface {} requirement {} realization {}",
+                            range.successor.interface,
+                            range.successor.requirement,
+                            realization(range.successor),
+                        ),
+                        range.operator_span,
+                    );
+                    dumper.heading("Lower");
+                    dumper.indented(|dumper| dumper.expression(&range.lower));
+                    dumper.heading("Upper");
+                    dumper.indented(|dumper| dumper.expression(&range.upper));
                 });
             }
             ResolvedExpression::TypeTest(test) => {

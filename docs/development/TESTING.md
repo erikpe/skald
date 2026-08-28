@@ -34,6 +34,17 @@ neutrality, and determinism. The
 is the authoritative traceability map and should be extended by linking the
 narrowest new owner test rather than repeating a scenario at every layer.
 
+Concise-range frontend coverage follows the same phase ownership. Lexer tests
+pin longest-match `..` beside decimal and member punctuation. Syntax tests own
+the non-associative lowest-precedence node, spans, recovery, traversal, and
+nesting budget. Module and resolution tests own compiler dependency evidence,
+generic specialization requests, exact endpoint matching, canonical
+initializer/protocol identities, primitive versus class realizations, and
+stable dumps. Type-check tests currently own the explicit range-HIR-pending
+gate. Golden diagnostics cover that complete frontend boundary; HIR, MIR,
+backend, and native concise-range coverage begins only when the gate is
+removed.
+
 Optional-value coverage spans type/capability/containment tests, HIR and MIR
 shape and verifier tests, target layout tests, and native lifecycle tests.
 Exact-class optional native tests use side-effect-visible destructors to catch

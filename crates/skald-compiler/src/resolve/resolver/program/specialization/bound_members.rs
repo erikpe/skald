@@ -121,7 +121,8 @@ pub(in crate::resolve::resolver::program) fn close_bound_member_selections(
                 ResolvedTemplateSelection::TopLevel { .. }
                 | ResolvedTemplateSelection::TemplateMember { .. }
                 | ResolvedTemplateSelection::DefinitionSite { .. }
-                | ResolvedTemplateSelection::ArgumentDependent { .. } => {}
+                | ResolvedTemplateSelection::ArgumentDependent { .. }
+                | ResolvedTemplateSelection::Range { .. } => {}
             }
         }
     }

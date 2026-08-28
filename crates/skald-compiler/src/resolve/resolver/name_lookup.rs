@@ -216,6 +216,17 @@ impl<'program> ModuleLookup<'program> {
             .interface_at_application(self.current, span)
     }
 
+    pub(super) fn class_specialization(
+        self,
+        class: ClassId,
+    ) -> Option<&'program GenericSpecialization> {
+        self.specializations?.for_class(class)
+    }
+
+    pub(super) fn specialization_at(self, span: Span) -> Option<&'program GenericSpecialization> {
+        self.specializations?.at_application(self.current, span)
+    }
+
     fn report_unknown_binding(
         self,
         name: &syntax::Name,

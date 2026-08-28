@@ -285,6 +285,20 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 self.visit_expression(&expression.left);
                 self.visit_expression(&expression.right);
             }
+            syntax::Expression::Range(expression) => {
+                self.visit_expression(&expression.lower);
+                self.visit_expression(&expression.upper);
+                let lower = self.type_of_expression(&expression.lower);
+                let upper = self.type_of_expression(&expression.upper);
+                if let (Some(lower), Some(upper)) = (lower, upper) {
+                    if lower.semantically_eq(&upper) {
+                        self.selections.push(ResolvedTemplateSelection::Range {
+                            endpoint: lower,
+                            span: expression.operator_span,
+                        });
+                    }
+                }
+            }
             syntax::Expression::TypeTest(expression) => {
                 self.visit_expression(&expression.source);
                 if let Some(target) = self.resolve_named_type_use(
@@ -1073,6 +1087,22 @@ impl TemplateBodyResolver<'_, '_, '_> {
             },
             syntax::Expression::Unary(unary) => self.operator_output(unary.span),
             syntax::Expression::Binary(binary) => self.operator_output(binary.span),
+            syntax::Expression::Logical(_)
+            | syntax::Expression::TypeTest(_)
+            | syntax::Expression::PresenceTest(_) => Some(ResolvedTemplateType {
+                kind: ResolvedTemplateTypeKind::Bool,
+                span: expression.span(),
+            }),
+            syntax::Expression::PrimitiveCast(cast) => Some(ResolvedTemplateType {
+                kind: match cast.target {
+                    syntax::PrimitiveType::I64 => ResolvedTemplateTypeKind::I64,
+                    syntax::PrimitiveType::U64 => ResolvedTemplateTypeKind::U64,
+                    syntax::PrimitiveType::U8 => ResolvedTemplateTypeKind::U8,
+                    syntax::PrimitiveType::F64 => ResolvedTemplateTypeKind::F64,
+                    syntax::PrimitiveType::Bool => ResolvedTemplateTypeKind::Bool,
+                },
+                span: cast.span,
+            }),
             _ => None,
         }
     }

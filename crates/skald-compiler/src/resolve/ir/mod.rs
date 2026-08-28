@@ -64,7 +64,8 @@ pub use expression::{
     ResolvedNumericLiteralExpr, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
     ResolvedOptionalBoxAllocationExpr, ResolvedOptionalBoxInitializer, ResolvedPresenceTestExpr,
     ResolvedPresenceTestKind, ResolvedPresentExpr, ResolvedPrimitiveCastExpr,
-    ResolvedPrimitiveType, ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr,
+    ResolvedPrimitiveType, ResolvedRangeExpr, ResolvedRangeProtocolEvidence,
+    ResolvedRangeProtocolRealization, ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr,
     ResolvedStringLiteralExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
     ResolvedUnwrapExpr,
 };

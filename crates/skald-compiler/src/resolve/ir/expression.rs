@@ -2,8 +2,9 @@
 
 use crate::{
     identity::{
-        BindingId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId,
-        LiteralDataId, MethodId, OptionalBoxTypeId, OptionalTypeId, StaticFieldId,
+        BindingId, ClassId, FieldId, FunctionId, InitializerId, InterfaceId,
+        InterfaceRequirementId, LiteralDataId, MethodId, OptionalBoxTypeId, OptionalTypeId,
+        StaticFieldId,
     },
     literal::NumericLiteralKind,
     source::Span,
@@ -24,6 +25,7 @@ pub enum ResolvedExpression {
     Dereference(ResolvedDereferenceExpr),
     Binary(ResolvedBinaryExpr),
     Logical(ResolvedLogicalExpr),
+    Range(Box<ResolvedRangeExpr>),
     TypeTest(ResolvedTypeTestExpr),
     PresenceTest(ResolvedPresenceTestExpr),
     Unwrap(ResolvedUnwrapExpr),
@@ -60,6 +62,7 @@ impl ResolvedExpression {
             Self::Dereference(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::Logical(expression) => expression.span,
+            Self::Range(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::PresenceTest(expression) => expression.span,
             Self::Unwrap(expression) => expression.span,
@@ -478,6 +481,34 @@ pub struct ResolvedLogicalExpr {
     pub operator_span: Span,
     pub right: Box<ResolvedExpression>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedRangeExpr {
+    pub lower: Box<ResolvedExpression>,
+    pub operator_span: Span,
+    pub upper: Box<ResolvedExpression>,
+    pub endpoint_type: super::ResolvedTypeKind,
+    pub range_template: crate::identity::ClassTemplateId,
+    pub range_class: ClassId,
+    pub initializer: InitializerId,
+    pub ordering: ResolvedRangeProtocolEvidence,
+    pub successor: ResolvedRangeProtocolEvidence,
+    pub iterable: InterfaceId,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedRangeProtocolEvidence {
+    pub interface: InterfaceId,
+    pub requirement: InterfaceRequirementId,
+    pub realization: ResolvedRangeProtocolRealization,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedRangeProtocolRealization {
+    ClassWitness,
+    PrimitiveIntrinsic(ResolvedPrimitiveType),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

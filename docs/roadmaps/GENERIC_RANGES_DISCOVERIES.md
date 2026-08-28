@@ -2,6 +2,40 @@
 
 Status: pending after the generic ranges and tight range loops roadmap.
 
+## Replace syntax-level range request inference with a semantic request pass
+
+**Priority:** high.
+
+**Problem:** Generic class specializations are currently fixed before ordinary
+function and class bodies are resolved. RG2 therefore discovers
+`Range<T>` requests with a deliberately small source-type closer. It covers
+literals, declared locals and parameters, constructors, casts, local function
+results, common primitive expressions, and closed generic-template terms, but
+cannot in general know the result of imported calls, method calls, or an
+overloaded operator whose output differs from its receiver. A semantically
+valid range using one of those producers can consequently receive the focused
+unsupported-range diagnostic before ordinary endpoint resolution would have
+identified `T`.
+
+**Evidence:**
+`resolve/resolver/program/specialization/requests/source_request_scanner.rs`
+contains the conservative `static_type` bridge. RG2 resolved tests cover the
+literal, class-construction, local-call, and closed generic-template request
+families.
+
+**Likely owner:** generic-specialization discovery and program phase ordering,
+not range syntax or ordinary body resolution.
+
+**Useful boundary:** Add a semantic, diagnostic-suppressing request pass after
+ordinary callable/class signatures are available and before specialized
+declarations and bodies are materialized. It should resolve endpoint types
+with the ordinary expression-selection rules, collect exact `Range<T>` keys,
+iterate inner-to-outer for nested ranges, and then perform normal body
+resolution once. Remove the syntax-level result inference rather than growing
+a second operator, call, inheritance, and method type system. Preserve
+source-order diagnostics and specialization provenance at the `..` span. This
+should be addressed before RG3 admits concise ranges to executable HIR.
+
 ## Suppress dependent body diagnostics for unsatisfied specializations
 
 **Priority:** medium.

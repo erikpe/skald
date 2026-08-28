@@ -147,6 +147,7 @@ fn parse_source(
         let kind = match token.kind {
             TokenKind::StringLiteral => CompilerDependencyKind::StringLiteral,
             TokenKind::For => CompilerDependencyKind::GeneralIteration,
+            TokenKind::DotDot => CompilerDependencyKind::RangeExpression,
             _ => continue,
         };
         compiler_dependency_ranges
@@ -241,6 +242,7 @@ pub(super) fn compiler_dependency_path(kind: CompilerDependencyKind) -> ModulePa
     let path = match kind {
         CompilerDependencyKind::StringLiteral => "std::str",
         CompilerDependencyKind::GeneralIteration => "std::iter",
+        CompilerDependencyKind::RangeExpression => "std::range",
     };
     ModulePath::try_from(path).expect("compiler dependency path must be valid")
 }

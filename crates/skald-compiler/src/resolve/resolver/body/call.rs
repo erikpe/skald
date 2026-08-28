@@ -631,6 +631,7 @@ impl CallableResolver<'_, '_> {
                 },
             },
             ResolvedExpression::Logical(_) => Some(ResolvedTypeKind::Bool),
+            ResolvedExpression::Range(range) => Some(ResolvedTypeKind::Class(range.range_class)),
             ResolvedExpression::PrimitiveCast(cast) => Some(match cast.target {
                 ResolvedPrimitiveType::I64 => ResolvedTypeKind::I64,
                 ResolvedPrimitiveType::U64 => ResolvedTypeKind::U64,

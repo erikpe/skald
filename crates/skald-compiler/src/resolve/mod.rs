@@ -58,7 +58,8 @@ pub use ir::{
     ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable, ResolvedOrdinaryBindings,
     ResolvedParameter, ResolvedParameterBindingMode, ResolvedPresenceTestExpr,
     ResolvedPresenceTestKind, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedProgram,
-    ResolvedRangeLanguageItem, ResolvedReceiverAccess, ResolvedReturn,
+    ResolvedRangeExpr, ResolvedRangeLanguageItem, ResolvedRangeProtocolEvidence,
+    ResolvedRangeProtocolRealization, ResolvedReceiverAccess, ResolvedReturn,
     ResolvedScalarBindingAssignment, ResolvedSharedAssignment, ResolvedSharedTarget,
     ResolvedSharedTargetCategory, ResolvedStatement, ResolvedStaticCallExpr,
     ResolvedStaticFieldAccessExpr, ResolvedStaticFieldAssignment, ResolvedStaticFieldDeclaration,
@@ -88,11 +89,11 @@ pub use resolver::{
     INVALID_STRING_LANGUAGE_ITEM, ITERATION_ITEM_TYPE_MISMATCH, LOOP_EXIT_OUTSIDE_LOOP,
     MISSING_ITERABLE_APPLICATION, MISSING_STRING_LANGUAGE_ITEM, MODULE_CONTEXT_REQUIRED,
     NON_TERMINATING_GENERIC_SPECIALIZATION, PRIVATE_DECLARATION, PRIVATE_MEMBER_ACCESS,
-    RAW_GENERIC_TYPE, SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE,
+    RANGE_ENDPOINT_TYPE_MISMATCH, RAW_GENERIC_TYPE, SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE,
     UNCONSTRAINED_TYPE_PARAMETER_MEMBER, UNKNOWN_IMPORTED_DECLARATION, UNKNOWN_MEMBER,
     UNKNOWN_MODULE_BINDING, UNKNOWN_NAME, UNKNOWN_QUALIFIED_DECLARATION, UNKNOWN_TYPE,
     UNSATISFIED_GENERIC_REQUIREMENT, UNSUPPORTED_GENERIC_OPERATOR_APPLICATION,
-    UNSUPPORTED_PARAMETER_CONSTRUCTION,
+    UNSUPPORTED_PARAMETER_CONSTRUCTION, UNSUPPORTED_RANGE_APPLICATION,
 };
 
 #[cfg(test)]

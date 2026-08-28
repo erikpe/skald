@@ -68,6 +68,7 @@ pub(crate) struct GenericSpecialization {
     pub(crate) closed_bound_members: Vec<Option<ClosedGenericBoundMember>>,
     pub(crate) closed_operator_selections: Vec<Option<ClosedGenericOperatorSelection>>,
     pub(crate) closed_iteration_selections: Vec<Option<ClosedGenericIterationSelection>>,
+    pub(crate) closed_range_selections: Vec<Option<ClassId>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -154,20 +155,26 @@ impl GenericSpecializationTable {
     }
 
     pub(crate) fn class_at_application(&self, module: ModuleId, span: Span) -> Option<ClassId> {
-        self.entries
-            .iter()
-            .find(|entry| {
-                entry
-                    .provenance
-                    .origins
-                    .contains(&GenericApplicationOrigin { module, span })
-            })
+        self.at_application(module, span)
             .and_then(|entry| match entry.state {
                 GenericSpecializationState::Complete(class) => Some(class),
                 GenericSpecializationState::Requested
                 | GenericSpecializationState::InProgress(_)
                 | GenericSpecializationState::Failed { .. } => None,
             })
+    }
+
+    pub(crate) fn at_application(
+        &self,
+        module: ModuleId,
+        span: Span,
+    ) -> Option<&GenericSpecialization> {
+        self.entries.iter().find(|entry| {
+            entry
+                .provenance
+                .origins
+                .contains(&GenericApplicationOrigin { module, span })
+        })
     }
 
     pub(crate) fn fail_class(&mut self, class: ClassId) {

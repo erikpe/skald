@@ -66,6 +66,18 @@ fn grouped_comparisons_use_the_common_expression_nesting_budget() {
 }
 
 #[test]
+fn both_range_endpoints_keep_the_common_expression_nesting_budget() {
+    let groups = MAX_SYNTAX_NESTING - 2;
+    let expression = format!(
+        "{} .. {}",
+        grouped_expression(groups),
+        grouped_expression(groups)
+    );
+    let output = parse_text(source_with_return(&expression));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+}
+
+#[test]
 fn primitive_casts_use_the_common_expression_nesting_budget() {
     let allowed = format!("{}1", "(i64) ".repeat(MAX_SYNTAX_NESTING - 2));
     assert!(parse_text(source_with_return(&allowed))

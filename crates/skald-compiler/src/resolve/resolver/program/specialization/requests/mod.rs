@@ -71,6 +71,7 @@ pub(crate) struct GenericApplicationDiscovery {
 
 pub(crate) fn discover_specializations(
     input: SpecializationDiscoveryInput<'_, '_>,
+    range_language_item: Option<&ResolvedRangeLanguageItem>,
     interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> GenericApplicationDiscovery {
@@ -83,11 +84,15 @@ pub(crate) fn discover_specializations(
         diagnostics,
         input.ordinary_class_count,
         input.ordinary_interface_count,
+        range_language_item.map(|item| item.range_template),
     );
     for unit in input.units {
         let lookup = input.lookups.for_unit(unit, input.modules);
-        SourceRequestScanner::new(SyntaxTypeCloser::new(&mut owner, lookup, unit.module))
-            .visit_unit(unit.ast);
+        SourceRequestScanner::new(
+            SyntaxTypeCloser::new(&mut owner, lookup, unit.module),
+            range_language_item.map(|item| item.range_template),
+        )
+        .visit_unit(unit.ast);
     }
     owner.finish()
 }

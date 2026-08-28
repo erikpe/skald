@@ -113,7 +113,7 @@ contextual positions.
 The complete punctuation and operator token set outside literal delimiters is:
 
 ```text
-( ) { } [ ] , : :: ; . -> + - * / % = == != < <= > >= ? ! ~ & | ^ << >> && ||
+( ) { } [ ] , : :: ; . .. -> + - * / % = == != < <= > >= ? ! ~ & | ^ << >> && ||
 ```
 
 Double quotes delimit one string-literal token. Single quotes delimit one
@@ -622,7 +622,9 @@ and cleanup are owned by
 ## Expressions
 
 ```text
-expression                = logical-or-expression
+expression                = range-expression
+range-expression          = logical-or-expression
+                            [".." logical-or-expression]
 view-target               = named-type
 
 logical-or-expression     = logical-and-expression
@@ -835,7 +837,9 @@ Primitive operators and class or generic-bound protocol operators share the
 following implemented grammar:
 
 ```text
-expression                = logical-or-expression
+expression                = range-expression
+range-expression          = logical-or-expression
+                            [".." logical-or-expression]
 
 logical-or-expression     = logical-and-expression
                             {"||" logical-and-expression}
@@ -1076,7 +1080,8 @@ payload.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-cast semantics.
 
-The frozen [generic-range contract](RANGES.md) plans a lowest-precedence,
-non-associative `lower .. upper` expression. It is deliberately absent from
-the implemented expression production above until the range-syntax task lands;
-the current lexer and parser therefore reject it.
+The [generic-range contract](RANGES.md) defines the lowest-precedence,
+non-associative `lower .. upper` expression. The lexer chooses `..` before
+member-access `.`, including without whitespace after integer and floating
+literals. Parsing, canonical range resolution, and frontend diagnostics are
+implemented; typed HIR construction remains intentionally gated.

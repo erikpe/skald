@@ -1,13 +1,15 @@
 # Generic Ranges and Concise Range Expressions
 
-Status: frozen language contract; explicit generic ranges implemented. The
+Status: frozen language contract; explicit generic ranges and the concise
+range frontend implemented. The
 canonical `Successor<Output>` protocol, ordinary `Range<T>` class, class
-opt-in, static integer realizations, and explicit half-open iteration are
-implemented. The concise `..` expression and initial primitive tight-loop
-profile remain settled but not implemented. The
+opt-in, static integer realizations, explicit half-open iteration, `..`
+syntax, and exact canonical resolution are implemented. Concise range values
+stop at an intentional typed-HIR gate until ordinary construction lowering is
+implemented; the initial primitive tight-loop profile remains planned. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains authoritative for accepted
-source until the range-syntax task lands.
+source syntax.
 
 This document owns the source-visible contract for explicit `Range<T>` values
 and concise `lower .. upper` expressions. Compiler identities, primitive
@@ -157,7 +159,8 @@ implements OpAdd<BigInteger, BigInteger>,
 }
 ```
 
-The class can use explicit ranges now; the concise equivalent remains planned:
+The class can use explicit ranges now; its concise equivalent is accepted and
+resolved but is not executable until range-expression HIR lowering lands:
 
 ```ska
 from std::range import Range;
@@ -165,7 +168,7 @@ from std::range import Range;
 for (i in Range<BigInteger>(BigInteger(17u), BigInteger(23u))) {
 }
 
-// Planned concise equivalent:
+// Frontend-only concise equivalent:
 // for (i in BigInteger(17u) .. BigInteger(23u)) {}
 ```
 
@@ -175,6 +178,9 @@ destruction retain ordinary class behavior. The initial tight-loop guarantee
 does not apply to class ranges.
 
 ## Concise `..` expression
+
+Status: syntax and canonical resolution implemented; typed HIR intentionally
+gated.
 
 The frozen syntax adds one lowest-precedence, non-associative expression tier:
 
@@ -213,6 +219,13 @@ inference does not add general generic-argument inference.
 Successfully parsed range syntax acquires `std::range` as a compiler
 dependency without creating a source import binding. An explicit import is
 still required to name `Range` or `Successor` directly.
+
+The resolved expression retains exact endpoint, range-template,
+specialization, initializer, `OpLess<T>`, `Successor<T>`, iterable-claim, and
+primitive-intrinsic or class-witness identities. Until ordinary construction
+HIR is implemented, any successfully resolved range expression reports the
+dedicated range-HIR-pending diagnostic before general expression or `for-in`
+type checking begins.
 
 ## Evaluation, iteration, and cleanup
 

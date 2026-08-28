@@ -1,6 +1,6 @@
 # Generic Ranges and Tight Range Loops Roadmap
 
-Status: in progress; RG2 is next.
+Status: in progress; RG3 is next.
 
 This roadmap implements the frozen
 [language contract](../language/RANGES.md) and
@@ -51,7 +51,7 @@ and determinism pipelines are the baseline. No other roadmap blocks RG0.
 
 - [x] RG0 — Canonical successor protocol and primitive realizations
 - [x] RG1 — Explicit generic `Range<T>` values and iteration
-- [ ] RG2 — Range punctuation, grammar, and resolved canonical construction
+- [x] RG2 — Range punctuation, grammar, and resolved canonical construction
 - [ ] RG3 — Concise range expression HIR and complete ordinary execution
 - [ ] RG4 — Immediate primitive range-loop fusion
 - [ ] RG5 — Performance evidence, hardening, and release closure
@@ -161,27 +161,27 @@ invalid, and no range-specific lower IR or runtime support exists.
 **Purpose:** Add the concise source surface and settle all frontend identities
 and diagnostics before executable HIR consumes it.
 
-- [ ] Add longest-match `..` tokenization before `.`, preserving member access,
+- [x] Add longest-match `..` tokenization before `.`, preserving member access,
   decimal literals, no-whitespace integer forms, token dumps, and source spans.
-- [ ] Add the lowest-precedence non-associative range-expression grammar and a
+- [x] Add the lowest-precedence non-associative range-expression grammar and a
   dedicated source AST node with lower, upper, operator, and complete spans.
-- [ ] Diagnose missing endpoints and ungrouped chains once and recover at
+- [x] Diagnose missing endpoints and ungrouped chains once and recover at
   expression, statement, `for` header, argument, initializer, and body
   boundaries.
-- [ ] Include both endpoints in nesting limits, source scanners, template
+- [x] Include both endpoints in nesting limits, source scanners, template
   request discovery, visitors, dumps, and every expression-containing syntax
   position without reducing existing depth budgets.
-- [ ] Add compiler-dependency evidence from successful `..` syntax to canonical
+- [x] Add compiler-dependency evidence from successful `..` syntax to canonical
   `std::range` without introducing an import binding.
-- [ ] Resolve endpoints in source order, require one exact static type, close
+- [x] Resolve endpoints in source order, require one exact static type, close
   canonical `Range<T>` bounds, and select exact initializer, ordering,
   successor, result, and realization identities.
-- [ ] Reject mixed endpoints, missing bounds, unsupported primitive cells,
+- [x] Reject mixed endpoints, missing bounds, unsupported primitive cells,
   lookalike declarations, structural methods, conversions, and expected-type
   filtering with focused ordered diagnostics.
-- [ ] Retain deterministic resolved range evidence and dumps while gating the
+- [x] Retain deterministic resolved range evidence and dumps while gating the
   expression before completed HIR until RG3.
-- [ ] Update the implemented grammar, range language contract, module/compiler
+- [x] Update the implemented grammar, range language contract, module/compiler
   contracts, status, testing, and debugging documents to the accepted
   frontend-only maturity.
 

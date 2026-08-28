@@ -632,6 +632,10 @@ pub(crate) enum ResolvedTemplateSelection {
         iter_next: InterfaceTemplateRequirementId,
         span: Span,
     },
+    Range {
+        endpoint: ResolvedTemplateType,
+        span: Span,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

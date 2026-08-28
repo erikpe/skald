@@ -471,6 +471,7 @@ pub(in crate::resolve::resolver::program) fn validate_range_language_item(
             range_parameter: parameter.id,
             range_initializer_member: member,
             range_ordering_bound: 0,
+            range_ordering_requirement: less.requirement,
             range_successor_bound: 1,
             range_iterable_claim: 0,
             range_declaration_span: template.span,

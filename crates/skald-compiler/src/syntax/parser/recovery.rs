@@ -174,6 +174,7 @@ impl Parser<'_> {
                 | TokenKind::Bang
                 | TokenKind::Tilde
                 | TokenKind::LeftParen
+                | TokenKind::DotDot
         )
     }
 

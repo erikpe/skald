@@ -3,13 +3,37 @@ use crate::{
     mir::{dump_mir, lower_hir, verify_mir},
     resolve::{dump_resolved, resolve_module_graph, ResolvedCopyOperation},
     test_support::load_module_sources_with_standard_library,
-    typeck::{type_check, COPY_OPERATION_UNAVAILABLE},
+    typeck::{type_check, COPY_OPERATION_UNAVAILABLE, RANGE_HIR_PENDING},
 };
 
 fn resolve_range_source(source: &str) -> crate::resolve::ResolveOutput {
     let (_workspace, graph) =
         load_module_sources_with_standard_library("app", &[("app.ska", source)]);
     resolve_module_graph(&graph)
+}
+
+#[test]
+fn concise_range_stops_at_the_explicit_frontend_hir_gate() {
+    let resolved =
+        resolve_range_source("fn main() -> i64 { for (item in 1u .. 3u) {} return 0; }\n");
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+
+    let checked = type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert_eq!(
+        checked
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == RANGE_HIR_PENDING)
+            .count(),
+        1,
+        "{:?}",
+        checked.diagnostics,
+    );
 }
 
 fn check_range_source(source: &str) -> crate::hir::HirProgram {

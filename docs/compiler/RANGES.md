@@ -1,17 +1,19 @@
 # Generic-Range Compiler Contract
 
-Status: frozen compiler contract; explicit generic ranges implemented.
+Status: frozen compiler contract; explicit generic ranges and concise-range
+frontend implemented.
 Resolution validates the canonical declaration bundle, closes exact integer
 bounds to existing operations, and compiles explicit `Range<T>` values through
-ordinary construction and general iteration. Range-expression phase flow,
-ordinary-construction HIR provenance, primitive loop fusion, and performance
-evidence remain planned. This document owns those identities and target/ABI
-constraints for the
+ordinary construction and general iteration. `..` now has source AST,
+compiler-dependency, exact resolved construction evidence, diagnostics, and a
+dedicated pre-HIR gate. Ordinary-construction HIR provenance, primitive loop
+fusion, and performance evidence remain planned. This document owns those
+identities and target/ABI constraints for the
 [generic-range language contract](../language/RANGES.md).
 
-The implemented grammar remains unchanged until the syntax task lands. No
-range expression, range-syntax HIR provenance, fusion plan, or benchmark
-guarantee described here is currently compiler behavior.
+The implemented grammar includes range expressions. No range-syntax HIR
+provenance, fusion plan, or benchmark guarantee described below is currently
+compiler behavior.
 
 ## Canonical module and identities
 
@@ -113,6 +115,9 @@ syntax and fusion.
 
 ## Range syntax and resolution
 
+Status: implemented through resolved IR; completed typed HIR is deliberately
+blocked until the next roadmap task.
+
 Lexing adds a longest-match `..` token before `.` while preserving numeric
 literal and member-access tokenization. Parsing adds a source-shaped,
 lowest-precedence, non-associative range expression containing both operands,
@@ -140,6 +145,11 @@ Selection performs no expected-result filtering, implicit conversion,
 promotion, common-base inference, structural lookup, constructor search on
 `T`, or overload protocol search. Candidate, bound, diagnostic, request, and
 dump order remains deterministic.
+
+After successful resolution, type checking emits the dedicated range-HIR-
+pending diagnostic at every range operator and creates no HIR program. This
+phase gate prevents an unresolved or partially lowered range from reaching
+ordinary expression consumers or the general-iteration fallback.
 
 ## Typed HIR representation
 

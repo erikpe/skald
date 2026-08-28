@@ -22,6 +22,7 @@ pub(super) struct SpecializationCoordinator<'semantic, 'interner, 'diagnostics> 
     specialization_failures: usize,
     next_class: usize,
     next_interface: usize,
+    range_template: Option<ClassTemplateId>,
 }
 
 impl<'semantic, 'interner, 'diagnostics>
@@ -37,6 +38,7 @@ impl<'semantic, 'interner, 'diagnostics>
         diagnostics: &'diagnostics mut Diagnostics,
         ordinary_class_count: usize,
         ordinary_interface_count: usize,
+        range_template: Option<ClassTemplateId>,
     ) -> Self {
         Self {
             class_semantics,
@@ -54,6 +56,7 @@ impl<'semantic, 'interner, 'diagnostics>
             specialization_failures: 0,
             next_class: ordinary_class_count,
             next_interface: ordinary_interface_count,
+            range_template,
         }
     }
 
@@ -142,6 +145,7 @@ impl<'semantic, 'interner, 'diagnostics>
             closed_bound_members: Vec::new(),
             closed_operator_selections: Vec::new(),
             closed_iteration_selections: Vec::new(),
+            closed_range_selections: Vec::new(),
         });
         self.activate_class(index)
     }
@@ -286,6 +290,31 @@ impl<'semantic, 'interner, 'diagnostics>
             vec![None; semantics.selections.len()];
         self.class_entries[index].closed_iteration_selections =
             vec![None; semantics.selections.len()];
+        self.class_entries[index].closed_range_selections = vec![None; semantics.selections.len()];
+        for (selection_index, selection) in semantics.selections.iter().enumerate() {
+            let ResolvedTemplateSelection::Range { endpoint, span } = selection else {
+                continue;
+            };
+            let Some(range_template) = self.range_template else {
+                continue;
+            };
+            let Some(endpoint) = self.close_template_type(endpoint, environment) else {
+                continue;
+            };
+            let range = self.request_class(
+                range_template,
+                vec![endpoint],
+                GenericApplicationOrigin {
+                    module: self
+                        .class_templates
+                        .get(key.template)
+                        .expect("template exists")
+                        .module,
+                    span: *span,
+                },
+            );
+            self.class_entries[index].closed_range_selections[selection_index] = range;
+        }
         let valid = self.specialization_failures == failures_before;
         debug_assert_eq!(self.active.pop(), Some(work_key));
         if valid {

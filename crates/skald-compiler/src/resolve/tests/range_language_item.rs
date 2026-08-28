@@ -7,6 +7,14 @@ use crate::{
     },
 };
 
+fn resolve_range_syntax(source: &str) -> (crate::module::ModuleGraph, ResolveOutput) {
+    let mut sources = vec![("app.ska", source)];
+    sources.extend(canonical_standard_library_sources(&[]));
+    let (_workspace, graph) = load_module_sources("app", &sources);
+    let output = resolve_module_graph(&graph);
+    (graph, output)
+}
+
 const APP_IMPORT: &str = "import std::range;\nfn main() -> i64 { return 0; }\n";
 
 fn resolve_range_module(source: &str) -> ResolveOutput {
@@ -65,6 +73,203 @@ fn canonical_successor_retains_exact_identities_and_static_evidence() {
     assert!(dump.contains("i64 canonical Successor<i64>"), "{dump}");
     assert!(!dump.contains("f64 canonical Successor"), "{dump}");
     assert!(!dump.contains("bool canonical Successor"), "{dump}");
+}
+
+#[test]
+fn concise_integer_range_activates_canonical_module_and_retains_resolved_evidence() {
+    let (graph, output) =
+        resolve_range_syntax("fn main() -> i64 { for (item in 1u .. 3u) {} return 0; }\n");
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let app = graph
+        .modules()
+        .iter()
+        .find(|module| module.provenance().module_path().to_string() == "app")
+        .expect("entry module is loaded");
+    let range_edge = app
+        .imports()
+        .iter()
+        .find(|edge| {
+            graph
+                .module(edge.target())
+                .is_some_and(|module| module.provenance().module_path().to_string() == "std::range")
+        })
+        .expect("range syntax creates a compiler dependency");
+    assert!(range_edge.import_spans().is_empty());
+    assert_eq!(
+        range_edge
+            .compiler_dependency_spans(crate::module::CompilerDependencyKind::RangeExpression)
+            .len(),
+        1
+    );
+
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.expect("main is selected"))
+        .expect("main resolves");
+    let ResolvedStatement::ForIn(loop_) = &main.body.statements[0] else {
+        panic!("expected resolved for-in");
+    };
+    let ResolvedExpression::Range(range) = &loop_.iterable else {
+        panic!("expected resolved range evidence");
+    };
+    assert_eq!(range.endpoint_type, ResolvedTypeKind::U64);
+    assert_eq!(
+        range.range_template,
+        output
+            .program
+            .range_language_item
+            .as_ref()
+            .unwrap()
+            .range_template
+    );
+    assert_eq!(range.initializer.class(), range.range_class);
+    assert!(matches!(
+        range.ordering.realization,
+        ResolvedRangeProtocolRealization::PrimitiveIntrinsic(ResolvedPrimitiveType::U64)
+    ));
+    assert!(matches!(
+        range.successor.realization,
+        ResolvedRangeProtocolRealization::PrimitiveIntrinsic(ResolvedPrimitiveType::U64)
+    ));
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Range template"), "{dump}");
+    assert!(dump.contains("realization primitive-u64"), "{dump}");
+    assert_eq!(dump, dump_resolved(&output.program));
+}
+
+#[test]
+fn concise_range_rejects_mixed_exact_endpoint_types_before_hir() {
+    let (_graph, output) =
+        resolve_range_syntax("fn main() -> i64 { for (item in 1u .. 3) {} return 0; }\n");
+    assert!(
+        output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == RANGE_ENDPOINT_TYPE_MISMATCH
+                && diagnostic.message.contains("exactly the same static type")
+        }),
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(output
+        .program
+        .entry_function
+        .and_then(|main| output.program.definitions.get(main))
+        .is_some_and(|definition| {
+            definition.body.statements.len() == 1
+                && matches!(definition.body.statements[0], ResolvedStatement::Return(_))
+        }));
+}
+
+#[test]
+fn concise_class_range_selects_nominal_ordering_and_successor_witnesses() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "from std::ops import OpLess;\n",
+        "from std::range import Successor;\n",
+        "class Value implements OpLess<Value>, Successor<Value> {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n",
+        "  fn successor() -> Value { return Value(self.value + 1); }\n",
+        "}\n",
+        "fn main() -> i64 { for (item in Value(1) .. Value(3)) {} return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
+    let ResolvedStatement::ForIn(loop_) = &main.body.statements[0] else {
+        panic!("expected for-in");
+    };
+    let ResolvedExpression::Range(range) = &loop_.iterable else {
+        panic!("expected concise range");
+    };
+    assert!(matches!(range.endpoint_type, ResolvedTypeKind::Class(_)));
+    assert_eq!(
+        range.ordering.realization,
+        ResolvedRangeProtocolRealization::ClassWitness
+    );
+    assert_eq!(
+        range.successor.realization,
+        ResolvedRangeProtocolRealization::ClassWitness
+    );
+}
+
+#[test]
+fn generic_template_range_requests_close_for_each_concrete_endpoint_type() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "from std::ops import OpLess;\n",
+        "from std::range import Successor;\n",
+        "class Scanner<T> where T: OpLess<T>, T: Successor<T> {\n",
+        "  init() {}\n",
+        "  fn scan(start: T, end: T) -> unit { for (item in start .. end) {} }\n",
+        "}\n",
+        "fn use(scanner: Scanner<u64>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("Selection range endpoint template0:type0"),
+        "{dump}"
+    );
+    assert!(dump.contains("Range template"), "{dump}");
+}
+
+#[test]
+fn concise_range_requests_follow_endpoint_function_result_types() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "fn lower() -> u8 { return 1u8; }\n",
+        "fn upper() -> u8 { return 3u8; }\n",
+        "fn main() -> i64 { for (item in lower() .. upper()) {} return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("endpoint u8"), "{dump}");
+    assert!(dump.contains("realization primitive-u8"), "{dump}");
+}
+
+#[test]
+fn unsupported_primitive_range_reports_the_failed_canonical_bound_without_a_resolver_cascade() {
+    let (_graph, output) =
+        resolve_range_syntax("fn main() -> i64 { for (item in 1.0 .. 3.0) {} return 0; }\n");
+    assert!(
+        output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| { diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT }),
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(!output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == UNSUPPORTED_RANGE_APPLICATION));
+}
+
+#[test]
+fn concise_syntax_validates_replacement_canonical_range_declarations() {
+    let broken = replace_once(CANONICAL_RANGE_SOURCE, "public class Range", "class Range");
+    let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
+        "app",
+        &[(
+            "app.ska",
+            "fn main() -> i64 { for (item in 1u .. 3u) {} return 0; }\n",
+        )],
+        &[("std/range.ska", &broken)],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(
+        output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == INVALID_RANGE_LANGUAGE_ITEM
+                && diagnostic.message.contains("must be public")
+        }),
+        "{:?}",
+        output.diagnostics
+    );
 }
 
 #[test]

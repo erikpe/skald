@@ -644,6 +644,10 @@ fn compiler_dependency_kinds_own_exact_canonical_module_paths() {
         super::load::compiler_dependency_path(CompilerDependencyKind::GeneralIteration),
         "std::iter".parse().unwrap()
     );
+    assert_eq!(
+        super::load::compiler_dependency_path(CompilerDependencyKind::RangeExpression),
+        "std::range".parse().unwrap()
+    );
 }
 
 #[test]

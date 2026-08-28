@@ -8,6 +8,7 @@ use super::{
         resolve_callable_body, resolve_static_initializer_expression, BodyDeclarationEnvironment,
         BodyLanguageItemEnvironment, BodyResolutionEnvironment, BodySpecializationEnvironment,
         CallableResolutionContext, IterationResolutionEnvironment, OperatorResolutionEnvironment,
+        RangeResolutionEnvironment,
     },
     *,
 };

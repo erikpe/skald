@@ -125,10 +125,13 @@ may reach MIR or the backend. Explicit ranges should appear as ordinary closed
 `Range<T>` classes, construction, `Iterable<T, T>` calls, optional results,
 and general `ForIn` control flow.
 
-For future `lower .. upper`, follow the source range node to
-its exact resolved range, initializer, ordering, and successor identities,
-then confirm that typed HIR contains ordinary class construction with the
-non-forgeable canonical syntax origin. An immediately consumed integer syntax
+For implemented frontend-only `lower .. upper`, follow the source range node
+to its exact resolved range, initializer, ordering, successor, iterable, and
+primitive-intrinsic or class-witness identities. A successful frontend case
+then stops with `TYP051`; no HIR program should be produced. Once ordinary
+range construction lowering lands, confirm that typed HIR contains ordinary
+class construction with the non-forgeable canonical syntax origin. An
+immediately consumed integer syntax
 range may instead select the structured fused `HirForIn` plan; its preliminary
 MIR should contain only ordered endpoint initialization, scalar comparison,
 item initialization, increment-before-body, loop edges, and cleanup. Explicit

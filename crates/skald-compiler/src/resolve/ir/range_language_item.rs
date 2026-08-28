@@ -23,6 +23,7 @@ pub struct ResolvedRangeLanguageItem {
     pub range_parameter: TypeParameterId,
     pub range_initializer_member: usize,
     pub range_ordering_bound: usize,
+    pub range_ordering_requirement: InterfaceTemplateRequirementId,
     pub range_successor_bound: usize,
     pub range_iterable_claim: usize,
     pub range_declaration_span: Span,

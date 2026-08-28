@@ -28,6 +28,41 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
         self.close_with_lookup_diagnostics(syntax, false)
     }
 
+    pub(super) fn request_range(
+        &mut self,
+        template: ClassTemplateId,
+        endpoint: ResolvedTypeKind,
+        span: Span,
+    ) -> Option<ClassId> {
+        self.owner.request_class(
+            template,
+            vec![endpoint],
+            GenericApplicationOrigin {
+                module: self.module,
+                span,
+            },
+        )
+    }
+
+    pub(super) fn constructor_type(
+        &mut self,
+        callee: &syntax::Expression,
+    ) -> Option<ResolvedTypeKind> {
+        match callee {
+            syntax::Expression::Identifier(identifier) => {
+                let symbol = self.select(&identifier.name, false)?;
+                match symbol.kind {
+                    TopLevelSymbolKind::Class(class) => Some(ResolvedTypeKind::Class(class)),
+                    _ => None,
+                }
+            }
+            syntax::Expression::GenericTypeApplication(application) => {
+                self.close_named(&application.target, false)
+            }
+            _ => None,
+        }
+    }
+
     fn close_with_lookup_diagnostics(
         &mut self,
         syntax: &syntax::TypeSyntax,

@@ -19,6 +19,7 @@ mod indirect_call;
 mod iteration;
 mod operator;
 mod place;
+mod range;
 mod statement;
 mod structural_bracket;
 
@@ -86,6 +87,7 @@ pub(super) struct BodyLanguageItemEnvironment<'program> {
     string_literals: StringLiteralResolutionEnvironment<'program>,
     iteration: Option<IterationResolutionEnvironment<'program>>,
     operators: Option<OperatorResolutionEnvironment<'program>>,
+    range: Option<RangeResolutionEnvironment<'program>>,
 }
 
 impl<'program> BodyLanguageItemEnvironment<'program> {
@@ -93,11 +95,31 @@ impl<'program> BodyLanguageItemEnvironment<'program> {
         string_literals: StringLiteralResolutionEnvironment<'program>,
         iteration: Option<IterationResolutionEnvironment<'program>>,
         operators: Option<OperatorResolutionEnvironment<'program>>,
+        range: Option<RangeResolutionEnvironment<'program>>,
     ) -> Self {
         Self {
             string_literals,
             iteration,
             operators,
+            range,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct RangeResolutionEnvironment<'program> {
+    language_item: &'program ResolvedRangeLanguageItem,
+    applications: &'program GenericInterfaceSpecializationTable,
+}
+
+impl<'program> RangeResolutionEnvironment<'program> {
+    pub(super) const fn new(
+        language_item: &'program ResolvedRangeLanguageItem,
+        applications: &'program GenericInterfaceSpecializationTable,
+    ) -> Self {
+        Self {
+            language_item,
+            applications,
         }
     }
 }
@@ -184,6 +206,18 @@ impl<'program> BodySpecializationEnvironment<'program> {
                     return None;
                 }
                 *closed
+            })
+    }
+
+    fn range_class(self, span: Span) -> Option<ClassId> {
+        self.semantics
+            .selections
+            .iter()
+            .zip(&self.specialization.closed_range_selections)
+            .find_map(|(selection, closed)| {
+                matches!(selection, ResolvedTemplateSelection::Range { span: selection_span, .. } if *selection_span == span)
+                    .then_some(*closed)
+                    .flatten()
             })
     }
 
@@ -745,6 +779,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     _ => None,
                 }
             }
+            syntax::Expression::Range(range) => self.resolve_range_expression(range),
             syntax::Expression::TypeTest(test) => {
                 let source = self.resolve_expression(&test.source);
                 let target = self.resolve_view_target(&test.target);

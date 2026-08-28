@@ -34,7 +34,7 @@ pub(super) fn scan_numeric_literal(source: &str) -> NumericScan {
                 kind = NumericLiteralKind::U64(IntegerRadix::Decimal);
             }
         }
-        Some(b'.') => {
+        Some(b'.') if bytes.get(end + 1).is_some_and(u8::is_ascii_digit) => {
             kind = NumericLiteralKind::F64;
             end += 1;
             let fraction_start = end;
@@ -55,7 +55,9 @@ pub(super) fn scan_numeric_literal(source: &str) -> NumericScan {
         _ => {}
     }
 
-    if bytes.get(end).is_some_and(|byte| is_numeric_tail(*byte)) {
+    if !bytes.get(end..).is_some_and(|tail| tail.starts_with(b".."))
+        && bytes.get(end).is_some_and(|byte| is_numeric_tail(*byte))
+    {
         well_formed = false;
         end = take_numeric_tail(bytes, end);
     }
@@ -210,5 +212,10 @@ mod tests {
             scan("0x1e+2"),
             (4, Some(NumericLiteralKind::I64(IntegerRadix::Hexadecimal)))
         );
+        assert_eq!(
+            scan("1..3"),
+            (1, Some(NumericLiteralKind::I64(IntegerRadix::Decimal)))
+        );
+        assert_eq!(scan("1.5..3"), (3, Some(NumericLiteralKind::F64)));
     }
 }

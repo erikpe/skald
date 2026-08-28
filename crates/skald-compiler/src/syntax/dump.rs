@@ -726,6 +726,16 @@ impl AstDumper {
                     dumper.expression(&logical.right);
                 });
             }
+            Expression::Range(range) => {
+                self.line("Range", range.span);
+                self.indented(|dumper| {
+                    dumper.heading("Lower");
+                    dumper.indented(|dumper| dumper.expression(&range.lower));
+                    dumper.line("DotDot", range.operator_span);
+                    dumper.heading("Upper");
+                    dumper.indented(|dumper| dumper.expression(&range.upper));
+                });
+            }
             Expression::TypeTest(test) => {
                 self.line("TypeTest", test.span);
                 self.indented(|dumper| {
