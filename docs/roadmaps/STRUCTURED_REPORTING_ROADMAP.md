@@ -1,6 +1,6 @@
 # Structured Compiler Reporting Roadmap
 
-Status: in progress; REP0 and REP1 are complete, and REP2 is next.
+Status: in progress; REP0 through REP2 are complete, and REP3 is next.
 
 This roadmap implements the frozen
 [structured compiler reporting contract](../compiler/REPORTING.md) and its
@@ -47,7 +47,7 @@ compiler output, source diagnostics, generated artifacts, or runtime behavior.
 
 - [x] REP0 — Establish typed reporting and human rendering
 - [x] REP1 — Observe the complete compilation pipeline
-- [ ] REP2 — Publish honest phase-owned statistics
+- [x] REP2 — Publish honest phase-owned statistics
 - [ ] REP3 — Integrate CLI selection, linking, and artifact reporting
 - [ ] REP4 — Harden composition, publish implementation, and close
 
@@ -150,31 +150,31 @@ compiler result.
 is stable, with special care for repeated module-loading work and disabled-path
 overhead.
 
-- [ ] Introduce a module-loading measurement sidecar or narrow observed loader
+- [x] Introduce a module-loading measurement sidecar or narrow observed loader
       adapter without changing the existing public `load_module_graph` result
       contract used by repository callers.
-- [ ] Count reached modules, source reads, source bytes, discovery lex/parse
+- [x] Count reached modules, source reads, source bytes, discovery lex/parse
       executions, final lex/parse executions, and tokens processed; expose
       discovery and final work separately or through an explicitly totalled
       pair.
-- [ ] Add stable cheap output metrics for resolution, typed HIR, preliminary
+- [x] Add stable cheap output metrics for resolution, typed HIR, preliminary
       and final MIR, lifecycle planning/synthesis, diagnostics, and backend
       assembly only where the owning product defines the count precisely.
-- [ ] Add MIR pipeline statistics for verification and registered pass
+- [x] Add MIR pipeline statistics for verification and registered pass
       executions without inventing transformation counters while the pipeline
       has no transforming pass.
-- [ ] Establish the return-shape rule that future transformations publish
+- [x] Establish the return-shape rule that future transformations publish
       pass-owned statistics to the pipeline rather than logging formatted
       sentences internally.
-- [ ] Emit unit-bearing metrics in one documented deterministic order for each
+- [x] Emit unit-bearing metrics in one documented deterministic order for each
       phase and attach them only to the corresponding finish event.
-- [ ] Guard extra IR traversals, sorting, allocations, and formatting behind
+- [x] Guard extra IR traversals, sorting, allocations, and formatting behind
       the observer's `Details` or `Trace` query; retain already-computed cheap
       counters without changing phase products unnecessarily.
-- [ ] Add trace-detail module observations that identify discovery versus final
+- [x] Add trace-detail module observations that identify discovery versus final
       parsing without including source contents or nondeterministic filesystem
       metadata.
-- [ ] Update reporting and module/debugging documentation with the implemented
+- [x] Update reporting and module/debugging documentation with the implemented
       metric vocabulary and exact repeated-parse accounting.
 
 **Tests:** Multi-module graphs with explicit, compiler-injected, duplicate, and

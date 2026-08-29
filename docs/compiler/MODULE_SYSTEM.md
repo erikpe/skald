@@ -302,6 +302,17 @@ module aliases and selective imports of that module reuse its `ModuleId`,
 `SourceId`, parsed product, declaration tables, and graph node. They do not
 repeat source I/O, lexing, parsing, or semantic collection.
 
+Observed request compilation measures the loader's two intentional frontend
+passes rather than inferring work from graph size. Each successfully decoded
+staged source is lexed and, when lexing succeeds, parsed during dependency
+discovery; the canonical final source database then repeats those operations.
+Details reports keep source-read attempts, staged UTF-8 bytes, discovery work,
+and final work separate. Trace reports identify each actual parser execution
+by canonical logical module path and discovery/final stage, without retaining
+source contents or physical filesystem metadata. The ordinary public loader
+still returns only `ModuleGraph` or `ModuleGraphLoadFailure`; measurement is an
+internal sidecar used by observed driver composition.
+
 The compilation proceeds as follows:
 
 ```text

@@ -101,8 +101,9 @@ The frozen [structured compiler reporting contract](REPORTING.md) defines the
 request-scoped observer, typed event and metric vocabulary, human rendering,
 observed compilation APIs, and planned independent CLI selection of operational
 reports and source diagnostics. Request and singleton compilation now emit
-phase outcomes and timings without changing phase products, diagnostics,
-dumps, or quiet API behavior. Metrics and CLI integration remain owned by the
+phase outcomes, timings, deterministic phase-owned metrics, and trace module
+parse observations without changing phase products, diagnostics, dumps, or
+quiet API behavior. CLI integration remains owned by the
 [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 
 The implemented

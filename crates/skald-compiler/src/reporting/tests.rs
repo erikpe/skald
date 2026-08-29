@@ -148,6 +148,35 @@ fn phase_rendering_covers_every_typed_identity_and_detail_policy() {
 }
 
 #[test]
+fn module_parse_rendering_is_trace_only_and_keeps_typed_stage_identity() {
+    for (stage, label) in [
+        (ReportModuleStage::Discovery, "discovery"),
+        (ReportModuleStage::Final, "final"),
+    ] {
+        let event = ReportEvent::ModuleParsed {
+            module: "app::mód".to_owned(),
+            stage,
+            tokens: 17,
+            outcome: ReportOutcome::Completed,
+        };
+
+        assert_eq!(render_event(&event, ReportDetail::Phases), "");
+        assert_eq!(render_event(&event, ReportDetail::Details), "");
+        assert_eq!(
+            render_event(&event, ReportDetail::Trace),
+            format!("skac: trace: {label} parsed module app::mód: 17 tokens, completed\n")
+        );
+
+        let mut details = RecordingObserver::new(ReportDetail::Details);
+        details.observe(event.clone());
+        assert!(details.events().is_empty());
+        let mut trace = RecordingObserver::new(ReportDetail::Trace);
+        trace.observe(event.clone());
+        assert_eq!(trace.events(), &[event]);
+    }
+}
+
+#[test]
 fn run_and_artifact_rendering_covers_every_scope_outcome_and_kind() {
     for scope in [ReportScope::Compilation, ReportScope::Driver] {
         for outcome in [ReportOutcome::Completed, ReportOutcome::Failed] {

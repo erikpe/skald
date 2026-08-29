@@ -9,10 +9,12 @@ progress. Completed roadmaps and resolved discovery records move to
 The [structured compiler reporting roadmap](STRUCTURED_REPORTING_ROADMAP.md) is
 in progress. REP0 established the typed event, metric, observer, and human
 rendering facade, and REP1 added observed request and singleton compilation
-through the complete compiler pipeline. REP2 is next and will publish honest
-phase-owned statistics. The roadmap depends on the implemented request driver
-and explicit compiler phase pipeline and has no dependency on another active
-roadmap.
+through the complete compiler pipeline. REP2 added deterministic phase-owned
+statistics, exact two-stage module-loading measurements, and trace module
+observations. REP3 is next and will integrate report selection, linking, and
+artifact reporting into the CLI. The roadmap depends on the implemented
+request driver and explicit compiler phase pipeline and has no dependency on
+another active roadmap.
 
 ## Pending discoveries
 

@@ -34,9 +34,12 @@ debugging and regression format, not a stable interchange format.
 Use `driver::compile_request_to_assembly_observed` or
 `driver::compile_source_to_assembly_observed` with a `RecordingObserver` to
 inspect request progress, phase outcomes, and elapsed durations as typed data.
-Metrics and artifact events remain planned. Reports do not replace
-deterministic dumps or structured source diagnostics. Delivery is tracked by
-the [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
+At `Details`, finish events also expose deterministic phase-owned metrics. At
+`Trace`, request compilation identifies every discovery and final parser
+execution by canonical logical module path. Artifact events and CLI selection
+remain planned. Reports do not replace deterministic dumps or structured
+source diagnostics. Delivery is tracked by the
+[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 
 When hand-built or future lowered MIR uses path-dependent state, the MIR dump
 prints a `PathConditions` table before the block list. Each row identifies the

@@ -7,8 +7,10 @@
 
 mod artifact;
 mod cli;
+mod observation;
 mod pipeline;
 mod request;
+mod statistics;
 mod toolchain;
 
 pub use cli::run_cli;

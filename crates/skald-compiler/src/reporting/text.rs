@@ -43,6 +43,21 @@ pub fn render_event(event: &ReportEvent, detail: ReportDetail) -> String {
                 }
             }
         }
+        ReportEvent::ModuleParsed {
+            module,
+            stage,
+            tokens,
+            outcome,
+        } => {
+            if detail.includes(ReportDetail::Trace) {
+                let _ = writeln!(
+                    rendered,
+                    "skac: trace: {} parsed module {module}: {tokens} tokens, {}",
+                    stage.label(),
+                    outcome.label()
+                );
+            }
+        }
         ReportEvent::ArtifactPublished { kind, path } => {
             let _ = writeln!(
                 rendered,

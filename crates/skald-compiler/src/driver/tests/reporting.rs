@@ -4,7 +4,8 @@ use crate::{
     backend::{emit_assembly, BackendInput},
     passes::run_mir_pipeline,
     reporting::{
-        RecordingObserver, ReportDetail, ReportEvent, ReportOutcome, ReportPhase, ReportScope,
+        MetricValue, RecordingObserver, ReportDetail, ReportEvent, ReportMetric, ReportModuleStage,
+        ReportOutcome, ReportPhase, ReportScope,
     },
     test_support::lower_source_to_final_mir,
 };
@@ -57,6 +58,10 @@ fn singleton_success_observes_every_owned_phase_and_compilation_total() {
         &completed(&SINGLETON_SUCCESS_PHASES),
         ReportOutcome::Completed,
     );
+    assert!(observer.events().iter().all(|event| !matches!(
+        event,
+        ReportEvent::PhaseFinished { metrics, .. } if !metrics.is_empty()
+    )));
 }
 
 #[test]
@@ -64,13 +69,14 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
     let workspace = TemporaryDirectory::new("observed-request").unwrap();
     let root = workspace.join("modules");
     fs::create_dir_all(&root).unwrap();
-    fs::write(root.join("app.ska"), "fn main() -> i64 { return 42; }\n").unwrap();
+    let source = "fn main() -> i64 { return 42; }\n";
+    fs::write(root.join("app.ska"), source).unwrap();
     let request = request(
         &workspace,
         root,
         EntrySelector::Module("app".parse().unwrap()),
     );
-    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let mut observer = RecordingObserver::new(ReportDetail::Trace);
 
     let artifact = compile_request_to_assembly_observed(&request, &mut observer).unwrap();
 
@@ -80,6 +86,164 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
         observer.events(),
         &completed(&REQUEST_SUCCESS_PHASES),
         ReportOutcome::Completed,
+    );
+    let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
+    assert_eq!(
+        observer
+            .events()
+            .iter()
+            .filter(|event| matches!(event, ReportEvent::ModuleParsed { .. }))
+            .cloned()
+            .collect::<Vec<_>>(),
+        vec![
+            ReportEvent::ModuleParsed {
+                module: "app".to_owned(),
+                stage: ReportModuleStage::Discovery,
+                tokens,
+                outcome: ReportOutcome::Completed,
+            },
+            ReportEvent::ModuleParsed {
+                module: "app".to_owned(),
+                stage: ReportModuleStage::Final,
+                tokens,
+                outcome: ReportOutcome::Completed,
+            },
+        ]
+    );
+    let loading_start = observer
+        .events()
+        .iter()
+        .position(|event| {
+            matches!(
+                event,
+                ReportEvent::PhaseStarted {
+                    phase: ReportPhase::ModuleLoading,
+                }
+            )
+        })
+        .unwrap();
+    let loading_finish = observer
+        .events()
+        .iter()
+        .position(|event| {
+            matches!(
+                event,
+                ReportEvent::PhaseFinished {
+                    phase: ReportPhase::ModuleLoading,
+                    ..
+                }
+            )
+        })
+        .unwrap();
+    assert!(observer.events()[loading_start + 1..loading_finish]
+        .iter()
+        .all(|event| matches!(event, ReportEvent::ModuleParsed { .. })));
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::ModuleLoading),
+        &[
+            ReportMetric::count("reached modules", 1),
+            ReportMetric::count("source reads", 1),
+            ReportMetric::bytes("source bytes", source.len() as u64),
+            ReportMetric::count("discovery lex executions", 1),
+            ReportMetric::count("discovery parse executions", 1),
+            ReportMetric::count("discovery tokens", tokens),
+            ReportMetric::count("final lex executions", 1),
+            ReportMetric::count("final parse executions", 1),
+            ReportMetric::count("final tokens", tokens),
+        ]
+    );
+}
+
+#[test]
+fn details_publish_deterministic_phase_owned_metrics() {
+    let source = "fn main() -> i64 { return 42; }";
+    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let artifact = compile_source_to_assembly_observed(
+        "metrics.ska",
+        source,
+        Target::X86_64SysV,
+        &mut observer,
+    )
+    .unwrap();
+    let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
+
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::Lexing),
+        &[
+            ReportMetric::count("lex executions", 1),
+            ReportMetric::bytes("source bytes", source.len() as u64),
+            ReportMetric::count("tokens", tokens),
+            ReportMetric::count("diagnostics", 0),
+            ReportMetric::count("warnings", 0),
+            ReportMetric::count("errors", 0),
+        ]
+    );
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::Resolution),
+        &[
+            ReportMetric::count("modules", 1),
+            ReportMetric::count("function declarations", 1),
+            ReportMetric::count("function definitions", 1),
+            ReportMetric::count("class declarations", 0),
+            ReportMetric::count("class definitions", 0),
+            ReportMetric::count("interface declarations", 0),
+            ReportMetric::count("diagnostics", 0),
+            ReportMetric::count("warnings", 0),
+            ReportMetric::count("errors", 0),
+        ]
+    );
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::TypeChecking),
+        &[
+            ReportMetric::count("modules", 1),
+            ReportMetric::count("function definitions", 1),
+            ReportMetric::count("class definitions", 0),
+            ReportMetric::count("diagnostics", 0),
+            ReportMetric::count("warnings", 0),
+            ReportMetric::count("errors", 0),
+        ]
+    );
+    let preliminary = phase_metrics(observer.events(), ReportPhase::PreliminaryMirLowering);
+    assert_eq!(preliminary[0], ReportMetric::count("definitions", 1));
+    assert_eq!(preliminary[1], ReportMetric::count("blocks", 1));
+    assert_eq!(
+        metric_names(preliminary),
+        ["definitions", "blocks", "instructions"]
+    );
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::StaticLifecyclePlanning,),
+        &[
+            ReportMetric::count("effect summaries", 1),
+            ReportMetric::count("dependencies", 0),
+            ReportMetric::count("activation fields", 0),
+            ReportMetric::count("shutdown fields", 0),
+            ReportMetric::count("static initializers", 0),
+        ]
+    );
+    let synthesis = phase_metrics(observer.events(), ReportPhase::StaticLifecycleSynthesis);
+    assert_eq!(synthesis[0], ReportMetric::count("definitions", 1));
+    assert_eq!(synthesis[1], ReportMetric::count("blocks", 1));
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::MirPipeline)[..2],
+        [
+            ReportMetric::count("verification executions", 1),
+            ReportMetric::count("pass executions", 0),
+        ]
+    );
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::MirPipeline)[2],
+        ReportMetric::count("definitions", 1)
+    );
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::MirPipeline)[3],
+        ReportMetric::count("blocks", 1)
+    );
+    assert_eq!(
+        phase_metrics(observer.events(), ReportPhase::BackendEmission),
+        &[
+            ReportMetric::bytes("assembly bytes", artifact.assembly.len() as u64),
+            ReportMetric::count("assembly lines", artifact.assembly.lines().count() as u64,),
+        ]
     );
 }
 
@@ -121,6 +285,20 @@ fn provider_and_loading_failures_stop_at_their_existing_boundaries() {
             (ReportPhase::ModuleLoading, ReportOutcome::Failed),
         ],
         ReportOutcome::Failed,
+    );
+    let loading_metrics = phase_metrics(loading_observer.events(), ReportPhase::ModuleLoading);
+    assert_eq!(
+        loading_metrics[0],
+        ReportMetric::count("reached modules", 0)
+    );
+    assert_eq!(loading_metrics[1], ReportMetric::count("source reads", 0));
+    assert_eq!(
+        metric_names(&loading_metrics[loading_metrics.len() - 3..]),
+        ["diagnostics", "warnings", "errors"]
+    );
+    assert_ne!(
+        loading_metrics.last().unwrap().value(),
+        MetricValue::Count(0)
     );
 }
 
@@ -168,6 +346,10 @@ fn singleton_source_failures_stop_after_the_owning_frontend_phase() {
             Err(CompilationError::Diagnostics(_))
         ));
         assert_observation(observer.events(), &expected, ReportOutcome::Failed);
+        let failed_phase = expected.last().unwrap().0;
+        assert!(phase_metrics(observer.events(), failed_phase)
+            .iter()
+            .any(|metric| metric.name() == "errors" && metric.value() != MetricValue::Count(0)));
     }
 }
 
@@ -197,13 +379,20 @@ fn lifecycle_planning_diagnostics_stop_before_planned_mir_verification() {
     let mut expected = completed(&SINGLETON_SUCCESS_PHASES[..6]);
     expected.push((ReportPhase::StaticLifecyclePlanning, ReportOutcome::Failed));
     assert_observation(observer.events(), &expected, ReportOutcome::Failed);
+    assert_eq!(
+        metric_names(phase_metrics(
+            observer.events(),
+            ReportPhase::StaticLifecyclePlanning,
+        )),
+        ["dependencies", "diagnostics", "warnings", "errors"]
+    );
 }
 
 #[test]
 fn malformed_mir_and_backend_errors_receive_failed_phase_outcomes() {
     let mut malformed_pipeline = malformed_final_mir();
     let mut mir_observer = RecordingObserver::new(ReportDetail::Phases);
-    let result = super::super::pipeline::observe_phase(
+    let result = super::super::observation::observe_phase(
         &mut mir_observer,
         ReportPhase::MirPipeline,
         || run_mir_pipeline(malformed_pipeline),
@@ -218,7 +407,7 @@ fn malformed_mir_and_backend_errors_receive_failed_phase_outcomes() {
 
     malformed_pipeline = malformed_final_mir();
     let mut backend_observer = RecordingObserver::new(ReportDetail::Phases);
-    let result = super::super::pipeline::observe_phase(
+    let result = super::super::observation::observe_phase(
         &mut backend_observer,
         ReportPhase::BackendEmission,
         || {
@@ -324,7 +513,7 @@ fn independent_observers_do_not_share_events_across_repeated_or_parallel_calls()
 fn phase_observation_does_not_convert_panics_into_compilation_failures() {
     let mut observer = RecordingObserver::new(ReportDetail::Phases);
     let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-        super::super::pipeline::observe_phase(
+        super::super::observation::observe_phase(
             &mut observer,
             ReportPhase::Resolution,
             || panic!("internal defect"),
@@ -364,30 +553,52 @@ fn completed(phases: &[ReportPhase]) -> Vec<(ReportPhase, ReportOutcome)> {
         .collect()
 }
 
+fn phase_metrics(events: &[ReportEvent], phase: ReportPhase) -> &[ReportMetric] {
+    events
+        .iter()
+        .find_map(|event| match event {
+            ReportEvent::PhaseFinished {
+                phase: finished,
+                metrics,
+                ..
+            } if *finished == phase => Some(metrics.as_slice()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("missing finished phase {phase:?}"))
+}
+
+fn metric_names(metrics: &[ReportMetric]) -> Vec<&'static str> {
+    metrics.iter().map(ReportMetric::name).collect()
+}
+
 fn assert_observation(
     events: &[ReportEvent],
     expected: &[(ReportPhase, ReportOutcome)],
     run_outcome: ReportOutcome,
 ) {
-    assert_eq!(events.len(), expected.len() * 2 + 1, "{events:#?}");
+    let phase_events = events
+        .iter()
+        .filter(|event| {
+            matches!(
+                event,
+                ReportEvent::PhaseStarted { .. } | ReportEvent::PhaseFinished { .. }
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(phase_events.len(), expected.len() * 2, "{events:#?}");
     for (index, (phase, outcome)) in expected.iter().copied().enumerate() {
         let offset = index * 2;
-        assert_eq!(events[offset], ReportEvent::PhaseStarted { phase });
+        assert_eq!(*phase_events[offset], ReportEvent::PhaseStarted { phase });
         let ReportEvent::PhaseFinished {
             phase: finished,
             outcome: actual,
-            metrics,
             ..
-        } = &events[offset + 1]
+        } = phase_events[offset + 1]
         else {
             panic!("phase start was not followed by a finish: {events:#?}");
         };
         assert_eq!(*finished, phase);
         assert_eq!(*actual, outcome);
-        assert!(
-            metrics.is_empty(),
-            "metrics belong to the next roadmap task"
-        );
     }
     assert!(matches!(
         events.last(),

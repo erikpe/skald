@@ -14,8 +14,8 @@ use super::{
         AMBIGUOUS_ENTRY_IDENTITY, AMBIGUOUS_MODULE, INVALID_ENTRY, MISSING_MODULE,
         MODULE_LOOKUP_FAILURE, MODULE_SOURCE_FAILURE, SELF_IMPORT,
     },
-    dump_module_graph, load_module_graph, CompilerDependencyKind, ModuleGraph,
-    ModuleGraphLoadFailure,
+    dump_module_graph, load_module_graph, load_module_graph_measured, CompilerDependencyKind,
+    ModuleGraph, ModuleGraphLoadFailure, ModuleLoadMeasurementOptions, ModuleParseStage,
 };
 
 fn directory(label: &str) -> TemporaryDirectory {
@@ -45,6 +45,20 @@ fn load(
 ) -> Result<ModuleGraph, ModuleGraphLoadFailure> {
     let providers = roots(working_directory, root_paths);
     load_module_graph(&entry, working_directory, &providers)
+}
+
+fn load_measured(
+    entry: EntrySelector,
+    working_directory: &Path,
+    root_paths: &[PathBuf],
+) -> super::MeasuredModuleGraphLoad {
+    let providers = roots(working_directory, root_paths);
+    load_module_graph_measured(
+        &entry,
+        working_directory,
+        &providers,
+        ModuleLoadMeasurementOptions::new(true, true),
+    )
 }
 
 fn codes(failure: &ModuleGraphLoadFailure) -> Vec<&'static str> {
@@ -91,6 +105,120 @@ fn logical_entry_loads_only_the_reachable_import_closure() {
     assert!(graph.find(&"app::main".parse().unwrap()).is_some());
     assert!(graph.find(&"dep::used".parse().unwrap()).is_some());
     assert!(graph.find(&"dep::unreachable".parse().unwrap()).is_none());
+}
+
+#[test]
+fn measured_loading_counts_real_discovery_and_final_frontend_work() {
+    let workspace = directory("graph-measurements");
+    let root = workspace.join("modules");
+    let app = concat!(
+        "import dep;\n",
+        "import dep;\n",
+        "fn main() -> i64 { \"x\"; return 0; } // é\n",
+    );
+    let dep = "import app;\npublic fn value() -> i64 { return 1; }\n";
+    let string = "public class Str {}\n";
+    source(&root, "app.ska", app);
+    source(&root, "dep.ska", dep);
+    source(&root, "std/str.ska", string);
+
+    let measured = load_measured(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    );
+    assert_eq!(measured.result.unwrap().modules().len(), 3);
+
+    let measurements = measured.measurements;
+    let expected_tokens = [app, dep, string]
+        .into_iter()
+        .map(|text| crate::test_support::lex_source(text).2.tokens.len() as u64)
+        .sum::<u64>();
+    assert_eq!(measurements.reached_modules(), 3);
+    assert_eq!(measurements.source_reads(), 3);
+    assert_eq!(
+        measurements.source_bytes(),
+        u64::try_from(app.len() + dep.len() + string.len()).unwrap()
+    );
+    assert_eq!(measurements.discovery_lex_executions(), 3);
+    assert_eq!(measurements.discovery_parse_executions(), 3);
+    assert_eq!(measurements.discovery_tokens(), expected_tokens);
+    assert_eq!(measurements.final_lex_executions(), 3);
+    assert_eq!(measurements.final_parse_executions(), 3);
+    assert_eq!(measurements.final_tokens(), expected_tokens);
+    assert_eq!(
+        measurements
+            .parses()
+            .iter()
+            .map(|parsed| (
+                parsed.module().to_string(),
+                parsed.stage(),
+                parsed.completed()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("app".to_owned(), ModuleParseStage::Discovery, true),
+            ("dep".to_owned(), ModuleParseStage::Discovery, true),
+            ("std::str".to_owned(), ModuleParseStage::Discovery, true),
+            ("app".to_owned(), ModuleParseStage::Final, true),
+            ("dep".to_owned(), ModuleParseStage::Final, true),
+            ("std::str".to_owned(), ModuleParseStage::Final, true),
+        ]
+    );
+}
+
+#[test]
+fn measured_loading_retains_completed_work_for_malformed_reached_sources() {
+    let workspace = directory("graph-failed-measurements");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        "import broken;\nfn main() -> i64 { return 0; }\n",
+    );
+    source(&root, "broken.ska", "fn broken(\n");
+
+    let measured = load_measured(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    );
+    assert!(measured.result.is_err());
+    assert_eq!(measured.measurements.reached_modules(), 2);
+    assert_eq!(measured.measurements.source_reads(), 2);
+    assert_eq!(measured.measurements.discovery_parse_executions(), 2);
+    assert_eq!(measured.measurements.final_parse_executions(), 2);
+    assert_eq!(
+        measured
+            .measurements
+            .parses()
+            .iter()
+            .filter(|parsed| !parsed.completed())
+            .map(|parsed| parsed.module().to_string())
+            .collect::<Vec<_>>(),
+        ["broken", "broken"]
+    );
+}
+
+#[test]
+fn disabled_loader_measurements_retain_no_optional_counts_or_trace_records() {
+    let workspace = directory("graph-disabled-measurements");
+    let root = workspace.join("modules");
+    source(&root, "app.ska", "fn main() -> i64 { return 0; }\n");
+    let providers = roots(workspace.path(), std::slice::from_ref(&root));
+
+    let measured = load_module_graph_measured(
+        &EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &providers,
+        ModuleLoadMeasurementOptions::default(),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        measured.measurements,
+        super::ModuleLoadMeasurements::default()
+    );
 }
 
 #[test]

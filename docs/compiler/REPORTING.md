@@ -3,8 +3,9 @@
 Status: authoritative for the frozen structured-reporting contract. The typed
 event and metric model, observer facade, recording and text observers, and
 human renderer are implemented. Observed request and singleton compilation
-APIs emit phase and compilation-total events. Phase-owned metrics, CLI
-selection, linking, and publication observation remain tracked by the
+APIs emit phase events, phase-owned metrics, trace module observations, and
+compilation totals. CLI selection, linking, and publication observation remain
+tracked by the
 [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 Current command-line behavior remains defined by
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) until the responsible roadmap
@@ -70,10 +71,11 @@ renders the actual failure exactly once through its existing owner.
 
 ### Report events
 
-A report event is a small typed operational observation. Initial event
-families are phase start, phase completion, artifact publication, and scoped
-run completion. Events may carry duration, outcome, and deterministically
-ordered metric values. They do not retain source text or large phase products.
+A report event is a small typed operational observation. Event families are
+phase start, phase completion, trace-level module parsing, artifact
+publication, and scoped run completion. Events may carry duration, outcome,
+and deterministically ordered metric values. They do not retain source text or
+large phase products.
 
 ### Dumps
 
@@ -150,6 +152,12 @@ pub enum ReportEvent {
         outcome: ReportOutcome,
         metrics: Vec<ReportMetric>,
     },
+    ModuleParsed {
+        module: String,
+        stage: ReportModuleStage,
+        tokens: u64,
+        outcome: ReportOutcome,
+    },
     ArtifactPublished {
         kind: ReportArtifactKind,
         path: PathBuf,
@@ -211,17 +219,22 @@ are defined `ReportPhase` identities but are not emitted until driver-level
 observation is implemented.
 
 Within request compilation, source reading, discovery lexing/parsing, and final
-lexing/parsing remain beneath module loading. Individual pass executions and
-loader work become detail events or owned metrics in later implementation.
+lexing/parsing remain beneath module loading. Their aggregate work is attached
+to the module-loading finish event at details level. Trace additionally emits
+one `ModuleParsed` event for each parser execution, with a typed `Discovery` or
+`Final` stage and canonical logical module path. It includes neither source
+contents nor physical filesystem metadata.
 
 Elapsed measurements use `std::time::Instant` and `Duration`. Wall-clock
 timestamps, time zones, process IDs, and thread IDs do not enter the event
 model. Each normally returning started phase produces exactly one completed or
-failed finish event with an empty metric vector for now. A source phase that
-returns terminal diagnostics is failed for reporting purposes even though the
-diagnostics remain ordinary data. No later phase starts after terminal failure.
-The final compilation-scoped `RunFinished` ends after assembly production or
-the terminal compiler failure and excludes host linking and publication.
+failed finish event. Details and trace observers receive that owner's stable
+metrics; phases-only observers receive an empty metric vector. A source phase
+that returns terminal diagnostics is failed for reporting purposes even though
+the diagnostics remain ordinary data. No later phase starts after terminal
+failure. The final compilation-scoped `RunFinished` ends after assembly
+production or the terminal compiler failure and excludes host linking and
+publication.
 
 Reporting does not turn a compiler panic into a normal compilation failure.
 Unwind and internal-defect policy remain unchanged.
@@ -237,33 +250,48 @@ The phase or pass that understands a count defines and populates it. The
 driver may aggregate typed values but does not parse dumps, assembly comments,
 or diagnostic wording to recover statistics.
 
-The initial useful metric families are:
+The implemented metrics appear in this deterministic owner order:
 
-| Owner | Metric family |
+| Phase | Successful finish metrics |
 |---|---|
-| Module loading | reached modules, source files read, source bytes, discovery lex/parse runs, final lex/parse runs, tokens processed |
-| Resolution | modules and stable declaration/specialization counts already represented by the resolved product |
-| Type checking | checked definitions, produced HIR definitions, warning count, error count |
-| MIR and lifecycle | definitions, blocks, operations, lifecycle plan nodes and edges, synthesized definitions |
-| MIR pass pipeline | pass executions, verification executions, and future pass-owned transformation counters |
-| Backend | emitted definitions or data when owned cheaply, assembly bytes, assembly lines |
-| Driver | link invocation and published artifact kind/size when cheaply available |
+| Singleton lexing | `lex executions`, `source bytes`, `tokens`, `diagnostics`, `warnings`, `errors` |
+| Singleton parsing | `parse executions`, `tokens`, `diagnostics`, `warnings`, `errors` |
+| Module loading | `reached modules`, `source reads`, `source bytes`, discovery lex/parse executions and tokens, then final lex/parse executions and tokens |
+| Resolution | modules, function declarations/definitions, class declarations/definitions, interface declarations, diagnostics, warnings, errors |
+| Type checking | produced HIR modules and function/class definitions, then diagnostics, warnings, errors; failed checking has only diagnostic metrics because it produces no HIR |
+| Preliminary MIR lowering | definitions, blocks, instructions |
+| MIR verification boundaries | verification executions; failed verification also includes verification errors |
+| Static-lifecycle planning | effect summaries, dependencies, activation fields, shutdown fields, static initializers |
+| Static-lifecycle synthesis | final MIR definitions, blocks, instructions, followed by lifecycle definitions and activation/shutdown regions when present |
+| MIR pass pipeline | verification executions, pass executions, then final MIR definitions, blocks, instructions |
+| Backend emission | assembly bytes, assembly lines |
 
-This inventory defines ownership, not a requirement to expose every candidate
-before its meaning is stable. A metric enters the initial implementation only
-when its owner can state and test the count without exposing unstable private
-representation.
+A failed loader retains completed loader counters before diagnostic counts. A
+failed lifecycle plan retains the dependency and diagnostic counts it actually
+produced. Phases that fail before producing a count do not invent one.
 
-Module loading must account for actual work. The current loader lexes and
-parses each staged source once during dependency discovery and again after the
-final source database is assembled. Reports therefore distinguish discovery
-and final executions or clearly report their sum. They never imply that N
-reached modules means only N parser runs.
+Module loading accounts for actual work. `source reads` counts attempted source
+reads; `reached modules` counts successfully decoded and staged logical
+modules; `source bytes` counts their UTF-8 bytes. The loader lexes each staged
+source once during dependency discovery and again after the final source
+database is assembled. It invokes the parser after each successful lex, even
+when parsing then produces diagnostics. Discovery and final counters are
+therefore separate. Token totals count the actual token vectors, including the
+required EOF sentinel, and never imply that N reached modules means only N
+parser runs.
 
-Future transformation passes return their program plus pass-owned statistics.
-They do not format sentences or call a global logger. The pipeline attaches
-pass identity, duration, outcome, and counters to events. A pass without useful
-counters may still emit completion timing at trace detail.
+Metrics requiring diagnostic or MIR traversal, assembly line scanning,
+allocation, or formatting are constructed only after a `Details` or `Trace`
+query succeeds. Trace module records are collected only for `Trace`. Quiet and
+phases-only compilation performs no report-only product scan, sort, or text
+formatting; already-known phase execution counts remain local to the observed
+adapter.
+
+The current MIR pipeline performs one verification and zero transforming pass
+executions. Future transformation passes return their program plus pass-owned
+statistics to the pipeline coordinator. They do not format sentences or call a
+global logger. The pipeline owns execution counts and attaches the resulting
+counters to its finish event.
 
 ## CLI selection
 

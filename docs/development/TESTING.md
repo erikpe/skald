@@ -141,8 +141,12 @@ event, metric, observer, renderer, filtering, path, and writer-error invariants
 to implemented compiler unit tests. The compiler public-API integration test
 owns intentional reporting and observed driver facade paths. Driver reporting
 tests own request/singleton phase order, source and internal failure cutoffs,
-compilation totals, result compatibility, panic policy, and independent caller
-composition. Option, stream, status, diagnostic-display, and quiet-default
+compilation totals, result compatibility, panic policy, independent caller
+composition, exact metric order, detail gating, and trace module events.
+Module-loader tests own real discovery/final execution counts across duplicate,
+compiler-injected, cyclic, malformed, and UTF-8 sources. MIR model and pass
+tests own definition/block/instruction and verification/pass counts. Option,
+stream, status, diagnostic-display, and quiet-default
 behavior remains a real-binary-test responsibility. Those later suites are
 tracked in the
 [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).

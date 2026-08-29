@@ -56,10 +56,11 @@ The returned report owns every reached source and diagnostic.
 
 The observed request and singleton forms emit typed start/finish events at
 these existing boundaries plus one compilation total. Source-diagnostic
-failures produce a failed owning phase and stop later phase starts. Metrics are
-empty until their phase owners publish stable counts. The quiet forms delegate
-through `NoopObserver`; observation does not change returned assembly,
-diagnostics, failure categories, or source ownership.
+failures produce a failed owning phase and stop later phase starts. Details
+observers receive deterministic phase-owned metrics, and trace observers also
+receive discovery/final module parse events. The quiet forms delegate through
+`NoopObserver`; observation does not change returned assembly, diagnostics,
+failure categories, or source ownership.
 
 Both public compilation adapters request closed-world target artifact
 retention. Verified HIR and MIR stay complete, while functions and data not

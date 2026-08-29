@@ -59,7 +59,10 @@ diagnostic, identity, or IR registry.
 The frozen [structured reporting contract](REPORTING.md) observes this
 pipeline through a request-scoped interface without entering phase products or
 changing their ownership. Direct public phase paths remain independent from
-reporting; observation belongs to driver composition.
+reporting; observation belongs to driver composition. Details metrics inspect
+stable product tables and executable MIR shape only after the observer requests
+them, while already-known loader and pass execution counts remain sidecars of
+their owning orchestration boundaries.
 
 `HirForIn` carries one exhaustive execution plan. `Protocol` retains the
 selected iterable receiver, state, optional result, item lifecycle, and call

@@ -369,8 +369,8 @@ fn intentional_reporting_paths_compose() {
 
     use skald_compiler::reporting::{
         render_event, MetricValue, NoopObserver, RecordingObserver, ReportArtifactKind,
-        ReportDetail, ReportEvent, ReportMetric, ReportObserver, ReportOutcome, ReportPhase,
-        ReportScope, TextObserver,
+        ReportDetail, ReportEvent, ReportMetric, ReportModuleStage, ReportObserver, ReportOutcome,
+        ReportPhase, ReportScope, TextObserver,
     };
 
     let metric = ReportMetric::new("source bytes", MetricValue::Bytes(512));
@@ -427,6 +427,12 @@ fn intentional_reporting_paths_compose() {
     let _artifact = ReportEvent::ArtifactPublished {
         kind: ReportArtifactKind::Assembly,
         path: PathBuf::from("program.s"),
+    };
+    let _module = ReportEvent::ModuleParsed {
+        module: "app".to_owned(),
+        stage: ReportModuleStage::Discovery,
+        tokens: 1,
+        outcome: ReportOutcome::Completed,
     };
     let _run = ReportEvent::RunFinished {
         scope: ReportScope::Compilation,

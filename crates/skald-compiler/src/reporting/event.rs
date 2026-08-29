@@ -79,6 +79,22 @@ impl ReportOutcome {
     }
 }
 
+/// Which of the loader's two real parser executions produced an observation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReportModuleStage {
+    Discovery,
+    Final,
+}
+
+impl ReportModuleStage {
+    pub(super) const fn label(self) -> &'static str {
+        match self {
+            Self::Discovery => "discovery",
+            Self::Final => "final",
+        }
+    }
+}
+
 /// The extent covered by an aggregate completion event.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReportScope {
@@ -125,6 +141,12 @@ pub enum ReportEvent {
         outcome: ReportOutcome,
         metrics: Vec<ReportMetric>,
     },
+    ModuleParsed {
+        module: String,
+        stage: ReportModuleStage,
+        tokens: u64,
+        outcome: ReportOutcome,
+    },
     ArtifactPublished {
         kind: ReportArtifactKind,
         path: PathBuf,
@@ -134,4 +156,16 @@ pub enum ReportEvent {
         elapsed: Duration,
         outcome: ReportOutcome,
     },
+}
+
+impl ReportEvent {
+    pub(super) const fn detail(&self) -> ReportDetail {
+        match self {
+            Self::ModuleParsed { .. } => ReportDetail::Trace,
+            Self::PhaseStarted { .. }
+            | Self::PhaseFinished { .. }
+            | Self::ArtifactPublished { .. }
+            | Self::RunFinished { .. } => ReportDetail::Phases,
+        }
+    }
 }

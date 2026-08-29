@@ -15,6 +15,7 @@ pub(crate) mod test_fixtures;
 
 pub use dump::{dump_mir, dump_preliminary_mir};
 pub use lower::{lower_hir, lower_preliminary_hir};
+pub(crate) use model::MirProgramStatistics;
 pub use model::{
     BlockId, MirAggregateOptionalAssign, MirAggregateOptionalCleanup,
     MirAggregateOptionalInitialize, MirAggregateOptionalPublish, MirAggregateOptionalSource,

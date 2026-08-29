@@ -22,6 +22,7 @@ mod primitive;
 mod shared;
 mod shift;
 mod static_lifecycle;
+mod statistics;
 mod strings;
 mod value;
 
@@ -113,6 +114,7 @@ pub use static_lifecycle::{
     StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
     StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
 };
+pub(crate) use statistics::MirProgramStatistics;
 pub use strings::{
     MirLiteralData, MirLiteralDataTable, MirStaticAllocationOrigin, MirStaticDataMutability,
     MirStringInitialize, MirStringLanguageItem,

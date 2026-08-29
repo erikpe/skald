@@ -8,10 +8,11 @@ use crate::{
     lexer::lex,
     mir::{lower_preliminary_hir, verify_preliminary_mir},
     module::{
-        load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
+        load_module_graph_measured, normalize_provider_roots, ModuleGraph,
+        ModuleLoadMeasurementOptions, ProviderNormalizationError,
     },
     passes::{
-        run_mir_pipeline,
+        run_mir_pipeline_measured,
         static_lifecycle::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
         },
@@ -26,7 +27,10 @@ use crate::{
     typeck::type_check,
 };
 
-use super::CompilationRequest;
+use super::{
+    observation::{observe_phase, observe_phase_with_metrics},
+    statistics, CompilationRequest,
+};
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -79,19 +83,25 @@ pub fn compile_request_to_assembly_observed(
             result_outcome,
         )
         .map_err(CompilationError::ProviderConfiguration)?;
-        let graph = observe_phase(
+        let measurement_options = ModuleLoadMeasurementOptions::new(
+            observer.enabled(ReportDetail::Details),
+            observer.enabled(ReportDetail::Trace),
+        );
+        let loaded = observe_phase_with_metrics(
             observer,
             ReportPhase::ModuleLoading,
             || {
-                load_module_graph(
+                load_module_graph_measured(
                     request.entry(),
                     request.environment().working_directory(),
                     &providers,
+                    measurement_options,
                 )
             },
-            result_outcome,
-        )
-        .map_err(|failure| {
+            |measured| result_outcome(&measured.result),
+            statistics::module_loading_metrics,
+        );
+        let graph = loaded.result.map_err(|failure| {
             let (sources, diagnostics) = failure.into_parts();
             diagnostic_failure(sources, diagnostics)
         })?;
@@ -127,18 +137,23 @@ pub fn compile_source_to_assembly_observed(
         let source_id = sources.add(path, text);
         let mut diagnostics = Diagnostics::new();
 
-        let lexed = observe_phase(
+        let source_bytes = sources
+            .get(source_id)
+            .expect("source was just inserted")
+            .len();
+        let lexed = observe_phase_with_metrics(
             observer,
             ReportPhase::Lexing,
             || lex(sources.get(source_id).expect("source was just inserted")),
             |output| diagnostics_outcome(&output.diagnostics),
+            |output, _| statistics::lexing_metrics(output, source_bytes),
         );
         diagnostics.append(lexed.diagnostics);
         if diagnostics.has_errors() {
             return Err(diagnostic_failure(sources, diagnostics));
         }
 
-        let parsed = observe_phase(
+        let parsed = observe_phase_with_metrics(
             observer,
             ReportPhase::Parsing,
             || {
@@ -148,17 +163,19 @@ pub fn compile_source_to_assembly_observed(
                 )
             },
             |output| diagnostics_outcome(&output.diagnostics),
+            |output, _| statistics::parsing_metrics(output, lexed.tokens.len()),
         );
         diagnostics.append(parsed.diagnostics);
         if diagnostics.has_errors() {
             return Err(diagnostic_failure(sources, diagnostics));
         }
 
-        let resolved = observe_phase(
+        let resolved = observe_phase_with_metrics(
             observer,
             ReportPhase::Resolution,
             || resolve_with_source_path(&parsed.ast, path),
             |output| diagnostics_outcome(&output.diagnostics),
+            |output, _| statistics::resolution_metrics(&output.program, &output.diagnostics),
         );
         diagnostics.append(resolved.diagnostics);
         finish_compilation(
@@ -178,11 +195,12 @@ fn compile_module_graph_to_assembly(
     runtime_trace: RuntimeTracePolicy,
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
-    let resolved = observe_phase(
+    let resolved = observe_phase_with_metrics(
         observer,
         ReportPhase::Resolution,
         || resolve_module_graph(&graph),
         |output| diagnostics_outcome(&output.diagnostics),
+        |output, _| statistics::resolution_metrics(&output.program, &output.diagnostics),
     );
     let sources = graph.into_sources();
     finish_compilation(
@@ -207,11 +225,12 @@ fn finish_compilation(
         return Err(diagnostic_failure(sources, diagnostics));
     }
 
-    let checked = observe_phase(
+    let checked = observe_phase_with_metrics(
         observer,
         ReportPhase::TypeChecking,
         || type_check(&resolved),
         |output| diagnostics_outcome(&output.diagnostics),
+        |output, _| statistics::type_checking_metrics(output),
     );
     diagnostics.append(checked.diagnostics);
     if diagnostics.has_errors() {
@@ -220,24 +239,27 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    let preliminary = observe_phase(
+    let preliminary = observe_phase_with_metrics(
         observer,
         ReportPhase::PreliminaryMirLowering,
         || lower_preliminary_hir(&hir),
         |_| ReportOutcome::Completed,
+        |program, _| statistics::preliminary_mir_metrics(program),
     );
-    observe_phase(
+    observe_phase_with_metrics(
         observer,
         ReportPhase::PreliminaryMirVerification,
         || verify_preliminary_mir(&preliminary),
         result_outcome,
+        |result, _| statistics::verification_metrics(result),
     )
     .map_err(CompilationError::MirVerification)?;
-    let planned = match observe_phase(
+    let planned = match observe_phase_with_metrics(
         observer,
         ReportPhase::StaticLifecyclePlanning,
         || plan_static_lifetimes(preliminary),
         result_outcome,
+        |result, _| statistics::lifecycle_planning_metrics(result),
     ) {
         Ok(planned) => planned,
         Err(failure) => {
@@ -245,28 +267,33 @@ fn finish_compilation(
             return Err(diagnostic_failure(sources, diagnostics));
         }
     };
-    observe_phase(
+    observe_phase_with_metrics(
         observer,
         ReportPhase::PlannedMirVerification,
         || verify_planned_mir(&planned),
         result_outcome,
+        |result, _| statistics::verification_metrics(result),
     )
     .map_err(CompilationError::MirVerification)?;
-    let mir = observe_phase(
+    let mir = observe_phase_with_metrics(
         observer,
         ReportPhase::StaticLifecycleSynthesis,
         || synthesize_static_lifecycle(planned),
         result_outcome,
+        |result, _| statistics::lifecycle_synthesis_metrics(result),
     )
     .map_err(CompilationError::MirVerification)?;
-    let mir = observe_phase(
+    let measured_pipeline = observe_phase_with_metrics(
         observer,
         ReportPhase::MirPipeline,
-        || run_mir_pipeline(mir),
-        result_outcome,
-    )
-    .map_err(CompilationError::MirVerification)?;
-    let assembly = observe_phase(
+        || run_mir_pipeline_measured(mir),
+        |measured| result_outcome(&measured.result),
+        |measured, _| statistics::mir_pipeline_metrics(measured),
+    );
+    let mir = measured_pipeline
+        .result
+        .map_err(CompilationError::MirVerification)?;
+    let assembly = observe_phase_with_metrics(
         observer,
         ReportPhase::BackendEmission,
         || {
@@ -278,6 +305,7 @@ fn finish_compilation(
             emit_assembly(target, input)
         },
         result_outcome,
+        |result, _| statistics::backend_metrics(result),
     )
     .map_err(CompilationError::Backend)?;
 
@@ -303,28 +331,6 @@ fn observe_compilation<T>(
             outcome: result_outcome(&result),
         });
     }
-    result
-}
-
-pub(super) fn observe_phase<T>(
-    observer: &mut dyn ReportObserver,
-    phase: ReportPhase,
-    operation: impl FnOnce() -> T,
-    outcome: impl FnOnce(&T) -> ReportOutcome,
-) -> T {
-    if !observer.enabled(ReportDetail::Phases) {
-        return operation();
-    }
-
-    let started = Instant::now();
-    observer.observe(ReportEvent::PhaseStarted { phase });
-    let result = operation();
-    observer.observe(ReportEvent::PhaseFinished {
-        phase,
-        elapsed: started.elapsed(),
-        outcome: outcome(&result),
-        metrics: Vec::new(),
-    });
     result
 }
 

@@ -13,6 +13,10 @@ pub use graph::{
     dump_module_graph, load_module_graph, CompilerDependencyEvidence, CompilerDependencyKind,
     LoadedModule, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge,
 };
+pub(crate) use graph::{
+    load_module_graph_measured, MeasuredModuleGraphLoad, ModuleLoadMeasurementOptions,
+    ModuleLoadMeasurements, ModuleParseStage,
+};
 pub use metadata::{ProgramModuleTable, ProgramModuleTableError};
 pub use path::{ModulePath, ModulePathError, ModulePathErrorKind};
 pub use provenance::{ModuleProvenance, ModuleSourceLocation};

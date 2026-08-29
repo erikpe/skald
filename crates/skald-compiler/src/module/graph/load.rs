@@ -14,6 +14,10 @@ use super::{
         append_pending_diagnostics, entry_failure, self_import_diagnostic, PendingLoadError,
     },
     entry::{select_entry, LoaderProviders},
+    measurement::{
+        MeasuredModuleGraphLoad, ModuleLoadMeasurementOptions, ModuleLoadMeasurements,
+        ModuleParseStage,
+    },
     model::{
         CompilerDependencyEvidence, CompilerDependencyKind, LoadedModule, ModuleGraph,
         ModuleGraphLoadFailure, ModuleImportEdge,
@@ -32,6 +36,35 @@ pub fn load_module_graph(
     entry: &EntrySelector,
     working_directory: &Path,
     providers: &ProviderSet,
+) -> Result<ModuleGraph, ModuleGraphLoadFailure> {
+    load_module_graph_measured(
+        entry,
+        working_directory,
+        providers,
+        ModuleLoadMeasurementOptions::default(),
+    )
+    .result
+}
+
+pub(crate) fn load_module_graph_measured(
+    entry: &EntrySelector,
+    working_directory: &Path,
+    providers: &ProviderSet,
+    options: ModuleLoadMeasurementOptions,
+) -> MeasuredModuleGraphLoad {
+    let mut measurements = ModuleLoadMeasurements::new(options);
+    let result = load_module_graph_impl(entry, working_directory, providers, &mut measurements);
+    MeasuredModuleGraphLoad {
+        result,
+        measurements,
+    }
+}
+
+fn load_module_graph_impl(
+    entry: &EntrySelector,
+    working_directory: &Path,
+    providers: &ProviderSet,
+    measurements: &mut ModuleLoadMeasurements,
 ) -> Result<ModuleGraph, ModuleGraphLoadFailure> {
     let selected = match select_entry(entry, working_directory, providers) {
         Ok(selected) => selected,
@@ -57,8 +90,12 @@ pub fn load_module_graph(
         }
         let candidate = pending.candidate;
         let text = match fs::read_to_string(candidate.canonical_io_path()) {
-            Ok(text) => text,
+            Ok(text) => {
+                measurements.record_source_read(Some(text.len()));
+                text
+            }
             Err(error) => {
+                measurements.record_source_read(None);
                 pending_errors.push(PendingLoadError::Source {
                     module_path,
                     candidate,
@@ -68,7 +105,12 @@ pub fn load_module_graph(
                 continue;
             }
         };
-        let discovered = discover_dependencies(candidate.display_source_path(), &text);
+        let discovered = discover_dependencies(
+            &module_path,
+            candidate.display_source_path(),
+            &text,
+            measurements,
+        );
         let dependencies = discovered
             .as_ref()
             .map(|parsed| dependency_occurrences(&parsed.ast, &parsed.compiler_dependency_ranges))
@@ -110,7 +152,7 @@ pub fn load_module_graph(
         }
     }
 
-    finalize_graph(entry_path, staged, pending_errors)
+    finalize_graph(entry_path, staged, pending_errors, measurements)
 }
 
 struct StagedModule {
@@ -123,20 +165,36 @@ struct PendingModule {
     imported_from: Option<(ModulePath, TextRange)>,
 }
 
-fn discover_dependencies(path: &Path, text: &str) -> Option<ParsedModule> {
+fn discover_dependencies(
+    module_path: &ModulePath,
+    path: &Path,
+    text: &str,
+    measurements: &mut ModuleLoadMeasurements,
+) -> Option<ParsedModule> {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add(path, text);
-    parse_source(&sources, source_id).0
+    parse_source(
+        &sources,
+        source_id,
+        module_path,
+        ModuleParseStage::Discovery,
+        measurements,
+    )
+    .0
 }
 
 fn parse_source(
     sources: &SourceDatabase,
     source_id: SourceId,
+    module_path: &ModulePath,
+    stage: ModuleParseStage,
+    measurements: &mut ModuleLoadMeasurements,
 ) -> (Option<ParsedModule>, Diagnostics) {
     let source = sources
         .get(source_id)
         .expect("the loader parses an inserted source");
     let lexed = lex(source);
+    measurements.record_lex(stage, lexed.tokens.len());
     let mut diagnostics = lexed.diagnostics;
     if diagnostics.has_errors() {
         return (None, diagnostics);
@@ -156,6 +214,12 @@ fn parse_source(
             .push(token.span.range());
     }
     diagnostics.append(parsed.diagnostics);
+    measurements.record_parse(
+        module_path,
+        stage,
+        lexed.tokens.len(),
+        !diagnostics.has_errors(),
+    );
     if diagnostics.has_errors() {
         (None, diagnostics)
     } else {
@@ -251,6 +315,7 @@ fn finalize_graph(
     entry_path: ModulePath,
     staged: BTreeMap<ModulePath, StagedModule>,
     pending_errors: Vec<PendingLoadError>,
+    measurements: &mut ModuleLoadMeasurements,
 ) -> Result<ModuleGraph, ModuleGraphLoadFailure> {
     let mut sources = SourceDatabase::new();
     let mut source_ids = BTreeMap::new();
@@ -263,7 +328,13 @@ fn finalize_graph(
     let mut finalized = Vec::new();
     for (path, module) in staged {
         let source_id = source_ids[&path];
-        let (parsed, source_diagnostics) = parse_source(&sources, source_id);
+        let (parsed, source_diagnostics) = parse_source(
+            &sources,
+            source_id,
+            &path,
+            ModuleParseStage::Final,
+            measurements,
+        );
         diagnostics.append(source_diagnostics);
         if let Some(parsed) = parsed {
             finalized.push(FinalizedModule {

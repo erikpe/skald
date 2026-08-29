@@ -2,14 +2,16 @@
 //!
 //! Reporting is operational data rather than source diagnostics or phase
 //! dumps. The typed model and observers are available to repository tools,
-//! but compiler phases and the command-line driver do not emit events yet.
+//! and observed compiler adapters emit phase, metric, trace, and total events.
+//! The command-line driver does not select or render them yet.
 
 mod event;
 mod metrics;
 mod text;
 
 pub use event::{
-    ReportArtifactKind, ReportDetail, ReportEvent, ReportOutcome, ReportPhase, ReportScope,
+    ReportArtifactKind, ReportDetail, ReportEvent, ReportModuleStage, ReportOutcome, ReportPhase,
+    ReportScope,
 };
 pub use metrics::{MetricValue, ReportMetric};
 pub use text::{render_event, TextObserver};
@@ -71,7 +73,7 @@ impl ReportObserver for RecordingObserver {
     }
 
     fn observe(&mut self, event: ReportEvent) {
-        if self.detail.includes(ReportDetail::Phases) {
+        if self.detail.includes(event.detail()) {
             self.events.push(event);
         }
     }
