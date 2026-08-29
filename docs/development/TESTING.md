@@ -137,12 +137,13 @@ Reusable non-Rust compiler corpus data belongs under `tests/compiler/`.
 Production crates must not depend on the top-level test tree at runtime.
 
 The frozen [structured reporting contract](../compiler/REPORTING.md) assigns
-event, metric, observer, and renderer invariants to compiler unit tests;
-cross-phase observation to compiler integration tests; and option, stream,
-status, diagnostic-display, and quiet-default behavior to real-binary tests.
-These suites are planned in the
-[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md), not
-present behavior yet.
+event, metric, observer, renderer, filtering, path, and writer-error invariants
+to implemented compiler unit tests. The compiler public-API integration test
+owns intentional reporting facade paths. Cross-phase observation remains a
+compiler integration-test responsibility; option, stream, status,
+diagnostic-display, and quiet-default behavior remains a real-binary-test
+responsibility. Those later suites are tracked in the
+[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 
 ## Selecting coverage
 

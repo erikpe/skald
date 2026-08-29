@@ -355,3 +355,60 @@ fn intentional_driver_paths_compile() {
         .assembly
         .contains(".Lska_optional_box_0_finalize"));
 }
+
+#[test]
+fn intentional_reporting_paths_compose() {
+    use std::{path::PathBuf, time::Duration};
+
+    use skald_compiler::reporting::{
+        render_event, MetricValue, NoopObserver, RecordingObserver, ReportArtifactKind,
+        ReportDetail, ReportEvent, ReportMetric, ReportObserver, ReportOutcome, ReportPhase,
+        ReportScope, TextObserver,
+    };
+
+    let metric = ReportMetric::new("source bytes", MetricValue::Bytes(512));
+    assert_eq!(metric.name(), "source bytes");
+    assert_eq!(metric.value(), MetricValue::Bytes(512));
+
+    let finished = ReportEvent::PhaseFinished {
+        phase: ReportPhase::ModuleLoading,
+        elapsed: Duration::from_millis(2),
+        outcome: ReportOutcome::Completed,
+        metrics: vec![metric, ReportMetric::count("modules", 1)],
+    };
+    let mut recording = RecordingObserver::new(ReportDetail::Trace);
+    assert!(recording.enabled(ReportDetail::Details));
+    recording.observe(finished.clone());
+    assert_eq!(recording.events(), std::slice::from_ref(&finished));
+    assert_eq!(recording.into_events(), vec![finished.clone()]);
+
+    let mut rendered = TextObserver::new(Vec::new(), ReportDetail::Details);
+    rendered.observe(finished.clone());
+    assert!(rendered.error().is_none());
+    assert_eq!(rendered.detail(), ReportDetail::Details);
+    let (bytes, error) = rendered.into_parts();
+    assert!(error.is_none());
+    assert_eq!(
+        String::from_utf8(bytes).unwrap(),
+        render_event(&finished, ReportDetail::Details)
+    );
+
+    let mut noop = NoopObserver;
+    let observer: &mut dyn ReportObserver = &mut noop;
+    observer.observe(ReportEvent::PhaseStarted {
+        phase: ReportPhase::ProviderNormalization,
+    });
+
+    let _artifact = ReportEvent::ArtifactPublished {
+        kind: ReportArtifactKind::Assembly,
+        path: PathBuf::from("program.s"),
+    };
+    let _run = ReportEvent::RunFinished {
+        scope: ReportScope::Compilation,
+        elapsed: Duration::ZERO,
+        outcome: ReportOutcome::Failed,
+    };
+    let _remaining_details = [ReportDetail::Off, ReportDetail::Phases];
+    let _remaining_scopes = [ReportScope::Driver];
+    let _remaining_artifacts = [ReportArtifactKind::Executable, ReportArtifactKind::Dump];
+}

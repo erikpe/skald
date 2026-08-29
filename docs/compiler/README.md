@@ -383,15 +383,16 @@ The crate exposes responsibility-oriented facades:
 | `module` | validated logical module paths and request-local module provenance |
 | `backend` | target registry and assembly-emission boundary |
 | `driver` | typed compilation requests, complete one-source compilation, and command-line orchestration |
+| `reporting` | typed operational events and metrics, request-local observers, and deterministic human rendering |
 
 These namespaces, rather than private source files, are the supported way for
 repository consumers to cross a compiler boundary. Facades use explicit
 re-exports; implementation modules, state machines, table storage, builders,
 and target internals remain private.
 
-The reporting contract reserves `reporting` as a future facade with explicit
-re-exports over private event, metric, and text-renderer modules. It is omitted
-from the table because no reporting API is implemented yet.
+The reporting facade is implemented with explicit re-exports over private
+event, metric, and text-renderer modules. Compiler phases and the driver do not
+emit events yet, so its current consumers are tests and repository tools.
 
 Public phase-product fields allow inspection and phase-specific debugging.
 They do not make arbitrary constructed or mutated AST, resolved IR, HIR, or

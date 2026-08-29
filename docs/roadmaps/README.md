@@ -6,7 +6,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The [structured compiler reporting roadmap](STRUCTURED_REPORTING_ROADMAP.md) is
+in progress. REP0 established the typed event, metric, observer, and human
+rendering facade; REP1 is next and will observe the complete compilation
+pipeline. The roadmap depends on the implemented request driver and explicit
+compiler phase pipeline and has no dependency on another active roadmap.
 
 ## Pending discoveries
 
@@ -18,11 +22,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The [structured compiler reporting roadmap](STRUCTURED_REPORTING_ROADMAP.md) is
-planned; REP0 is next. It delivers the frozen request-scoped event, metric,
-timing, rendering, and CLI-selection contract in five ordered, PR-sized tasks.
-It depends on the implemented request driver and explicit compiler phase
-pipeline and has no dependency on another active roadmap.
+No other implementation roadmap is currently planned.
 
 ## Design proposals
 

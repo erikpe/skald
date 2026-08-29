@@ -1,8 +1,10 @@
 # Structured Compiler Reporting
 
-Status: authoritative for the frozen structured-reporting contract and planned
-compiler/driver boundary. The contract is not yet implemented; delivery is
-tracked by the [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
+Status: authoritative for the frozen structured-reporting contract. The typed
+event and metric model, observer facade, recording and text observers, and
+human renderer are implemented. Compiler phases and the command-line driver do
+not emit report events yet; their delivery is tracked by the
+[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 Current command-line behavior remains defined by
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) until the responsible roadmap
 tasks update it.
@@ -13,11 +15,11 @@ time, aggregate and pass-owned statistics, and artifact publication. Source
 diagnostics, driver errors, deterministic phase dumps, generated artifacts,
 and runtime program output retain their existing owners.
 
-The design is request-scoped and event-first. Compiler work emits typed events
-to an explicitly supplied observer. The CLI may render selected events as
-human text on stderr, while tests and repository tools may collect the same
-events as typed data. No process-global logger, subscriber, or environment
-setting controls compiler behavior.
+The design is request-scoped and event-first. The implemented facade lets
+repository tools construct, record, and render owned typed events without
+global state. Planned compiler work will emit those events to an explicitly
+supplied observer, and the CLI will render selected events as human text on
+stderr.
 
 ## Contract boundary
 
@@ -82,7 +84,7 @@ the dump contents never become a trace-level message.
 
 ## Request-scoped observer composition
 
-The reporting facade exposes an object-safe observer equivalent in shape to:
+The reporting facade exposes this object-safe observer:
 
 ```rust
 pub trait ReportObserver {
@@ -91,12 +93,13 @@ pub trait ReportObserver {
 }
 ```
 
-The exact private representation may evolve, but the contract requires an
-`enabled` query and owned typed events. Owners use the query before computing
-optional detailed statistics.
+`NoopObserver` disables all detail and discards events. `RecordingObserver`
+owns events in emission order at a selected detail level. `TextObserver<W>`
+renders to any `std::io::Write`. Owners use `enabled` before computing optional
+detailed statistics.
 
-The driver facade preserves its current quiet compilation functions and adds
-observed counterparts:
+The planned driver integration preserves its current quiet compilation
+functions and adds observed counterparts:
 
 ```rust
 pub fn compile_request_to_assembly(
@@ -109,10 +112,10 @@ pub fn compile_request_to_assembly_observed(
 ) -> Result<AssemblyArtifact, CompilationError>;
 ```
 
-The quiet function delegates through a no-op observer. The in-memory
-`compile_source_to_assembly` adapter receives the same pair of quiet and
-observed surfaces so its lexing and parsing work is visible to repository
-tools without filesystem module loading.
+Once pipeline integration lands, the quiet function will delegate through a
+no-op observer. The in-memory `compile_source_to_assembly` adapter will receive
+the same pair of quiet and observed surfaces so its lexing and parsing work is
+visible to repository tools without filesystem module loading.
 
 The observer is an invocation service, not semantic request configuration. It
 does not live inside `CompilationRequest`, participate in `Clone` or `Eq`,
@@ -120,12 +123,12 @@ affect deterministic request identity, or enter a phase product. Passing it
 explicitly permits separate callers and future concurrent outer tooling to use
 independent sinks.
 
-`observe` is infallible from the compiler's perspective. A recording observer
-has no I/O. A writer-backed text observer remembers its first write failure,
-stops attempting output, and lets the process driver retrieve the error after
-compilation. Command-output failure therefore retains exit status 74 without
-adding presentation failures to `CompilationError` or changing compilation
-results.
+`observe` is infallible from the compiler's perspective. The implemented
+writer-backed text observer remembers its first write failure, stops attempting
+output, disables every later detail query, and exposes the retained error
+through `error` and `into_parts`. The planned process-driver integration will
+therefore retain status 74 without adding presentation failures to
+`CompilationError` or changing compilation results.
 
 The initial observer contract does not require `Send`, `Sync`, or concurrent
 event ordering. A future internally parallel compiler must define
@@ -134,7 +137,7 @@ contract.
 
 ## Event and metric model
 
-The semantic shape is:
+The implemented semantic shape is:
 
 ```rust
 pub enum ReportEvent {
@@ -164,8 +167,10 @@ pub enum MetricValue {
 }
 ```
 
-Exact Rust type names are repository-internal and may change while the roadmap
-is implemented. These properties may not change implicitly:
+`ReportMetric::count` and `ReportMetric::bytes` construct named values, and
+`ReportMetric::new` accepts an explicit `MetricValue`. These repository-internal
+Rust names may evolve during the roadmap, but these properties may not change
+implicitly:
 
 - phases, scopes, artifact kinds, and outcomes are validated enums rather than
   arbitrary message strings;
@@ -185,7 +190,7 @@ give one identically named total two different meanings.
 
 ## Phase inventory and outcomes
 
-Programmatic observations retain these phase boundaries:
+`ReportPhase` defines these boundaries before pipeline emission is added:
 
 1. provider normalization;
 2. reachable module loading;
@@ -283,17 +288,20 @@ configuration file that silently changes report selection.
 
 ## Human rendering and streams
 
-The first renderer produces deterministic human text. Every operational line
-begins with `skac:` and a short category such as `phase`, `stats`, or
-`artifact`. Durations use one consistent millisecond policy, metrics retain
-owner order, paths follow the driver's native-path display rules, and every
-record owns exactly one trailing newline.
+`render_event` and `TextObserver` produce deterministic human text. Every
+operational line begins with `skac:` and a short category such as `phase`,
+`stats`, or `artifact`. Phase detail omits durations and metrics; details and
+trace render elapsed time in milliseconds with three fractional digits,
+rounded to the nearest microsecond. Metrics retain owner order and bytes use
+singular or plural units. Paths use Rust's native lossy display, and every
+rendered record owns exactly one trailing newline. Off detail renders no text.
 
-Operational text goes to stderr. Help and version stay on stdout. Source
-diagnostics stay on stderr with their existing `error[CODE]` and
-`warning[CODE]` headers rather than gaining a second `skac:` prefix. Compiler
-artifacts remain at selected paths, and generated-program stdout is unrelated
-to compiler reporting.
+The renderer accepts an arbitrary writer and does not select a process stream.
+Planned CLI integration sends operational text to stderr. Help and version stay
+on stdout. Source diagnostics stay on stderr with their existing `error[CODE]`
+and `warning[CODE]` headers rather than gaining a second `skac:` prefix.
+Compiler artifacts remain at selected paths, and generated-program stdout is
+unrelated to compiler reporting.
 
 The quiet observer preserves every existing successful CLI, golden, and
 tooling byte by default. Tests that request live timings use structural or
@@ -308,7 +316,7 @@ dependency to `skald-compiler` and promises no external telemetry schema.
 ## Module ownership
 
 Reporting is a cross-cutting compiler service rather than a driver-private
-logger. Its planned facade-oriented organization is:
+logger. Its implemented facade-oriented organization is:
 
 ```text
 crates/skald-compiler/src/reporting/
@@ -317,17 +325,13 @@ crates/skald-compiler/src/reporting/
 ├── metrics.rs
 ├── text.rs
 └── tests.rs
-
-crates/skald-compiler/src/driver/cli/
-├── parse.rs
-└── reporting.rs
 ```
 
 The top-level `reporting` facade owns module documentation, private submodule
-declarations, explicit re-exports, the small observer trait, and the no-op
-observer. Event identity, metric construction, and human rendering have
-cohesive private owners. CLI configuration, stderr integration, and deferred
-writer-error extraction remain in the driver.
+declarations, explicit re-exports, the small observer trait, and no-op and
+recording observers. Event identity, metric construction, and human rendering
+have cohesive private owners. CLI configuration, stderr integration, and
+process-status handling remain planned driver responsibilities.
 
 Compiler phases depend only on the narrow reporting facade or a phase-local
 measurement context. They do not learn about CLI flags, stderr, text
@@ -340,20 +344,24 @@ macros the compiler's internal observation contract.
 
 ## Verification and overhead
 
-Tests follow existing ownership:
+Implemented tests follow existing ownership:
 
 - reporting unit tests construct exact events and verify filtering, metric
   units, deterministic order, text rendering, and deferred writer errors;
-- CLI parser tests cover verbosity, quiet saturation, explicit-level
-  conflicts, diagnostic level, help, and native path arguments;
-- driver pipeline tests use a recording observer for phase order, failure
+- the public API integration test covers every intentional facade path without
+  exposing private implementation modules.
+
+Later roadmap tasks add:
+
+- CLI parser tests for verbosity, quiet saturation, explicit-level conflicts,
+  diagnostic level, help, and native path arguments;
+- driver pipeline tests using a recording observer for phase order, failure
   cutoff, outcome, metrics, request compilation, and singleton compilation;
-- module-loader tests verify discovery and final parser execution accounting;
-- pass tests verify that counters match transformations and disabled detail
-  avoids optional scans;
-- binary integration tests own real `skac` arguments, stdout/stderr, status,
+- module-loader tests for discovery and final parser execution accounting;
+- pass tests for transformation counters and disabled-detail optional work;
+- binary integration tests for real `skac` arguments, stdout/stderr, status,
   and artifact behavior; and
-- ordinary goldens prove default observations and generated artifacts remain
+- ordinary goldens proving default observations and generated artifacts remain
   unchanged.
 
 The disabled path performs no string formatting, path rendering, metric

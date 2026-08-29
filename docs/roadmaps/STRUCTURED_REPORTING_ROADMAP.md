@@ -1,6 +1,6 @@
 # Structured Compiler Reporting Roadmap
 
-Status: planned; REP0 is next.
+Status: in progress; REP0 is complete and REP1 is next.
 
 This roadmap implements the frozen
 [structured compiler reporting contract](../compiler/REPORTING.md) and its
@@ -45,7 +45,7 @@ compiler output, source diagnostics, generated artifacts, or runtime behavior.
 
 ## Progress
 
-- [ ] REP0 — Establish typed reporting and human rendering
+- [x] REP0 — Establish typed reporting and human rendering
 - [ ] REP1 — Observe the complete compilation pipeline
 - [ ] REP2 — Publish honest phase-owned statistics
 - [ ] REP3 — Integrate CLI selection, linking, and artifact reporting
@@ -58,26 +58,26 @@ compiler output, source diagnostics, generated artifacts, or runtime behavior.
 **Purpose:** Settle the format-neutral event, metric, observer, and renderer
 boundary before compiler phases or CLI policy depend on it.
 
-- [ ] Add a top-level `reporting` facade with private `event`, `metrics`, and
+- [x] Add a top-level `reporting` facade with private `event`, `metrics`, and
       `text` implementation modules plus a substantial external `tests.rs`.
-- [ ] Define `ReportDetail`, `ReportPhase`, `ReportScope`, `ReportOutcome`,
+- [x] Define `ReportDetail`, `ReportPhase`, `ReportScope`, `ReportOutcome`,
       `ReportArtifactKind`, unit-bearing integer metric values, deterministic
       metrics, and owned `ReportEvent` variants for start, finish, publication,
       and scoped run completion.
-- [ ] Define the object-safe `ReportObserver` contract with an `enabled` query,
+- [x] Define the object-safe `ReportObserver` contract with an `enabled` query,
       and provide quiet no-op and owned recording observers through selective
       facade re-exports.
-- [ ] Implement deterministic human event rendering with the `skac:` category
+- [x] Implement deterministic human event rendering with the `skac:` category
       prefix, one duration policy, owner-order metrics, native path display,
       and exactly one trailing newline per event.
-- [ ] Implement a writer-backed text observer that records its first write
+- [x] Implement a writer-backed text observer that records its first write
       error, suppresses later writes, and exposes the retained error without
       making `observe` fallible.
-- [ ] Keep event types independent of driver-owned `ArtifactKind`; map only
+- [x] Keep event types independent of driver-owned `ArtifactKind`; map only
       through the reporting-owned artifact vocabulary.
-- [ ] Add compile-time public API coverage for intentional reporting facade
+- [x] Add compile-time public API coverage for intentional reporting facade
       paths without exposing private module layout.
-- [ ] Update the reporting contract and compiler facade inventory only for the
+- [x] Update the reporting contract and compiler facade inventory only for the
       model and renderer behavior implemented in this task; retain explicit
       wording that no compiler phase or CLI option emits events yet.
 
