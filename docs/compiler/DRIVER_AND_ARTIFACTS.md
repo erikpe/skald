@@ -48,6 +48,12 @@ the verified MIR pass pipeline, and target assembly emission. Provider
 configuration failures remain structured separately from source diagnostics.
 The returned report owns every reached source and diagnostic.
 
+Both public compilation adapters request closed-world target artifact
+retention. Verified HIR and MIR stay complete, while functions and data not
+reachable from an exported machine symbol are omitted from published assembly.
+Direct backend consumers may retain complete output when inspecting lowering
+of otherwise uncalled MIR definitions.
+
 `compile_source_to_assembly(path, text, target)` is the in-memory singleton
 adapter. Its path labels diagnostics but is never read, and it gains no module
 root discovery. After lexing and parsing, it uses the same program resolver,

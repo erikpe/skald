@@ -1036,6 +1036,21 @@ there is no backend argument-capture path or target ABI addition.
 
 ## Assembly emission and verification
 
+The production driver requests closed-world artifact retention after target
+instruction selection and before textual emission. Exported functions seed a
+deterministic symbol graph; direct calls, callable addresses, static slots,
+dispatch entries, literal metadata, panic messages, and runtime-trace records
+form its edges. Unreachable functions and data are omitted together, while an
+ordinary reference retains its complete transitive implementation. This
+target-level boundary sees only explicit machine symbols and has no knowledge
+of source sugar or language-item identities.
+
+Direct backend consumers may instead request complete emission. That mode is
+used for phase-owner diagnostics and tests which need to inspect lowering of
+an otherwise uncalled verified MIR body. HIR and every MIR product remain
+complete and deterministic in both modes; artifact retention does not mutate
+or replace the verified program.
+
 The target assembly model is rendered as deterministic GNU assembler text
 beginning with `.intel_syntax noprefix`. Instructions use destination-first
 operands, bare register names, bracketed memory operands, and explicit memory

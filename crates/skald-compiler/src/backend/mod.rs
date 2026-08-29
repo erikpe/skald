@@ -36,6 +36,7 @@ pub struct BackendInput<'input> {
     program: &'input MirProgram,
     sources: Option<&'input SourceDatabase>,
     runtime_trace: RuntimeTracePolicy,
+    reachable_artifacts_only: bool,
 }
 
 impl<'input> BackendInput<'input> {
@@ -47,6 +48,7 @@ impl<'input> BackendInput<'input> {
             program,
             sources: Some(sources),
             runtime_trace: RuntimeTracePolicy::Enabled,
+            reachable_artifacts_only: false,
         }
     }
 
@@ -55,7 +57,16 @@ impl<'input> BackendInput<'input> {
             program,
             sources: None,
             runtime_trace: RuntimeTracePolicy::Omitted,
+            reachable_artifacts_only: false,
         }
+    }
+
+    /// Requests closed-world removal of target artifacts unreachable from an
+    /// exported symbol. Complete emission remains the default so phase-owner
+    /// diagnostics and tests can inspect lowered but uncalled MIR bodies.
+    pub const fn with_reachable_artifacts_only(mut self) -> Self {
+        self.reachable_artifacts_only = true;
+        self
     }
 
     pub const fn program(self) -> &'input MirProgram {
@@ -68,6 +79,10 @@ impl<'input> BackendInput<'input> {
 
     pub const fn runtime_trace(self) -> RuntimeTracePolicy {
         self.runtime_trace
+    }
+
+    pub(crate) const fn reachable_artifacts_only(self) -> bool {
+        self.reachable_artifacts_only
     }
 }
 
@@ -204,7 +219,11 @@ mod tests {
 
         assert_eq!(enabled.runtime_trace(), RuntimeTracePolicy::Enabled);
         assert!(enabled.sources().is_some());
+        assert!(!enabled.reachable_artifacts_only());
         assert_eq!(omitted.runtime_trace(), RuntimeTracePolicy::Omitted);
         assert!(omitted.sources().is_none());
+        assert!(omitted
+            .with_reachable_artifacts_only()
+            .reachable_artifacts_only());
     }
 }

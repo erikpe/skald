@@ -344,6 +344,14 @@ interface metadata; the fused path uses no range metadata at all. There is no
 new target operation, calling convention, layout rule, public symbol, runtime
 service, allocation requirement, or runtime ABI revision.
 
+Published assembly applies the backend's general closed-world artifact
+retention after instruction selection. A fused-only canonical range therefore
+leaves its complete validation, HIR, and MIR evidence available to earlier
+phase dumps, but its unreferenced `Range<T>` methods and metadata do not reach
+textual assembly. Explicit construction, stored execution, callable addresses,
+and protocol dispatch create ordinary symbol edges and retain the complete
+transitive artifacts they use. The retention pass does not recognize ranges.
+
 Coverage ownership is:
 
 - lexer/parser for punctuation, precedence, recovery, nesting, and spans;

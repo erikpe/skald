@@ -130,4 +130,4 @@ robustness-long:
 check: static-check test
 
 # Complete ordinary and extended validation gate.
-check-long: check golden-determinism-test runtime-trace-benchmark msrv-check robustness-long generic-vec-benchmark
+check-long: check golden-determinism-test runtime-trace-benchmark msrv-check robustness-long generic-vec-benchmark range-loop-benchmark

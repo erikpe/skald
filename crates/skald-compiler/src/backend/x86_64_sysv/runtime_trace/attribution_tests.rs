@@ -83,7 +83,11 @@ fn native_result(fixture: &FinalMirWithSources) -> std::process::Output {
 #[test]
 fn runtime_trace_attribution_routes_all_target_calls_through_the_audited_facade() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/backend/x86_64_sysv");
-    let allowed = [root.join("emit.rs"), root.join("lower/call/emission.rs")];
+    let allowed = [
+        root.join("artifacts.rs"),
+        root.join("emit.rs"),
+        root.join("lower/call/emission.rs"),
+    ];
     let mut pending = vec![root];
     let mut violations = Vec::new();
 

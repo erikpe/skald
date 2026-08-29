@@ -157,7 +157,8 @@ fn finish_compilation(
     let input = match runtime_trace {
         RuntimeTracePolicy::Enabled => BackendInput::with_runtime_trace(&mir, &sources),
         RuntimeTracePolicy::Omitted => BackendInput::without_runtime_trace(&mir),
-    };
+    }
+    .with_reachable_artifacts_only();
     let assembly = emit_assembly(target, input).map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {

@@ -9,6 +9,7 @@
 
 mod abi;
 mod array_legality;
+mod artifacts;
 mod dispatch;
 mod emit;
 mod frame;
@@ -30,6 +31,9 @@ pub fn emit_assembly(input: BackendInput<'_>) -> Result<String, BackendError> {
     let activations = runtime_trace::Activations::plan(program, &metadata)?;
     let mut assembly = lower::lower(program, &data_layout, &dispatch, &activations, &metadata)?;
     assembly.runtime_trace = metadata.finish();
+    if input.reachable_artifacts_only() {
+        artifacts::retain_reachable(&mut assembly);
+    }
     Ok(emit::emit(&assembly))
 }
 

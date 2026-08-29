@@ -144,10 +144,33 @@ fn immediate_integer_ranges_match_handwritten_while_instruction_shapes() {
     }
     assert!(!output.contains("ska_rt_range"));
     assert!(
+        !output.contains("Range_x3c_"),
+        "fused-only range use must not retain erased canonical classes\n{output}"
+    );
+    assert!(
         include_str!("../../../../../../runtime/include/skald_runtime.h")
             .contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(9)")
     );
     assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn ordinary_range_execution_retains_canonical_artifacts() {
+    let source = concat!(
+        "from std::range import Range;\n",
+        "fn main() -> i64 {\n",
+        "  var values: Range<u64> = Range<u64>(1u, 4u);\n",
+        "  var sum: u64 = 0u;\n",
+        "  for (item in values) { sum = sum + item; }\n",
+        "  return (i64) sum;\n",
+        "}\n",
+    );
+    let output = standard_library_assembly(source);
+
+    assert!(output.contains("Range_x3c_u64_x3e_"), "{output}");
+    assert!(output.contains("method.iter_next"), "{output}");
+    assert_system_assembler_accepts(&output);
+    assert_eq!(run_native_assembly(&output).code(), Some(6));
 }
 
 fn named_source_function_assembly<'a>(assembly: &'a str, name: &str) -> &'a str {
@@ -183,6 +206,28 @@ fn profile_without_unconditional_jumps<'a>(profile: &[&'a str]) -> Vec<&'a str> 
 }
 
 fn range_assembly(source: &str) -> String {
+    let (hir, mir) = standard_library_hir_and_mir(source);
+    assert_eq!(
+        crate::hir::dump_hir(&hir).matches("PrimitiveRange").count(),
+        3
+    );
+    crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&mir).with_reachable_artifacts_only(),
+    )
+    .unwrap()
+}
+
+fn standard_library_assembly(source: &str) -> String {
+    let (_, mir) = standard_library_hir_and_mir(source);
+    crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&mir).with_reachable_artifacts_only(),
+    )
+    .unwrap()
+}
+
+fn standard_library_hir_and_mir(source: &str) -> (crate::hir::HirProgram, crate::mir::MirProgram) {
     let (_workspace, graph) = crate::test_support::load_module_sources_with_standard_library(
         "app",
         &[("app.ska", source)],
@@ -192,11 +237,7 @@ fn range_assembly(source: &str) -> String {
     let checked = crate::typeck::type_check(&resolved.program);
     assert!(!checked.has_errors(), "{:?}", checked.diagnostics);
     let hir = checked.hir.expect("valid ranges must produce HIR");
-    assert_eq!(
-        crate::hir::dump_hir(&hir).matches("PrimitiveRange").count(),
-        3
-    );
     let mir = crate::test_support::lower_hir_to_final_mir(&hir);
     verify_mir(&mir).expect("matched range and while MIR must verify");
-    emit_assembly(Target::X86_64SysV, &mir).unwrap()
+    (hir, mir)
 }

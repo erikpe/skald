@@ -445,17 +445,12 @@ fn installed_process_arguments_reach_verified_assembly_as_ordinary_library_sourc
         "    call .Lska.static.initialize\n",
         "    call .Lska.fn.app.main.",
     )));
-    for runtime_symbol in [
-        "ska_rt_io_standard_handle",
-        "ska_rt_io_open",
-        "ska_rt_io_read",
-        "ska_rt_io_write",
-        "ska_rt_io_close",
-    ] {
+    for runtime_symbol in ["ska_rt_io_open", "ska_rt_io_read", "ska_rt_io_close"] {
         assert!(artifact
             .assembly
             .contains(&format!("call {runtime_symbol}")));
     }
+    assert!(!artifact.assembly.contains("call ska_rt_io_write"));
 }
 
 #[test]
@@ -488,7 +483,7 @@ fn request_pipeline_preserves_configuration_and_source_failure_categories() {
 }
 
 #[test]
-fn unused_destructor_bodies_lower_through_the_backend() {
+fn unused_destructor_bodies_are_pruned_from_published_assembly() {
     let artifact = compile_source_to_assembly(
         "destructor.ska",
         concat!(
@@ -500,14 +495,13 @@ fn unused_destructor_bodies_lower_through_the_backend() {
     .expect("valid destructor definitions must lower deterministically");
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact
+    assert!(!artifact
         .assembly
         .contains(".Lska.class.main.Resource.c0.destroy.d0"));
-    assert!(artifact.assembly.contains(".Lska.trace."));
 }
 
 #[test]
-fn unused_copy_lifecycle_bodies_lower_to_mir_member_definitions() {
+fn unused_copy_lifecycle_bodies_are_pruned_from_published_assembly() {
     let artifact = compile_source_to_assembly(
         "copy-lifecycle.ska",
         concat!(
@@ -524,13 +518,13 @@ fn unused_copy_lifecycle_bodies_lower_to_mir_member_definitions() {
     .expect("copy lifecycle bodies must lower as MIR member definitions");
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact
+    assert!(!artifact
         .assembly
         .contains(".Lska.class.main.Value.c0.init.i0"));
-    assert!(artifact
+    assert!(!artifact
         .assembly
         .contains(".Lska.class.main.Value.c0.copy.k0"));
-    assert!(artifact
+    assert!(!artifact
         .assembly
         .contains(".Lska.class.main.Value.c0.assign.a0"));
 }
@@ -749,7 +743,7 @@ fn typed_alias_syntax_reaches_the_backend_pipeline() {
         concat!(
             "class Dog { init() {} }\n",
             "fn inspect(ref dog: Dog) -> unit {}\n",
-            "fn main() -> i64 { return 0; }\n",
+            "fn main() -> i64 { var dog: Dog = Dog(); inspect(dog); return 0; }\n",
         ),
         Target::X86_64SysV,
     )
@@ -962,7 +956,6 @@ fn primitive_inline_array_locals_cross_the_complete_driver_pipeline() {
     .expect("primitive inline local arrays must lower through x86-64");
     assert!(artifact.assembly.contains("call ska_rt_alloc"));
     assert!(artifact.assembly.contains("call ska_rt_free"));
-    assert!(artifact.assembly.contains(".Lska_array_0_copy_element"));
     assert!(artifact.assembly.contains("[r11 + r10*8 + 16]"));
 }
 
@@ -1037,8 +1030,8 @@ fn nested_inline_array_element_lists_cross_the_complete_driver_pipeline() {
         Target::X86_64SysV,
     )
     .expect("nested inline-array element lists must lower through x86-64");
-    assert!(artifact.assembly.contains("call .Lska_array_0_clone"));
-    assert!(artifact.assembly.contains("call .Lska_array_0_release"));
+    assert!(!artifact.assembly.contains("_clone"));
+    assert!(artifact.assembly.contains("_release"));
 }
 
 #[test]

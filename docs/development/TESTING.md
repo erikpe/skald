@@ -452,7 +452,10 @@ type, and HIR tests own punctuation/recovery, canonical declaration
 validation, identity and dump determinism, exact realization, construction
 provenance, fusion eligibility, and excluded boundaries. MIR and x86-64 tests
 own the call-free, optional-free scalar shape, malicious mutations, and matched
-handwritten-`while` instruction profile. `tests/golden/ranges` owns the
+handwritten-`while` instruction profile. Backend coverage also proves that
+published fused-only programs omit the unreferenced canonical range class,
+while explicit range construction retains and executes its ordinary methods
+and metadata. `tests/golden/ranges` owns the
 source-to-native primitive/class, explicit/syntax, ordinary/fused, boundary,
 nested, exit, lifecycle, effect, diagnostic, and failure matrix. Pipeline and
 golden determinism permute source/provider order and independent processes;

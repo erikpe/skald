@@ -45,9 +45,9 @@ objdump -d build/measurements/range-loop/u64_range
 ```
 
 Close background work and use a stable performance policy for less noisy
-numbers. The threshold concerns median execution only; compilation and whole-
-artifact size include the canonical standard-library dependency and are
-reported to expose fixed overhead rather than treated as hot-loop cost.
+numbers. The threshold concerns median execution only. Compilation and whole-
+artifact size are still reported, and current published assembly prunes
+canonical range artifacts when fused syntax is their only consumer.
 
 ## Reference result
 
@@ -61,11 +61,13 @@ warmups with runtime traces omitted:
 | `u64` | 97.943 ms | 97.866 ms | 0.079% |
 | `i64` | 97.799 ms | 97.699 ms | 0.102% |
 
-All three are within the 10% acceptance target. In each emitted source
-function, the range and `while` mnemonic profiles were identical except for
-one extra unconditional jump on the fused range's cold scalar-cleanup path.
+All three are within the 10% acceptance target. This result predates
+closed-world pruning of fused-only canonical range artifacts. In each emitted
+source function, the range and `while` mnemonic profiles were identical except
+for one extra unconditional jump on the fused range's cold scalar-cleanup path.
 The hot comparison, conditional edge, item handling, two additions (induction
 and checksum), and memory traffic matched. Range executables were 80 bytes
-larger in this run because their whole programs retain canonical range
-dependency artifacts; this fixed size difference does not occur in the hot
-loop and had no material median-time effect.
+larger in this run because that compiler revision retained canonical range
+dependency artifacts. Current compiler output removes that fixed assembly
+overhead; the recorded timing remains valid evidence for the unchanged hot
+loop.
