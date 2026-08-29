@@ -4,12 +4,11 @@ Status: authoritative for the frozen structured-reporting contract. The typed
 event and metric model, observer facade, recording and text observers, and
 human renderer are implemented. Observed request and singleton compilation
 APIs emit phase events, phase-owned metrics, trace module observations, and
-compilation totals. CLI selection, linking, and publication observation remain
-tracked by the
+compilation totals. The CLI implements independent report and diagnostic
+selection, observes host linking and atomic publication, emits artifact and
+driver-total events, and maps report-writer failure to status 74. Remaining
+composition hardening is tracked by the
 [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
-Current command-line behavior remains defined by
-[Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) until the responsible roadmap
-tasks update it.
 
 Structured reporting makes one compiler invocation observable without making
 observation part of compilation semantics. It covers phase progress, elapsed
@@ -19,8 +18,8 @@ and runtime program output retain their existing owners.
 
 The design is request-scoped and event-first. Repository tools can compile
 through an explicitly supplied observer, collect owned typed events without
-global state, and render them independently. The CLI does not select or render
-these observations yet.
+global state, and render them independently. The CLI renders selected
+observations to stderr through the same request-local observer.
 
 ## Contract boundary
 
@@ -128,9 +127,9 @@ independent sinks.
 `observe` is infallible from the compiler's perspective. The implemented
 writer-backed text observer remembers its first write failure, stops attempting
 output, disables every later detail query, and exposes the retained error
-through `error` and `into_parts`. The planned process-driver integration will
-therefore retain status 74 without adding presentation failures to
-`CompilationError` or changing compilation results.
+through `error` and `into_parts`. The process driver extracts that error after
+the command operation, returns status 74, and does not add presentation
+failures to `CompilationError` or cancel a successfully produced artifact.
 
 The initial observer contract does not require `Send`, `Sync`, or concurrent
 event ordering. A future internally parallel compiler must define
@@ -306,7 +305,9 @@ Operational detail and diagnostic visibility use separate controls.
 
 Repeated `-q` subtracts from repeated `-v` and saturates at `off`. Combining an
 explicit `--report-level` with `-v` or `-q` is a usage error rather than an
-order-dependent override. Option resolution is pure and performs no I/O.
+order-dependent override. Shorthand letters may be repeated as separate
+arguments or one cluster. Detail caps at `trace`; extra quiet flags remain at
+`off`. Option resolution is pure and performs no I/O.
 
 Diagnostic display defaults to `warning`, which renders warnings and errors.
 `--diagnostic-level error` hides warnings at the CLI boundary but retains them
@@ -318,6 +319,14 @@ single `--log-level`. Quiet operational reporting cannot accidentally hide a
 source warning. The initial implementation has no environment variable or
 configuration file that silently changes report selection.
 
+The CLI constructs one `TextObserver` over its borrowed stderr for the whole
+compile command. Compilation emits its own total. Executable mode then emits a
+host-linking phase, and both output modes emit an artifact-publication phase,
+an artifact notice only after the final atomic rename, and a distinct driver
+total. A terminal compiler, linker, or publication failure finishes the
+applicable phase and totals before the existing diagnostic or driver error is
+rendered once.
+
 ## Human rendering and streams
 
 `render_event` and `TextObserver` produce deterministic human text. Every
@@ -328,12 +337,12 @@ rounded to the nearest microsecond. Metrics retain owner order and bytes use
 singular or plural units. Paths use Rust's native lossy display, and every
 rendered record owns exactly one trailing newline. Off detail renders no text.
 
-The renderer accepts an arbitrary writer and does not select a process stream.
-Planned CLI integration sends operational text to stderr. Help and version stay
-on stdout. Source diagnostics stay on stderr with their existing `error[CODE]`
-and `warning[CODE]` headers rather than gaining a second `skac:` prefix.
-Compiler artifacts remain at selected paths, and generated-program stdout is
-unrelated to compiler reporting.
+The renderer accepts an arbitrary writer and does not itself select a process
+stream. CLI operational text goes to stderr. Help and version stay on stdout.
+Source diagnostics stay on stderr with their existing `error[CODE]` and
+`warning[CODE]` headers rather than gaining a second `skac:` prefix. Compiler
+artifacts remain at selected paths, and generated-program stdout is unrelated
+to compiler reporting.
 
 The quiet observer preserves every existing successful CLI, golden, and
 tooling byte by default. Tests that request live timings use structural or
@@ -362,8 +371,9 @@ crates/skald-compiler/src/reporting/
 The top-level `reporting` facade owns module documentation, private submodule
 declarations, explicit re-exports, the small observer trait, and no-op and
 recording observers. Event identity, metric construction, and human rendering
-have cohesive private owners. CLI configuration, stderr integration, and
-process-status handling remain planned driver responsibilities.
+have cohesive private owners. Private driver CLI modules own typed option
+resolution, stderr integration, linking/publication observation, diagnostic
+filtering, and process-status handling.
 
 Compiler phases depend only on the narrow reporting facade or a phase-local
 measurement context. They do not learn about CLI flags, stderr, text
@@ -384,18 +394,15 @@ Implemented tests follow existing ownership:
   exposing private implementation modules; and
 - driver reporting tests cover request and singleton order, every source
   cutoff, lifecycle failure, malformed MIR, backend failure, compilation
-  totals, unchanged results, panic behavior, and independent parallel callers.
-
-Later roadmap tasks add:
-
-- CLI parser tests for verbosity, quiet saturation, explicit-level conflicts,
-  diagnostic level, help, and native path arguments;
+  totals, unchanged results, panic behavior, and independent parallel callers;
+- CLI parser tests cover verbosity, quiet saturation, explicit-level conflicts,
+  diagnostic levels, help, and pure option resolution;
 - module-loader tests for discovery and final parser execution accounting;
 - pass tests for transformation counters and disabled-detail optional work;
 - binary integration tests for real `skac` arguments, stdout/stderr, status,
-  and artifact behavior; and
-- ordinary goldens proving default observations and generated artifacts remain
-  unchanged.
+  native paths, report-writer failure, and assembly/executable artifacts; and
+- ordinary goldens continue to prove that default-off reporting preserves
+  generated artifacts and process streams.
 
 The disabled path performs no string formatting, path rendering, metric
 sorting, heap allocation solely for report events, or extra IR traversal.

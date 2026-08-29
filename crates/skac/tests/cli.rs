@@ -1,6 +1,12 @@
 mod support;
 
-use std::{ffi::OsString, fs, os::unix::ffi::OsStringExt, path::Path, process::Command};
+use std::{
+    ffi::OsString,
+    fs::{self, OpenOptions},
+    os::unix::{ffi::OsStringExt, fs::PermissionsExt},
+    path::Path,
+    process::{Command, Stdio},
+};
 
 use support::TemporaryDirectory;
 
@@ -16,6 +22,131 @@ fn help_succeeds_through_the_binary_entry_point() {
         .expect("skac stdout was not UTF-8")
         .starts_with("skac - the Skald compiler\n"));
     assert!(output.stderr.is_empty());
+
+    let help = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg("--help")
+        .output()
+        .unwrap();
+    let help = String::from_utf8(help.stdout).unwrap();
+    assert!(help.contains("-v, -q                  Increase or decrease operational report detail"));
+    assert!(help.contains("--report-level <level>  Select off, phases, details, or trace reports"));
+    assert!(help.contains("--diagnostic-level <l>  Render warning or error diagnostics"));
+}
+
+#[test]
+fn real_binary_renders_the_detail_ladder_only_on_stderr() {
+    let directory = TemporaryDirectory::new("report-levels").unwrap();
+    let source = directory.join("main.ska");
+    fs::write(&source, "fn main() -> i64 { return 42; }\n").unwrap();
+
+    let cases = [
+        ("phases", false, false),
+        ("details", true, false),
+        ("trace", true, true),
+    ];
+    for (level, has_details, has_trace) in cases {
+        let assembly = directory.join(format!("{level}.s"));
+        let output = Command::new(env!("CARGO_BIN_EXE_skac"))
+            .arg(&source)
+            .args([
+                "--no-stdlib",
+                "--emit",
+                "asm",
+                "--report-level",
+                level,
+                "-o",
+            ])
+            .arg(&assembly)
+            .output()
+            .expect("failed to execute skac");
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains("skac: phase: module loading started\n"));
+        assert!(stderr.contains("skac: artifact: assembly "));
+        assert!(stderr.contains("skac: run: compilation completed"));
+        assert!(stderr.contains("skac: run: driver completed"));
+        assert_eq!(stderr.contains("skac: stats:"), has_details, "{level}");
+        assert_eq!(stderr.contains(" completed in "), has_details, "{level}");
+        assert_eq!(stderr.contains("skac: trace:"), has_trace, "{level}");
+        assert!(assembly.is_file());
+    }
+}
+
+#[test]
+fn real_binary_reports_executable_linking_publication_and_artifact() {
+    let directory = TemporaryDirectory::new("executable-report").unwrap();
+    let source = directory.join("main.ska");
+    let executable = directory.join("main");
+    let runtime = directory.join("runtime.a");
+    let linker = directory.join("fake-linker.sh");
+    fs::write(&source, "fn main() -> i64 { return 42; }\n").unwrap();
+    fs::write(&runtime, "runtime").unwrap();
+    fs::write(
+        &linker,
+        concat!(
+            "#!/bin/sh\n",
+            "output=\n",
+            "while [ \"$#\" -gt 0 ]; do\n",
+            "  if [ \"$1\" = \"-o\" ]; then output=$2; shift 2; else shift; fi\n",
+            "done\n",
+            "cat >/dev/null\n",
+            "printf 'linked executable' >\"$output\"\n",
+        ),
+    )
+    .unwrap();
+    let mut permissions = fs::metadata(&linker).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&linker, permissions).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args(["--no-stdlib", "-v", "-o"])
+        .arg(&executable)
+        .env("CC", &linker)
+        .env("SKALD_RUNTIME_ARCHIVE", &runtime)
+        .output()
+        .expect("failed to execute skac");
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(output.stdout.is_empty());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("skac: phase: host linking completed\n"));
+    assert!(stderr.contains("skac: phase: artifact publication completed\n"));
+    assert!(stderr.contains(&format!(
+        "skac: artifact: executable {}\n",
+        executable.display()
+    )));
+    assert_eq!(fs::read_to_string(executable).unwrap(), "linked executable");
+}
+
+#[test]
+fn report_writer_failure_maps_to_process_status_74_after_compilation() {
+    let directory = TemporaryDirectory::new("report-writer-failure").unwrap();
+    let source = directory.join("main.ska");
+    let assembly = directory.join("main.s");
+    fs::write(&source, "fn main() -> i64 { return 42; }\n").unwrap();
+    let full = OpenOptions::new().write(true).open("/dev/full").unwrap();
+
+    let status = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args(["--no-stdlib", "--emit", "asm", "-v", "-o"])
+        .arg(&assembly)
+        .stderr(Stdio::from(full))
+        .status()
+        .expect("failed to execute skac");
+
+    assert_eq!(status.code(), Some(74));
+    assert!(assembly.is_file());
 }
 
 #[test]
@@ -259,6 +390,7 @@ fn module_root_accepts_non_utf8_os_paths() {
     let directory = TemporaryDirectory::new("non-utf8-root").unwrap();
     let root_name = OsString::from_vec(b"modules-\xff".to_vec());
     let root = directory.join(&root_name);
+    let output_name = OsString::from_vec(b"main-\xff.s".to_vec());
     fs::create_dir(&root).unwrap();
     write_module(&root, "app/main.ska", "fn main() -> i64 { return 42; }\n");
 
@@ -266,7 +398,16 @@ fn module_root_accepts_non_utf8_os_paths() {
         .current_dir(directory.path())
         .arg("--module-root")
         .arg(root_name)
-        .args(["--entry", "app::main", "--no-stdlib", "--emit", "asm"])
+        .args([
+            "--entry",
+            "app::main",
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "-v",
+            "-o",
+        ])
+        .arg(&output_name)
         .output()
         .expect("failed to execute skac");
 
@@ -275,7 +416,10 @@ fn module_root_accepts_non_utf8_os_paths() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(directory.join("main.s").is_file());
+    assert!(directory.join(output_name).is_file());
+    assert!(String::from_utf8(output.stderr)
+        .unwrap()
+        .contains("skac: artifact: assembly main-�.s"));
 }
 
 fn write_module(base: &Path, relative: impl AsRef<Path>, source: &str) {

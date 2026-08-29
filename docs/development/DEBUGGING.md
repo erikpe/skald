@@ -5,8 +5,7 @@ MIR invariants belong to [Phases and IR](../compiler/PHASES_AND_IR.md); target
 behavior belongs to the [Backend and Target Contract](../compiler/BACKEND.md).
 The frozen operational-observation design belongs to
 [Structured Compiler Reporting](../compiler/REPORTING.md). Its typed model and
-renderer and the observed library compilation APIs are implemented. No CLI
-option emits events yet.
+renderer, observed library compilation APIs, and CLI selection are implemented.
 
 ## Inspect the nearest phase product
 
@@ -31,15 +30,21 @@ for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
 Their text is a deterministic
 debugging and regression format, not a stable interchange format.
 
+Use `skac -v` for phase progress, `skac -vv` for timings and phase-owned
+statistics, and `skac -vvv` for discovery/final module parse records. The
+explicit equivalents are `--report-level phases|details|trace`; operational
+text goes to stderr. Use `--diagnostic-level error` to hide warnings during a
+focused investigation without deleting them from the compilation report.
+
 Use `driver::compile_request_to_assembly_observed` or
 `driver::compile_source_to_assembly_observed` with a `RecordingObserver` to
 inspect request progress, phase outcomes, and elapsed durations as typed data.
 At `Details`, finish events also expose deterministic phase-owned metrics. At
 `Trace`, request compilation identifies every discovery and final parser
-execution by canonical logical module path. Artifact events and CLI selection
-remain planned. Reports do not replace deterministic dumps or structured
-source diagnostics. Delivery is tracked by the
-[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
+execution by canonical logical module path. The CLI additionally observes host
+linking, atomic artifact publication, artifact notices, and a separate driver
+total. Reports do not replace deterministic dumps or structured source
+diagnostics.
 
 When hand-built or future lowered MIR uses path-dependent state, the MIR dump
 prints a `PathConditions` table before the block list. Each row identifies the

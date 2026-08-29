@@ -1,6 +1,6 @@
 # Structured Compiler Reporting Roadmap
 
-Status: in progress; REP0 through REP2 are complete, and REP3 is next.
+Status: in progress; REP0 through REP3 are complete, and REP4 is next.
 
 This roadmap implements the frozen
 [structured compiler reporting contract](../compiler/REPORTING.md) and its
@@ -48,7 +48,7 @@ compiler output, source diagnostics, generated artifacts, or runtime behavior.
 - [x] REP0 — Establish typed reporting and human rendering
 - [x] REP1 — Observe the complete compilation pipeline
 - [x] REP2 — Publish honest phase-owned statistics
-- [ ] REP3 — Integrate CLI selection, linking, and artifact reporting
+- [x] REP3 — Integrate CLI selection, linking, and artifact reporting
 - [ ] REP4 — Harden composition, publish implementation, and close
 
 ## PR-sized implementation sequence
@@ -202,34 +202,34 @@ have one explicit pipeline-owned route.
 the real compiler process while preserving independent diagnostic policy and
 all existing stream/status behavior.
 
-- [ ] Extend typed CLI parsing with repeatable `-v` and `-q`, explicit
+- [x] Extend typed CLI parsing with repeatable `-v` and `-q`, explicit
       `--report-level off|phases|details|trace`, and
       `--diagnostic-level warning|error`.
-- [ ] Resolve `-v`/`-q` by saturating subtraction; reject either shorthand
+- [x] Resolve `-v`/`-q` by saturating subtraction; reject either shorthand
       combined with explicit report level and reject repeated or invalid
       explicit options as command-usage errors.
-- [ ] Update exact help text and typed `CompileOptions` without filesystem
+- [x] Update exact help text and typed `CompileOptions` without filesystem
       access or environment-dependent defaults.
-- [ ] Construct the text observer over the CLI's borrowed stderr, invoke the
+- [x] Construct the text observer over the CLI's borrowed stderr, invoke the
       observed compiler adapter, and render selected events without mixing
       operational text into stdout, diagnostics, assembly, or executable
       output.
-- [ ] Filter warning rendering only at the CLI boundary; retain every warning
+- [x] Filter warning rendering only at the CLI boundary; retain every warning
       in `CompilationReport`, always render source errors, and never make
       operational quietness suppress diagnostics.
-- [ ] Observe host linking and assembly/executable publication with the same
+- [x] Observe host linking and assembly/executable publication with the same
       invocation observer, and add a driver-scope total distinct from the
       compiler-scope total.
-- [ ] Emit successful artifact notices only after atomic publication; failed
+- [x] Emit successful artifact notices only after atomic publication; failed
       linking/publication gets a failed phase outcome followed by the existing
       driver error exactly once.
-- [ ] Extract a retained report-writer error at the process boundary and return
+- [x] Extract a retained report-writer error at the process boundary and return
       status 74 without replacing an earlier compiler result with a
       `CompilationError` variant.
-- [ ] Add real-binary and driver tests for every detail/diagnostic combination,
+- [x] Add real-binary and driver tests for every detail/diagnostic combination,
       both entry forms, assembly/executable modes, failure categories, native
       path arguments, and exact stdout/stderr ownership.
-- [ ] Update the driver contract, development workflow, debugging guide,
+- [x] Update the driver contract, development workflow, debugging guide,
       testing guide, README command reference, and any golden-fixture guidance
       affected by the implemented CLI.
 

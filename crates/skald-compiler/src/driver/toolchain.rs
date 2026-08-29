@@ -62,6 +62,14 @@ impl Toolchain {
         self.link_assembly_with(assembly, output, execute_link)
     }
 
+    pub(super) fn link_assembly_pending(
+        &self,
+        assembly: &str,
+        output: &Path,
+    ) -> Result<PendingArtifact, ToolchainError> {
+        self.link_assembly_pending_with(assembly, output, execute_link)
+    }
+
     /// Links assembly through a caller-provided process executor.
     ///
     /// The toolchain retains command construction, runtime validation, pending
@@ -74,6 +82,17 @@ impl Toolchain {
         output: &Path,
         execute: impl FnOnce(&LinkInvocation) -> Result<LinkObservation, ToolchainError>,
     ) -> Result<(), ToolchainError> {
+        self.link_assembly_pending_with(assembly, output, execute)?
+            .publish()
+            .map_err(|source| ToolchainError::Publish { source })
+    }
+
+    fn link_assembly_pending_with(
+        &self,
+        assembly: &str,
+        output: &Path,
+        execute: impl FnOnce(&LinkInvocation) -> Result<LinkObservation, ToolchainError>,
+    ) -> Result<PendingArtifact, ToolchainError> {
         if !self.runtime_archive.is_file() {
             return Err(ToolchainError::RuntimeArchiveMissing);
         }
@@ -103,9 +122,7 @@ impl Toolchain {
             });
         }
 
-        pending
-            .publish()
-            .map_err(|source| ToolchainError::Publish { source })
+        Ok(pending)
     }
 }
 

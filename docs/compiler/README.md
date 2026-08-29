@@ -99,12 +99,13 @@ prerequisites and validation are defined by the
 
 The frozen [structured compiler reporting contract](REPORTING.md) defines the
 request-scoped observer, typed event and metric vocabulary, human rendering,
-observed compilation APIs, and planned independent CLI selection of operational
-reports and source diagnostics. Request and singleton compilation now emit
+observed compilation APIs, and independent CLI selection of operational
+reports and source diagnostics. Request and singleton compilation emit
 phase outcomes, timings, deterministic phase-owned metrics, and trace module
 parse observations without changing phase products, diagnostics, dumps, or
-quiet API behavior. CLI integration remains owned by the
-[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
+quiet API behavior. The CLI uses the same observer through compiler totals,
+host linking, atomic publication, artifact notices, and a distinct driver
+total, while report-writer failure remains process status 74.
 
 The implemented
 [structural indexing and slicing compiler contract](INDEXING_AND_SLICING.md)

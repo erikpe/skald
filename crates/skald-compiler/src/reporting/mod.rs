@@ -2,8 +2,8 @@
 //!
 //! Reporting is operational data rather than source diagnostics or phase
 //! dumps. The typed model and observers are available to repository tools,
-//! and observed compiler adapters emit phase, metric, trace, and total events.
-//! The command-line driver does not select or render them yet.
+//! observed compiler adapters emit phase, metric, trace, and total events, and
+//! the command-line driver renders explicitly selected reports to stderr.
 
 mod event;
 mod metrics;

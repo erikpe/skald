@@ -11,8 +11,10 @@ in progress. REP0 established the typed event, metric, observer, and human
 rendering facade, and REP1 added observed request and singleton compilation
 through the complete compiler pipeline. REP2 added deterministic phase-owned
 statistics, exact two-stage module-loading measurements, and trace module
-observations. REP3 is next and will integrate report selection, linking, and
-artifact reporting into the CLI. The roadmap depends on the implemented
+observations. REP3 integrated report and diagnostic selection, linking,
+publication, artifact notices, driver totals, and report-writer status into the
+CLI. REP4 is next and will harden composition, publish the final living
+documentation, and close the roadmap. The roadmap depends on the implemented
 request driver and explicit compiler phase pipeline and has no dependency on
 another active roadmap.
 

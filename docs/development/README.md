@@ -107,6 +107,10 @@ behavior. Before handing off a completed change, run `make check` and
 `git diff --check`. Add `make msrv-check` under the conditions above. The
 [driver guide](../compiler/DRIVER_AND_ARTIFACTS.md) documents compiler/toolchain
 selection and artifact behavior; `make help` remains the command inventory.
+For an interactive compiler run, `skac -v`, `-vv`, and `-vvv` add phase,
+details, and trace reports on stderr without changing artifact or program
+output. Use `--diagnostic-level error` independently when warnings would
+obscure a focused failure.
 
 Cargo writes under `target/`, and repository runtime, golden, and compiler
 artifacts write under `build/`. Both directories are ignored and must not be

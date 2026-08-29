@@ -59,6 +59,11 @@ Emit assembly without linking:
 cargo run --locked -p skac -- samples/strings.ska --emit asm -o build/strings.s
 ```
 
+Operational reports are opt-in on stderr: use `-v` for phases, `-vv` for
+timings and statistics, or `-vvv` for trace-level module parsing. The explicit
+form is `--report-level off|phases|details|trace`. Source-warning visibility is
+independent through `--diagnostic-level warning|error`.
+
 `skac --help` is the exact command-line reference. Run `make help` for the
 repository command inventory and `make check` for the ordinary validation
 gate. CLI, toolchain, runtime selection, and artifact guarantees are defined

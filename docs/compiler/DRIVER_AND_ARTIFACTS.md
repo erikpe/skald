@@ -145,19 +145,31 @@ missing modules, unreadable or malformed reached sources, ambiguity, and
 provider failures are compilation failures with structured diagnostics or
 configuration errors.
 
-## Planned structured reporting
+## Structured reporting and diagnostics
 
-The current CLI has no reporting or diagnostic-display level options. The
-frozen [structured reporting contract](REPORTING.md) now provides typed events,
-metrics, observers, deterministic human rendering, and observed library
-compilation. The CLI still uses the quiet request wrapper and therefore emits
-no operational text. Planned selection will use `-v`/`-q`, `--report-level`, and
-`--diagnostic-level`; source diagnostics remain a separate structured channel
-and a failed compilation can never hide its errors. Linking and artifact
-publication are driver events, not compiler-phase events. The
-[implementation roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md) owns the
-rollout; until its tasks land, `skac --help` and this document's other sections
-remain authoritative for implemented command-line behavior.
+The CLI implements the frozen [structured reporting contract](REPORTING.md).
+Operational selection defaults to off. Repeatable `-v` and `-q` use saturating
+subtraction, while `--report-level off|phases|details|trace` selects an explicit
+level and cannot be combined with either shorthand. Repeated or invalid
+explicit options are usage errors.
+
+Operational reports go only to stderr. Phase detail reports progress, outcome,
+artifact notices, and compilation/driver totals. Details add elapsed durations
+and phase-owned metrics; trace adds discovery/final module parse records.
+Executable mode reports host linking before publication. Assembly and
+executable modes report atomic publication and emit the artifact notice only
+after the final rename succeeds. Default compilation remains silent when it
+has no source diagnostic or driver error.
+
+Diagnostic visibility is independent. `--diagnostic-level warning` is the
+default and renders warnings plus errors; `--diagnostic-level error` filters
+only warnings at this CLI boundary. Every diagnostic remains in the library
+`CompilationReport`, and source errors are always rendered. There is no
+diagnostic-off mode.
+
+The CLI retains the text observer's first writer failure through command
+execution and returns status 74 at the process boundary. That presentation
+failure does not enter `CompilationError` or cancel artifact production.
 
 ## Target selection
 
@@ -239,6 +251,9 @@ The CLI process statuses are:
 | `2` | Command usage, target selection, source suffix, or input/output alias was invalid. |
 | `74` | Working-directory, artifact, or command-output I/O failed. |
 
+Report output failure is command-output I/O and therefore status 74 even when
+compilation and artifact publication completed successfully.
+
 Exact diagnostics are tested at their owning source, CLI, artifact, or
 toolchain boundary. Host operating-system and tool messages are retained as
 details and are not portable compiler wording.
@@ -247,8 +262,9 @@ details and are not portable compiler wording.
 
 Driver tests are divided by responsibility:
 
-- CLI tests cover help, version, selectors, roots, argument rejection, output
-  defaults, suffix, target, trace omission, and OS-string rules;
+- CLI tests cover help, version, selectors, roots, argument rejection, report
+  and diagnostic levels, output defaults, suffix, target, trace omission, and
+  OS-string rules;
 - pipeline tests compose singleton and request-based whole-program phases,
   trace policy/source handoff, and structured failures;
 - artifact tests cover assembly output, source alias rejection, preservation,
@@ -256,9 +272,12 @@ Driver tests are divided by responsibility:
 - toolchain tests cover missing archives, process failures, unresolved
   externals, version-8/version-9 ABI mismatch, captured status, and executable
   preservation; and
-- `crates/skac` integration tests exercise both entry forms, repeated roots,
-  standard-library selection, relative and non-UTF-8 paths, and output
-  publication through the real binary entry point.
+- CLI reporting tests cover compiler/link/publication phase order, separate
+  totals, failures, diagnostic filtering, and retained writer errors; and
+- `crates/skac` integration tests exercise both entry forms, the detail ladder,
+  repeated roots, standard-library selection, relative and non-UTF-8 paths,
+  status 74, and assembly/executable publication through the real binary entry
+  point.
 
 Complete native golden cases additionally cover the real compiler process,
 runtime archive, linker, published executable, stdout, stderr, and process

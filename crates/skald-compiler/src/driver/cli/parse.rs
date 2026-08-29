@@ -5,6 +5,7 @@ use std::{ffi::OsString, path::PathBuf};
 use crate::{
     backend::{RuntimeTracePolicy, DEFAULT_TARGET_NAME},
     module::ModulePath,
+    reporting::ReportDetail,
 };
 
 use super::super::request::{
@@ -18,6 +19,14 @@ pub(super) struct CompileOptions {
     pub standard_library: StandardLibrarySelection,
     pub artifact: ArtifactOptions,
     pub target: String,
+    pub report_detail: ReportDetail,
+    pub diagnostic_level: DiagnosticLevel,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum DiagnosticLevel {
+    Warning,
+    Error,
 }
 
 pub(super) enum Command {
@@ -42,6 +51,10 @@ where
     let mut emit_seen = false;
     let mut target = None;
     let mut omit_runtime_trace = false;
+    let mut verbose = 0usize;
+    let mut quiet = 0usize;
+    let mut report_level = None;
+    let mut diagnostic_level = None;
 
     while let Some(argument) = args.next() {
         match argument.to_str() {
@@ -111,6 +124,31 @@ where
                 }
                 omit_runtime_trace = true;
             }
+            Some("--report-level") => {
+                if report_level.is_some() {
+                    return Err("report level specified more than once".to_owned());
+                }
+                let value = utf8_option_value(
+                    &mut args,
+                    "--report-level",
+                    "`off`, `phases`, `details`, or `trace`",
+                )?;
+                report_level = Some(parse_report_detail(&value)?);
+            }
+            Some("--diagnostic-level") => {
+                if diagnostic_level.is_some() {
+                    return Err("diagnostic level specified more than once".to_owned());
+                }
+                let value =
+                    utf8_option_value(&mut args, "--diagnostic-level", "`warning` or `error`")?;
+                diagnostic_level = Some(parse_diagnostic_level(&value)?);
+            }
+            Some(value) if report_shorthand(value).is_some() => {
+                let (more_verbose, more_quiet) =
+                    report_shorthand(value).expect("guard recognized report shorthand");
+                verbose = verbose.saturating_add(more_verbose);
+                quiet = quiet.saturating_add(more_quiet);
+            }
             Some(value) if value.starts_with('-') => {
                 return Err(format!("unknown option `{value}`"));
             }
@@ -126,6 +164,7 @@ where
     let standard_library =
         StandardLibrarySelection::from_options(standard_library_root, no_standard_library)
             .map_err(|error| error.to_string())?;
+    let report_detail = resolve_report_detail(verbose, quiet, report_level)?;
     Ok(Command::Compile(CompileOptions {
         entry,
         module_roots,
@@ -138,7 +177,63 @@ where
             },
         ),
         target: target.unwrap_or_else(|| DEFAULT_TARGET_NAME.to_owned()),
+        report_detail,
+        diagnostic_level: diagnostic_level.unwrap_or(DiagnosticLevel::Warning),
     }))
+}
+
+fn report_shorthand(argument: &str) -> Option<(usize, usize)> {
+    let shorthand = argument.strip_prefix('-')?;
+    if shorthand.is_empty() || !shorthand.bytes().all(|byte| matches!(byte, b'v' | b'q')) {
+        return None;
+    }
+    Some((
+        shorthand.bytes().filter(|byte| *byte == b'v').count(),
+        shorthand.bytes().filter(|byte| *byte == b'q').count(),
+    ))
+}
+
+fn resolve_report_detail(
+    verbose: usize,
+    quiet: usize,
+    explicit: Option<ReportDetail>,
+) -> Result<ReportDetail, String> {
+    if explicit.is_some() && (verbose != 0 || quiet != 0) {
+        return Err(
+            "report shorthand `-v`/`-q` cannot be combined with `--report-level`".to_owned(),
+        );
+    }
+    if let Some(explicit) = explicit {
+        return Ok(explicit);
+    }
+    Ok(match verbose.saturating_sub(quiet) {
+        0 => ReportDetail::Off,
+        1 => ReportDetail::Phases,
+        2 => ReportDetail::Details,
+        _ => ReportDetail::Trace,
+    })
+}
+
+fn parse_report_detail(value: &str) -> Result<ReportDetail, String> {
+    match value {
+        "off" => Ok(ReportDetail::Off),
+        "phases" => Ok(ReportDetail::Phases),
+        "details" => Ok(ReportDetail::Details),
+        "trace" => Ok(ReportDetail::Trace),
+        _ => Err(format!(
+            "invalid report level `{value}`; expected `off`, `phases`, `details`, or `trace`"
+        )),
+    }
+}
+
+fn parse_diagnostic_level(value: &str) -> Result<DiagnosticLevel, String> {
+    match value {
+        "warning" => Ok(DiagnosticLevel::Warning),
+        "error" => Ok(DiagnosticLevel::Error),
+        _ => Err(format!(
+            "invalid diagnostic level `{value}`; expected `warning` or `error`"
+        )),
+    }
 }
 
 fn path_option_value(
@@ -161,3 +256,6 @@ fn utf8_option_value(
         .into_string()
         .map_err(|_| format!("value after `{option}` must be valid UTF-8"))
 }
+
+#[cfg(test)]
+mod tests;
