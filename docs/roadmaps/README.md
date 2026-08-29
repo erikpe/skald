@@ -6,17 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [structured compiler reporting roadmap](STRUCTURED_REPORTING_ROADMAP.md) is
-in progress. REP0 established the typed event, metric, observer, and human
-rendering facade, and REP1 added observed request and singleton compilation
-through the complete compiler pipeline. REP2 added deterministic phase-owned
-statistics, exact two-stage module-loading measurements, and trace module
-observations. REP3 integrated report and diagnostic selection, linking,
-publication, artifact notices, driver totals, and report-writer status into the
-CLI. REP4 is next and will harden composition, publish the final living
-documentation, and close the roadmap. The roadmap depends on the implemented
-request driver and explicit compiler phase pipeline and has no dependency on
-another active roadmap.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -35,8 +25,9 @@ No other implementation roadmap is currently planned.
 No design proposal is currently active. The structured-reporting decisions
 are promoted into the [compiler reporting contract](../compiler/REPORTING.md),
 their [frozen decision record](../archive/STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
-is preserved in the archive, and delivery is owned by the
-[structured compiler reporting roadmap](STRUCTURED_REPORTING_ROADMAP.md).
+and completed
+[implementation roadmap](../archive/STRUCTURED_REPORTING_ROADMAP.md) are
+preserved in the archive.
 
 The frozen generic-range contract is promoted into the
 [language](../language/RANGES.md) and [compiler](../compiler/RANGES.md)

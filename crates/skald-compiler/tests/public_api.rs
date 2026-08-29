@@ -441,5 +441,5 @@ fn intentional_reporting_paths_compose() {
     };
     let _remaining_details = [ReportDetail::Off, ReportDetail::Phases];
     let _remaining_scopes = [ReportScope::Driver];
-    let _remaining_artifacts = [ReportArtifactKind::Executable, ReportArtifactKind::Dump];
+    let _remaining_artifacts = [ReportArtifactKind::Executable];
 }

@@ -148,10 +148,13 @@ compiler-injected, cyclic, malformed, and UTF-8 sources. MIR model and pass
 tests own definition/block/instruction and verification/pass counts. Option,
 stream, status, diagnostic-display, and quiet-default behavior is covered by
 private driver CLI tests and `crates/skac/tests/cli.rs` through the real binary.
-Those tests use structural duration assertions, exercise assembly and
-executable publication plus failed owners, and direct report output to
-`/dev/full` to prove process status 74. Ordinary goldens invoke the default-off
-CLI and therefore retain their existing exact stdout and stderr contracts.
+Those tests compare default and explicit-off process bytes across successful,
+diagnostic, provider, toolchain, help, and version paths; pin constructed
+warning and backend-failure presentation; use structural duration assertions;
+exercise concurrent request-local destinations and assembly/executable
+publication plus failed owners; and direct report output to `/dev/full` to
+prove process status 74. Ordinary goldens invoke the default-off CLI and
+therefore retain their existing exact stdout and stderr contracts.
 
 ## Selecting coverage
 

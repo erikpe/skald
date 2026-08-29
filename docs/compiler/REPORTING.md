@@ -1,14 +1,13 @@
 # Structured Compiler Reporting
 
-Status: authoritative for the frozen structured-reporting contract. The typed
-event and metric model, observer facade, recording and text observers, and
-human renderer are implemented. Observed request and singleton compilation
-APIs emit phase events, phase-owned metrics, trace module observations, and
-compilation totals. The CLI implements independent report and diagnostic
-selection, observes host linking and atomic publication, emits artifact and
-driver-total events, and maps report-writer failure to status 74. Remaining
-composition hardening is tracked by the
-[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
+Status: authoritative for the implemented structured-reporting contract. The
+typed event and metric model, request-local observers, compiler and driver
+instrumentation, human renderer, CLI selection, and report-writer failure
+handling described here are current. Historical design alternatives are
+preserved in the archived
+[design proposal](../archive/STRUCTURED_REPORTING_DESIGN_PROPOSAL.md), and the
+completed [implementation roadmap](../archive/STRUCTURED_REPORTING_ROADMAP.md)
+preserves delivery and validation history.
 
 Structured reporting makes one compiler invocation observable without making
 observation part of compilation semantics. It covers phase progress, elapsed
@@ -80,8 +79,10 @@ large phase products.
 
 Token, AST, module-graph, resolved, HIR, MIR, analysis, and assembly dumps
 remain phase-owned formats selected through explicit APIs or future dump
-options. Publishing a dump may produce an artifact notice naming its path;
-the dump contents never become a trace-level message.
+options. The implemented artifact-report vocabulary contains only assembly
+and executable publication because the CLI publishes no dump artifact. Future
+dump publication must extend that vocabulary explicitly; dump contents must
+not become trace-level messages.
 
 ## Request-scoped observer composition
 
@@ -176,8 +177,8 @@ pub enum MetricValue {
 
 `ReportMetric::count` and `ReportMetric::bytes` construct named values, and
 `ReportMetric::new` accepts an explicit `MetricValue`. These repository-internal
-Rust names may evolve during the roadmap, but these properties may not change
-implicitly:
+Rust names may evolve with reviewed compiler changes, but these properties do
+not change implicitly:
 
 - phases, scopes, artifact kinds, and outcomes are validated enums rather than
   arbitrary message strings;
@@ -213,9 +214,9 @@ Request compilation emits these boundaries in order:
 
 Singleton compilation emits lexing and parsing before the same resolution
 through backend sequence. Its `Lexing` and `Parsing` identities are explicit
-because no module loader owns that work. Host linking and artifact publication
-are defined `ReportPhase` identities but are not emitted until driver-level
-observation is implemented.
+because no module loader owns that work. Executable driver composition emits
+host linking, while assembly and executable composition both emit artifact
+publication.
 
 Within request compilation, source reading, discovery lexing/parsing, and final
 lexing/parsing remain beneath module loading. Their aggregate work is attached
@@ -301,7 +302,7 @@ Operational detail and diagnostic visibility use separate controls.
 | default or `--report-level off` | No report events are rendered. |
 | `-v` or `--report-level phases` | Phase progress, final outcome, and artifact notices. |
 | `-vv` or `--report-level details` | Phase and total timings plus aggregate metrics. |
-| `-vvv` or `--report-level trace` | Per-module, verification, and per-pass detail. |
+| `-vvv` or `--report-level trace` | Details plus discovery and final module-parser records. |
 
 Repeated `-q` subtracts from repeated `-v` and saturates at `off`. Combining an
 explicit `--report-level` with `-v` or `-q` is a usage error rather than an
@@ -316,7 +317,7 @@ failed CLI compilation must display its source errors.
 
 Skald does not combine operational detail with diagnostic severity under a
 single `--log-level`. Quiet operational reporting cannot accidentally hide a
-source warning. The initial implementation has no environment variable or
+source warning. The implementation has no environment variable or
 configuration file that silently changes report selection.
 
 The CLI constructs one `TextObserver` over its borrowed stderr for the whole
@@ -351,7 +352,7 @@ reviewed partial matching rather than byte-exact duration strings.
 A versioned JSON or other machine schema is deferred. The typed event model is
 format-neutral, but external serialization requires separate decisions about
 schema versioning, duration units, path representation, partial failure output,
-diagnostic inclusion, and compatibility. The initial contract adds no Serde
+diagnostic inclusion, and compatibility. The implemented contract adds no Serde
 dependency to `skald-compiler` and promises no external telemetry schema.
 
 ## Module ownership
@@ -400,16 +401,21 @@ Implemented tests follow existing ownership:
 - module-loader tests for discovery and final parser execution accounting;
 - pass tests for transformation counters and disabled-detail optional work;
 - binary integration tests for real `skac` arguments, stdout/stderr, status,
-  native paths, report-writer failure, and assembly/executable artifacts; and
+  native paths, report-writer failure, and assembly/executable artifacts;
 - ordinary goldens continue to prove that default-off reporting preserves
-  generated artifacts and process streams.
+  generated artifacts and process streams;
+- default-versus-explicit-off binary comparisons cover success, source
+  diagnostics, provider failure, toolchain failure, help, and version, while
+  constructed owner tests pin warning and backend-failure bytes; and
+- repeated and concurrent library/driver invocations prove that observers and
+  destinations do not leak across requests.
 
-The disabled path performs no string formatting, path rendering, metric
-sorting, heap allocation solely for report events, or extra IR traversal.
-Reading a small number of monotonic instants in the observed adapter is
-acceptable; the quiet wrapper may avoid event construction entirely through
-the no-op observer's detail query. Overhead may be recorded by a focused
-measurement, but a timing threshold does not join `make check`.
+The disabled path performs no monotonic timing, event construction, string
+formatting, path cloning or rendering, metric sorting, heap allocation solely
+for report events, or extra IR traversal. Compiler and driver run timers,
+phase timers, owned artifact paths, detailed metrics, and trace records are
+all guarded by the observer's detail query. Overhead may be recorded by a
+focused measurement, but a timing threshold does not join `make check`.
 
 Implementation validation uses focused reporting, driver, module, pass, and
 binary tests followed by `make check`. Changes to supported Rust syntax or the
@@ -417,7 +423,7 @@ repository-internal public API also run `make msrv-check`.
 
 ## Deferred extensions
 
-The frozen initial contract excludes:
+The implemented contract excludes:
 
 - versioned JSON, SARIF, OpenTelemetry, or another external schema;
 - environment-variable or configuration-file precedence;
@@ -437,6 +443,6 @@ contracts of their own.
 ## Decision and delivery records
 
 The archived [design proposal](../archive/STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
-preserves the reviewed alternatives and SR1 through SR10 decisions. The active
-[implementation roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md) owns task
-order, validation, and implementation status.
+preserves the reviewed alternatives and SR1 through SR10 decisions. The
+archived [implementation roadmap](../archive/STRUCTURED_REPORTING_ROADMAP.md)
+preserves task order, validation, and implementation history.

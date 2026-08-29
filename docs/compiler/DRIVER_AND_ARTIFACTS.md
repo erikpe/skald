@@ -7,9 +7,9 @@ and driver failure boundaries. Compiler phases are owned by
 [Backend and Target Contract](BACKEND.md), and the linked C surface by the
 [Runtime ABI](RUNTIME_ABI.md). Multiple-file CLI, provider, and entry behavior
 is owned by the
-[Module-System Compiler Contract](MODULE_SYSTEM.md). The operational-reporting
-boundary and its remaining planned extensions are owned by
-[Structured Compiler Reporting](REPORTING.md).
+[Module-System Compiler Contract](MODULE_SYSTEM.md). The implemented
+operational-reporting boundary and its explicitly deferred extensions are
+owned by [Structured Compiler Reporting](REPORTING.md).
 
 ## Driver facade
 
@@ -273,11 +273,13 @@ Driver tests are divided by responsibility:
   externals, version-8/version-9 ABI mismatch, captured status, and executable
   preservation; and
 - CLI reporting tests cover compiler/link/publication phase order, separate
-  totals, failures, diagnostic filtering, and retained writer errors; and
+  totals, failures, diagnostic filtering, default-off byte stability,
+  concurrent destination isolation, quiet-path gating, and retained writer
+  errors; and
 - `crates/skac` integration tests exercise both entry forms, the detail ladder,
   repeated roots, standard-library selection, relative and non-UTF-8 paths,
-  status 74, and assembly/executable publication through the real binary entry
-  point.
+  default-versus-explicit-off process bytes, structural failed reports, status
+  74, and assembly/executable publication through the real binary entry point.
 
 Complete native golden cases additionally cover the real compiler process,
 runtime archive, linker, published executable, stdout, stderr, and process

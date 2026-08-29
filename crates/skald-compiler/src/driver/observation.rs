@@ -4,7 +4,27 @@ use std::time::Instant;
 
 use crate::reporting::{
     ReportDetail, ReportEvent, ReportMetric, ReportObserver, ReportOutcome, ReportPhase,
+    ReportScope,
 };
+
+/// Runs one scoped operation and emits its total only when phase reporting is enabled.
+pub(super) fn observe_run<T>(
+    observer: &mut dyn ReportObserver,
+    scope: ReportScope,
+    operation: impl FnOnce(&mut dyn ReportObserver) -> T,
+    outcome: impl FnOnce(&T) -> ReportOutcome,
+) -> T {
+    let started = observer.enabled(ReportDetail::Phases).then(Instant::now);
+    let result = operation(observer);
+    if let Some(started) = started {
+        observer.observe(ReportEvent::RunFinished {
+            scope,
+            elapsed: started.elapsed(),
+            outcome: outcome(&result),
+        });
+    }
+    result
+}
 
 pub(super) fn observe_phase<T>(
     observer: &mut dyn ReportObserver,
@@ -79,6 +99,32 @@ mod tests {
                 Some(ReportEvent::PhaseFinished { metrics, .. })
                     if metrics == &[ReportMetric::count("answers", 1)]
             ));
+        }
+    }
+
+    #[test]
+    fn disabled_observation_skips_run_timing_and_event_construction() {
+        let mut observer = RejectingDisabledObserver;
+
+        let result = observe_run(
+            &mut observer,
+            ReportScope::Driver,
+            |_| 42,
+            |_| ReportOutcome::Completed,
+        );
+
+        assert_eq!(result, 42);
+    }
+
+    struct RejectingDisabledObserver;
+
+    impl ReportObserver for RejectingDisabledObserver {
+        fn enabled(&self, _detail: ReportDetail) -> bool {
+            false
+        }
+
+        fn observe(&mut self, _event: ReportEvent) {
+            panic!("disabled observation must not construct or emit events");
         }
     }
 }

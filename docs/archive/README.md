@@ -93,6 +93,7 @@ Archived plans:
 - [`Str` cached-hash migration](STR_CACHED_HASH_MIGRATION_ROADMAP.md)
 - [Primitive box classes](PRIMITIVE_BOX_CLASSES_ROADMAP.md)
 - [Final fields](FINAL_FIELDS_ROADMAP.md)
+- [Structured compiler reporting](STRUCTURED_REPORTING_ROADMAP.md)
 
 Resolved string-design inputs:
 

@@ -1,6 +1,7 @@
 use std::{
     io::{self, Write},
     os::unix::fs::PermissionsExt,
+    thread,
 };
 
 use super::*;
@@ -268,6 +269,178 @@ fn source_errors_remain_visible_at_both_diagnostic_levels_and_when_reports_are_o
         assert!(stdout.is_empty());
         assert!(stderr.contains("error[RES003]"), "{level}: {stderr}");
         assert!(!stderr.contains("skac: phase:"), "{level}: {stderr}");
+    }
+}
+
+#[test]
+fn default_and_explicit_quiet_modes_are_byte_identical_across_cli_outcomes() {
+    let directory = TemporaryDirectory::new("driver-default-reporting").unwrap();
+    let valid = directory.join("valid.ska");
+    let invalid = directory.join("invalid.ska");
+    fs::write(&valid, "fn main() -> i64 { return 42; }\n").unwrap();
+    fs::write(&invalid, "fn main() -> i64 { return missing; }\n").unwrap();
+
+    let default_assembly = directory.join("default.s");
+    let explicit_assembly = directory.join("explicit.s");
+    let default = run(&[
+        "skac",
+        valid.to_str().unwrap(),
+        "--no-stdlib",
+        "--emit",
+        "asm",
+        "-o",
+        default_assembly.to_str().unwrap(),
+    ]);
+    let explicit = run(&[
+        "skac",
+        valid.to_str().unwrap(),
+        "--no-stdlib",
+        "--emit",
+        "asm",
+        "-o",
+        explicit_assembly.to_str().unwrap(),
+        "--report-level",
+        "off",
+        "--diagnostic-level",
+        "warning",
+    ]);
+    assert_eq!(default, explicit);
+    assert_eq!(
+        fs::read(default_assembly).unwrap(),
+        fs::read(explicit_assembly).unwrap()
+    );
+
+    let default = run(&[
+        "skac",
+        invalid.to_str().unwrap(),
+        "--no-stdlib",
+        "--emit",
+        "asm",
+    ]);
+    let explicit = run(&[
+        "skac",
+        invalid.to_str().unwrap(),
+        "--no-stdlib",
+        "--emit",
+        "asm",
+        "--report-level",
+        "off",
+        "--diagnostic-level",
+        "warning",
+    ]);
+    assert_eq!(default, explicit);
+
+    let missing_root = directory.join("missing-root");
+    let default = run(&[
+        "skac",
+        "--entry",
+        "app",
+        "--module-root",
+        missing_root.to_str().unwrap(),
+        "--no-stdlib",
+        "--emit",
+        "asm",
+    ]);
+    let explicit = run(&[
+        "skac",
+        "--entry",
+        "app",
+        "--module-root",
+        missing_root.to_str().unwrap(),
+        "--no-stdlib",
+        "--emit",
+        "asm",
+        "--report-level",
+        "off",
+        "--diagnostic-level",
+        "warning",
+    ]);
+    assert_eq!(default, explicit);
+
+    let runtime = directory.join("runtime.a");
+    fs::write(&runtime, "runtime").unwrap();
+    let toolchain = Toolchain::new("false", runtime);
+    let default_output = directory.join("default-executable");
+    let explicit_output = directory.join("explicit-executable");
+    let default = run_with_toolchain(
+        &[
+            "skac",
+            valid.to_str().unwrap(),
+            "--no-stdlib",
+            "-o",
+            default_output.to_str().unwrap(),
+        ],
+        &toolchain,
+    );
+    let explicit = run_with_toolchain(
+        &[
+            "skac",
+            valid.to_str().unwrap(),
+            "--no-stdlib",
+            "-o",
+            explicit_output.to_str().unwrap(),
+            "--report-level",
+            "off",
+            "--diagnostic-level",
+            "warning",
+        ],
+        &toolchain,
+    );
+    assert_eq!(default, explicit);
+
+    assert_eq!(
+        run(&["skac", "--help"]),
+        run(&["skac", "--report-level", "off", "--help"])
+    );
+    assert_eq!(
+        run(&["skac", "--version"]),
+        run(&["skac", "--diagnostic-level", "warning", "--version"])
+    );
+}
+
+#[test]
+fn concurrent_cli_invocations_keep_report_destinations_request_local() {
+    let handles = (0..4)
+        .map(|value| {
+            thread::spawn(move || {
+                let directory =
+                    TemporaryDirectory::new(&format!("driver-concurrent-report-{value}")).unwrap();
+                let input = directory.join("main.ska");
+                let output = directory.join(format!("result-{value}.s"));
+                fs::write(&input, format!("fn main() -> i64 {{ return {value}; }}\n")).unwrap();
+
+                let (status, stdout, stderr) = run(&[
+                    "skac",
+                    input.to_str().unwrap(),
+                    "--no-stdlib",
+                    "--emit",
+                    "asm",
+                    "-o",
+                    output.to_str().unwrap(),
+                    "-v",
+                ]);
+                assert_eq!(status, 0, "{stderr}");
+                assert!(stdout.is_empty());
+                assert!(output.is_file());
+                (output.display().to_string(), stderr)
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let reports = handles
+        .into_iter()
+        .map(|handle| handle.join().unwrap())
+        .collect::<Vec<_>>();
+    for (own_path, report) in &reports {
+        assert!(
+            report.contains(&format!("skac: artifact: assembly {own_path}\n")),
+            "{report}"
+        );
+        for (other_path, _) in &reports {
+            if other_path != own_path {
+                assert!(!report.contains(other_path), "{report}");
+            }
+        }
     }
 }
 

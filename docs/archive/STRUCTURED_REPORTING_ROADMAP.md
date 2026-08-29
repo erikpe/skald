@@ -1,10 +1,10 @@
 # Structured Compiler Reporting Roadmap
 
-Status: in progress; REP0 through REP3 are complete, and REP4 is next.
+Status: complete; REP0 through REP4 are complete.
 
 This roadmap implements the frozen
 [structured compiler reporting contract](../compiler/REPORTING.md) and its
-archived [design record](../archive/STRUCTURED_REPORTING_DESIGN_PROPOSAL.md).
+archived [design record](STRUCTURED_REPORTING_DESIGN_PROPOSAL.md).
 It adds request-scoped typed observation to library compilation, then exposes
 that observation through an opt-in human CLI without changing default
 compiler output, source diagnostics, generated artifacts, or runtime behavior.
@@ -49,7 +49,7 @@ compiler output, source diagnostics, generated artifacts, or runtime behavior.
 - [x] REP1 — Observe the complete compilation pipeline
 - [x] REP2 — Publish honest phase-owned statistics
 - [x] REP3 — Integrate CLI selection, linking, and artifact reporting
-- [ ] REP4 — Harden composition, publish implementation, and close
+- [x] REP4 — Harden composition, publish implementation, and close
 
 ## PR-sized implementation sequence
 
@@ -258,32 +258,32 @@ maps report-output failure to status 74 without changing compiler semantics.
 composition, remove rollout-only wording, and leave current behavior in living
 documentation before archiving the roadmap.
 
-- [ ] Audit every `ReportPhase`, scope, outcome, artifact kind, metric unit, and
+- [x] Audit every `ReportPhase`, scope, outcome, artifact kind, metric unit, and
       CLI selection for focused owner coverage and remove unreachable or
       redundant event vocabulary.
-- [ ] Verify independent observers across repeated library compilation,
+- [x] Verify independent observers across repeated library compilation,
       concurrent outer tooling calls, golden-runner process scheduling, and
       test execution without global state or cross-request leakage.
-- [ ] Prove default byte stability for successful, warning-bearing, diagnostic
+- [x] Prove default byte stability for successful, warning-bearing, diagnostic
       failure, provider failure, backend failure, toolchain failure, help, and
       version invocations; keep live durations out of exact default goldens.
-- [ ] Add structural real-process observations for phases, details, trace,
+- [x] Add structural real-process observations for phases, details, trace,
       warning filtering, artifacts, and failures without asserting exact real
       elapsed values.
-- [ ] Audit the quiet path for report-only formatting, sorting, path rendering,
+- [x] Audit the quiet path for report-only formatting, sorting, path rendering,
       allocation, or full-product traversal; record any optional focused
       overhead measurement without adding a timing gate to `make check`.
-- [ ] Confirm production dependencies remain unchanged and no global logging,
+- [x] Confirm production dependencies remain unchanged and no global logging,
       JSON schema, runtime surface, source syntax, or dump policy entered the
       implementation.
-- [ ] Update all living reporting, architecture, driver, development, testing,
+- [x] Update all living reporting, architecture, driver, development, testing,
       debugging, and public API documentation to implemented present tense;
       remove REP task codes and rollout gates outside roadmap history.
-- [ ] Run the complete ordinary and MSRV gates from an artifact-free snapshot,
+- [x] Run the complete ordinary and MSRV gates from an artifact-free snapshot,
       resolve high-priority responsibility hotspots, and record any lower-
       priority follow-up in an indexed discovery document rather than
       expanding this roadmap.
-- [ ] Mark every task complete, set this roadmap status to complete, move it to
+- [x] Mark every task complete, set this roadmap status to complete, move it to
       `docs/archive/`, remove it from the active index, add it to the archive
       index, and repair all incoming links.
 

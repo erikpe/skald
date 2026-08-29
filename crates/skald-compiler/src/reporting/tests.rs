@@ -193,11 +193,7 @@ fn run_and_artifact_rendering_covers_every_scope_outcome_and_kind() {
         }
     }
 
-    for kind in [
-        ReportArtifactKind::Assembly,
-        ReportArtifactKind::Executable,
-        ReportArtifactKind::Dump,
-    ] {
+    for kind in [ReportArtifactKind::Assembly, ReportArtifactKind::Executable] {
         let rendered = render_event(
             &ReportEvent::ArtifactPublished {
                 kind,

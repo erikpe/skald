@@ -6,15 +6,14 @@ use std::{
     io::{self, Write},
     os::unix::fs::MetadataExt,
     path::Path,
-    time::Instant,
 };
 
 use crate::{
     backend::target_by_name,
     diagnostics::{render_diagnostic, Diagnostics, Severity},
     reporting::{
-        ReportArtifactKind, ReportEvent, ReportObserver, ReportOutcome, ReportPhase, ReportScope,
-        TextObserver,
+        ReportArtifactKind, ReportDetail, ReportEvent, ReportObserver, ReportOutcome, ReportPhase,
+        ReportScope, TextObserver,
     },
 };
 
@@ -22,7 +21,7 @@ use super::{
     super::{
         artifact::PendingArtifact,
         compile_request_to_assembly_observed,
-        observation::observe_phase,
+        observation::{observe_phase, observe_run},
         request::{ArtifactKind, CompilationEnvironment, CompilationRequest, EntrySelector},
         CompilationError, CompilationReport, Toolchain, ToolchainError,
     },
@@ -78,14 +77,13 @@ pub(super) fn compile<Stderr: Write>(
         ),
     );
 
-    let started = Instant::now();
     let mut observer = TextObserver::new(&mut *stderr, options.report_detail);
-    let result = execute_driver(&request, &output, toolchain, &mut observer);
-    observer.observe(ReportEvent::RunFinished {
-        scope: ReportScope::Driver,
-        elapsed: started.elapsed(),
-        outcome: result_outcome(&result),
-    });
+    let result = observe_run(
+        &mut observer,
+        ReportScope::Driver,
+        |observer| execute_driver(&request, &output, toolchain, observer),
+        result_outcome,
+    );
     let (_, report_error) = observer.into_parts();
 
     let presentation = present_result(result, options.diagnostic_level, stderr);
@@ -178,14 +176,25 @@ fn execute_driver(
         }
     }
 
+    observe_artifact_publication(observer, request.artifact().kind(), output);
+    Ok(artifact.report)
+}
+
+fn observe_artifact_publication(
+    observer: &mut dyn ReportObserver,
+    kind: ArtifactKind,
+    output: &Path,
+) {
+    if !observer.enabled(ReportDetail::Phases) {
+        return;
+    }
     observer.observe(ReportEvent::ArtifactPublished {
-        kind: match request.artifact().kind() {
+        kind: match kind {
             ArtifactKind::Assembly => ReportArtifactKind::Assembly,
             ArtifactKind::Executable => ReportArtifactKind::Executable,
         },
         path: output.to_owned(),
     });
-    Ok(artifact.report)
 }
 
 fn publish_assembly(assembly: &str, output: &Path) -> Result<(), DriverError> {
@@ -356,7 +365,38 @@ mod tests {
     }
 
     #[test]
-    fn backend_failure_presentation_retains_its_existing_category_once() {
+    fn default_warning_presentation_is_byte_stable_without_operational_reports() {
+        let mut sources = SourceDatabase::new();
+        let source = sources.add("warning.ska", "let\n");
+        let span = sources.get(source).unwrap().span(0, 3).unwrap();
+        let diagnostics = [
+            Diagnostic::warning("TEST001", "example warning").with_primary_label(span, "primary")
+        ]
+        .into_iter()
+        .collect();
+        let report = CompilationReport {
+            sources,
+            diagnostics,
+        };
+        let mut stderr = Vec::new();
+
+        let status = present_result(Ok(report), DiagnosticLevel::Warning, &mut stderr).unwrap();
+
+        assert_eq!(status, 0);
+        assert_eq!(
+            String::from_utf8(stderr).unwrap(),
+            concat!(
+                "warning[TEST001]: example warning\n",
+                " --> warning.ska:1:1\n",
+                "   |\n",
+                "1 | let\n",
+                "   | ^^^ primary\n",
+            )
+        );
+    }
+
+    #[test]
+    fn backend_failure_default_presentation_is_byte_stable_and_not_duplicated() {
         let result = Err(CommandError::Compilation(CompilationError::Backend(
             BackendError::new(Target::X86_64SysV, None, "injected backend failure"),
         )));
@@ -369,5 +409,26 @@ mod tests {
             String::from_utf8(stderr).unwrap(),
             "skac: internal x86_64-sysv backend error: injected backend failure\n"
         );
+    }
+
+    #[test]
+    fn disabled_artifact_observation_does_not_construct_an_owned_path_event() {
+        observe_artifact_publication(
+            &mut RejectingDisabledObserver,
+            ArtifactKind::Assembly,
+            Path::new("not-cloned.s"),
+        );
+    }
+
+    struct RejectingDisabledObserver;
+
+    impl ReportObserver for RejectingDisabledObserver {
+        fn enabled(&self, _detail: ReportDetail) -> bool {
+            false
+        }
+
+        fn observe(&mut self, _event: ReportEvent) {
+            panic!("disabled artifact observation must not emit an event");
+        }
     }
 }

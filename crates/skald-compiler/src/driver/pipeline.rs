@@ -1,6 +1,6 @@
 //! Source-to-assembly orchestration over explicit compiler phase boundaries.
 
-use std::{path::Path, time::Instant};
+use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, BackendInput, RuntimeTracePolicy, Target},
@@ -18,8 +18,7 @@ use crate::{
         },
     },
     reporting::{
-        NoopObserver, ReportDetail, ReportEvent, ReportObserver, ReportOutcome, ReportPhase,
-        ReportScope,
+        NoopObserver, ReportDetail, ReportObserver, ReportOutcome, ReportPhase, ReportScope,
     },
     resolve::{resolve_module_graph, resolve_with_source_path, ResolvedProgram},
     source::SourceDatabase,
@@ -28,7 +27,7 @@ use crate::{
 };
 
 use super::{
-    observation::{observe_phase, observe_phase_with_metrics},
+    observation::{observe_phase, observe_phase_with_metrics, observe_run},
     statistics, CompilationRequest,
 };
 
@@ -72,42 +71,55 @@ pub fn compile_request_to_assembly_observed(
     request: &CompilationRequest,
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
-    observe_compilation(observer, |observer| {
-        let providers = observe_phase(
-            observer,
-            ReportPhase::ProviderNormalization,
-            || {
-                let configurations = request.provider_root_configurations();
-                normalize_provider_roots(request.environment().working_directory(), &configurations)
-            },
-            result_outcome,
-        )
-        .map_err(CompilationError::ProviderConfiguration)?;
-        let measurement_options = ModuleLoadMeasurementOptions::new(
-            observer.enabled(ReportDetail::Details),
-            observer.enabled(ReportDetail::Trace),
-        );
-        let loaded = observe_phase_with_metrics(
-            observer,
-            ReportPhase::ModuleLoading,
-            || {
-                load_module_graph_measured(
-                    request.entry(),
-                    request.environment().working_directory(),
-                    &providers,
-                    measurement_options,
-                )
-            },
-            |measured| result_outcome(&measured.result),
-            statistics::module_loading_metrics,
-        );
-        let graph = loaded.result.map_err(|failure| {
-            let (sources, diagnostics) = failure.into_parts();
-            diagnostic_failure(sources, diagnostics)
-        })?;
+    observe_run(
+        observer,
+        ReportScope::Compilation,
+        |observer| {
+            let providers = observe_phase(
+                observer,
+                ReportPhase::ProviderNormalization,
+                || {
+                    let configurations = request.provider_root_configurations();
+                    normalize_provider_roots(
+                        request.environment().working_directory(),
+                        &configurations,
+                    )
+                },
+                result_outcome,
+            )
+            .map_err(CompilationError::ProviderConfiguration)?;
+            let measurement_options = ModuleLoadMeasurementOptions::new(
+                observer.enabled(ReportDetail::Details),
+                observer.enabled(ReportDetail::Trace),
+            );
+            let loaded = observe_phase_with_metrics(
+                observer,
+                ReportPhase::ModuleLoading,
+                || {
+                    load_module_graph_measured(
+                        request.entry(),
+                        request.environment().working_directory(),
+                        &providers,
+                        measurement_options,
+                    )
+                },
+                |measured| result_outcome(&measured.result),
+                statistics::module_loading_metrics,
+            );
+            let graph = loaded.result.map_err(|failure| {
+                let (sources, diagnostics) = failure.into_parts();
+                diagnostic_failure(sources, diagnostics)
+            })?;
 
-        compile_module_graph_to_assembly(graph, request.target(), request.runtime_trace(), observer)
-    })
+            compile_module_graph_to_assembly(
+                graph,
+                request.target(),
+                request.runtime_trace(),
+                observer,
+            )
+        },
+        result_outcome,
+    )
 }
 
 /// Compiles one in-memory singleton source through the same semantic and
@@ -132,61 +144,66 @@ pub fn compile_source_to_assembly_observed(
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let path = path.as_ref();
-    observe_compilation(observer, |observer| {
-        let mut sources = SourceDatabase::new();
-        let source_id = sources.add(path, text);
-        let mut diagnostics = Diagnostics::new();
+    observe_run(
+        observer,
+        ReportScope::Compilation,
+        |observer| {
+            let mut sources = SourceDatabase::new();
+            let source_id = sources.add(path, text);
+            let mut diagnostics = Diagnostics::new();
 
-        let source_bytes = sources
-            .get(source_id)
-            .expect("source was just inserted")
-            .len();
-        let lexed = observe_phase_with_metrics(
-            observer,
-            ReportPhase::Lexing,
-            || lex(sources.get(source_id).expect("source was just inserted")),
-            |output| diagnostics_outcome(&output.diagnostics),
-            |output, _| statistics::lexing_metrics(output, source_bytes),
-        );
-        diagnostics.append(lexed.diagnostics);
-        if diagnostics.has_errors() {
-            return Err(diagnostic_failure(sources, diagnostics));
-        }
+            let source_bytes = sources
+                .get(source_id)
+                .expect("source was just inserted")
+                .len();
+            let lexed = observe_phase_with_metrics(
+                observer,
+                ReportPhase::Lexing,
+                || lex(sources.get(source_id).expect("source was just inserted")),
+                |output| diagnostics_outcome(&output.diagnostics),
+                |output, _| statistics::lexing_metrics(output, source_bytes),
+            );
+            diagnostics.append(lexed.diagnostics);
+            if diagnostics.has_errors() {
+                return Err(diagnostic_failure(sources, diagnostics));
+            }
 
-        let parsed = observe_phase_with_metrics(
-            observer,
-            ReportPhase::Parsing,
-            || {
-                parse(
-                    sources.get(source_id).expect("source was just inserted"),
-                    &lexed.tokens,
-                )
-            },
-            |output| diagnostics_outcome(&output.diagnostics),
-            |output, _| statistics::parsing_metrics(output, lexed.tokens.len()),
-        );
-        diagnostics.append(parsed.diagnostics);
-        if diagnostics.has_errors() {
-            return Err(diagnostic_failure(sources, diagnostics));
-        }
+            let parsed = observe_phase_with_metrics(
+                observer,
+                ReportPhase::Parsing,
+                || {
+                    parse(
+                        sources.get(source_id).expect("source was just inserted"),
+                        &lexed.tokens,
+                    )
+                },
+                |output| diagnostics_outcome(&output.diagnostics),
+                |output, _| statistics::parsing_metrics(output, lexed.tokens.len()),
+            );
+            diagnostics.append(parsed.diagnostics);
+            if diagnostics.has_errors() {
+                return Err(diagnostic_failure(sources, diagnostics));
+            }
 
-        let resolved = observe_phase_with_metrics(
-            observer,
-            ReportPhase::Resolution,
-            || resolve_with_source_path(&parsed.ast, path),
-            |output| diagnostics_outcome(&output.diagnostics),
-            |output, _| statistics::resolution_metrics(&output.program, &output.diagnostics),
-        );
-        diagnostics.append(resolved.diagnostics);
-        finish_compilation(
-            sources,
-            diagnostics,
-            resolved.program,
-            target,
-            RuntimeTracePolicy::Enabled,
-            observer,
-        )
-    })
+            let resolved = observe_phase_with_metrics(
+                observer,
+                ReportPhase::Resolution,
+                || resolve_with_source_path(&parsed.ast, path),
+                |output| diagnostics_outcome(&output.diagnostics),
+                |output, _| statistics::resolution_metrics(&output.program, &output.diagnostics),
+            );
+            diagnostics.append(resolved.diagnostics);
+            finish_compilation(
+                sources,
+                diagnostics,
+                resolved.program,
+                target,
+                RuntimeTracePolicy::Enabled,
+                observer,
+            )
+        },
+        result_outcome,
+    )
 }
 
 fn compile_module_graph_to_assembly(
@@ -316,22 +333,6 @@ fn finish_compilation(
             diagnostics,
         },
     })
-}
-
-fn observe_compilation<T>(
-    observer: &mut dyn ReportObserver,
-    operation: impl FnOnce(&mut dyn ReportObserver) -> Result<T, CompilationError>,
-) -> Result<T, CompilationError> {
-    let started = observer.enabled(ReportDetail::Phases).then(Instant::now);
-    let result = operation(observer);
-    if let Some(started) = started {
-        observer.observe(ReportEvent::RunFinished {
-            scope: ReportScope::Compilation,
-            elapsed: started.elapsed(),
-            outcome: result_outcome(&result),
-        });
-    }
-    result
 }
 
 fn result_outcome<T, E>(result: &Result<T, E>) -> ReportOutcome {

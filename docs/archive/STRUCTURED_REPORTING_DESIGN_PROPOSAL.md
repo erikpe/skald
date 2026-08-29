@@ -3,7 +3,7 @@
 Status: frozen design proposal. SR1 through SR10 were confirmed together on
 2026-08-29 and promoted into the focused
 [compiler reporting contract](../compiler/REPORTING.md) before roadmap
-creation. The [implementation roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md)
+creation. The [implementation roadmap](STRUCTURED_REPORTING_ROADMAP.md)
 owns delivery; this document preserves the reviewed decisions.
 
 This proposal adds request-scoped structured reporting to the Skald compiler.

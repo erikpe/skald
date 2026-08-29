@@ -116,7 +116,6 @@ impl ReportScope {
 pub enum ReportArtifactKind {
     Assembly,
     Executable,
-    Dump,
 }
 
 impl ReportArtifactKind {
@@ -124,7 +123,6 @@ impl ReportArtifactKind {
         match self {
             Self::Assembly => "assembly",
             Self::Executable => "executable",
-            Self::Dump => "dump",
         }
     }
 }

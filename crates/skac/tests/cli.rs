@@ -5,7 +5,7 @@ use std::{
     fs::{self, OpenOptions},
     os::unix::{ffi::OsStringExt, fs::PermissionsExt},
     path::Path,
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
 };
 
 use support::TemporaryDirectory;
@@ -76,6 +76,135 @@ fn real_binary_renders_the_detail_ladder_only_on_stderr() {
         assert_eq!(stderr.contains("skac: trace:"), has_trace, "{level}");
         assert!(assembly.is_file());
     }
+}
+
+#[test]
+fn real_binary_default_output_matches_explicit_quiet_selection() {
+    let directory = TemporaryDirectory::new("default-reporting").unwrap();
+    let valid = directory.join("valid.ska");
+    let invalid = directory.join("invalid.ska");
+    fs::write(&valid, "fn main() -> i64 { return 42; }\n").unwrap();
+    fs::write(&invalid, "fn main() -> i64 { return missing; }\n").unwrap();
+
+    let default_assembly = directory.join("default.s");
+    let explicit_assembly = directory.join("explicit.s");
+    let default = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&valid)
+        .args(["--no-stdlib", "--emit", "asm", "-o"])
+        .arg(&default_assembly)
+        .output()
+        .unwrap();
+    let explicit = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&valid)
+        .args(["--no-stdlib", "--emit", "asm", "-o"])
+        .arg(&explicit_assembly)
+        .args(["--report-level", "off", "--diagnostic-level", "warning"])
+        .output()
+        .unwrap();
+    assert_same_process_output(&default, &explicit);
+    assert_eq!(
+        fs::read(default_assembly).unwrap(),
+        fs::read(explicit_assembly).unwrap()
+    );
+
+    let default = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&invalid)
+        .args(["--no-stdlib", "--emit", "asm"])
+        .output()
+        .unwrap();
+    let explicit = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&invalid)
+        .args([
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "--report-level",
+            "off",
+            "--diagnostic-level",
+            "warning",
+        ])
+        .output()
+        .unwrap();
+    assert_same_process_output(&default, &explicit);
+
+    let missing_root = directory.join("missing-root");
+    let default = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .args(["--entry", "app", "--module-root"])
+        .arg(&missing_root)
+        .args(["--no-stdlib", "--emit", "asm"])
+        .output()
+        .unwrap();
+    let explicit = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .args(["--entry", "app", "--module-root"])
+        .arg(&missing_root)
+        .args([
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "--report-level",
+            "off",
+            "--diagnostic-level",
+            "warning",
+        ])
+        .output()
+        .unwrap();
+    assert_same_process_output(&default, &explicit);
+
+    let runtime = directory.join("runtime.a");
+    fs::write(&runtime, "runtime").unwrap();
+    let default_executable = directory.join("default-executable");
+    let explicit_executable = directory.join("explicit-executable");
+    let default = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&valid)
+        .args(["--no-stdlib", "-o"])
+        .arg(&default_executable)
+        .env("CC", "false")
+        .env("SKALD_RUNTIME_ARCHIVE", &runtime)
+        .output()
+        .unwrap();
+    let explicit = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&valid)
+        .args(["--no-stdlib", "-o"])
+        .arg(&explicit_executable)
+        .args(["--report-level", "off", "--diagnostic-level", "warning"])
+        .env("CC", "false")
+        .env("SKALD_RUNTIME_ARCHIVE", &runtime)
+        .output()
+        .unwrap();
+    assert_same_process_output(&default, &explicit);
+
+    for special in ["--help", "--version"] {
+        let default = Command::new(env!("CARGO_BIN_EXE_skac"))
+            .arg(special)
+            .output()
+            .unwrap();
+        let explicit = Command::new(env!("CARGO_BIN_EXE_skac"))
+            .args(["--report-level", "off", special])
+            .output()
+            .unwrap();
+        assert_same_process_output(&default, &explicit);
+    }
+}
+
+#[test]
+fn real_binary_structurally_reports_terminal_failure_without_fixed_elapsed_time() {
+    let directory = TemporaryDirectory::new("reported-failure").unwrap();
+    let missing_root = directory.join("missing-root");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .args(["--entry", "app", "--module-root"])
+        .arg(&missing_root)
+        .args(["--no-stdlib", "--emit", "asm", "--report-level", "details"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("skac: phase: provider normalization failed in "));
+    assert!(stderr.contains("skac: run: compilation failed in "));
+    assert!(stderr.contains("skac: run: driver failed in "));
+    assert!(stderr.contains("skac: cannot normalize provider root"));
 }
 
 #[test]
@@ -426,4 +555,10 @@ fn write_module(base: &Path, relative: impl AsRef<Path>, source: &str) {
     let path = base.join(relative);
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, source).unwrap();
+}
+
+fn assert_same_process_output(default: &Output, explicit: &Output) {
+    assert_eq!(default.status.code(), explicit.status.code());
+    assert_eq!(default.stdout, explicit.stdout);
+    assert_eq!(default.stderr, explicit.stderr);
 }
