@@ -54,6 +54,11 @@ behavior is separate from the target-independent phase model and is defined by
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
+The frozen [structured reporting contract](REPORTING.md) observes this
+pipeline through a request-scoped interface without entering phase products or
+changing their ownership. Reporting is planned and not yet part of the public
+phase paths.
+
 `HirForIn` carries one exhaustive execution plan. `Protocol` retains the
 selected iterable receiver, state, optional result, item lifecycle, and call
 plans. `PrimitiveRange` is selected only for an immediately consumed canonical

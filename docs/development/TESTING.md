@@ -136,6 +136,14 @@ over-budget syntax diagnostics.
 Reusable non-Rust compiler corpus data belongs under `tests/compiler/`.
 Production crates must not depend on the top-level test tree at runtime.
 
+The frozen [structured reporting contract](../compiler/REPORTING.md) assigns
+event, metric, observer, and renderer invariants to compiler unit tests;
+cross-phase observation to compiler integration tests; and option, stream,
+status, diagnostic-display, and quiet-default behavior to real-binary tests.
+These suites are planned in the
+[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md), not
+present behavior yet.
+
 ## Selecting coverage
 
 Add a colocated unit test when a private owner can state the invariant directly.

@@ -3,6 +3,9 @@
 Status: authoritative for compiler inspection workflows. Phase contracts and
 MIR invariants belong to [Phases and IR](../compiler/PHASES_AND_IR.md); target
 behavior belongs to the [Backend and Target Contract](../compiler/BACKEND.md).
+The frozen operational-observation design belongs to
+[Structured Compiler Reporting](../compiler/REPORTING.md) and is not yet
+implemented.
 
 ## Inspect the nearest phase product
 
@@ -26,6 +29,11 @@ The phase renderers are repository-internal Rust APIs. There are no CLI modes
 for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
 Their text is a deterministic
 debugging and regression format, not a stable interchange format.
+
+Planned structured reports complement these products with request progress,
+elapsed phase durations, phase-owned metrics, and artifact events. They do not
+replace deterministic dumps or structured source diagnostics. Delivery is
+tracked by the [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 
 When hand-built or future lowered MIR uses path-dependent state, the MIR dump
 prints a `PathConditions` table before the block list. Each row identifies the

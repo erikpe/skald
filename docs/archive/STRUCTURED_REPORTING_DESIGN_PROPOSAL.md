@@ -1,10 +1,10 @@
 # Structured Compiler Reporting Design Proposal
 
-Status: proposed design. SR1 through SR10 await confirmation. The current
-[driver contract](../compiler/DRIVER_AND_ARTIFACTS.md),
-[compiler architecture](../compiler/README.md), and
-[debugging guide](../development/DEBUGGING.md) remain authoritative until this
-proposal is frozen, promoted, and implemented.
+Status: frozen design proposal. SR1 through SR10 were confirmed together on
+2026-08-29 and promoted into the focused
+[compiler reporting contract](../compiler/REPORTING.md) before roadmap
+creation. The [implementation roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md)
+owns delivery; this document preserves the reviewed decisions.
 
 This proposal adds request-scoped structured reporting to the Skald compiler.
 It covers phase progress, elapsed time, aggregate and pass-owned statistics,
@@ -179,18 +179,18 @@ This proposal uses these terms consistently:
 
 ## Decision register
 
-| ID | Question | Proposed direction | State |
+| ID | Question | Confirmed direction | State |
 |---|---|---|---|
-| [SR1](#sr1--separate-reporting-from-diagnostics-and-dumps) | What belongs to structured reporting? | Operational events only; diagnostics, driver errors, and dumps retain separate owners | **Proposed** |
-| [SR2](#sr2--request-scoped-observer-composition) | How does reporting enter the compiler? | An explicit observer passed to observed compilation adapters, with existing quiet wrappers | **Proposed** |
-| [SR3](#sr3--typed-event-and-metric-model) | What is reported? | Typed phase, outcome, metric, and artifact events with owned values and deterministic ordering | **Proposed** |
-| [SR4](#sr4--cli-configuration-and-warning-policy) | How is reporting configured? | An operational detail ladder independent from diagnostic severity | **Proposed** |
-| [SR5](#sr5--phase-timing-and-failure-semantics) | How are phases and timings represented? | Monotonic start/finish observation, including failed completion, with no exact-time correctness claims | **Proposed** |
-| [SR6](#sr6--statistics-ownership-and-source-loading-accounting) | Where do counters come from? | Phase-owned sidecars and pass results, including explicit discovery/final parse execution counts | **Proposed** |
-| [SR7](#sr7--rendering-streams-and-output-stability) | Where and how is output rendered? | Human text to stderr initially; default streams unchanged; machine format deferred | **Proposed** |
-| [SR8](#sr8--module-and-public-api-organization) | Where does implementation live? | A top-level `reporting` facade plus driver-local CLI configuration | **Proposed** |
-| [SR9](#sr9--verification-determinism-and-overhead) | How is the system tested and bounded? | Typed recording tests, fixed renderer fixtures, CLI stream tests, and disabled-path overhead checks | **Proposed** |
-| [SR10](#sr10--promotion-and-delivery-boundary) | How does the proposal become implementation work? | Freeze and promote the contract before creating a PR-sized implementation roadmap | **Proposed** |
+| [SR1](#sr1--separate-reporting-from-diagnostics-and-dumps) | What belongs to structured reporting? | Operational events only; diagnostics, driver errors, and dumps retain separate owners | **Confirmed** |
+| [SR2](#sr2--request-scoped-observer-composition) | How does reporting enter the compiler? | An explicit observer passed to observed compilation adapters, with existing quiet wrappers | **Confirmed** |
+| [SR3](#sr3--typed-event-and-metric-model) | What is reported? | Typed phase, outcome, metric, and artifact events with owned values and deterministic ordering | **Confirmed** |
+| [SR4](#sr4--cli-configuration-and-warning-policy) | How is reporting configured? | An operational detail ladder independent from diagnostic severity | **Confirmed** |
+| [SR5](#sr5--phase-timing-and-failure-semantics) | How are phases and timings represented? | Monotonic start/finish observation, including failed completion, with no exact-time correctness claims | **Confirmed** |
+| [SR6](#sr6--statistics-ownership-and-source-loading-accounting) | Where do counters come from? | Phase-owned sidecars and pass results, including explicit discovery/final parse execution counts | **Confirmed** |
+| [SR7](#sr7--rendering-streams-and-output-stability) | Where and how is output rendered? | Human text to stderr initially; default streams unchanged; machine format deferred | **Confirmed** |
+| [SR8](#sr8--module-and-public-api-organization) | Where does implementation live? | A top-level `reporting` facade plus driver-local CLI configuration | **Confirmed** |
+| [SR9](#sr9--verification-determinism-and-overhead) | How is the system tested and bounded? | Typed recording tests, fixed renderer fixtures, CLI stream tests, and disabled-path overhead checks | **Confirmed** |
+| [SR10](#sr10--promotion-and-delivery-boundary) | How does the proposal become implementation work? | Freeze and promote the contract before creating a PR-sized implementation roadmap | **Confirmed** |
 
 ## SR1 — Separate reporting from diagnostics and dumps
 
@@ -584,24 +584,21 @@ require `make msrv-check`.
 
 ## SR10 — Promotion and delivery boundary
 
-SR1 through SR10 should be reviewed and confirmed together because CLI
-semantics, event representation, phase ownership, error behavior, and test
-strategy depend on one another. Implementation should not begin from a mixture
-of confirmed and provisional reporting contracts.
+SR1 through SR10 were reviewed and confirmed together on 2026-08-29 because
+CLI semantics, event representation, phase ownership, error behavior, and test
+strategy depend on one another. The promotion procedure then:
 
-After confirmation:
-
-1. publish a focused living compiler reporting contract, expected at
+1. published a focused living compiler reporting contract at
    `docs/compiler/REPORTING.md`;
-2. update the compiler architecture, driver contract, debugging guide, and
+2. updated the compiler architecture, driver contract, debugging guide, and
    testing guide to link to that single authority;
-3. move this proposal to `docs/archive/` as the preserved decision record;
-4. create and index a PR-sized implementation roadmap; and
-5. keep source-language documentation and the runtime ABI unchanged because
+3. moved this proposal to `docs/archive/` as the preserved decision record;
+4. created and indexed a PR-sized implementation roadmap; and
+5. kept source-language documentation and the runtime ABI unchanged because
    structured compiler reporting adds no source syntax or runtime service.
 
-The implementation roadmap should settle contracts before consumers. A likely
-dependency order is:
+The implementation roadmap settles contracts before consumers in this
+dependency order:
 
 1. event, metric, observer, renderer, and CLI-detail contracts;
 2. request and singleton phase observation with aggregate loading statistics;
@@ -610,9 +607,8 @@ dependency order is:
 4. pass-owned detailed metrics, hardening, documentation promotion, and full
    validation.
 
-The roadmap may split these boundaries further to keep each task reviewable,
-but it must not replace typed events with temporary global logging as an
-intermediate state.
+The roadmap splits these boundaries further to keep each task reviewable and
+does not permit temporary global logging as an intermediate state.
 
 ## Rejected alternatives
 

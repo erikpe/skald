@@ -17,6 +17,7 @@ For current information, use:
 - [the backend and target contract](../compiler/BACKEND.md);
 - [the runtime ABI](../compiler/RUNTIME_ABI.md);
 - [driver and artifacts](../compiler/DRIVER_AND_ARTIFACTS.md);
+- [structured compiler reporting](../compiler/REPORTING.md);
 - [the development workflow](../development/README.md);
 - [testing](../development/TESTING.md);
 - [debugging the compiler](../development/DEBUGGING.md);
@@ -129,6 +130,10 @@ Resolved panic runtime-trace inputs:
 
 - [Panic runtime trace design record](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md)
 - [Panic runtime trace investigation](PANIC_RUNTIME_TRACE_INVESTIGATION.md)
+
+Resolved compiler-reporting design inputs:
+
+- [Structured compiler reporting design proposal](STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
 
 Supporting records for the documentation overhaul:
 

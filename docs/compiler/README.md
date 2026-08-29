@@ -97,6 +97,13 @@ ownership and selection are defined by
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
+The frozen [structured compiler reporting contract](REPORTING.md) defines the
+planned request-scoped observer, typed event and metric vocabulary, human
+rendering, and independent CLI selection of operational reports and source
+diagnostics. It preserves the current phase, diagnostic, dump, and driver
+ownership boundaries. The contract is not implemented yet; delivery is owned
+by the [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
+
 The implemented
 [structural indexing and slicing compiler contract](INDEXING_AND_SLICING.md)
 uses neutral source-only bracket vocabulary. Resolution retains built-in arrays
@@ -381,6 +388,10 @@ These namespaces, rather than private source files, are the supported way for
 repository consumers to cross a compiler boundary. Facades use explicit
 re-exports; implementation modules, state machines, table storage, builders,
 and target internals remain private.
+
+The reporting contract reserves `reporting` as a future facade with explicit
+re-exports over private event, metric, and text-renderer modules. It is omitted
+from the table because no reporting API is implemented yet.
 
 Public phase-product fields allow inspection and phase-specific debugging.
 They do not make arbitrary constructed or mutated AST, resolved IR, HIR, or

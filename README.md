@@ -75,6 +75,7 @@ Start at the [documentation index](docs/README.md). Principal references are:
   [string](docs/language/STRINGS.md) language contracts;
 - [compiler architecture](docs/compiler/README.md),
   [phases and IR](docs/compiler/PHASES_AND_IR.md),
+  [structured reporting](docs/compiler/REPORTING.md),
   [module-system contract](docs/compiler/MODULE_SYSTEM.md),
   [backend](docs/compiler/BACKEND.md), and
   [runtime ABI](docs/compiler/RUNTIME_ABI.md);

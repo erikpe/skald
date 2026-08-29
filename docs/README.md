@@ -114,6 +114,8 @@ Use the authority closest to the behavior:
   belong in the [runtime ABI](compiler/RUNTIME_ABI.md);
 - compiler orchestration, CLI behavior, tool invocation, and artifact
   publication belong in [driver and artifacts](compiler/DRIVER_AND_ARTIFACTS.md);
+- the frozen request-scoped event, timing, metric, renderer, and report-selection
+  design belongs in [structured compiler reporting](compiler/REPORTING.md);
 - contributor prerequisites and validation belong in the
   [development workflow](development/README.md);
 - test ownership, placement, fixtures, determinism, and robustness belong in

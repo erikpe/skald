@@ -7,7 +7,9 @@ and driver failure boundaries. Compiler phases are owned by
 [Backend and Target Contract](BACKEND.md), and the linked C surface by the
 [Runtime ABI](RUNTIME_ABI.md). Multiple-file CLI, provider, and entry behavior
 is owned by the
-[Module-System Compiler Contract](MODULE_SYSTEM.md).
+[Module-System Compiler Contract](MODULE_SYSTEM.md). The frozen but not yet
+implemented operational-reporting boundary is owned by
+[Structured Compiler Reporting](REPORTING.md).
 
 ## Driver facade
 
@@ -128,6 +130,20 @@ strings. Loading reads every reached source as UTF-8 text. Invalid entries,
 missing modules, unreadable or malformed reached sources, ambiguity, and
 provider failures are compilation failures with structured diagnostics or
 configuration errors.
+
+## Planned structured reporting
+
+The current CLI has no reporting or diagnostic-display level options. The
+frozen [structured reporting contract](REPORTING.md) adds observed compilation
+adapters while retaining the existing quiet wrappers, emits human operational
+reports to stderr, and keeps default successful compilation quiet. Planned
+selection uses `-v`/`-q`, `--report-level`, and `--diagnostic-level`; source
+diagnostics remain a separate structured channel and a failed compilation can
+never hide its errors. Linking and artifact publication are driver events,
+not compiler-phase events. The
+[implementation roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md) owns the
+rollout; until its tasks land, `skac --help` and this document's other sections
+remain authoritative for implemented command-line behavior.
 
 ## Target selection
 

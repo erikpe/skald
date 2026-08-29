@@ -18,18 +18,19 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No other implementation roadmap is currently planned.
+The [structured compiler reporting roadmap](STRUCTURED_REPORTING_ROADMAP.md) is
+planned; REP0 is next. It delivers the frozen request-scoped event, metric,
+timing, rendering, and CLI-selection contract in five ordered, PR-sized tasks.
+It depends on the implemented request driver and explicit compiler phase
+pipeline and has no dependency on another active roadmap.
 
 ## Design proposals
 
-The [structured compiler reporting design proposal](STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
-is active. Its status is proposed; SR1 through SR10 await confirmation. It
-defines request-scoped typed phase, timing, metric, and artifact events while
-preserving structured diagnostics, deterministic dumps, quiet default output,
-and the existing driver failure boundaries. Its only material dependency is
-the implemented request-based driver and explicit compiler phase pipeline; no
-implementation roadmap should be created until the whole reporting contract
-is frozen and promoted.
+No design proposal is currently active. The structured-reporting decisions
+are promoted into the [compiler reporting contract](../compiler/REPORTING.md),
+their [frozen decision record](../archive/STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
+is preserved in the archive, and delivery is owned by the
+[structured compiler reporting roadmap](STRUCTURED_REPORTING_ROADMAP.md).
 
 The frozen generic-range contract is promoted into the
 [language](../language/RANGES.md) and [compiler](../compiler/RANGES.md)
