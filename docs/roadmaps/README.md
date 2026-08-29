@@ -22,9 +22,18 @@ No other implementation roadmap is currently planned.
 
 ## Design proposals
 
-No design proposal is currently active. The frozen generic-range contract is
-promoted into the [language](../language/RANGES.md) and
-[compiler](../compiler/RANGES.md) documentation, and its
+The [structured compiler reporting design proposal](STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
+is active. Its status is proposed; SR1 through SR10 await confirmation. It
+defines request-scoped typed phase, timing, metric, and artifact events while
+preserving structured diagnostics, deterministic dumps, quiet default output,
+and the existing driver failure boundaries. Its only material dependency is
+the implemented request-based driver and explicit compiler phase pipeline; no
+implementation roadmap should be created until the whole reporting contract
+is frozen and promoted.
+
+The frozen generic-range contract is promoted into the
+[language](../language/RANGES.md) and [compiler](../compiler/RANGES.md)
+documentation, and its
 [decision record](../archive/GENERIC_RANGES_DESIGN_PROPOSAL.md) is preserved in
 the archive.
 
