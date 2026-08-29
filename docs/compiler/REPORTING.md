@@ -2,8 +2,9 @@
 
 Status: authoritative for the frozen structured-reporting contract. The typed
 event and metric model, observer facade, recording and text observers, and
-human renderer are implemented. Compiler phases and the command-line driver do
-not emit report events yet; their delivery is tracked by the
+human renderer are implemented. Observed request and singleton compilation
+APIs emit phase and compilation-total events. Phase-owned metrics, CLI
+selection, linking, and publication observation remain tracked by the
 [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 Current command-line behavior remains defined by
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) until the responsible roadmap
@@ -15,11 +16,10 @@ time, aggregate and pass-owned statistics, and artifact publication. Source
 diagnostics, driver errors, deterministic phase dumps, generated artifacts,
 and runtime program output retain their existing owners.
 
-The design is request-scoped and event-first. The implemented facade lets
-repository tools construct, record, and render owned typed events without
-global state. Planned compiler work will emit those events to an explicitly
-supplied observer, and the CLI will render selected events as human text on
-stderr.
+The design is request-scoped and event-first. Repository tools can compile
+through an explicitly supplied observer, collect owned typed events without
+global state, and render them independently. The CLI does not select or render
+these observations yet.
 
 ## Contract boundary
 
@@ -98,8 +98,8 @@ owns events in emission order at a selected detail level. `TextObserver<W>`
 renders to any `std::io::Write`. Owners use `enabled` before computing optional
 detailed statistics.
 
-The planned driver integration preserves its current quiet compilation
-functions and adds observed counterparts:
+The driver preserves its quiet compilation functions and provides observed
+counterparts:
 
 ```rust
 pub fn compile_request_to_assembly(
@@ -112,10 +112,10 @@ pub fn compile_request_to_assembly_observed(
 ) -> Result<AssemblyArtifact, CompilationError>;
 ```
 
-Once pipeline integration lands, the quiet function will delegate through a
-no-op observer. The in-memory `compile_source_to_assembly` adapter will receive
-the same pair of quiet and observed surfaces so its lexing and parsing work is
-visible to repository tools without filesystem module loading.
+The quiet request function delegates through a no-op observer. The in-memory
+`compile_source_to_assembly` adapter has the same quiet and observed surfaces,
+with the observer as the final argument, so its lexing and parsing work is
+visible without filesystem module loading.
 
 The observer is an invocation service, not semantic request configuration. It
 does not live inside `CompilationRequest`, participate in `Clone` or `Eq`,
@@ -190,7 +190,7 @@ give one identically named total two different meanings.
 
 ## Phase inventory and outcomes
 
-`ReportPhase` defines these boundaries before pipeline emission is added:
+Request compilation emits these boundaries in order:
 
 1. provider normalization;
 2. reachable module loading;
@@ -201,23 +201,27 @@ give one identically named total two different meanings.
 7. static-lifecycle planning;
 8. planned MIR verification;
 9. static-lifecycle synthesis;
-10. the target-independent MIR pass pipeline;
-11. backend assembly emission;
-12. host linking; and
-13. artifact publication.
+10. the target-independent MIR pass pipeline; and
+11. backend assembly emission.
 
-Source reading, discovery lexing/parsing, final lexing/parsing, individual
-verification operations, and future named passes are detail events or owned
-metrics beneath their corresponding phase. They remain distinguishable at
-trace detail even when the human renderer groups adjacent successful phases
-for concise output.
+Singleton compilation emits lexing and parsing before the same resolution
+through backend sequence. Its `Lexing` and `Parsing` identities are explicit
+because no module loader owns that work. Host linking and artifact publication
+are defined `ReportPhase` identities but are not emitted until driver-level
+observation is implemented.
+
+Within request compilation, source reading, discovery lexing/parsing, and final
+lexing/parsing remain beneath module loading. Individual pass executions and
+loader work become detail events or owned metrics in later implementation.
 
 Elapsed measurements use `std::time::Instant` and `Duration`. Wall-clock
 timestamps, time zones, process IDs, and thread IDs do not enter the event
-model. Each started phase produces exactly one completed or failed finish
-event. A source phase that returns terminal diagnostics is failed for reporting
-purposes even though the diagnostics remain ordinary data. No later phase
-starts after terminal failure.
+model. Each normally returning started phase produces exactly one completed or
+failed finish event with an empty metric vector for now. A source phase that
+returns terminal diagnostics is failed for reporting purposes even though the
+diagnostics remain ordinary data. No later phase starts after terminal failure.
+The final compilation-scoped `RunFinished` ends after assembly production or
+the terminal compiler failure and excludes host linking and publication.
 
 Reporting does not turn a compiler panic into a normal compilation failure.
 Unwind and internal-defect policy remain unchanged.
@@ -349,14 +353,15 @@ Implemented tests follow existing ownership:
 - reporting unit tests construct exact events and verify filtering, metric
   units, deterministic order, text rendering, and deferred writer errors;
 - the public API integration test covers every intentional facade path without
-  exposing private implementation modules.
+  exposing private implementation modules; and
+- driver reporting tests cover request and singleton order, every source
+  cutoff, lifecycle failure, malformed MIR, backend failure, compilation
+  totals, unchanged results, panic behavior, and independent parallel callers.
 
 Later roadmap tasks add:
 
 - CLI parser tests for verbosity, quiet saturation, explicit-level conflicts,
   diagnostic level, help, and native path arguments;
-- driver pipeline tests using a recording observer for phase order, failure
-  cutoff, outcome, metrics, request compilation, and singleton compilation;
 - module-loader tests for discovery and final parser execution accounting;
 - pass tests for transformation counters and disabled-detail optional work;
 - binary integration tests for real `skac` arguments, stdout/stderr, status,

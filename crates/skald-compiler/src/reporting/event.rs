@@ -26,6 +26,8 @@ impl ReportDetail {
 pub enum ReportPhase {
     ProviderNormalization,
     ModuleLoading,
+    Lexing,
+    Parsing,
     Resolution,
     TypeChecking,
     PreliminaryMirLowering,
@@ -44,6 +46,8 @@ impl ReportPhase {
         match self {
             Self::ProviderNormalization => "provider normalization",
             Self::ModuleLoading => "module loading",
+            Self::Lexing => "lexing",
+            Self::Parsing => "parsing",
             Self::Resolution => "resolution",
             Self::TypeChecking => "type checking",
             Self::PreliminaryMirLowering => "preliminary MIR lowering",

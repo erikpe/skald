@@ -159,11 +159,11 @@ impl CompilationEnvironment {
     }
 }
 
-/// Complete typed input to a future request-based driver pipeline.
+/// Complete typed input to the request-based compiler driver.
 ///
 /// Construction records configuration only. Provider normalization,
-/// filesystem validation, reachable loading, and compilation are introduced
-/// by later module-system tasks.
+/// filesystem validation, reachable loading, and compilation remain explicit
+/// driver operations.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationRequest {
     entry: EntrySelector,

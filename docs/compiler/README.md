@@ -98,11 +98,12 @@ prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
 The frozen [structured compiler reporting contract](REPORTING.md) defines the
-planned request-scoped observer, typed event and metric vocabulary, human
-rendering, and independent CLI selection of operational reports and source
-diagnostics. It preserves the current phase, diagnostic, dump, and driver
-ownership boundaries. The contract is not implemented yet; delivery is owned
-by the [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
+request-scoped observer, typed event and metric vocabulary, human rendering,
+observed compilation APIs, and planned independent CLI selection of operational
+reports and source diagnostics. Request and singleton compilation now emit
+phase outcomes and timings without changing phase products, diagnostics,
+dumps, or quiet API behavior. Metrics and CLI integration remain owned by the
+[structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 
 The implemented
 [structural indexing and slicing compiler contract](INDEXING_AND_SLICING.md)
@@ -391,8 +392,9 @@ re-exports; implementation modules, state machines, table storage, builders,
 and target internals remain private.
 
 The reporting facade is implemented with explicit re-exports over private
-event, metric, and text-renderer modules. Compiler phases and the driver do not
-emit events yet, so its current consumers are tests and repository tools.
+event, metric, and text-renderer modules. The driver exposes observed request
+and singleton compilation alongside no-op-observer compatibility wrappers;
+direct phase APIs remain reporting-independent.
 
 Public phase-product fields allow inspection and phase-specific debugging.
 They do not make arbitrary constructed or mutated AST, resolved IR, HIR, or

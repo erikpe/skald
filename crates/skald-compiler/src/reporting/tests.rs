@@ -6,9 +6,11 @@ use std::{
 
 use super::*;
 
-const ALL_PHASES: [ReportPhase; 13] = [
+const ALL_PHASES: [ReportPhase; 15] = [
     ReportPhase::ProviderNormalization,
     ReportPhase::ModuleLoading,
+    ReportPhase::Lexing,
+    ReportPhase::Parsing,
     ReportPhase::Resolution,
     ReportPhase::TypeChecking,
     ReportPhase::PreliminaryMirLowering,

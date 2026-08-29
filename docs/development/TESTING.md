@@ -139,10 +139,12 @@ Production crates must not depend on the top-level test tree at runtime.
 The frozen [structured reporting contract](../compiler/REPORTING.md) assigns
 event, metric, observer, renderer, filtering, path, and writer-error invariants
 to implemented compiler unit tests. The compiler public-API integration test
-owns intentional reporting facade paths. Cross-phase observation remains a
-compiler integration-test responsibility; option, stream, status,
-diagnostic-display, and quiet-default behavior remains a real-binary-test
-responsibility. Those later suites are tracked in the
+owns intentional reporting and observed driver facade paths. Driver reporting
+tests own request/singleton phase order, source and internal failure cutoffs,
+compilation totals, result compatibility, panic policy, and independent caller
+composition. Option, stream, status, diagnostic-display, and quiet-default
+behavior remains a real-binary-test responsibility. Those later suites are
+tracked in the
 [structured reporting roadmap](../roadmaps/STRUCTURED_REPORTING_ROADMAP.md).
 
 ## Selecting coverage

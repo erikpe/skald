@@ -42,7 +42,9 @@ The target-independent compiler path is:
 `driver::compile_request_to_assembly` composes provider normalization,
 reachable graph loading, these phases, target selection, and backend emission.
 `driver::compile_source_to_assembly` is its in-memory singleton convenience
-surface. Both stop after any source phase that produced an error. Successful
+surface. Their observed counterparts emit typed phase and compilation-total
+events without entering the products. All forms stop after any source phase
+that produced an error. Successful
 type checking always produces HIR; failed type checking
 produces no HIR. HIR lowering represents every typed operation directly in
 target-independent MIR. The
@@ -56,8 +58,8 @@ diagnostic, identity, or IR registry.
 
 The frozen [structured reporting contract](REPORTING.md) observes this
 pipeline through a request-scoped interface without entering phase products or
-changing their ownership. Reporting is planned and not yet part of the public
-phase paths.
+changing their ownership. Direct public phase paths remain independent from
+reporting; observation belongs to driver composition.
 
 `HirForIn` carries one exhaustive execution plan. `Protocol` retains the
 selected iterable receiver, state, optional result, item lifecycle, and call

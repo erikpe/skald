@@ -1,6 +1,6 @@
 //! Source-to-assembly orchestration over explicit compiler phase boundaries.
 
-use std::path::Path;
+use std::{path::Path, time::Instant};
 
 use crate::{
     backend::{emit_assembly, BackendError, BackendInput, RuntimeTracePolicy, Target},
@@ -15,6 +15,10 @@ use crate::{
         static_lifecycle::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
         },
+    },
+    reporting::{
+        NoopObserver, ReportDetail, ReportEvent, ReportObserver, ReportOutcome, ReportPhase,
+        ReportScope,
     },
     resolve::{resolve_module_graph, resolve_with_source_path, ResolvedProgram},
     source::SourceDatabase,
@@ -51,22 +55,49 @@ pub enum CompilationError {
 pub fn compile_request_to_assembly(
     request: &CompilationRequest,
 ) -> Result<AssemblyArtifact, CompilationError> {
-    let providers = normalize_provider_roots(
-        request.environment().working_directory(),
-        &request.provider_root_configurations(),
-    )
-    .map_err(CompilationError::ProviderConfiguration)?;
-    let graph = load_module_graph(
-        request.entry(),
-        request.environment().working_directory(),
-        &providers,
-    )
-    .map_err(|failure| {
-        let (sources, diagnostics) = failure.into_parts();
-        diagnostic_failure(sources, diagnostics)
-    })?;
+    let mut observer = NoopObserver;
+    compile_request_to_assembly_observed(request, &mut observer)
+}
 
-    compile_module_graph_to_assembly(graph, request.target(), request.runtime_trace())
+/// Loads and compiles a request while emitting typed phase observations.
+///
+/// The observer is invocation-local and does not become part of the request or
+/// any compiler product. Host linking and artifact publication remain outside
+/// this compilation-scoped API.
+pub fn compile_request_to_assembly_observed(
+    request: &CompilationRequest,
+    observer: &mut dyn ReportObserver,
+) -> Result<AssemblyArtifact, CompilationError> {
+    observe_compilation(observer, |observer| {
+        let providers = observe_phase(
+            observer,
+            ReportPhase::ProviderNormalization,
+            || {
+                let configurations = request.provider_root_configurations();
+                normalize_provider_roots(request.environment().working_directory(), &configurations)
+            },
+            result_outcome,
+        )
+        .map_err(CompilationError::ProviderConfiguration)?;
+        let graph = observe_phase(
+            observer,
+            ReportPhase::ModuleLoading,
+            || {
+                load_module_graph(
+                    request.entry(),
+                    request.environment().working_directory(),
+                    &providers,
+                )
+            },
+            result_outcome,
+        )
+        .map_err(|failure| {
+            let (sources, diagnostics) = failure.into_parts();
+            diagnostic_failure(sources, diagnostics)
+        })?;
+
+        compile_module_graph_to_assembly(graph, request.target(), request.runtime_trace(), observer)
+    })
 }
 
 /// Compiles one in-memory singleton source through the same semantic and
@@ -76,43 +107,83 @@ pub fn compile_source_to_assembly(
     text: impl Into<String>,
     target: Target,
 ) -> Result<AssemblyArtifact, CompilationError> {
+    let mut observer = NoopObserver;
+    compile_source_to_assembly_observed(path, text, target, &mut observer)
+}
+
+/// Compiles one in-memory source while emitting typed phase observations.
+///
+/// Lexing and parsing are explicit phases for this adapter because no module
+/// loader owns its frontend work.
+pub fn compile_source_to_assembly_observed(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+    target: Target,
+    observer: &mut dyn ReportObserver,
+) -> Result<AssemblyArtifact, CompilationError> {
     let path = path.as_ref();
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add(path, text);
-    let mut diagnostics = Diagnostics::new();
+    observe_compilation(observer, |observer| {
+        let mut sources = SourceDatabase::new();
+        let source_id = sources.add(path, text);
+        let mut diagnostics = Diagnostics::new();
 
-    let lexed = lex(sources.get(source_id).expect("source was just inserted"));
-    diagnostics.append(lexed.diagnostics);
-    if diagnostics.has_errors() {
-        return Err(diagnostic_failure(sources, diagnostics));
-    }
+        let lexed = observe_phase(
+            observer,
+            ReportPhase::Lexing,
+            || lex(sources.get(source_id).expect("source was just inserted")),
+            |output| diagnostics_outcome(&output.diagnostics),
+        );
+        diagnostics.append(lexed.diagnostics);
+        if diagnostics.has_errors() {
+            return Err(diagnostic_failure(sources, diagnostics));
+        }
 
-    let parsed = parse(
-        sources.get(source_id).expect("source was just inserted"),
-        &lexed.tokens,
-    );
-    diagnostics.append(parsed.diagnostics);
-    if diagnostics.has_errors() {
-        return Err(diagnostic_failure(sources, diagnostics));
-    }
+        let parsed = observe_phase(
+            observer,
+            ReportPhase::Parsing,
+            || {
+                parse(
+                    sources.get(source_id).expect("source was just inserted"),
+                    &lexed.tokens,
+                )
+            },
+            |output| diagnostics_outcome(&output.diagnostics),
+        );
+        diagnostics.append(parsed.diagnostics);
+        if diagnostics.has_errors() {
+            return Err(diagnostic_failure(sources, diagnostics));
+        }
 
-    let resolved = resolve_with_source_path(&parsed.ast, path);
-    diagnostics.append(resolved.diagnostics);
-    finish_compilation(
-        sources,
-        diagnostics,
-        resolved.program,
-        target,
-        RuntimeTracePolicy::Enabled,
-    )
+        let resolved = observe_phase(
+            observer,
+            ReportPhase::Resolution,
+            || resolve_with_source_path(&parsed.ast, path),
+            |output| diagnostics_outcome(&output.diagnostics),
+        );
+        diagnostics.append(resolved.diagnostics);
+        finish_compilation(
+            sources,
+            diagnostics,
+            resolved.program,
+            target,
+            RuntimeTracePolicy::Enabled,
+            observer,
+        )
+    })
 }
 
 fn compile_module_graph_to_assembly(
     graph: ModuleGraph,
     target: Target,
     runtime_trace: RuntimeTracePolicy,
+    observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
-    let resolved = resolve_module_graph(&graph);
+    let resolved = observe_phase(
+        observer,
+        ReportPhase::Resolution,
+        || resolve_module_graph(&graph),
+        |output| diagnostics_outcome(&output.diagnostics),
+    );
     let sources = graph.into_sources();
     finish_compilation(
         sources,
@@ -120,6 +191,7 @@ fn compile_module_graph_to_assembly(
         resolved.program,
         target,
         runtime_trace,
+        observer,
     )
 }
 
@@ -129,12 +201,18 @@ fn finish_compilation(
     resolved: ResolvedProgram,
     target: Target,
     runtime_trace: RuntimeTracePolicy,
+    observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
     }
 
-    let checked = type_check(&resolved);
+    let checked = observe_phase(
+        observer,
+        ReportPhase::TypeChecking,
+        || type_check(&resolved),
+        |output| diagnostics_outcome(&output.diagnostics),
+    );
     diagnostics.append(checked.diagnostics);
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
@@ -142,24 +220,66 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    let preliminary = lower_preliminary_hir(&hir);
-    verify_preliminary_mir(&preliminary).map_err(CompilationError::MirVerification)?;
-    let planned = match plan_static_lifetimes(preliminary) {
+    let preliminary = observe_phase(
+        observer,
+        ReportPhase::PreliminaryMirLowering,
+        || lower_preliminary_hir(&hir),
+        |_| ReportOutcome::Completed,
+    );
+    observe_phase(
+        observer,
+        ReportPhase::PreliminaryMirVerification,
+        || verify_preliminary_mir(&preliminary),
+        result_outcome,
+    )
+    .map_err(CompilationError::MirVerification)?;
+    let planned = match observe_phase(
+        observer,
+        ReportPhase::StaticLifecyclePlanning,
+        || plan_static_lifetimes(preliminary),
+        result_outcome,
+    ) {
         Ok(planned) => planned,
         Err(failure) => {
             diagnostics.append(failure.into_diagnostics());
             return Err(diagnostic_failure(sources, diagnostics));
         }
     };
-    verify_planned_mir(&planned).map_err(CompilationError::MirVerification)?;
-    let mir = synthesize_static_lifecycle(planned).map_err(CompilationError::MirVerification)?;
-    let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
-    let input = match runtime_trace {
-        RuntimeTracePolicy::Enabled => BackendInput::with_runtime_trace(&mir, &sources),
-        RuntimeTracePolicy::Omitted => BackendInput::without_runtime_trace(&mir),
-    }
-    .with_reachable_artifacts_only();
-    let assembly = emit_assembly(target, input).map_err(CompilationError::Backend)?;
+    observe_phase(
+        observer,
+        ReportPhase::PlannedMirVerification,
+        || verify_planned_mir(&planned),
+        result_outcome,
+    )
+    .map_err(CompilationError::MirVerification)?;
+    let mir = observe_phase(
+        observer,
+        ReportPhase::StaticLifecycleSynthesis,
+        || synthesize_static_lifecycle(planned),
+        result_outcome,
+    )
+    .map_err(CompilationError::MirVerification)?;
+    let mir = observe_phase(
+        observer,
+        ReportPhase::MirPipeline,
+        || run_mir_pipeline(mir),
+        result_outcome,
+    )
+    .map_err(CompilationError::MirVerification)?;
+    let assembly = observe_phase(
+        observer,
+        ReportPhase::BackendEmission,
+        || {
+            let input = match runtime_trace {
+                RuntimeTracePolicy::Enabled => BackendInput::with_runtime_trace(&mir, &sources),
+                RuntimeTracePolicy::Omitted => BackendInput::without_runtime_trace(&mir),
+            }
+            .with_reachable_artifacts_only();
+            emit_assembly(target, input)
+        },
+        result_outcome,
+    )
+    .map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {
         assembly,
@@ -168,6 +288,60 @@ fn finish_compilation(
             diagnostics,
         },
     })
+}
+
+fn observe_compilation<T>(
+    observer: &mut dyn ReportObserver,
+    operation: impl FnOnce(&mut dyn ReportObserver) -> Result<T, CompilationError>,
+) -> Result<T, CompilationError> {
+    let started = observer.enabled(ReportDetail::Phases).then(Instant::now);
+    let result = operation(observer);
+    if let Some(started) = started {
+        observer.observe(ReportEvent::RunFinished {
+            scope: ReportScope::Compilation,
+            elapsed: started.elapsed(),
+            outcome: result_outcome(&result),
+        });
+    }
+    result
+}
+
+pub(super) fn observe_phase<T>(
+    observer: &mut dyn ReportObserver,
+    phase: ReportPhase,
+    operation: impl FnOnce() -> T,
+    outcome: impl FnOnce(&T) -> ReportOutcome,
+) -> T {
+    if !observer.enabled(ReportDetail::Phases) {
+        return operation();
+    }
+
+    let started = Instant::now();
+    observer.observe(ReportEvent::PhaseStarted { phase });
+    let result = operation();
+    observer.observe(ReportEvent::PhaseFinished {
+        phase,
+        elapsed: started.elapsed(),
+        outcome: outcome(&result),
+        metrics: Vec::new(),
+    });
+    result
+}
+
+fn result_outcome<T, E>(result: &Result<T, E>) -> ReportOutcome {
+    if result.is_ok() {
+        ReportOutcome::Completed
+    } else {
+        ReportOutcome::Failed
+    }
+}
+
+fn diagnostics_outcome(diagnostics: &Diagnostics) -> ReportOutcome {
+    if diagnostics.has_errors() {
+        ReportOutcome::Failed
+    } else {
+        ReportOutcome::Completed
+    }
 }
 
 fn diagnostic_failure(sources: SourceDatabase, diagnostics: Diagnostics) -> CompilationError {

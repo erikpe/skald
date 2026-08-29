@@ -7,19 +7,23 @@ and driver failure boundaries. Compiler phases are owned by
 [Backend and Target Contract](BACKEND.md), and the linked C surface by the
 [Runtime ABI](RUNTIME_ABI.md). Multiple-file CLI, provider, and entry behavior
 is owned by the
-[Module-System Compiler Contract](MODULE_SYSTEM.md). The frozen but not yet
-implemented operational-reporting boundary is owned by
+[Module-System Compiler Contract](MODULE_SYSTEM.md). The operational-reporting
+boundary and its remaining planned extensions are owned by
 [Structured Compiler Reporting](REPORTING.md).
 
 ## Driver facade
 
-The repository-internal `skald_compiler::driver` facade exposes five ways to
+The repository-internal `skald_compiler::driver` facade exposes seven ways to
 compose the compiler:
 
 - `compile_request_to_assembly` loads and compiles the selected entry's
   reachable module program from a typed `CompilationRequest`;
+- `compile_request_to_assembly_observed` performs the same work through an
+  explicitly supplied request-local `ReportObserver`;
 - `compile_source_to_assembly` runs one in-memory source through the complete
   semantic, MIR, backend, and assembly pipeline without filesystem discovery;
+- `compile_source_to_assembly_observed` performs that singleton compilation
+  with explicit lexing, parsing, shared compiler-phase, and total events;
 - `Toolchain::link_assembly` sends assembly to a configured host compiler
   driver and publishes the linked executable;
 - `Toolchain::link_assembly_with` preserves the same link command, runtime
@@ -50,6 +54,13 @@ the verified MIR pass pipeline, and target assembly emission. Provider
 configuration failures remain structured separately from source diagnostics.
 The returned report owns every reached source and diagnostic.
 
+The observed request and singleton forms emit typed start/finish events at
+these existing boundaries plus one compilation total. Source-diagnostic
+failures produce a failed owning phase and stop later phase starts. Metrics are
+empty until their phase owners publish stable counts. The quiet forms delegate
+through `NoopObserver`; observation does not change returned assembly,
+diagnostics, failure categories, or source ownership.
+
 Both public compilation adapters request closed-world target artifact
 retention. Verified HIR and MIR stay complete, while functions and data not
 reachable from an exported machine symbol are omitted from published assembly.
@@ -77,7 +88,9 @@ Static inheritance, inherited access, class/`Obj` alias views, and inline
 slicing reach verified target-independent MIR and execute through the current
 x86-64 base layout and internal static-view calling convention.
 
-Neither assembly API invokes the host toolchain or publishes an artifact.
+None of the four compilation APIs invokes the host toolchain or publishes an
+artifact. Linking and publication therefore do not enter their compilation
+totals.
 
 The runtime-trace extension changes the final handoff only: the driver
 passes final verified MIR, the report's read-only `SourceDatabase`, and the
@@ -135,10 +148,9 @@ configuration errors.
 
 The current CLI has no reporting or diagnostic-display level options. The
 frozen [structured reporting contract](REPORTING.md) now provides typed events,
-metrics, observers, and deterministic human rendering, but the driver does not
-emit them. Planned observed compilation adapters retain the existing quiet
-wrappers, emit human operational reports to stderr, and keep default successful
-compilation quiet. Selection will use `-v`/`-q`, `--report-level`, and
+metrics, observers, deterministic human rendering, and observed library
+compilation. The CLI still uses the quiet request wrapper and therefore emits
+no operational text. Planned selection will use `-v`/`-q`, `--report-level`, and
 `--diagnostic-level`; source diagnostics remain a separate structured channel
 and a failed compilation can never hide its errors. Linking and artifact
 publication are driver events, not compiler-phase events. The

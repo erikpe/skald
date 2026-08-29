@@ -6,7 +6,8 @@ use skald_compiler::{
     backend::{emit_assembly, target_by_name, BackendInput, RuntimeTracePolicy, Target},
     diagnostics::{render_diagnostics, Diagnostics},
     driver::{
-        compile_request_to_assembly, compile_source_to_assembly, run_cli, ArtifactKind,
+        compile_request_to_assembly, compile_request_to_assembly_observed,
+        compile_source_to_assembly, compile_source_to_assembly_observed, run_cli, ArtifactKind,
         ArtifactOptions, AssemblyArtifact, CompilationEnvironment, CompilationError,
         CompilationRequest, EntrySelector, StandardLibrarySelection, Toolchain,
     },
@@ -295,9 +296,15 @@ fn intentional_phase_and_dump_paths_compose() {
 
 #[test]
 fn intentional_driver_paths_compile() {
+    use skald_compiler::reporting::ReportObserver;
+
     let _cli_entry: fn(Vec<OsString>) -> i32 = run_cli::<Vec<OsString>>;
     let _request_pipeline: fn(&CompilationRequest) -> Result<AssemblyArtifact, CompilationError> =
         compile_request_to_assembly;
+    let _observed_request_pipeline: fn(
+        &CompilationRequest,
+        &mut dyn ReportObserver,
+    ) -> Result<AssemblyArtifact, CompilationError> = compile_request_to_assembly_observed;
     let _toolchain = Toolchain::new("cc", "runtime.a");
     let artifact = compile_source_to_assembly(
         "api.ska",
@@ -398,6 +405,24 @@ fn intentional_reporting_paths_compose() {
     observer.observe(ReportEvent::PhaseStarted {
         phase: ReportPhase::ProviderNormalization,
     });
+
+    let mut observed = RecordingObserver::new(ReportDetail::Phases);
+    let artifact = compile_source_to_assembly_observed(
+        "observed-api.ska",
+        "fn main() -> i64 { return 0; }",
+        Target::X86_64SysV,
+        &mut observed,
+    )
+    .unwrap();
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(matches!(
+        observed.events().last(),
+        Some(ReportEvent::RunFinished {
+            scope: ReportScope::Compilation,
+            outcome: ReportOutcome::Completed,
+            ..
+        })
+    ));
 
     let _artifact = ReportEvent::ArtifactPublished {
         kind: ReportArtifactKind::Assembly,

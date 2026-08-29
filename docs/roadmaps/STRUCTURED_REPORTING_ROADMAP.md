@@ -1,6 +1,6 @@
 # Structured Compiler Reporting Roadmap
 
-Status: in progress; REP0 is complete and REP1 is next.
+Status: in progress; REP0 and REP1 are complete, and REP2 is next.
 
 This roadmap implements the frozen
 [structured compiler reporting contract](../compiler/REPORTING.md) and its
@@ -46,7 +46,7 @@ compiler output, source diagnostics, generated artifacts, or runtime behavior.
 ## Progress
 
 - [x] REP0 — Establish typed reporting and human rendering
-- [ ] REP1 — Observe the complete compilation pipeline
+- [x] REP1 — Observe the complete compilation pipeline
 - [ ] REP2 — Publish honest phase-owned statistics
 - [ ] REP3 — Integrate CLI selection, linking, and artifact reporting
 - [ ] REP4 — Harden composition, publish implementation, and close
@@ -103,26 +103,26 @@ compiler entry points remain quiet, and production dependencies are unchanged.
 orchestration and prove success/failure sequencing before statistics or CLI
 presentation add further consumers.
 
-- [ ] Add observed request and in-memory singleton compilation functions while
+- [x] Add observed request and in-memory singleton compilation functions while
       preserving the current signatures as no-op-observer wrappers.
-- [ ] Add one small generic phase-observation helper that reads monotonic time,
+- [x] Add one small generic phase-observation helper that reads monotonic time,
       emits start and exactly one completed/failed finish, and returns the
       original phase result without changing its type or error.
-- [ ] Observe provider normalization, reachable loading, resolution, type
+- [x] Observe provider normalization, reachable loading, resolution, type
       checking, preliminary MIR lowering and verification, lifecycle planning,
       planned MIR verification, lifecycle synthesis, the MIR pass pipeline,
       and backend assembly emission at their actual orchestration boundaries.
-- [ ] Emit a compilation-scope total ending after assembly production or the
+- [x] Emit a compilation-scope total ending after assembly production or the
       terminal compilation failure; do not include host linking or publication.
-- [ ] Treat terminal source diagnostics as failed phase outcomes while leaving
+- [x] Treat terminal source diagnostics as failed phase outcomes while leaving
       their structured values and rendering unchanged.
-- [ ] Stop event production with the same phase cutoff as compilation: no later
+- [x] Stop event production with the same phase cutoff as compilation: no later
       phase starts after provider, source, verification, or backend failure.
-- [ ] Keep compiler panics as internal defects rather than converting unwind
+- [x] Keep compiler panics as internal defects rather than converting unwind
       into an ordinary failed event/result pair.
-- [ ] Preserve request artifacts, IR, assembly, diagnostics, errors, and public
+- [x] Preserve request artifacts, IR, assembly, diagnostics, errors, and public
       quiet-path behavior exactly when comparing observed and unobserved runs.
-- [ ] Document the implemented observed library surface and phase inventory in
+- [x] Document the implemented observed library surface and phase inventory in
       the reporting, architecture, driver, debugging, and testing authorities.
 
 **Tests:** Recording-observer order for request and singleton success; provider

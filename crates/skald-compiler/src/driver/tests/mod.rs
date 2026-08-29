@@ -45,6 +45,7 @@ fn temporary_artifacts(directory: &Path) -> Vec<PathBuf> {
 mod artifact;
 mod cli;
 mod pipeline;
+mod reporting;
 mod request;
 mod runtime_trace;
 mod toolchain;

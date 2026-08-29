@@ -13,8 +13,8 @@ mod toolchain;
 
 pub use cli::run_cli;
 pub use pipeline::{
-    compile_request_to_assembly, compile_source_to_assembly, AssemblyArtifact, CompilationError,
-    CompilationReport,
+    compile_request_to_assembly, compile_request_to_assembly_observed, compile_source_to_assembly,
+    compile_source_to_assembly_observed, AssemblyArtifact, CompilationError, CompilationReport,
 };
 pub use request::{
     ArtifactKind, ArtifactOptions, CompilationEnvironment, CompilationRequest, EntrySelectionError,
