@@ -17,12 +17,12 @@ use skald_compiler::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
     passes::{
-        run_mir_pipeline,
+        run_mir_pipeline, run_mir_pipeline_inspected,
         static_lifecycle::{
             dump_planned_mir, plan_static_lifetimes, synthesize_static_lifecycle,
             verify_planned_mir,
         },
-        VerifiedFinalMirProgram,
+        MirPipelineCheckpoint, VerifiedFinalMirProgram,
     },
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
@@ -186,6 +186,9 @@ const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
 const STATIC_FIELD_MODULE_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_MODULE_DETERMINISM_OUTPUT";
 const STATIC_FIELD_MODULE_TEST_NAME: &str =
     "static_field_module_products_are_deterministic_across_processes";
+const MIR_CHECKPOINT_HELPER_OUTPUT: &str = "SKALD_MIR_CHECKPOINT_DETERMINISM_OUTPUT";
+const MIR_CHECKPOINT_TEST_NAME: &str =
+    "mir_pipeline_checkpoints_are_deterministic_across_processes";
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
@@ -194,6 +197,16 @@ fn object_lifetime_phase_products_are_deterministic_across_processes() {
         OBJECT_HELPER_OUTPUT,
         OBJECT_TEST_NAME,
         object_phase_dump,
+    );
+}
+
+#[test]
+fn mir_pipeline_checkpoints_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "mir-pipeline-checkpoints",
+        MIR_CHECKPOINT_HELPER_OUTPUT,
+        MIR_CHECKPOINT_TEST_NAME,
+        mir_pipeline_checkpoint_dump,
     );
 }
 
@@ -2459,6 +2472,36 @@ fn complete_phase_dump(text: &str) -> String {
         dump_mir(&mir),
         assembly,
     )
+}
+
+fn mir_pipeline_checkpoint_dump() -> String {
+    let text = "fn helper(value: i64) -> i64 { return value + 1; }\n\
+                fn main() -> i64 { return helper(41); }\n";
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("checkpoint-determinism.ska", text);
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty());
+
+    let mut checkpoints = Vec::new();
+    let mut inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
+        checkpoints.push((
+            checkpoint.label().to_string(),
+            dump_mir(checkpoint.verified()),
+        ));
+    };
+    run_mir_pipeline_inspected(lower_hir(&checked.hir.unwrap()), &mut inspector).unwrap();
+
+    checkpoints
+        .into_iter()
+        .map(|(label, dump)| format!("CHECKPOINT {label}\n{dump}"))
+        .collect()
 }
 
 fn function_value_composition_phase_dump() -> String {

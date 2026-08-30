@@ -4,6 +4,7 @@ use crate::mir::{rewrite::MirProgramRewriteResult, MirProgram};
 
 use super::{
     error::MirPipelineError,
+    inspection::{MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineInspector},
     measurement::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord},
     model::{MirPassCapability, MirPassFailure, MirPassOutcome},
     statistics::{MeasuredMirPipeline, MirPipelineStatistics},
@@ -14,20 +15,29 @@ pub(crate) fn run_mir_pipeline_measured(
     program: MirProgram,
     schedule: &MirPassSchedule,
 ) -> MeasuredMirPipeline {
-    run(program, schedule, false)
+    run(program, schedule, false, None)
 }
 
 pub(crate) fn run_mir_pipeline_with_occurrences(
     program: MirProgram,
     schedule: &MirPassSchedule,
 ) -> MeasuredMirPipeline {
-    run(program, schedule, true)
+    run(program, schedule, true, None)
+}
+
+pub(crate) fn run_mir_pipeline_measured_inspected(
+    program: MirProgram,
+    schedule: &MirPassSchedule,
+    inspector: Option<&mut dyn MirPipelineInspector>,
+) -> MeasuredMirPipeline {
+    run(program, schedule, false, inspector)
 }
 
 fn run(
     program: MirProgram,
     schedule: &MirPassSchedule,
     record_occurrences: bool,
+    mut inspector: Option<&mut dyn MirPipelineInspector>,
 ) -> MeasuredMirPipeline {
     let mut statistics = MirPipelineStatistics::default();
     let mut records = if record_occurrences {
@@ -46,6 +56,7 @@ fn run(
             );
         }
     };
+    inspect_checkpoint(&mut inspector, MirPipelineCheckpointLabel::Input, &verified);
 
     for occurrence in schedule.iter() {
         statistics.record_pass_execution();
@@ -88,6 +99,7 @@ fn run(
                     ));
                 }
                 verified = unchanged;
+                inspect_checkpoint(&mut inspector, after_label(occurrence), &verified);
             }
             MirPassOutcome::Changed { rewrite, data } => {
                 statistics.record_pass_data(occurrence, &data);
@@ -126,11 +138,32 @@ fn run(
                         );
                     }
                 };
+                inspect_checkpoint(&mut inspector, after_label(occurrence), &verified);
             }
         }
     }
 
+    inspect_checkpoint(&mut inspector, MirPipelineCheckpointLabel::Final, &verified);
+
     MeasuredMirPipeline::new(Ok(verified), statistics, records)
+}
+
+fn after_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpointLabel {
+    MirPipelineCheckpointLabel::After {
+        position: occurrence.position(),
+        pass_name: occurrence.name(),
+        occurrence: occurrence.occurrence(),
+    }
+}
+
+fn inspect_checkpoint(
+    inspector: &mut Option<&mut dyn MirPipelineInspector>,
+    label: MirPipelineCheckpointLabel,
+    verified: &crate::passes::VerifiedFinalMirProgram,
+) {
+    if let Some(inspector) = inspector.as_deref_mut() {
+        inspector.inspect(MirPipelineCheckpoint::new(label, verified));
+    }
 }
 
 fn record_failure(

@@ -341,12 +341,17 @@ existing detail queries.
 
 Pass modules return data and never call observers, loggers, formatters, or
 filesystem services. The pipeline coordinator converts outcomes into report
-data, and reporting owns rendering. Optional input, after-occurrence, and final
-MIR checkpoints use a separate inspection service and accept only borrowed
-verified final MIR. Checkpoint labels and bytes are deterministic, but dump
-contents do not become report events, metrics, semantic request identity, or
-pass logs. Filesystem publication and general CLI dump retention remain
-separate driver decisions.
+data, and reporting owns rendering. Implemented input, after-occurrence, and
+final MIR checkpoints use the separate request-local `MirPipelineInspector`
+service and accept only borrowed verified final MIR. Labels are `input`,
+`after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, and
+`final`. Changed results are resealed before callbacks; failures produce no
+failed after-checkpoint or final checkpoint. Checkpoint labels and bytes are
+deterministic, but dump contents do not become report events, metrics,
+semantic request identity, or pass logs. The disabled ordinary path performs
+no checkpoint formatting, dump rendering, allocation, or event construction.
+Filesystem publication and general CLI dump retention remain separate driver
+decisions.
 
 ## CLI selection
 

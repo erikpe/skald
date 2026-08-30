@@ -168,6 +168,12 @@ pass-attributed failure carries its exact stable name, internal identity,
 schedule position, and occurrence number, and the driver stops before backend
 emission without exposing a partial product.
 
+Verified checkpoint inspection is implemented by the pass facade's
+`run_mir_pipeline_inspected` entry point rather than by
+`CompilationRequest` or `ReportObserver`. The ordinary driver supplies no
+inspector and performs no checkpoint work. General driver/CLI dump destination
+and retention policy remain intentionally deferred.
+
 ## Command-line modes
 
 `skac --help` is the exact option reference. One invocation requires exactly

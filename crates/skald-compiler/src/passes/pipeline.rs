@@ -13,12 +13,12 @@ mod execution;
 mod policy;
 
 pub(crate) use execution::{
-    run_mir_pipeline_measured, run_mir_pipeline_with_occurrences, MeasuredMirPipeline,
-    MirPipelineStatistics,
+    run_mir_pipeline_measured, run_mir_pipeline_measured_inspected,
+    run_mir_pipeline_with_occurrences, MeasuredMirPipeline, MirPipelineStatistics,
 };
 pub use execution::{
-    MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineError,
-    MirPipelineFailureStage,
+    MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineCheckpoint,
+    MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage, MirPipelineInspector,
 };
 pub use policy::MirOptimizationProfile;
 pub use policy::MirPassIdentity;
@@ -81,9 +81,26 @@ impl Deref for VerifiedFinalMirProgram {
 /// same verified runner used by request compilation. The returned sealed
 /// product is the only MIR accepted by backend input.
 pub fn run_mir_pipeline(program: MirProgram) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
-    let schedule = resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty())
-        .expect("compiler-owned default MIR pass policy must be valid");
+    let schedule = default_mir_pass_schedule();
     run_mir_pipeline_measured(program, &schedule).result
+}
+
+/// Runs the default final-MIR pipeline with verified inspection checkpoints.
+///
+/// The inspector receives `input`, every successfully completed pass
+/// occurrence, and `final`. Ordinary compilation uses [`run_mir_pipeline`]
+/// and performs no checkpoint work.
+pub fn run_mir_pipeline_inspected(
+    program: MirProgram,
+    inspector: &mut dyn MirPipelineInspector,
+) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
+    let schedule = default_mir_pass_schedule();
+    run_mir_pipeline_measured_inspected(program, &schedule, Some(inspector)).result
+}
+
+fn default_mir_pass_schedule() -> MirPassSchedule {
+    resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty())
+        .expect("compiler-owned default MIR pass policy must be valid")
 }
 
 /// Seals final MIR after the central ordinary and lifecycle-realization check.

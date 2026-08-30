@@ -47,14 +47,15 @@ use skald_compiler::{
         ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::{
-        run_mir_pipeline,
+        run_mir_pipeline, run_mir_pipeline_inspected,
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
             PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan,
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
-        MirPipelineError, MirPipelineFailureStage, VerifiedFinalMirProgram,
+        MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
+        MirPipelineFailureStage, VerifiedFinalMirProgram,
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -306,6 +307,19 @@ fn intentional_phase_and_dump_paths_compose() {
     verify_mir(&mir).unwrap();
     let _pipeline_error: Option<MirPipelineError> = None;
     let _pipeline_stage = MirPipelineFailureStage::InputVerification;
+    let mut checkpoint_labels = Vec::new();
+    let mut inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
+        checkpoint_labels.push(checkpoint.label());
+        let _verified_dump = dump_mir(checkpoint.verified());
+    };
+    run_mir_pipeline_inspected(mir.clone(), &mut inspector).unwrap();
+    assert_eq!(
+        checkpoint_labels,
+        [
+            MirPipelineCheckpointLabel::Input,
+            MirPipelineCheckpointLabel::Final,
+        ]
+    );
     let mir: VerifiedFinalMirProgram = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);
     let target = target_by_name("x86_64-sysv").unwrap();

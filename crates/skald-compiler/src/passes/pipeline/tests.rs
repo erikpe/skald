@@ -4,6 +4,7 @@ use crate::{
     backend::{emit_assembly, BackendInput, Target},
     identity::{CallableId, StaticFieldId},
     mir::{
+        dump_mir,
         rewrite::{MirReferenceFailure, MirRewriteChangeSummary, MirRewriteError},
         BlockId, MirAssignment, MirBasicBlock, MirInstruction, MirPlace, MirRvalueKind,
         MirTerminator, ValueId,
@@ -335,6 +336,148 @@ fn aggregate_only_runner_skips_occurrence_recording() {
     assert!(measured.result.is_ok());
     assert!(measured.occurrences().is_empty());
     assert_eq!(measured.statistics.processed_callables(), 4);
+}
+
+#[derive(Default)]
+struct CheckpointCollector {
+    labels: Vec<String>,
+    dumps: Vec<String>,
+    definition_counts: Vec<usize>,
+}
+
+impl MirPipelineInspector for CheckpointCollector {
+    fn inspect(&mut self, checkpoint: MirPipelineCheckpoint<'_>) {
+        self.labels.push(checkpoint.label().to_string());
+        self.dumps.push(dump_mir(checkpoint.verified()));
+        self.definition_counts
+            .push(checkpoint.verified().definitions.len());
+    }
+}
+
+#[test]
+fn checkpoint_labels_are_stable_and_unambiguous_for_repetition() {
+    assert_eq!(MirPipelineCheckpointLabel::Input.to_string(), "input");
+    assert_eq!(
+        MirPipelineCheckpointLabel::After {
+            position: 3,
+            pass_name: "fixture-pass",
+            occurrence: 2,
+        }
+        .to_string(),
+        "after-3-fixture-pass-2"
+    );
+    assert_eq!(MirPipelineCheckpointLabel::Final.to_string(), "final");
+}
+
+#[test]
+fn empty_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
+    let mir = lowered_program();
+    let expected_dump = dump_mir(&mir);
+    let mut collector = CheckpointCollector::default();
+
+    let measured =
+        run_mir_pipeline_measured_inspected(mir, &default_schedule(), Some(&mut collector));
+
+    assert!(measured.result.is_ok());
+    assert_eq!(collector.labels, ["input", "final"]);
+    assert_eq!(collector.dumps, [expected_dump.clone(), expected_dump]);
+    assert_eq!(collector.definition_counts.len(), 2);
+}
+
+#[test]
+fn unchanged_and_repeated_passes_each_publish_one_verified_after_checkpoint() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+
+    let measured = run_mir_pipeline_measured_inspected(
+        lowered_program(),
+        &test_schedule(&[UNCHANGED, UNCHANGED]),
+        Some(&mut collector),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        collector.labels,
+        [
+            "input",
+            "after-0-unchanged-pass-0",
+            "after-1-unchanged-pass-1",
+            "final",
+        ]
+    );
+    assert!(collector.dumps.windows(2).all(|pair| pair[0] == pair[1]));
+}
+
+#[test]
+fn changed_output_is_resealed_before_inspection_and_later_checkpoints() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+
+    let measured = run_mir_pipeline_measured_inspected(
+        lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }"),
+        &test_schedule(&[DELETE_EQUIVALENT, OBSERVE_DELETE]),
+        Some(&mut collector),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        collector.labels,
+        [
+            "input",
+            "after-0-delete-equivalent-pass-0",
+            "after-1-observe-delete-pass-0",
+            "final",
+        ]
+    );
+    assert_ne!(collector.dumps[0], collector.dumps[1]);
+    assert_eq!(collector.dumps[1], collector.dumps[2]);
+    assert_eq!(collector.dumps[2], collector.dumps[3]);
+}
+
+#[test]
+fn failed_occurrence_publishes_no_after_or_final_checkpoint() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+
+    let measured = run_mir_pipeline_measured_inspected(
+        lowered_program(),
+        &test_schedule(&[FAIL_SECOND, FAIL_SECOND, LATER]),
+        Some(&mut collector),
+    );
+
+    assert!(measured.result.is_err());
+    assert_eq!(collector.labels, ["input", "after-0-fail-second-pass-0"]);
+    assert_eq!(execution_log(), ["fail-second", "fail-second"]);
+}
+
+#[test]
+fn invalid_changed_output_is_never_inspected() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+
+    let measured = run_mir_pipeline_measured_inspected(
+        lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }"),
+        &test_schedule(&[INVALID_OUTPUT, LATER]),
+        Some(&mut collector),
+    );
+
+    assert!(measured.result.is_err());
+    assert_eq!(collector.labels, ["input"]);
+    assert_eq!(execution_log(), ["invalid-output"]);
+}
+
+#[test]
+fn disabled_inspection_does_not_create_checkpoints_or_report_events() {
+    use crate::reporting::{RecordingObserver, ReportDetail};
+
+    let collector = CheckpointCollector::default();
+    let reporter = RecordingObserver::new(ReportDetail::Trace);
+    let measured = run_mir_pipeline_measured(lowered_program(), &test_schedule(&[UNCHANGED]));
+
+    assert!(measured.result.is_ok());
+    assert!(collector.labels.is_empty());
+    assert!(collector.dumps.is_empty());
+    assert!(reporter.events().is_empty());
 }
 
 #[test]

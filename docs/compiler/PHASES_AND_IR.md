@@ -635,11 +635,11 @@ The typed registry, empty profiles, schedule occurrence model, exclusions, and
 exact compiler-internal schedule resolver described below are implemented, as
 are typed request and CLI selection. Every compiler adapter resolves its
 profile before provider or source work and passes that schedule to the MIR
-pipeline. Production schedule execution, structured failure attribution, and
-pass measurement/reporting are implemented; verified checkpoints and the
-canary remain planned. Both supported profiles are empty, so ordinary
-production compilation still performs one final verification and no
-transformation.
+pipeline. Production schedule execution, structured failure attribution, pass
+measurement/reporting, and verified inspection checkpoints are implemented;
+the shared value-use census and canary remain planned. Both supported profiles
+are empty, so ordinary production compilation still performs one final
+verification and no transformation.
 
 One compiler-owned immutable registry couples each entry's typed identity,
 unique stable lowercase kebab-case name, description, implementation-declared
@@ -693,10 +693,17 @@ rather than MIR text, distinguish processed from actually changed callables,
 and treat elapsed durations as observations rather than deterministic
 products.
 
-The next inspection layer adds optional borrowed checkpoints after initial
-verification, each completed occurrence, and the complete schedule. Only
-verified products may be inspected, and phase-owned dumps remain a separate
-observation surface.
+Optional pipeline inspection is a request-local service separate from semantic
+compilation requests and report observers. It receives only borrowed
+`VerifiedFinalMirProgram` checkpoints at `input`, after every successfully
+completed occurrence, and `final`. After-pass labels use
+`after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, so repeated
+passes cannot collide. Changed MIR is centrally resealed before inspection;
+pass, rewrite, or output-verification failure emits no failed after-checkpoint
+and no final checkpoint. The ordinary path passes no inspector and therefore
+constructs no checkpoint label strings, dumps, collections, or report events.
+The inspected entry point may invoke phase-owned `mir::dump_mir` or collect
+in-memory facts, but filesystem retention and CLI dump policy remain separate.
 
 The framework's production canary removes only an unused
 `MirInstruction::Assign` whose rvalue is an integer, byte, binary64-bit, or
@@ -2625,11 +2632,12 @@ Target-specific legality and structured backend failures are defined by the
 [backend and target contract](BACKEND.md#input-and-legality-boundary).
 
 The supported MIR profiles currently verify without transforming. The frozen
-registry, profiles, request selection, and verified runner are implemented;
-per-occurrence reporting, verified inspection checkpoints, shared value-use
-analysis, and the dead-pure canary remain planned. Every transformation has
-explicit ordering and returns changed MIR through the same verifier boundary.
-Compiler correctness must not depend on an optimization pass being enabled.
+registry, profiles, request selection, verified runner, per-occurrence
+reporting, and verified inspection checkpoints are implemented; shared
+value-use analysis and the dead-pure canary remain planned. Every
+transformation has explicit ordering and returns changed MIR through the same
+verifier boundary. Compiler correctness must not depend on an optimization
+pass being enabled.
 
 The shared-ownership implementation preserves this division of
 responsibility: HIR records owner provenance and anchor requirements, MIR
@@ -2672,6 +2680,12 @@ identity order, and module ownership on top-level declarations. The
 public dump paths let integration tests and temporary tools inspect the same
 representation used by focused tests. Practical inspection steps are in
 [Debugging the Compiler](../development/DEBUGGING.md).
+
+The final-MIR pipeline exposes `run_mir_pipeline_inspected` with a
+request-local `MirPipelineInspector`. Its callback receives a typed label and
+only a borrowed verified final-MIR product. Checkpoint labels and `dump_mir`
+bytes are deterministic across independent processes. The inspection surface
+is neither a dump serializer nor a filesystem publication service.
 
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests

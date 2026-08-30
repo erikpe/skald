@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: in progress. MPR0 through MPR3 are complete; MPR4 is next.
+Status: in progress. MPR0 through MPR4 are complete; MPR5 is next.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -88,7 +88,7 @@ rather than expanding an active task.
 - [x] MPR1 — Add typed request and CLI selection
 - [x] MPR2 — Productionize the verified multi-pass runner
 - [x] MPR3 — Add structured pass measurements and reporting
-- [ ] MPR4 — Add verified pipeline inspection checkpoints
+- [x] MPR4 — Add verified pipeline inspection checkpoints
 - [ ] MPR5 — Publish an exhaustive value-use census
 - [ ] MPR6 — Implement the dead-pure-definition canary
 - [ ] MPR7 — Activate, harden, and close the canary pipeline
@@ -338,23 +338,23 @@ filtering. `cargo test --locked -p skald-compiler reporting`,
 **Purpose:** Provide deterministic optimized-MIR inspection without exposing
 malformed intermediate state or turning dumps into report messages.
 
-- [ ] Define a request-local optional inspection service separate from
+- [x] Define a request-local optional inspection service separate from
       `CompilationRequest` and `ReportObserver`.
-- [ ] Expose borrowed verified products at `input`, after every successfully
+- [x] Expose borrowed verified products at `input`, after every successfully
       completed occurrence, and `final`, including unchanged occurrences when
       requested.
-- [ ] Define deterministic labels containing schedule position, stable pass
+- [x] Define deterministic labels containing schedule position, stable pass
       name, and occurrence number so repetitions cannot collide.
-- [ ] Ensure changed raw MIR is resealed before an after-pass callback and no
+- [x] Ensure changed raw MIR is resealed before an after-pass callback and no
       callback runs after pass, rewrite, or verification failure.
-- [ ] Permit the service to invoke the existing phase-owned `mir::dump_mir`
+- [x] Permit the service to invoke the existing phase-owned `mir::dump_mir`
       renderer or collect in-memory statistics without granting mutation.
-- [ ] Make the disabled path avoid checkpoint labels, dump rendering,
+- [x] Make the disabled path avoid checkpoint labels, dump rendering,
       allocation, and report events.
-- [ ] Add a narrow measured/inspected pipeline composition surface for tests
+- [x] Add a narrow measured/inspected pipeline composition surface for tests
       and compiler tools; defer general filesystem publication, retention, and
       CLI dump policy.
-- [ ] Verify independent-process stability for checkpoint order, labels, and
+- [x] Verify independent-process stability for checkpoint order, labels, and
       bytes under identical target-independent inputs.
 
 **Tests:** Empty, one-pass, repeated, unchanged, changed, and failed schedules;
@@ -371,6 +371,27 @@ boundary deterministically, never see sparse or unverified MIR, and remain
 independent from semantic request identity and operational reporting.
 
 **Completed:**
+
+The pass facade now exposes typed `input`,
+`after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, and
+`final` checkpoint identities together with a request-local
+`MirPipelineInspector`. Callbacks receive only borrowed
+`VerifiedFinalMirProgram` products; changed outputs are centrally resealed
+before publication, unchanged occurrences are still observable, and every
+failure path stops before the failed after-checkpoint and final checkpoint.
+The ordinary driver path supplies no inspector and performs no label
+formatting, dump rendering, collection allocation, or report-event work. A
+narrow public default-pipeline entry point supports in-memory compiler tools,
+while the exact-schedule measured/inspected composition remains crate-private
+for focused tests. Filesystem publication, retention, and CLI dump policy stay
+deferred. Unit and compile-fail coverage exercises empty, unchanged, repeated,
+changed, pass-failed, and verification-failed schedules; public API coverage
+proves phase-owned dumps compose with the borrowed checkpoint; and an
+independent-process test compares checkpoint order, labels, and exact MIR dump
+bytes. `cargo test --locked -p skald-compiler passes`,
+`cargo test --locked -p skald-compiler reporting`, `make compiler-test`,
+`make fmt-check`, `make lint`, `make docs-check`, `make msrv-check`, and
+`git diff --check` passed on 2026-08-30.
 
 ### MPR5 — Publish an exhaustive value-use census
 

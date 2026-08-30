@@ -14,9 +14,10 @@ pub(crate) use pipeline::{
     MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
 };
 pub use pipeline::{
-    run_mir_pipeline, verify_final_mir, MirOptimizationProfile, MirPassIdentity,
-    MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineError,
-    MirPipelineFailureStage, VerifiedFinalMirProgram,
+    run_mir_pipeline, run_mir_pipeline_inspected, verify_final_mir, MirOptimizationProfile,
+    MirPassIdentity, MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord,
+    MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage,
+    MirPipelineInspector, VerifiedFinalMirProgram,
 };
 pub(crate) use pipeline::{
     run_mir_pipeline_measured, run_mir_pipeline_with_occurrences, MeasuredMirPipeline,
