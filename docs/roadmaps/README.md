@@ -10,7 +10,13 @@ No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
-No pending discovery record is currently active.
+The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
+record the seven current compiler constraints on modular target-independent and
+target-specific optimization, their interaction with permanent whole-world and
+single-threaded program semantics, expected impact and effort, and a recommended
+starting sequence. The next design decision is the static-lifecycle certificate
+relation for effect-removing transformations; no implementation roadmap is yet
+scheduled.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
