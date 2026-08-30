@@ -36,24 +36,19 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
         );
     }
     let mut fields = BTreeSet::new();
-    let activation_indices = view
-        .lifecycle
-        .plan()
-        .activation()
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(index, field)| (field, index))
-        .collect::<BTreeMap<_, _>>();
-    let shutdown_indices = view
-        .lifecycle
-        .plan()
-        .shutdown()
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(index, field)| (field, index))
-        .collect::<BTreeMap<_, _>>();
+    for pair in definitions.windows(2) {
+        match pair[0].field.cmp(&pair[1].field) {
+            std::cmp::Ordering::Equal => program_error(
+                errors,
+                format!("duplicate final lifecycle definition for {}", pair[0].field),
+            ),
+            std::cmp::Ordering::Greater => program_error(
+                errors,
+                "final lifecycle definitions are not in canonical field order",
+            ),
+            std::cmp::Ordering::Less => {}
+        }
+    }
     for definition in definitions {
         if !fields.insert(definition.field) {
             program_error(
@@ -77,7 +72,6 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
         if declaration.ty != definition.ty
             || declaration.initialization != definition.initialization
             || declaration.final_span != definition.final_span
-            || declaration.lifecycle != Some(definition.indices)
             || declaration.span != definition.span
         {
             program_error(
@@ -102,17 +96,6 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
                 ),
             );
         }
-        if activation_indices.get(&definition.field) != Some(&definition.indices.activation)
-            || shutdown_indices.get(&definition.field) != Some(&definition.indices.shutdown)
-        {
-            program_error(
-                errors,
-                format!(
-                    "final lifecycle indices for {} disagree with the plan",
-                    definition.field
-                ),
-            );
-        }
     }
     let planned = view
         .lifecycle
@@ -123,7 +106,7 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
         .collect::<BTreeSet<_>>();
     if planned != fields
         || view.lifecycle.plan().activation().len() != fields.len()
-        || view.lifecycle.plan().shutdown().iter().copied().ne(view
+        || view.lifecycle.plan().shutdown().ne(view
             .lifecycle
             .plan()
             .activation()
@@ -147,12 +130,6 @@ fn verify_activation(
     if coordinator.activation().len() != order.len() {
         program_error(errors, "final activation regions do not cover every field");
     }
-    let definitions = view
-        .lifecycle
-        .definitions()
-        .iter()
-        .map(|definition| (definition.field, definition))
-        .collect::<BTreeMap<_, _>>();
     let initializers = coordinator
         .initializers()
         .iter()
@@ -174,7 +151,7 @@ fn verify_activation(
             program_error(errors, "final activation regions are reordered");
             continue;
         }
-        let Some(definition) = definitions.get(expected_field) else {
+        let Some(definition) = view.lifecycle.definition(*expected_field) else {
             continue;
         };
         match (definition.initialization, region.work) {
@@ -243,8 +220,10 @@ fn verify_activation(
             "final activation regions disagree with certified transitions",
         );
     }
-    let expected_initializers = definitions
-        .values()
+    let expected_initializers = view
+        .lifecycle
+        .definitions()
+        .iter()
         .filter_map(|definition| match definition.initialization {
             MirStaticFieldInitialization::Explicit(initializer) => Some(initializer),
             MirStaticFieldInitialization::ZeroDefault => None,
@@ -263,16 +242,10 @@ fn verify_shutdown(
     coordinator: &MirStaticLifecycleCoordinator,
     errors: &mut Vec<MirVerificationError>,
 ) {
-    let order = view.lifecycle.plan().shutdown();
+    let order = view.lifecycle.plan().shutdown().collect::<Vec<_>>();
     if coordinator.shutdown().len() != order.len() {
         program_error(errors, "final destruction regions do not cover every field");
     }
-    let definitions = view
-        .lifecycle
-        .definitions()
-        .iter()
-        .map(|definition| (definition.field, definition))
-        .collect::<BTreeMap<_, _>>();
     let mut flattened = Vec::new();
     for (index, region) in coordinator.shutdown().iter().enumerate() {
         let Some(expected_field) = order.get(index) else {
@@ -282,7 +255,7 @@ fn verify_shutdown(
             program_error(errors, "final destruction regions are not in reverse order");
             continue;
         }
-        let Some(definition) = definitions.get(expected_field) else {
+        let Some(definition) = view.lifecycle.definition(*expected_field) else {
             continue;
         };
         if region.begin.field != *expected_field

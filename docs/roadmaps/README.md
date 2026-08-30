@@ -12,9 +12,11 @@ is in progress. Normalized lifecycle-root analysis, exact immutable authority
 issuance, monotone final-MIR realization verification, and separation of
 planning evidence from compact executable proof are complete. Analysis,
 planning evidence, compact MIR proof, coordinator, and phase products now have
-distinct module owners; canonicalizing planned lifecycle data is next. The roadmap depends on the
-existing whole-world static-effect extractor and lifecycle planner; the later
-general optimization framework and dense-ID rewriter remain separate work.
+distinct module owners, and planned lifecycle data now has one canonical
+definition table and activation order. Canonicalizing the executable
+coordinator is next. The roadmap depends on the existing whole-world
+static-effect extractor and lifecycle planner; the later general optimization
+framework and dense-ID rewriter remain separate work.
 
 ## Pending discoveries
 

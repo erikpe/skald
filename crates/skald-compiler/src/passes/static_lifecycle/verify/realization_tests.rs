@@ -5,8 +5,7 @@ use crate::{
     identity::{CallableId, FunctionId},
     mir::{
         lower_preliminary_hir, MirAssignment, MirCallTarget, MirInstruction, MirPlace, MirRvalue,
-        MirRvalueKind, MirStaticLifecycleIndices, MirStore, MirType, StaticLifecycleAuthority,
-        ValueId,
+        MirRvalueKind, MirStore, MirType, StaticLifecycleAuthority, ValueId,
     },
     test_support::{emit_assembly_without_runtime_trace, type_check_source},
 };
@@ -490,42 +489,8 @@ fn rejects_realized_dependency_that_violates_a_corrupted_frozen_order() {
             .plan_mut_for_test()
             .activation_mut_for_test()
             .reverse();
-        lifecycle
-            .plan_mut_for_test()
-            .shutdown_mut_for_test()
-            .reverse();
         lifecycle.activation_mut_for_test().rotate_left(2);
         lifecycle.shutdown_mut_for_test().rotate_left(2);
-
-        let activation = lifecycle.plan().activation().to_vec();
-        let field_count = activation.len();
-        for definition in lifecycle.definitions_mut_for_test() {
-            let activation = activation
-                .iter()
-                .position(|field| *field == definition.field)
-                .unwrap();
-            definition.indices = MirStaticLifecycleIndices {
-                activation,
-                shutdown: field_count - activation - 1,
-            };
-        }
-    }
-    let indices = program
-        .static_lifecycle
-        .as_ref()
-        .unwrap()
-        .lifecycle()
-        .definitions()
-        .iter()
-        .map(|definition| (definition.field, definition.indices))
-        .collect::<std::collections::BTreeMap<_, _>>();
-    for field in program
-        .classes
-        .entries_mut_for_test()
-        .iter_mut()
-        .flat_map(|class| &mut class.static_fields)
-    {
-        field.lifecycle = Some(indices[&field.id]);
     }
 
     let message = errors(&program);

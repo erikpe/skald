@@ -336,7 +336,6 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                     .map_or(MirStaticFieldInitialization::ZeroDefault, |initializer| {
                         MirStaticFieldInitialization::Explicit(initializer.id)
                     }),
-                lifecycle: None,
                 span: field.span,
             })
             .collect(),

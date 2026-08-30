@@ -60,20 +60,12 @@ fn direct_and_transitive_dependencies_are_local_to_each_closed_owner() {
             .unwrap();
         assert!(seed_index < direct_index);
         assert!(direct_index < transitive_index);
-        assert!(planned
-            .planning_report()
-            .dependencies()
-            .iter()
-            .any(|dependency| {
-                dependency.prerequisite == seed && dependency.dependent == direct
-            }));
-        assert!(planned
-            .planning_report()
-            .dependencies()
-            .iter()
-            .any(|dependency| {
-                dependency.prerequisite == direct && dependency.dependent == transitive
-            }));
+        assert!(planned.dependencies().iter().any(|dependency| {
+            dependency.prerequisite == seed && dependency.dependent == direct
+        }));
+        assert!(planned.dependencies().iter().any(|dependency| {
+            dependency.prerequisite == direct && dependency.dependent == transitive
+        }));
         for field in [seed, direct, transitive] {
             assert!(preliminary
                 .static_fields()
@@ -88,12 +80,11 @@ fn direct_and_transitive_dependencies_are_local_to_each_closed_owner() {
         }
     }
     assert!(planned
-        .planning_report()
         .dependencies()
         .iter()
         .all(|dependency| { dependency.prerequisite.class() == dependency.dependent.class() }));
     assert_eq!(
-        planned.lifecycle().shutdown(),
+        planned.lifecycle().shutdown().collect::<Vec<_>>(),
         planned
             .lifecycle()
             .activation()
@@ -126,17 +117,12 @@ fn plans_direct_and_transitive_dependencies_across_closed_owners() {
 
     assert_ne!(base.class(), direct.class());
     assert!(planned
-        .planning_report()
         .dependencies()
         .iter()
         .any(|dependency| { dependency.prerequisite == base && dependency.dependent == direct }));
-    assert!(planned
-        .planning_report()
-        .dependencies()
-        .iter()
-        .any(|dependency| {
-            dependency.prerequisite == base && dependency.dependent == transitive
-        }));
+    assert!(planned.dependencies().iter().any(|dependency| {
+        dependency.prerequisite == base && dependency.dependent == transitive
+    }));
     let activation = planned.lifecycle().activation();
     let base_index = activation.iter().position(|field| *field == base).unwrap();
     assert!(

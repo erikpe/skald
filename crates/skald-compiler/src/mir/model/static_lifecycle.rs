@@ -9,10 +9,10 @@ pub use coordinator::{
     MirStaticActivationRegion, MirStaticActivationWork, MirStaticDestructionRegion,
     MirStaticLifecycleCoordinator, MirStaticSharedCleanup, MirStaticValueCleanup,
 };
-pub use phase_product::MirProgramLifecycle;
+pub use phase_product::{MirPlannedLifecycle, MirProgramLifecycle};
 pub use plan::{
-    MirStaticFieldInitialization, MirStaticLifecycleDefinition, MirStaticLifecycleIndices,
-    MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, StaticLifecyclePlan,
+    MirStaticFieldInitialization, MirStaticLifecycleDefinition, MirStaticLifecycleTransition,
+    MirStaticLifecycleTransitionKind, StaticLifecyclePlan,
 };
 pub use proof::{
     MirStaticLifecycleProof, StaticAccessKind, StaticArrayLifecycleOperation,

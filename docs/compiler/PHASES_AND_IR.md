@@ -266,32 +266,36 @@ Iterative strongly connected component analysis remains separate from
 callable recursion and reports deterministic `STA001` self-dependency or
 `STA002` cycle source diagnostics. An acyclic graph is topologically ordered
 with canonical field identity as the ready-node tie-breaker, and shutdown is
-stored as the exact reverse.
+always exposed as a derived reverse iterator over activation.
 
 An initializer's own destination write is lifecycle-owned rather than a
 self-dependency. Other pre-publication accesses to that field are invalid;
 cleanup proven to start after publication may use the newly live field.
 Accesses to other fields in either region remain ordinary dependencies.
 
-`PlannedMirProgram` privately owns preliminary MIR, explicit program lifecycle
-definitions, and a `StaticLifecyclePlanningReport`. The executable lifecycle
-schema retains field initialization modes, typed initializer bodies,
-begin/publish/destroy transitions, plan indices, activation order, and compact
-baseline authority. The report separately owns direct effects, conservative
-targets and summaries, exact-signature candidates, recursive-component count,
-and one source-rich evidence record per lifetime edge. `verify_planned_mir`
-independently re-extracts normalized root facts, requires exact authority,
-derives dependency pairs from that authority, and checks field coverage,
-dependency order, phase structure, and exact-reverse shutdown. Stable
-`dump_planned_mir` and `dump_static_lifetime_plan` render report evidence only
-from the planned product. The private ownership boundary prevents final MIR
+`PlannedMirProgram` privately owns preliminary MIR, one canonical definition
+table sorted by stable static-field identity, one activation-order vector,
+compact baseline authority, and a `StaticLifecyclePlanningReport`. Shutdown,
+positions, required dependency pairs, source-rich dependency evidence, and
+planned transition views are derived rather than stored. The report owns
+direct effects, conservative targets and summaries, exact-signature
+candidates, recursive-component count, spans, and witnesses from which
+inspection can reconstruct the same evidence deterministically.
+`verify_planned_mir` independently re-extracts normalized root facts, requires
+exact authority, derives dependency pairs from authority and definitions, and
+checks canonical definition and activation coverage plus dependency order.
+Stable `dump_planned_mir` and `dump_static_lifetime_plan` render derived
+positions, reverse shutdown, dependencies, and transitions without adding
+mirrors to the product. The private ownership boundary prevents final MIR
 passes and backends from consuming analysis evidence or unplanned initializer
 bodies.
 
 `synthesize_static_lifecycle` consumes that verified product, moves every
 initializer body unchanged into the planned activation order, and produces the
 only final `MirProgram` used by the ordinary MIR pipeline. The planning report
-is dropped at this boundary; final MIR retains only compact baseline authority.
+is dropped at this boundary; transition spans are derived from definitions and
+initializer publication metadata, and final MIR retains the canonical planned
+data plus compact baseline authority.
 A zero-default field
 has one direct activation-to-live transition at its planned position. An
 explicit field has begin and publish transitions, with publication fixed to the
@@ -360,12 +364,13 @@ effects, call edges, source spans, witnesses, node inventory, and address-taken
 candidate inventory are no longer compared across the final boundary.
 
 Solved analysis, direct graph shape, candidate inventory, recursive-component
-metrics, access spans, and witness-bearing dependencies live only in
-`StaticLifecyclePlanningReport`. Synthesis drops that sidecar. Final
+metrics, access spans, and witness inputs live only in
+`StaticLifecyclePlanningReport`; source-rich dependencies are reconstructed
+from that report when inspected. Synthesis drops the sidecar. Final
 `MirStaticLifecycleProof` owns only immutable baseline authority, so analysis
 evidence cannot constrain graph reshaping or reach backend-consumable MIR.
 The MIR-owned lifecycle schema is separately divided into compact proof,
-planned transition, structured coordinator, and phase-product modules behind
+canonical plan, structured coordinator, and phase-product modules behind
 the existing `mir` facade. Stable lifecycle-root identities and normalized
 authority remain MIR values because they cross planning, optimization,
 verification, and backend boundaries; source-rich analysis evidence does not.

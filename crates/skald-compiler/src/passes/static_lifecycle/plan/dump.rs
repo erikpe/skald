@@ -10,6 +10,7 @@ use crate::{
 
 use super::{
     super::analysis::{dump_static_effects, write_node},
+    derived::{positions, transitions},
     model::{PlannedMirProgram, StaticLifetimeDependency},
 };
 
@@ -44,7 +45,7 @@ fn dump_baseline_authority(program: &PlannedMirProgram) -> String {
 
 pub fn dump_static_lifetime_plan(program: &PlannedMirProgram) -> String {
     let mut output = String::from("StaticLifetimePlan\n");
-    for dependency in program.planning_report().dependencies() {
+    for dependency in &program.dependencies() {
         write_dependency(&mut output, program, dependency);
     }
     output.push_str("  Activation");
@@ -56,29 +57,29 @@ pub fn dump_static_lifetime_plan(program: &PlannedMirProgram) -> String {
     output.push_str("  Shutdown");
     for field in program.lifecycle().shutdown() {
         output.push(' ');
-        write_field_reference(&mut output, program, *field);
+        write_field_reference(&mut output, program, field);
     }
     output.push('\n');
     output.push_str("ProgramLifecycle\n");
+    let positions = positions(program.lifecycle());
+    let transitions = transitions(program);
     for definition in program.lifecycle_mir().definitions() {
         output.push_str("  Field ");
         write_field_reference(&mut output, program, definition.field);
         if definition.final_span.is_some() {
             output.push_str(" final");
         }
+        let position = positions[&definition.field];
         let _ = write!(
             output,
             " {} {} activation={} shutdown={}",
-            definition.ty,
-            definition.initialization,
-            definition.indices.activation,
-            definition.indices.shutdown
+            definition.ty, definition.initialization, position.activation, position.shutdown
         );
         write_span(&mut output, definition.span);
         output.push('\n');
     }
     output.push_str("  ActivationTransitions\n");
-    for transition in program.lifecycle_mir().activation() {
+    for transition in transitions.activation {
         output.push_str("    ");
         write_field_reference(&mut output, program, transition.field);
         let _ = write!(output, " {:?}", transition.kind);
@@ -86,7 +87,7 @@ pub fn dump_static_lifetime_plan(program: &PlannedMirProgram) -> String {
         output.push('\n');
     }
     output.push_str("  ShutdownTransitions\n");
-    for transition in program.lifecycle_mir().shutdown() {
+    for transition in transitions.shutdown {
         output.push_str("    ");
         write_field_reference(&mut output, program, transition.field);
         let _ = write!(output, " {:?}", transition.kind);

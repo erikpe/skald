@@ -176,6 +176,7 @@ impl PreliminaryMirProgram {
         &self.program
     }
 
+    #[cfg(test)]
     pub(crate) fn program_mut(&mut self) -> &mut MirProgram {
         &mut self.program
     }

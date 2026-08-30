@@ -1,13 +1,13 @@
 //! Exact issuance verification for planner-owned baseline authority.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use crate::mir::{MirVerificationError, StaticLifecycleAuthority, StaticLifecycleRootAuthority};
 
 use super::{
     super::{
         analysis::{extract, root_effects},
-        plan::PlannedMirProgram,
+        plan::{derived, PlannedMirProgram},
     },
     program_error,
 };
@@ -176,19 +176,14 @@ fn verify_dependency_order(
             return;
         }
     };
-    let positions = program
-        .lifecycle()
-        .activation()
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(position, field)| (field, position))
-        .collect::<BTreeMap<_, _>>();
+    let positions = derived::positions(program.lifecycle());
     for (prerequisite, dependent) in derived {
         let valid = positions
             .get(&prerequisite)
             .zip(positions.get(&dependent))
-            .is_some_and(|(prerequisite, dependent)| prerequisite < dependent);
+            .is_some_and(|(prerequisite, dependent)| {
+                prerequisite.activation < dependent.activation
+            });
         if !valid {
             program_error(
                 errors,

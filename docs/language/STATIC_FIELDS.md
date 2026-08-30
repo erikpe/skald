@@ -325,12 +325,13 @@ when its operand or buffer happens to come from a static place.
 Every supported static field in the reachable program is live before the
 selected Skald entry function begins. After producing preliminary lifecycle
 MIR, the compiler constructs and verifies explicit lifecycle definitions,
-begin/publish/destroy transitions, compact baseline authority, and the complete
-activation and reverse-shutdown plan. A planning-only report retains
-deterministic transitive static-effect summaries, conservative dynamic targets,
-source-facing witnesses, and evidenced lifetime dependencies for diagnostics
-and inspection. The compiler then drops that report, moves the unchanged
-initializer bodies into final coordinator activation regions, retains
+compact baseline authority, and one complete activation order. Reverse
+shutdown, lifecycle positions, dependencies, and planned transitions are
+derived views. A planning-only report retains deterministic transitive
+static-effect summaries, conservative dynamic targets, spans, and
+source-facing witnesses; evidenced lifetime dependencies are reconstructed for
+diagnostics and inspection. The compiler then drops that report, moves the
+unchanged initializer bodies into final coordinator activation regions, retains
 post-publication full-expression cleanup, synthesizes type-selected reverse
 destruction regions, and independently verifies final MIR against its compact
 proof.

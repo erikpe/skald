@@ -7,7 +7,10 @@ use crate::mir::{
 };
 
 use super::{
-    super::analysis::{extract, root_effects},
+    super::{
+        analysis::{extract, root_effects},
+        plan::derived,
+    },
     program_error, LifecycleMirView,
 };
 
@@ -116,21 +119,15 @@ fn verify_realized_dependencies(
             return;
         }
     };
-    let positions = program
-        .lifecycle
-        .plan()
-        .activation()
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(position, field)| (field, position))
-        .collect::<BTreeMap<_, _>>();
+    let positions = derived::positions(program.lifecycle.plan());
 
     for (prerequisite, dependent) in dependencies {
         let valid = positions
             .get(&prerequisite)
             .zip(positions.get(&dependent))
-            .is_some_and(|(prerequisite, dependent)| prerequisite < dependent);
+            .is_some_and(|(prerequisite, dependent)| {
+                prerequisite.activation < dependent.activation
+            });
         if !valid {
             program_error(
                 errors,

@@ -256,19 +256,33 @@ fn dump_static_lifecycle_coordinator(
         lifecycle.proof().authority().roots().len(),
     );
     output.push_str("    Definitions\n");
+    let positions = lifecycle
+        .plan()
+        .activation()
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(activation, field)| {
+            (
+                field,
+                (
+                    activation,
+                    lifecycle.plan().activation().len() - activation - 1,
+                ),
+            )
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
     for definition in lifecycle.definitions() {
         output.push_str("      Field ");
         write_static_field_reference(output, program, definition.field);
         if definition.final_span.is_some() {
             output.push_str(" final");
         }
+        let (activation, shutdown) = positions[&definition.field];
         let _ = writeln!(
             output,
             " : {} {} activation={} shutdown={}",
-            definition.ty,
-            definition.initialization,
-            definition.indices.activation,
-            definition.indices.shutdown
+            definition.ty, definition.initialization, activation, shutdown
         );
     }
     output.push_str("    ActivationRegions\n");
@@ -438,13 +452,6 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         }
         write_quoted(output, &field.name);
         let _ = write!(output, " : {} {}", field.ty, field.initialization);
-        if let Some(indices) = field.lifecycle {
-            let _ = write!(
-                output,
-                " activation={} shutdown={}",
-                indices.activation, indices.shutdown
-            );
-        }
         write_span(output, field.span);
         output.push('\n');
         if let Some(span) = field.final_span {

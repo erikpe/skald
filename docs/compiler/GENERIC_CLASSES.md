@@ -294,9 +294,10 @@ the module-path `::` remains inside the generic head. Resolution then uses the
 same specialized static-field and receiverless static-method paths as before;
 it does not model the class application as a runtime object receiver.
 
-Preliminary, planned, and final MIR retain identity-selected static fields,
-initializer bodies, effect witnesses, and lifecycle indices while rendering
-closed owners with source-facing argument names. Backend symbols encode that
+Preliminary and planned MIR retain identity-selected static fields,
+initializer bodies, effect witnesses, canonical definitions, and activation
+order while deriving lifecycle positions and reverse shutdown. Closed owners
+render with source-facing argument names. Backend symbols encode that
 readable punctuation into assembler-safe components and retain the closed
 `ClassId` suffix as the collision-proof selector. Template records allocate no
 runtime slot or lifecycle body.

@@ -146,10 +146,7 @@ pub(super) fn lifecycle_planning_metrics(
                 "effect summaries",
                 count(planned.planning_report().analysis().summaries().len()),
             ),
-            ReportMetric::count(
-                "dependencies",
-                count(planned.planning_report().dependencies().len()),
-            ),
+            ReportMetric::count("dependencies", count(planned.dependencies().len())),
             ReportMetric::count(
                 "activation fields",
                 count(planned.lifecycle().activation().len()),

@@ -4,7 +4,7 @@ use crate::diagnostics::{Diagnostic, Diagnostics};
 use crate::{
     identity::{StaticFieldId, StaticInitializerId},
     mir::{
-        MirProgramLifecycle, PreliminaryMirProgram, PreliminaryMirStaticField,
+        MirPlannedLifecycle, PreliminaryMirProgram, PreliminaryMirStaticField,
         PreliminaryMirStaticInitializer, StaticAccessKind, StaticEffectNode, StaticEffectPhase,
         StaticLifecycleAuthority,
     },
@@ -45,35 +45,25 @@ pub struct StaticLifetimeDependency {
 }
 
 /// Analysis evidence retained for deterministic inspection of lifecycle
-/// planning, but deliberately excluded from backend-consumable MIR.
+/// planning, including on-demand dependency evidence, but deliberately
+/// excluded from backend-consumable MIR.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticLifecyclePlanningReport {
     analysis: StaticEffectAnalysis,
-    dependencies: Vec<StaticLifetimeDependency>,
 }
 
 impl StaticLifecyclePlanningReport {
-    pub(crate) const fn new(
-        analysis: StaticEffectAnalysis,
-        dependencies: Vec<StaticLifetimeDependency>,
-    ) -> Self {
-        Self {
-            analysis,
-            dependencies,
-        }
+    pub(crate) const fn new(analysis: StaticEffectAnalysis) -> Self {
+        Self { analysis }
     }
 
     pub const fn analysis(&self) -> &StaticEffectAnalysis {
         &self.analysis
     }
-
-    pub fn dependencies(&self) -> &[StaticLifetimeDependency] {
-        &self.dependencies
-    }
 }
 
-/// Preliminary MIR plus executable lifecycle metadata and planning-only
-/// analysis evidence.
+/// Preliminary MIR plus canonical lifecycle definitions, activation order,
+/// compact proof, and planning-only analysis evidence.
 ///
 /// The wrapped preliminary program remains private, so no backend can consume
 /// initializer bodies before lifecycle coordinator synthesis. Consuming this
@@ -81,14 +71,14 @@ impl StaticLifecyclePlanningReport {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PlannedMirProgram {
     preliminary: PreliminaryMirProgram,
-    lifecycle: MirProgramLifecycle,
+    lifecycle: MirPlannedLifecycle,
     report: StaticLifecyclePlanningReport,
 }
 
 impl PlannedMirProgram {
     pub(crate) const fn new(
         preliminary: PreliminaryMirProgram,
-        lifecycle: MirProgramLifecycle,
+        lifecycle: MirPlannedLifecycle,
         report: StaticLifecyclePlanningReport,
     ) -> Self {
         Self {
@@ -98,7 +88,7 @@ impl PlannedMirProgram {
         }
     }
 
-    pub const fn lifecycle_mir(&self) -> &MirProgramLifecycle {
+    pub const fn lifecycle_mir(&self) -> &MirPlannedLifecycle {
         &self.lifecycle
     }
 
@@ -141,7 +131,7 @@ impl PlannedMirProgram {
         &self.preliminary
     }
 
-    pub(crate) fn into_executable_parts(self) -> (PreliminaryMirProgram, MirProgramLifecycle) {
+    pub(crate) fn into_executable_parts(self) -> (PreliminaryMirProgram, MirPlannedLifecycle) {
         (self.preliminary, self.lifecycle)
     }
 
@@ -151,7 +141,7 @@ impl PlannedMirProgram {
     }
 
     #[cfg(test)]
-    pub(crate) fn lifecycle_mut_for_test(&mut self) -> &mut MirProgramLifecycle {
+    pub(crate) fn lifecycle_mut_for_test(&mut self) -> &mut MirPlannedLifecycle {
         &mut self.lifecycle
     }
 }

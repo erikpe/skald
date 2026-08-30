@@ -1,5 +1,6 @@
 //! Static dependency planning after closed-world effect inference.
 
+pub(super) mod derived;
 mod diagnostics;
 mod dump;
 mod graph;
@@ -41,9 +42,19 @@ pub fn plan_static_lifetimes(
         preliminary,
         root_effects,
         effects,
-        graph.dependencies().to_vec(),
         lifecycle,
     ))
+}
+
+impl PlannedMirProgram {
+    /// Derives deterministic source-rich dependency evidence for inspection.
+    /// Semantic dependency pairs remain derived from baseline authority by
+    /// verification rather than stored in the accepted phase product.
+    pub fn dependencies(&self) -> Vec<StaticLifetimeDependency> {
+        graph::LifetimeGraph::build(self.preliminary(), self.planning_report().analysis())
+            .dependencies()
+            .to_vec()
+    }
 }
 
 #[cfg(test)]

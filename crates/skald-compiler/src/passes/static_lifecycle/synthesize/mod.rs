@@ -3,13 +3,13 @@
 use std::collections::BTreeMap;
 
 use crate::mir::{
-    MirProgram, MirStaticActivationRegion, MirStaticActivationWork, MirStaticDestructionRegion,
-    MirStaticFieldInitialization, MirStaticLifecycleCoordinator, MirStaticValueCleanup,
-    MirVerificationErrors,
+    MirProgram, MirProgramLifecycle, MirStaticActivationRegion, MirStaticActivationWork,
+    MirStaticDestructionRegion, MirStaticFieldInitialization, MirStaticLifecycleCoordinator,
+    MirStaticValueCleanup, MirVerificationErrors,
 };
 
 use super::{
-    plan::PlannedMirProgram,
+    plan::{derived, PlannedMirProgram},
     verify::{debug_assert_exact_synthesized_realization, verify_planned_mir},
     verify_synthesized_mir,
 };
@@ -21,23 +21,22 @@ pub fn synthesize_static_lifecycle(
 ) -> Result<MirProgram, MirVerificationErrors> {
     verify_planned_mir(&planned)?;
 
-    let (preliminary, lifecycle) = planned.into_executable_parts();
+    let transitions = derived::transitions(&planned);
+    let activation_transitions = transitions.activation;
+    let shutdown_transitions = transitions.shutdown;
+    let (preliminary, planned_lifecycle) = planned.into_executable_parts();
     let (mut program, _fields, initializers) = preliminary.into_parts();
     let mut initializers = initializers
         .into_iter()
         .map(|initializer| (initializer.id, initializer))
         .collect::<BTreeMap<_, _>>();
-    let definitions = lifecycle
-        .definitions()
-        .iter()
-        .map(|definition| (definition.field, *definition))
-        .collect::<BTreeMap<_, _>>();
-
-    let mut transitions = lifecycle.activation().iter().copied();
-    let mut activation = Vec::with_capacity(lifecycle.plan().activation().len());
+    let mut transitions = activation_transitions.iter().copied();
+    let mut activation = Vec::with_capacity(planned_lifecycle.plan().activation().len());
     let mut ordered_initializers = Vec::with_capacity(initializers.len());
-    for field in lifecycle.plan().activation() {
-        let definition = definitions[field];
+    for field in planned_lifecycle.plan().activation() {
+        let definition = *planned_lifecycle
+            .definition(*field)
+            .expect("verified activation field must have a definition");
         let (work, region_transitions) = match definition.initialization {
             MirStaticFieldInitialization::ZeroDefault => (
                 MirStaticActivationWork::ZeroDefault,
@@ -73,21 +72,21 @@ pub fn synthesize_static_lifecycle(
     debug_assert!(transitions.next().is_none());
     debug_assert!(initializers.is_empty());
 
-    let shutdown_transitions = lifecycle.shutdown();
-    let shutdown = lifecycle
+    let shutdown = planned_lifecycle
         .plan()
         .shutdown()
-        .iter()
         .enumerate()
         .map(|(index, field)| {
-            let definition = definitions[field];
+            let definition = *planned_lifecycle
+                .definition(field)
+                .expect("verified shutdown field must have a definition");
             MirStaticDestructionRegion {
-                field: *field,
+                field,
                 begin: shutdown_transitions[index * 2],
                 cleanup: MirStaticValueCleanup::for_field(
                     &program.optional_types,
                     definition.ty,
-                    *field,
+                    field,
                     definition.span,
                 )
                 .expect("verified static lifecycle definitions have storable types"),
@@ -95,6 +94,12 @@ pub fn synthesize_static_lifecycle(
             }
         })
         .collect();
+
+    let lifecycle = MirProgramLifecycle::new(
+        planned_lifecycle,
+        activation_transitions,
+        shutdown_transitions,
+    );
 
     program.static_lifecycle = Some(MirStaticLifecycleCoordinator::new(
         lifecycle,

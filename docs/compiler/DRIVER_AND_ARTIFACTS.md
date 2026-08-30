@@ -75,9 +75,11 @@ type checker, MIR pipeline, and backend completion path as request
 compilation. A source-phase error stops later phases. HIR lowering, MIR
 verification, and backend failures remain distinct structured categories.
 After structural preliminary-MIR verification, static effect inference and
-lifetime planning run before final MIR conversion. The resulting explicit
-lifecycle definitions, transitions, summaries, dynamic targets, dependency
-edges, and plan indices are verified again at a dedicated trust boundary.
+lifetime planning run before final MIR conversion. The resulting canonical
+lifecycle definitions and activation order, compact authority, summaries,
+dynamic targets, and derived dependency edges are verified again at a
+dedicated trust boundary. Shutdown, positions, and planned transition views
+are reconstructed from that canonical data.
 Static self-dependencies and cycles are ordinary source diagnostics; malformed
 preliminary or planned MIR remains a distinct verification failure. A valid
 explicit initializer is synthesized into final coordinator MIR and passes the

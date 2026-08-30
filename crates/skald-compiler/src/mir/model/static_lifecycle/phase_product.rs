@@ -1,46 +1,39 @@
-//! Final-MIR lifecycle phase product.
+//! Planned and final lifecycle phase products.
+
+use crate::identity::StaticFieldId;
 
 use super::{
-    MirStaticLifecycleDefinition, MirStaticLifecycleProof, MirStaticLifecycleTransition,
-    StaticLifecyclePlan,
+    plan::MirStaticLifecycleDefinitions, MirStaticLifecycleDefinition, MirStaticLifecycleProof,
+    MirStaticLifecycleTransition, StaticLifecyclePlan,
 };
 
+/// Canonical planned lifecycle data shared unchanged with final MIR.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirProgramLifecycle {
-    definitions: Vec<MirStaticLifecycleDefinition>,
-    activation: Vec<MirStaticLifecycleTransition>,
-    shutdown: Vec<MirStaticLifecycleTransition>,
+pub struct MirPlannedLifecycle {
+    definitions: MirStaticLifecycleDefinitions,
     plan: StaticLifecyclePlan,
     proof: MirStaticLifecycleProof,
 }
 
-impl MirProgramLifecycle {
+impl MirPlannedLifecycle {
     pub(crate) fn new(
         definitions: Vec<MirStaticLifecycleDefinition>,
-        activation: Vec<MirStaticLifecycleTransition>,
-        shutdown: Vec<MirStaticLifecycleTransition>,
         plan: StaticLifecyclePlan,
         proof: MirStaticLifecycleProof,
     ) -> Self {
         Self {
-            definitions,
-            activation,
-            shutdown,
+            definitions: MirStaticLifecycleDefinitions::new(definitions),
             plan,
             proof,
         }
     }
 
     pub fn definitions(&self) -> &[MirStaticLifecycleDefinition] {
-        &self.definitions
+        self.definitions.entries()
     }
 
-    pub fn activation(&self) -> &[MirStaticLifecycleTransition] {
-        &self.activation
-    }
-
-    pub fn shutdown(&self) -> &[MirStaticLifecycleTransition] {
-        &self.shutdown
+    pub fn definition(&self, field: StaticFieldId) -> Option<&MirStaticLifecycleDefinition> {
+        self.definitions.get(field)
     }
 
     pub fn plan(&self) -> &StaticLifecyclePlan {
@@ -58,7 +51,67 @@ impl MirProgramLifecycle {
 
     #[cfg(test)]
     pub(crate) fn definitions_mut_for_test(&mut self) -> &mut Vec<MirStaticLifecycleDefinition> {
-        &mut self.definitions
+        self.definitions.entries_mut_for_test()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn proof_mut_for_test(&mut self) -> &mut MirStaticLifecycleProof {
+        &mut self.proof
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirProgramLifecycle {
+    planned: MirPlannedLifecycle,
+    activation: Vec<MirStaticLifecycleTransition>,
+    shutdown: Vec<MirStaticLifecycleTransition>,
+}
+
+impl MirProgramLifecycle {
+    pub(crate) fn new(
+        planned: MirPlannedLifecycle,
+        activation: Vec<MirStaticLifecycleTransition>,
+        shutdown: Vec<MirStaticLifecycleTransition>,
+    ) -> Self {
+        Self {
+            planned,
+            activation,
+            shutdown,
+        }
+    }
+
+    pub fn definitions(&self) -> &[MirStaticLifecycleDefinition] {
+        self.planned.definitions()
+    }
+
+    pub fn definition(&self, field: StaticFieldId) -> Option<&MirStaticLifecycleDefinition> {
+        self.planned.definition(field)
+    }
+
+    pub fn activation(&self) -> &[MirStaticLifecycleTransition] {
+        &self.activation
+    }
+
+    pub fn shutdown(&self) -> &[MirStaticLifecycleTransition] {
+        &self.shutdown
+    }
+
+    pub fn plan(&self) -> &StaticLifecyclePlan {
+        self.planned.plan()
+    }
+
+    pub fn proof(&self) -> &MirStaticLifecycleProof {
+        self.planned.proof()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn plan_mut_for_test(&mut self) -> &mut StaticLifecyclePlan {
+        self.planned.plan_mut_for_test()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn definitions_mut_for_test(&mut self) -> &mut Vec<MirStaticLifecycleDefinition> {
+        self.planned.definitions_mut_for_test()
     }
 
     #[cfg(test)]
@@ -73,6 +126,6 @@ impl MirProgramLifecycle {
 
     #[cfg(test)]
     pub(crate) fn proof_mut_for_test(&mut self) -> &mut MirStaticLifecycleProof {
-        &mut self.proof
+        self.planned.proof_mut_for_test()
     }
 }

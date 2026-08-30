@@ -33,9 +33,9 @@ use skald_compiler::{
         MirComparisonOperand, MirComparisonPredicate, MirDirectBase, MirFunctionType,
         MirFunctionTypeTable, MirIndirectCallTarget, MirIntegerBitwiseOperation, MirIntegerType,
         MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
-        MirPlaceProjection, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveComparison,
-        MirPrimitiveType, MirProgram, MirStaticLifecycleProof, MirType, MirUnaryOperation,
-        MirViewTarget, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+        MirPlaceProjection, MirPlannedLifecycle, MirPrimitiveCast, MirPrimitiveCastKind,
+        MirPrimitiveComparison, MirPrimitiveType, MirProgram, MirStaticLifecycleProof, MirType,
+        MirUnaryOperation, MirViewTarget, StaticLifecycleAuthority, StaticLifecycleEffectFact,
         StaticLifecycleRootAuthority,
     },
     module::{
@@ -245,7 +245,8 @@ fn intentional_phase_and_dump_paths_compose() {
         }
     }
     let _lifecycle: &StaticLifecyclePlan = planned.lifecycle();
-    let _dependencies: &[StaticLifetimeDependency] = report.dependencies();
+    let _planned_lifecycle: &MirPlannedLifecycle = planned.lifecycle_mir();
+    let _dependencies: Vec<StaticLifetimeDependency> = planned.dependencies();
     let synthesized = synthesize_static_lifecycle(planned).unwrap();
     verify_synthesized_mir(&synthesized).unwrap();
     assert!(synthesized.static_lifecycle.is_some());

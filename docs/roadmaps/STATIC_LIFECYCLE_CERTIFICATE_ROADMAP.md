@@ -1,6 +1,6 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: in progress; LCR0-LCR4 are complete and LCR5 is next.
+Status: in progress; LCR0-LCR5 are complete and LCR6 is next.
 
 This roadmap implements the frozen
 [static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
@@ -67,7 +67,7 @@ graph-reshaping passes can later rely.
 - [x] LCR2 — Verify monotone final-MIR realization
 - [x] LCR3 — Separate analysis evidence from executable proof
 - [x] LCR4 — Reorganize lifecycle module ownership
-- [ ] LCR5 — Canonicalize planned lifecycle data
+- [x] LCR5 — Canonicalize planned lifecycle data
 - [ ] LCR6 — Canonicalize the executable coordinator
 - [ ] LCR7 — Seal phase products and publish the optimization boundary
 
@@ -367,26 +367,26 @@ checks pass without dump, diagnostic, behavior, path, or product-shape changes.
 one definition inventory and one activation order before coordinator synthesis
 is simplified.
 
-- [ ] Define one canonical lifecycle definition table keyed by stable static
+- [x] Define one canonical lifecycle definition table keyed by stable static
       field identity and require exact unique coverage of declarations.
-- [ ] Store one activation-order vector covering definitions exactly once;
+- [x] Store one activation-order vector covering definitions exactly once;
       expose shutdown as a reverse iterator or derived view.
-- [ ] Remove stored shutdown order from `StaticLifecyclePlan` and eliminate
+- [x] Remove stored shutdown order from `StaticLifecyclePlan` and eliminate
       stored activation/shutdown indices from static declarations and lifecycle
       definitions.
-- [ ] Provide one checked or verifier-local position map for consumers that
+- [x] Provide one checked or verifier-local position map for consumers that
       need order comparisons or numeric dump output.
-- [ ] Remove stored lifetime dependency vectors from the planned schema and
+- [x] Remove stored lifetime dependency vectors from the planned schema and
       derive pairs from authority and definitions at planning verification and
       inspection boundaries.
-- [ ] Stop constructing flat activation and shutdown transitions in planned
+- [x] Stop constructing flat activation and shutdown transitions in planned
       MIR; retain source spans on definitions and initializer publication
       boundaries that can derive executable transitions later.
-- [ ] Build declaration, definition, initializer, and position indexes once,
+- [x] Build declaration, definition, initializer, and position indexes once,
       replacing repeated linear `static_fields().find(...)` scans.
-- [ ] Preserve deterministic topological tie breaking and exact source
+- [x] Preserve deterministic topological tie breaking and exact source
       diagnostics even though the accepted product stores less derived data.
-- [ ] Update planned dumps with derived shutdown positions, dependencies, and
+- [x] Update planned dumps with derived shutdown positions, dependencies, and
       transitions only where those views remain useful.
 
 **Tests:** Missing, duplicate, and foreign definitions/order entries;
@@ -404,6 +404,21 @@ goldens; generic static definitions.
 activation order, all reverse orders, positions, dependencies, and planned
 transitions are derived, construction performs no repeated field lookup loops,
 and synthesis still produces byte-for-byte equivalent executable behavior.
+
+**Completed:** Planned MIR now stores one static-field-identity-ordered
+definition table, one exact activation order, and the compact proof. Shutdown
+order, numeric positions, semantic dependency pairs, source-rich inspection
+dependencies, and planned transition views are derived at their verification,
+inspection, or synthesis boundaries. Construction and verification build
+canonical field, declaration, initializer, definition, and position indexes
+instead of repeatedly scanning inventories. Malformed-product tests cover
+missing, duplicate, foreign, noncanonical, and inconsistent definitions and
+orders; derived transition tests cover explicit and zero-default spans.
+Topological tie breaking, `STA001`/`STA002` diagnostics, dumps, generated
+startup and shutdown behavior, and generic-static identities remain unchanged.
+Focused lifecycle and public API tests, pipeline determinism, the full compiler
+suite, static-field goldens, formatting, lint, documentation, MSRV, and diff
+checks all pass.
 
 ### LCR6 — Canonicalize the executable coordinator
 

@@ -104,13 +104,13 @@ pub use shared::{
 };
 pub use shift::{MirRightShiftFlavor, MirShiftCountCheck, MirShiftDirection, MirShiftOperation};
 pub use static_lifecycle::{
-    MirProgramLifecycle, MirStaticActivationRegion, MirStaticActivationWork,
+    MirPlannedLifecycle, MirProgramLifecycle, MirStaticActivationRegion, MirStaticActivationWork,
     MirStaticDestructionRegion, MirStaticFieldInitialization, MirStaticLifecycleCoordinator,
-    MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleProof,
-    MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirStaticSharedCleanup,
-    MirStaticValueCleanup, StaticAccessKind, StaticArrayLifecycleOperation,
-    StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority,
-    StaticLifecycleEffectFact, StaticLifecyclePlan, StaticLifecycleRootAuthority,
+    MirStaticLifecycleDefinition, MirStaticLifecycleProof, MirStaticLifecycleTransition,
+    MirStaticLifecycleTransitionKind, MirStaticSharedCleanup, MirStaticValueCleanup,
+    StaticAccessKind, StaticArrayLifecycleOperation, StaticClassLifecycleOperation,
+    StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+    StaticLifecyclePlan, StaticLifecycleRootAuthority,
 };
 pub(crate) use statistics::MirProgramStatistics;
 pub use strings::{

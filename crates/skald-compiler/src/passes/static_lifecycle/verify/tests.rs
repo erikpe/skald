@@ -3,9 +3,8 @@
 use crate::{
     identity::{ClassId, StaticFieldId},
     mir::{
-        lower_preliminary_hir, MirProgramLifecycle, MirStaticFieldInitialization,
-        MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleProof,
-        MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirType, StaticAccessKind,
+        lower_preliminary_hir, MirPlannedLifecycle, MirStaticFieldInitialization,
+        MirStaticLifecycleDefinition, MirStaticLifecycleProof, MirType, StaticAccessKind,
         StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase, StaticLifecyclePlan,
     },
     test_support::type_check_source,
@@ -45,60 +44,23 @@ fn accepts_a_complete_hand_built_phase_product() {
         "class State { static value: i64 = 1; init() {} }
          fn main() -> i64 { return 0; }",
     );
-    let mut preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
     let field = *preliminary.static_fields().next().unwrap();
     let initializer_id = field.initializer.unwrap();
-    let initializer = preliminary.static_initializer(initializer_id).unwrap();
-    let initializer_span = initializer.span;
-    let publication_span = initializer.publication.span;
-    let indices = MirStaticLifecycleIndices {
-        activation: 0,
-        shutdown: 0,
-    };
-    preliminary
-        .program_mut()
-        .static_field_mut(field.field)
-        .unwrap()
-        .lifecycle = Some(indices);
     let (effects, authority) = infer_static_effects_with_roots(&preliminary);
     let plan = StaticLifecyclePlan::new(vec![field.field]);
-    let lifecycle = MirProgramLifecycle::new(
+    let lifecycle = MirPlannedLifecycle::new(
         vec![MirStaticLifecycleDefinition {
             field: field.field,
             ty: field.ty,
             initialization: MirStaticFieldInitialization::Explicit(initializer_id),
             final_span: field.final_span,
-            indices,
             span: field.span,
         }],
-        vec![
-            MirStaticLifecycleTransition {
-                field: field.field,
-                kind: MirStaticLifecycleTransitionKind::BeginInitialization,
-                span: initializer_span,
-            },
-            MirStaticLifecycleTransition {
-                field: field.field,
-                kind: MirStaticLifecycleTransitionKind::PublishLive,
-                span: publication_span,
-            },
-        ],
-        vec![
-            MirStaticLifecycleTransition {
-                field: field.field,
-                kind: MirStaticLifecycleTransitionKind::BeginDestruction,
-                span: field.span,
-            },
-            MirStaticLifecycleTransition {
-                field: field.field,
-                kind: MirStaticLifecycleTransitionKind::FinishDestruction,
-                span: field.span,
-            },
-        ],
         plan,
         MirStaticLifecycleProof::new(authority),
     );
-    let report = StaticLifecyclePlanningReport::new(effects, Vec::new());
+    let report = StaticLifecyclePlanningReport::new(effects);
     let planned = PlannedMirProgram::new(preliminary, lifecycle, report);
 
     verify_planned_mir(&planned).unwrap();
@@ -269,14 +231,6 @@ fn rejects_authority_derived_order_violations() {
         .activation_mut_for_test()
         .reverse();
     assert!(errors(&wrong_order).contains("violates activation order"));
-
-    let mut wrong_shutdown = plan(DEPENDENCY_SOURCE);
-    wrong_shutdown
-        .lifecycle_mut_for_test()
-        .plan_mut_for_test()
-        .shutdown_mut_for_test()
-        .reverse();
-    assert!(errors(&wrong_shutdown).contains("exact reverse"));
 }
 
 #[test]
@@ -296,34 +250,118 @@ fn rejects_missing_fields_mistyped_definitions_and_foreign_identities() {
     foreign.lifecycle_mut_for_test().definitions_mut_for_test()[0].field =
         StaticFieldId::new(ClassId::new(99), 0);
     assert!(errors(&foreign).contains("foreign static field"));
+
+    let mut duplicate = plan(DEPENDENCY_SOURCE);
+    let definitions = duplicate
+        .lifecycle_mut_for_test()
+        .definitions_mut_for_test();
+    definitions.insert(1, definitions[0]);
+    assert!(errors(&duplicate).contains("duplicate lifecycle definition"));
+
+    let mut reordered = plan(DEPENDENCY_SOURCE);
+    reordered
+        .lifecycle_mut_for_test()
+        .definitions_mut_for_test()
+        .reverse();
+    assert!(errors(&reordered).contains("not in canonical field order"));
+
+    let mut declaration = plan(DEPENDENCY_SOURCE);
+    declaration
+        .preliminary_mut_for_test()
+        .program_mut()
+        .classes
+        .entries_mut_for_test()[0]
+        .static_fields[0]
+        .initialization = MirStaticFieldInitialization::ZeroDefault;
+    let declaration_errors = errors(&declaration);
+    assert!(
+        declaration_errors.contains("initialization mode inconsistent"),
+        "{declaration_errors}"
+    );
 }
 
 #[test]
-fn rejects_phase_partition_and_declaration_index_mutations() {
-    let mut phases = plan(DEPENDENCY_SOURCE);
-    phases.lifecycle_mut_for_test().activation_mut_for_test()[0].kind =
-        MirStaticLifecycleTransitionKind::PublishLive;
-    assert!(errors(&phases).contains("activation phase partition"));
-
-    let mut shutdown_phases = plan(DEPENDENCY_SOURCE);
-    shutdown_phases
+fn rejects_incomplete_duplicate_and_foreign_activation_orders() {
+    let mut missing = plan(DEPENDENCY_SOURCE);
+    missing
         .lifecycle_mut_for_test()
-        .shutdown_mut_for_test()[0]
-        .kind = MirStaticLifecycleTransitionKind::FinishDestruction;
-    assert!(errors(&shutdown_phases).contains("shutdown phase partition"));
+        .plan_mut_for_test()
+        .activation_mut_for_test()
+        .pop();
+    assert!(errors(&missing).contains("does not cover every field exactly once"));
 
-    let mut indices = plan(DEPENDENCY_SOURCE);
-    let field = indices.static_fields().next().unwrap().field;
-    indices
-        .preliminary_mut_for_test()
-        .program_mut()
-        .static_field_mut(field)
-        .unwrap()
-        .lifecycle
-        .as_mut()
-        .unwrap()
-        .activation += 1;
-    assert!(errors(&indices).contains("inconsistent lifecycle indices"));
+    let mut duplicate = plan(DEPENDENCY_SOURCE);
+    let activation = duplicate
+        .lifecycle_mut_for_test()
+        .plan_mut_for_test()
+        .activation_mut_for_test();
+    activation[1] = activation[0];
+    assert!(errors(&duplicate).contains("does not cover every field exactly once"));
+
+    let mut foreign = plan(DEPENDENCY_SOURCE);
+    foreign
+        .lifecycle_mut_for_test()
+        .plan_mut_for_test()
+        .activation_mut_for_test()[0] = StaticFieldId::new(ClassId::new(99), 0);
+    assert!(errors(&foreign).contains("does not cover every field exactly once"));
+}
+
+#[test]
+fn shutdown_and_positions_are_derived_from_activation() {
+    let planned = plan(DEPENDENCY_SOURCE);
+    let activation = planned.lifecycle().activation();
+    let shutdown = planned.lifecycle().shutdown().collect::<Vec<_>>();
+    assert_eq!(
+        shutdown,
+        activation.iter().rev().copied().collect::<Vec<_>>()
+    );
+
+    let positions = super::super::plan::derived::positions(planned.lifecycle());
+    for (activation_position, field) in activation.iter().copied().enumerate() {
+        assert_eq!(positions[&field].activation, activation_position);
+        assert_eq!(
+            positions[&field].shutdown,
+            shutdown.len() - activation_position - 1
+        );
+    }
+}
+
+#[test]
+fn planned_transition_views_derive_explicit_and_zero_default_spans() {
+    let planned = plan(
+        "class State {
+           static explicit: i64 = 1;
+           static zero: i64;
+           init() {}
+         }
+         fn main() -> i64 { return 0; }",
+    );
+    let transitions = super::super::plan::derived::transitions(&planned);
+
+    for definition in planned.lifecycle_mir().definitions() {
+        match definition.initialization {
+            MirStaticFieldInitialization::Explicit(initializer) => {
+                let body = planned.static_initializer(initializer).unwrap();
+                assert!(transitions.activation.windows(2).any(|pair| {
+                    pair[0].field == definition.field
+                        && pair[0].span == body.span
+                        && pair[1].field == definition.field
+                        && pair[1].span == body.publication.span
+                }));
+            }
+            MirStaticFieldInitialization::ZeroDefault => {
+                assert!(transitions.activation.iter().any(|transition| {
+                    transition.field == definition.field && transition.span == definition.span
+                }));
+            }
+        }
+        assert!(transitions.shutdown.chunks_exact(2).any(|pair| {
+            pair[0].field == definition.field
+                && pair[0].span == definition.span
+                && pair[1].field == definition.field
+                && pair[1].span == definition.span
+        }));
+    }
 }
 
 #[test]
@@ -351,7 +389,9 @@ fn lifecycle_dump_has_an_exact_stable_schema() {
         crate::mir::MirStaticFieldInitialization::ZeroDefault => unreachable!(),
     };
     let span = definition.span.range();
-    let transition_span = planned.lifecycle_mir().activation()[0].span.range();
+    let transition_span = super::super::plan::derived::transitions(&planned).activation[0]
+        .span
+        .range();
     let field_reference = format!("{field} \"State.value\"");
     let expected = format!(
         concat!(

@@ -111,7 +111,6 @@ fn expands_each_indirect_call_to_every_exact_signature_target() {
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let result = fields[2];
     assert!(planned
-        .planning_report()
         .dependencies()
         .iter()
         .filter(|dependency| dependency.dependent == result)
@@ -122,7 +121,6 @@ fn expands_each_indirect_call_to_every_exact_signature_target() {
                 .iter()
                 .any(|edge| edge.kind == StaticEffectEdgeKind::IndirectCall)));
     assert!(planned
-        .planning_report()
         .dependencies()
         .iter()
         .any(|dependency| dependency.dependent == result && dependency.prerequisite == fields[1]));

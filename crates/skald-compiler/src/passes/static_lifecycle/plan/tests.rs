@@ -47,10 +47,11 @@ fn orders_initialization_dependencies_and_independent_fields_deterministically()
         &[fields[1], fields[2], fields[0]]
     );
     assert_eq!(
-        planned.lifecycle().shutdown(),
-        &[fields[0], fields[2], fields[1]]
+        planned.lifecycle().shutdown().collect::<Vec<_>>(),
+        [fields[0], fields[2], fields[1]]
     );
-    let dependency = planned.planning_report().dependencies().first().unwrap();
+    let dependencies = planned.dependencies();
+    let dependency = dependencies.first().unwrap();
     assert_eq!(dependency.prerequisite, fields[2]);
     assert_eq!(dependency.dependent, fields[0]);
     assert_eq!(
@@ -78,7 +79,8 @@ fn includes_destruction_of_initializer_free_replaceable_owning_fields() {
         .static_fields()
         .map(|field| field.field)
         .collect::<Vec<_>>();
-    let dependency = planned.planning_report().dependencies().first().unwrap();
+    let dependencies = planned.dependencies();
+    let dependency = dependencies.first().unwrap();
 
     assert_eq!(dependency.prerequisite, fields[1]);
     assert_eq!(dependency.dependent, fields[0]);
@@ -134,7 +136,6 @@ fn issues_exact_authority_for_explicit_zero_default_and_destructible_statics() {
     )
     .unwrap();
     let report_pairs = planned
-        .planning_report()
         .dependencies()
         .iter()
         .map(|dependency| (dependency.prerequisite, dependency.dependent))
@@ -157,7 +158,7 @@ fn permits_post_publication_cleanup_to_access_the_newly_live_field() {
          fn main() -> i64 { return 0; }",
     );
 
-    assert!(planned.planning_report().dependencies().is_empty());
+    assert!(planned.dependencies().is_empty());
     assert_eq!(planned.lifecycle().activation().len(), 1);
 }
 
@@ -260,7 +261,7 @@ fn callable_recursion_remains_separate_from_static_lifetime_cycles() {
     );
 
     assert!(planned.planning_report().analysis().recursive_components() >= 1);
-    assert_eq!(planned.planning_report().dependencies().len(), 1);
+    assert_eq!(planned.dependencies().len(), 1);
 }
 
 #[test]
@@ -348,7 +349,7 @@ fn planning_report_is_inspectable_but_synthesis_retains_only_compact_proof() {
     assert!(report.analysis().function_value_candidates().len() > 0);
     assert!(report.analysis().summaries().len() > 0);
     assert_eq!(report.analysis().recursive_components(), 0);
-    assert!(report
+    assert!(planned
         .dependencies()
         .iter()
         .any(|dependency| !dependency.evidence.witness.is_empty()));
