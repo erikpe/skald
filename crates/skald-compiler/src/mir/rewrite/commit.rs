@@ -219,11 +219,20 @@ pub(super) struct MirCallableCommit {
 }
 
 pub(super) fn commit(edit: MirCallableEdit) -> Result<MirCallableCommit, MirRewriteError> {
+    commit_with_attachments(edit, (), |(), _mapper| Ok(())).map(|(commit, ())| commit)
+}
+
+pub(super) fn commit_with_attachments<A>(
+    edit: MirCallableEdit,
+    mut attachments: A,
+    map_attachments: impl FnOnce(&mut A, &mut CommitMapper<'_>) -> Result<(), MirRewriteError>,
+) -> Result<(MirCallableCommit, A), MirRewriteError> {
     let inventory = edit.commit_inventory()?;
     let maps = MirCommitMaps::build(&inventory)?;
     let changes = MirRewriteChangeSummary::from_inventory(&inventory);
-    let mut candidate = edit.into_dense_candidate()?;
     let mut mapper = CommitMapper { maps: &maps };
+    map_attachments(&mut attachments, &mut mapper)?;
+    let mut candidate = edit.into_dense_candidate()?;
     map_common_local_identities(
         &mut candidate.storage,
         &mut candidate.values,
@@ -236,14 +245,17 @@ pub(super) fn commit(edit: MirCallableEdit) -> Result<MirCallableCommit, MirRewr
         values: candidate.values,
         body: candidate.body,
     };
-    Ok(MirCallableCommit {
-        callable,
-        maps,
-        changes,
-    })
+    Ok((
+        MirCallableCommit {
+            callable,
+            maps,
+            changes,
+        },
+        attachments,
+    ))
 }
 
-struct CommitMapper<'a> {
+pub(super) struct CommitMapper<'a> {
     maps: &'a MirCommitMaps,
 }
 

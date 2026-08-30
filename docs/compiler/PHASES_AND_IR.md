@@ -474,9 +474,10 @@ and its active
 define the target-independent structural editing boundary that follows the
 static-lifecycle certificate foundation. The exhaustive local-identity
 traversal, private sparse common callable state, and atomic dense common-state
-commit described below are implemented. Callable-specific adapters, the
-supported editing facade, and pipeline integration remain roadmap work. The
-current pipeline still has no production MIR transformation.
+commit described below are implemented. Private adapters now cover every
+executable definition kind and rebuild whole programs atomically. The
+supported editing facade, rehoming, and pipeline integration remain roadmap
+work. The current pipeline still has no production MIR transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -508,8 +509,7 @@ with its structural site. Commit consumes the private transaction and returns
 the dense common callable state, five typed identity maps, and structured
 retained/inserted/removed counts without logging, rendering, verifying, or
 updating an external analysis. Callable header and static-publication
-attachments join this atomic boundary through the remaining definition
-adapters.
+attachments join this atomic boundary through the definition adapters.
 Compaction never guesses value substitution, edge forwarding, cascading
 deletion, proof-metadata repair, or any other semantic transformation.
 
@@ -526,13 +526,18 @@ reference form must update this traversal and its census coverage in the same
 change; individual passes may not maintain competing remapping inventories.
 
 Function, member, and static-initializer definitions retain their public MIR
-shape. Private owned adapters share common transaction and commit logic while
-remapping each definition kind's attachments. Program containers provide only
-narrow crate-private ownership transfer; they do not gain a production
-`iter_mut` escape hatch. Initial HIR-to-MIR lowering remains append-oriented
-and does not use the optimization editor.
+shape. The implemented private owned adapters share common transaction and
+commit logic while remapping each definition kind's attachments. Atomic
+program rewriting consumes sparse function slots, callable-keyed members, and
+lifecycle-ordered initializer CFGs through narrow crate-private ownership
+transfer, commits every requested edit, and only then restores the containers.
+Function holes, member identities, initializer activation order, and the
+entire lifecycle plan, proof, activation, and shutdown coordinator remain
+unchanged. The model gains no production `iter_mut` escape hatch. Initial
+HIR-to-MIR lowering remains append-oriented and does not use the optimization
+editor.
 
-The supported editor facade provides typed lookup, allocation, explicit
+The planned supported editor facade provides typed lookup, allocation, explicit
 deletion, functional block-instruction rewriting, checked value/place
 substitution, explicit edge redirection, block ordering, and commit. Helpers
 state structural preconditions but do not claim semantic facts such as

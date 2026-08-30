@@ -227,6 +227,26 @@ impl MirStaticLifecycleCoordinator {
         &self.shutdown
     }
 
+    /// Temporarily transfers initializer CFG ownership to the atomic MIR
+    /// rewriter. Lifecycle authority, plans, and coordinator regions remain in
+    /// place and cannot be edited through this boundary.
+    pub(crate) fn take_initializers_for_rewrite(&mut self) -> Vec<MirStaticInitializerBody> {
+        std::mem::take(&mut self.initializers)
+    }
+
+    /// Restores initializer CFGs after every requested callable rewrite has
+    /// committed successfully.
+    pub(crate) fn restore_initializers_after_rewrite(
+        &mut self,
+        initializers: Vec<MirStaticInitializerBody>,
+    ) {
+        assert!(
+            self.initializers.is_empty(),
+            "static initializer rewrite restoration requires an empty transfer slot"
+        );
+        self.initializers = initializers;
+    }
+
     #[cfg(test)]
     pub(crate) fn activation_mut_for_test(&mut self) -> &mut Vec<MirStaticActivationRegion> {
         &mut self.activation

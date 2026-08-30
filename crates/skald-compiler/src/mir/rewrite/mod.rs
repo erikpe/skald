@@ -17,11 +17,13 @@
 //! state and either returns one canonically compacted common callable with
 //! complete maps and change counts or one structured error.
 
+mod callable;
 mod commit;
 mod edit;
 mod error;
 mod identity;
 mod map;
+mod program;
 
 pub(crate) use identity::{
     MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentityOwnershipError, MirLocalIdentitySite,

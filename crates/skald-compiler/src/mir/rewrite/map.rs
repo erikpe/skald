@@ -20,8 +20,7 @@ pub(crate) fn map_function_local_identities<M: MirLocalIdentityMapper>(
         body,
         span: _,
     } = definition;
-    map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
-    map_parameters(parameters, mapper)?;
+    map_function_attachments(return_storage, parameters, mapper)?;
     map_common_local_identities(storage, values, body, mapper)
 }
 
@@ -40,9 +39,7 @@ pub(crate) fn map_member_local_identities<M: MirLocalIdentityMapper>(
         body,
         span: _,
     } = definition;
-    map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
-    map_optional_storage(mapper, MirLocalIdentitySite::Receiver, receiver)?;
-    map_parameters(parameters, mapper)?;
+    map_member_attachments(return_storage, receiver, parameters, mapper)?;
     map_common_local_identities(storage, values, body, mapper)
 }
 
@@ -60,6 +57,34 @@ pub(crate) fn map_static_initializer_local_identities<M: MirLocalIdentityMapper>
         body,
         span: _,
     } = definition;
+    map_static_publication_attachment(publication, mapper)?;
+    map_common_local_identities(storage, values, body, mapper)
+}
+
+pub(super) fn map_function_attachments<M: MirLocalIdentityMapper>(
+    return_storage: &mut Option<StorageId>,
+    parameters: &mut [StorageId],
+    mapper: &mut M,
+) -> Result<(), M::Error> {
+    map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
+    map_parameters(parameters, mapper)
+}
+
+pub(super) fn map_member_attachments<M: MirLocalIdentityMapper>(
+    return_storage: &mut Option<StorageId>,
+    receiver: &mut Option<StorageId>,
+    parameters: &mut [StorageId],
+    mapper: &mut M,
+) -> Result<(), M::Error> {
+    map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
+    map_optional_storage(mapper, MirLocalIdentitySite::Receiver, receiver)?;
+    map_parameters(parameters, mapper)
+}
+
+pub(super) fn map_static_publication_attachment<M: MirLocalIdentityMapper>(
+    publication: &mut MirStaticPublication,
+    mapper: &mut M,
+) -> Result<(), M::Error> {
     let MirStaticPublication {
         initialization_exit,
         cleanup_entry,
@@ -74,8 +99,7 @@ pub(crate) fn map_static_initializer_local_identities<M: MirLocalIdentityMapper>
         mapper,
         MirLocalIdentitySite::StaticPublicationCleanupEntry,
         cleanup_entry,
-    )?;
-    map_common_local_identities(storage, values, body, mapper)
+    )
 }
 
 pub(crate) fn validate_function_local_identity_owners(

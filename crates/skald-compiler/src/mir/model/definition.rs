@@ -48,6 +48,12 @@ impl MirFunctionDefinitionTable {
         self.entries.indexed_slots()
     }
 
+    /// Consumes definitions for an atomic executable-MIR rewrite while
+    /// preserving every vacant function-ID slot.
+    pub(crate) fn into_rewrite_slots(self) -> Vec<Option<MirFunctionDefinition>> {
+        self.entries.into_slots()
+    }
+
     #[cfg(test)]
     pub(crate) fn get_mut_for_test(
         &mut self,
@@ -109,6 +115,12 @@ impl MirMemberDefinitionTable {
         self.entries
             .iter()
             .map(|(callable, definition)| (*callable, definition))
+    }
+
+    /// Consumes definitions in stable callable-identity order for an atomic
+    /// executable-MIR rewrite.
+    pub(crate) fn into_rewrite_entries(self) -> Vec<MirMemberDefinition> {
+        self.entries.into_values().collect()
     }
 
     pub fn is_empty(&self) -> bool {

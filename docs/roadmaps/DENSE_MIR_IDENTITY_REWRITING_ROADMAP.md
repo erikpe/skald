@@ -1,6 +1,6 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: in progress; DMR0-DMR2 are implemented and DMR3 is next.
+Status: in progress; DMR0-DMR3 are implemented and DMR4 is next.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
@@ -66,7 +66,7 @@ rather than expanding a reviewed task.
 - [x] DMR0 — Establish exhaustive local-identity traversal
 - [x] DMR1 — Introduce stable sparse edit storage
 - [x] DMR2 — Commit deterministic dense callable state
-- [ ] DMR3 — Integrate every executable definition kind
+- [x] DMR3 — Integrate every executable definition kind
 - [ ] DMR4 — Publish the supported callable editing facade
 - [ ] DMR5 — Add explicit cross-callable rehoming
 - [ ] DMR6 — Integrate verified pipeline invalidation and resealing
@@ -233,26 +233,26 @@ counts. Callable-specific header and publication attachments remain DMR3.
 surface without exposing general mutable definition tables or restructuring
 public MIR.
 
-- [ ] Add a private owned callable-package adapter for function, member, and
+- [x] Add a private owned callable-package adapter for function, member, and
       static-initializer definitions with stable semantic owner data, common
       editable state, and variant-specific attachments.
-- [ ] Remap receiver, parameters, return storage, body entry, and both static
+- [x] Remap receiver, parameters, return storage, body entry, and both static
       publication block references atomically with common body state.
-- [ ] Add narrow crate-private ownership transfer that extracts and rebuilds
+- [x] Add narrow crate-private ownership transfer that extracts and rebuilds
       function, member, and lifecycle-initializer containers in deterministic
       container order only after requested edits commit.
-- [ ] Preserve sparse program function slots, member map identities, static
+- [x] Preserve sparse program function slots, member map identities, static
       initializer activation order, lifecycle plan/coordinator data, and all
       program-level semantic IDs exactly.
-- [ ] Share common lookup and attachment adaptation where it removes actual
+- [x] Share common lookup and attachment adaptation where it removes actual
       function/member/initializer duplication, but do not introduce the
       rejected public `MirCallableBody` restructuring.
-- [ ] Keep production `iter_mut` access absent; retain narrowly named test-only
+- [x] Keep production `iter_mut` access absent; retain narrowly named test-only
       corruptors only where verifier tests require malformed final MIR.
-- [ ] Make a multi-callable program rewrite externally atomic: an error drops
+- [x] Make a multi-callable program rewrite externally atomic: an error drops
       the attempted output rather than returning a partially rewritten
       `MirProgram`.
-- [ ] Update current-phase documentation for the new private representation
+- [x] Update current-phase documentation for the new private representation
       without describing the roadmap as implemented prematurely.
 
 **Tests:** No-op equality and exact MIR dump parity across ordinary functions,
@@ -272,6 +272,23 @@ compile tests expose no mutation escape hatch.
 common private commit path, all variant attachments are covered, program
 containers retain their semantic order and identity, and no broad production
 mutation API has been added.
+
+**Completed:** Private owned callable packages now split function, member, and
+static-initializer definitions into stable semantic attachments and the common
+sparse edit state. Header and publication references map through the
+authoritative traversal before common-state reconstruction, and the package
+rebuilds the original public definition shape after commit. Whole-program
+rewriting consumes sparse function slots, callable-ordered members, and
+lifecycle-ordered initializer bodies through narrow ownership-transfer APIs;
+it reinstalls them only after every callback and commit succeeds. Function
+holes, member identities, initializer activation order, lifecycle authority,
+plans, activation/shutdown regions, declarations, and other program-level IDs
+remain unchanged. Tests cover exact no-op equality and dump parity across
+ordinary functions, instance/static methods, initialization, user copy and
+assignment, destruction, and explicit static initialization; every attachment
+site, publication block reordering, container identity/order preservation, and
+late multi-callable failure. The rewrite owner remains crate-private and adds
+no production mutable table iteration or pipeline transformation.
 
 ### DMR4 — Publish the supported callable editing facade
 

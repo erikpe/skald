@@ -207,6 +207,11 @@ impl<T> SparseFunctionTable<T> {
             .map(|(index, entry)| (index, entry.as_ref()))
     }
 
+    /// Consumes the table without collapsing vacant function-ID slots.
+    pub(crate) fn into_slots(self) -> Vec<Option<T>> {
+        self.entries
+    }
+
     #[cfg(test)]
     pub(crate) fn get_mut_for_test(&mut self, id: FunctionId) -> Option<&mut T> {
         self.entries.get_mut(id.index())?.as_mut()
