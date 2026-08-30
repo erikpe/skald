@@ -310,6 +310,79 @@ wrapper preserves the entry result across that normal-return call. The
 source-visible lifetime rule is owned by the [static-field
 contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
+### Frozen static-lifecycle certificate direction
+
+The current implementation requires final MIR to reproduce the preliminary
+certificate's direct effects, possible target edges, and function-value
+candidate inventory exactly. The frozen replacement keeps lifecycle planning
+before optimization but changes the cross-phase proof from graph equality to a
+root-effect authority relation. Delivery is owned by the
+[static-lifecycle certificate roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md),
+and the complete rationale is preserved in the
+[frozen design record](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md).
+
+For every explicit static initializer and implicit class or array lifecycle
+operation used to activate or destroy a static field, preliminary analysis
+will issue an exact baseline authority. One authorized fact consists of target
+static field, access kind, root phase, and whether the access is the
+lifecycle-owned unpublished initializer destination. Source span, witness
+path, directness, intermediate callable, call-edge kind, and target-set shape
+are evidence or analysis details rather than fact identity.
+
+Let `effects(P, r)` be the conservative closed-world normalized facts reachable
+from lifecycle root `r` in MIR product `P`, and let `B[r]` be its immutable
+baseline authority. Planned-MIR issuance must establish:
+
+```text
+effects(preliminary_mir, r) = B[r]
+```
+
+Final synthesis and effect-changing MIR transformations must establish:
+
+```text
+effects(final_mir, r) subset-of B[r]
+```
+
+Final verification also derives the dependencies of the realized facts and
+checks them directly against the frozen activation order, including existing
+self-access, publication-phase, and lifecycle-destination rules. This accepts
+effect removal, target narrowing, and inlining even when their direct graph
+shape changes, while rejecting a newly reachable field/access/phase fact.
+Optimization never replans lifecycle order or changes source diagnostics.
+
+Target expansion is re-derived from each MIR product. Whole-world compilation
+makes virtual, interface, exact-signature function-value, copy, finalization,
+cleanup, and array-lifecycle target sets finite. Function-value candidates are
+an analysis input; callable retention becomes a separate future reachability
+responsibility. No unknown external Skald target may be assumed effect-free.
+Single-threaded generated execution requires no runtime guards, atomics, lazy
+initialization, or synchronization state.
+
+The baseline authority is planner-owned and opaque to optimization passes.
+Planned issuance and final realization use distinct verifier entry points, and
+the backend accepts only a final product checked for ordinary MIR structure and
+lifecycle realization. Passes that may change static access, control-flow
+reachability, lifecycle operations, or possible callees invalidate the derived
+realization and cause central reanalysis; all pipelines verify once at the
+backend boundary regardless of pass declarations.
+
+The promoted schema direction has one canonical representation for each
+durable fact:
+
+- one lifecycle definition per static field;
+- one activation-order vector, with shutdown and position indices derived;
+- one immutable baseline authority map keyed by lifecycle root; and
+- structured activation and destruction regions as the executable coordinator
+  form, with flat transitions available only as derived dump views.
+
+Required dependency pairs derive from authority and definitions. Direct effect
+graphs, target inventories, SCC metrics, solved per-callable summaries, source
+witnesses, and diagnostic paths remain pass-owned analysis or reporting data
+rather than executable MIR certificate identity. The migration preserves
+complete field coverage, initialization modes and types, publication dominance,
+destination non-escape, exact-reverse destruction, deterministic dumps, and
+the existing `STA001` and `STA002` diagnostic behavior.
+
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns recursive, bottom-up
 interned optional identities whose payloads may name earlier optional or array

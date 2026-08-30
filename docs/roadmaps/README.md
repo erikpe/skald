@@ -14,9 +14,9 @@ The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIE
 record the seven current compiler constraints on modular target-independent and
 target-specific optimization, their interaction with permanent whole-world and
 single-threaded program semantics, expected impact and effort, and a recommended
-starting sequence. Its first recommended change is now explored by the active
-static-lifecycle certificate design proposal; no implementation roadmap is yet
-scheduled.
+starting sequence. Its first recommended change is now explored by the planned
+static-lifecycle certificate roadmap. The remaining six constraints stay
+pending and are not part of that roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -24,16 +24,24 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No other implementation roadmap is currently planned.
+The
+[static-lifecycle certificate redesign roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+is planned with LCR0 next. It establishes normalized lifecycle-root effects,
+exact baseline authority, monotone final-MIR realization, canonical lifecycle
+schema, and sealed backend phase products before any production optimization
+pass is added. It depends on the existing whole-world static-effect extractor
+and lifecycle planner; the later general optimization framework and dense-ID
+rewriter remain separate work.
 
 ## Design proposals
 
-The
-[static-lifecycle certificate redesign proposal](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
-defines an immutable preliminary-MIR authority and a root-reachable final-MIR
-realization relation, together with adjacent lifecycle schema and ownership
-cleanup. Its SLC1 through SLC12 decisions await confirmation before an
-implementation roadmap is created.
+The static-lifecycle certificate decisions are promoted into the
+[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction),
+their
+[frozen decision record](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+is preserved in the archive, and the planned
+[implementation roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md) owns
+delivery.
 
 The structured-reporting decisions are promoted into the
 [compiler reporting contract](../compiler/REPORTING.md),

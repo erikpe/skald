@@ -136,6 +136,10 @@ Resolved compiler-reporting design inputs:
 
 - [Structured compiler reporting design proposal](STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
 
+Resolved static-lifecycle optimization inputs:
+
+- [Static-lifecycle certificate redesign proposal](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+
 Supporting records for the documentation overhaul:
 
 - [migration inventory](DOCUMENTATION_OVERHAUL_INVENTORY.md)

@@ -1,13 +1,15 @@
 # Optimization Architecture Discoveries
 
-Status: pending architectural assessment; no implementation roadmap is
-currently scheduled.
+Status: pending architectural assessment. The first constraint is scheduled in
+the
+[static-lifecycle certificate roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md);
+the remaining six have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
 separates foundational changes from later high-effort opportunities so that a
-future implementation roadmap can settle contracts and representation
-boundaries before scheduling individual optimization passes.
+future implementation work can settle contracts and representation boundaries
+before scheduling individual optimization passes.
 
 ## Scope and fixed assumptions
 
@@ -111,7 +113,7 @@ Keep source diagnostics and the selected lifecycle order based on the verified
 unoptimized program, then distinguish that conservative proof from effects
 realized by optimized MIR. The central invariant should permit removal while
 rejecting additions. The focused
-[static-lifecycle certificate redesign proposal](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+[static-lifecycle certificate redesign proposal](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
 refines the relation to lifecycle-root effects rather than direct graph shape:
 
 ```text

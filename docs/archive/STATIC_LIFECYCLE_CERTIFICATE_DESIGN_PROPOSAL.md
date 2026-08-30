@@ -1,7 +1,11 @@
 # Static-Lifecycle Certificate Redesign Proposal
 
-Status: proposed design. SLC1 through SLC12 are proposed decisions and await
-confirmation before an implementation roadmap is created.
+Status: frozen design proposal. SLC1 through SLC12 were confirmed together on
+2026-08-30 and promoted into the
+[compiler phase and IR contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction).
+The
+[implementation roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+owns delivery; this document preserves the reviewed decisions.
 
 This proposal redesigns Skald's exact static-lifecycle certificate so
 target-independent MIR optimization can remove or reshape static effects
@@ -17,7 +21,7 @@ contract is introduced.
 
 Skald programs are permanently compiled whole-world for this design, and the
 resulting program is single threaded. Whole-world compilation is essential to
-the proposed finite call-target and effect analysis. Single-threaded execution
+the finite call-target and effect analysis. Single-threaded execution
 means the redesign needs no concurrent initialization states, atomic guards,
 or memory-ordering proof; it does not otherwise weaken the static dependency
 requirements.
@@ -207,20 +211,20 @@ remain unchanged and are the relevant lifecycle property.
 
 ## Decision register
 
-| ID | Question | Proposed direction | State |
+| ID | Question | Confirmed direction | State |
 |---|---|---|---|
-| [SLC1](#slc1--separate-baseline-authority-from-final-realization) | What does the certificate mean across optimization? | Exact baseline root authority plus a monotone final realization relation | **Proposed** |
-| [SLC2](#slc2--compare-normalized-root-effects-not-direct-graph-shape) | What is compared? | Span-free normalized effects reachable from lifecycle roots, not direct effects or edges | **Proposed** |
-| [SLC3](#slc3--use-distinct-issuance-and-realization-verifiers) | Where is exactness checked? | Exact planned-MIR issuance verification and subset final-MIR realization verification | **Proposed** |
-| [SLC4](#slc4--derive-targets-from-each-whole-world-mir-product) | How are dynamic calls handled? | Rebuild conservative targets from the MIR product under verification | **Proposed** |
-| [SLC5](#slc5--make-proof-data-immutable-to-optimization-passes) | Who may change the proof? | Planner-owned opaque authority; passes receive no proof mutation API | **Proposed** |
-| [SLC6](#slc6--store-one-canonical-lifecycle-schema) | Which lifecycle forms are stored? | Definitions, one activation order, structured coordinator regions, and baseline authority only | **Proposed** |
-| [SLC7](#slc7--separate-analysis-proof-and-executable-module-ownership) | Where do the types live? | Pass-owned analysis/evidence, MIR-owned compact proof and executable schema | **Proposed** |
-| [SLC8](#slc8--keep-witnesses-and-statistics-out-of-semantic-identity) | What happens to witnesses and metrics? | Planning/report sidecars; deterministic evidence retained only where it explains diagnostics | **Proposed** |
-| [SLC9](#slc9--freeze-diagnostics-and-order-before-optimization) | Can optimization change acceptance or order? | No; profiles share preliminary analysis, diagnostics, and plan | **Proposed** |
-| [SLC10](#slc10--centralize-invalidation-and-reverification) | How do future passes interact? | Declare lifecycle-effect preservation or invalidation; the pipeline reanalyzes centrally | **Proposed** |
-| [SLC11](#slc11--strengthen-phase-products-and-backend-entry) | How is the trust boundary encoded? | Sealed verified phase products; backend entry requires a verified final-MIR view | **Proposed** |
-| [SLC12](#slc12--migrate-by-invariant-before-adding-optimizations) | How is this delivered safely? | Establish parity and malformed-MIR coverage before the first effect-changing pass | **Proposed** |
+| [SLC1](#slc1--separate-baseline-authority-from-final-realization) | What does the certificate mean across optimization? | Exact baseline root authority plus a monotone final realization relation | **Confirmed** |
+| [SLC2](#slc2--compare-normalized-root-effects-not-direct-graph-shape) | What is compared? | Span-free normalized effects reachable from lifecycle roots, not direct effects or edges | **Confirmed** |
+| [SLC3](#slc3--use-distinct-issuance-and-realization-verifiers) | Where is exactness checked? | Exact planned-MIR issuance verification and subset final-MIR realization verification | **Confirmed** |
+| [SLC4](#slc4--derive-targets-from-each-whole-world-mir-product) | How are dynamic calls handled? | Rebuild conservative targets from the MIR product under verification | **Confirmed** |
+| [SLC5](#slc5--make-proof-data-immutable-to-optimization-passes) | Who may change the proof? | Planner-owned opaque authority; passes receive no proof mutation API | **Confirmed** |
+| [SLC6](#slc6--store-one-canonical-lifecycle-schema) | Which lifecycle forms are stored? | Definitions, one activation order, structured coordinator regions, and baseline authority only | **Confirmed** |
+| [SLC7](#slc7--separate-analysis-proof-and-executable-module-ownership) | Where do the types live? | Pass-owned analysis/evidence, MIR-owned compact proof and executable schema | **Confirmed** |
+| [SLC8](#slc8--keep-witnesses-and-statistics-out-of-semantic-identity) | What happens to witnesses and metrics? | Planning/report sidecars; deterministic evidence retained only where it explains diagnostics | **Confirmed** |
+| [SLC9](#slc9--freeze-diagnostics-and-order-before-optimization) | Can optimization change acceptance or order? | No; profiles share preliminary analysis, diagnostics, and plan | **Confirmed** |
+| [SLC10](#slc10--centralize-invalidation-and-reverification) | How do future passes interact? | Declare lifecycle-effect preservation or invalidation; the pipeline reanalyzes centrally | **Confirmed** |
+| [SLC11](#slc11--strengthen-phase-products-and-backend-entry) | How is the trust boundary encoded? | Sealed verified phase products; backend entry requires a verified final-MIR view | **Confirmed** |
+| [SLC12](#slc12--migrate-by-invariant-before-adding-optimizations) | How is this delivered safely? | Establish parity and malformed-MIR coverage before the first effect-changing pass | **Confirmed** |
 
 ## SLC1 — Separate baseline authority from final realization
 
@@ -284,7 +288,7 @@ exactness:
 
 1. `verify_planned_static_lifecycle` independently extracts preliminary MIR,
    computes root-reachable normalized facts, requires exact equality with the
-   proposed baseline authority, derives all required dependencies, and checks
+   stored baseline authority, derives all required dependencies, and checks
    the activation order and self/publication rules.
 2. `verify_static_lifecycle_realization` independently extracts final MIR,
    computes root-reachable normalized facts, requires a subset of the immutable
@@ -484,9 +488,9 @@ read-only definitions, activation order, and authority; construction remains
 crate-owned. Test-only malformed-product builders should live with verifier
 tests instead of adding general mutation accessors to production types.
 
-No cryptographic seal is proposed. The trust mechanism is Rust ownership,
-private construction, opaque phase products, and mandatory verification at
-the phase boundary.
+No cryptographic seal is part of the design. The trust mechanism is Rust
+ownership, private construction, opaque phase products, and mandatory
+verification at the phase boundary.
 
 ## SLC12 — Migrate by invariant before adding optimizations
 
@@ -507,11 +511,10 @@ effect-changing optimization. A safe delivery sequence is:
 8. add a test-only transformation that removes, narrows, and inlines effects to
    demonstrate the contract before scheduling an optimizer pass.
 
-These are delivery slices, not yet an implementation roadmap. After the
-decisions are confirmed, the roadmap should turn them into ordered PR-sized
-tasks with exact tests and documentation updates.
+These delivery slices are refined into ordered PR-sized tasks in the
+[implementation roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md).
 
-## Proposed product model
+## Frozen product model
 
 The final names should follow repository conventions, but the ownership should
 approximately be:
@@ -551,7 +554,7 @@ they do not travel to the backend as if they were executable MIR.
 
 ## Verification matrix
 
-The implementation roadmap should require at least these cases:
+The implementation roadmap requires at least these cases:
 
 | Case | Planned issuance | Final realization |
 |---|---|---|
@@ -661,8 +664,7 @@ mirrored lifecycle forms.
 
 ## Confirmation and promotion
 
-Before roadmap creation, review should confirm SLC1 through SLC12 together,
-with particular attention to:
+SLC1 through SLC12 were confirmed together on 2026-08-30, including:
 
 - root-reachable normalized effects rather than direct-edge subset;
 - immutable baseline authority and optimization-independent planning;
@@ -671,7 +673,8 @@ with particular attention to:
   certificate identity; and
 - the sealed phase-product requirement at backend entry.
 
-Once confirmed, the durable compiler contract belongs in
-[`PHASES_AND_IR.md`](../compiler/PHASES_AND_IR.md), including the revised
-pipeline invariant and static-lifecycle schema. The implementation roadmap can
-then own migration and delivery. This proposal remains the decision record.
+The durable direction is promoted into
+[`PHASES_AND_IR.md`](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction).
+The
+[implementation roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+owns migration and delivery. This proposal remains the frozen decision record.

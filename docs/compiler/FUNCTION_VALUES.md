@@ -170,6 +170,16 @@ retention inventory against final MIR. Separate closed generic static methods
 remain separate target and effect nodes. Dumps expose candidate sets as
 explicit retention decisions and render their induced `IndirectCall` edges.
 
+The frozen
+[static-lifecycle certificate redesign](PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction)
+will separate these responsibilities. Each MIR product will derive its own
+exact-signature candidates for conservative indirect-effect expansion, while
+the compact lifecycle proof will contain only normalized effects reachable
+from lifecycle roots. Callable retention will become an explicit responsibility
+of future whole-program reachability rather than a second meaning of lifecycle
+certificate identity. Until that roadmap is implemented, the exact inventory
+check above remains the current compiler behavior.
+
 ## x86-64 representation and internal ABI
 
 X86-64 legality
