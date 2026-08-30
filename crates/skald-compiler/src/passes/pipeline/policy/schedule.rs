@@ -1,13 +1,14 @@
 use super::{
-    error::MirPassScheduleError, identity::MirPassIdentity, profile::MirOptimizationProfile,
-    registry::MirPassRegistry,
+    descriptor::MirPassRegistration, error::MirPassScheduleError, identity::MirPassIdentity,
+    profile::MirOptimizationProfile, registry::MirPassRegistry,
 };
+use crate::passes::pipeline::execution::MirPassTransform;
 
 /// One position in an explicitly resolved pass schedule.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct MirPassOccurrence {
     position: usize,
-    identity: MirPassIdentity,
+    registration: MirPassRegistration,
     occurrence: usize,
 }
 
@@ -17,11 +18,19 @@ impl MirPassOccurrence {
     }
 
     pub(crate) const fn identity(self) -> MirPassIdentity {
-        self.identity
+        self.registration.descriptor().identity()
     }
 
     pub(crate) const fn occurrence(self) -> usize {
         self.occurrence
+    }
+
+    pub(in crate::passes::pipeline) const fn name(self) -> &'static str {
+        self.registration.descriptor().name()
+    }
+
+    pub(in crate::passes::pipeline) const fn transform(self) -> MirPassTransform {
+        self.registration.implementation().transform()
     }
 }
 
@@ -103,14 +112,20 @@ pub(super) fn resolve_identities<'a>(
         .iter()
         .copied()
         .filter(|identity| !disabled_identities.contains(identity));
-    Ok(number_occurrences(retained))
+    Ok(number_occurrences(registry, retained))
 }
 
-fn number_occurrences(identities: impl IntoIterator<Item = MirPassIdentity>) -> MirPassSchedule {
+fn number_occurrences(
+    registry: MirPassRegistry,
+    identities: impl IntoIterator<Item = MirPassIdentity>,
+) -> MirPassSchedule {
     let mut counts = Vec::<(MirPassIdentity, usize)>::new();
     let mut occurrences = Vec::new();
 
     for (position, identity) in identities.into_iter().enumerate() {
+        let registration = registry
+            .registration(identity)
+            .expect("validated schedule identity must have one registration");
         let occurrence = match counts
             .iter_mut()
             .find(|(known_identity, _)| *known_identity == identity)
@@ -127,7 +142,7 @@ fn number_occurrences(identities: impl IntoIterator<Item = MirPassIdentity>) -> 
         };
         occurrences.push(MirPassOccurrence {
             position,
-            identity,
+            registration,
             occurrence,
         });
     }

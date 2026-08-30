@@ -288,17 +288,20 @@ fn count(value: usize) -> u64 {
 #[cfg(test)]
 mod tests {
     use crate::{
-        passes::run_transforming_mir_pipeline, reporting::MetricValue,
+        passes::{resolve_mir_pass_schedule, run_mir_pipeline_measured, MirOptimizationProfile},
+        reporting::MetricValue,
         test_support::lower_source_to_final_mir,
     };
 
     use super::*;
 
     #[test]
-    fn transformed_pipeline_metrics_use_commit_counts_without_phantom_executions() {
-        let measured = run_transforming_mir_pipeline(
+    fn empty_pipeline_metrics_report_verification_without_phantom_pass_work() {
+        let schedule =
+            resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+        let measured = run_mir_pipeline_measured(
             lower_source_to_final_mir("fn main() -> i64 { return 0; }"),
-            |_callable, _edit| Ok(()),
+            &schedule,
         );
         let program = measured
             .result
@@ -307,12 +310,10 @@ mod tests {
             .map(|verified| verified.program());
         let metrics = mir_pipeline_metrics_from(measured.statistics, program);
 
-        assert_eq!(metric(&metrics, "verification executions"), Some(2));
-        assert_eq!(metric(&metrics, "pass executions"), Some(1));
-        assert_eq!(metric(&metrics, "rewritten callables"), Some(1));
-        assert!(metric(&metrics, "retained MIR entities").unwrap() > 0);
-        assert_eq!(metric(&metrics, "inserted MIR entities"), Some(0));
-        assert_eq!(metric(&metrics, "removed MIR entities"), Some(0));
+        assert_eq!(metric(&metrics, "verification executions"), Some(1));
+        assert_eq!(metric(&metrics, "pass executions"), Some(0));
+        assert_eq!(metric(&metrics, "rewritten callables"), None);
+        assert_eq!(metric(&metrics, "retained MIR entities"), None);
     }
 
     fn metric(metrics: &[ReportMetric], name: &str) -> Option<u64> {

@@ -8,8 +8,8 @@ mod build;
 mod dump;
 mod lower;
 mod model;
-// No production transformation consumes this boundary yet. Keeping it
-// compiled makes MIR model drift fail at the exhaustive rewrite owner.
+// The final-MIR pass runner is the only production owner permitted to consume
+// this atomic rewrite boundary.
 #[allow(dead_code, unused_imports)]
 pub(crate) mod rewrite;
 mod verify;

@@ -8,6 +8,7 @@ use super::{
     resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
     schedule::{resolve_exact, resolve_identities},
 };
+use crate::passes::pipeline::execution::{MirPassCapability, MirPassFailure, MirPassOutcome};
 
 const ALPHA: MirPassIdentity = MirPassIdentity::new(1);
 const BETA: MirPassIdentity = MirPassIdentity::new(2);
@@ -21,8 +22,12 @@ const fn registration(
 ) -> MirPassRegistration {
     MirPassRegistration::new(
         MirPassDescriptor::new(descriptor_identity, name, description),
-        MirPassImplementation::new(implementation_identity),
+        MirPassImplementation::new(implementation_identity, metadata_only_pass),
     )
+}
+
+fn metadata_only_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+    Ok(capability.unchanged())
 }
 
 static VALID_REGISTRATIONS: [MirPassRegistration; 3] = [

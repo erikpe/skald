@@ -10,9 +10,9 @@ The
 [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 owns delivery. Its typed registry, empty profiles, deterministic schedule and
 occurrence model, exclusions, and exact compiler-internal schedule resolver
-are implemented. Typed request/CLI selection is also implemented and threads
-the resolved empty schedule to the pipeline; production pass execution,
-observation, and the canary remain planned.
+are implemented. Typed request/CLI selection and the verified multi-pass runner
+are also implemented. The supported schedules remain empty; pass observation,
+inspection, shared analysis, and the canary remain planned.
 
 This proposal defines the first production target-independent optimization
 framework for Skald. It builds on the implemented static-lifecycle authority
@@ -69,7 +69,8 @@ lifecycle synthesis produces raw final `MirProgram`, and
 realization verification before returning `VerifiedFinalMirProgram`.
 `BackendInput` accepts only that sealed product.
 
-The pipeline also has a test-only transforming coordinator. It:
+Before productionization, the pipeline also had a test-only transforming
+coordinator. It:
 
 1. verifies the input;
 2. privately invalidates the final-MIR seal;
@@ -77,9 +78,10 @@ The pipeline also has a test-only transforming coordinator. It:
 4. records commit-owned identity changes; and
 5. verifies the dense result before returning it.
 
-That path proves the important safety relation, but it is deliberately dormant
-in production. There is no pass descriptor, schedule, profile, request option,
-CLI selection, per-pass failure identity, or production optimization.
+That path proved the important safety relation and has now been absorbed by the
+sole production runner. Pass descriptors, schedules, profiles, request/CLI
+selection, exact per-pass failure identity, and immediate changed-output
+resealing are implemented. No production optimization is registered yet.
 
 The implemented rewrite facade already provides:
 
@@ -100,15 +102,14 @@ size, and structural rewrite changes. Pass executions are currently zero in
 production. Reports intentionally do not contain phase dumps, and passes do
 not log.
 
-`CompilationRequest` currently records source, module, standard-library,
-target, artifact, runtime-trace, and environment policy. It has no
-optimization configuration. The CLI likewise has no optimization selection or
-MIR dump option.
+`CompilationRequest` now records typed optimization policy alongside source,
+module, standard-library, target, artifact, runtime-trace, and environment
+policy. The CLI selects the two supported profiles and stable-name exclusions;
+it has no MIR dump option.
 
-These facts make the next implementation boundary relatively narrow: promote
-the tested transforming shape into a production runner without weakening the
-seal, then prove it using a pass whose semantics and analysis requirements are
-small.
+These facts led to the implemented production runner without weakening the
+seal. The remaining boundary adds observation and inspection, then proves the
+framework using a pass whose semantics and analysis requirements are small.
 
 ## Relationship to the completed foundations
 

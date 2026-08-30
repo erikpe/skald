@@ -6,12 +6,14 @@ use super::{
 
 /// Immutable view of the compiler-owned final-MIR pass registry.
 #[derive(Clone, Copy)]
-pub(super) struct MirPassRegistry {
+pub(in crate::passes::pipeline) struct MirPassRegistry {
     registrations: &'static [MirPassRegistration],
 }
 
 impl MirPassRegistry {
-    pub(super) const fn new(registrations: &'static [MirPassRegistration]) -> Self {
+    pub(in crate::passes::pipeline) const fn new(
+        registrations: &'static [MirPassRegistration],
+    ) -> Self {
         Self { registrations }
     }
 
@@ -66,6 +68,13 @@ impl MirPassRegistry {
         self.registrations
             .iter()
             .any(|registration| registration.descriptor().identity() == identity)
+    }
+
+    pub(super) fn registration(self, identity: MirPassIdentity) -> Option<MirPassRegistration> {
+        self.registrations
+            .iter()
+            .copied()
+            .find(|registration| registration.descriptor().identity() == identity)
     }
 
     pub(super) fn identity_for_name(self, name: &str) -> Option<MirPassIdentity> {

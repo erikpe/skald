@@ -2,87 +2,45 @@
 
 use std::ops::Deref;
 
-use crate::mir::rewrite::MirRewriteChangeSummary;
 use crate::mir::{MirProgram, MirVerificationErrors};
 
 use super::static_lifecycle;
 
-// Selection is intentionally dormant until request policy is threaded through
-// the driver. Its focused tests establish the registry and schedule contracts
-// without changing the verification-only production pipeline.
+mod execution;
+// Exact internal schedules and constructors remain compiler/test tooling until
+// the first production pass is registered.
 #[allow(dead_code)]
 mod policy;
 
-// This owner is intentionally dormant until the first production MIR pass.
-// Its unit tests exercise the complete invalidation and resealing path now.
-#[allow(dead_code)]
-mod rewrite;
-
+pub(crate) use execution::{run_mir_pipeline_measured, MeasuredMirPipeline, MirPipelineStatistics};
+pub use execution::{MirPipelineError, MirPipelineFailureStage};
 pub use policy::MirOptimizationProfile;
-#[allow(unused_imports)]
 pub(crate) use policy::{
     registered_mir_pass_names, resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
     MirPassIdentity, MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
 };
-
-#[cfg(test)]
-pub(crate) use rewrite::run_transforming_mir_pipeline;
-
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(crate) struct MirPipelineStatistics {
-    verification_executions: u64,
-    pass_executions: u64,
-    rewritten_callables: u64,
-    rewrite_changes: MirRewriteChangeSummary,
-}
-
-impl MirPipelineStatistics {
-    pub(crate) const fn verification_executions(self) -> u64 {
-        self.verification_executions
-    }
-
-    pub(crate) const fn pass_executions(self) -> u64 {
-        self.pass_executions
-    }
-
-    pub(crate) const fn rewritten_callables(self) -> u64 {
-        self.rewritten_callables
-    }
-
-    pub(crate) const fn rewrite_changes(self) -> MirRewriteChangeSummary {
-        self.rewrite_changes
-    }
-
-    fn record_verification(&mut self) {
-        self.verification_executions = self.verification_executions.saturating_add(1);
-    }
-
-    #[allow(dead_code)]
-    fn record_pass_execution(&mut self) {
-        self.pass_executions = self.pass_executions.saturating_add(1);
-    }
-
-    #[allow(dead_code)]
-    fn record_rewrite(&mut self, rewrite: &crate::mir::rewrite::MirProgramRewriteResult) {
-        self.rewritten_callables = self
-            .rewritten_callables
-            .saturating_add(u64::try_from(rewrite.callables.len()).unwrap_or(u64::MAX));
-        for callable in &rewrite.callables {
-            self.rewrite_changes.accumulate(callable.changes);
-        }
-    }
-}
-
-pub(crate) struct MeasuredMirPipeline {
-    pub(crate) result: Result<VerifiedFinalMirProgram, MirVerificationErrors>,
-    pub(crate) statistics: MirPipelineStatistics,
-}
 
 /// Read-only final MIR that passed ordinary and lifecycle-realization checks.
 ///
 /// The private representation is the backend trust token. Any future pass
 /// that changes executable MIR must produce raw MIR and call [`verify_final_mir`]
 /// before constructing backend input again.
+///
+/// External code cannot forge the seal:
+///
+/// ```compile_fail
+/// use skald_compiler::{mir::MirProgram, passes::VerifiedFinalMirProgram};
+///
+/// fn forge(program: MirProgram) -> VerifiedFinalMirProgram {
+///     VerifiedFinalMirProgram { program }
+/// }
+/// ```
+///
+/// The pass rewrite capability is also implementation-private:
+///
+/// ```compile_fail
+/// use skald_compiler::passes::MirPassCapability;
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VerifiedFinalMirProgram {
     program: MirProgram,
@@ -97,7 +55,6 @@ impl VerifiedFinalMirProgram {
     ///
     /// Visibility is deliberately restricted to the pass owner. Rewriters and
     /// backends cannot extract raw MIR from a verified product themselves.
-    #[allow(dead_code)]
     fn invalidate_for_transformation(self) -> MirProgram {
         self.program
     }
@@ -113,13 +70,10 @@ impl Deref for VerifiedFinalMirProgram {
 
 /// Runs the target-independent MIR pass pipeline.
 ///
-/// No transformations are currently registered, but this explicit boundary
-/// keeps correctness independent of a backend-owned implicit pipeline.
-/// Verification runs here after MIR construction. The returned sealed product
-/// is the only MIR accepted by backend input.
-pub fn run_mir_pipeline(
-    program: MirProgram,
-) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
+/// The selected default schedule is resolved explicitly and executed by the
+/// same verified runner used by request compilation. The returned sealed
+/// product is the only MIR accepted by backend input.
+pub fn run_mir_pipeline(program: MirProgram) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
     let schedule = resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty())
         .expect("compiler-owned default MIR pass policy must be valid");
     run_mir_pipeline_measured(program, &schedule).result
@@ -136,26 +90,6 @@ pub fn verify_final_mir(
 ) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
     static_lifecycle::verify_synthesized_mir(&program)?;
     Ok(VerifiedFinalMirProgram { program })
-}
-
-/// Runs the pipeline while retaining its already-known execution counts.
-///
-/// A future transformation must return its transformed program together with
-/// pass-owned statistics to this coordinator. The pipeline, rather than the
-/// pass or driver, then records the execution and publishes those values. A
-/// pass must not format or emit reporting text itself.
-pub(crate) fn run_mir_pipeline_measured(
-    program: MirProgram,
-    schedule: &MirPassSchedule,
-) -> MeasuredMirPipeline {
-    assert!(
-        schedule.is_empty(),
-        "the production final-MIR pass runner is not implemented yet"
-    );
-    let mut statistics = MirPipelineStatistics::default();
-    statistics.record_verification();
-    let result = verify_final_mir(program);
-    MeasuredMirPipeline { result, statistics }
 }
 
 #[cfg(test)]

@@ -8,7 +8,7 @@ use std::fmt;
 pub(crate) struct MirPassIdentity(u16);
 
 impl MirPassIdentity {
-    pub(super) const fn new(value: u16) -> Self {
+    pub(in crate::passes::pipeline) const fn new(value: u16) -> Self {
         Self(value)
     }
 }

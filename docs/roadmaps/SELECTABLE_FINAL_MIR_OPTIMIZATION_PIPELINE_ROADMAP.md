@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: in progress. MPR0 and MPR1 are complete; MPR2 is next.
+Status: in progress. MPR0 through MPR2 are complete; MPR3 is next.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -86,7 +86,7 @@ rather than expanding an active task.
 
 - [x] MPR0 — Establish registry, profiles, and schedule resolution
 - [x] MPR1 — Add typed request and CLI selection
-- [ ] MPR2 — Productionize the verified multi-pass runner
+- [x] MPR2 — Productionize the verified multi-pass runner
 - [ ] MPR3 — Add structured pass measurements and reporting
 - [ ] MPR4 — Add verified pipeline inspection checkpoints
 - [ ] MPR5 — Publish an exhaustive value-use census
@@ -207,30 +207,30 @@ empty. `cargo test --locked -p skald-compiler driver`,
 **Purpose:** Turn the tested rewrite coordinator into the sole production
 owner of verified multi-pass execution and failure attribution.
 
-- [ ] Define a private pass capability that borrows the current verified
+- [x] Define a private pass capability that borrows the current verified
       product for analysis and can consume it only through the atomic
       whole-program rewrite coordinator.
-- [ ] Define explicit unchanged and changed outcomes. Preserve the same seal
+- [x] Define explicit unchanged and changed outcomes. Preserve the same seal
       after unchanged; carry raw dense MIR, commit maps, change summaries,
       changed-callable accounting, and pass data after changed.
-- [ ] Verify synthesized MIR before invoking any selected callback, and ensure
+- [x] Verify synthesized MIR before invoking any selected callback, and ensure
       invalid input reports no pass execution.
-- [ ] Immediately call central ordinary and lifecycle-realization verification
+- [x] Immediately call central ordinary and lifecycle-realization verification
       after every changed occurrence before another pass, checkpoint, or
       backend may receive the product.
-- [ ] Introduce structured pipeline errors for input verification, pass
+- [x] Introduce structured pipeline errors for input verification, pass
       execution, structural rewrite, and changed-output verification, including
       exact schedule position, pass identity/name, and occurrence number where
       applicable.
-- [ ] Stop atomically at the first failure without exposing the consumed seal,
+- [x] Stop atomically at the first failure without exposing the consumed seal,
       malformed dense MIR, sparse editor state, partial program, or later
       callback result.
-- [ ] Route the ordinary production entry point and both compiler adapters
+- [x] Route the ordinary production entry point and both compiler adapters
       through this runner while retaining the current one-verification,
       zero-pass path for empty schedules.
-- [ ] Remove or absorb the test-only transforming coordinator so there is one
+- [x] Remove or absorb the test-only transforming coordinator so there is one
       authoritative seal invalidation, rewrite, and resealing path.
-- [ ] Keep pass callbacks free of public raw-table mutation, lifecycle
+- [x] Keep pass callbacks free of public raw-table mutation, lifecycle
       authority, seal construction, reporting, target, source-diagnostic, and
       filesystem capabilities.
 
@@ -251,7 +251,27 @@ verified/rewrite capabilities, re-verifies every changed occurrence, retains
 unchanged seals, attributes failures exactly, and never publishes raw or
 partial MIR.
 
-**Completed:**
+**Completed:** One production runner now consumes every resolved schedule. Its
+private pass capability exposes borrowed verified MIR and can invalidate the
+seal only through the atomic whole-program rewrite coordinator. Explicit
+unchanged outcomes retain the original seal, while changed outcomes carry the
+dense program, callable commit maps and change summaries, changed-callable
+pass data, and immediately re-enter ordinary plus lifecycle-realization
+verification. `MirPipelineError` distinguishes input verification, pass
+execution, structural rewrite, and output verification; pass-attributed
+failures retain stable name, internal identity, schedule position, occurrence
+number, and their structured source. Execution stops at the first failure and
+publishes no raw, partial, or later product. The former synthetic coordinator
+was absorbed, and public compile-fail coverage proves neither the seal nor pass
+capability can be forged externally. Focused exact-schedule tests cover empty,
+unchanged, changed-then-unchanged, ordered/repeated, every failure class,
+failure cut-off, truthful accounting, immutable lifecycle authority, backend
+handoff, and function/member/static-initializer rewriting.
+`cargo test --locked -p skald-compiler passes`,
+`cargo test --locked -p skald-compiler mir::rewrite`,
+`cargo test --locked -p skald-compiler mir::verify`, `make compiler-test`,
+`make cli-test`, `make fmt-check`, `make lint`, `make docs-check`,
+`make msrv-check`, and `git diff --check` passed on 2026-08-30.
 
 ### MPR3 — Add structured pass measurements and reporting
 

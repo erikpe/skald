@@ -11,7 +11,10 @@ The
 is in progress. Its typed registry, empty `none`/`default` profiles,
 deterministic schedule occurrence model, exclusions, and crate-private exact
 schedule resolver are implemented. Typed request/CLI selection and schedule
-threading are also implemented. The verified multi-pass runner is next.
+threading are also implemented. The verified multi-pass runner now owns pass
+capabilities, atomic changed-result rewriting, immediate resealing, and
+structured failure attribution. Structured pass measurement and reporting are
+next.
 
 ## Pending discoveries
 
@@ -54,7 +57,8 @@ into the living
 and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
 contracts. The active roadmap owns implementation; no production optimization
 is implemented yet. Registry, schedule policy, and request/CLI selection are
-current; the verified runner and remaining pipeline are in progress.
+current; structured occurrence reporting and the remaining pipeline are in
+progress.
 
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented

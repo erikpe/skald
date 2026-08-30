@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Discoveries
 
-Status: active companion to the planned
+Status: active companion to the in-progress
 [selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
 
 This record holds maintainability, architecture, and follow-up findings found

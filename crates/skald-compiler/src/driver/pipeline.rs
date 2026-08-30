@@ -16,7 +16,7 @@ use crate::{
         static_lifecycle::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
         },
-        MirPassSchedule,
+        MirPassSchedule, MirPipelineError,
     },
     reporting::{
         NoopObserver, ReportDetail, ReportObserver, ReportOutcome, ReportPhase, ReportScope,
@@ -50,6 +50,7 @@ pub enum CompilationError {
     ProviderConfiguration(Vec<ProviderNormalizationError>),
     Diagnostics(CompilationReport),
     MirVerification(crate::mir::MirVerificationErrors),
+    MirPipeline(MirPipelineError),
     Backend(BackendError),
 }
 
@@ -322,7 +323,7 @@ fn finish_compilation(
     );
     let mir = measured_pipeline
         .result
-        .map_err(CompilationError::MirVerification)?;
+        .map_err(CompilationError::MirPipeline)?;
     let assembly = observe_phase_with_metrics(
         observer,
         ReportPhase::BackendEmission,

@@ -287,11 +287,12 @@ phases-only compilation performs no report-only product scan, sort, or text
 formatting; already-known phase execution counts remain local to the observed
 adapter.
 
-The current MIR pipeline performs one verification and zero transforming pass
-executions. Future transformation passes return their program plus pass-owned
-statistics to the pipeline coordinator. They do not format sentences or call a
-global logger. The pipeline owns execution counts and attaches the resulting
-counters to its finish event.
+The current supported MIR schedules perform one verification and zero
+transforming pass executions. The implemented runner already owns verified
+execution, atomic changed-result commit, immediate reverification, and
+execution counts. Passes return outcomes and pass-owned data; they do not
+format sentences or call a global logger. Per-occurrence measurement and
+report conversion remain the next reporting extension.
 
 ## Frozen final-MIR pass reporting
 
@@ -300,10 +301,10 @@ The confirmed
 extends this reporting boundary with structured pass-occurrence observation.
 Its
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is active. Registry and request/CLI schedule selection are implemented, but no
-pass executes yet; the current event and metric inventory above therefore
-remains implemented behavior until the verified runner and observation tasks
-land.
+is active. Registry, request/CLI schedule selection, and the verified runner
+are implemented. No supported profile selects a pass yet, and occurrence
+records are not emitted until the observation task lands; the current event
+and metric inventory above therefore remains implemented behavior.
 
 Every attempted selected occurrence will produce one pipeline-owned record in
 schedule order. Its stable identity consists of schedule position, typed pass

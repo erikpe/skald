@@ -38,7 +38,7 @@ The target-independent compiler path is:
 | Planned MIR verification | `passes::static_lifecycle::verify_planned_mir` | opaque `VerifiedPlannedMirProgram` after exact authority issuance verification |
 | Static lifecycle synthesis | `passes::static_lifecycle::synthesize_static_lifecycle` | final `MirProgram` with program-owned activation, publication, and reverse-destruction regions |
 | Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
-| MIR passes | `passes::run_mir_pipeline` | read-only `VerifiedFinalMirProgram` or verification errors |
+| MIR passes | `passes::run_mir_pipeline` | read-only `VerifiedFinalMirProgram` or structured `MirPipelineError` |
 
 `driver::compile_request_to_assembly` composes provider normalization,
 reachable graph loading, these phases, target selection, and backend emission.
@@ -426,11 +426,13 @@ classes in their own implementation and tests:
   inlining, and call-graph reshaping even when the expected effect set only
   shrinks.
 
-The current pipeline has no production transformation, registry, or analysis
-cache. It nevertheless records one final verification execution honestly and
-returns the sealed product required by every backend. Whole-world compilation
-makes target re-derivation finite, and single-threaded generated execution
-requires no synchronization or runtime lifecycle guard at this boundary.
+The current pipeline has no production transformation or shared analysis
+cache. Its immutable registry and verified multi-pass runner are implemented;
+because both supported schedules remain empty, it records one final
+verification execution and returns the sealed product required by every
+backend. Whole-world compilation makes target re-derivation finite, and
+single-threaded generated execution requires no synchronization or runtime
+lifecycle guard at this boundary.
 
 Target expansion is re-derived from each MIR product. Whole-world compilation
 makes virtual, interface, exact-signature function-value, copy, finalization,
@@ -632,19 +634,20 @@ The typed registry, empty profiles, schedule occurrence model, exclusions, and
 exact compiler-internal schedule resolver described below are implemented, as
 are typed request and CLI selection. Every compiler adapter resolves its
 profile before provider or source work and passes that schedule to the MIR
-pipeline. Production schedule execution, per-pass observation, verified
-checkpoints, and the canary remain planned. Both supported profiles are empty,
-so the production pipeline still performs one final verification and no
-transformation.
+pipeline. Production schedule execution and structured failure attribution are
+implemented; per-pass observation, verified checkpoints, and the canary remain
+planned. Both supported profiles are empty, so ordinary production compilation
+still performs one final verification and no transformation.
 
 One compiler-owned immutable registry couples each entry's typed identity,
-unique stable lowercase kebab-case name, description, and implementation-
-declared identity. Deterministic validation rejects duplicate identities or
-names, invalid names, empty descriptions, and mismatched implementation
-identity before schedule selection. The production registry is currently
-empty. The implemented `none` and `default` profiles both expand to empty
-explicit ordered schedules until the canary is activated; at roadmap
-completion `default` contains `dead-pure-definition-elimination` exactly once.
+unique stable lowercase kebab-case name, description, implementation-declared
+identity, and transformation entry point. Deterministic validation rejects
+duplicate identities or names, invalid names, empty descriptions, and
+mismatched implementation identity before schedule selection. The production
+registry is currently empty. The implemented `none` and `default` profiles
+both expand to empty explicit ordered schedules until the canary is activated;
+at roadmap completion `default` contains
+`dead-pure-definition-elimination` exactly once.
 
 A resolved schedule may deliberately repeat a pass, and every occurrence is
 identified by its resolved schedule position, pass identity, and that pass's
@@ -656,17 +659,17 @@ selects execution order. Exact schedules are a crate-private input for tests
 and compiler tools. The command line selects profiles and exclusions,
 not arbitrary pass order.
 
-The planned transforming runner first calls central final-MIR verification,
-including immutable
-static-lifecycle realization. Every occurrence then receives read-only access
-to that verified product and one pipeline-owned capability to consume the seal
-through the atomic whole-program rewrite coordinator. An unchanged outcome
-retains the same seal and adds no verification execution. A changed outcome
-yields raw dense MIR, rewrite maps, change summaries, explicit changed-callable
-accounting, and pass-owned measurements; the runner immediately calls central
+The transforming runner first calls central final-MIR verification, including
+immutable static-lifecycle realization. Every occurrence then receives
+read-only access to that verified product and one pipeline-owned capability to
+consume the seal through the atomic whole-program rewrite coordinator. An
+unchanged outcome retains the same seal and adds no verification execution. A
+changed outcome yields raw dense MIR, rewrite maps, change summaries, and
+explicit changed-callable pass data; the runner immediately calls central
 verification before any later pass, inspection checkpoint, or backend can
 observe it. Input-verification, pass execution, structural-rewrite, and
-output-verification failures identify the exact occurrence and stop without a
+output-verification failures identify the exact pass name, identity, schedule
+position, and occurrence where applicable, then stop without exposing a
 partial or later product.
 
 Passes cannot construct seals, mutate dense definition tables directly,
@@ -678,9 +681,9 @@ no preservation declarations or global analysis manager. Whole-program
 analysis may inspect all verified definitions, but edits still commit through
 the single atomic program coordinator.
 
-The planned runner owns ordered occurrence measurements, deterministic aggregates,
-and optional borrowed inspection checkpoints after initial verification,
-after each completed occurrence, and after the complete schedule. Only
+The next reporting and inspection layers add ordered occurrence measurements,
+deterministic aggregates, and optional borrowed checkpoints after initial
+verification, each completed occurrence, and the complete schedule. Only
 verified products may be inspected. Reports contain compact typed metrics and
 events rather than MIR text; phase-owned dumps remain a separate observation
 surface. Pass metrics distinguish processed callables from callables actually
@@ -2598,8 +2601,8 @@ deliberate boundaries:
 
 1. after HIR lowering in debug builds, identifying producer defects close to
    their source;
-2. unconditionally in `passes::run_mir_pipeline` after the currently empty
-   target-independent transformation sequence, constructing the only sealed
+2. unconditionally at the input of `passes::run_mir_pipeline`, with immediate
+   reverification after each changed occurrence, constructing the only sealed
    final MIR accepted by backend input.
 
 The backend does not repeat target-independent verification. Under the frozen
@@ -2612,11 +2615,12 @@ transformation defects before another pass or backend can inspect the result.
 Target-specific legality and structured backend failures are defined by the
 [backend and target contract](BACKEND.md#input-and-legality-boundary).
 
-The MIR pass pipeline currently verifies without transforming. The frozen
-registry, profile, runner, reporting, inspection, and dead-pure canary contract
-is planned but not yet implemented. Every future transformation has explicit
-ordering and returns MIR through the same verifier boundary. Compiler
-correctness must not depend on an optimization pass being enabled.
+The supported MIR profiles currently verify without transforming. The frozen
+registry, profiles, request selection, and verified runner are implemented;
+per-occurrence reporting, verified inspection checkpoints, shared value-use
+analysis, and the dead-pure canary remain planned. Every transformation has
+explicit ordering and returns changed MIR through the same verifier boundary.
+Compiler correctness must not depend on an optimization pass being enabled.
 
 The shared-ownership implementation preserves this division of
 responsibility: HIR records owner provenance and anchor requirements, MIR

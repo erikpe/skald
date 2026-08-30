@@ -10,9 +10,10 @@ frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 and an active
 [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
-The roadmap's typed registry, deterministic schedule policy, and request/CLI
-selection are implemented, with the verified multi-pass runner next. The
-remaining constraints have no implementation roadmap.
+The roadmap's typed registry, deterministic schedule policy, request/CLI
+selection, and verified multi-pass runner are implemented, with structured
+pass measurement and reporting next. The remaining constraints have no
+implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -83,11 +84,12 @@ roadmap:
 
 The static-lifecycle and dense-identity rewriting foundations are implemented.
 The active pipeline roadmap now also provides a typed empty registry, profiles,
-and deterministic schedule resolution, while deliberately retaining zero
-production optimizations. Together those boundaries support later constant folding, algebraic
-simplification, copy propagation, dead-pure-definition elimination, and
-conservative CFG simplification. Earlier reachability then offers a
-comparatively contained way to exploit permanent whole-world compilation. A
+deterministic schedule resolution, and a verified atomic multi-pass runner,
+while deliberately retaining zero production optimizations. Together those
+boundaries support later constant folding, algebraic simplification, copy
+propagation, dead-pure-definition elimination, and conservative CFG
+simplification. Earlier reachability then offers a comparatively contained way
+to exploit permanent whole-world compilation. A
 virtual-register backend is likely to provide the largest eventual improvement
 in generated scalar code, but it is also the largest single investment and
 should not be the first optimizer change.
@@ -182,11 +184,12 @@ publishes no partial program on failure.
 The supported crate-private facade provides typed lookup, allocation,
 substitution, instruction rewriting, edge redirection, explicit deletion, and
 cross-callable rehoming. Function, member, and static-initializer bodies use the
-same atomic program coordinator. A pipeline-private ownership bridge consumes
-verified final MIR before transformation and only central ordinary and
-static-lifecycle realization verification can reseal the dense result.
-Backends accept only that sealed product. The production pass sequence remains
-empty.
+same atomic program coordinator. A pipeline-private capability exposes only
+borrowed verified MIR and consumes its seal through that coordinator. The
+runner immediately invokes central ordinary and static-lifecycle realization
+verification for every changed result. Backends accept only the resealed
+product, and structured failures stop without exposing raw or partial MIR. The
+production pass sequence remains empty.
 
 The authoritative implemented contract is documented in
 [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#dense-callable-local-mir-identity-rewriting).
@@ -531,8 +534,9 @@ allocation elision is not included in this assessment.
 1. Settle the lifecycle proof relation for effect-removing transformations.
 2. Introduce exhaustive MIR traversal, rewriting, and deterministic compaction.
 3. Add the named pass registry, selection profiles, per-pass verification, and
-   optimized MIR dumps around those contracts. The registry and deterministic
-   schedule-policy portion is implemented; the remaining boundary is recorded in the
+   optimized MIR dumps around those contracts. The registry, deterministic
+   schedule policy, and verified runner are implemented; the remaining
+   boundary is recorded in the
    [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
    and delivery is divided by its
    [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).

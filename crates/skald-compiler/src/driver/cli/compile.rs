@@ -238,6 +238,10 @@ fn present_result<Stderr: Write>(
             writeln!(stderr, "skac: internal MIR verification failed:\n{errors}")?;
             Ok(EXIT_COMPILE_ERROR)
         }
+        Err(CommandError::Compilation(CompilationError::MirPipeline(error))) => {
+            writeln!(stderr, "skac: internal {error}")?;
+            Ok(EXIT_COMPILE_ERROR)
+        }
         Err(CommandError::Driver(error)) => {
             writeln!(stderr, "skac: {error}")?;
             Ok(error.exit_code())

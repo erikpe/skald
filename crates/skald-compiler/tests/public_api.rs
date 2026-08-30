@@ -54,7 +54,7 @@ use skald_compiler::{
             PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan,
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
-        VerifiedFinalMirProgram,
+        MirPipelineError, MirPipelineFailureStage, VerifiedFinalMirProgram,
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -304,6 +304,8 @@ fn intentional_phase_and_dump_paths_compose() {
         MirType::U64
     );
     verify_mir(&mir).unwrap();
+    let _pipeline_error: Option<MirPipelineError> = None;
+    let _pipeline_stage = MirPipelineFailureStage::InputVerification;
     let mir: VerifiedFinalMirProgram = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);
     let target = target_by_name("x86_64-sysv").unwrap();

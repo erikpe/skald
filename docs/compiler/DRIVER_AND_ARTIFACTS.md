@@ -122,8 +122,9 @@ The confirmed
 adds target-independent optimization policy to the typed compilation request
 and CLI. Its
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is active. Typed request and CLI selection are implemented, while current
-compilation still uses the empty verification-only pipeline.
+is active. Typed request/CLI selection and the verified multi-pass runner are
+implemented, while both supported profiles still select the empty
+verification-only schedule.
 
 `CompilationRequest` contains a typed `MirOptimizationOptions` value and the
 non-breaking `with_mir_optimization` builder. Options select a typed
@@ -161,7 +162,11 @@ identity. Profile selection and exclusions are independent of target,
 artifact kind, runtime-trace policy, diagnostic presentation, and operational
 report detail. Selection never changes source acceptance or diagnostics;
 malformed pass output remains a structured compiler failure rather than a
-source diagnostic.
+source diagnostic. The final-MIR runner distinguishes input verification, pass
+execution, structural rewrite, and changed-output verification failures. A
+pass-attributed failure carries its exact stable name, internal identity,
+schedule position, and occurrence number, and the driver stops before backend
+emission without exposing a partial product.
 
 ## Command-line modes
 
