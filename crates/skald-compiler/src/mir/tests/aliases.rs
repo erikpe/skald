@@ -7,7 +7,7 @@ fn verifies_direct_member_initializer_forwarding_overlap_and_mixed_alias_argumen
 
     assert!(verify_mir(&program).is_ok());
     let expected = program.clone();
-    assert_eq!(run_mir_pipeline(program).unwrap(), expected);
+    assert_eq!(run_mir_pipeline(program).unwrap().program(), &expected);
 }
 
 #[test]

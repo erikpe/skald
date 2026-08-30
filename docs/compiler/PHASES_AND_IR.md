@@ -35,9 +35,10 @@ The target-independent compiler path is:
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
 | Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects with witnesses for every callable and implicit lifecycle operation |
 | Static lifecycle planning | `passes::static_lifecycle::plan_static_lifetimes` | `PlannedMirProgram` with a planning-only analysis report plus compact authority and deterministic activation/reverse-shutdown order |
+| Planned MIR verification | `passes::static_lifecycle::verify_planned_mir` | opaque `VerifiedPlannedMirProgram` after exact authority issuance verification |
 | Static lifecycle synthesis | `passes::static_lifecycle::synthesize_static_lifecycle` | final `MirProgram` with program-owned activation, publication, and reverse-destruction regions |
 | Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
-| MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
+| MIR passes | `passes::run_mir_pipeline` | read-only `VerifiedFinalMirProgram` or verification errors |
 
 `driver::compile_request_to_assembly` composes provider normalization,
 reachable graph loading, these phases, target selection, and backend emission.
@@ -290,7 +291,9 @@ mirrors to the product. The private ownership boundary prevents final MIR
 passes and backends from consuming analysis evidence or unplanned initializer
 bodies.
 
-`synthesize_static_lifecycle` consumes that verified product, moves every
+`verify_planned_mir` consumes the draft planned product and is the only public
+constructor of `VerifiedPlannedMirProgram`. `synthesize_static_lifecycle`
+accepts only that sealed product, moves every
 initializer body unchanged into the planned activation order, and produces the
 only final `MirProgram` used by the ordinary MIR pipeline. The planning report
 is dropped at this boundary. Synthesis constructs structured regions directly
@@ -315,7 +318,11 @@ there is no mirrored transition-vector equality check. Realization verification
 re-derives closed-world targets and normalized effects, requires exact
 contractual lifecycle-root coverage and a subset of baseline authority, then
 checks realized dependencies against the frozen activation order.
-`run_mir_pipeline` and the backend trust boundary call this combined verifier.
+`passes::verify_final_mir` owns this combined verifier and constructs the
+opaque, read-only `VerifiedFinalMirProgram`. `run_mir_pipeline` calls that
+boundary once after all target-independent transformations. `BackendInput`
+accepts only the sealed result and does not repeat target-independent
+verification.
 No runtime access guard is represented; certified ordinary static accesses are
 valid because their targets are earlier in activation and later in shutdown.
 
@@ -333,11 +340,9 @@ contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 ### Frozen static-lifecycle certificate direction
 
-The implementation keeps lifecycle planning before optimization and uses a
-root-effect authority relation rather than exact cross-phase graph equality.
-Delivery of the remaining certificate and schema cleanup is owned by the
-[static-lifecycle certificate roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md),
-and the complete rationale is preserved in the
+The implemented design keeps lifecycle planning before optimization and uses a
+root-effect authority relation rather than exact cross-phase analysis-shape
+equality. Its complete rationale and delivery history are preserved in the
 [frozen design record](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md).
 
 Planning now issues a compact MIR-owned baseline authority computed by a
@@ -407,6 +412,25 @@ self-access, publication-phase, and lifecycle-destination rules. This accepts
 effect removal, target narrowing, and inlining even when their direct graph
 shape changes, while rejecting a newly reachable field/access/phase fact.
 Optimization never replans lifecycle order or changes source diagnostics.
+
+Future target-independent MIR passes must declare one of two lifecycle
+classes in their own implementation and tests:
+
+- A lifecycle-effect-preserving pass proves that it cannot change static
+  accesses, reachable control flow, lifecycle operations, or possible call
+  targets. It may preserve an existing seal only through an API that encodes
+  that proof; no such production pass needs that API today.
+- A lifecycle-effect-changing pass works on raw `MirProgram`, invalidates any
+  earlier final seal, and returns to `verify_final_mir`. This includes effect
+  removal, dead-code removal, devirtualization or other target narrowing,
+  inlining, and call-graph reshaping even when the expected effect set only
+  shrinks.
+
+The current pipeline has no production transformation, registry, or analysis
+cache. It nevertheless records one final verification execution honestly and
+returns the sealed product required by every backend. Whole-world compilation
+makes target re-derivation finite, and single-threaded generated execution
+requires no synchronization or runtime lifecycle guard at this boundary.
 
 Target expansion is re-derived from each MIR product. Whole-world compilation
 makes virtual, interface, exact-signature function-value, copy, finalization,
@@ -1538,9 +1562,9 @@ replacement before invalidation; shared-owner and array-backing anchors keep
 old aliased storage alive exactly as they do for replacement through another
 mutable path. No raw store may bypass these plans.
 
-At the backend trust boundary, final verification consumes the authorization
-proof and target selection uses the ordinary field address and assignment
-machinery; the evidence produces no target instruction. Cell metadata changes
+At the sealed final-MIR boundary, verification consumes the authorization
+proof. Backend target selection then uses the ordinary field address and
+assignment machinery; the evidence produces no target instruction. Cell metadata changes
 no field offset, object size,
 alignment, calling convention, dispatch table, symbol family, runtime call,
 public C API, or runtime ABI version. It carries no atomic, volatile,
@@ -2257,7 +2281,7 @@ Verification requires:
 - structural checking of every block even when unreachable; and
 - deterministic structured-error ordering independent of worklist visitation.
 
-The MIR pass pipeline consumes verified MIR and returns verified MIR.
+The MIR pass pipeline consumes raw final MIR and returns sealed verified MIR.
 Transformations never repair a producer invariant or establish correctness
 required for unoptimized execution. Source acceptance, type diagnostics, and
 definite-return diagnostics are determined before MIR optimization.

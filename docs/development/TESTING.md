@@ -156,6 +156,15 @@ publication plus failed owners; and direct report output to `/dev/full` to
 prove process status 74. Ordinary goldens invoke the default-off CLI and
 therefore retain their existing exact stdout and stderr contracts.
 
+The static-lifecycle pass tests also own the sealed phase-product boundary.
+Compile-fail examples prove that draft planned MIR cannot enter synthesis and
+raw final MIR cannot construct `BackendInput`. Realization tests apply effect
+removal, closed-world target narrowing, and an inlining-shaped rewrite in one
+sequence, returning to `passes::verify_final_mir` after each invalidation.
+Public-API compilation exercises both verified product types, while reporting
+tests keep planned and final verification counts and backend-only failures in
+their truthful owning phases.
+
 ## Selecting coverage
 
 Add a colocated unit test when a private owner can state the invariant directly.

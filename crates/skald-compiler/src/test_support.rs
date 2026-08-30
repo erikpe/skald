@@ -20,6 +20,7 @@ use crate::{
     lexer::{lex, LexOutput},
     mir::{lower_hir, lower_preliminary_hir, MirProgram},
     module::{load_module_graph, normalize_provider_roots, ModuleGraph, ProviderRootConfiguration},
+    passes::{run_mir_pipeline, verify_final_mir, VerifiedFinalMirProgram},
     resolve::{resolve, resolve_with_source_path, ResolveOutput},
     source::{SourceDatabase, SourceId},
     syntax::{parse, ParseOutput},
@@ -153,8 +154,8 @@ pub(crate) fn lower_source_to_mir(text: impl Into<String>) -> MirProgram {
     )
 }
 
-/// Lowers source through static lifecycle planning and synthesis into the
-/// exact final MIR product accepted by target backends.
+/// Lowers source through static lifecycle planning and synthesis into mutable
+/// final MIR for tests that inspect or deliberately corrupt the result.
 pub(crate) fn lower_source_to_final_mir(text: impl Into<String>) -> MirProgram {
     let checked = type_check_source(text);
     assert_phase_succeeded("type checking", &checked.diagnostics);
@@ -166,7 +167,7 @@ pub(crate) fn lower_source_to_final_mir(text: impl Into<String>) -> MirProgram {
 
 pub(crate) struct FinalMirWithSources {
     pub sources: SourceDatabase,
-    pub mir: MirProgram,
+    pub mir: VerifiedFinalMirProgram,
 }
 
 impl FinalMirWithSources {
@@ -213,7 +214,8 @@ pub(crate) fn lower_source_to_final_mir_with_sources(
         .expect("successful type checking must produce typed HIR");
     FinalMirWithSources {
         sources,
-        mir: lower_hir_to_final_mir(&hir),
+        mir: run_mir_pipeline(lower_hir_to_final_mir(&hir))
+            .expect("test source must produce verified final MIR"),
     }
 }
 
@@ -227,8 +229,9 @@ pub(crate) fn lower_hir_to_final_mir(hir: &crate::hir::HirProgram) -> MirProgram
                 failure.into_diagnostics()
             )
         });
-    crate::passes::static_lifecycle::synthesize_static_lifecycle(planned)
-        .expect("test source must produce valid synthesized MIR")
+    let verified = crate::passes::static_lifecycle::verify_planned_mir(planned)
+        .expect("test source must produce valid planned MIR");
+    crate::passes::static_lifecycle::synthesize_static_lifecycle(verified)
 }
 
 pub(crate) fn lower_source_to_assembly(
@@ -236,16 +239,32 @@ pub(crate) fn lower_source_to_assembly(
     target: Target,
 ) -> Result<String, BackendError> {
     let mir = lower_source_to_final_mir(text);
-    emit_assembly_without_runtime_trace(target, &mir)
+    let verified = run_mir_pipeline(mir).map_err(|errors| {
+        BackendError::new(
+            target,
+            None,
+            format!("input MIR failed verification:\n{errors}"),
+        )
+    })?;
+    emit_assembly(target, BackendInput::without_runtime_trace(&verified))
 }
 
-/// Emits final MIR through the intentionally metadata-free backend path used
-/// by tests whose concern predates runtime trace metadata.
+/// Seals test-owned raw final MIR and emits it without trace metadata.
+///
+/// This adapter exists for malformed and optimization-shaped MIR fixtures;
+/// ordinary source-to-assembly tests use the complete MIR pipeline above.
 pub(crate) fn emit_assembly_without_runtime_trace(
     target: Target,
     mir: &MirProgram,
 ) -> Result<String, BackendError> {
-    emit_assembly(target, BackendInput::without_runtime_trace(mir))
+    let verified = verify_final_mir(mir.clone()).map_err(|errors| {
+        BackendError::new(
+            target,
+            None,
+            format!("input MIR failed verification:\n{errors}"),
+        )
+    })?;
+    emit_assembly(target, BackendInput::without_runtime_trace(&verified))
 }
 
 pub(crate) fn load_module_sources(

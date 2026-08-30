@@ -35,7 +35,7 @@ fn plan(source: &str) -> PlannedMirProgram {
 }
 
 fn errors(program: &PlannedMirProgram) -> String {
-    verify_planned_mir(program).unwrap_err().to_string()
+    verify_planned_mir(program.clone()).unwrap_err().to_string()
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn accepts_a_complete_hand_built_phase_product() {
     let report = StaticLifecyclePlanningReport::new(effects);
     let planned = PlannedMirProgram::new(preliminary, lifecycle, report);
 
-    verify_planned_mir(&planned).unwrap();
+    verify_planned_mir(planned).unwrap();
 }
 
 #[test]
@@ -371,7 +371,7 @@ fn verification_and_lifecycle_dump_are_deterministic() {
 
     for _ in 0..8 {
         let repeated = plan(DEPENDENCY_SOURCE);
-        verify_planned_mir(&repeated).unwrap();
+        verify_planned_mir(repeated.clone()).unwrap();
         assert_eq!(super::super::dump_planned_mir(&repeated), expected);
     }
 }
@@ -423,7 +423,7 @@ fn final_static_publication_metadata_is_verified_at_the_plan_boundary() {
     let source =
         "class State { final static value: i64 = 1; init() {} } fn main() -> i64 { return State.value; }";
     let planned = plan(source);
-    verify_planned_mir(&planned).unwrap();
+    verify_planned_mir(planned.clone()).unwrap();
     let definition = planned.lifecycle_mir().definitions()[0];
     assert!(definition.final_span.is_some());
     assert!(matches!(

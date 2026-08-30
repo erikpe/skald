@@ -43,10 +43,14 @@ ABI, external-ABI, or runtime-marker rule. Their source lifetime is owned by the
 
 ## Backend interface and target registry
 
-Backends consume an explicit `BackendInput`: final target-independent
-`MirProgram`, read-only source lookup only when tracing is enabled, and a typed
-runtime-trace policy. This boundary does not expose AST, resolved IR, HIR, or
-type-checker state to a backend. The public backend facade provides:
+Backends consume an explicit `BackendInput`: an opaque, read-only
+`VerifiedFinalMirProgram`, source lookup only when tracing is enabled, and a
+typed runtime-trace policy. Only `passes::run_mir_pipeline` and
+`passes::verify_final_mir` construct that sealed product after ordinary and
+static-lifecycle realization verification. The backend cannot accept raw
+`MirProgram` and does not repeat target-independent verification. This
+boundary does not expose AST, resolved IR, HIR, or type-checker state to a
+backend. The public backend facade provides:
 
 - `backend::Target`, the selected target identity;
 - `backend::target_by_name`, which validates a user-facing target name;
@@ -70,19 +74,18 @@ frontend or target-independent IR code.
 
 The x86-64 backend performs these steps in order:
 
-1. run the public MIR verifier again at the backend trust boundary;
-2. reject verified MIR features not yet implemented by this target;
-3. compute deterministic class dispatch tables from verified virtual families,
+1. reject verified MIR features not yet implemented by this target;
+2. compute deterministic class dispatch tables from verified virtual families,
    interfaces, requirements, conformances, and classes;
-4. compute checked primitive and class layouts;
-5. check that every executable signature and called member can be represented
+3. compute checked primitive and class layouts;
+4. check that every executable signature and called member can be represented
    by the target calling convention;
-6. plan fixed stack frames and target addresses;
-7. select target instructions into a private assembly model; and
-8. emit deterministic GNU assembly text in Intel syntax with `noprefix`.
+5. plan fixed stack frames and target addresses;
+6. select target instructions into a private assembly model; and
+7. emit deterministic GNU assembly text in Intel syntax with `noprefix`.
 
-Malformed MIR is returned as a backend error before target layout or
-instruction selection. Target-specific failures—including recursive layout,
+Raw or malformed MIR cannot construct `BackendInput`. Target-specific
+failures—including recursive layout,
 unrepresentable sizes, missing callable bodies needed by target lowering,
 argument-area limits, frame limits, and displacement limits—also return
 `BackendError`. An error identifies its target and, when applicable, the
@@ -163,10 +166,10 @@ This path adds no semantic branch, runtime call, failure edge, or ABI rule.
 Direct MIR fixtures and source-native goldens exercise the complete predicate
 matrix, including NaN in either operand position, signed zero, and infinities.
 
-Producer invariants already established by MIR verification may be asserted
-inside later private steps. Arbitrary mutated MIR is supported only through
-the verifier and structured backend-error boundary, not as a valid lowering
-input.
+Producer invariants established by the central final-MIR verifier may be
+asserted inside later private steps. Arbitrary mutated MIR must be submitted
+to `passes::verify_final_mir`; it cannot be used to construct backend input.
+Target-specific legality failures remain structured `BackendError` values.
 
 Inline optional owning values follow the implemented layout in
 [Optional Values](OPTIONAL_VALUES.md#initial-x86-64-inline-layout): an
@@ -1035,7 +1038,7 @@ change this wrapper or the parameterless internal entry call. The
 `std::process` module reads the Linux host record through ordinary library I/O;
 there is no backend argument-capture path or target ABI addition.
 
-## Assembly emission and verification
+## Assembly emission and artifact retention
 
 The production driver requests closed-world artifact retention after target
 instruction selection and before textual emission. Exported functions seed a

@@ -100,9 +100,19 @@ mod value_parameters;
 mod virtual_dispatch;
 use objects::record_i64_stub;
 
+/// Seals raw backend fixtures at the production final-verification boundary.
+/// This deliberately lets target tests mutate MIR without making unchecked
+/// MIR a valid `BackendInput`.
 fn emit_assembly(
     target: Target,
     program: &MirProgram,
 ) -> Result<String, crate::backend::BackendError> {
-    crate::backend::emit_assembly(target, BackendInput::without_runtime_trace(program))
+    let verified = crate::passes::verify_final_mir(program.clone()).map_err(|errors| {
+        crate::backend::BackendError::new(
+            target,
+            None,
+            format!("input MIR failed verification:\n{errors}"),
+        )
+    })?;
+    crate::backend::emit_assembly(target, BackendInput::without_runtime_trace(&verified))
 }

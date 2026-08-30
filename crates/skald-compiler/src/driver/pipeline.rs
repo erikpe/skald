@@ -284,10 +284,10 @@ fn finish_compilation(
             return Err(diagnostic_failure(sources, diagnostics));
         }
     };
-    observe_phase_with_metrics(
+    let verified_planned = observe_phase_with_metrics(
         observer,
         ReportPhase::PlannedMirVerification,
-        || verify_planned_mir(&planned),
+        || verify_planned_mir(planned),
         result_outcome,
         |result, _| statistics::verification_metrics(result),
     )
@@ -295,11 +295,10 @@ fn finish_compilation(
     let mir = observe_phase_with_metrics(
         observer,
         ReportPhase::StaticLifecycleSynthesis,
-        || synthesize_static_lifecycle(planned),
-        result_outcome,
-        |result, _| statistics::lifecycle_synthesis_metrics(result),
-    )
-    .map_err(CompilationError::MirVerification)?;
+        || synthesize_static_lifecycle(verified_planned),
+        |_| ReportOutcome::Completed,
+        |program, _| statistics::lifecycle_synthesis_metrics(program),
+    );
     let measured_pipeline = observe_phase_with_metrics(
         observer,
         ReportPhase::MirPipeline,

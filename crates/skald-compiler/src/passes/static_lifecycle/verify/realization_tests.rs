@@ -1,7 +1,7 @@
 //! Test-only optimized shapes for the final realization trust boundary.
 
 use crate::{
-    backend::Target,
+    backend::{emit_assembly, BackendInput, Target},
     identity::{CallableId, FunctionId},
     mir::{
         lower_preliminary_hir, MirAssignment, MirCallTarget, MirInstruction, MirPlace, MirRvalue,
@@ -14,13 +14,15 @@ use super::{
     super::{plan_static_lifetimes, synthesize_static_lifecycle},
     realization, verify_synthesized_mir, LifecycleMirView,
 };
+use crate::passes::verify_final_mir;
 
 fn synthesized(source: &str) -> crate::mir::MirProgram {
     let checked = type_check_source(source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
     let planned = plan_static_lifetimes(preliminary).expect("fixture must have an acyclic plan");
-    synthesize_static_lifecycle(planned).expect("fixture must synthesize")
+    let verified = super::verify_planned_mir(planned).expect("fixture plan must verify");
+    synthesize_static_lifecycle(verified)
 }
 
 fn errors(program: &crate::mir::MirProgram) -> String {
@@ -329,6 +331,98 @@ fn accepts_virtual_interface_and_indirect_target_narrowing() {
     }
     assert!(realized_fact_count(&indirect) < baseline_fact_count(&indirect));
     verify_synthesized_mir(&indirect).unwrap();
+}
+
+#[test]
+fn optimization_sequence_reseals_after_removal_narrowing_and_inlining() {
+    let mut program = synthesized(
+        "fn maybe_write(flag: bool) -> unit {
+           if (flag) { State.observed = 1; }
+         }
+         fn initialize() -> i64 { maybe_write(false); return 1; }
+         fn read() -> i64 { return State.base; }
+         fn read_virtual(ref value: Base) -> i64 { return value.read(); }
+         class State {
+           static observed: i64;
+           static base: i64 = 1;
+           static child: i64 = 2;
+           static initialized: i64 = initialize();
+           static inlined: i64 = read();
+           static narrowed: i64 = read_virtual(Base());
+           init() {}
+         }
+         class Base {
+           init() {}
+           virtual fn read() -> i64 { return State.base; }
+         }
+         class Child extends Base {
+           init() { super(); }
+           override fn read() -> i64 { return State.child; }
+         }
+         fn main() -> i64 { return 0; }",
+    );
+
+    let maybe_write = function(&program, "maybe_write");
+    for block in &mut program
+        .definitions
+        .get_mut_for_test(maybe_write)
+        .unwrap()
+        .body
+        .blocks
+    {
+        block.instructions.retain(|instruction| {
+            !matches!(instruction, MirInstruction::Store(store)
+                if store.destination.base.static_field().is_some())
+        });
+    }
+    program = verify_final_mir(program).unwrap().program().clone();
+
+    for family in program.virtual_families.entries_mut_for_test() {
+        family.members.truncate(1);
+    }
+    program = verify_final_mir(program).unwrap().program().clone();
+
+    let read = function(&program, "read");
+    let base = program
+        .classes
+        .iter()
+        .flat_map(|class| &class.static_fields)
+        .find(|field| field.name == "base")
+        .unwrap()
+        .id;
+    let instruction = program
+        .static_lifecycle
+        .as_mut()
+        .unwrap()
+        .initializers_mut_for_test()
+        .iter_mut()
+        .flat_map(|body| &mut body.body.blocks)
+        .flat_map(|block| &mut block.instructions)
+        .find(|instruction| {
+            matches!(instruction, MirInstruction::Call(call)
+                if call.target == MirCallTarget::Direct(read))
+        })
+        .expect("static initializer must call read before inlining");
+    let MirInstruction::Call(call) = instruction else {
+        unreachable!()
+    };
+    let result = call.result.expect("read returns an i64");
+    let span = call.span;
+    *instruction = MirInstruction::Assign(MirAssignment {
+        result,
+        rvalue: MirRvalue {
+            kind: MirRvalueKind::Load(MirPlace::static_field(base)),
+            ty: MirType::I64,
+        },
+        span,
+    });
+
+    let verified = verify_final_mir(program).unwrap();
+    emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&verified),
+    )
+    .unwrap();
 }
 
 #[test]

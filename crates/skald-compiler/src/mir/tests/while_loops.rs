@@ -470,8 +470,8 @@ fn loop_dump_pipeline_backend_and_native_execution_accept_the_backedge() {
     let mir = counting_loop();
     let expected = mir.clone();
     assert_eq!(
-        run_mir_pipeline(mir.clone()).unwrap(),
-        expected,
+        run_mir_pipeline(mir.clone()).unwrap().program(),
+        &expected,
         "the target-independent pass boundary must preserve verified loop CFG"
     );
 

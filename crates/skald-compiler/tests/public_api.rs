@@ -51,8 +51,9 @@ use skald_compiler::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
             PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan,
-            StaticLifecyclePlanningReport, StaticLifetimeDependency,
+            StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
+        VerifiedFinalMirProgram,
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -227,11 +228,12 @@ fn intentional_phase_and_dump_paths_compose() {
     let _preliminary_dump = dump_preliminary_mir(&preliminary);
     assert!(!preliminary.has_static_initializers());
     let planned: PlannedMirProgram = plan_static_lifetimes(preliminary).unwrap();
-    verify_planned_mir(&planned).unwrap();
+    let verified_planned: VerifiedPlannedMirProgram = verify_planned_mir(planned).unwrap();
+    let planned = verified_planned.program();
     let report: &StaticLifecyclePlanningReport = planned.planning_report();
     let static_effects: &StaticEffectAnalysis = report.analysis();
     let _static_effect_dump = dump_static_effects(static_effects);
-    let _planned_dump = dump_planned_mir(&planned);
+    let _planned_dump = dump_planned_mir(planned);
     let authority: &StaticLifecycleAuthority = planned.authority();
     for root in authority.roots() {
         let root: &StaticLifecycleRootAuthority = root;
@@ -247,7 +249,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let _lifecycle: &StaticLifecyclePlan = planned.lifecycle();
     let _planned_lifecycle: &MirPlannedLifecycle = planned.lifecycle_mir();
     let _dependencies: Vec<StaticLifetimeDependency> = planned.dependencies();
-    let synthesized = synthesize_static_lifecycle(planned).unwrap();
+    let synthesized = synthesize_static_lifecycle(verified_planned);
     verify_synthesized_mir(&synthesized).unwrap();
     assert!(synthesized.static_lifecycle.is_some());
     let _proof: &MirStaticLifecycleProof = synthesized
@@ -299,7 +301,7 @@ fn intentional_phase_and_dump_paths_compose() {
         MirType::U64
     );
     verify_mir(&mir).unwrap();
-    let mir = run_mir_pipeline(mir).unwrap();
+    let mir: VerifiedFinalMirProgram = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);
     let target = target_by_name("x86_64-sysv").unwrap();
     let omitted = emit_assembly(target, BackendInput::without_runtime_trace(&mir)).unwrap();

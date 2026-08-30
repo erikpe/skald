@@ -75,15 +75,18 @@ type checker, MIR pipeline, and backend completion path as request
 compilation. A source-phase error stops later phases. HIR lowering, MIR
 verification, and backend failures remain distinct structured categories.
 After structural preliminary-MIR verification, static effect inference and
-lifetime planning run before final MIR conversion. The resulting canonical
-lifecycle definitions and activation order, compact authority, summaries,
-dynamic targets, and derived dependency edges are verified again at a
-dedicated trust boundary. Shutdown, positions, and planned transition views
-are reconstructed from that canonical data.
+lifetime planning run before final MIR conversion. Planned verification
+consumes the draft product, checks its canonical lifecycle definitions,
+activation order, compact authority, dynamic targets, and derived dependency
+edges, and returns the only sealed planned product accepted by synthesis.
+Shutdown, positions, and planned transition views are reconstructed from that
+canonical data.
 Static self-dependencies and cycles are ordinary source diagnostics; malformed
 preliminary or planned MIR remains a distinct verification failure. A valid
 explicit initializer is synthesized directly into structured final coordinator
-regions and passes the ordinary target-independent verifier pipeline. These
+regions and passes the ordinary target-independent verifier pipeline exactly
+once after all registered passes. The pipeline returns the sealed, read-only
+final product required by backend input. These
 regions are the sole executable lifecycle representation consumed by both
 verification and the backend. The x86-64 backend then emits private initializer
 bodies and a dependency-ordered program initializer, and the existing host
@@ -104,6 +107,12 @@ with the compilation report, and no target trace record or rendered path is
 written back into MIR. Both request compilation and the in-memory singleton
 adapter enable tracing by default; `ArtifactOptions` carries the explicit
 policy used by request compilation.
+
+Structured reporting retains separate planning, planned-verification,
+synthesis, MIR-pipeline, and backend phases. Planned and final verification
+executions are counted by their owning phases; synthesis is infallible after
+its sealed input, and the backend does not hide another target-independent
+verification execution.
 
 ## Command-line modes
 

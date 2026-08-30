@@ -27,4 +27,4 @@ pub use plan::{
     STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
 };
 pub use synthesize::synthesize_static_lifecycle;
-pub use verify::{verify_planned_mir, verify_synthesized_mir};
+pub use verify::{verify_planned_mir, verify_synthesized_mir, VerifiedPlannedMirProgram};

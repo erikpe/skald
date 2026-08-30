@@ -102,6 +102,6 @@ fn punctuation_and_explicit_protocol_calls_feed_identical_effect_and_target_owne
 
     let planned = plan_static_lifetimes(preliminary)
         .expect("operator interface targets must survive lifecycle planning");
-    crate::passes::static_lifecycle::verify_planned_mir(&planned)
+    crate::passes::static_lifecycle::verify_planned_mir(planned)
         .expect("operator calls must retain valid static-lifecycle authority");
 }

@@ -211,18 +211,20 @@ fn range_assembly(source: &str) -> String {
         crate::hir::dump_hir(&hir).matches("PrimitiveRange").count(),
         3
     );
+    let verified = crate::passes::run_mir_pipeline(mir).unwrap();
     crate::backend::emit_assembly(
         Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&mir).with_reachable_artifacts_only(),
+        BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only(),
     )
     .unwrap()
 }
 
 fn standard_library_assembly(source: &str) -> String {
     let (_, mir) = standard_library_hir_and_mir(source);
+    let verified = crate::passes::run_mir_pipeline(mir).unwrap();
     crate::backend::emit_assembly(
         Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&mir).with_reachable_artifacts_only(),
+        BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only(),
     )
     .unwrap()
 }

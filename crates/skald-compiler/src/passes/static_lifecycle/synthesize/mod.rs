@@ -5,22 +5,22 @@ use std::collections::BTreeMap;
 use crate::mir::{
     MirProgram, MirProgramLifecycle, MirStaticActivationRegion, MirStaticDestructionRegion,
     MirStaticFieldInitialization, MirStaticLifecycleCoordinator, MirStaticValueCleanup,
-    MirVerificationErrors,
 };
 
-use super::{
-    plan::PlannedMirProgram,
-    verify::{debug_assert_exact_synthesized_realization, verify_planned_mir},
-    verify_synthesized_mir,
-};
+use super::verify::{debug_assert_exact_synthesized_realization, VerifiedPlannedMirProgram};
 
-/// Consumes a verified planned product and moves its existing initializer CFGs
-/// into one final program-owned lifecycle coordinator.
-pub fn synthesize_static_lifecycle(
-    planned: PlannedMirProgram,
-) -> Result<MirProgram, MirVerificationErrors> {
-    verify_planned_mir(&planned)?;
-
+/// Consumes an exactly verified planned product and moves its existing
+/// initializer CFGs into one final program-owned lifecycle coordinator.
+///
+/// ```compile_fail
+/// use skald_compiler::passes::static_lifecycle::{
+///     synthesize_static_lifecycle, PlannedMirProgram,
+/// };
+/// let draft: PlannedMirProgram = todo!();
+/// let _ = synthesize_static_lifecycle(draft);
+/// ```
+pub fn synthesize_static_lifecycle(verified: VerifiedPlannedMirProgram) -> MirProgram {
+    let planned = verified.into_program();
     let (preliminary, planned_lifecycle) = planned.into_executable_parts();
     let (mut program, _fields, initializers) = preliminary.into_parts();
     let mut initializers = initializers
@@ -82,8 +82,7 @@ pub fn synthesize_static_lifecycle(
         shutdown,
     ));
     debug_assert_exact_synthesized_realization(&program);
-    verify_synthesized_mir(&program)?;
-    Ok(program)
+    program
 }
 
 #[cfg(test)]

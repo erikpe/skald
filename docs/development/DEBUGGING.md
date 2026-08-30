@@ -365,17 +365,20 @@ live. Shared array access should show a stable, copied, adopted, or secured
 owner anchor before the checked projection. MIR contains no header offsets or
 strides; those first appear in x86-64 layout and instruction selection.
 
-MIR verification runs at three boundaries:
+The driver has three explicit target-independent verification products:
 
-1. immediately after HIR lowering in debug builds;
-2. unconditionally at the input to `passes::run_mir_pipeline`; and
-3. inside backend legality checking before target lowering.
+1. preliminary MIR is checked before lifecycle planning;
+2. `verify_planned_mir` consumes draft planned MIR and seals exact authority
+   issuance for synthesis; and
+3. `run_mir_pipeline` calls `verify_final_mir` once after its transformations
+   and seals ordinary MIR plus lifecycle realization for backend input.
 
-A failure at the first boundary points to MIR production. A failure after a
-pass points to the transformation or its input. Backend rejection beginning
-with `input MIR failed verification` means malformed MIR reached the final
-trust boundary; another structured backend error means verified MIR violates a
-target-specific legality or lowering contract.
+A preliminary or planned failure points to its producer. A final failure after
+a pass points to the transformation or its input. Backend construction cannot
+accept raw MIR, so a structured backend error means already verified MIR
+violates a target-specific legality, layout, or lowering contract. When
+experimenting with a transformation, clone the read-only program into a raw
+test product, mutate it, and submit it to `verify_final_mir` before emission.
 
 ## Inspect function values
 

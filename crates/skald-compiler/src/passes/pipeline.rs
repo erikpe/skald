@@ -1,5 +1,7 @@
 //! Target-independent MIR pass registration, execution, and accounting.
 
+use std::ops::Deref;
+
 use crate::mir::{MirProgram, MirVerificationErrors};
 
 use super::static_lifecycle;
@@ -21,18 +23,57 @@ impl MirPipelineStatistics {
 }
 
 pub(crate) struct MeasuredMirPipeline {
-    pub(crate) result: Result<MirProgram, MirVerificationErrors>,
+    pub(crate) result: Result<VerifiedFinalMirProgram, MirVerificationErrors>,
     pub(crate) statistics: MirPipelineStatistics,
+}
+
+/// Read-only final MIR that passed ordinary and lifecycle-realization checks.
+///
+/// The private representation is the backend trust token. Any future pass
+/// that changes executable MIR must produce raw MIR and call [`verify_final_mir`]
+/// before constructing backend input again.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VerifiedFinalMirProgram {
+    program: MirProgram,
+}
+
+impl VerifiedFinalMirProgram {
+    pub const fn program(&self) -> &MirProgram {
+        &self.program
+    }
+}
+
+impl Deref for VerifiedFinalMirProgram {
+    type Target = MirProgram;
+
+    fn deref(&self) -> &Self::Target {
+        self.program()
+    }
 }
 
 /// Runs the target-independent MIR pass pipeline.
 ///
 /// No transformations are currently registered, but this explicit boundary
 /// keeps correctness independent of a backend-owned implicit pipeline.
-/// Verification runs here after MIR construction and backends verify again at
-/// their trust boundary before target lowering.
-pub fn run_mir_pipeline(program: MirProgram) -> Result<MirProgram, MirVerificationErrors> {
+/// Verification runs here after MIR construction. The returned sealed product
+/// is the only MIR accepted by backend input.
+pub fn run_mir_pipeline(
+    program: MirProgram,
+) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
     run_mir_pipeline_measured(program).result
+}
+
+/// Seals final MIR after the central ordinary and lifecycle-realization check.
+///
+/// This is the invalidation target for future transformations that can change
+/// static accesses, control-flow reachability, lifecycle operations, or
+/// possible callees. Passes that affect any of those facts must return raw MIR
+/// to this boundary before backend input can be constructed.
+pub fn verify_final_mir(
+    program: MirProgram,
+) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
+    static_lifecycle::verify_synthesized_mir(&program)?;
+    Ok(VerifiedFinalMirProgram { program })
 }
 
 /// Runs the pipeline while retaining its already-known execution counts.
@@ -46,7 +87,7 @@ pub(crate) fn run_mir_pipeline_measured(program: MirProgram) -> MeasuredMirPipel
         verification_executions: 1,
         pass_executions: 0,
     };
-    let result = static_lifecycle::verify_synthesized_mir(&program).map(|()| program);
+    let result = verify_final_mir(program);
     MeasuredMirPipeline { result, statistics }
 }
 
@@ -66,7 +107,7 @@ mod tests {
         let expected = mir.clone();
         let measured = run_mir_pipeline_measured(mir);
 
-        assert_eq!(measured.result.unwrap(), expected);
+        assert_eq!(measured.result.unwrap().program(), &expected);
         assert_eq!(measured.statistics.verification_executions(), 1);
         assert_eq!(measured.statistics.pass_executions(), 0);
     }
@@ -92,7 +133,7 @@ mod tests {
             .any(|definition| !definition.body.path_conditions.is_empty()));
         let expected = mir.clone();
 
-        assert_eq!(run_mir_pipeline(mir).unwrap(), expected);
+        assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
     }
 
     #[test]
@@ -115,7 +156,7 @@ mod tests {
         });
         let expected = mir.clone();
 
-        assert_eq!(run_mir_pipeline(mir).unwrap(), expected);
+        assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
     }
 
     #[test]
@@ -126,7 +167,7 @@ mod tests {
         );
         let expected = mir.clone();
 
-        assert_eq!(run_mir_pipeline(mir).unwrap(), expected);
+        assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
     }
 
     #[test]

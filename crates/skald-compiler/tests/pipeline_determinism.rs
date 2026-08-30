@@ -12,13 +12,17 @@ use skald_compiler::{
     driver::EntrySelector,
     hir::{dump_hir, HirProgram},
     lexer::{dump_tokens, lex},
-    mir::{dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir, MirProgram},
+    mir::{dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir},
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
     passes::{
         run_mir_pipeline,
-        static_lifecycle::{dump_planned_mir, plan_static_lifetimes, synthesize_static_lifecycle},
+        static_lifecycle::{
+            dump_planned_mir, plan_static_lifetimes, synthesize_static_lifecycle,
+            verify_planned_mir,
+        },
+        VerifiedFinalMirProgram,
     },
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
@@ -1073,7 +1077,7 @@ fn generic_module_phase_dump(variant: usize) -> String {
     let preliminary = lower_preliminary_hir(&hir);
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
-    let final_mir = synthesize_static_lifecycle(planned).unwrap();
+    let final_mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
 
     normalize_fixture_paths(
         &fixture.path,
@@ -1175,7 +1179,10 @@ fn generic_interface_module_phase_dump(variant: usize) -> String {
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
-    let mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
+    let mir = run_mir_pipeline(synthesize_static_lifecycle(
+        verify_planned_mir(planned).unwrap(),
+    ))
+    .unwrap();
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::with_runtime_trace(&mir, graph.sources()),
@@ -1283,7 +1290,10 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
+    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
+        verify_planned_mir(planned).unwrap(),
+    ))
+    .unwrap();
     let final_dump = dump_mir(&final_mir);
     assert!(!final_dump.contains("Operator"), "{final_dump}");
     let assembly = emit_assembly(
@@ -1421,7 +1431,10 @@ fn range_module_phase_dump(variant: usize) -> String {
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
+    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
+        verify_planned_mir(planned).unwrap(),
+    ))
+    .unwrap();
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::without_runtime_trace(&final_mir),
@@ -1527,7 +1540,10 @@ fn iteration_module_phase_dump(variant: usize) -> String {
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
+    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
+        verify_planned_mir(planned).unwrap(),
+    ))
+    .unwrap();
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::without_runtime_trace(&final_mir),
@@ -2467,7 +2483,10 @@ fn function_value_composition_phase_dump() -> String {
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
-    let mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
+    let mir = run_mir_pipeline(synthesize_static_lifecycle(
+        verify_planned_mir(planned).unwrap(),
+    ))
+    .unwrap();
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::with_runtime_trace(&mir, &sources),
@@ -2487,10 +2506,10 @@ fn function_value_composition_phase_dump() -> String {
     )
 }
 
-fn lower_final_hir(hir: &HirProgram) -> MirProgram {
+fn lower_final_hir(hir: &HirProgram) -> VerifiedFinalMirProgram {
     let preliminary = lower_preliminary_hir(hir);
     let planned = plan_static_lifetimes(preliminary).unwrap();
-    let mir = synthesize_static_lifecycle(planned).unwrap();
+    let mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
     run_mir_pipeline(mir).unwrap()
 }
 
@@ -2511,7 +2530,10 @@ fn planned_lifecycle_phase_dump(text: &str) -> String {
     let preliminary = lower_preliminary_hir(&hir);
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
-    let final_mir = synthesize_static_lifecycle(planned).unwrap();
+    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
+        verify_planned_mir(planned).unwrap(),
+    ))
+    .unwrap();
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::without_runtime_trace(&final_mir),

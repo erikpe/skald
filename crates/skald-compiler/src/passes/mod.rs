@@ -8,5 +8,5 @@ pub mod static_lifecycle;
 mod graph;
 mod pipeline;
 
-pub use pipeline::run_mir_pipeline;
+pub use pipeline::{run_mir_pipeline, verify_final_mir, VerifiedFinalMirProgram};
 pub(crate) use pipeline::{run_mir_pipeline_measured, MeasuredMirPipeline, MirPipelineStatistics};

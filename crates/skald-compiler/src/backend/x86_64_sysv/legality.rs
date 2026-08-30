@@ -11,13 +11,6 @@ use crate::{
 use super::{abi, array_legality, dispatch::DispatchMetadata, layout::DataLayout};
 
 pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadata), BackendError> {
-    crate::passes::static_lifecycle::verify_synthesized_mir(program).map_err(|errors| {
-        BackendError::new(
-            Target::X86_64SysV,
-            None,
-            format!("input MIR failed verification:\n{errors}"),
-        )
-    })?;
     array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;

@@ -2,6 +2,7 @@ use crate::{
     backend::{RuntimeTracePolicy, Target},
     identity::CallableId,
     mir::{MirCallTarget, MirInstruction, MirMethodCallTarget, MirTerminator},
+    passes::verify_final_mir,
     test_support::{
         lower_source_to_final_mir_with_sources, run_native_assembly_with_runtime_trace_probe,
     },
@@ -467,11 +468,8 @@ fn runtime_trace_location_native_renders_one_based_unicode_scalar_columns() {
     let CallableId::Function(main_function) = main else {
         panic!("main must be a free function");
     };
-    let definition = fixture
-        .mir
-        .definitions
-        .get_mut_for_test(main_function)
-        .unwrap();
+    let mut mir = fixture.mir.program().clone();
+    let definition = mir.definitions.get_mut_for_test(main_function).unwrap();
     let termination = definition
         .body
         .blocks
@@ -485,6 +483,7 @@ fn runtime_trace_location_native_renders_one_based_unicode_scalar_columns() {
         unreachable!();
     };
     *span = unicode_span;
+    fixture.mir = verify_final_mir(mir).unwrap();
 
     let assembly = fixture
         .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)

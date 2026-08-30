@@ -1,9 +1,9 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: in progress; LCR0-LCR6 are complete and LCR7 is next.
+Status: complete; LCR0-LCR7 are implemented and validated.
 
 This roadmap implements the frozen
-[static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+[static-lifecycle certificate design](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
 and its promoted
 [compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction).
 It replaces exact cross-phase effect-graph equality with an exact
@@ -69,7 +69,7 @@ graph-reshaping passes can later rely.
 - [x] LCR4 — Reorganize lifecycle module ownership
 - [x] LCR5 — Canonicalize planned lifecycle data
 - [x] LCR6 — Canonicalize the executable coordinator
-- [ ] LCR7 — Seal phase products and publish the optimization boundary
+- [x] LCR7 — Seal phase products and publish the optimization boundary
 
 ## PR-sized implementation sequence
 
@@ -488,36 +488,36 @@ lifecycle behavior.
 integrate the future pass invalidation contract without unused framework, and
 finish the redesign as a safe backend prerequisite.
 
-- [ ] Introduce private draft and sealed verified planned-product boundaries so
+- [x] Introduce private draft and sealed verified planned-product boundaries so
       synthesis can consume only a product that passed exact authority
       issuance verification.
-- [ ] Make final ordinary-MIR plus lifecycle-realization verification produce a
+- [x] Make final ordinary-MIR plus lifecycle-realization verification produce a
       read-only verified final product or view required by backend input
       construction.
-- [ ] Update driver phase orchestration and structured reporting so planning,
+- [x] Update driver phase orchestration and structured reporting so planning,
       planned verification, synthesis, MIR-pipeline verification, and backend
       metrics retain truthful boundaries and failure ownership.
-- [ ] Remove duplicate planned verification inside synthesis once the consumed
+- [x] Remove duplicate planned verification inside synthesis once the consumed
       type proves it, while retaining final verification once before backend
       consumption.
-- [ ] Expose the realization checker as the central invalidation target for
+- [x] Expose the realization checker as the central invalidation target for
       future passes that change static accesses, control-flow reachability,
       lifecycle operations, or possible callees.
-- [ ] Document the required future pass classification as preserving or
+- [x] Document the required future pass classification as preserving or
       changing lifecycle effects; do not add an unused general registry or
       cache before a production transformation needs one.
-- [ ] Keep pass-owned statistics flowing through the existing measured MIR
+- [x] Keep pass-owned statistics flowing through the existing measured MIR
       pipeline and count all verification executions honestly.
-- [ ] Replace broad production mutation accessors with verifier-local malformed
+- [x] Replace broad production mutation accessors with verifier-local malformed
       builders or narrow test support where practical.
-- [ ] Add an end-to-end test-only sequence exercising effect removal, target
+- [x] Add an end-to-end test-only sequence exercising effect removal, target
       narrowing, and inlining-shaped rewriting through the same central final
       checker used by the driver.
-- [ ] Audit static-lifecycle modules and functions by responsibility, resolve
+- [x] Audit static-lifecycle modules and functions by responsibility, resolve
       remaining high-priority duplication, and record unrelated optimizer or
       dense-identity findings in the indexed optimization discoveries rather
       than expanding this roadmap.
-- [ ] Promote the fully implemented schema and trust boundary in compiler,
+- [x] Promote the fully implemented schema and trust boundary in compiler,
       debugging, testing, and public API documentation; remove stale exact-
       graph and rollout wording from living docs.
 
@@ -538,6 +538,23 @@ in sealed phase products, no backend path accepts unchecked final MIR, no stale
 exact graph certificate or redundant lifecycle encoding remains, the full
 repository gate passes, and the compiler is ready for a separately reviewed
 optimization-pass framework or first transformation.
+
+**Implementation result:** Planned verification now consumes draft
+`PlannedMirProgram` and constructs opaque `VerifiedPlannedMirProgram`, which is
+the only synthesis input. The target-independent MIR pipeline constructs a
+read-only `VerifiedFinalMirProgram` through the central final ordinary and
+lifecycle-realization checker, and `BackendInput` accepts only that sealed
+product. Synthesis and backend legality no longer repeat verification; report
+phases and pipeline statistics retain one truthful planned and one truthful
+final execution. Compile-fail API examples enforce both type boundaries, and a
+test-only transformation sequence reseals after effect removal, closed-world
+target narrowing, and inlining-shaped rewriting before backend emission.
+
+The closing module audit found no broad production lifecycle-proof mutation
+surface: remaining mutation accessors are test-only malformed-product support.
+No additional optimizer or dense-identity discovery was required. `make check`,
+`make golden-determinism-test`, `make msrv-check`, formatting, documentation
+links, and diff hygiene pass.
 
 ## Ordering and dependencies
 

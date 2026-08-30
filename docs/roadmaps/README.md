@@ -6,19 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[static-lifecycle certificate redesign roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
-is in progress. Normalized lifecycle-root analysis, exact immutable authority
-issuance, monotone final-MIR realization verification, and separation of
-planning evidence from compact executable proof are complete. Analysis,
-planning evidence, compact MIR proof, coordinator, and phase products now have
-distinct module owners, and planned lifecycle data now has one canonical
-definition table and activation order. Structured coordinator regions are now
-the sole final executable lifecycle representation shared by verification and
-the backend. Sealing planned and final phase products and publishing the future
-optimization invalidation boundary is next. The roadmap depends on the
-existing whole-world static-effect extractor and lifecycle planner; the later
-general optimization framework and dense-ID rewriter remain separate work.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -26,9 +14,10 @@ The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIE
 record the seven current compiler constraints on modular target-independent and
 target-specific optimization, their interaction with permanent whole-world and
 single-threaded program semantics, expected impact and effort, and a recommended
-starting sequence. Its first recommended change is now explored by the planned
-static-lifecycle certificate roadmap. The remaining six constraints stay
-pending and are not part of that roadmap.
+starting sequence. Its first recommended change is now implemented; the
+[completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+is preserved in the archive. The remaining six constraints stay pending and
+are not part of that roadmap.
 
 The
 [static-lifecycle certificate follow-up discoveries](STATIC_LIFECYCLE_CERTIFICATE_DISCOVERIES.md)
@@ -50,9 +39,8 @@ The static-lifecycle certificate decisions are promoted into the
 [compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction),
 their
 [frozen decision record](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
-is preserved in the archive, and the planned
-[implementation roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md) owns
-delivery.
+is preserved in the archive, together with the completed
+[implementation roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md).
 
 The structured-reporting decisions are promoted into the
 [compiler reporting contract](../compiler/REPORTING.md),

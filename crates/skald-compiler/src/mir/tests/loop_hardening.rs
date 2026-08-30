@@ -176,7 +176,7 @@ fn equivalent_split_and_renumbered_loop_cfg_survives_passes_and_backend() {
     verify_mir(&mir).expect("equivalent transformed loop CFG must verify");
 
     let expected = mir.clone();
-    assert_eq!(run_mir_pipeline(mir.clone()).unwrap(), expected);
+    assert_eq!(run_mir_pipeline(mir.clone()).unwrap().program(), &expected);
     let assembly = emit_assembly(Target::X86_64SysV, &mir)
         .expect("backend must consume verified generic CFG without loop metadata");
     assert!(assembly.contains("jmp .Lska.fn.main.main.f0.block_"));

@@ -8,7 +8,7 @@ use crate::{
 };
 
 use super::{
-    super::{plan_static_lifetimes, verify_synthesized_mir},
+    super::{plan_static_lifetimes, verify_planned_mir, verify_synthesized_mir},
     synthesize_static_lifecycle,
 };
 
@@ -35,7 +35,8 @@ fn planned(source: &str) -> super::super::PlannedMirProgram {
 }
 
 fn synthesized(source: &str) -> crate::mir::MirProgram {
-    synthesize_static_lifecycle(planned(source)).expect("planned MIR must synthesize")
+    let verified = verify_planned_mir(planned(source)).expect("planned MIR must verify");
+    synthesize_static_lifecycle(verified)
 }
 
 fn errors(program: &crate::mir::MirProgram) -> String {
@@ -71,7 +72,8 @@ fn moves_initializer_bodies_unchanged_into_planned_activation_regions() {
     let planned = planned(STORAGE_MATRIX);
     let expected_bodies = planned.static_initializers().cloned().collect::<Vec<_>>();
     let expected_order = planned.lifecycle().activation().to_vec();
-    let program = synthesize_static_lifecycle(planned).unwrap();
+    let verified = verify_planned_mir(planned).unwrap();
+    let program = synthesize_static_lifecycle(verified);
     let coordinator = program.static_lifecycle.as_ref().unwrap();
 
     let mut actual_bodies = coordinator.initializers().to_vec();

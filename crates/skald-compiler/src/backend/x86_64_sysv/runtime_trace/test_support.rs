@@ -136,7 +136,8 @@ pub(super) fn module_fixture(source: &str) -> FinalMirWithSources {
     assert!(!checked.has_errors(), "{:?}", checked.diagnostics);
     FinalMirWithSources {
         sources,
-        mir: lower_hir_to_final_mir(&checked.hir.unwrap()),
+        mir: crate::passes::run_mir_pipeline(lower_hir_to_final_mir(&checked.hir.unwrap()))
+            .unwrap(),
     }
 }
 

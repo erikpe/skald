@@ -4,8 +4,8 @@ Status: frozen design proposal. SLC1 through SLC12 were confirmed together on
 2026-08-30 and promoted into the
 [compiler phase and IR contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction).
 The
-[implementation roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
-owns delivery; this document preserves the reviewed decisions.
+[implementation roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md) records the
+completed delivery; this document preserves the reviewed decisions.
 
 This proposal redesigns Skald's exact static-lifecycle certificate so
 target-independent MIR optimization can remove or reshape static effects
@@ -512,7 +512,7 @@ effect-changing optimization. A safe delivery sequence is:
    demonstrate the contract before scheduling an optimizer pass.
 
 These delivery slices are refined into ordered PR-sized tasks in the
-[implementation roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md).
+[implementation roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md).
 
 ## Frozen product model
 
@@ -676,5 +676,6 @@ SLC1 through SLC12 were confirmed together on 2026-08-30, including:
 The durable direction is promoted into
 [`PHASES_AND_IR.md`](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction).
 The
-[implementation roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
-owns migration and delivery. This proposal remains the frozen decision record.
+[implementation roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md) records the
+completed migration and delivery. This proposal remains the frozen decision
+record.

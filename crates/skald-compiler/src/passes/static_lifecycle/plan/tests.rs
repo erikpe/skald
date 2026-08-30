@@ -355,7 +355,8 @@ fn planning_report_is_inspectable_but_synthesis_retains_only_compact_proof() {
         .any(|dependency| !dependency.evidence.witness.is_empty()));
     let authority = planned.authority().clone();
 
-    let final_program = super::super::synthesize_static_lifecycle(planned).unwrap();
+    let verified = super::super::verify_planned_mir(planned).unwrap();
+    let final_program = super::super::synthesize_static_lifecycle(verified);
     let proof = final_program
         .static_lifecycle
         .as_ref()

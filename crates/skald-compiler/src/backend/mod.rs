@@ -6,7 +6,9 @@
 
 use std::fmt;
 
-use crate::{identity::CallableId, mir::MirProgram, source::SourceDatabase};
+use crate::{
+    identity::CallableId, mir::MirProgram, passes::VerifiedFinalMirProgram, source::SourceDatabase,
+};
 
 mod x86_64_sysv;
 
@@ -30,10 +32,17 @@ pub enum RuntimeTracePolicy {
 /// Complete verified input needed by a target backend.
 ///
 /// The constructors keep source access unavailable when tracing is omitted,
-/// making trace-only source lookup impossible on that path.
+/// making trace-only source lookup impossible on that path. They accept only
+/// the sealed product returned by the central final-MIR verifier.
+///
+/// ```compile_fail
+/// use skald_compiler::{backend::BackendInput, mir::MirProgram};
+/// let unchecked: MirProgram = todo!();
+/// let _ = BackendInput::without_runtime_trace(&unchecked);
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {
-    program: &'input MirProgram,
+    verified: &'input VerifiedFinalMirProgram,
     sources: Option<&'input SourceDatabase>,
     runtime_trace: RuntimeTracePolicy,
     reachable_artifacts_only: bool,
@@ -41,20 +50,20 @@ pub struct BackendInput<'input> {
 
 impl<'input> BackendInput<'input> {
     pub const fn with_runtime_trace(
-        program: &'input MirProgram,
+        verified: &'input VerifiedFinalMirProgram,
         sources: &'input SourceDatabase,
     ) -> Self {
         Self {
-            program,
+            verified,
             sources: Some(sources),
             runtime_trace: RuntimeTracePolicy::Enabled,
             reachable_artifacts_only: false,
         }
     }
 
-    pub const fn without_runtime_trace(program: &'input MirProgram) -> Self {
+    pub const fn without_runtime_trace(verified: &'input VerifiedFinalMirProgram) -> Self {
         Self {
-            program,
+            verified,
             sources: None,
             runtime_trace: RuntimeTracePolicy::Omitted,
             reachable_artifacts_only: false,
@@ -69,8 +78,8 @@ impl<'input> BackendInput<'input> {
         self
     }
 
-    pub const fn program(self) -> &'input MirProgram {
-        self.program
+    pub(crate) const fn program(self) -> &'input MirProgram {
+        self.verified.program()
     }
 
     pub const fn sources(self) -> Option<&'input SourceDatabase> {
@@ -213,9 +222,10 @@ mod tests {
     fn backend_input_exposes_sources_only_for_enabled_tracing() {
         let program =
             crate::test_support::lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+        let verified = crate::passes::verify_final_mir(program).unwrap();
         let sources = SourceDatabase::new();
-        let enabled = BackendInput::with_runtime_trace(&program, &sources);
-        let omitted = BackendInput::without_runtime_trace(&program);
+        let enabled = BackendInput::with_runtime_trace(&verified, &sources);
+        let omitted = BackendInput::without_runtime_trace(&verified);
 
         assert_eq!(enabled.runtime_trace(), RuntimeTracePolicy::Enabled);
         assert!(enabled.sources().is_some());

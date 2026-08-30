@@ -31,7 +31,7 @@ fn structured_mutations_are_rejected_before_backend_lowering() {
         }));
         let error = backend
             .unwrap_or_else(|_| panic!("backend panicked for {} mutation", mutation.name))
-            .expect_err("invalid MIR must not pass the backend trust boundary");
+            .expect_err("invalid MIR must not pass the final verifier adapter");
         assert!(
             error.message().contains("input MIR failed verification"),
             "{} mutation reached backend lowering: {error}",

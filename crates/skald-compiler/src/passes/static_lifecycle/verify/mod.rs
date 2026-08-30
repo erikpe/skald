@@ -12,6 +12,26 @@ use crate::mir::{
 
 use super::plan::PlannedMirProgram;
 
+/// Planned lifecycle MIR whose exact authority issuance has been verified.
+///
+/// The private representation prevents callers from asserting verification by
+/// construction. Synthesis consumes this product and cannot accept draft
+/// `PlannedMirProgram` values.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VerifiedPlannedMirProgram {
+    program: PlannedMirProgram,
+}
+
+impl VerifiedPlannedMirProgram {
+    pub fn program(&self) -> &PlannedMirProgram {
+        &self.program
+    }
+
+    pub(super) fn into_program(self) -> PlannedMirProgram {
+        self.program
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct LifecycleMirView<'mir> {
     pub(super) program: &'mir MirProgram,
@@ -21,14 +41,16 @@ pub(super) struct LifecycleMirView<'mir> {
 
 /// Verifies the explicit lifecycle schema and compact authority without
 /// solving effects, strongly connected components, or a new lifecycle order.
-pub fn verify_planned_mir(program: &PlannedMirProgram) -> Result<(), MirVerificationErrors> {
+pub fn verify_planned_mir(
+    program: PlannedMirProgram,
+) -> Result<VerifiedPlannedMirProgram, MirVerificationErrors> {
     verify_preliminary_mir(program.preliminary())?;
 
     let mut errors = Vec::new();
-    lifecycle::verify(program, &mut errors);
-    authority::verify(program, &mut errors);
+    lifecycle::verify(&program, &mut errors);
+    authority::verify(&program, &mut errors);
     if errors.is_empty() {
-        Ok(())
+        Ok(VerifiedPlannedMirProgram { program })
     } else {
         Err(MirVerificationErrors::new(errors))
     }

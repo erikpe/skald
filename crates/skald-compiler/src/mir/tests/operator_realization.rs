@@ -132,7 +132,10 @@ fn preliminary_operator_call_corruption_is_rejected_by_interface_verification() 
 
 #[test]
 fn final_operator_intrinsic_and_alias_corruption_use_existing_verifiers() {
-    let valid = run_mir_pipeline(lower_hir(&operator_hir())).unwrap();
+    let valid = run_mir_pipeline(lower_hir(&operator_hir()))
+        .unwrap()
+        .program()
+        .clone();
 
     let mut wrong_intrinsic = valid.clone();
     let intrinsic_owner = wrong_intrinsic

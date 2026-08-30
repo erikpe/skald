@@ -1,8 +1,8 @@
 # Optimization Architecture Discoveries
 
-Status: pending architectural assessment. The first constraint is scheduled in
-the
-[static-lifecycle certificate roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md);
+Status: pending architectural assessment. The first constraint is implemented
+by the
+[completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md);
 the remaining six have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
@@ -396,7 +396,7 @@ machine symbols. This produces a pruned artifact, but unreachable definitions
 have already participated in target legality, layout, trace planning, frame
 planning, and instruction selection. The current target-private pass is
 described in
-[closed-world artifact retention](../compiler/BACKEND.md#assembly-emission-and-verification).
+[closed-world artifact retention](../compiler/BACKEND.md#assembly-emission-and-artifact-retention).
 
 ### Nature and impact
 

@@ -2,7 +2,12 @@ use std::{fs, panic::AssertUnwindSafe, path::PathBuf, thread};
 
 use crate::{
     backend::{emit_assembly, BackendInput},
-    passes::run_mir_pipeline,
+    identity::{ClassId, FieldId, ModuleId},
+    mir::{
+        MirClassDeclaration, MirClassDeclarationTable, MirCopyCapability, MirDestructionPlan,
+        MirFieldDeclaration, MirType,
+    },
+    passes::{run_mir_pipeline, verify_final_mir, VerifiedFinalMirProgram},
     reporting::{
         MetricValue, RecordingObserver, ReportDetail, ReportEvent, ReportMetric, ReportModuleStage,
         ReportOutcome, ReportPhase, ReportScope,
@@ -390,7 +395,7 @@ fn lifecycle_planning_diagnostics_stop_before_planned_mir_verification() {
 
 #[test]
 fn malformed_mir_and_backend_errors_receive_failed_phase_outcomes() {
-    let mut malformed_pipeline = malformed_final_mir();
+    let malformed_pipeline = malformed_final_mir();
     let mut mir_observer = RecordingObserver::new(ReportDetail::Phases);
     let result = super::super::observation::observe_phase(
         &mut mir_observer,
@@ -405,7 +410,7 @@ fn malformed_mir_and_backend_errors_receive_failed_phase_outcomes() {
         ReportOutcome::Failed,
     );
 
-    malformed_pipeline = malformed_final_mir();
+    let unsupported_backend = unsupported_backend_mir();
     let mut backend_observer = RecordingObserver::new(ReportDetail::Phases);
     let result = super::super::observation::observe_phase(
         &mut backend_observer,
@@ -413,7 +418,7 @@ fn malformed_mir_and_backend_errors_receive_failed_phase_outcomes() {
         || {
             emit_assembly(
                 Target::X86_64SysV,
-                BackendInput::without_runtime_trace(&malformed_pipeline),
+                BackendInput::without_runtime_trace(&unsupported_backend),
             )
         },
         result_phase_outcome,
@@ -641,4 +646,35 @@ fn malformed_final_mir() -> crate::mir::MirProgram {
         .blocks[0]
         .terminator = None;
     mir
+}
+
+fn unsupported_backend_mir() -> VerifiedFinalMirProgram {
+    let mut mir = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+    let class = ClassId::new(0);
+    let field = FieldId::new(class, 0);
+    mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
+        id: class,
+        module: ModuleId::new(0),
+        name: "Recursive".to_owned(),
+        direct_base: None,
+        conformances: vec![],
+        static_fields: vec![],
+        fields: vec![MirFieldDeclaration {
+            id: field,
+            cell_span: None,
+            final_span: None,
+            name: "self".to_owned(),
+            ty: MirType::Class(class),
+            span: mir.span,
+        }],
+        initializers: vec![],
+        copy_constructor_declaration: None,
+        copy_constructor: MirCopyCapability::Unavailable,
+        copy_assignment_declaration: None,
+        copy_assignment: MirCopyCapability::Unavailable,
+        destruction: MirDestructionPlan::new(None, &[field]),
+        methods: vec![],
+        span: mir.span,
+    }]);
+    verify_final_mir(mir).expect("target-independent MIR permits recursive inline layout")
 }

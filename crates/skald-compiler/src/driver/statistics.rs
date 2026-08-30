@@ -181,12 +181,7 @@ pub(super) fn lifecycle_planning_metrics(
     }
 }
 
-pub(super) fn lifecycle_synthesis_metrics(
-    result: &Result<MirProgram, MirVerificationErrors>,
-) -> Vec<ReportMetric> {
-    let Ok(program) = result else {
-        return Vec::new();
-    };
+pub(super) fn lifecycle_synthesis_metrics(program: &MirProgram) -> Vec<ReportMetric> {
     let mut metrics = mir_metrics(program.reporting_statistics());
     if let Some(coordinator) = &program.static_lifecycle {
         metrics.extend([

@@ -125,7 +125,10 @@ fn runtime_trace_metadata_uses_provider_relative_module_paths() {
     let checked = type_check(&resolved.program);
     assert!(!checked.has_errors(), "{:?}", checked.diagnostics);
     let mir = lower_hir_to_final_mir(&checked.hir.unwrap());
-    let fixture = FinalMirWithSources { sources, mir };
+    let fixture = FinalMirWithSources {
+        sources,
+        mir: crate::passes::run_mir_pipeline(mir).unwrap(),
+    };
     let callable = function(&fixture, "main");
     let span = fixture
         .mir
