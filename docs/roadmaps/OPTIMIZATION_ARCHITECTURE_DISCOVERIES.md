@@ -5,14 +5,13 @@ and dense callable-local identity constraints are resolved by their completed
 [static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 and
 [MIR identity rewriting](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-roadmaps. The next enabling layer has a
-frozen
-[selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
-and an active
-[implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
-The roadmap's typed registry, deterministic schedule policy, request/CLI
-selection, and verified multi-pass runner are implemented, with structured
-pass measurement and reporting next. The remaining constraints have no
+roadmaps. The next enabling layer is also resolved by the completed
+[selectable final-MIR optimization pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+and its frozen
+[design record](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md).
+The pipeline now includes typed selection, deterministic verified execution,
+reporting and inspection, shared value-use analysis, and one default
+dead-pure-definition elimination pass. The remaining constraints have no
 implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
@@ -42,9 +41,10 @@ boundaries before scheduling individual optimization passes.
   boundary.
 
 The implemented pipeline lowers typed HIR to preliminary MIR, plans and
-synthesizes static lifecycle work, runs the currently empty final-MIR pass
-pipeline, and then enters target legality and emission. The authoritative
-current sequence is documented in
+synthesizes static lifecycle work, runs the selected final-MIR pass schedule,
+and then enters target legality and emission. `none` is the empty unoptimized
+schedule and `default` runs dead-pure-definition elimination once. The
+authoritative current sequence is documented in
 [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#pipeline-contract).
 
 ## Assessment scale
@@ -82,14 +82,14 @@ roadmap:
 | Reachability after machine lowering | Retains unreachable work through legality, layout, frame planning, and instruction selection | Phase-placement debt | High for size, compile time, and whole-world follow-ons | Medium to large | Early whole-world optimization after lifecycle and rewrite foundations |
 | Conservative alias, effect, and ownership knowledge | Prevents memory and ownership optimizations unless each pass proves safety independently | Analysis-infrastructure gap under intentionally permissive language semantics | High, with precision improving incrementally | Large to extra large | Build a conservative shared analysis after the first MIR passes |
 
-The static-lifecycle and dense-identity rewriting foundations are implemented.
-The active pipeline roadmap now also provides a typed empty registry, profiles,
-deterministic schedule resolution, and a verified atomic multi-pass runner,
-while deliberately retaining zero production optimizations. Together those
+The static-lifecycle, dense-identity rewriting, and selectable-pipeline
+foundations are implemented. The pipeline provides a typed static registry,
+profiles, deterministic schedule resolution, a verified atomic multi-pass
+runner, and default dead-pure-definition elimination. Together those
 boundaries support later constant folding, algebraic simplification, copy
-propagation, dead-pure-definition elimination, and conservative CFG
-simplification. Earlier reachability then offers a comparatively contained way
-to exploit permanent whole-world compilation. A
+propagation, and conservative CFG simplification. Earlier reachability then
+offers a comparatively contained way to exploit permanent whole-world
+compilation. A
 virtual-register backend is likely to provide the largest eventual improvement
 in generated scalar code, but it is also the largest single investment and
 should not be the first optimizer change.
@@ -534,12 +534,8 @@ allocation elision is not included in this assessment.
 1. Settle the lifecycle proof relation for effect-removing transformations.
 2. Introduce exhaustive MIR traversal, rewriting, and deterministic compaction.
 3. Add the named pass registry, selection profiles, per-pass verification, and
-   optimized MIR dumps around those contracts. The registry, deterministic
-   schedule policy, and verified runner are implemented; the remaining
-   boundary is recorded in the
-   [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
-   and delivery is divided by its
-   [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
+   optimized MIR dumps around those contracts. This is implemented by the
+   [selectable final-MIR optimization pipeline](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
 
 These steps should be proven by one deliberately small transformation, such as
 local constant folding or dead pure definition elimination. Building a large
@@ -548,8 +544,9 @@ the actual architectural constraints.
 
 ### First useful optimization layer
 
-4. Add conservative constant folding, algebraic simplification, copy
-   propagation, dead-pure-definition elimination, and CFG cleanup to final MIR.
+4. Extend the implemented dead-pure-definition elimination layer with
+   conservative constant folding, algebraic simplification, copy propagation,
+   and CFG cleanup in final MIR.
 5. Add target-independent whole-world reachability and retain machine-artifact
    pruning as the final target safety net.
 6. Generalize callable effects and alias queries as real passes demonstrate

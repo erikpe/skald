@@ -33,6 +33,9 @@ const RETARGET_STATIC: MirPassIdentity = MirPassIdentity::new(108);
 const REWRITE_ALL: MirPassIdentity = MirPassIdentity::new(109);
 const INVALID_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(110);
 const MEASURED_UNCHANGED: MirPassIdentity = MirPassIdentity::new(111);
+const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
+const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
+const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
 
 const fn registration(
     identity: MirPassIdentity,
@@ -95,8 +98,8 @@ fn lowered_program() -> MirProgram {
     lower_source_to_mir("fn main() -> i64 { return 0; }")
 }
 
-fn default_schedule() -> MirPassSchedule {
-    resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap()
+fn none_schedule() -> MirPassSchedule {
+    resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap()
 }
 
 fn test_schedule(identities: &[MirPassIdentity]) -> MirPassSchedule {
@@ -119,10 +122,10 @@ fn execution_log() -> Vec<&'static str> {
 }
 
 #[test]
-fn empty_pipeline_preserves_valid_mir_and_reports_only_verification() {
+fn none_pipeline_preserves_valid_mir_and_reports_only_verification() {
     let mir = lowered_program();
     let expected = mir.clone();
-    let measured = run_mir_pipeline_measured(mir, &default_schedule());
+    let measured = run_mir_pipeline_measured(mir, &none_schedule());
 
     assert_eq!(measured.result.unwrap().program(), &expected);
     assert_eq!(measured.statistics.verification_executions(), 1);
@@ -370,18 +373,130 @@ fn checkpoint_labels_are_stable_and_unambiguous_for_repetition() {
 }
 
 #[test]
-fn empty_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
+fn none_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
     let mir = lowered_program();
     let expected_dump = dump_mir(&mir);
     let mut collector = CheckpointCollector::default();
 
-    let measured =
-        run_mir_pipeline_measured_inspected(mir, &default_schedule(), Some(&mut collector));
+    let measured = run_mir_pipeline_measured_inspected(mir, &none_schedule(), Some(&mut collector));
 
     assert!(measured.result.is_ok());
     assert_eq!(collector.labels, ["input", "final"]);
     assert_eq!(collector.dumps, [expected_dump.clone(), expected_dump]);
     assert_eq!(collector.definition_counts.len(), 2);
+}
+
+#[test]
+fn schedule_errors_measurements_and_checkpoints_are_deterministic_across_processes() {
+    if std::env::var_os(PIPELINE_DETERMINISM_CHILD).is_some() {
+        println!("{PIPELINE_FINGERPRINT_BEGIN}");
+        println!("{}", pipeline_determinism_fingerprint());
+        println!("{PIPELINE_FINGERPRINT_END}");
+        return;
+    }
+
+    let first = pipeline_fingerprint_from_child();
+    let second = pipeline_fingerprint_from_child();
+    assert_eq!(first, second);
+}
+
+fn pipeline_fingerprint_from_child() -> String {
+    let output = std::process::Command::new(
+        std::env::current_exe().expect("unit-test executable path"),
+    )
+    .args([
+        "--exact",
+        "passes::pipeline::tests::schedule_errors_measurements_and_checkpoints_are_deterministic_across_processes",
+        "--nocapture",
+    ])
+    .env(PIPELINE_DETERMINISM_CHILD, "1")
+    .output()
+    .expect("pipeline determinism child starts");
+    assert!(
+        output.status.success(),
+        "pipeline determinism child failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("test output is UTF-8");
+    let (_, fingerprint) = stdout
+        .split_once(PIPELINE_FINGERPRINT_BEGIN)
+        .expect("child emitted fingerprint start marker");
+    let (fingerprint, _) = fingerprint
+        .split_once(PIPELINE_FINGERPRINT_END)
+        .expect("child emitted fingerprint end marker");
+    fingerprint.trim().to_owned()
+}
+
+fn pipeline_determinism_fingerprint() -> String {
+    let none = none_schedule();
+    let default =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    let disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["dead-pure-definition-elimination"],
+    )
+    .unwrap();
+    let repeated = test_schedule(&[MEASURED_UNCHANGED, MEASURED_UNCHANGED]);
+
+    let mut collector = CheckpointCollector::default();
+    let inspected =
+        run_mir_pipeline_measured_inspected(lowered_program(), &default, Some(&mut collector));
+    let final_dump = dump_mir(inspected.result.as_ref().unwrap().program());
+
+    clear_test_state();
+    let measured = run_mir_pipeline_with_occurrences(lowered_program(), &repeated);
+    let measurements = measured
+        .statistics
+        .pass_measurements()
+        .map(|(identity, name, measurement)| {
+            (identity, name, measurement.name(), measurement.value())
+        })
+        .collect::<Vec<_>>();
+
+    clear_test_state();
+    let failed = run_mir_pipeline_with_occurrences(
+        lowered_program(),
+        &test_schedule(&[EXECUTION_FAILURE, LATER]),
+    );
+    let error = failed.result.unwrap_err();
+
+    format!(
+        "none={:?}\ndefault={:?}\ndisabled={:?}\nrepeated={:?}\n\
+         metrics=({}, {}, {}, {:?})\nerror=({:?}, {:?}, {:?}, {:?}, {})\n\
+         checkpoints={:?}\ncheckpoint-dumps={:?}\nfinal-mir=\n{}",
+        schedule_fingerprint(&none),
+        schedule_fingerprint(&default),
+        schedule_fingerprint(&disabled),
+        schedule_fingerprint(&repeated),
+        measured.statistics.verification_executions(),
+        measured.statistics.pass_executions(),
+        measured.statistics.processed_callables(),
+        measurements,
+        error.stage(),
+        error.pass_name(),
+        error.pass_position(),
+        error.pass_occurrence(),
+        error,
+        collector.labels,
+        collector.dumps,
+        final_dump,
+    )
+}
+
+fn schedule_fingerprint(
+    schedule: &MirPassSchedule,
+) -> Vec<(usize, MirPassIdentity, &'static str, usize)> {
+    schedule
+        .iter()
+        .map(|occurrence| {
+            (
+                occurrence.position(),
+                occurrence.identity(),
+                occurrence.name(),
+                occurrence.occurrence(),
+            )
+        })
+        .collect()
 }
 
 #[test]

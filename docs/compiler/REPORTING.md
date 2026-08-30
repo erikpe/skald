@@ -287,25 +287,27 @@ phases-only compilation performs no report-only product scan, sort, or text
 formatting; already-known phase execution counts remain local to the observed
 adapter.
 
-The current supported MIR schedules perform one verification and zero
-transforming pass executions. The runner owns verified execution, atomic
+The `none` MIR schedule performs one verification and zero pass executions.
+The `default` schedule executes `dead-pure-definition-elimination` once; an
+unchanged result retains the input seal, while a changed result performs one
+additional immediate verification. The runner owns verified execution, atomic
 changed-result commit, immediate reverification, aggregate accounting, and
 optional per-occurrence timing. Passes return outcomes and already-known
 integer data; they do not format sentences or call a global logger. Aggregate
-metrics distinguish callables processed by the atomic coordinator from
-callables a pass actually changed.
+metrics distinguish callables processed by a pass from callables it actually
+changed.
 
 ## Frozen final-MIR pass reporting
 
 The confirmed
-[selectable final-MIR pipeline design](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+[selectable final-MIR pipeline design](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 extends this reporting boundary with structured pass-occurrence observation.
 Its
-[implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is active. Registry, request/CLI schedule selection, the verified runner, and
-structured pass reporting are implemented. No supported profile selects a
-pass yet, so ordinary production traces contain no pass-finished event until
-the canary is selected through an exact internal schedule or later activated.
+[completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+records delivery. Registry, request/CLI schedule selection, the verified
+runner, and structured pass reporting are implemented. Ordinary production
+traces contain one pass-finished event for the default canary; `none` and a
+default request disabling the canary contain none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
 schedule order. Its stable identity consists of schedule position, typed pass

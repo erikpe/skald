@@ -426,13 +426,14 @@ classes in their own implementation and tests:
   inlining, and call-graph reshaping even when the expected effect set only
   shrinks.
 
-The current pipeline has no production transformation or shared analysis
-cache. Its immutable registry and verified multi-pass runner are implemented;
-because both supported schedules remain empty, it records one final
-verification execution and returns the sealed product required by every
-backend. Whole-world compilation makes target re-derivation finite, and
-single-threaded generated execution requires no synchronization or runtime
-lifecycle guard at this boundary.
+The current pipeline has one production transformation and no shared analysis
+cache. Its immutable registry and verified multi-pass runner execute
+dead-pure-definition elimination under `default`; `none` records one final
+verification execution and returns the unmodified sealed product required by
+every backend. A changed default product is immediately reverified.
+Whole-world compilation makes target re-derivation finite, and single-threaded
+generated execution requires no synchronization or runtime lifecycle guard at
+this boundary.
 
 Target expansion is re-derived from each MIR product. Whole-world compilation
 makes virtual, interface, exact-signature function-value, copy, finalization,
@@ -614,44 +615,39 @@ occur. Structurally successful commits contribute already-known processed and
 changed callable counts plus retained/inserted/removed entity counts; the
 editor emits no report text. Pass-owned integer counters retain deterministic
 first-owner and first-counter order. The driver renders aggregate counts at
-details level and typed occurrence records at trace level. The empty
-production pipeline therefore retains byte-for-byte MIR, one final
-verification, zero transformation executions, and no pass-finished events.
+details level and typed occurrence records at trace level. The `none` schedule
+retains byte-for-byte MIR, one final verification, zero pass executions, and
+no pass-finished events; the default schedule runs the canary once.
 
 This direction adds no SSA form, persistent instruction identity, public
-common callable-body restructuring, general pass registry, optimization-level
-CLI, production optimization, proof-provenance normalization, alias/effect
+common callable-body restructuring, dynamic pass registry, optimization-level
+CLI, broader optimization suite, proof-provenance normalization, alias/effect
 analysis, or backend virtual-register layer. Those remain separate decisions
-that can consume the now-implemented rewrite boundary.
+that can consume the implemented pipeline boundary.
 
 ### Frozen selectable final-MIR optimization pipeline direction
 
 The target-independent optimizer now has a deterministic selection-policy
 foundation over final MIR. Its frozen complete design is preserved in the
-[decision record](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md),
-and its delivery is owned by the
-[implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
-The typed registry, empty profiles, schedule occurrence model, exclusions, and
-exact compiler-internal schedule resolver described below are implemented, as
-are typed request and CLI selection. Every compiler adapter resolves its
-profile before provider or source work and passes that schedule to the MIR
-pipeline. Production schedule execution, structured failure attribution, pass
-measurement/reporting, verified inspection checkpoints, and the shared
-value-use census are implemented. The registered dead-pure-definition canary
-is exercised through crate-private exact schedules but remains absent from
-both supported profiles, so ordinary production compilation still performs
-one final verification and no transformation.
+[decision record](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md),
+and its delivery is recorded by the
+[completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
+The typed registry and profiles, schedule occurrence model, exclusions, exact
+compiler-internal test schedule resolver, request/CLI selection, verified
+execution, structured failures and measurements, inspection checkpoints, and
+shared value-use census are implemented. Every compiler adapter resolves its
+profile before provider or source work and passes that schedule to the same
+MIR pipeline.
 
 One compiler-owned immutable registry couples each entry's typed identity,
 unique stable lowercase kebab-case name, description, implementation-declared
 identity, and transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity before schedule selection. The production
-registry currently contains the default-inactive
-`dead-pure-definition-elimination` canary. The implemented `none` and
-`default` profiles both expand to empty explicit ordered schedules until the
-canary is activated; at roadmap completion `default` contains
-`dead-pure-definition-elimination` exactly once.
+registry contains `dead-pure-definition-elimination`. The `none` profile
+expands to an empty explicit ordered schedule, and `default` contains the
+canary exactly once. Disabling the canary from `default`, including duplicate
+disabling, produces the same schedule as `none`.
 
 A resolved schedule may deliberately repeat a pass, and every occurrence is
 identified by its resolved schedule position, pass identity, and that pass's
@@ -733,10 +729,10 @@ initializer, the canary computes value uses through the exhaustive MIR
 identity traversal, deletes unused eligible assignments and their matching
 value declarations in stable waves to a fixed point, and commits the callable
 once. It performs no CFG, storage, metadata, ownership, lifecycle, folding,
-replacement, or reordering edit. The pipeline roadmap does not complete until
-the canary is registered in `default`, `none` preserves the exact current
-verification-only path, selective disabling provides parity, and changed
-products pass ordinary and lifecycle-realization verification.
+replacement, or reordering edit. The canary is registered in `default`;
+`none` preserves the exact verification-only path, selective disabling
+provides parity, and every changed product passes ordinary and
+lifecycle-realization verification.
 
 This boundary adds no dynamic pass ABI, target-specific pass, numerical
 optimization level, SSA, proof-provenance normalization, interprocedural
@@ -2645,13 +2641,12 @@ transformation defects before another pass or backend can inspect the result.
 Target-specific legality and structured backend failures are defined by the
 [backend and target contract](BACKEND.md#input-and-legality-boundary).
 
-The supported MIR profiles currently verify without transforming. The frozen
-registry, profiles, request selection, verified runner, per-occurrence
-reporting, verified inspection checkpoints, and shared value-use analysis are
-implemented. The dead-pure canary is registered, reaches a conservative
-fixed point through exact internal schedules, and remains default-inactive
-pending activation hardening. Every transformation has explicit ordering and
-returns changed MIR through the same verifier boundary.
+The supported MIR profiles share the frozen registry, request selection,
+verified runner, per-occurrence reporting, inspection checkpoints, and
+value-use analysis. `none` verifies without transforming; `default` runs the
+dead-pure canary exactly once to a conservative fixed point. Every
+transformation has explicit ordering and returns changed MIR through the same
+verifier boundary.
 Compiler correctness must not depend on an optimization pass being enabled.
 
 The shared-ownership implementation preserves this division of

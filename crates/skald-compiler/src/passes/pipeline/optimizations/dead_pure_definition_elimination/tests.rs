@@ -442,9 +442,9 @@ fn no_op_exact_run_preserves_the_seal_and_exact_mir() {
 }
 
 #[test]
-fn registered_canary_remains_inactive_in_the_default_profile() {
+fn registered_canary_runs_once_in_the_default_profile() {
     let input = dead_tree_program();
-    let expected = input.clone();
+    let expected = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
 
     assert_eq!(run_mir_pipeline(input).unwrap().program(), &expected);
 }

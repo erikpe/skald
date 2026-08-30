@@ -118,26 +118,25 @@ verification execution.
 ## Frozen final-MIR optimization selection
 
 The confirmed
-[selectable final-MIR pipeline design](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+[selectable final-MIR pipeline design](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 adds target-independent optimization policy to the typed compilation request
 and CLI. Its
-[implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is active. Typed request/CLI selection and the verified multi-pass runner are
-implemented, while both supported profiles still select the empty
-verification-only schedule. The registered
-`dead-pure-definition-elimination` canary is currently selectable only through
-crate-private exact schedules pending activation hardening.
+[completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+records delivery. Typed request/CLI selection, deterministic scheduling, the
+verified multi-pass runner, reporting, checkpoints, and the first production
+pass are implemented.
 
 `CompilationRequest` contains a typed `MirOptimizationOptions` value and the
 non-breaking `with_mir_optimization` builder. Options select a typed
 `MirOptimizationProfile` and a canonical lexical set of disabled stable pass
 names; duplicate disabling is idempotent in request identity. Existing request
-construction and singleton compilation helpers select `default`. The initial
-profiles are `none` and `default`; both currently resolve to empty schedules,
-and the framework is complete only when `default` contains
-`dead-pure-definition-elimination` exactly once. `none` remains the reference
-unoptimized mode and preserves the current final MIR path after its required
-central verification.
+construction and singleton compilation helpers select `default`. The
+supported profiles are `none` and `default`: `none` resolves to the empty
+verification-only schedule, while `default` contains
+`dead-pure-definition-elimination` exactly once. Disabling that pass from
+`default`, including duplicate disabling, resolves to the same schedule and
+product as `none`. `none` remains the reference unoptimized mode and preserves
+raw final MIR after its required central verification.
 
 The frozen command-line surface is:
 
@@ -151,8 +150,8 @@ These options are implemented. `--mir-optimization` may appear once.
 removes every occurrence of the named pass from the selected profile;
 duplicate disabling is idempotent. Unknown profile or pass names are usage
 errors before provider or source I/O, and unknown and known pass-name lists are
-sorted lexically. Because the current registry is empty, every disabled name
-is currently unknown. The CLI
+sorted lexically. The current registry contains the stable
+`dead-pure-definition-elimination` name. The CLI
 does not initially expose arbitrary pass order, `-O`, or numeric optimization
 levels. A crate-private exact-schedule API belongs to compiler tests and tools,
 not the public driver policy.

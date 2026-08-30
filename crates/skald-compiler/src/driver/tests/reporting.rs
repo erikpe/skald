@@ -228,21 +228,37 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let synthesis = phase_metrics(observer.events(), ReportPhase::StaticLifecycleSynthesis);
     assert_eq!(synthesis[0], ReportMetric::count("definitions", 1));
     assert_eq!(synthesis[1], ReportMetric::count("blocks", 1));
+    let pipeline = phase_metrics(observer.events(), ReportPhase::MirPipeline);
     assert_eq!(
-        phase_metrics(observer.events(), ReportPhase::MirPipeline)[..2],
+        pipeline[..7],
         [
             ReportMetric::count("verification executions", 1),
-            ReportMetric::count("pass executions", 0),
+            ReportMetric::count("pass executions", 1),
+            ReportMetric::count("processed callables", 1),
+            ReportMetric::count("changed callables", 0),
+            ReportMetric::count("retained MIR entities", 0),
+            ReportMetric::count("inserted MIR entities", 0),
+            ReportMetric::count("removed MIR entities", 0),
         ]
     );
     assert_eq!(
-        phase_metrics(observer.events(), ReportPhase::MirPipeline)[2],
-        ReportMetric::count("definitions", 1)
+        pipeline[7],
+        ReportMetric::pass_count(
+            "dead-pure-definition-elimination",
+            "removed assignment instructions",
+            0,
+        )
     );
     assert_eq!(
-        phase_metrics(observer.events(), ReportPhase::MirPipeline)[3],
-        ReportMetric::count("blocks", 1)
+        pipeline[8],
+        ReportMetric::pass_count(
+            "dead-pure-definition-elimination",
+            "removed value declarations",
+            0,
+        )
     );
+    assert_eq!(pipeline[9], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[10], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[

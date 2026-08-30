@@ -24,6 +24,20 @@ fn module_request(
     )
 }
 
+fn mir_pipeline_pass_executions(events: &[ReportEvent]) -> Option<MetricValue> {
+    events.iter().find_map(|event| match event {
+        ReportEvent::PhaseFinished {
+            phase: ReportPhase::MirPipeline,
+            metrics,
+            ..
+        } => metrics
+            .iter()
+            .find(|metric| metric.name() == "pass executions")
+            .map(|metric| metric.value()),
+        _ => None,
+    })
+}
+
 #[test]
 fn request_pipeline_compiles_the_reachable_multi_module_program() {
     let directory = TemporaryDirectory::new("request-pipeline").unwrap();
@@ -60,42 +74,47 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 }
 
 #[test]
-fn request_profiles_reach_quiet_and_observed_pipelines_with_empty_schedule_parity() {
+fn request_selection_matrix_reaches_quiet_and_observed_pipelines() {
     let directory = TemporaryDirectory::new("request-optimization-profile").unwrap();
     let root = directory.join("modules");
     fs::create_dir_all(&root).unwrap();
     fs::write(root.join("app.ska"), "fn main() -> i64 { return 6 * 7; }\n").unwrap();
-    let default = module_request(
-        &directory,
-        EntrySelector::Module("app".parse().unwrap()),
-        vec![root.clone()],
-    );
-    let none = module_request(
+    let base = module_request(
         &directory,
         EntrySelector::Module("app".parse().unwrap()),
         vec![root],
-    )
-    .with_mir_optimization(MirOptimizationOptions::new(MirOptimizationProfile::None));
+    );
 
-    let default_artifact = compile_request_to_assembly(&default).unwrap();
-    let mut observer = crate::reporting::RecordingObserver::new(ReportDetail::Details);
-    let none_artifact = compile_request_to_assembly_observed(&none, &mut observer).unwrap();
+    let quiet_default = compile_request_to_assembly(&base).unwrap();
+    assert!(quiet_default.report.diagnostics.is_empty());
 
-    assert_eq!(default_artifact.assembly, none_artifact.assembly);
-    assert!(default_artifact.report.diagnostics.is_empty());
-    assert!(none_artifact.report.diagnostics.is_empty());
-    let pass_executions = observer.events().iter().find_map(|event| match event {
-        ReportEvent::PhaseFinished {
-            phase: ReportPhase::MirPipeline,
-            metrics,
-            ..
-        } => metrics
-            .iter()
-            .find(|metric| metric.name() == "pass executions")
-            .map(|metric| metric.value()),
-        _ => None,
-    });
-    assert_eq!(pass_executions, Some(MetricValue::Count(0)));
+    let cases = [
+        (MirOptimizationOptions::default(), 1),
+        (MirOptimizationOptions::new(MirOptimizationProfile::None), 0),
+        (
+            MirOptimizationOptions::default()
+                .with_disabled_pass("dead-pure-definition-elimination"),
+            0,
+        ),
+        (
+            MirOptimizationOptions::default()
+                .with_disabled_pass("dead-pure-definition-elimination")
+                .with_disabled_pass("dead-pure-definition-elimination"),
+            0,
+        ),
+    ];
+    for (options, expected_executions) in cases {
+        let request = base.clone().with_mir_optimization(options);
+        let mut observer = crate::reporting::RecordingObserver::new(ReportDetail::Details);
+        let artifact = compile_request_to_assembly_observed(&request, &mut observer).unwrap();
+
+        assert_eq!(artifact.assembly, quiet_default.assembly);
+        assert!(artifact.report.diagnostics.is_empty());
+        assert_eq!(
+            mir_pipeline_pass_executions(observer.events()),
+            Some(MetricValue::Count(expected_executions))
+        );
+    }
 }
 
 #[test]

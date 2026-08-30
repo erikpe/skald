@@ -21,8 +21,8 @@ pub use execution::{
 pub use policy::MirOptimizationProfile;
 pub use policy::MirPassIdentity;
 pub(crate) use policy::{
-    registered_mir_pass_names, resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
-    MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
+    resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, MirPassOccurrence, MirPassSchedule,
+    MirPassScheduleError,
 };
 
 /// Read-only final MIR that passed ordinary and lifecycle-realization checks.

@@ -36,11 +36,13 @@ fn help_succeeds_through_the_binary_entry_point() {
 }
 
 #[test]
-fn real_binary_accepts_both_empty_mir_profiles_with_exact_assembly_parity() {
+fn real_binary_honors_the_mir_optimization_selection_matrix() {
     let directory = TemporaryDirectory::new("mir-optimization-profiles").unwrap();
     let source = directory.join("main.ska");
     let default_assembly = directory.join("default.s");
     let none_assembly = directory.join("none.s");
+    let disabled_assembly = directory.join("disabled.s");
+    let duplicate_disabled_assembly = directory.join("duplicate-disabled.s");
     fs::write(&source, "fn main() -> i64 { return 6 * 7; }\n").unwrap();
 
     let default = Command::new(env!("CARGO_BIN_EXE_skac"))
@@ -69,11 +71,44 @@ fn real_binary_accepts_both_empty_mir_profiles_with_exact_assembly_parity() {
         .arg(&none_assembly)
         .output()
         .unwrap();
+    let disabled = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args([
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "--disable-mir-pass",
+            "dead-pure-definition-elimination",
+            "-o",
+        ])
+        .arg(&disabled_assembly)
+        .output()
+        .unwrap();
+    let duplicate_disabled = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args([
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "--disable-mir-pass",
+            "dead-pure-definition-elimination",
+            "--disable-mir-pass",
+            "dead-pure-definition-elimination",
+            "-o",
+        ])
+        .arg(&duplicate_disabled_assembly)
+        .output()
+        .unwrap();
 
     assert_same_process_output(&default, &none);
+    assert_same_process_output(&default, &disabled);
+    assert_same_process_output(&default, &duplicate_disabled);
+    let expected_assembly = fs::read(default_assembly).unwrap();
+    assert_eq!(fs::read(none_assembly).unwrap(), expected_assembly);
+    assert_eq!(fs::read(disabled_assembly).unwrap(), expected_assembly);
     assert_eq!(
-        fs::read(default_assembly).unwrap(),
-        fs::read(none_assembly).unwrap()
+        fs::read(duplicate_disabled_assembly).unwrap(),
+        expected_assembly
     );
 }
 

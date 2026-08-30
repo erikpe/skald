@@ -1,4 +1,5 @@
 use super::identity::MirPassIdentity;
+use crate::passes::pipeline::optimizations::dead_pure_definition_elimination;
 
 /// Supported target-independent final-MIR optimization policy.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -9,6 +10,7 @@ pub enum MirOptimizationProfile {
 }
 
 const NO_PASSES: &[MirPassIdentity] = &[];
+const DEFAULT_PASSES: &[MirPassIdentity] = &[dead_pure_definition_elimination::IDENTITY];
 
 impl MirOptimizationProfile {
     pub const fn name(self) -> &'static str {
@@ -20,7 +22,8 @@ impl MirOptimizationProfile {
 
     pub(super) const fn identities(self) -> &'static [MirPassIdentity] {
         match self {
-            Self::None | Self::Default => NO_PASSES,
+            Self::None => NO_PASSES,
+            Self::Default => DEFAULT_PASSES,
         }
     }
 }

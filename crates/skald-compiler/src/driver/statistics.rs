@@ -304,9 +304,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_pipeline_metrics_report_verification_without_phantom_pass_work() {
+    fn none_pipeline_metrics_report_verification_without_phantom_pass_work() {
         let schedule =
-            resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+            resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap();
         let measured = run_mir_pipeline_measured(
             lower_source_to_final_mir("fn main() -> i64 { return 0; }"),
             &schedule,

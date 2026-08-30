@@ -1,11 +1,11 @@
 # Selectable Final-MIR Optimization Pipeline Discoveries
 
-Status: active companion to the in-progress
-[selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
+Status: active post-roadmap follow-up record for the completed
+[selectable final-MIR optimization pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
 
 This record holds maintainability, architecture, and follow-up findings found
 while implementing the frozen
-[selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+[selectable final-MIR optimization pipeline design](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 when they are valuable but too large or insufficiently coupled to the active
 roadmap task. Small cohesive improvements should be implemented directly in
 the task that exposes them.
@@ -64,7 +64,7 @@ roadmap instead of this file.
 ## Resolution and closure
 
 When a finding is implemented, replace it with a short resolution note and a
-link to the authoritative living contract or archived delivery record. At
-roadmap completion, move this file to `docs/archive/` only if actionable
-follow-ups remain. If it is still empty, remove it and note that the final
-review found no deferred pipeline findings in the archived roadmap.
+link to the authoritative living contract or archived delivery record. Keep
+this record active while actionable follow-ups remain. Move it to
+`docs/archive/` after those findings are resolved; if it becomes empty, remove
+it and note the final disposition in the archived roadmap.

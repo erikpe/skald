@@ -317,6 +317,11 @@ fn intentional_phase_and_dump_paths_compose() {
         checkpoint_labels,
         [
             MirPipelineCheckpointLabel::Input,
+            MirPipelineCheckpointLabel::After {
+                position: 0,
+                pass_name: "dead-pure-definition-elimination",
+                occurrence: 0,
+            },
             MirPipelineCheckpointLabel::Final,
         ]
     );

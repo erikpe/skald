@@ -1,18 +1,17 @@
 # Selectable Final-MIR Optimization Pipeline Design Proposal
 
-Status: frozen design proposal. MOP1 through MOP12 were confirmed together on
-2026-08-30 and promoted into the
+Status: frozen and delivered. MOP1 through MOP12 were confirmed together on
+2026-08-30, implemented by the completed
+[roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md), and promoted
+into the
 [compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
 [driver contract](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
 and
 [reporting contract](../compiler/REPORTING.md#frozen-final-mir-pass-reporting).
-The
-[implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-owns delivery. Its typed registry, empty profiles, deterministic schedule and
-occurrence model, exclusions, and exact compiler-internal schedule resolver
-are implemented. Typed request/CLI selection and the verified multi-pass runner
-are also implemented. The supported schedules remain empty; pass observation,
-inspection, shared analysis, and the canary remain planned.
+The living compiler, driver, and reporting contracts are authoritative. This
+record preserves the decisions that produced the typed registry, selectable
+schedules, verified runner, observation and inspection boundaries, shared
+value-use census, and default dead-pure-definition elimination canary.
 
 This proposal defines the first production target-independent optimization
 framework for Skald. It builds on the implemented static-lifecycle authority
@@ -27,7 +26,7 @@ contracts under which later constant folding, copy propagation, CFG cleanup,
 whole-program reachability, devirtualization, and inlining can be added as
 independent passes. Its place in the broader preparation sequence is recorded
 by the
-[optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md).
+[optimization architecture discoveries](../roadmaps/OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md).
 
 The language contract does not change. Evaluation order, checked failures,
 panic behavior, allocation behavior, deterministic destruction, aliasing,
@@ -63,7 +62,8 @@ The design should provide:
 
 ## Current architecture and evidence
 
-Skald already has an explicit target-independent MIR pipeline. Static
+At proposal freeze, Skald already had an explicit target-independent MIR
+pipeline. Static
 lifecycle synthesis produces raw final `MirProgram`, and
 `passes::run_mir_pipeline` currently performs one ordinary and lifecycle-
 realization verification before returning `VerifiedFinalMirProgram`.
@@ -81,7 +81,8 @@ coordinator. It:
 That path proved the important safety relation and has now been absorbed by the
 sole production runner. Pass descriptors, schedules, profiles, request/CLI
 selection, exact per-pass failure identity, and immediate changed-output
-resealing are implemented. No production optimization is registered yet.
+resealing were implemented. No production optimization was registered at that
+point.
 
 The implemented rewrite facade already provides:
 
@@ -98,9 +99,9 @@ The implemented rewrite facade already provides:
 
 The reporting layer already owns one `MirPipeline` phase and deterministic
 aggregate metrics for verification executions, pass executions, final MIR
-size, and structural rewrite changes. Pass executions are currently zero in
-production. Reports intentionally do not contain phase dumps, and passes do
-not log.
+size, and structural rewrite changes. Pass executions were zero in production
+at proposal freeze. Reports intentionally do not contain phase dumps, and
+passes do not log.
 
 `CompilationRequest` now records typed optimization policy alongside source,
 module, standard-library, target, artifact, runtime-trace, and environment
@@ -108,7 +109,7 @@ policy. The CLI selects the two supported profiles and stable-name exclusions;
 it has no MIR dump option.
 
 These facts led to the implemented production runner without weakening the
-seal. The remaining boundary adds observation and inspection, then proves the
+seal. The roadmap then added observation and inspection and proved the
 framework using a pass whose semantics and analysis requirements are small.
 
 ## Relationship to the completed foundations

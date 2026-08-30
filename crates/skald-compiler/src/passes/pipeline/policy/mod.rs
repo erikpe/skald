@@ -32,18 +32,12 @@ pub(crate) fn resolve_mir_pass_schedule<'a>(
 /// Resolves an exact compiler-internal pass order.
 ///
 /// The driver does not expose this surface. It exists for focused pass tests,
-/// composition checks, and compiler-owned tools.
+/// composition checks, and future compiler-internal experiments.
 #[allow(dead_code)]
 pub(crate) fn resolve_exact_mir_pass_schedule(
     identities: &[MirPassIdentity],
 ) -> Result<MirPassSchedule, MirPassScheduleError> {
     schedule::resolve_exact(production_registry(), identities)
-}
-
-/// Returns every registered stable pass name in lexical order.
-#[allow(dead_code)]
-pub(crate) fn registered_mir_pass_names() -> Vec<&'static str> {
-    production_registry().known_names()
 }
 
 #[cfg(test)]

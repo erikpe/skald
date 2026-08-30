@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: in progress. MPR0 through MPR6 are complete; MPR7 is next.
+Status: complete. MPR0 through MPR7 were delivered on 2026-08-30.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -18,7 +18,7 @@ optimization suite. Because this work crosses phase ownership, request policy,
 reporting, inspection, analysis, and dense rewriting, each task should also
 remove small adjacent duplication, awkward ownership, and panic-prone internal
 handling when the cleanup is cohesive. Larger findings belong in the
-[dedicated discoveries record](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
+[dedicated discoveries record](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
 rather than expanding an active task.
 
 ## Dependencies
@@ -91,7 +91,7 @@ rather than expanding an active task.
 - [x] MPR4 — Add verified pipeline inspection checkpoints
 - [x] MPR5 — Publish an exhaustive value-use census
 - [x] MPR6 — Implement the dead-pure-definition canary
-- [ ] MPR7 — Activate, harden, and close the canary pipeline
+- [x] MPR7 — Activate, harden, and close the canary pipeline
 
 ## PR-sized implementation sequence
 
@@ -547,31 +547,31 @@ skald-compiler passes`, `cargo test --locked -p skald-compiler mir::rewrite`,
 prove selection and unoptimized parity across the repository, and close the
 roadmap without carrying transitional paths or documentation.
 
-- [ ] Place `dead-pure-definition-elimination` exactly once in `default`; keep
+- [x] Place `dead-pure-definition-elimination` exactly once in `default`; keep
       `none` empty, and prove disabling the canary from `default` resolves to
       the same schedule and product as `none`.
-- [ ] Remove temporary empty-default allowances, inactive-registration
+- [x] Remove temporary empty-default allowances, inactive-registration
       scaffolding, duplicate coordinators, and compatibility helpers that are
       no longer needed after production activation.
-- [ ] Prove `none` retains exact unoptimized MIR and assembly behavior apart
+- [x] Prove `none` retains exact unoptimized MIR and assembly behavior apart
       from intended reporting/checkpoint selection, with one central final
       verification and zero pass executions.
-- [ ] Prove default, none, disabled, duplicate-disabled, and crate-private
+- [x] Prove default, none, disabled, duplicate-disabled, and crate-private
       repeated schedules across request, singleton, quiet, observed, CLI,
       backend, and native execution paths.
-- [ ] Compare optimized and unoptimized source diagnostics, checked failures,
+- [x] Compare optimized and unoptimized source diagnostics, checked failures,
       panic behavior, output, ownership/lifecycle observations, and native
       behavior on representative and full-corpus programs.
-- [ ] Add independent-process determinism coverage for schedule resolution,
+- [x] Add independent-process determinism coverage for schedule resolution,
       pass errors, measurements, checkpoint labels and bytes, MIR dumps,
       assembly, and golden products where applicable.
-- [ ] Audit public and crate-private visibility, module facades, error wording,
+- [x] Audit public and crate-private visibility, module facades, error wording,
       exhaustive matches, request help, living contracts, and tests; remove
       stale claims that the production pipeline is empty.
-- [ ] Review the dedicated discoveries record. Implement small cohesive
+- [x] Review the dedicated discoveries record. Implement small cohesive
       maintainability findings, retain larger actionable follow-ups, and do not
       schedule whole-world reachability or other optimization passes here.
-- [ ] Run the complete repository, golden determinism, and MSRV gates and
+- [x] Run the complete repository, golden determinism, and MSRV gates and
       record exact completion evidence before marking every roadmap checkbox.
 
 **Tests:** Full canary focused suite; request/CLI selection matrix; exact
@@ -591,6 +591,33 @@ and any remaining discoveries are bounded follow-up work rather than missing
 pipeline scope.
 
 **Completed:**
+
+`default` now selects `dead-pure-definition-elimination` exactly once, while
+`none`, one disabled canary, and duplicate-disabled selection resolve to the
+same empty schedule and unoptimized product. The production path proves the
+matrix through typed requests, quiet and observed compilation, singleton
+helpers, the real CLI binary, backend assembly, checkpoint inspection, and the
+full native golden corpus. Focused tests retain exact raw-MIR and one-
+verification/zero-pass behavior for `none`, exercise deliberate repeated exact
+schedules, and verify that the default pass removes an injected dead scalar
+tree through central resealing.
+
+The activation audit removed the unused production registry-name helper and
+facade occurrence re-export, preserved the frozen exact-schedule experiment
+surface, updated public checkpoint and detailed-report expectations, and
+replaced every living empty-default claim with the implemented profile
+contract. A new independent-process
+fingerprint covers schedule selection and repetition, structured pass errors,
+measurements, checkpoint labels and MIR bytes, and final MIR; existing driver
+and golden determinism coverage proves assembly, diagnostics, checked failure,
+panic, ownership/lifecycle, output, and native products. The larger immutable
+identity-observer opportunity remains evidence-backed and bounded in the
+active discoveries record.
+
+`make check`, `make golden-determinism-test`, `make msrv-check`,
+`make docs-check`, and `git diff --check` passed on 2026-08-30. The final
+status review contained only the intended source, test, documentation, and
+archival changes; build artifacts remained ignored.
 
 ## Roadmap completion criteria
 

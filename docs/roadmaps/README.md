@@ -6,18 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is in progress. Its typed registry, empty `none`/`default` profiles,
-deterministic schedule occurrence model, exclusions, and crate-private exact
-schedule resolver are implemented. Typed request/CLI selection and schedule
-threading are also implemented. The verified multi-pass runner now owns pass
-capabilities, atomic changed-result rewriting, immediate resealing, and
-structured failure attribution. Structured pass measurement/reporting,
-verified inspection checkpoints, and the exhaustive value-use census are also
-implemented. The dead-pure-definition canary is now registered and exercised
-through exact internal schedules while remaining inactive in `default`; broad
-activation and parity hardening are next.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -29,15 +18,17 @@ starting sequence. Its first two recommended changes are now implemented; the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 and the completed
 [dense callable-local MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-are preserved in the archive. The selectable final-MIR pipeline is now the
-active enabling layer around those foundations. The remaining five original
-constraints stay pending and have no implementation roadmap.
+are preserved in the archive. The completed
+[selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+adds the enabling layer around those foundations and activates one conservative
+default pass. The remaining five original constraints stay pending and have no
+implementation roadmap.
 
 The
 [selectable pipeline discoveries](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
-are the active companion for maintainability or architecture findings exposed
-by that roadmap. It currently records the mutation-oriented identity mapper's
-snapshot cost for read-only analyses as a bounded post-canary follow-up.
+are the active post-roadmap record for maintainability or architecture findings
+exposed during delivery. It currently records the mutation-oriented identity
+mapper's snapshot cost for read-only analyses as a bounded follow-up.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -49,21 +40,15 @@ No other implementation roadmap is currently planned.
 
 ## Design proposals
 
-The
-[selectable final-MIR optimization pipeline proposal](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
-defines a typed static pass registry, deterministic profiles and schedules,
-verified pass ownership, request and CLI selection, structured measurements,
-verified dump checkpoints, and a narrow dead-pure-definition elimination
-canary. Its twelve decisions were frozen together on 2026-08-30 and promoted
-into the living
+The completed selectable final-MIR optimization pipeline design and delivery
+record are preserved in the [archive](../archive/README.md). Their typed static
+registry, deterministic profiles and schedules, request and CLI selection,
+verified pass ownership, structured measurements, verified checkpoints, and
+default dead-pure-definition elimination canary are promoted into the living
 [compiler phase](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
 [driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
 and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
-contracts. The active roadmap owns implementation; no production optimization
-is enabled by default yet. Registry and schedule policy, request/CLI selection,
-verified execution, occurrence reporting, checkpoint inspection, and the
-value-use census are current; the canary implementation is complete and its
-activation hardening remains in progress.
+contracts.
 
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented

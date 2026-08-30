@@ -3,7 +3,6 @@ use super::{
     error::{MirPassRegistryError, MirPassScheduleError},
     identity::MirPassIdentity,
     profile::MirOptimizationProfile,
-    registered_mir_pass_names,
     registry::MirPassRegistry,
     resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
     schedule::{resolve_exact, resolve_identities},
@@ -42,26 +41,41 @@ fn valid_registry() -> MirPassRegistry {
 }
 
 #[test]
-fn production_registry_contains_the_default_inactive_canary() {
-    assert_eq!(
-        registered_mir_pass_names(),
-        ["dead-pure-definition-elimination"]
-    );
+fn production_profiles_select_the_canary_only_by_default() {
     assert_eq!(
         MirOptimizationProfile::default(),
         MirOptimizationProfile::Default
     );
 
-    for profile in [
-        MirOptimizationProfile::None,
-        MirOptimizationProfile::Default,
+    let none = resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap();
+    assert!(none.is_empty());
+
+    let default =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    assert_eq!(default.len(), 1);
+    assert_eq!(default.as_slice()[0].position(), 0);
+    assert_eq!(default.as_slice()[0].occurrence(), 0);
+    assert_eq!(
+        default.as_slice()[0].identity(),
+        dead_pure_definition_elimination::IDENTITY
+    );
+    assert_eq!(
+        default.as_slice()[0].name(),
+        "dead-pure-definition-elimination"
+    );
+
+    for disabled in [
+        vec!["dead-pure-definition-elimination"],
+        vec![
+            "dead-pure-definition-elimination",
+            "dead-pure-definition-elimination",
+        ],
     ] {
-        let schedule = resolve_mir_pass_schedule(profile, std::iter::empty()).unwrap();
-        assert!(schedule.is_empty());
-        assert_eq!(schedule.len(), 0);
-        assert!(schedule.as_slice().is_empty());
-        assert_eq!(schedule.iter().count(), 0);
+        let schedule =
+            resolve_mir_pass_schedule(MirOptimizationProfile::Default, disabled).unwrap();
+        assert_eq!(schedule, none);
     }
+
     assert!(resolve_exact_mir_pass_schedule(&[]).unwrap().is_empty());
     let exact =
         resolve_exact_mir_pass_schedule(&[dead_pure_definition_elimination::IDENTITY]).unwrap();
