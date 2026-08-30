@@ -1,5 +1,6 @@
 //! Verification boundary for planned static-lifecycle MIR.
 
+mod authority;
 mod certificate;
 mod final_coordinator;
 mod lifecycle;
@@ -23,6 +24,7 @@ pub fn verify_planned_mir(program: &PlannedMirProgram) -> Result<(), MirVerifica
 
     let mut errors = Vec::new();
     lifecycle::verify(program, &mut errors);
+    authority::verify(program, &mut errors);
     certificate::verify(
         LifecycleMirView {
             program: program.preliminary().program(),

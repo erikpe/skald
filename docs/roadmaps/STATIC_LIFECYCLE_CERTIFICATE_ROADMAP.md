@@ -1,6 +1,6 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: in progress; LCR0 is complete and LCR1 is next.
+Status: in progress; LCR0-LCR1 are complete and LCR2 is next.
 
 This roadmap implements the frozen
 [static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
@@ -63,7 +63,7 @@ graph-reshaping passes can later rely.
 ## Progress
 
 - [x] LCR0 — Establish normalized root-effect analysis
-- [ ] LCR1 — Issue exact immutable baseline authority
+- [x] LCR1 — Issue exact immutable baseline authority
 - [ ] LCR2 — Verify monotone final-MIR realization
 - [ ] LCR3 — Separate analysis evidence from executable proof
 - [ ] LCR4 — Reorganize lifecycle module ownership
@@ -137,27 +137,27 @@ compiler test suite pass.
 **Purpose:** Make normalized root facts the exact proof issued by planning
 before any final-MIR comparison is relaxed.
 
-- [ ] Add compact MIR-owned authority and per-root records with private
+- [x] Add compact MIR-owned authority and per-root records with private
       construction, sorted unique storage, read-only iteration, and no
       optimization-facing mutation API.
-- [ ] Have planning construct authority for exactly the lifecycle roots implied
+- [x] Have planning construct authority for exactly the lifecycle roots implied
       by every static definition and its stored type.
-- [ ] Split certificate verification into an issuance checker that independently
+- [x] Split certificate verification into an issuance checker that independently
       extracts preliminary MIR, recomputes root facts, and requires exact
       authority equality.
-- [ ] Derive required lifetime dependency pairs from authority, definitions,
+- [x] Derive required lifetime dependency pairs from authority, definitions,
       and the existing lifecycle destination/published-self rules.
-- [ ] Check every derived pair against activation order and retain all current
+- [x] Check every derived pair against activation order and retain all current
       self-dependency and cycle decisions from the pre-optimization planner.
-- [ ] Temporarily retain the old analysis certificate and stored dependencies
+- [x] Temporarily retain the old analysis certificate and stored dependencies
       as a compatibility oracle, requiring both forms to agree until later
       migration removes them.
-- [ ] Add malformed-planned-MIR builders local to verifier tests for missing,
+- [x] Add malformed-planned-MIR builders local to verifier tests for missing,
       extra, duplicate, foreign-root, foreign-field, wrong-access, wrong-phase,
       and wrong-lifecycle-owned authority mutations.
-- [ ] Extend planned dumps with an explicit deterministic baseline-authority
+- [x] Extend planned dumps with an explicit deterministic baseline-authority
       section without yet removing current analysis sections.
-- [ ] Update the compiler contract to mark exact baseline authority issuance as
+- [x] Update the compiler contract to mark exact baseline authority issuance as
       implemented while leaving exact final graph equality documented as the
       temporary final boundary.
 
@@ -177,6 +177,19 @@ inspection; no certificate constructor or mutator exposed publicly.
 derives every required dependency independently, malformed authority is
 rejected, current exact final verification still passes, and source diagnostics
 and executable output are unchanged.
+
+**Completed:** Planning now stores one compact MIR-owned authority with
+canonical root and fact sets, private construction, and read-only public
+inspection. Planned-MIR issuance independently re-extracts preliminary MIR,
+requires exact authority equality, derives dependencies from lifecycle
+definitions, checks activation order, and requires parity with the retained
+analysis and witness-bearing dependency certificate. Deterministic planned
+dumps expose the authority separately. Focused tests cover explicit,
+zero-default, and initializer-free destructible statics plus missing, extra,
+duplicate, foreign-identity, access, phase, and lifecycle-owned mutations.
+Planner diagnostics and exact final verification remain unchanged. Focused
+plan/verifier and public API tests, pipeline determinism, the full compiler
+suite, documentation checks, MSRV checks, lint, and diff validation all pass.
 
 ### LCR2 — Verify monotone final-MIR realization
 

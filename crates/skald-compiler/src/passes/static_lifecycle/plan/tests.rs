@@ -1,7 +1,10 @@
 //! Focused static-lifetime graph, order, evidence, and diagnostic tests.
 
 use crate::{
-    mir::{lower_preliminary_hir, PreliminaryMirProgram},
+    mir::{
+        lower_preliminary_hir, MirStaticFieldInitialization, PreliminaryMirProgram,
+        StaticClassLifecycleOperation, StaticEffectNode,
+    },
     test_support::type_check_source,
 };
 
@@ -81,6 +84,61 @@ fn includes_destruction_of_initializer_free_replaceable_owning_fields() {
     assert_eq!(dependency.dependent, fields[0]);
     assert_eq!(dependency.evidence.phase, StaticLifetimePhase::Destruction);
     assert_eq!(planned.lifecycle().activation(), &[fields[1], fields[0]]);
+}
+
+#[test]
+fn issues_exact_authority_for_explicit_zero_default_and_destructible_statics() {
+    let planned = plan(
+        "class State {
+           static explicit: i64 = 1;
+           static zero: i64;
+           static item: Item?;
+           init() {}
+         }
+         class Item {
+           init() {}
+           destroy { var observed: i64 = State.zero; }
+         }
+         fn main() -> i64 { return 0; }",
+    );
+    let definitions = planned.lifecycle_mir().definitions();
+    let explicit = match definitions[0].initialization {
+        MirStaticFieldInitialization::Explicit(initializer) => initializer,
+        MirStaticFieldInitialization::ZeroDefault => panic!("explicit static lost initializer"),
+    };
+
+    assert_eq!(
+        definitions[1].initialization,
+        MirStaticFieldInitialization::ZeroDefault
+    );
+    assert_eq!(
+        definitions[2].initialization,
+        MirStaticFieldInitialization::ZeroDefault
+    );
+    assert!(planned
+        .authority()
+        .root(StaticEffectNode::callable(explicit.into()))
+        .is_some());
+    assert!(planned.authority().roots().any(|root| matches!(
+        root.root(),
+        StaticEffectNode::ClassLifecycle {
+            operation: StaticClassLifecycleOperation::CompleteFinalizer,
+            ..
+        }
+    )));
+
+    let authority_pairs = super::super::root_effects::dependency_pairs_for_definitions(
+        planned.preliminary().program(),
+        definitions,
+        planned.authority(),
+    )
+    .unwrap();
+    let legacy_pairs = planned
+        .dependencies()
+        .iter()
+        .map(|dependency| (dependency.prerequisite, dependency.dependent))
+        .collect();
+    assert_eq!(authority_pairs, legacy_pairs);
 }
 
 #[test]
@@ -267,7 +325,10 @@ fn exact_plan_dump_retains_effects_dependencies_witnesses_and_reverse_order() {
         fields[0], fields[1]
     )));
     assert_eq!(dump, dump_static_lifetime_plan(&planned));
-    assert!(dump_planned_mir(&planned).contains("StaticEffectAnalysis\n"));
+    let planned_dump = dump_planned_mir(&planned);
+    assert!(planned_dump.contains("StaticEffectAnalysis\n"));
+    assert!(planned_dump.contains("StaticLifecycleBaselineAuthority\n"));
+    assert!(planned_dump.contains("  Root callable"));
 }
 
 mod generic_classes;

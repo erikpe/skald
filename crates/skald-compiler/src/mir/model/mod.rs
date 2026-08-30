@@ -112,7 +112,9 @@ pub use static_lifecycle::{
     StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
     StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
-    StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
+    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecyclePlan,
+    StaticLifecycleRootAuthority, StaticLifetimeDependency, StaticLifetimeEvidence,
+    StaticLifetimePhase,
 };
 pub(crate) use statistics::MirProgramStatistics;
 pub use strings::{

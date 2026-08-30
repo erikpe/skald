@@ -6,11 +6,12 @@ use crate::mir::{
     MirProgramLifecycle, MirStaticFieldInitialization, MirStaticLifecycleCertificate,
     MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleTransition,
     MirStaticLifecycleTransitionKind, PlannedMirProgram, PreliminaryMirProgram,
-    StaticEffectAnalysis, StaticLifecyclePlan, StaticLifetimeDependency,
+    StaticEffectAnalysis, StaticLifecycleAuthority, StaticLifecyclePlan, StaticLifetimeDependency,
 };
 
 pub(super) fn build_planned_program(
     mut preliminary: PreliminaryMirProgram,
+    authority: StaticLifecycleAuthority,
     effects: StaticEffectAnalysis,
     dependencies: Vec<StaticLifetimeDependency>,
     plan: StaticLifecyclePlan,
@@ -115,7 +116,7 @@ pub(super) fn build_planned_program(
             ]
         })
         .collect();
-    let certificate = MirStaticLifecycleCertificate::new(effects, dependencies);
+    let certificate = MirStaticLifecycleCertificate::new(authority, effects, dependencies);
     let lifecycle = MirProgramLifecycle::new(definitions, activation, shutdown, plan, certificate);
     PlannedMirProgram::new(preliminary, lifecycle)
 }

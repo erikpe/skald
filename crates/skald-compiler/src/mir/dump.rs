@@ -252,7 +252,8 @@ fn dump_static_lifecycle_coordinator(
     let lifecycle = coordinator.lifecycle();
     let _ = writeln!(
         output,
-        "    Certificate summaries={} dependencies={}",
+        "    Certificate authority-roots={} summaries={} dependencies={}",
+        lifecycle.certificate().authority().roots().len(),
         lifecycle.certificate().effects().summaries().len(),
         lifecycle.certificate().dependencies().len()
     );

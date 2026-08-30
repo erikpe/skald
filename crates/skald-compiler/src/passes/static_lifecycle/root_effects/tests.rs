@@ -7,7 +7,7 @@ use crate::{
     mir::{
         lower_preliminary_hir, PreliminaryMirProgram, StaticAccessKind,
         StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectNode,
-        StaticEffectPhase,
+        StaticEffectPhase, StaticLifecycleAuthority, StaticLifecycleEffectFact,
     },
     test_support::type_check_source,
 };
@@ -15,7 +15,7 @@ use crate::{
 use super::{
     super::{extract, plan_static_lifetimes},
     analyze,
-    model::{StaticLifecycleEffectFact, StaticLifecycleRootEffectError},
+    model::StaticLifecycleRootEffectError,
 };
 
 fn lower(text: &str) -> PreliminaryMirProgram {
@@ -24,7 +24,7 @@ fn lower(text: &str) -> PreliminaryMirProgram {
     lower_preliminary_hir(&checked.hir.unwrap())
 }
 
-fn analyze_program(program: &PreliminaryMirProgram) -> super::StaticLifecycleRootEffectAnalysis {
+fn analyze_program(program: &PreliminaryMirProgram) -> StaticLifecycleAuthority {
     let graph = extract::extract(program);
     analyze(program, &graph).expect("valid preliminary MIR must have valid lifecycle roots")
 }
@@ -39,12 +39,7 @@ fn fact(
     phase: StaticEffectPhase,
     lifecycle_owned: bool,
 ) -> StaticLifecycleEffectFact {
-    StaticLifecycleEffectFact {
-        target,
-        access,
-        phase,
-        lifecycle_owned,
-    }
+    StaticLifecycleEffectFact::new(target, access, phase, lifecycle_owned)
 }
 
 #[test]
@@ -70,9 +65,9 @@ fn normalizes_direct_transitive_and_post_publication_effects_by_root() {
         .unwrap();
     let analysis = analyze_program(&program);
     let effects = &analysis
-        .summary(StaticEffectNode::callable(initializer.callable()))
+        .root(StaticEffectNode::callable(initializer.callable()))
         .unwrap()
-        .effects;
+        .effects();
 
     assert!(effects.contains(&fact(
         field(&program, 0),
@@ -120,8 +115,8 @@ fn inventories_initializer_free_optional_shared_and_array_destruction_roots() {
     );
     let analysis = analyze_program(&program);
     let roots = analysis
-        .summaries()
-        .map(|summary| summary.root)
+        .roots()
+        .map(|summary| summary.root())
         .collect::<BTreeSet<_>>();
 
     assert!(roots.contains(&StaticEffectNode::class(
@@ -146,8 +141,8 @@ fn inventories_initializer_free_optional_shared_and_array_destruction_roots() {
 
     let observed = field(&program, 0);
     for dependent in [field(&program, 1), field(&program, 2), field(&program, 3)] {
-        assert!(analysis
-            .dependency_pairs(&program)
+        assert!(super::dependency_pairs(&program, &analysis)
+            .unwrap()
             .contains(&(observed, dependent)));
     }
 }
@@ -170,9 +165,9 @@ fn closed_world_indirect_targets_contribute_normalized_initializer_effects() {
     let initializer = program.static_initializers().nth(2).unwrap();
     let analysis = analyze_program(&program);
     let effects = &analysis
-        .summary(StaticEffectNode::callable(initializer.callable()))
+        .root(StaticEffectNode::callable(initializer.callable()))
         .unwrap()
-        .effects;
+        .effects();
 
     for target in [field(&program, 0), field(&program, 1)] {
         assert!(effects.contains(&fact(
@@ -211,9 +206,9 @@ fn closed_world_virtual_and_interface_targets_contribute_root_effects() {
 
     for initializer in program.static_initializers().skip(2) {
         let effects = &analysis
-            .summary(StaticEffectNode::callable(initializer.callable()))
+            .root(StaticEffectNode::callable(initializer.callable()))
             .unwrap()
-            .effects;
+            .effects();
         for target in [field(&program, 0), field(&program, 1)] {
             assert!(effects.contains(&fact(
                 target,
@@ -251,11 +246,11 @@ fn preserves_access_kinds_in_normalized_facts() {
     );
     let analysis = analyze_program(&program);
     let effects = &analysis
-        .summary(StaticEffectNode::callable(
+        .root(StaticEffectNode::callable(
             program.static_initializers().nth(2).unwrap().callable(),
         ))
         .unwrap()
-        .effects;
+        .effects();
 
     assert!(effects.contains(&fact(
         field(&program, 0),
@@ -264,14 +259,14 @@ fn preserves_access_kinds_in_normalized_facts() {
         false,
     )));
     assert!(effects.iter().any(|effect| {
-        effect.target == field(&program, 1)
-            && effect.access == StaticAccessKind::Replace
-            && effect.phase == StaticEffectPhase::InitializerBeforePublication
+        effect.target() == field(&program, 1)
+            && effect.access() == StaticAccessKind::Replace
+            && effect.phase() == StaticEffectPhase::InitializerBeforePublication
     }));
     assert!(effects.iter().any(|effect| {
-        effect.target == field(&program, 1)
-            && effect.access == StaticAccessKind::Borrow
-            && effect.phase == StaticEffectPhase::InitializerBeforePublication
+        effect.target() == field(&program, 1)
+            && effect.access() == StaticAccessKind::Borrow
+            && effect.phase() == StaticEffectPhase::InitializerBeforePublication
     }));
 }
 
@@ -292,7 +287,7 @@ fn normalized_dependencies_match_the_existing_planner_oracle() {
          }
          fn main() -> i64 { return 0; }",
     );
-    let expected = analyze_program(&program).dependency_pairs(&program);
+    let expected = super::dependency_pairs(&program, &analyze_program(&program)).unwrap();
     let planned = plan_static_lifetimes(program).unwrap();
     let actual = planned
         .dependencies()

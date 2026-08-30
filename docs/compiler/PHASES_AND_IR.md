@@ -321,19 +321,32 @@ root-effect authority relation. Delivery is owned by the
 and the complete rationale is preserved in the
 [frozen design record](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md).
 
-Planning now also computes a checker-oriented normalized root-effect analysis
-directly over the raw extracted graph. It inventories roots from static
-definitions and stored types, walks direct and implicit closed-world edges
-without trusting solved summaries, and preserves target field, access kind,
-propagated root phase, and lifecycle-owned status. Internal compatibility
-checks require those facts and their derived dependency pairs to agree with the
-existing solved summaries and lifetime graph. This establishes the comparison
-model without yet changing `MirStaticLifecycleCertificate` or its exact final-
-MIR verification rule.
+Planning now issues a compact MIR-owned baseline authority computed by a
+checker-oriented normalized root-effect analysis over the raw extracted graph.
+It inventories roots from static definitions and stored types, walks direct and
+implicit closed-world edges without trusting solved summaries, and preserves
+target field, access kind, propagated root phase, and lifecycle-owned status.
+The authority has private construction, canonical sorted unique storage, and a
+public read-only inspection API.
+
+`verify_planned_mir` independently extracts preliminary MIR, recomputes the
+normalized root facts, and requires exact authority equality. It derives
+required dependency pairs from the authority and lifecycle definitions,
+checks every pair against activation order, and requires agreement with the
+temporarily retained witness-bearing dependency and solved-analysis
+certificate. This compatibility oracle preserves the existing `STA001` and
+`STA002` planning decisions while the certificate migration is incomplete.
+Planned dumps identify the compact proof separately as
+`StaticLifecycleBaselineAuthority` while retaining the analysis dump.
+
+Final-MIR verification still uses the legacy exact graph, candidate-inventory,
+and dependency certificate. Replacing that temporary optimization fence with
+the baseline-authority subset relation is the next roadmap milestone; the
+issued authority is not yet the final realization checker.
 
 For every explicit static initializer and implicit class or array lifecycle
 operation used to activate or destroy a static field, preliminary analysis
-will issue an exact baseline authority. One authorized fact consists of target
+issues an exact baseline authority. One authorized fact consists of target
 static field, access kind, root phase, and whether the access is the
 lifecycle-owned unpublished initializer destination. Source span, witness
 path, directness, intermediate callable, call-edge kind, and target-set shape

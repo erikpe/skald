@@ -25,7 +25,8 @@ pub fn plan_static_lifetimes(
     let (effects, root_effects) = infer_static_effects_with_roots(&preliminary);
     let graph = graph::LifetimeGraph::build(&preliminary, &effects);
     debug_assert_eq!(
-        root_effects.dependency_pairs(&preliminary),
+        super::root_effects::dependency_pairs(&preliminary, &root_effects)
+            .expect("issued lifecycle roots must derive dependencies"),
         graph
             .dependencies()
             .iter()
@@ -47,6 +48,7 @@ pub fn plan_static_lifetimes(
     let lifecycle = graph.plan();
     Ok(schema::build_planned_program(
         preliminary,
+        root_effects,
         effects,
         graph.dependencies().to_vec(),
         lifecycle,

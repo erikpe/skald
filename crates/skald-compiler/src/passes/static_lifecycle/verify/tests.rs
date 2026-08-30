@@ -6,13 +6,14 @@ use crate::{
         lower_preliminary_hir, MirProgramLifecycle, MirStaticFieldInitialization,
         MirStaticLifecycleCertificate, MirStaticLifecycleDefinition, MirStaticLifecycleIndices,
         MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirType, PlannedMirProgram,
-        StaticEffectEdgeKind, StaticLifecyclePlan,
+        StaticAccessKind, StaticClassLifecycleOperation, StaticEffectEdgeKind, StaticEffectNode,
+        StaticEffectPhase, StaticLifecyclePlan,
     },
     test_support::type_check_source,
 };
 
 use super::{
-    super::{infer_static_effects, plan_static_lifetimes},
+    super::{infer_static_effects_with_roots, plan_static_lifetimes},
     verify_planned_mir,
 };
 
@@ -56,7 +57,7 @@ fn accepts_a_complete_hand_built_phase_product() {
         .static_field_mut(field.field)
         .unwrap()
         .lifecycle = Some(indices);
-    let effects = infer_static_effects(&preliminary);
+    let (effects, authority) = infer_static_effects_with_roots(&preliminary);
     let plan = StaticLifecyclePlan::new(vec![field.field]);
     let lifecycle = MirProgramLifecycle::new(
         vec![MirStaticLifecycleDefinition {
@@ -92,7 +93,7 @@ fn accepts_a_complete_hand_built_phase_product() {
             },
         ],
         plan,
-        MirStaticLifecycleCertificate::new(effects, Vec::new()),
+        MirStaticLifecycleCertificate::new(authority, effects, Vec::new()),
     );
     let planned = PlannedMirProgram::new(preliminary, lifecycle);
 
@@ -206,6 +207,161 @@ fn rejects_missing_function_value_candidate_and_retention_inventory() {
         .clear();
 
     assert!(errors(&planned).contains("candidate and retention inventory"));
+}
+
+#[test]
+fn rejects_missing_extra_and_duplicate_authority_entries() {
+    let mut missing_root = plan(DEPENDENCY_SOURCE);
+    missing_root
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .pop();
+    assert!(errors(&missing_root).contains("omits lifecycle root"));
+
+    let mut duplicate_root = plan(DEPENDENCY_SOURCE);
+    let roots = duplicate_root
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test();
+    roots.insert(1, roots[0].clone());
+    assert!(errors(&duplicate_root).contains("duplicate lifecycle root"));
+
+    let mut missing_fact = plan(DEPENDENCY_SOURCE);
+    missing_fact
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .iter_mut()
+        .find(|root| !root.effects().is_empty())
+        .unwrap()
+        .effects_mut_for_test()
+        .pop();
+    assert!(errors(&missing_fact).contains("omits preliminary-MIR fact"));
+
+    let mut duplicate_fact = plan(DEPENDENCY_SOURCE);
+    let root = duplicate_fact
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .iter_mut()
+        .find(|root| !root.effects().is_empty())
+        .unwrap();
+    let duplicate = root.effects()[0];
+    root.effects_mut_for_test().insert(1, duplicate);
+    assert!(errors(&duplicate_fact).contains("duplicate fact"));
+
+    let mut extra_fact = plan(DEPENDENCY_SOURCE);
+    let root = extra_fact
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .iter_mut()
+        .find(|root| !root.effects().is_empty())
+        .unwrap();
+    let mut extra = root.effects()[0];
+    extra.set_lifecycle_owned_for_test(!extra.is_lifecycle_owned());
+    root.effects_mut_for_test().push(extra);
+    root.effects_mut_for_test().sort_unstable();
+    assert!(errors(&extra_fact).contains("contains extra fact"));
+
+    let mut extra_root = plan(DEPENDENCY_SOURCE);
+    let extra_node = extra_root
+        .effects()
+        .summaries()
+        .map(|summary| summary.node)
+        .find(|node| extra_root.authority().root(*node).is_none())
+        .expect("fixture must contain a non-lifecycle effect node");
+    let roots = extra_root
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test();
+    let mut extra = roots[0].clone();
+    extra.set_root_for_test(extra_node);
+    roots.push(extra);
+    roots.sort_by_key(|root| root.root());
+    assert!(errors(&extra_root).contains("extra lifecycle root"));
+}
+
+#[test]
+fn rejects_foreign_authority_identities() {
+    let mut foreign_root = plan(DEPENDENCY_SOURCE);
+    foreign_root
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()[0]
+        .set_root_for_test(StaticEffectNode::class(
+            ClassId::new(99),
+            StaticClassLifecycleOperation::CompleteFinalizer,
+        ));
+    assert!(errors(&foreign_root).contains("foreign lifecycle root"));
+
+    let mut foreign_field = plan(DEPENDENCY_SOURCE);
+    foreign_field
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .iter_mut()
+        .find(|root| !root.effects().is_empty())
+        .unwrap()
+        .effects_mut_for_test()[0]
+        .set_target_for_test(StaticFieldId::new(ClassId::new(99), 0));
+    assert!(errors(&foreign_field).contains("foreign static field"));
+}
+
+#[test]
+fn rejects_changed_authority_access_phase_and_lifecycle_ownership() {
+    let mut wrong_access = plan(DEPENDENCY_SOURCE);
+    let fact = wrong_access
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .iter_mut()
+        .find_map(|root| root.effects_mut_for_test().first_mut())
+        .unwrap();
+    fact.set_access_for_test(if fact.access() == StaticAccessKind::Read {
+        StaticAccessKind::Write
+    } else {
+        StaticAccessKind::Read
+    });
+    assert!(errors(&wrong_access).contains("contains extra fact"));
+
+    let mut wrong_phase = plan(DEPENDENCY_SOURCE);
+    let fact = wrong_phase
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .iter_mut()
+        .find_map(|root| root.effects_mut_for_test().first_mut())
+        .unwrap();
+    fact.set_phase_for_test(if fact.phase() == StaticEffectPhase::Ordinary {
+        StaticEffectPhase::Copy
+    } else {
+        StaticEffectPhase::Ordinary
+    });
+    assert!(errors(&wrong_phase).contains("contains extra fact"));
+
+    let mut wrong_ownership = plan(DEPENDENCY_SOURCE);
+    let fact = wrong_ownership
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .authority_mut_for_test()
+        .roots_mut_for_test()
+        .iter_mut()
+        .find_map(|root| root.effects_mut_for_test().first_mut())
+        .unwrap();
+    fact.set_lifecycle_owned_for_test(!fact.is_lifecycle_owned());
+    assert!(errors(&wrong_ownership).contains("contains extra fact"));
 }
 
 #[test]

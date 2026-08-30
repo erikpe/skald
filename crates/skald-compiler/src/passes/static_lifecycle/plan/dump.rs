@@ -15,11 +15,31 @@ use super::{
 
 pub fn dump_planned_mir(program: &PlannedMirProgram) -> String {
     format!(
-        "{}{}{}",
+        "{}{}{}{}",
         dump_preliminary_mir(program.preliminary()),
         dump_static_effects(program.effects()),
+        dump_baseline_authority(program),
         dump_static_lifetime_plan(program),
     )
+}
+
+fn dump_baseline_authority(program: &PlannedMirProgram) -> String {
+    let mut output = String::from("StaticLifecycleBaselineAuthority\n");
+    for root in program.authority().roots() {
+        output.push_str("  Root ");
+        write_node(&mut output, root.root());
+        output.push('\n');
+        for fact in root.effects() {
+            output.push_str("    Effect ");
+            write_field_reference(&mut output, program, fact.target());
+            let _ = write!(output, " {:?} {:?}", fact.access(), fact.phase());
+            if fact.is_lifecycle_owned() {
+                output.push_str(" lifecycle-destination");
+            }
+            output.push('\n');
+        }
+    }
+    output
 }
 
 pub fn dump_static_lifetime_plan(program: &PlannedMirProgram) -> String {

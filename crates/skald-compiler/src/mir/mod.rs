@@ -75,8 +75,9 @@ pub use model::{
     StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
     StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
-    StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
-    StorageId, ValueId,
+    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecyclePlan,
+    StaticLifecycleRootAuthority, StaticLifetimeDependency, StaticLifetimeEvidence,
+    StaticLifetimePhase, StorageId, ValueId,
 };
 pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,

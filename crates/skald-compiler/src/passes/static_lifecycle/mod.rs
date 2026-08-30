@@ -14,6 +14,9 @@ mod solve;
 mod synthesize;
 mod verify;
 
+pub use crate::mir::{
+    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
+};
 pub use dump::dump_static_effects;
 pub use model::{
     StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
@@ -34,10 +37,7 @@ use crate::mir::PreliminaryMirProgram;
 
 fn infer_static_effects_with_roots(
     program: &PreliminaryMirProgram,
-) -> (
-    StaticEffectAnalysis,
-    root_effects::StaticLifecycleRootEffectAnalysis,
-) {
+) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
     let graph = extract::extract(program);
     let root_effects = root_effects::analyze(program, &graph)
         .expect("verified preliminary MIR must have valid lifecycle-root identities");

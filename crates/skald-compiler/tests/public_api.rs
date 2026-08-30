@@ -35,6 +35,7 @@ use skald_compiler::{
         MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
         MirPlaceProjection, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveComparison,
         MirPrimitiveType, MirProgram, MirType, MirUnaryOperation, MirViewTarget,
+        StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -228,6 +229,18 @@ fn intentional_phase_and_dump_paths_compose() {
     let static_effects: &StaticEffectAnalysis = planned.effects();
     let _static_effect_dump = dump_static_effects(static_effects);
     let _planned_dump = dump_planned_mir(&planned);
+    let authority: &StaticLifecycleAuthority = planned.authority();
+    for root in authority.roots() {
+        let root: &StaticLifecycleRootAuthority = root;
+        assert_eq!(authority.root(root.root()), Some(root));
+        for fact in root.effects() {
+            let fact: &StaticLifecycleEffectFact = fact;
+            let _target = fact.target();
+            let _access = fact.access();
+            let _phase = fact.phase();
+            let _lifecycle_owned = fact.is_lifecycle_owned();
+        }
+    }
     let _lifecycle: &StaticLifecyclePlan = planned.lifecycle();
     let _dependencies: &[StaticLifetimeDependency] = planned.dependencies();
     let synthesized = synthesize_static_lifecycle(planned).unwrap();
