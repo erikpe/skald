@@ -3,7 +3,7 @@
 Status: frozen design proposal. DMI1 through DMI12 were confirmed together on
 2026-08-30 and promoted into the
 [compiler phase and IR contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction).
-The planned
+The active
 [implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md) owns
 delivery; this document preserves the reviewed decisions.
 

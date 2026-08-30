@@ -10,7 +10,14 @@
 //! Program-semantic identities, including source
 //! [`BindingId`](crate::identity::BindingId) values, are deliberately outside
 //! this traversal.
+//!
+//! Dense callable tables move into private sparse edit state while a
+//! transformation is in progress. Tombstones and explicit order never
+//! masquerade as committed MIR; deterministic dense reconstruction belongs to
+//! the separate commit boundary.
 
+mod edit;
+mod error;
 mod identity;
 mod map;
 

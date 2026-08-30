@@ -1,6 +1,6 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: in progress; DMR0 is implemented and DMR1 is next.
+Status: in progress; DMR0-DMR1 are implemented and DMR2 is next.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
@@ -64,7 +64,7 @@ rather than expanding a reviewed task.
 ## Progress
 
 - [x] DMR0 — Establish exhaustive local-identity traversal
-- [ ] DMR1 — Introduce stable sparse edit storage
+- [x] DMR1 — Introduce stable sparse edit storage
 - [ ] DMR2 — Commit deterministic dense callable state
 - [ ] DMR3 — Integrate every executable definition kind
 - [ ] DMR4 — Publish the supported callable editing facade
@@ -129,25 +129,25 @@ off the production pipeline until the sparse transaction consumes it.
 **Purpose:** Add the private representation in which a pass can make several
 structural changes without renumbering unrelated entities after each edit.
 
-- [ ] Add a small reusable private slot-table owner for live entries,
+- [x] Add a small reusable private slot-table owner for live entries,
       tombstones, monotonic allocation, ownership checks, and stable lookup;
       keep abstractions limited to the four repeated dense-table
       responsibilities.
-- [ ] Move storage, values, blocks, and path conditions into sparse edit slots
+- [x] Move storage, values, blocks, and path conditions into sparse edit slots
       when opening an isolated callable transaction.
-- [ ] Maintain explicit block order independently from block allocation and
+- [x] Maintain explicit block order independently from block allocation and
       require append, before, or after placement for new blocks.
-- [ ] Retain storage and value slot order and enforce parent-before-child path
+- [x] Retain storage and value slot order and enforce parent-before-child path
       condition creation.
-- [ ] Represent logical-expression records with ordered tombstones and seed a
+- [x] Represent logical-expression records with ordered tombstones and seed a
       private optional-guard registry from existing references without adding a
       committed MIR table.
-- [ ] Keep block instruction vectors block-owned and provide no persistent
+- [x] Keep block instruction vectors block-owned and provide no persistent
       instruction identity.
-- [ ] Prevent the transaction, its sparse tables, and its mutation methods from
+- [x] Prevent the transaction, its sparse tables, and its mutation methods from
       being passed to ordinary verification, dumping, lifecycle analysis, or a
       backend.
-- [ ] Split storage, order, guard, and error responsibilities into cohesive
+- [x] Split storage, order, guard, and error responsibilities into cohesive
       modules rather than growing one editor implementation file.
 
 **Tests:** Stable IDs across earlier and repeated deletions; monotonic new slot
@@ -161,6 +161,17 @@ deterministic results across equivalent edit sequences.
 **Exit criteria:** An isolated private callable transaction supports stable
 sparse slots, deletion, allocation, and explicit ordering without exposing a
 malformed `MirProgram` or renumbering live entities.
+
+**Completed:** The private common callable edit state now moves dense storage,
+value, block, and path-condition declarations into one reusable sparse-slot
+owner with stable tombstones and monotonic allocation. Block order is explicit,
+logical records have ordered tombstones, path parents must precede children,
+and optional guards are discovered through the exhaustive mapper and retained
+in a private sparse registry. Focused tests cover ownership, declaration
+identity, repeated deletion, every allocation family, block placement and order
+validation, guard holes, logical order, block-owned instructions, and
+deterministic equivalent edits. No dense reconstruction or production pipeline
+entry point exists yet.
 
 ### DMR2 — Commit deterministic dense callable state
 

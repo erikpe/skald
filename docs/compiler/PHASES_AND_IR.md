@@ -473,9 +473,10 @@ and its active
 [implementation roadmap](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 define the target-independent structural editing boundary that follows the
 static-lifecycle certificate foundation. The exhaustive local-identity
-traversal described below is implemented; sparse editing, compaction, and
-pipeline integration remain roadmap work. The current pipeline still has no
-production MIR transformation.
+traversal and private sparse common callable state described below are
+implemented; dense commit, callable-specific adapters, and pipeline integration
+remain roadmap work. The current pipeline still has no production MIR
+transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -483,14 +484,16 @@ position, and verified consumers may continue to index callable tables without
 building sparse maps. Program-level semantic identities and existing
 source-semantic `BindingId` provenance are not renumbered.
 
-A pass that structurally changes executable MIR instead opens one complete
-callable package in a private owned edit transaction. Storage, value, block,
-and path-condition entities occupy stable sparse slots with tombstones until
-commit. Logical-expression records have ordered tombstones, blocks have an
-explicit order independent from allocation, and a private registry owns
-optional guards without adding a committed guard table. The transaction is not
-a `MirProgram` and cannot enter ordinary verification, static-lifecycle
-analysis, dumping, or a backend.
+The implemented private edit state moves one callable's storage, values,
+blocks, and path conditions into stable sparse slots with tombstones. Blocks
+retain their instruction vectors and have an explicit order independent from
+allocation; new blocks require append, before, or after placement. Logical
+records use ordered tombstones, path-condition creation requires an already
+allocated earlier parent, and a private registry discovers optional guards
+through the exhaustive traversal without adding a committed guard table.
+Allocation is callable-local and monotonic, so deletion never renumbers a live
+edit slot. This state is not a `MirBody` or `MirProgram` and has no path into
+ordinary verification, static-lifecycle analysis, dumping, or a backend.
 
 Commit is atomic and deterministic. Storage and values retain surviving slot
 order followed by allocation order; blocks use explicit editor order; path

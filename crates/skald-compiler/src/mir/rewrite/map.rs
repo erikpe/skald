@@ -130,10 +130,13 @@ fn map_callable_body<M: MirLocalIdentityMapper>(
         let MirValue { id, ty: _, span: _ } = declaration;
         map_value(mapper, MirLocalIdentitySite::ValueDeclaration(index), id)?;
     }
-    map_body(body, mapper)
+    map_body_local_identities(body, mapper)
 }
 
-fn map_body<M: MirLocalIdentityMapper>(body: &mut MirBody, mapper: &mut M) -> Result<(), M::Error> {
+pub(super) fn map_body_local_identities<M: MirLocalIdentityMapper>(
+    body: &mut MirBody,
+    mapper: &mut M,
+) -> Result<(), M::Error> {
     let MirBody {
         entry,
         blocks,
