@@ -7,10 +7,23 @@ use crate::mir::{MirProgram, MirVerificationErrors};
 
 use super::static_lifecycle;
 
+// Selection is intentionally dormant until request policy is threaded through
+// the driver. Its focused tests establish the registry and schedule contracts
+// without changing the verification-only production pipeline.
+#[allow(dead_code)]
+mod policy;
+
 // This owner is intentionally dormant until the first production MIR pass.
 // Its unit tests exercise the complete invalidation and resealing path now.
 #[allow(dead_code)]
 mod rewrite;
+
+#[allow(unused_imports)]
+pub(crate) use policy::{
+    registered_mir_pass_names, resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
+    MirOptimizationProfile, MirPassIdentity, MirPassOccurrence, MirPassSchedule,
+    MirPassScheduleError,
+};
 
 #[cfg(test)]
 pub(crate) use rewrite::run_transforming_mir_pipeline;

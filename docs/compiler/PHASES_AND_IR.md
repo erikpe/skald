@@ -623,29 +623,38 @@ that can consume the now-implemented rewrite boundary.
 
 ### Frozen selectable final-MIR optimization pipeline direction
 
-The next target-independent boundary is a deterministic selectable pipeline
-over verified final MIR. Its frozen design is preserved in the
+The target-independent optimizer now has a deterministic selection-policy
+foundation over final MIR. Its frozen complete design is preserved in the
 [decision record](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md),
 and its delivery is owned by the
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
-This section specifies planned compiler direction, not current behavior: the
-production pipeline still performs one final verification and no
-transformation.
+The typed registry, empty profiles, schedule occurrence model, exclusions, and
+exact compiler-internal schedule resolver described below are implemented.
+Request/CLI selection, production schedule execution, per-pass observation,
+verified checkpoints, and the canary remain planned. The production pipeline
+therefore still performs one final verification and no transformation.
 
-One compiler-owned static registry assigns every pass a typed identity, a
-unique stable kebab-case name, descriptive metadata, and one transformation
-entry point. Profiles expand request-locally into explicit immutable ordered
-schedules. The initial `none` profile has no transformation occurrences and
-the completed `default` profile contains
-`dead-pure-definition-elimination` exactly once. A schedule may deliberately
-repeat a pass, and every occurrence is identified by schedule position, pass
-identity, and that pass's zero-based occurrence number. Filesystem order,
-module discovery, map iteration, or compiler worker completion never selects
-execution order. Exact schedules remain crate-private inputs for tests and
-compiler tools; the supported command line selects profiles and exclusions,
+One compiler-owned immutable registry couples each entry's typed identity,
+unique stable lowercase kebab-case name, description, and implementation-
+declared identity. Deterministic validation rejects duplicate identities or
+names, invalid names, empty descriptions, and mismatched implementation
+identity before schedule selection. The production registry is currently
+empty. The implemented `none` and `default` profiles both expand to empty
+explicit ordered schedules until the canary is activated; at roadmap
+completion `default` contains `dead-pure-definition-elimination` exactly once.
+
+A resolved schedule may deliberately repeat a pass, and every occurrence is
+identified by its resolved schedule position, pass identity, and that pass's
+zero-based occurrence number. Stable-name exclusions remove every matching
+occurrence, duplicate exclusions are idempotent, and unknown names plus the
+complete known-name inventory are sorted lexically. Filesystem order, module
+discovery, registry order, map iteration, or compiler worker completion never
+selects execution order. Exact schedules are a crate-private input for tests
+and compiler tools. The planned command line selects profiles and exclusions,
 not arbitrary pass order.
 
-The pipeline first calls central final-MIR verification, including immutable
+The planned transforming runner first calls central final-MIR verification,
+including immutable
 static-lifecycle realization. Every occurrence then receives read-only access
 to that verified product and one pipeline-owned capability to consume the seal
 through the atomic whole-program rewrite coordinator. An unchanged outcome
@@ -666,7 +675,7 @@ no preservation declarations or global analysis manager. Whole-program
 analysis may inspect all verified definitions, but edits still commit through
 the single atomic program coordinator.
 
-The pipeline owns ordered occurrence measurements, deterministic aggregates,
+The planned runner owns ordered occurrence measurements, deterministic aggregates,
 and optional borrowed inspection checkpoints after initial verification,
 after each completed occurrence, and after the complete schedule. Only
 verified products may be inspected. Reports contain compact typed metrics and

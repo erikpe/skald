@@ -8,8 +8,10 @@ and
 [reporting contract](../compiler/REPORTING.md#frozen-final-mir-pass-reporting).
 The
 [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-owns delivery; none of the planned framework or production optimization is
-implemented yet.
+owns delivery. Its typed registry, empty profiles, deterministic schedule and
+occurrence model, exclusions, and exact compiler-internal schedule resolver
+are implemented; request/CLI wiring, production pass execution, observation,
+and the canary remain planned.
 
 This proposal defines the first production target-independent optimization
 framework for Skald. It builds on the implemented static-lifecycle authority

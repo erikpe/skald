@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: planned. MPR0 is the next task.
+Status: in progress. MPR0 is complete; MPR1 is next.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -84,7 +84,7 @@ rather than expanding an active task.
 
 ## Progress
 
-- [ ] MPR0 — Establish registry, profiles, and schedule resolution
+- [x] MPR0 — Establish registry, profiles, and schedule resolution
 - [ ] MPR1 — Add typed request and CLI selection
 - [ ] MPR2 — Productionize the verified multi-pass runner
 - [ ] MPR3 — Add structured pass measurements and reporting
@@ -100,26 +100,26 @@ rather than expanding an active task.
 **Purpose:** Establish deterministic pass identity and policy independently of
 execution, request parsing, or a production transformation.
 
-- [ ] Add a cohesive final-MIR pipeline policy owner behind the existing
+- [x] Add a cohesive final-MIR pipeline policy owner behind the existing
       `passes` facade, with typed pass identity, stable name, description, and
       private transformation descriptor responsibilities kept distinct.
-- [ ] Define one immutable compiler-owned registry with deterministic lookup
+- [x] Define one immutable compiler-owned registry with deterministic lookup
       by identity and name; reject duplicate identities, duplicate names,
       invalid stable-name spelling, and descriptor/implementation mismatch in
       focused validation.
-- [ ] Define typed `none` and `default` profiles and resolve them to immutable
+- [x] Define typed `none` and `default` profiles and resolve them to immutable
       ordered schedules without using registry iteration order.
-- [ ] Represent schedule position and zero-based per-pass occurrence number so
+- [x] Represent schedule position and zero-based per-pass occurrence number so
       deliberate repeated passes remain unambiguous.
-- [ ] Add deterministic exclusion resolution that removes every occurrence,
+- [x] Add deterministic exclusion resolution that removes every occurrence,
       treats duplicate exclusions idempotently, and reports unknown names with
       the known registry names sorted lexically.
-- [ ] Add a crate-private exact-schedule construction surface for isolated,
+- [x] Add a crate-private exact-schedule construction surface for isolated,
       repeated, and ordering tests without exposing arbitrary order through the
       driver API.
-- [ ] Keep the production registry and both profiles empty during this task;
+- [x] Keep the production registry and both profiles empty during this task;
       no callback runs and current compilation behavior remains unchanged.
-- [ ] Split identity, descriptor, profile, schedule, and error logic into small
+- [x] Split identity, descriptor, profile, schedule, and error logic into small
       responsibility-oriented modules rather than growing the pass facade.
 
 **Tests:** Registry uniqueness and stable-name validation; exact empty profile
@@ -134,7 +134,17 @@ iteration independence; deterministic results from equivalent inputs.
 registry and resolve profiles, exclusions, repetition, and exact internal
 schedules, while the production pipeline still executes zero passes.
 
-**Completed:**
+**Completed:** The pass facade now exposes a crate-private policy layer with a
+typed identity, separately validated descriptor/implementation ownership, an
+immutable static registry, typed empty `none` and `default` profiles,
+deterministic exclusions, exact internal schedules, and positional occurrence
+numbering. Registry validation rejects duplicate identities/names, malformed
+stable names, empty descriptions, and identity mismatches in deterministic
+order. Ten focused policy tests cover the frozen matrix, while the existing
+empty-pipeline tests prove production still performs one verification and zero
+passes. `cargo test --locked -p skald-compiler passes`, `make fmt-check`,
+`make lint`, `make docs-check`, `make msrv-check`, and `git diff --check` passed
+on 2026-08-30.
 
 ### MPR1 — Add typed request and CLI selection
 

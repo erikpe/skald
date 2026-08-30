@@ -8,9 +8,11 @@ and
 roadmaps. The next enabling layer has a
 frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
-and a planned
+and an active
 [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
-The remaining constraints have no implementation roadmap.
+The roadmap's typed registry and deterministic schedule-policy foundation are
+implemented, with request selection next. The remaining constraints have no
+implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -79,9 +81,10 @@ roadmap:
 | Reachability after machine lowering | Retains unreachable work through legality, layout, frame planning, and instruction selection | Phase-placement debt | High for size, compile time, and whole-world follow-ons | Medium to large | Early whole-world optimization after lifecycle and rewrite foundations |
 | Conservative alias, effect, and ownership knowledge | Prevents memory and ownership optimizations unless each pass proves safety independently | Analysis-infrastructure gap under intentionally permissive language semantics | High, with precision improving incrementally | Large to extra large | Build a conservative shared analysis after the first MIR passes |
 
-The static-lifecycle and dense-identity rewriting foundations are implemented;
-they deliberately land no production optimization or general pass registry.
-Together those boundaries support later constant folding, algebraic
+The static-lifecycle and dense-identity rewriting foundations are implemented.
+The active pipeline roadmap now also provides a typed empty registry, profiles,
+and deterministic schedule resolution, while deliberately retaining zero
+production optimizations. Together those boundaries support later constant folding, algebraic
 simplification, copy propagation, dead-pure-definition elimination, and
 conservative CFG simplification. Earlier reachability then offers a
 comparatively contained way to exploit permanent whole-world compilation. A
@@ -528,8 +531,8 @@ allocation elision is not included in this assessment.
 1. Settle the lifecycle proof relation for effect-removing transformations.
 2. Introduce exhaustive MIR traversal, rewriting, and deterministic compaction.
 3. Add the named pass registry, selection profiles, per-pass verification, and
-   optimized MIR dumps around those contracts. The frozen boundary is recorded
-   in the
+   optimized MIR dumps around those contracts. The registry and deterministic
+   schedule-policy portion is implemented; the remaining boundary is recorded in the
    [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
    and delivery is divided by its
    [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).

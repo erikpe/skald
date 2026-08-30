@@ -6,7 +6,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+is in progress. Its typed registry, empty `none`/`default` profiles,
+deterministic schedule occurrence model, exclusions, and crate-private exact
+schedule resolver are implemented. Typed request and CLI selection is next.
 
 ## Pending discoveries
 
@@ -33,12 +37,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The
-[selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is planned. It begins with a typed registry, profiles, and deterministic
-schedule resolution; proceeds through request/CLI policy, verified execution,
-structured observation, and verified checkpoints; and ends by activating and
-hardening the narrow dead-pure-definition elimination canary in `default`.
+No other implementation roadmap is currently planned.
 
 ## Design proposals
 
@@ -52,8 +51,9 @@ into the living
 [compiler phase](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
 [driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
 and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
-contracts. The planned roadmap owns implementation; no production optimization
-is implemented yet.
+contracts. The active roadmap owns implementation; no production optimization
+is implemented yet. The registry and schedule-policy foundation is current;
+the remaining pipeline is in progress.
 
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented
