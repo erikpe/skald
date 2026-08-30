@@ -753,6 +753,31 @@ analyses more tractable, but neither assumption weakens verification,
 determinism, evaluation-order, checked-failure, allocation, ownership, alias,
 or destruction requirements.
 
+### Current execution-dependency vocabulary
+
+MIR now owns one neutral `MirExecutionNode` identity for callables, class copy
+construction, class copy assignment, complete class finalization, and array
+default/copy/assignment/destruction. The existing `StaticEffectNode` and
+static lifecycle operation names are compatibility aliases for that same type,
+so correctness analysis and future reachability analysis cannot acquire
+independently drifting lifecycle-node taxonomies.
+
+The crate-private `passes::reachability` facade defines typed dependency
+targets and edge kinds, whole-program root targets and reasons, runtime-entity
+references, semantic-declaration references, and physically retained callable-
+definition references. Executable nodes, declarations, retained bodies,
+runtime metadata, external/intrinsic leaves, and backend artifacts therefore
+remain distinct roles even when they refer to related semantic identities.
+Canonical comparison keys define deterministic node, edge-kind, root-reason,
+and source-span order without exposing future graph storage.
+
+This is a contract layer only. It does not yet collect roots, extract edges,
+resolve targets, compute closure, bind facts to final MIR, remove definitions,
+change a pass schedule, or affect backend output. Any new MIR operation that
+can select executable work, or new implicit lifecycle operation, must update
+the exhaustive dependency extraction and its focused coverage in the same
+change.
+
 ### Frozen target-independent whole-world reachability direction
 
 The confirmed

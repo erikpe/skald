@@ -7,6 +7,9 @@ pub mod static_lifecycle;
 
 mod graph;
 mod pipeline;
+// The contract lands before its first extraction and closure consumers.
+#[allow(dead_code, unused_imports)]
+pub(crate) mod reachability;
 
 // The exact resolver is a frozen compiler-internal experiment surface; no
 // production adapter selects it yet.

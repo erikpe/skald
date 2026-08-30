@@ -2,50 +2,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::identity::{ArrayTypeId, CallableId, ClassId, StaticFieldId};
+use crate::identity::StaticFieldId;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum StaticClassLifecycleOperation {
-    CopyConstructor,
-    CopyAssignment,
-    CompleteFinalizer,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum StaticArrayLifecycleOperation {
-    Default,
-    Copy,
-    Assignment,
-    Destruction,
-}
-
-/// Stable identity of a callable or implicit lifecycle root.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum StaticEffectNode {
-    Callable(CallableId),
-    ClassLifecycle {
-        class: ClassId,
-        operation: StaticClassLifecycleOperation,
-    },
-    ArrayLifecycle {
-        array: ArrayTypeId,
-        operation: StaticArrayLifecycleOperation,
-    },
-}
-
-impl StaticEffectNode {
-    pub const fn callable(callable: CallableId) -> Self {
-        Self::Callable(callable)
-    }
-
-    pub const fn class(class: ClassId, operation: StaticClassLifecycleOperation) -> Self {
-        Self::ClassLifecycle { class, operation }
-    }
-
-    pub const fn array(array: ArrayTypeId, operation: StaticArrayLifecycleOperation) -> Self {
-        Self::ArrayLifecycle { array, operation }
-    }
-}
+use super::StaticEffectNode;
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum StaticAccessKind {

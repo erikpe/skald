@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Discoveries
 
-Status: active companion to the planned
+Status: active companion to the in-progress
 [target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md).
 No follow-up discovery is currently recorded.
 

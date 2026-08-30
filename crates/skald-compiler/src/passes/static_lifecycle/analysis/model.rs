@@ -6,6 +6,7 @@ pub(crate) use crate::mir::{
     StaticEffectNode, StaticEffectPhase,
 };
 
+pub(crate) use crate::passes::reachability::mir_span_key as span_key;
 use crate::{identity::StaticFieldId, source::Span};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -131,14 +132,6 @@ impl StaticEffectAnalysis {
     pub const fn recursive_components(&self) -> usize {
         self.recursive_components
     }
-}
-
-pub(crate) fn span_key(span: Span) -> (usize, usize, usize) {
-    (
-        span.source_id().index(),
-        span.range().start(),
-        span.range().end(),
-    )
 }
 
 pub(crate) fn evidence_key(

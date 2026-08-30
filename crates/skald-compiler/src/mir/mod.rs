@@ -19,22 +19,24 @@ pub(crate) mod test_fixtures;
 
 pub use dump::{dump_mir, dump_preliminary_mir};
 pub use lower::{lower_hir, lower_preliminary_hir};
+pub(crate) use model::mir_execution_node_key;
 pub(crate) use model::MirProgramStatistics;
 pub use model::{
     BlockId, MirAggregateOptionalAssign, MirAggregateOptionalCleanup,
     MirAggregateOptionalInitialize, MirAggregateOptionalPublish, MirAggregateOptionalSource,
     MirAliasAccess, MirArgument, MirArrayAnchorKind, MirArrayAssignElement, MirArrayBoundary,
     MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement, MirArrayFailure,
-    MirArrayInstruction, MirArrayLifecycle, MirArrayOwnership, MirArrayPositionKind, MirArrayType,
-    MirArrayTypeTable, MirAssignment, MirBaseCopy, MirBasicBlock, MirBinaryOperation, MirBody,
-    MirCall, MirCallReceiver, MirCallTarget, MirCallableAddress, MirCallableSignature,
-    MirCellWriteAuthorization, MirCheckedViewBinding, MirCheckedViewEnd, MirClassDeclaration,
-    MirClassDeclarationTable, MirClassOptionalAssign, MirClassOptionalCleanup,
-    MirClassOptionalInitialize, MirClassOptionalPublish, MirClassOptionalSource, MirCleanup,
-    MirComparisonOperand, MirComparisonPredicate, MirCopyAssignment, MirCopyAssignmentDeclaration,
-    MirCopyCapability, MirCopyConstruction, MirCopyConstructorDeclaration, MirDefinitionRef,
-    MirDestructionPlan, MirDestructionStep, MirDestructorDeclaration, MirDirectBase,
-    MirEndFullExpression, MirF64ToIntegerRange, MirF64ToIntegerRounding, MirFieldDeclaration,
+    MirArrayInstruction, MirArrayLifecycle, MirArrayLifecycleOperation, MirArrayOwnership,
+    MirArrayPositionKind, MirArrayType, MirArrayTypeTable, MirAssignment, MirBaseCopy,
+    MirBasicBlock, MirBinaryOperation, MirBody, MirCall, MirCallReceiver, MirCallTarget,
+    MirCallableAddress, MirCallableSignature, MirCellWriteAuthorization, MirCheckedViewBinding,
+    MirCheckedViewEnd, MirClassDeclaration, MirClassDeclarationTable, MirClassLifecycleOperation,
+    MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
+    MirClassOptionalPublish, MirClassOptionalSource, MirCleanup, MirComparisonOperand,
+    MirComparisonPredicate, MirCopyAssignment, MirCopyAssignmentDeclaration, MirCopyCapability,
+    MirCopyConstruction, MirCopyConstructorDeclaration, MirDefinitionRef, MirDestructionPlan,
+    MirDestructionStep, MirDestructorDeclaration, MirDirectBase, MirEndFullExpression,
+    MirExecutionNode, MirF64ToIntegerRange, MirF64ToIntegerRounding, MirFieldDeclaration,
     MirFinalWriteAuthorization, MirFunctionDeclaration, MirFunctionDeclarationTable,
     MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirFunctionType,
     MirFunctionTypeTable, MirIndirectCallTarget, MirInitialize, MirInitializerDeclaration,

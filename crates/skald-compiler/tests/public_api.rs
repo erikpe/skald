@@ -29,15 +29,17 @@ use skald_compiler::{
     literal::{IntegerRadix, NumericLiteralKind},
     mir::{
         dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir, verify_mir,
-        verify_preliminary_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
-        MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver, MirCallableAddress,
-        MirComparisonOperand, MirComparisonPredicate, MirDirectBase, MirFunctionType,
+        verify_preliminary_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayLifecycleOperation,
+        MirArrayType, MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver,
+        MirCallableAddress, MirClassLifecycleOperation, MirComparisonOperand,
+        MirComparisonPredicate, MirDirectBase, MirExecutionNode, MirFunctionType,
         MirFunctionTypeTable, MirIndirectCallTarget, MirIntegerBitwiseOperation, MirIntegerType,
         MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
         MirPlaceProjection, MirPlannedLifecycle, MirPrimitiveCast, MirPrimitiveCastKind,
         MirPrimitiveComparison, MirPrimitiveType, MirProgram, MirStaticLifecycleProof, MirType,
-        MirUnaryOperation, MirViewTarget, StaticLifecycleAuthority, StaticLifecycleEffectFact,
-        StaticLifecycleRootAuthority,
+        MirUnaryOperation, MirViewTarget, StaticArrayLifecycleOperation,
+        StaticClassLifecycleOperation, StaticEffectNode, StaticLifecycleAuthority,
+        StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -264,6 +266,11 @@ fn intentional_phase_and_dump_paths_compose() {
         .unwrap()
         .lifecycle()
         .proof();
+    let _neutral_node_from_certificate_name: Option<MirExecutionNode> = None::<StaticEffectNode>;
+    let _neutral_class_operation_from_certificate_name: Option<MirClassLifecycleOperation> =
+        None::<StaticClassLifecycleOperation>;
+    let _neutral_array_operation_from_certificate_name: Option<MirArrayLifecycleOperation> =
+        None::<StaticArrayLifecycleOperation>;
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;

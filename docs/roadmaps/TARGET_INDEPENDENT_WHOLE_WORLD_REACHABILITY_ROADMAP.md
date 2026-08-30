@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: planned; WRR0 is next.
+Status: in progress; WRR0 is complete and WRR1 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -91,7 +91,7 @@ instead of expanding reviewed scope.
 
 ## Progress
 
-- [ ] WRR0 — Establish the execution-dependency contract
+- [x] WRR0 — Establish the execution-dependency contract
 - [ ] WRR1 — Centralize possible-target and lifecycle dependency extraction
 - [ ] WRR2 — Implement deterministic root closure and analysis queries
 - [ ] WRR3 — Bind reachability facts to verified final MIR
@@ -109,28 +109,28 @@ instead of expanding reviewed scope.
 needed by both reachability and existing correctness analysis before changing
 target expansion or compiler behavior.
 
-- [ ] Add a target-independent reachability/dependency facade under `passes`
+- [x] Add a target-independent reachability/dependency facade under `passes`
       with an initial focused model/test owner and document where root,
       extraction, target, closure, and dump responsibilities will land as they
       become real; expose no production transformation yet.
-- [ ] Define stable typed execution-node identities for callables, class copy
+- [x] Define stable typed execution-node identities for callables, class copy
       construction, class copy assignment, complete class finalization, array
       default, array copy, array assignment, and array destruction.
-- [ ] Define exhaustive dependency-edge kinds and whole-program root reasons
+- [x] Define exhaustive dependency-edge kinds and whole-program root reasons
       without including static-effect phases, target symbols, or presentation
       text in semantic identity.
-- [ ] Establish the distinction between executable nodes, root reasons,
+- [x] Establish the distinction between executable nodes, root reasons,
       runtime-entity references, semantic declarations, and physically retained
       definitions in code documentation and focused types.
-- [ ] Reuse or carefully generalize the existing static-lifecycle node identity
+- [x] Reuse or carefully generalize the existing static-lifecycle node identity
       so there is not a second independently exhaustive lifecycle-node enum;
       preserve public/static-certificate compatibility where required.
-- [ ] Add deterministic canonical comparison keys for nodes, edge kinds,
+- [x] Add deterministic canonical comparison keys for nodes, edge kinds,
       spans, and root reasons; do not expose private storage representation.
-- [ ] Build shared fixture helpers for functions, members, static initializers,
+- [x] Build shared fixture helpers for functions, members, static initializers,
       virtual/interface dispatch, function values, and implicit lifecycle work
       without cloning large existing test builders.
-- [ ] Document the maintenance rule that every executable MIR operation or
+- [x] Document the maintenance rule that every executable MIR operation or
       lifecycle variant must update dependency extraction and coverage in the
       same change.
 
@@ -146,6 +146,14 @@ maintenance points.
 **Exit criteria:** One concise owner defines deterministic target-independent
 execution nodes, edges, roots, and runtime-entity vocabulary without changing
 static-effect results, final MIR, pass schedules, backend work, or artifacts.
+
+Completed on 2026-08-30. MIR now owns one neutral exhaustive execution-node
+identity while the prior static-lifecycle names remain compatibility aliases.
+The crate-private reachability facade owns the closed dependency, root,
+runtime-entity, semantic-declaration, and retained-definition vocabulary plus
+canonical ordering and shared focused fixtures. Static-effect analysis reuses
+the shared span key. No extraction, closure, seal integration, transformation,
+schedule, backend, or artifact behavior changed.
 
 ### WRR1 — Centralize possible-target and lifecycle dependency extraction
 

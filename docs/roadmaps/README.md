@@ -6,7 +6,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+has established its neutral execution-dependency contract. WRR1 is next: it
+will centralize possible-target and implicit-lifecycle dependency extraction
+without yet computing reachability or pruning MIR.
 
 ## Pending discoveries
 
@@ -21,7 +25,7 @@ and the completed
 are preserved in the archive. The completed
 [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 adds the enabling layer around those foundations and activates one conservative
-default pass. The frozen whole-world reachability design now has a planned
+default pass. The frozen whole-world reachability design now has an in-progress
 implementation roadmap and an active
 [discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
 The other four original unresolved constraints have no implementation roadmap.
@@ -32,14 +36,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The planned
-[target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-starts with WRR0. It establishes reusable final-MIR execution-dependency and
-root analysis, seal-bound reachability facts, independently verified sparse
-executable definitions, atomic stable-identity retention, backend retained-
-domain consumption, and a selectable definition-pruning pass. It depends on
-the completed static-lifecycle certificate, dense MIR rewriting, and selectable
-pipeline roadmaps.
+No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
@@ -50,7 +47,7 @@ reachability facts, stable-identity program retention, independently verified
 sparse executable definitions, backend retained-domain consumption, and one
 conservative definition-pruning client. Its
 [implementation roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-is planned, and the direction is promoted into the living
+is in progress, and the direction is promoted into the living
 [compiler phase](../compiler/PHASES_AND_IR.md#frozen-target-independent-whole-world-reachability-direction),
 [backend](../compiler/BACKEND.md#frozen-target-independent-reachability-boundary),
 [driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-whole-world-reachability-selection),
