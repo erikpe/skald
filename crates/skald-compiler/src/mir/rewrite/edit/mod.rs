@@ -148,6 +148,10 @@ impl MirCallableEdit {
         self.values.live_ids()
     }
 
+    pub(in crate::mir::rewrite) fn allocated_value_slots(&self) -> usize {
+        self.values.next_id().index()
+    }
+
     pub(crate) fn allocate_value(
         &mut self,
         build: impl FnOnce(ValueId) -> MirValue,

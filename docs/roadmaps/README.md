@@ -13,8 +13,9 @@ deterministic schedule occurrence model, exclusions, and crate-private exact
 schedule resolver are implemented. Typed request/CLI selection and schedule
 threading are also implemented. The verified multi-pass runner now owns pass
 capabilities, atomic changed-result rewriting, immediate resealing, and
-structured failure attribution. Structured pass measurement and reporting are
-next.
+structured failure attribution. Structured pass measurement/reporting,
+verified inspection checkpoints, and the exhaustive value-use census are also
+implemented. The dead-pure-definition canary implementation is next.
 
 ## Pending discoveries
 
@@ -33,7 +34,8 @@ constraints stay pending and have no implementation roadmap.
 The
 [selectable pipeline discoveries](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
 are the active companion for maintainability or architecture findings exposed
-by that roadmap. No deferred finding has been recorded yet.
+by that roadmap. It currently records the mutation-oriented identity mapper's
+snapshot cost for read-only analyses as a bounded post-canary follow-up.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -56,8 +58,9 @@ into the living
 [driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
 and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
 contracts. The active roadmap owns implementation; no production optimization
-is implemented yet. Registry, schedule policy, and request/CLI selection are
-current; structured occurrence reporting and the remaining pipeline are in
+is implemented yet. Registry and schedule policy, request/CLI selection,
+verified execution, occurrence reporting, checkpoint inspection, and the
+value-use census are current; the canary and activation hardening remain in
 progress.
 
 The completed dense callable-local MIR identity rewriting design and delivery

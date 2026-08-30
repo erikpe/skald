@@ -139,7 +139,7 @@ impl MirLocalIdentityMapper for ReindexBy {
     }
 }
 
-fn representative_function() -> MirFunctionDefinition {
+pub(super) fn representative_function() -> MirFunctionDefinition {
     let program = lower_source_to_mir("fn main() -> i64 { return 0; }");
     let mut definition = program
         .definitions

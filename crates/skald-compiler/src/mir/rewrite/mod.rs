@@ -20,6 +20,7 @@
 //! semantic cascading deletion of liveness or proof metadata.
 
 mod callable;
+mod census;
 mod commit;
 mod edit;
 mod error;
@@ -28,6 +29,7 @@ mod import;
 mod map;
 mod program;
 
+pub(crate) use census::{MirValueCensusEntry, MirValueUseCensus};
 pub(crate) use commit::{
     MirCommitMap, MirCommitMaps, MirEntityChangeCount, MirRewriteChangeSummary,
 };

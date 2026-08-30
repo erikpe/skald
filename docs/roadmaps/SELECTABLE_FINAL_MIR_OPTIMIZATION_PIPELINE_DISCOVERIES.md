@@ -37,7 +37,28 @@ roadmap instead of this file.
 
 ## Active findings
 
-No deferred findings have been recorded.
+### Mutation-oriented identity traversal makes read-only analyses snapshot MIR
+
+- **Problem:** The authoritative exhaustive identity traversal rewrites
+  identities in place, so a genuinely read-only consumer must currently map a
+  private clone rather than borrow the active callable directly.
+- **Evidence:** `mir::rewrite::map` accepts mutable MIR throughout, and the
+  value-use census consequently clones `MirCallableEdit` before invoking
+  `map_live_references`. A fixed-point optimization repeats that snapshot once
+  per analysis wave.
+- **Why deferred:** Introducing a shared immutable visitor/transform kernel
+  would touch the complete exhaustive traversal and every mapper, importer,
+  committer, substitution, and validation consumer. That is substantially
+  broader and riskier than publishing the narrow census needed by the frozen
+  pipeline.
+- **Likely owner:** The callable-local identity traversal under
+  `mir::rewrite`.
+- **Priority:** Medium after the canary has supplied representative compile-time
+  measurements; correctness and API isolation are unaffected.
+- **Bounded next step:** Measure snapshot cost on broad MIR fixtures, then
+  design a reviewable immutable-observer layer that shares the existing
+  exhaustive destructuring and compile-time coverage without creating a
+  second identity inventory.
 
 ## Resolution and closure
 

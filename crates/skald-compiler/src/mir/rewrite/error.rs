@@ -43,6 +43,11 @@ pub(crate) enum MirRewriteError {
         site: MirLocalIdentitySite,
         failure: MirReferenceFailure,
     },
+    DuplicateValueDefinition {
+        value: super::super::ValueId,
+        first: MirLocalIdentitySite,
+        duplicate: MirLocalIdentitySite,
+    },
     PathParentNotEarlier {
         condition: super::super::PathConditionId,
         parent: super::super::PathConditionId,
@@ -149,6 +154,14 @@ impl fmt::Display for MirRewriteError {
                     write!(formatter, "{identity} at {site} names a deleted edit slot")
                 }
             },
+            Self::DuplicateValueDefinition {
+                value,
+                first,
+                duplicate,
+            } => write!(
+                formatter,
+                "value {value} is defined at both {first} and {duplicate}"
+            ),
             Self::PathParentNotEarlier { condition, parent } => write!(
                 formatter,
                 "path condition {condition} requires earlier parent {parent}"

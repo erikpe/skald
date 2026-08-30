@@ -636,10 +636,10 @@ exact compiler-internal schedule resolver described below are implemented, as
 are typed request and CLI selection. Every compiler adapter resolves its
 profile before provider or source work and passes that schedule to the MIR
 pipeline. Production schedule execution, structured failure attribution, pass
-measurement/reporting, and verified inspection checkpoints are implemented;
-the shared value-use census and canary remain planned. Both supported profiles
-are empty, so ordinary production compilation still performs one final
-verification and no transformation.
+measurement/reporting, verified inspection checkpoints, and the shared
+value-use census are implemented; the canary remains planned. Both supported
+profiles are empty, so ordinary production compilation still performs one
+final verification and no transformation.
 
 One compiler-owned immutable registry couples each entry's typed identity,
 unique stable lowercase kebab-case name, description, implementation-declared
@@ -682,6 +682,18 @@ pre-commit local identities or instruction positions. The first framework has
 no preservation declarations or global analysis manager. Whole-program
 analysis may inspect all verified definitions, but edits still commit through
 the single atomic program coordinator.
+
+The callable editor provides one read-only value-use census backed by that
+same exhaustive identity traversal. It records every live value declaration
+in value-index order, distinguishes the unique instruction definition site
+from actual uses, and counts uses in rvalues, calls, arguments, terminators,
+logical proof records, and every other value-bearing site owned by the mapper.
+Definition positions and declarations are not uses. Foreign, unknown, deleted,
+and duplicate definition identities produce structured rewrite errors. A
+census describes only the edit snapshot from which it was computed: any
+rewrite invalidates it, and fixed-point passes must recompute before their next
+wave. This is deliberately not liveness, dominance, effect analysis, alias
+analysis, or a cached analysis manager.
 
 The runner now returns deterministic aggregates and, when trace observation is
 requested, one ordered typed record for every attempted occurrence. Records
@@ -2633,11 +2645,10 @@ Target-specific legality and structured backend failures are defined by the
 
 The supported MIR profiles currently verify without transforming. The frozen
 registry, profiles, request selection, verified runner, per-occurrence
-reporting, and verified inspection checkpoints are implemented; shared
-value-use analysis and the dead-pure canary remain planned. Every
-transformation has explicit ordering and returns changed MIR through the same
-verifier boundary. Compiler correctness must not depend on an optimization
-pass being enabled.
+reporting, verified inspection checkpoints, and shared value-use analysis are
+implemented; the dead-pure canary remains planned. Every transformation has
+explicit ordering and returns changed MIR through the same verifier boundary.
+Compiler correctness must not depend on an optimization pass being enabled.
 
 The shared-ownership implementation preserves this division of
 responsibility: HIR records owner provenance and anchor requirements, MIR

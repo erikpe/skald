@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: in progress. MPR0 through MPR4 are complete; MPR5 is next.
+Status: in progress. MPR0 through MPR5 are complete; MPR6 is next.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -89,7 +89,7 @@ rather than expanding an active task.
 - [x] MPR2 — Productionize the verified multi-pass runner
 - [x] MPR3 — Add structured pass measurements and reporting
 - [x] MPR4 — Add verified pipeline inspection checkpoints
-- [ ] MPR5 — Publish an exhaustive value-use census
+- [x] MPR5 — Publish an exhaustive value-use census
 - [ ] MPR6 — Implement the dead-pure-definition canary
 - [ ] MPR7 — Activate, harden, and close the canary pipeline
 
@@ -399,25 +399,25 @@ bytes. `cargo test --locked -p skald-compiler passes`,
 later scalar passes with exact definition/use data without introducing a
 general analysis manager.
 
-- [ ] Add a narrow read-only value census behind the MIR rewrite or analysis
+- [x] Add a narrow read-only value census behind the MIR rewrite or analysis
       facade, derived from the existing exhaustive callable-local identity
       mapper rather than a second hand-maintained MIR walk.
-- [ ] Distinguish value declarations, definition sites, and actual uses;
+- [x] Distinguish value declarations, definition sites, and actual uses;
       declarations and their defining result position must not count as uses.
-- [ ] Count uses in instructions, rvalues, calls, places, projections,
+- [x] Count uses in instructions, rvalues, calls, places, projections,
       terminators, path conditions, logical records, proof metadata, callable
       attachments, and every other value-bearing site owned by the mapper.
-- [ ] Return deterministic value-indexed counts and enough definition-site
+- [x] Return deterministic value-indexed counts and enough definition-site
       information for paired assignment/declaration deletion without exposing
       mutable MIR.
-- [ ] Reject malformed foreign, unknown, or duplicate definition identities
+- [x] Reject malformed foreign, unknown, or duplicate definition identities
       through existing structured traversal/error vocabulary rather than
       panicking or guessing.
-- [ ] Document analysis lifetime: a rewrite invalidates the census and the
+- [x] Document analysis lifetime: a rewrite invalidates the census and the
       canary recomputes it for every fixed-point wave.
-- [ ] Consolidate adjacent value-use scanning only when the new census can
+- [x] Consolidate adjacent value-use scanning only when the new census can
       become its complete authoritative replacement.
-- [ ] Keep the API deliberately smaller than liveness, effects, aliasing,
+- [x] Keep the API deliberately smaller than liveness, effects, aliasing,
       dominance, or an analysis cache.
 
 **Tests:** One declaration and one definition with zero uses; each reference
@@ -436,6 +436,30 @@ definition sites for every callable value, shares the authoritative traversal,
 and has an explicit post-rewrite invalidation rule.
 
 **Completed:**
+
+`MirCallableEdit` now exposes a read-only, pass-local value-use census over a
+private snapshot of its current sparse state. The census seeds live
+declarations in stable value-index order, uses the authoritative exhaustive
+identity mapper to distinguish definition hooks from actual references, and
+reports the exact structural definition site plus use count for each value.
+Definitions and declarations do not inflate use counts; rvalues, indirect
+calls, arguments, array and I/O operations, terminators, and logical proof
+records contribute through their existing mapper-owned sites. The shared live
+reference traversal now admits fallible observers as well as infallible
+substitution, avoiding a parallel MIR inventory. Foreign, unknown, deleted,
+and duplicate value definitions or references return structured rewrite
+errors. Documentation makes snapshot invalidation explicit: every rewrite
+requires recomputation before another fixed-point wave. Focused tests cover
+zero and multiple uses, dead-definition chains, logical metadata, exact
+definition sites, sparse recomputation, deterministic read-only behavior,
+malformed identities, duplicate definitions, and functions, members, and
+static initializers. The broader mutation-oriented traversal refactor exposed
+by snapshotting is bounded in the companion discoveries record rather than
+expanding this milestone. `cargo test --locked -p skald-compiler mir::rewrite`,
+`cargo test --locked -p skald-compiler mir::verify`,
+`cargo test --locked -p skald-compiler passes`, `make compiler-test`,
+`make fmt-check`, `make lint`, `make docs-check`, `make msrv-check`, and
+`git diff --check` passed on 2026-08-30.
 
 ### MPR6 — Implement the dead-pure-definition canary
 

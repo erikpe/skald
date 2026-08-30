@@ -63,7 +63,7 @@ impl MirCallableEdit {
             to,
             replacements: 0,
         };
-        self.map_live_references(&mut mapper);
+        infallible(self.map_live_references(&mut mapper));
         Ok(mapper.replacements)
     }
 
@@ -93,7 +93,7 @@ impl MirCallableEdit {
             to,
             replacements: 0,
         };
-        self.map_live_references(&mut mapper);
+        infallible(self.map_live_references(&mut mapper));
         Ok(mapper.replacements)
     }
 
@@ -126,35 +126,35 @@ impl MirCallableEdit {
         Ok(mapper.replacements)
     }
 
-    fn map_live_references(
+    pub(in crate::mir::rewrite) fn map_live_references<M: MirLocalIdentityMapper>(
         &mut self,
-        mapper: &mut impl MirLocalIdentityMapper<Error = Infallible>,
-    ) {
+        mapper: &mut M,
+    ) -> Result<(), M::Error> {
         for block in self.blocks.live_entries_mut() {
             for (instruction, entry) in block.instructions.iter_mut().enumerate() {
-                infallible(map_instruction(
+                map_instruction(
                     entry,
                     mapper,
                     MirLocalIdentitySite::Instruction {
                         block: block.id.index(),
                         instruction,
                     },
-                ));
+                )?;
             }
             if let Some(terminator) = &mut block.terminator {
-                infallible(map_terminator(
+                map_terminator(
                     terminator,
                     mapper,
                     MirLocalIdentitySite::Terminator(block.id.index()),
-                ));
+                )?;
             }
         }
         for condition in self.path_conditions.live_entries_mut() {
-            infallible(map_path_condition_metadata(
+            map_path_condition_metadata(
                 condition,
                 mapper,
                 MirLocalIdentitySite::PathCondition(condition.id.index()),
-            ));
+            )?;
         }
         let logical_order = self.logical_expressions.order().to_vec();
         for index in logical_order {
@@ -162,12 +162,13 @@ impl MirCallableEdit {
                 .logical_expressions
                 .get_mut(index)
                 .expect("live logical order was established by the edit transaction");
-            infallible(map_logical_expression(
+            map_logical_expression(
                 expression,
                 mapper,
                 MirLocalIdentitySite::LogicalExpression(index.index()),
-            ));
+            )?;
         }
+        Ok(())
     }
 }
 
