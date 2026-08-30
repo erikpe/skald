@@ -1,6 +1,6 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: planned; DMR0 is next.
+Status: in progress; DMR0 is implemented and DMR1 is next.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
@@ -63,7 +63,7 @@ rather than expanding a reviewed task.
 
 ## Progress
 
-- [ ] DMR0 — Establish exhaustive local-identity traversal
+- [x] DMR0 — Establish exhaustive local-identity traversal
 - [ ] DMR1 — Introduce stable sparse edit storage
 - [ ] DMR2 — Commit deterministic dense callable state
 - [ ] DMR3 — Integrate every executable definition kind
@@ -79,25 +79,25 @@ rather than expanding a reviewed task.
 **Purpose:** Create the single compile-time maintenance point for every
 callable-local MIR identity before any transformation depends on remapping.
 
-- [ ] Add a private `mir::rewrite` facade with cohesive traversal and structured
+- [x] Add a private `mir::rewrite` facade with cohesive traversal and structured
       error owners; keep the facade concise and avoid exposing optimization
       policy from `mir`.
-- [ ] Define one visitor/remapper contract covering storage, value, block, path
+- [x] Define one visitor/remapper contract covering storage, value, block, path
       condition, and optional-guard references through declarations,
       instructions, rvalues, arguments, places, projections, terminators,
       path conditions, logical expressions, callable attachments, and static
       publication.
-- [ ] Use exhaustive enum matches and full destructuring for identity-bearing
+- [x] Use exhaustive enum matches and full destructuring for identity-bearing
       structures; do not permit wildcard variants or `..` to hide future
       fields from review.
-- [ ] Add deterministic structural-site vocabulary that can identify a header,
+- [x] Add deterministic structural-site vocabulary that can identify a header,
       publication edge, declaration, block, instruction position, terminator,
       path condition, or logical record without using source diagnostics.
-- [ ] Separate source-semantic `BindingId` and program-level semantic
+- [x] Separate source-semantic `BindingId` and program-level semantic
       identities from the callable-local remapping inventory.
-- [ ] Consolidate any immediately adjacent duplicate local-ID scanning needed
+- [x] Consolidate any immediately adjacent duplicate local-ID scanning needed
       by the new owner instead of leaving competing authoritative traversals.
-- [ ] Document the maintenance rule that each new local identity or reference
+- [x] Document the maintenance rule that each new local identity or reference
       form updates traversal and census coverage in the same change.
 
 **Tests:** Direct collector/remapper tests for every model family; ownership and
@@ -114,6 +114,15 @@ order.
 current callable-local reference with deterministic sites, new identity-bearing
 MIR variants force review, and no editing or compaction behavior has changed
 production MIR.
+
+**Completed:** `mir::rewrite` now owns one mutation-capable mapper for all five
+callable-local identity families across function, member, and static-initializer
+packages. Full identity-bearing destructuring makes model additions fail at the
+traversal owner; the same walk supplies collection, identity mapping, and
+structured callable-owner validation. Focused fixtures cover ordinary,
+ownership-heavy, logical, optional, array, I/O, checked-operation, member, and
+static-publication shapes with deterministic visit order. The module remains
+off the production pipeline until the sparse transaction consumes it.
 
 ### DMR1 — Introduce stable sparse edit storage
 

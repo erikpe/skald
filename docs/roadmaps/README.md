@@ -6,7 +6,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The [dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+is in progress. Its exhaustive local-identity traversal is implemented; DMR1,
+stable sparse edit storage, is next.
 
 ## Pending discoveries
 
@@ -18,7 +20,7 @@ starting sequence. Its first recommended change is now implemented; the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 is preserved in the archive. The next constraint now has a frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
-and a planned
+and an active
 [implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md). The
 remaining constraints stay pending and are not part of the completed lifecycle
 roadmap.
@@ -34,13 +36,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The [dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-is planned. It implements the private sparse edit transaction, exhaustive
-reference traversal, deterministic dense commit, all-definition integration,
-supported editing facade, cross-callable rehoming, verified pipeline handoff,
-and final maintainability hardening. DMR0, exhaustive local-identity traversal,
-is next. It depends on the completed static-lifecycle certificate boundary and
-introduces no production optimization or general pass registry.
+No other implementation roadmap is currently planned.
 
 ## Design proposals
 
@@ -49,7 +45,7 @@ defines a private sparse edit transaction, exhaustive local-ID remapping,
 deterministic dense commit, all-executable-definition integration, and future
 cross-callable rehoming. Its decisions are frozen and promoted into the
 [compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction);
-the planned roadmap owns implementation.
+the active roadmap owns implementation.
 
 The static-lifecycle certificate decisions are promoted into the
 [compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction),

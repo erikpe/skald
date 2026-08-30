@@ -469,11 +469,13 @@ the existing `STA001` and `STA002` diagnostic behavior.
 
 The frozen
 [dense callable-local MIR identity rewriting design](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
-and its planned
+and its active
 [implementation roadmap](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 define the target-independent structural editing boundary that follows the
-static-lifecycle certificate foundation. This section is a selected direction;
-the current pipeline still has no production MIR transformation.
+static-lifecycle certificate foundation. The exhaustive local-identity
+traversal described below is implemented; sparse editing, compaction, and
+pipeline integration remain roadmap work. The current pipeline still has no
+production MIR transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -501,14 +503,17 @@ missing-order, or foreign reference is a deterministic internal rewrite error.
 Compaction never guesses value substitution, edge forwarding, cascading
 deletion, proof-metadata repair, or any other semantic transformation.
 
-One private exhaustive visitor/remapper is authoritative for callable-local
-identity references. It covers declarations, receiver, parameters, return
-storage, body entry, instructions, rvalues, arguments, places, projections,
-all terminators, path-condition structure, logical-expression provenance,
-optional-view guards, and static-initializer publication blocks. Identity-
-bearing matches do not use wildcard variants or partial struct patterns, so a
-new reference form forces compiler review. Individual passes may not maintain
-competing remapping inventories.
+The implemented private `mir::rewrite` visitor/remapper is authoritative for
+callable-local identity references. It covers declarations, receiver,
+parameters, return storage, body entry, instructions, rvalues, arguments,
+places, projections, all terminators, path-condition structure,
+logical-expression provenance, optional-view guards, and static-initializer
+publication blocks. It provides deterministic structural sites and a shared
+callable-owner validator without changing production MIR. Identity-bearing
+matches do not use wildcard variants or partial struct patterns, so a new
+reference form forces compiler review. Each new callable-local identity or
+reference form must update this traversal and its census coverage in the same
+change; individual passes may not maintain competing remapping inventories.
 
 Function, member, and static-initializer definitions retain their public MIR
 shape. Private owned adapters share common transaction and commit logic while
