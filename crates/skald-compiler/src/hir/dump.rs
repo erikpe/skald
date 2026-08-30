@@ -938,6 +938,19 @@ impl<'types> HirDumper<'types> {
                     dumper.selected_copy_operation(statement.operation);
                 });
             }
+            HirStatement::StaticCopyAssignment(statement) => {
+                self.line(
+                    &format!(
+                        "StaticCopyAssignment {} : class {}",
+                        statement.destination.field, statement.class
+                    ),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.object_source(&statement.source);
+                    dumper.selected_copy_operation(statement.operation);
+                });
+            }
             HirStatement::SharedFieldWrite(statement) => {
                 self.line(
                     match statement.kind {

@@ -58,8 +58,10 @@ fn main() -> i64 {
     State.maybe_item = Item(14);
     State.maybe_owner = new Item(15);
     State.values = i64[]{16, 17};
+    State.item = Item(18);
     assert_eq_i64(State.maybe_item!.value + State.maybe_owner!->value, 29);
     assert_eq_i64(State.values[0] + State.values[1], 33);
+    assert_eq_i64(State.item.value, 18);
     assert_false(State.empty.len() != 0u);
     return 0;
 }

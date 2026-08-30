@@ -420,6 +420,16 @@ pub struct HirCopyAssignment {
     pub span: Span,
 }
 
+/// Copy assignment into an already-published exact-class static slot.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirStaticCopyAssignment {
+    pub destination: super::HirStaticPlace,
+    pub class: ClassId,
+    pub source: HirObjectSource,
+    pub operation: HirSelectedCopyOperation<CopyAssignmentId>,
+    pub span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirObjectPlace {
     pub path: HirObjectPath,

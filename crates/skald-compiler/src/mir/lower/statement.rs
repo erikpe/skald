@@ -66,6 +66,9 @@ impl BodyLowerer<'_> {
                 self.lower_field_copy_assignment(statement)
             }
             HirStatement::CopyAssignment(statement) => self.lower_copy_assignment(statement),
+            HirStatement::StaticCopyAssignment(statement) => {
+                self.lower_static_copy_assignment(statement)
+            }
             HirStatement::SharedAssignment(assignment) => {
                 self.lower_shared_assignment(assignment);
                 self.finish_full_expression(assignment.span);
@@ -427,6 +430,22 @@ impl BodyLowerer<'_> {
             destination: self.lower_object_place(&statement.destination),
             source,
             class: statement.destination.class(),
+            operation: lower_selected_copy_operation(statement.operation),
+            authorization: None,
+            final_authorization: None,
+            span: statement.span,
+        }));
+        self.end_optional_views_from(optional_mark, statement.span);
+        self.finish_full_expression(statement.span);
+    }
+
+    fn lower_static_copy_assignment(&mut self, statement: &crate::hir::HirStaticCopyAssignment) {
+        let optional_mark = self.optional_view_mark();
+        let source = self.lower_object_source(&statement.source);
+        self.emit(MirInstruction::CopyAssign(MirCopyAssignment {
+            destination: MirPlace::static_field(statement.destination.field),
+            source,
+            class: statement.class,
             operation: lower_selected_copy_operation(statement.operation),
             authorization: None,
             final_authorization: None,

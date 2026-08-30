@@ -87,7 +87,8 @@ pub use object::{
     HirObjectInitialization, HirObjectOrigin, HirObjectPath, HirObjectPlace, HirObjectProducer,
     HirObjectReceiver, HirObjectReturn, HirObjectSlice, HirObjectSource, HirObjectView,
     HirRangeProtocolEvidence, HirRangeProtocolRealization, HirSelectedCopyOperation,
-    HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
+    HirStaticCopyAssignment, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy,
+    HirViewSource, HirViewTarget,
 };
 pub use optional::{
     HirAggregateOptionalAssignment, HirCheckedOptionalView, HirClassOptionalAssignment,

@@ -6,7 +6,7 @@ use crate::{
         HirOptionalSource, HirOptionalStorage, HirOwnerTransfer, HirPrimitiveStorage,
         HirScalarStorage, HirStoredValueInitialization,
     },
-    identity::{ClassId, MethodId, StaticFieldId, StaticInitializerId},
+    identity::{ClassId, CopyAssignmentId, MethodId, StaticFieldId, StaticInitializerId},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
     typeck::INVALID_STATIC_FIELD_TYPE,
@@ -252,6 +252,85 @@ fn retains_typed_primitive_and_exact_object_static_initializers() {
         state.static_fields[1].initializer.as_ref().unwrap().value,
         HirStoredValueInitialization::Class(HirObjectDestinationInitialization::Direct { .. })
     ));
+}
+
+#[test]
+fn lowers_exact_class_static_replacement_with_the_selected_copy_assignment() {
+    let output = check_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } ",
+        "  assign(ref other: Item) { self.value = other.value; } }\n",
+        "class State { static item: Item = Item(1); init() {} }\n",
+        "fn main() -> i64 { var replacement: Item = Item(2); ",
+        "  State.item = replacement; State.item = Item(3); State.item = State.item; ",
+        "  return State.item.value; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let assignments = main
+        .body
+        .statements
+        .iter()
+        .filter_map(|statement| match statement {
+            HirStatement::StaticCopyAssignment(assignment) => Some(assignment),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(assignments.len(), 3);
+    assert!(assignments.iter().all(|assignment| {
+        assignment.destination.field == StaticFieldId::new(ClassId::new(1), 0)
+            && assignment.class == ClassId::new(0)
+            && assignment.operation
+                == crate::hir::HirSelectedCopyOperation::User(CopyAssignmentId::new(
+                    ClassId::new(0),
+                    0,
+                ))
+    }));
+    assert!(matches!(
+        assignments[0].source,
+        crate::hir::HirObjectSource::Place(_)
+    ));
+    assert!(matches!(
+        assignments[1].source,
+        crate::hir::HirObjectSource::Produced(_)
+    ));
+    assert!(matches!(
+        assignments[2].source,
+        crate::hir::HirObjectSource::Static { .. }
+    ));
+
+    let dump = dump_hir(&hir);
+    assert_eq!(
+        dump.matches("StaticCopyAssignment c1:static0 : class c0")
+            .count(),
+        3,
+        "{dump}"
+    );
+}
+
+#[test]
+fn diagnoses_unavailable_exact_class_static_replacement_without_panicking() {
+    let mut program = resolve_text(concat!(
+        "class Item { init() {} }\n",
+        "class State { static item: Item = Item(); init() {} }\n",
+        "fn main() -> i64 { State.item = Item(); return 0; }\n",
+    ));
+    program.classes.entries_mut_for_test()[0].copy_assignment =
+        crate::resolve::ResolvedCopyOperation::Unavailable;
+
+    let output = type_check(&program);
+    assert!(output.hir.is_none());
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == crate::typeck::COPY_OPERATION_UNAVAILABLE)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
 }
 
 #[test]

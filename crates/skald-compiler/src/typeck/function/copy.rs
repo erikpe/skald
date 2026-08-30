@@ -713,6 +713,34 @@ impl CallableChecker<'_, '_> {
             }),
         ))
     }
+
+    pub(super) fn finish_static_copy_assignment(
+        &mut self,
+        destination: crate::hir::HirStaticPlace,
+        class: ClassId,
+        source: &crate::resolve::ResolvedExpression,
+        span: crate::source::Span,
+    ) -> CheckedStatement {
+        let Some(source) =
+            self.check_object_source(source, class, "static object assignment source")
+        else {
+            return CheckedStatement::falls_through(None);
+        };
+        let Some(operation) = self.copy_capabilities.assignment(class).selected() else {
+            self.report_unavailable_copy_operation(class, false, source.span());
+            return CheckedStatement::falls_through(None);
+        };
+
+        CheckedStatement::falls_through(Some(HirStatement::StaticCopyAssignment(
+            crate::hir::HirStaticCopyAssignment {
+                destination,
+                class,
+                source,
+                operation,
+                span,
+            },
+        )))
+    }
 }
 
 pub(in crate::typeck) fn is_checked_object_source_expression(

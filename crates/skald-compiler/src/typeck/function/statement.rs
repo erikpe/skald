@@ -270,6 +270,14 @@ impl CallableChecker<'_, '_> {
                         span: assignment.span,
                     })
                 }),
+            Type::Class(class) => {
+                return self.finish_static_copy_assignment(
+                    place,
+                    class,
+                    &assignment.value,
+                    assignment.span,
+                );
+            }
             _ => unreachable!("enabled static storage type must have a statement family"),
         };
         CheckedStatement::falls_through(hir)

@@ -19,12 +19,6 @@ starting sequence. Its first recommended change is now implemented; the
 is preserved in the archive. The remaining six constraints stay pending and
 are not part of that roadmap.
 
-The
-[static-lifecycle certificate follow-up discoveries](STATIC_LIFECYCLE_CERTIFICATE_DISCOVERIES.md)
-record an unrelated direct exact-class static-assignment panic found while
-building analysis fixtures. Its language/capability decision is deferred until
-after the active roadmap rather than expanding the current milestone.
-
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).

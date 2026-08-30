@@ -219,15 +219,14 @@ fn closed_world_virtual_and_interface_targets_contribute_root_effects() {
 #[test]
 fn preserves_access_kinds_in_normalized_facts() {
     let program = lower(
-        "fn inspect(ref item: Item) -> i64 { return item.value; }
-         fn mutate(ref replacement: Item) -> i64 {
+        "fn mutate(ref replacement: Item) -> i64 {
            State.number = 3;
            State.item = replacement;
-           return inspect(State.item!);
+           return State.item.read();
          }
          class State {
            static number: i64 = 1;
-           static item: Item? = Item(2);
+           static item: Item = Item(2);
            static result: i64 = mutate(Item(4));
            init() {}
          }
@@ -236,6 +235,7 @@ fn preserves_access_kinds_in_normalized_facts() {
            init(value: i64) { self.value = value; }
            copy(ref other: Item) { self.value = other.value; }
            assign(ref other: Item) { self.value = other.value; }
+           fn read() -> i64 { return self.value; }
            destroy {}
          }
          fn main() -> i64 { return 0; }",

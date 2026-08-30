@@ -141,6 +141,7 @@ Resolved static-lifecycle optimization inputs:
 
 - [Static-lifecycle certificate redesign proposal](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
 - [Static-lifecycle certificate redesign roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+- [Static-lifecycle certificate follow-up discoveries](STATIC_LIFECYCLE_CERTIFICATE_DISCOVERIES.md)
 
 Supporting records for the documentation overhaul:
 

@@ -52,6 +52,52 @@ fn lowers_dense_declarations_and_identity_based_always_live_places() {
 }
 
 #[test]
+fn exact_class_static_replacement_lowers_to_verified_copy_assignment() {
+    let program = lower_source_to_final_mir(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } ",
+        "  assign(ref other: Item) { self.value = other.value; } destroy {} }\n",
+        "class State { static item: Item = Item(1); init() {} }\n",
+        "fn main() -> i64 { var replacement: Item = Item(2); ",
+        "  State.item = replacement; State.item = Item(3); State.item = State.item; ",
+        "  return State.item.value; }\n",
+    ));
+
+    verify_mir(&program).unwrap();
+    let main = program.definitions.get(program.entry_function).unwrap();
+    let assignments = main
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::CopyAssign(assignment)
+                if matches!(assignment.destination.base, MirPlaceBase::StaticField(_)) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(assignments.len(), 3);
+    assert!(assignments.iter().all(|assignment| {
+        assignment.destination == MirPlace::static_field(StaticFieldId::new(ClassId::new(1), 0))
+            && assignment.class == ClassId::new(0)
+            && assignment.operation
+                == MirSelectedCopyOperation::User(crate::identity::CopyAssignmentId::new(
+                    ClassId::new(0),
+                    0,
+                ))
+    }));
+
+    let dump = dump_mir(&program);
+    assert_eq!(
+        dump.matches("copy-assign static(c1:static0)").count(),
+        3,
+        "{dump}"
+    );
+}
+
+#[test]
 fn rejects_missing_mismatched_and_projected_static_roots() {
     let mut missing = lower_text(SOURCE);
     let main = missing
