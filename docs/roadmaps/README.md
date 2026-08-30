@@ -18,8 +18,14 @@ starting sequence. Its first two recommended changes are now implemented; the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 and the completed
 [dense callable-local MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-are preserved in the archive. The remaining five constraints stay pending and
-have no implementation roadmap.
+are preserved in the archive. The selectable final-MIR pipeline is now the
+planned enabling layer around those foundations. The remaining five original
+constraints stay pending and have no implementation roadmap.
+
+The
+[selectable pipeline discoveries](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
+are the active companion for maintainability or architecture findings exposed
+by that roadmap. No deferred finding has been recorded yet.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -27,7 +33,12 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No other implementation roadmap is currently planned.
+The
+[selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+is planned. It begins with a typed registry, profiles, and deterministic
+schedule resolution; proceeds through request/CLI policy, verified execution,
+structured observation, and verified checkpoints; and ends by activating and
+hardening the narrow dead-pure-definition elimination canary in `default`.
 
 ## Design proposals
 
@@ -36,8 +47,13 @@ The
 defines a typed static pass registry, deterministic profiles and schedules,
 verified pass ownership, request and CLI selection, structured measurements,
 verified dump checkpoints, and a narrow dead-pure-definition elimination
-canary. Its decisions await confirmation; no production optimization is
-implemented.
+canary. Its twelve decisions were frozen together on 2026-08-30 and promoted
+into the living
+[compiler phase](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
+and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
+contracts. The planned roadmap owns implementation; no production optimization
+is implemented yet.
 
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented

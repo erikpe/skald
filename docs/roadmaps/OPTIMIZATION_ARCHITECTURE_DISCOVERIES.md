@@ -6,9 +6,11 @@ and dense callable-local identity constraints are resolved by their completed
 and
 [MIR identity rewriting](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 roadmaps. The next enabling layer has a
-[selectable final-MIR optimization pipeline design proposal](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md);
-its decisions await confirmation. The remaining constraints have no
-implementation roadmap.
+frozen
+[selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+and a planned
+[implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
+The remaining constraints have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -526,9 +528,11 @@ allocation elision is not included in this assessment.
 1. Settle the lifecycle proof relation for effect-removing transformations.
 2. Introduce exhaustive MIR traversal, rewriting, and deterministic compaction.
 3. Add the named pass registry, selection profiles, per-pass verification, and
-   optimized MIR dumps around those contracts. The proposed boundary is
-   recorded in the
-   [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md).
+   optimized MIR dumps around those contracts. The frozen boundary is recorded
+   in the
+   [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+   and delivery is divided by its
+   [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
 
 These steps should be proven by one deliberately small transformation, such as
 local constant folding or dead pure definition elimination. Building a large

@@ -1,7 +1,15 @@
 # Selectable Final-MIR Optimization Pipeline Design Proposal
 
-Status: design proposal awaiting confirmation. MOP1 through MOP12 are proposed
-together; none are an implemented compiler contract yet.
+Status: frozen design proposal. MOP1 through MOP12 were confirmed together on
+2026-08-30 and promoted into the
+[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
+[driver contract](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
+and
+[reporting contract](../compiler/REPORTING.md#frozen-final-mir-pass-reporting).
+The
+[implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+owns delivery; none of the planned framework or production optimization is
+implemented yet.
 
 This proposal defines the first production target-independent optimization
 framework for Skald. It builds on the implemented static-lifecycle authority
@@ -253,20 +261,20 @@ available to the driver.
 
 ## Decision register
 
-| Decision | Question | Proposed decision | Status |
+| Decision | Question | Frozen decision | Status |
 |---|---|---|---|
-| [MOP1](#mop1--use-one-static-named-pass-registry) | How are passes registered? | One typed compile-time registry with unique stable names | **Proposed** |
-| [MOP2](#mop2--expand-profiles-to-explicit-ordered-schedules) | Who owns order and repetition? | Profiles expand to immutable schedules; exact schedules are test/tool inputs | **Proposed** |
-| [MOP3](#mop3--make-selection-typed-request-policy) | How are passes selected? | Typed `none`/`default` request profile plus deterministic disabling | **Proposed** |
-| [MOP4](#mop4--give-passes-a-narrow-verified-rewrite-capability) | What may a pass access? | Read-only verified MIR and one atomic rewrite capability, never raw mutable tables | **Proposed** |
-| [MOP5](#mop5--reverify-every-changed-pass-result) | When does verification run? | Once initially and immediately after every changed occurrence | **Proposed** |
-| [MOP6](#mop6--attribute-failures-and-stop-atomically) | How do failures behave? | Structured pass-attributed failure; no continuation or partial product | **Proposed** |
-| [MOP7](#mop7--keep-analysis-lifetime-explicit-and-conservative) | How are analyses managed? | Pass-local by default; every change invalidates prior local-ID analyses | **Proposed** |
-| [MOP8](#mop8--return-structured-per-pass-measurements) | How is work observed? | Pipeline-owned occurrence records and deterministic aggregate reporting | **Proposed** |
-| [MOP9](#mop9--inspect-only-verified-checkpoints) | How are optimized dumps exposed? | Optional input, after-pass, and final verified checkpoints outside reports | **Proposed** |
-| [MOP10](#mop10--keep-policy-runner-pass-and-driver-ownership-separate) | Where does implementation live? | Cohesive registry, runner, pass, inspection, and driver owners behind facades | **Proposed** |
-| [MOP11](#mop11--use-an-exact-dead-pure-canary-whitelist) | What may the canary remove? | Unused assignments from a small exhaustive non-failing scalar whitelist | **Proposed** |
-| [MOP12](#mop12--eliminate-dead-pure-trees-to-a-deterministic-fixed-point) | How does the canary compose? | Per-callable fixed point, atomic declaration/instruction deletion, full parity tests | **Proposed** |
+| [MOP1](#mop1--use-one-static-named-pass-registry) | How are passes registered? | One typed compile-time registry with unique stable names | **Confirmed** |
+| [MOP2](#mop2--expand-profiles-to-explicit-ordered-schedules) | Who owns order and repetition? | Profiles expand to immutable schedules; exact schedules are test/tool inputs | **Confirmed** |
+| [MOP3](#mop3--make-selection-typed-request-policy) | How are passes selected? | Typed `none`/`default` request profile plus deterministic disabling | **Confirmed** |
+| [MOP4](#mop4--give-passes-a-narrow-verified-rewrite-capability) | What may a pass access? | Read-only verified MIR and one atomic rewrite capability, never raw mutable tables | **Confirmed** |
+| [MOP5](#mop5--reverify-every-changed-pass-result) | When does verification run? | Once initially and immediately after every changed occurrence | **Confirmed** |
+| [MOP6](#mop6--attribute-failures-and-stop-atomically) | How do failures behave? | Structured pass-attributed failure; no continuation or partial product | **Confirmed** |
+| [MOP7](#mop7--keep-analysis-lifetime-explicit-and-conservative) | How are analyses managed? | Pass-local by default; every change invalidates prior local-ID analyses | **Confirmed** |
+| [MOP8](#mop8--return-structured-per-pass-measurements) | How is work observed? | Pipeline-owned occurrence records and deterministic aggregate reporting | **Confirmed** |
+| [MOP9](#mop9--inspect-only-verified-checkpoints) | How are optimized dumps exposed? | Optional input, after-pass, and final verified checkpoints outside reports | **Confirmed** |
+| [MOP10](#mop10--keep-policy-runner-pass-and-driver-ownership-separate) | Where does implementation live? | Cohesive registry, runner, pass, inspection, and driver owners behind facades | **Confirmed** |
+| [MOP11](#mop11--use-an-exact-dead-pure-canary-whitelist) | What may the canary remove? | Unused assignments from a small exhaustive non-failing scalar whitelist | **Confirmed** |
+| [MOP12](#mop12--eliminate-dead-pure-trees-to-a-deterministic-fixed-point) | How does the canary compose? | Per-callable fixed point, atomic declaration/instruction deletion, full parity tests | **Confirmed** |
 
 ## MOP1 — Use one static named pass registry
 
@@ -494,7 +502,7 @@ The dead-pure canary owns these counters:
 - changed callables.
 
 The existing `MirPipeline` phase retains aggregate metrics in deterministic
-owner order. Trace-level reporting may additionally emit one typed
+owner order. Trace-level reporting additionally emits one typed
 pass-finished event per attempted occurrence. Reports do not derive counts by
 parsing MIR dumps, and pass modules do not depend on the reporting facade.
 
@@ -664,7 +672,7 @@ The pass is considered a successful framework canary only when:
 - the full repository, golden determinism, MSRV, documentation, formatting,
   lint, and diff gates pass.
 
-## Proposed profile and selection examples
+## Frozen profile and selection examples
 
 With the completed initial registry:
 
@@ -851,7 +859,7 @@ parity cross several ownership boundaries.
 | Value-use census facade | Small to medium | Reusable exhaustive canary analysis |
 | Dead-pure canary and broad parity hardening | Medium to large | First real production optimization |
 
-The implementation roadmap should preserve this dependency order:
+The implementation roadmap preserves this dependency order:
 
 1. settle registry, profile, schedule, and configuration types;
 2. productionize the verified runner with no transformation registered;
@@ -867,17 +875,15 @@ receive its own subsequent design and roadmap.
 
 ## Confirmation and promotion
 
-MOP1 through MOP12 are intended to be confirmed together because the canary's
+MOP1 through MOP12 were confirmed together on 2026-08-30 because the canary's
 soundness and usefulness depend on the registry, capability, verification,
-selection, measurement, and traversal decisions as one boundary.
+selection, measurement, and traversal decisions as one boundary. The durable
+contract is promoted into the living compiler phase, driver, and reporting
+documents linked from this proposal's status. The implementation roadmap
+divides delivery into reviewable tasks, and its dedicated discoveries record
+keeps larger follow-ups outside active scope.
 
-If confirmed, the durable pipeline contract should be promoted into
-`docs/compiler/PHASES_AND_IR.md` and the request/CLI and reporting portions
-into their existing compiler contracts. A separate implementation roadmap
-should then divide delivery into reviewable tasks and maintain a dedicated
-discoveries record for larger follow-ups.
-
-The decisions requiring confirmation are:
+The confirmed decisions are:
 
 - a static typed registry rather than runtime plugins;
 - `none` and `default` profiles, with `default` eventually containing the

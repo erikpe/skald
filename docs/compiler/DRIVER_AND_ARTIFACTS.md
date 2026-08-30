@@ -114,6 +114,49 @@ executions are counted by their owning phases; synthesis is infallible after
 its sealed input, and the backend does not hide another target-independent
 verification execution.
 
+## Frozen final-MIR optimization selection
+
+The confirmed
+[selectable final-MIR pipeline design](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+adds target-independent optimization policy to the typed compilation request
+and CLI. Its
+[implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+is planned. The options in this section are therefore frozen future behavior,
+not accepted by the current CLI, and current compilation still uses the empty
+verification-only pipeline.
+
+`CompilationRequest` will contain a typed optimization options value with a
+non-breaking builder. Existing request construction and singleton compilation
+helpers select the `default` profile. The initial profiles are `none` and
+`default`; the framework is complete only when `default` contains
+`dead-pure-definition-elimination` exactly once. `none` remains the reference
+unoptimized mode and preserves the current final MIR path after its required
+central verification.
+
+The frozen command-line surface is:
+
+```text
+--mir-optimization <none|default>
+--disable-mir-pass <name>
+```
+
+`--mir-optimization` may appear once. `--disable-mir-pass` is repeatable and
+removes every occurrence of the named pass from the selected profile;
+duplicate disabling is idempotent. Unknown profile or pass names are usage
+errors, and known pass names in errors and help are sorted lexically. The CLI
+does not initially expose arbitrary pass order, `-O`, or numeric optimization
+levels. A crate-private exact-schedule API belongs to compiler tests and tools,
+not the public driver policy.
+
+Optimization options are semantic compilation configuration and participate
+in request equality. Pass reports and verified MIR checkpoint observers are
+invocation services: they do not live in the request or affect compilation
+identity. Profile selection and exclusions are independent of target,
+artifact kind, runtime-trace policy, diagnostic presentation, and operational
+report detail. Selection never changes source acceptance or diagnostics;
+malformed pass output remains a structured compiler failure rather than a
+source diagnostic.
+
 ## Command-line modes
 
 `skac --help` is the exact option reference. One invocation requires exactly

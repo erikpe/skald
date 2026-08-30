@@ -293,6 +293,46 @@ statistics to the pipeline coordinator. They do not format sentences or call a
 global logger. The pipeline owns execution counts and attaches the resulting
 counters to its finish event.
 
+## Frozen final-MIR pass reporting
+
+The confirmed
+[selectable final-MIR pipeline design](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+extends this reporting boundary with structured pass-occurrence observation.
+Its
+[implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+is planned; the current event and metric inventory above remains implemented
+behavior until that roadmap lands.
+
+Every attempted selected occurrence will produce one pipeline-owned record in
+schedule order. Its stable identity consists of schedule position, typed pass
+identity and stable name, and that pass's zero-based occurrence number. The
+record carries elapsed duration, `unchanged` or `changed` outcome, and
+deterministically ordered pass-owned integer measurements. A failed occurrence
+is attributed by the pipeline error; no successful later occurrence or phase
+product is reported.
+
+The MIR-pipeline finish event will retain aggregate owner order: verification
+executions, pass executions, pass-owned aggregate counters, then final MIR
+definitions, blocks, and instructions. Pass accounting must distinguish
+callables processed from callables actually changed. The first canary owns
+removed assignment, removed value-declaration, and changed-callable counts.
+Trace reporting additionally emits one typed pass-finished event per attempted
+occurrence, including a failed outcome for the occurrence attributed by the
+pipeline error; details retain the deterministic aggregate metrics without
+parsing those events or a MIR dump. Timings remain
+nondeterministic observations, so correctness and determinism tests assert
+identity, order, outcome, and integer measurements rather than live duration
+values.
+
+Pass modules return data and never call observers, loggers, formatters, or
+filesystem services. The pipeline coordinator converts outcomes into report
+data, and reporting owns rendering. Optional input, after-occurrence, and final
+MIR checkpoints use a separate inspection service and accept only borrowed
+verified final MIR. Checkpoint labels and bytes are deterministic, but dump
+contents do not become report events, metrics, semantic request identity, or
+pass logs. Filesystem publication and general CLI dump retention remain
+separate driver decisions.
+
 ## CLI selection
 
 Operational detail and diagnostic visibility use separate controls.

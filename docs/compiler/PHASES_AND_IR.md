@@ -619,7 +619,88 @@ This direction adds no SSA form, persistent instruction identity, public
 common callable-body restructuring, general pass registry, optimization-level
 CLI, production optimization, proof-provenance normalization, alias/effect
 analysis, or backend virtual-register layer. Those remain separate decisions
-that can consume the rewrite boundary after it is implemented.
+that can consume the now-implemented rewrite boundary.
+
+### Frozen selectable final-MIR optimization pipeline direction
+
+The next target-independent boundary is a deterministic selectable pipeline
+over verified final MIR. Its frozen design is preserved in the
+[decision record](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md),
+and its delivery is owned by the
+[implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
+This section specifies planned compiler direction, not current behavior: the
+production pipeline still performs one final verification and no
+transformation.
+
+One compiler-owned static registry assigns every pass a typed identity, a
+unique stable kebab-case name, descriptive metadata, and one transformation
+entry point. Profiles expand request-locally into explicit immutable ordered
+schedules. The initial `none` profile has no transformation occurrences and
+the completed `default` profile contains
+`dead-pure-definition-elimination` exactly once. A schedule may deliberately
+repeat a pass, and every occurrence is identified by schedule position, pass
+identity, and that pass's zero-based occurrence number. Filesystem order,
+module discovery, map iteration, or compiler worker completion never selects
+execution order. Exact schedules remain crate-private inputs for tests and
+compiler tools; the supported command line selects profiles and exclusions,
+not arbitrary pass order.
+
+The pipeline first calls central final-MIR verification, including immutable
+static-lifecycle realization. Every occurrence then receives read-only access
+to that verified product and one pipeline-owned capability to consume the seal
+through the atomic whole-program rewrite coordinator. An unchanged outcome
+retains the same seal and adds no verification execution. A changed outcome
+yields raw dense MIR, rewrite maps, change summaries, explicit changed-callable
+accounting, and pass-owned measurements; the runner immediately calls central
+verification before any later pass, inspection checkpoint, or backend can
+observe it. Input-verification, pass execution, structural-rewrite, and
+output-verification failures identify the exact occurrence and stop without a
+partial or later product.
+
+Passes cannot construct seals, mutate dense definition tables directly,
+change lifecycle authority, emit diagnostics, log, write files, render dumps,
+or depend on driver, reporting, target, or another pass's private analysis.
+Analyses are pass-local by default, and every change invalidates data keyed by
+pre-commit local identities or instruction positions. The first framework has
+no preservation declarations or global analysis manager. Whole-program
+analysis may inspect all verified definitions, but edits still commit through
+the single atomic program coordinator.
+
+The pipeline owns ordered occurrence measurements, deterministic aggregates,
+and optional borrowed inspection checkpoints after initial verification,
+after each completed occurrence, and after the complete schedule. Only
+verified products may be inspected. Reports contain compact typed metrics and
+events rather than MIR text; phase-owned dumps remain a separate observation
+surface. Pass metrics distinguish processed callables from callables actually
+changed. Elapsed durations are observations and never deterministic products.
+
+The framework's production canary removes only an unused
+`MirInstruction::Assign` whose rvalue is an integer, byte, binary64-bit, or
+boolean constant; an exact unary or binary primitive operation; a primitive
+comparison; or a non-checked primitive cast. Eligibility is an exhaustive
+no-wildcard classification. Calls, loads, callable addresses, path conditions,
+checked division, checked shifts, checked binary64-to-integer conversion, type
+tests, optional-presence operations, array length, and every non-assignment
+result producer remain ineligible.
+
+For each executable function, method kind, lifecycle member, and static
+initializer, the canary computes value uses through the exhaustive MIR
+identity traversal, deletes unused eligible assignments and their matching
+value declarations in stable waves to a fixed point, and commits the callable
+once. It performs no CFG, storage, metadata, ownership, lifecycle, folding,
+replacement, or reordering edit. The pipeline roadmap does not complete until
+the canary is registered in `default`, `none` preserves the exact current
+verification-only path, selective disabling provides parity, and changed
+products pass ordinary and lifecycle-realization verification.
+
+This boundary adds no dynamic pass ABI, target-specific pass, numerical
+optimization level, SSA, proof-provenance normalization, interprocedural
+reachability, general alias/effect analysis, devirtualization, inlining,
+constant folding, CFG cleanup, register allocation, or target LIR. Permanent
+whole-world compilation and single-threaded generated programs make later
+analyses more tractable, but neither assumption weakens verification,
+determinism, evaluation-order, checked-failure, allocation, ownership, alias,
+or destruction requirements.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns recursive, bottom-up
@@ -2510,17 +2591,20 @@ deliberate boundaries:
    final MIR accepted by backend input.
 
 The backend does not repeat target-independent verification. Under the frozen
-identity-rewriting direction, a non-empty transforming pipeline first verifies
-its input, invalidates that seal privately, and verifies again after its final
-rewrite. Optional per-pass debug verification localizes transformation defects.
+[selectable pipeline direction](#frozen-selectable-final-mir-optimization-pipeline-direction),
+a non-empty pipeline first verifies its input, retains the seal after an
+unchanged occurrence, and privately invalidates and immediately rebuilds the
+seal after every changed occurrence. Per-changed-pass verification localizes
+transformation defects before another pass or backend can inspect the result.
 
 Target-specific legality and structured backend failures are defined by the
 [backend and target contract](BACKEND.md#input-and-legality-boundary).
 
-The MIR pass pipeline currently verifies without transforming. Future
-analyses and transformations must have explicit ordering and must return MIR
-that satisfies the same verifier boundary. Compiler correctness must not
-depend on an optimization pass being enabled.
+The MIR pass pipeline currently verifies without transforming. The frozen
+registry, profile, runner, reporting, inspection, and dead-pure canary contract
+is planned but not yet implemented. Every future transformation has explicit
+ordering and returns MIR through the same verifier boundary. Compiler
+correctness must not depend on an optimization pass being enabled.
 
 The shared-ownership implementation preserves this division of
 responsibility: HIR records owner provenance and anchor requirements, MIR
