@@ -95,6 +95,7 @@ Archived plans:
 - [Final fields](FINAL_FIELDS_ROADMAP.md)
 - [Structured compiler reporting](STRUCTURED_REPORTING_ROADMAP.md)
 - [Static-lifecycle certificate redesign](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+- [Dense callable-local MIR identity rewriting](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -142,6 +143,11 @@ Resolved static-lifecycle optimization inputs:
 - [Static-lifecycle certificate redesign proposal](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
 - [Static-lifecycle certificate redesign roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 - [Static-lifecycle certificate follow-up discoveries](STATIC_LIFECYCLE_CERTIFICATE_DISCOVERIES.md)
+
+Resolved dense-MIR identity rewriting inputs:
+
+- [Dense callable-local MIR identity rewriting design proposal](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
+- [Dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
 

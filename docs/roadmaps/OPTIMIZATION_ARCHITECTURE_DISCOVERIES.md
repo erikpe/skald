@@ -1,13 +1,11 @@
 # Optimization Architecture Discoveries
 
-Status: six architectural constraints remain pending. The static-lifecycle
-constraint is resolved by the
-[completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md);
-the next constraint has a frozen
-[dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
-and a planned
-[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md), while the
-other five constraints have no implementation roadmap.
+Status: five architectural constraints remain pending. The static-lifecycle
+and dense callable-local identity constraints are resolved by their completed
+[static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+and
+[MIR identity rewriting](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+roadmaps. The remaining constraints have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -69,16 +67,15 @@ roadmap:
 | Area | Limitation | Nature | Potential impact | Estimated effort | Recommended timing |
 |---|---|---|---|---|---|
 | Static-lifecycle optimization boundary | Resolved: exact verified baseline authority now permits monotone final-MIR realization | Implemented compiler proof and sealed phase-product contract | Very high architectural unlock delivered | Completed (large) | Foundation available |
-| Dense index-coupled MIR identities | Makes deletion, replacement, and CFG rewriting require complete coordinated remapping | Representation and editing-infrastructure debt | Very high enabling value | Large (roadmap planned) | Planned next |
+| Dense index-coupled MIR identities | Resolved: private sparse transactions support coordinated deletion, replacement, CFG rewriting, import, and deterministic dense commit | Implemented editing and verification infrastructure | Very high architectural unlock delivered | Completed (large) | Foundation available |
 | Block-local non-SSA values | Limits global scalar propagation, value numbering, code motion, and loop optimization | Deliberate initial representation with an eventual optimization ceiling | High for advanced portable optimization | Extra large | Defer until simpler MIR passes demonstrate the need |
 | Proof provenance mixed with executable MIR | Couples CFG transformations to exact lowering shapes and derived metadata | Awkward IR layering | High for CFG and loop work | Large | Normalize incrementally as CFG passes require it |
 | Direct physical-register backend lowering | Forces every MIR value and storage through a stack home and leaves no natural register-allocation layer | Deliberate bootstrap backend and the largest target-code ceiling | Very high eventual runtime value | Extra large | Largest eventual performance project |
 | Reachability after machine lowering | Retains unreachable work through legality, layout, frame planning, and instruction selection | Phase-placement debt | High for size, compile time, and whole-world follow-ons | Medium to large | Early whole-world optimization after lifecycle and rewrite foundations |
 | Conservative alias, effect, and ownership knowledge | Prevents memory and ownership optimizations unless each pass proves safety independently | Analysis-infrastructure gap under intentionally permissive language semantics | High, with precision improving incrementally | Large to extra large | Build a conservative shared analysis after the first MIR passes |
 
-The static-lifecycle foundation is implemented; it deliberately lands no
-production optimization or general pass registry. Dense-identity rewriting is
-the remaining enabling work needed for safe deletion and structural editing.
+The static-lifecycle and dense-identity rewriting foundations are implemented;
+they deliberately land no production optimization or general pass registry.
 Together those boundaries support later constant folding, algebraic
 simplification, copy propagation, dead-pure-definition elimination, and
 conservative CFG simplification. Earlier reachability then offers a
@@ -155,59 +152,40 @@ sealed public phase products, driver/reporting integration, malformed-product
 coverage, transformed-shape tests, documentation, and full repository,
 determinism, and MSRV validation.
 
-## 2. Dense index-coupled MIR identities
+## 2. Implemented dense callable-local MIR identity rewriting
 
-### Current constraint
+### Implemented state
 
 Callable-local `StorageId`, `ValueId`, and `BlockId` values contain vector
 indices. Definitions look them up by indexing `storage`, `values`, and `blocks`,
 and verification requires IDs to occupy their matching positions. Every
 declared transient value must retain exactly one definition, and unreachable
-blocks are still structurally verified. These choices provide deterministic,
-compact initial lowering but favor append-only construction.
+blocks are still structurally verified. Committed MIR therefore retains its
+compact, deterministic, directly indexed representation.
 
-A pass cannot simply erase a dead assignment: it must also remove or replace
-the value declaration and update every use of every shifted identity. Removing
-or reordering blocks likewise affects terminators, path conditions, logical
-metadata, and any other block-indexed analysis.
+Transformations now open a private callable-owned sparse transaction with
+stable slots, tombstones, and explicit block order. One exhaustive mapper owns
+every storage, value, block, path-condition, and optional-guard occurrence in
+instructions, terminators, places, callable headers, proof metadata, and static
+publication attachments. Commit validates all retained references, compacts in
+canonical order, returns complete typed maps and measured change counts, and
+publishes no partial program on failure.
 
-### Nature and impact
+The supported crate-private facade provides typed lookup, allocation,
+substitution, instruction rewriting, edge redirection, explicit deletion, and
+cross-callable rehoming. Function, member, and static-initializer bodies use the
+same atomic program coordinator. A pipeline-private ownership bridge consumes
+verified final MIR before transformation and only central ordinary and
+static-lifecycle realization verification can reseal the dense result.
+Backends accept only that sealed product. The production pass sequence remains
+empty.
 
-This is representation and editing-infrastructure debt. Stable semantic
-identities such as functions, classes, fields, and methods remain valuable in a
-closed-world compiler and should not be renumbered casually. The awkward part
-is requiring every temporary optimization edit to preserve dense callable-local
-indices immediately.
-
-Without a common solution, each optimization pass would need its own remapping
-logic, creating a large soundness and maintenance risk. Dead-code elimination,
-inlining, block merging, block forwarding, and value replacement all depend on
-reliable structural editing.
-
-### Resolution direction
-
-The frozen direction is recorded in the
-[dense callable-local MIR identity rewriting design proposal](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md),
-promoted into the
-[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction),
-and scheduled by the
-[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md).
-
-Introduce a private MIR rewriting boundary that can rebuild one callable while
-preserving program-level semantic identities. It should own:
-
-- complete operand, place, successor, and metadata traversal;
-- temporary deletion markers or stable pass-local handles;
-- old-to-new maps for callable-local values, storage, blocks, path conditions,
-  and related provenance;
-- deterministic compaction at commit time;
-- validation that no removed identity remains referenced; and
-- pass-independent utilities for replacing values, redirecting edges, removing
-  instructions, and rebuilding tables.
-
-The public final product may remain dense. Optimizers need a safe transaction
-or rebuild representation rather than unrestricted mutation of the dense
-tables.
+The authoritative implemented contract is documented in
+[Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#dense-callable-local-mir-identity-rewriting).
+The rationale and delivery history are preserved in the archived
+[design proposal](../archive/DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
+and
+[completed roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md).
 
 ### Optimization possibilities unlocked
 
@@ -220,9 +198,11 @@ tables.
 
 ### Effort
 
-**Large.** This is reusable infrastructure touching most MIR reference forms.
-It should be delivered and tested in small pieces, but its usefulness depends
-on exhaustive coverage and at least one real transformation proving the API.
+**Completed (large).** Delivery included exhaustive identity traversal, sparse
+editing, deterministic dense commit, all-definition ownership transfer,
+supported structural operations, cross-callable import, verified pipeline
+invalidation and resealing, adversarial malformed coverage, corpus parity, and
+independent-process determinism.
 
 ## 3. Block-local non-SSA values
 

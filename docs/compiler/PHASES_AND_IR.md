@@ -465,18 +465,14 @@ complete field coverage, initialization modes and types, publication dominance,
 destination non-escape, exact-reverse destruction, deterministic dumps, and
 the existing `STA001` and `STA002` diagnostic behavior.
 
-### Frozen dense callable-local MIR identity rewriting direction
+### Dense callable-local MIR identity rewriting
 
-The frozen
-[dense callable-local MIR identity rewriting design](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
-and its active
-[implementation roadmap](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-define the target-independent structural editing boundary that follows the
-static-lifecycle certificate foundation. The exhaustive local-identity
-traversal, private sparse common callable state, atomic dense common-state
-commit, all-definition adapters, supported editing facade, cross-callable
-rehoming, and verified pipeline ownership path described below are implemented.
-The current pipeline still has no production MIR transformation.
+The implemented target-independent structural editing boundary follows the
+static-lifecycle certificate foundation. Its rationale and delivery history are
+preserved in the archived
+[design record](../archive/DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md) and
+[roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md). The current
+pipeline still has no production MIR transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -523,6 +519,13 @@ matches do not use wildcard variants or partial struct patterns, so a new
 reference form forces compiler review. Each new callable-local identity or
 reference form must update this traversal and its census coverage in the same
 change; individual passes may not maintain competing remapping inventories.
+
+Every future production transformation of valid final MIR must enter through
+the supported `mir::rewrite` facade and its atomic program coordinator. Direct
+dense-vector construction remains appropriate for initial append-oriented
+lowering, while narrowly named test-only mutation helpers remain appropriate
+for deliberately malformed verifier and backend fixtures; neither is a valid
+optimization boundary.
 
 Function, member, and static-initializer definitions retain their public MIR
 shape. The implemented private owned adapters share common transaction and

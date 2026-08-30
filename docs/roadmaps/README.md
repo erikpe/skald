@@ -6,11 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-is in progress. Its exhaustive local-identity traversal and stable sparse edit
-storage, deterministic dense commit, all-definition integration, supported
-editing facade, cross-callable rehoming, and verified pipeline invalidation and
-resealing are implemented; DMR7, final boundary hardening, is next.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -18,19 +14,12 @@ The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIE
 record the seven current compiler constraints on modular target-independent and
 target-specific optimization, their interaction with permanent whole-world and
 single-threaded program semantics, expected impact and effort, and a recommended
-starting sequence. Its first recommended change is now implemented; the
+starting sequence. Its first two recommended changes are now implemented; the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
-is preserved in the archive. The next constraint now has a frozen
-[dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
-and an active
-[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md). The
-remaining constraints stay pending and are not part of the completed lifecycle
-roadmap.
-
-The active
-[dense MIR identity rewriting discoveries](DENSE_MIR_IDENTITY_REWRITING_DISCOVERIES.md)
-record owns larger maintainability findings discovered during implementation;
-it is currently empty.
+and the completed
+[dense callable-local MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+are preserved in the archive. The remaining five constraints stay pending and
+have no implementation roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -42,12 +31,10 @@ No other implementation roadmap is currently planned.
 
 ## Design proposals
 
-The [dense callable-local MIR identity rewriting proposal](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
-defines a private sparse edit transaction, exhaustive local-ID remapping,
-deterministic dense commit, all-executable-definition integration, and future
-cross-callable rehoming. Its decisions are frozen and promoted into the
-[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction);
-the active roadmap owns implementation.
+The completed dense callable-local MIR identity rewriting design and delivery
+record are preserved in the [archive](../archive/README.md); the implemented
+boundary is specified by the
+[compiler phase contract](../compiler/PHASES_AND_IR.md#dense-callable-local-mir-identity-rewriting).
 
 The static-lifecycle certificate decisions are promoted into the
 [compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction),

@@ -105,6 +105,66 @@ fn every_header_attachment_reports_its_exact_deleted_reference_site() {
 }
 
 #[test]
+fn headers_and_publication_distinguish_unknown_and_foreign_references() {
+    let span = fixture_span();
+    let function = FunctionId::new(0);
+    let owner = CallableId::Function(function);
+    for (identity, failure) in [
+        (StorageId::new(owner, 99), MirReferenceFailure::Unknown),
+        (
+            StorageId::new(CallableId::Function(FunctionId::new(99)), 0),
+            MirReferenceFailure::Foreign,
+        ),
+    ] {
+        let package = MirCallablePackage::from_function(MirFunctionDefinition {
+            function,
+            return_storage: Some(identity),
+            parameters: vec![],
+            storage: storage(owner, span),
+            values: vec![],
+            body: body(owner, span),
+            span,
+        })
+        .unwrap();
+        assert_attachment_failure(
+            package,
+            owner,
+            MirLocalIdentity::Storage(identity),
+            MirLocalIdentitySite::ReturnStorage,
+            failure,
+        );
+    }
+
+    let class = ClassId::new(0);
+    let initializer = StaticInitializerId::from(StaticFieldId::new(class, 0));
+    let owner = CallableId::StaticInitializer(initializer);
+    for (identity, failure) in [
+        (BlockId::new(owner, 99), MirReferenceFailure::Unknown),
+        (
+            BlockId::new(CallableId::Function(FunctionId::new(99)), 0),
+            MirReferenceFailure::Foreign,
+        ),
+    ] {
+        let mut package =
+            MirCallablePackage::from_static_initializer(static_initializer(initializer, span))
+                .unwrap();
+        let MirCallableAttachments::StaticInitializer { publication, .. } =
+            &mut package.attachments
+        else {
+            unreachable!("static initializer retains its attachment kind")
+        };
+        publication.cleanup_entry = identity;
+        assert_attachment_failure(
+            package,
+            owner,
+            MirLocalIdentity::Block(identity),
+            MirLocalIdentitySite::StaticPublicationCleanupEntry,
+            failure,
+        );
+    }
+}
+
+#[test]
 fn static_publication_follows_explicit_block_order_during_atomic_commit() {
     let span = fixture_span();
     let class = ClassId::new(0);
@@ -154,6 +214,24 @@ fn assert_deleted_attachment(
             identity,
             site,
             failure: MirReferenceFailure::Deleted,
+        })
+    );
+}
+
+fn assert_attachment_failure(
+    package: MirCallablePackage,
+    expected: CallableId,
+    identity: MirLocalIdentity,
+    site: MirLocalIdentitySite,
+    failure: MirReferenceFailure,
+) {
+    assert_eq!(
+        package.commit(),
+        Err(MirRewriteError::InvalidReference {
+            expected,
+            identity,
+            site,
+            failure,
         })
     );
 }

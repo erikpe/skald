@@ -1,11 +1,11 @@
 # Dense Callable-Local MIR Identity Rewriting Design Proposal
 
-Status: frozen design proposal. DMI1 through DMI12 were confirmed together on
-2026-08-30 and promoted into the
-[compiler phase and IR contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction).
-The active
-[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md) owns
-delivery; this document preserves the reviewed decisions.
+Status: frozen and implemented design record. DMI1 through DMI12 were confirmed
+together on 2026-08-30 and promoted into the
+[compiler phase and IR contract](../compiler/PHASES_AND_IR.md#dense-callable-local-mir-identity-rewriting).
+The completed
+[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md) preserves
+delivery history; this document preserves the reviewed decisions.
 
 This proposal removes the editing constraint created by Skald's dense,
 index-coupled callable-local MIR identities. It keeps dense final MIR as the
@@ -747,7 +747,7 @@ editing is sufficient for this foundation.
 
 The
 [dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-owns implementation in this dependency order:
+preserves implementation delivery in this dependency order:
 
 1. freeze the callable-local identity inventory and mapper contract;
 2. implement exhaustive collection/remapping with no-op and artificial-gap

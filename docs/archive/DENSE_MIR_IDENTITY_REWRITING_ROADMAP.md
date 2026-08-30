@@ -1,11 +1,11 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: in progress; DMR0-DMR6 are implemented and DMR7 is next.
+Status: complete; implemented and archived on 2026-08-30.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
 and its promoted
-[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction).
+[compiler phase contract](../compiler/PHASES_AND_IR.md#dense-callable-local-mir-identity-rewriting).
 It gives target-independent MIR passes a safe structural editing boundary while
 retaining compact dense MIR for verification, analysis, dumps, and backends.
 
@@ -14,9 +14,9 @@ optimization pass or pass-selection policy. Because the change touches nearly
 every callable-local MIR reference form, the roadmap also deliberately removes
 adjacent duplication, ad-hoc remapping, broad mutation pressure, unclear module
 ownership, and panic-prone internal failure handling where those cleanups are
-small and cohesive with the active task. Larger findings belong in the
-[identity-rewriting discoveries record](DENSE_MIR_IDENTITY_REWRITING_DISCOVERIES.md)
-rather than expanding a reviewed task.
+small and cohesive with the active task. Larger findings were to be recorded
+separately rather than expanding a reviewed task. The final review found no
+deferred identity-rewriting findings, so no discoveries record was retained.
 
 ## Scope and invariants
 
@@ -57,8 +57,8 @@ rather than expanding a reviewed task.
 - Keep `mod.rs` files as concise facades and place implementation-private tests
   beside the owner.
 - Prefer small touched-area maintainability fixes that reduce future change
-  cost. Record broader opportunities with problem, evidence, likely owner,
-  priority, and a bounded follow-up in the discoveries record.
+  cost. Broader opportunities would require a separate follow-up record with
+  problem, evidence, likely owner, priority, and a bounded next step.
 - Keep the root Makefile as the automation interface; add no repository CI.
 
 ## Progress
@@ -70,7 +70,7 @@ rather than expanding a reviewed task.
 - [x] DMR4 — Publish the supported callable editing facade
 - [x] DMR5 — Add explicit cross-callable rehoming
 - [x] DMR6 — Integrate verified pipeline invalidation and resealing
-- [ ] DMR7 — Harden the boundary and close maintainability debt
+- [x] DMR7 — Harden the boundary and close maintainability debt
 
 ## PR-sized implementation sequence
 
@@ -482,32 +482,32 @@ exactly while reporting one verification and zero pass executions.
 **Purpose:** Prove complete coverage, resolve touched-area architectural debt,
 and leave a durable foundation rather than a minimally working editor.
 
-- [ ] Audit every current callable-local identity occurrence and every model
+- [x] Audit every current callable-local identity occurrence and every model
       family against the traversal census; add missing direct or corpus tests.
-- [ ] Run artificial-gap round trips across a representative source corpus and
+- [x] Run artificial-gap round trips across a representative source corpus and
       prove no-op equality and exact dump parity for every executable
       definition kind.
-- [ ] Complete the malformed matrix for removed, unknown, duplicate, missing
+- [x] Complete the malformed matrix for removed, unknown, duplicate, missing
       order, and foreign identities at headers, declarations, instructions,
       terminators, metadata, guards, and publication attachments.
-- [ ] Add repeated and independent-process determinism coverage for committed
+- [x] Add repeated and independent-process determinism coverage for committed
       IDs, MIR dumps, rewrite errors, maps, and change counts.
-- [ ] Audit the rewrite implementation by responsibility: split oversized
+- [x] Audit the rewrite implementation by responsibility: split oversized
       files/functions, remove transitional adapters and duplicate traversal,
       tighten visibility, and keep `mod.rs` files as facades.
-- [ ] Audit touched MIR definition lookup and test mutation utilities; resolve
+- [x] Audit touched MIR definition lookup and test mutation utilities; resolve
       small duplication or awkward naming directly and record broader public
       model changes in the discoveries record.
-- [ ] Confirm there is no production direct dense-vector surgery for valid MIR
+- [x] Confirm there is no production direct dense-vector surgery for valid MIR
       transformation and document the rewrite facade as the required future
       pass boundary.
-- [ ] Update the compiler phase contract from frozen direction to implemented
+- [x] Update the compiler phase contract from frozen direction to implemented
       behavior, update the optimization discoveries status, and remove stale
       rollout language from living documentation without roadmap codes.
-- [ ] Review every recorded discovery: implement small in-scope findings,
+- [x] Review every recorded discovery: implement small in-scope findings,
       retain bounded actionable follow-ups, and archive or remove the record
       only if none remain.
-- [ ] Run the full repository, determinism, MSRV, documentation, formatting,
+- [x] Run the full repository, determinism, MSRV, documentation, formatting,
       lint, and diff gates from a clean artifact state.
 
 **Tests:** Full no-op and artificial-gap corpus; all successful edit and
@@ -523,8 +523,20 @@ and native observations when no transformation is registered.
 **Exit criteria:** The frozen identity-rewriting contract is fully implemented,
 all reference families and executable definition kinds are covered, default
 compiler behavior is unchanged, module and API ownership are maintainable,
-the full repository gates pass, and every larger follow-up is bounded in the
-indexed discoveries record.
+the full repository gates pass, and no unrecorded larger follow-up remains.
+
+**Completed:** The final audit added representative all-executable artificial-
+gap round trips with exact no-op and dump parity, completed header,
+instruction, publication, unknown, foreign, and order-failure coverage, and
+proved independent-process determinism for dense IDs, dumps, maps, counts, and
+structured errors. The implementation remains responsibility-oriented with a
+concise facade and one deliberately exhaustive traversal owner; production
+transformations have no direct dense-vector mutation path. Living compiler and
+optimization documentation now describe the implemented boundary without
+roadmap task codes. No larger maintainability finding remained to defer. A
+clean-artifact `make check`, full golden determinism, Rust 1.82 MSRV,
+documentation, formatting, lint, and diff validation all passed before this
+roadmap was closed.
 
 ## Ordering and dependencies
 

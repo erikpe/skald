@@ -2,8 +2,8 @@ use crate::{
     identity::{CallableId, FunctionId},
     mir::{
         dump_mir, BlockId, MirBasicBlock, MirBody, MirPathCondition, MirPlaceBase, MirStorage,
-        MirStorageKind, MirTerminator, MirType, MirValue, OptionalGuardId, PathConditionId,
-        StorageId, ValueId,
+        MirStorageKind, MirStorageLive, MirTerminator, MirType, MirValue, OptionalGuardId,
+        PathConditionId, StorageId, ValueId,
     },
     test_support::lower_source_to_mir,
 };
@@ -306,6 +306,57 @@ fn unknown_references_and_body_entry_are_rejected_at_their_structural_sites() {
 }
 
 #[test]
+fn instruction_references_distinguish_deleted_unknown_and_foreign_slots() {
+    let local = edit().callable();
+    let foreign = CallableId::Function(FunctionId::new(99));
+    let cases = [
+        (StorageId::new(local, 2), MirReferenceFailure::Deleted, true),
+        (
+            StorageId::new(local, 99),
+            MirReferenceFailure::Unknown,
+            false,
+        ),
+        (
+            StorageId::new(foreign, 0),
+            MirReferenceFailure::Foreign,
+            false,
+        ),
+    ];
+
+    for (identity, failure, remove) in cases {
+        let mut transaction = edit();
+        let block = BlockId::new(local, 0);
+        let span = transaction.block(block).unwrap().span;
+        transaction
+            .rewrite_block_instructions(block, |instructions| {
+                let mut rewritten = vec![crate::mir::MirInstruction::StorageLive(MirStorageLive {
+                    storage: identity,
+                    span,
+                })];
+                rewritten.extend_from_slice(instructions);
+                rewritten
+            })
+            .unwrap();
+        if remove {
+            transaction.remove_storage(identity).unwrap();
+        }
+
+        assert_eq!(
+            commit(transaction),
+            Err(MirRewriteError::InvalidReference {
+                expected: local,
+                identity: MirLocalIdentity::Storage(identity),
+                site: MirLocalIdentitySite::Instruction {
+                    block: 0,
+                    instruction: 0,
+                },
+                failure,
+            })
+        );
+    }
+}
+
+#[test]
 fn missing_duplicate_and_logical_orders_are_rejected_before_compaction() {
     let mut missing = edit();
     let callable = missing.callable();
@@ -337,6 +388,13 @@ fn missing_duplicate_and_logical_orders_are_rejected_before_compaction() {
     assert_eq!(
         commit(logical),
         Err(MirRewriteError::DuplicateLogicalOrder { index: 0 })
+    );
+
+    let mut missing_logical = edit();
+    missing_logical.replace_logical_order_for_test(vec![LogicalRecordIndex::new(0)]);
+    assert_eq!(
+        commit(missing_logical),
+        Err(MirRewriteError::MissingLogicalOrder { index: 1 })
     );
 }
 

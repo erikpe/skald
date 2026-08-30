@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use crate::{
     identity::CallableId,
     mir::{
@@ -28,6 +30,10 @@ const COMPLETE_EXECUTABLE_SURFACE: &str = concat!(
     "}\n",
     "fn main() -> i64 { var item: Item = Item(3); return item.read(); }\n",
 );
+
+const REWRITE_DETERMINISM_CHILD: &str = "SKALD_REWRITE_DETERMINISM_CHILD";
+const FINGERPRINT_BEGIN: &str = "SKALD_REWRITE_FINGERPRINT_BEGIN";
+const FINGERPRINT_END: &str = "SKALD_REWRITE_FINGERPRINT_END";
 
 #[test]
 fn no_op_program_rewrite_preserves_every_definition_and_exact_dump() {
@@ -71,6 +77,64 @@ fn no_op_program_rewrite_preserves_every_definition_and_exact_dump() {
             .collect::<Vec<_>>(),
         expected_callables
     );
+}
+
+#[test]
+fn representative_corpus_round_trips_exactly_with_transient_gaps_in_every_table() {
+    for source in [
+        "fn main() -> i64 { return 7; }",
+        "class Flag {
+           truth: bool;
+           init(truth: bool) { self.truth = truth; }
+           fn read() -> bool { return self.truth; }
+           destroy {}
+         }
+         fn make(truth: bool) -> shared Flag { return new Flag(truth); }
+         fn evaluate(left: bool) -> bool {
+           return left && make(true)->read();
+         }
+         fn main() -> i64 { return 0; }",
+        COMPLETE_EXECUTABLE_SURFACE,
+    ] {
+        let original = lower_source_to_final_mir(source);
+        let expected_dump = dump_mir(&original);
+        let result = rewrite_program(original.clone(), |_callable, edit| {
+            create_and_remove_transient_gaps(edit)
+        })
+        .expect("transient sparse holes compact without changing committed MIR");
+
+        assert_eq!(result.program, original);
+        assert_eq!(dump_mir(&result.program), expected_dump);
+        assert!(result.callables.iter().all(|callable| {
+            callable.changes.storage.inserted == 0
+                && callable.changes.storage.removed == 0
+                && callable.changes.values.inserted == 0
+                && callable.changes.values.removed == 0
+                && callable.changes.blocks.inserted == 0
+                && callable.changes.blocks.removed == 0
+                && callable.changes.path_conditions.inserted == 0
+                && callable.changes.path_conditions.removed == 0
+                && callable.changes.optional_guards.inserted == 0
+                && callable.changes.optional_guards.removed == 0
+                && callable.changes.logical_expressions.inserted == 0
+                && callable.changes.logical_expressions.removed == 0
+        }));
+        verify_final_mir(result.program).expect("gap round trip remains valid final MIR");
+    }
+}
+
+#[test]
+fn rewrite_products_are_identical_across_independent_processes() {
+    if std::env::var_os(REWRITE_DETERMINISM_CHILD).is_some() {
+        println!("{FINGERPRINT_BEGIN}");
+        println!("{}", rewrite_fingerprint());
+        println!("{FINGERPRINT_END}");
+        return;
+    }
+
+    let first = rewrite_fingerprint_from_child();
+    let second = rewrite_fingerprint_from_child();
+    assert_eq!(first, second);
 }
 
 #[test]
@@ -265,6 +329,96 @@ fn forwarding_block_edit_passes_final_verification() {
     .expect("forwarding block commits");
 
     verify_final_mir(result.program).expect("explicit CFG rewrite reseals");
+}
+
+fn create_and_remove_transient_gaps(edit: &mut MirCallableEdit) -> Result<(), MirRewriteError> {
+    let source_storage = edit.storage_ids().next();
+    if let Some(source) = source_storage {
+        let mut declaration = edit.storage(source)?.clone();
+        let inserted = edit.allocate_storage(|identity| {
+            declaration.id = identity;
+            declaration
+        })?;
+        edit.remove_storage(inserted)?;
+    }
+    let source_value = edit.value_ids().next();
+    if let Some(source) = source_value {
+        let mut declaration = edit.value(source)?.clone();
+        let inserted = edit.allocate_value(|identity| {
+            declaration.id = identity;
+            declaration
+        })?;
+        edit.remove_value(inserted)?;
+    }
+    if let Some(source) = edit.block_order().first().copied() {
+        let mut declaration = edit.block(source)?.clone();
+        let inserted = edit.allocate_block(BlockPlacement::Append, |identity| {
+            declaration.id = identity;
+            declaration
+        })?;
+        edit.remove_block(inserted)?;
+    }
+    let source_path = edit.path_condition_ids().next();
+    if let Some(source) = source_path {
+        let mut declaration = edit.path_condition(source)?.clone();
+        let inserted = edit.allocate_path_condition(|identity| {
+            declaration.id = identity;
+            declaration
+        })?;
+        edit.remove_path_condition(inserted)?;
+    }
+    if let Some(source) = edit.logical_order().first().copied() {
+        let declaration = edit.logical_record(source)?.clone();
+        let inserted = edit.allocate_logical_record(declaration);
+        edit.remove_logical_record(inserted)?;
+    }
+    let inserted = edit.allocate_optional_guard();
+    edit.remove_optional_guard(inserted)?;
+    Ok(())
+}
+
+fn rewrite_fingerprint_from_child() -> String {
+    let output = Command::new(std::env::current_exe().expect("unit-test executable path"))
+        .args([
+            "--exact",
+            "mir::rewrite::program::tests::rewrite_products_are_identical_across_independent_processes",
+            "--nocapture",
+        ])
+        .env(REWRITE_DETERMINISM_CHILD, "1")
+        .output()
+        .expect("rewrite determinism child starts");
+    assert!(
+        output.status.success(),
+        "rewrite determinism child failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("test output is UTF-8");
+    let (_, fingerprint) = stdout
+        .split_once(FINGERPRINT_BEGIN)
+        .expect("child emitted fingerprint start marker");
+    let (fingerprint, _) = fingerprint
+        .split_once(FINGERPRINT_END)
+        .expect("child emitted fingerprint end marker");
+    fingerprint.trim().to_owned()
+}
+
+fn rewrite_fingerprint() -> String {
+    let original = lower_source_to_final_mir(COMPLETE_EXECUTABLE_SURFACE);
+    let rewritten = rewrite_program(original.clone(), |_callable, edit| {
+        create_and_remove_transient_gaps(edit)
+    })
+    .expect("fingerprint rewrite succeeds");
+    let failure = rewrite_program(original, |_callable, edit| {
+        edit.remove_block(edit.entry())?;
+        Ok(())
+    })
+    .unwrap_err();
+
+    format!(
+        "dump:\n{}\ncallables:{:?}\nerror:{failure:?}\nerror-display:{failure}",
+        dump_mir(&rewritten.program),
+        rewritten.callables,
+    )
 }
 
 fn constant_values(edit: &MirCallableEdit) -> Vec<(BlockId, ValueId)> {
