@@ -31,6 +31,14 @@ No other implementation roadmap is currently planned.
 
 ## Design proposals
 
+The
+[selectable final-MIR optimization pipeline proposal](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+defines a typed static pass registry, deterministic profiles and schedules,
+verified pass ownership, request and CLI selection, structured measurements,
+verified dump checkpoints, and a narrow dead-pure-definition elimination
+canary. Its decisions await confirmation; no production optimization is
+implemented.
+
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented
 boundary is specified by the
