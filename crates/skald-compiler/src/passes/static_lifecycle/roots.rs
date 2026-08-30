@@ -10,12 +10,27 @@ pub(crate) fn is_lifecycle_destination_or_published_self(
     root: crate::identity::StaticFieldId,
     effect: &StaticAccessEvidence,
 ) -> bool {
-    effect.field == root
-        && ((!effect.lifecycle_owned
-            && effect.phase == StaticEffectPhase::InitializerAfterPublication)
-            || (effect.lifecycle_owned
-                && effect.phase == StaticEffectPhase::InitializerBeforePublication
-                && effect.access == StaticAccessKind::Initialize))
+    is_lifecycle_destination_or_published_self_parts(
+        root,
+        effect.field,
+        effect.access,
+        effect.phase,
+        effect.lifecycle_owned,
+    )
+}
+
+pub(crate) fn is_lifecycle_destination_or_published_self_parts(
+    root: crate::identity::StaticFieldId,
+    field: crate::identity::StaticFieldId,
+    access: StaticAccessKind,
+    phase: StaticEffectPhase,
+    lifecycle_owned: bool,
+) -> bool {
+    field == root
+        && ((!lifecycle_owned && phase == StaticEffectPhase::InitializerAfterPublication)
+            || (lifecycle_owned
+                && phase == StaticEffectPhase::InitializerBeforePublication
+                && access == StaticAccessKind::Initialize))
 }
 
 pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<StaticEffectNode> {

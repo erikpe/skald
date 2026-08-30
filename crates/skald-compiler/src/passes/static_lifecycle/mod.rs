@@ -8,6 +8,7 @@ mod dump;
 mod extract;
 mod model;
 mod plan;
+mod root_effects;
 mod roots;
 mod solve;
 mod synthesize;
@@ -30,6 +31,25 @@ pub use synthesize::synthesize_static_lifecycle;
 pub use verify::{verify_planned_mir, verify_synthesized_mir};
 
 use crate::mir::PreliminaryMirProgram;
+
+fn infer_static_effects_with_roots(
+    program: &PreliminaryMirProgram,
+) -> (
+    StaticEffectAnalysis,
+    root_effects::StaticLifecycleRootEffectAnalysis,
+) {
+    let graph = extract::extract(program);
+    let root_effects = root_effects::analyze(program, &graph)
+        .expect("verified preliminary MIR must have valid lifecycle-root identities");
+    let effects = solve::solve(graph);
+    debug_assert_eq!(
+        root_effects::project_solved_analysis(&root_effects, &effects)
+            .expect("solved analysis must cover every lifecycle root"),
+        root_effects,
+        "checker-oriented root effects must agree with solved summaries"
+    );
+    (effects, root_effects)
+}
 
 /// Infers direct and transitive static-field effects for every executable MIR
 /// body and every compiler-generated lifecycle operation in the closed program.

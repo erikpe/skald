@@ -1,6 +1,6 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: planned; LCR0 is next.
+Status: in progress; LCR0 is complete and LCR1 is next.
 
 This roadmap implements the frozen
 [static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
@@ -62,7 +62,7 @@ graph-reshaping passes can later rely.
 
 ## Progress
 
-- [ ] LCR0 — Establish normalized root-effect analysis
+- [x] LCR0 — Establish normalized root-effect analysis
 - [ ] LCR1 — Issue exact immutable baseline authority
 - [ ] LCR2 — Verify monotone final-MIR realization
 - [ ] LCR3 — Separate analysis evidence from executable proof
@@ -79,28 +79,29 @@ graph-reshaping passes can later rely.
 root-reachability implementation without changing the current certificate or
 pipeline behavior.
 
-- [ ] Add a pass-owned normalized fact type whose equality includes target
+- [x] Add a pass-owned normalized fact type whose equality includes target
       field, access kind, propagated root phase, and lifecycle-owned status but
       excludes span, witness, directness, edge kind, and intermediate node.
-- [ ] Inventory lifecycle roots from static definitions and stored types,
+- [x] Inventory lifecycle roots from static definitions and stored types,
       covering explicit initializers and every implicit class, optional,
       shared-owner, and array operation used by activation or destruction.
-- [ ] Build a checker-oriented closure over the existing extracted graph that
+- [x] Build a checker-oriented closure over the existing extracted graph that
       derives the normalized facts reachable from each requested lifecycle
       root without trusting `StaticEffectAnalysis` summaries.
-- [ ] Reuse the exhaustive instruction, terminator, place, cleanup, copy,
+- [x] Reuse the exhaustive instruction, terminator, place, cleanup, copy,
       finalization, array, virtual, interface, and indirect-call extraction
       owners; do not add a second MIR scanner.
-- [ ] Preserve exact-signature function-value target expansion from all
+- [x] Preserve exact-signature function-value target expansion from all
       address formations in the MIR product being analyzed.
-- [ ] Canonically sort and deduplicate roots and facts, reject foreign
+- [x] Canonically sort and deduplicate roots and facts, reject foreign
       identities, and keep phase propagation explicit at the first call or
       lifecycle edge from an initializer root.
-- [ ] Compare the new root facts and derived dependency pairs with the current
+- [x] Compare the new root facts and derived dependency pairs with the current
       solved summaries across the existing lifecycle fixture matrix, while
       leaving `MirStaticLifecycleCertificate` unchanged.
-- [ ] Add focused analysis dumps or test formatting only where necessary to
-      make root/fact disagreements actionable.
+- [x] Keep derived `Debug` output on normalized roots, facts, and errors for
+      actionable test disagreements; a separate user-facing dump is not needed
+      while the analysis remains an internal compatibility oracle.
 
 **Tests:** Direct and transitive reads, writes, borrows, replacement, and
 destruction; initializer before/after-publication partitioning; lifecycle-owned
@@ -119,6 +120,17 @@ fact set produced independently of stored transitive summaries, all implicit
 operation families and dynamic target kinds are covered, and existing
 certificate construction, diagnostics, final MIR, and backend output remain
 unchanged.
+
+**Completed:** Planning now computes sorted, deduplicated normalized facts for
+inventoried initializer and destruction roots by walking the raw extracted
+graph independently of solved summaries. Compatibility assertions cover both
+root facts and derived dependency pairs while the exact certificate remains
+unchanged. Focused tests cover phases, lifecycle-owned access, access kinds,
+recursive paths, implicit optional/shared/array destruction, indirect/virtual/
+interface targets, malformed identities, and determinism. The existing solver
+also keeps lifecycle ownership in its witness representative key so the oracle
+cannot collapse distinct semantic facts. All focused gates and the complete
+compiler test suite pass.
 
 ### LCR1 — Issue exact immutable baseline authority
 

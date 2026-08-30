@@ -321,6 +321,16 @@ root-effect authority relation. Delivery is owned by the
 and the complete rationale is preserved in the
 [frozen design record](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md).
 
+Planning now also computes a checker-oriented normalized root-effect analysis
+directly over the raw extracted graph. It inventories roots from static
+definitions and stored types, walks direct and implicit closed-world edges
+without trusting solved summaries, and preserves target field, access kind,
+propagated root phase, and lifecycle-owned status. Internal compatibility
+checks require those facts and their derived dependency pairs to agree with the
+existing solved summaries and lifetime graph. This establishes the comparison
+model without yet changing `MirStaticLifecycleCertificate` or its exact final-
+MIR verification rule.
+
 For every explicit static initializer and implicit class or array lifecycle
 operation used to activate or destroy a static field, preliminary analysis
 will issue an exact baseline authority. One authorized fact consists of target

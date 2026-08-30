@@ -132,7 +132,7 @@ fn witnesses_for(
     let mut queue = VecDeque::from([(root, None, Vec::new())]);
     let mut visited = BTreeSet::new();
     let mut representatives =
-        BTreeMap::<(StaticEffectPhase, StaticAccessKind), StaticAccessEvidence>::new();
+        BTreeMap::<(StaticEffectPhase, StaticAccessKind, bool), StaticAccessEvidence>::new();
     while let Some((node, root_phase, path)) = queue.pop_front() {
         if !visited.insert((node, root_phase)) {
             continue;
@@ -147,7 +147,7 @@ fn witnesses_for(
             if let Some(phase) = root_phase {
                 evidence.phase = phase;
             }
-            let key = (evidence.phase, evidence.access);
+            let key = (evidence.phase, evidence.access, evidence.lifecycle_owned);
             match representatives.entry(key) {
                 std::collections::btree_map::Entry::Vacant(entry) => {
                     entry.insert(evidence);

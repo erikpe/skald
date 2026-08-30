@@ -1,0 +1,120 @@
+//! Independent graph closure for normalized lifecycle-root effects.
+
+use std::collections::{BTreeSet, VecDeque};
+
+use crate::mir::{PreliminaryMirProgram, StaticEffectAnalysis, StaticEffectNode};
+
+use super::{
+    super::extract::ExtractedGraph,
+    model::{
+        lifecycle_root_uses, StaticLifecycleEffectFact, StaticLifecycleRootEffectAnalysis,
+        StaticLifecycleRootEffectError, StaticLifecycleRootEffectSummary,
+    },
+};
+
+pub(crate) fn analyze(
+    program: &PreliminaryMirProgram,
+    graph: &ExtractedGraph,
+) -> Result<StaticLifecycleRootEffectAnalysis, StaticLifecycleRootEffectError> {
+    let declared_fields = program
+        .static_fields()
+        .map(|field| field.field)
+        .collect::<BTreeSet<_>>();
+    let roots = lifecycle_root_uses(program)
+        .into_iter()
+        .map(|root| root.node)
+        .collect::<BTreeSet<_>>();
+    let summaries = roots
+        .into_iter()
+        .map(|root| {
+            effects_for(root, graph, &declared_fields).map(|effects| {
+                StaticLifecycleRootEffectSummary {
+                    root,
+                    effects: effects.into_iter().collect(),
+                }
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(StaticLifecycleRootEffectAnalysis::new(summaries))
+}
+
+pub(crate) fn project_solved_analysis(
+    roots: &StaticLifecycleRootEffectAnalysis,
+    analysis: &StaticEffectAnalysis,
+) -> Result<StaticLifecycleRootEffectAnalysis, StaticLifecycleRootEffectError> {
+    let summaries = roots
+        .summaries()
+        .map(|root| {
+            let summary = analysis
+                .summary(root.root)
+                .ok_or(StaticLifecycleRootEffectError::MissingRoot(root.root))?;
+            let effects = summary
+                .effects
+                .iter()
+                .map(|effect| StaticLifecycleEffectFact::from_evidence(effect, None))
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            Ok(StaticLifecycleRootEffectSummary {
+                root: root.root,
+                effects,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(StaticLifecycleRootEffectAnalysis::new(summaries))
+}
+
+fn effects_for(
+    root: StaticEffectNode,
+    graph: &ExtractedGraph,
+    declared_fields: &BTreeSet<crate::identity::StaticFieldId>,
+) -> Result<BTreeSet<StaticLifecycleEffectFact>, StaticLifecycleRootEffectError> {
+    if !graph.nodes.contains_key(&root) {
+        return Err(StaticLifecycleRootEffectError::MissingRoot(root));
+    }
+
+    let mut effects = BTreeSet::new();
+    let mut visited = BTreeSet::new();
+    let mut pending = VecDeque::from([(root, None)]);
+    while let Some((node, root_phase)) = pending.pop_front() {
+        if !visited.insert((node, root_phase)) {
+            continue;
+        }
+        let draft =
+            graph
+                .nodes
+                .get(&node)
+                .ok_or(StaticLifecycleRootEffectError::ForeignEdgeTarget {
+                    source: root,
+                    target: node,
+                })?;
+        for direct in &draft.direct {
+            if !declared_fields.contains(&direct.field) {
+                return Err(StaticLifecycleRootEffectError::ForeignStaticField {
+                    node,
+                    field: direct.field,
+                });
+            }
+            effects.insert(StaticLifecycleEffectFact::from_evidence(direct, root_phase));
+        }
+        for edge in &draft.edges {
+            if edge.source != node {
+                return Err(StaticLifecycleRootEffectError::ForeignEdgeSource {
+                    node,
+                    source: edge.source,
+                });
+            }
+            if !graph.nodes.contains_key(&edge.target) {
+                return Err(StaticLifecycleRootEffectError::ForeignEdgeTarget {
+                    source: node,
+                    target: edge.target,
+                });
+            }
+            let target_phase = root_phase.or(Some(edge.phase));
+            if !visited.contains(&(edge.target, target_phase)) {
+                pending.push_back((edge.target, target_phase));
+            }
+        }
+    }
+    Ok(effects)
+}

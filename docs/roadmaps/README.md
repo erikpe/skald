@@ -6,7 +6,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[static-lifecycle certificate redesign roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+is in progress. Normalized lifecycle-root effect analysis is complete; exact
+immutable baseline-authority issuance is next. The roadmap depends on the
+existing whole-world static-effect extractor and lifecycle planner; the later
+general optimization framework and dense-ID rewriter remain separate work.
 
 ## Pending discoveries
 
@@ -18,20 +23,19 @@ starting sequence. Its first recommended change is now explored by the planned
 static-lifecycle certificate roadmap. The remaining six constraints stay
 pending and are not part of that roadmap.
 
+The
+[static-lifecycle certificate follow-up discoveries](STATIC_LIFECYCLE_CERTIFICATE_DISCOVERIES.md)
+record an unrelated direct exact-class static-assignment panic found while
+building analysis fixtures. Its language/capability decision is deferred until
+after the active roadmap rather than expanding the current milestone.
+
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).
 
 ## Planned
 
-The
-[static-lifecycle certificate redesign roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
-is planned with LCR0 next. It establishes normalized lifecycle-root effects,
-exact baseline authority, monotone final-MIR realization, canonical lifecycle
-schema, and sealed backend phase products before any production optimization
-pass is added. It depends on the existing whole-world static-effect extractor
-and lifecycle planner; the later general optimization framework and dense-ID
-rewriter remain separate work.
+No other implementation roadmap is currently planned.
 
 ## Design proposals
 

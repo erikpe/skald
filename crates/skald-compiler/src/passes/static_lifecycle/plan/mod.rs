@@ -15,15 +15,24 @@ pub use model::{
 
 use crate::{diagnostics::Diagnostics, mir::PreliminaryMirProgram};
 
-use super::infer_static_effects;
+use super::infer_static_effects_with_roots;
 
 /// Infers effects once and converts them into a deterministic whole-program
 /// activation and exact-reverse shutdown plan.
 pub fn plan_static_lifetimes(
     preliminary: PreliminaryMirProgram,
 ) -> Result<PlannedMirProgram, StaticLifecyclePlanningFailure> {
-    let effects = infer_static_effects(&preliminary);
+    let (effects, root_effects) = infer_static_effects_with_roots(&preliminary);
     let graph = graph::LifetimeGraph::build(&preliminary, &effects);
+    debug_assert_eq!(
+        root_effects.dependency_pairs(&preliminary),
+        graph
+            .dependencies()
+            .iter()
+            .map(|dependency| (dependency.prerequisite, dependency.dependent))
+            .collect(),
+        "normalized lifecycle-root effects must derive the planned dependencies"
+    );
     let cyclic_components = graph.cyclic_components();
     if !cyclic_components.is_empty() {
         let diagnostics = diagnostics::cycle_diagnostics(&preliminary, &graph, &cyclic_components)
