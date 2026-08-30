@@ -110,19 +110,23 @@ high-value whole-world transformations.
 Keep source diagnostics and the selected lifecycle order based on the verified
 unoptimized program, then distinguish that conservative proof from effects
 realized by optimized MIR. The central invariant should permit removal while
-rejecting additions, conceptually:
+rejecting additions. The focused
+[static-lifecycle certificate redesign proposal](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+refines the relation to lifecycle-root effects rather than direct graph shape:
 
 ```text
-optimized direct effects and possible targets
+effects reachable from each optimized lifecycle root
     are a subset of
-certified pre-optimization direct effects and possible targets
+normalized effects certified for that unoptimized lifecycle root
 ```
 
-The exact relation needs a focused design because certificate witnesses,
-function-value retention, generated lifecycle nodes, and static destruction
-roots must remain sound. Passes should never edit certificate internals. The
-pipeline should re-extract realized effects and centrally verify the permitted
-relation after a pass that can change control flow or call targets.
+Comparing direct effects and possible targets would still reject inlining,
+because the same root effect changes from indirect to direct. The proposal
+therefore preserves semantic field, access, phase, and lifecycle-ownership
+facts while allowing call-graph shape, spans, and witnesses to change. Passes
+should never edit certificate internals. The pipeline should re-extract
+realized effects and centrally verify the permitted relation after a pass that
+can change control flow or call targets.
 
 Running all such transformations before lifecycle planning is not the preferred
 solution: static-cycle acceptance and diagnostics could then vary by

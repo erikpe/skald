@@ -14,8 +14,8 @@ The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIE
 record the seven current compiler constraints on modular target-independent and
 target-specific optimization, their interaction with permanent whole-world and
 single-threaded program semantics, expected impact and effort, and a recommended
-starting sequence. The next design decision is the static-lifecycle certificate
-relation for effect-removing transformations; no implementation roadmap is yet
+starting sequence. Its first recommended change is now explored by the active
+static-lifecycle certificate design proposal; no implementation roadmap is yet
 scheduled.
 
 The completed interface-based operator-overloading, general-iteration, and
@@ -28,8 +28,15 @@ No other implementation roadmap is currently planned.
 
 ## Design proposals
 
-No design proposal is currently active. The structured-reporting decisions
-are promoted into the [compiler reporting contract](../compiler/REPORTING.md),
+The
+[static-lifecycle certificate redesign proposal](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+defines an immutable preliminary-MIR authority and a root-reachable final-MIR
+realization relation, together with adjacent lifecycle schema and ownership
+cleanup. Its SLC1 through SLC12 decisions await confirmation before an
+implementation roadmap is created.
+
+The structured-reporting decisions are promoted into the
+[compiler reporting contract](../compiler/REPORTING.md),
 their [frozen decision record](../archive/STRUCTURED_REPORTING_DESIGN_PROPOSAL.md)
 and completed
 [implementation roadmap](../archive/STRUCTURED_REPORTING_ROADMAP.md) are
