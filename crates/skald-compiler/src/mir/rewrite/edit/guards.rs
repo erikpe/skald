@@ -26,17 +26,10 @@ pub(super) struct OptionalGuardRegistry {
 
 impl OptionalGuardRegistry {
     pub(super) fn discover(owner: CallableId, body: &mut MirBody) -> Result<Self, MirRewriteError> {
-        let mut collector = GuardCollector {
-            owner,
-            guards: BTreeSet::new(),
-        };
-        map_body_local_identities(body, &mut collector)?;
-        let slot_count = collector
-            .guards
-            .last()
-            .map_or(0, |identity| identity.index() + 1);
+        let guards = collect_optional_guards(owner, body)?;
+        let slot_count = guards.last().map_or(0, |identity| identity.index() + 1);
         let mut slots = vec![GuardSlot::Unallocated; slot_count];
-        for identity in collector.guards {
+        for identity in guards {
             slots[identity.index()] = GuardSlot::Live;
         }
         Ok(Self {
@@ -116,6 +109,18 @@ impl OptionalGuardRegistry {
             })
         }
     }
+}
+
+pub(in crate::mir::rewrite) fn collect_optional_guards(
+    owner: CallableId,
+    body: &mut MirBody,
+) -> Result<BTreeSet<OptionalGuardId>, MirRewriteError> {
+    let mut collector = GuardCollector {
+        owner,
+        guards: BTreeSet::new(),
+    };
+    map_body_local_identities(body, &mut collector)?;
+    Ok(collector.guards)
 }
 
 struct GuardCollector {

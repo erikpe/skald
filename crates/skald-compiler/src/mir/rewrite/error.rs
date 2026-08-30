@@ -1,8 +1,11 @@
 use std::fmt;
 
-use crate::identity::CallableId;
+use crate::identity::{BindingId, CallableId};
 
-use super::{super::MirType, MirLocalIdentity, MirLocalIdentitySite};
+use super::{
+    super::{MirStorageKind, MirType},
+    MirLocalIdentity, MirLocalIdentitySite,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum MirReferenceFailure {
@@ -55,6 +58,39 @@ pub(crate) enum MirRewriteError {
         from_type: MirType,
         to: super::super::StorageId,
         to_type: MirType,
+    },
+    ImportSourceMatchesDestination {
+        callable: CallableId,
+    },
+    DuplicateImportIdentity {
+        identity: MirLocalIdentity,
+    },
+    DuplicateImportSubstitution {
+        identity: MirLocalIdentity,
+    },
+    SelectedImportIdentityHasSubstitution {
+        identity: MirLocalIdentity,
+    },
+    MissingImportSubstitution {
+        identity: MirLocalIdentity,
+        site: MirLocalIdentitySite,
+    },
+    InvalidImportStorageKind {
+        storage: super::super::StorageId,
+        kind: MirStorageKind,
+    },
+    ForeignImportBinding {
+        expected: CallableId,
+        storage: super::super::StorageId,
+        binding: BindingId,
+    },
+    UnknownImportLogicalRecord {
+        source: CallableId,
+        index: usize,
+    },
+    DuplicateImportLogicalRecord {
+        source: CallableId,
+        index: usize,
     },
     UnknownLogicalRecord {
         index: usize,
@@ -134,6 +170,46 @@ impl fmt::Display for MirRewriteError {
             } => write!(
                 formatter,
                 "cannot substitute storage {from} ({from_type}) with {to} ({to_type})"
+            ),
+            Self::ImportSourceMatchesDestination { callable } => write!(
+                formatter,
+                "cross-callable import source and destination are both {callable}"
+            ),
+            Self::DuplicateImportIdentity { identity } => {
+                write!(formatter, "{identity} is selected more than once for import")
+            }
+            Self::DuplicateImportSubstitution { identity } => write!(
+                formatter,
+                "source-local {identity} has more than one import substitution"
+            ),
+            Self::SelectedImportIdentityHasSubstitution { identity } => write!(
+                formatter,
+                "selected import identity {identity} also has a boundary substitution"
+            ),
+            Self::MissingImportSubstitution { identity, site } => write!(
+                formatter,
+                "source-local {identity} at {site} is outside the import selection and has no substitution"
+            ),
+            Self::InvalidImportStorageKind { storage, kind } => write!(
+                formatter,
+                "imported storage {storage} cannot use destination kind {kind:?}"
+            ),
+            Self::ForeignImportBinding {
+                expected,
+                storage,
+                binding,
+            } => write!(
+                formatter,
+                "source storage {storage} has binding {binding} owned by {}, expected {expected}",
+                binding.callable()
+            ),
+            Self::UnknownImportLogicalRecord { source, index } => write!(
+                formatter,
+                "callable {source} has no logical record {index} to import"
+            ),
+            Self::DuplicateImportLogicalRecord { source, index } => write!(
+                formatter,
+                "logical record {index} from callable {source} is selected more than once for import"
             ),
             Self::UnknownLogicalRecord { index } => {
                 write!(formatter, "logical record {index} was never allocated")

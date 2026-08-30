@@ -1,6 +1,6 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: in progress; DMR0-DMR4 are implemented and DMR5 is next.
+Status: in progress; DMR0-DMR5 are implemented and DMR6 is next.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
@@ -68,7 +68,7 @@ rather than expanding a reviewed task.
 - [x] DMR2 — Commit deterministic dense callable state
 - [x] DMR3 — Integrate every executable definition kind
 - [x] DMR4 — Publish the supported callable editing facade
-- [ ] DMR5 — Add explicit cross-callable rehoming
+- [x] DMR5 — Add explicit cross-callable rehoming
 - [ ] DMR6 — Integrate verified pipeline invalidation and resealing
 - [ ] DMR7 — Harden the boundary and close maintainability debt
 
@@ -355,23 +355,23 @@ committable dominance mistake rejected by `verify_final_mir`.
 **Purpose:** Make the identity foundation sufficient for future inlining and
 specialization without implementing either optimization.
 
-- [ ] Add a two-phase importer that allocates all destination slots before
+- [x] Add a two-phase importer that allocates all destination slots before
       cloning selected source nodes through the exhaustive remapper.
-- [ ] Require explicit substitutions for receiver, parameters, return
+- [x] Require explicit substitutions for receiver, parameters, return
       destination, entry, exits, and every reference outside the selected clone
       set.
-- [ ] Rehome storage, values, blocks, path conditions, optional guards, logical
+- [x] Rehome storage, values, blocks, path conditions, optional guards, logical
       metadata, places, instructions, and terminators to the destination
       callable owner.
-- [ ] Preserve program-level semantic callable, type, field, static,
+- [x] Preserve program-level semantic callable, type, field, static,
       declaration, and lifecycle identities unchanged.
-- [ ] Reject foreign `BindingId` provenance and require imported callee locals
+- [x] Reject foreign `BindingId` provenance and require imported callee locals
       to use an explicit compiler-owned storage kind with no forged source
       binding.
-- [ ] Keep import policy separate from call-site splitting, evaluation order,
+- [x] Keep import policy separate from call-site splitting, evaluation order,
       ownership transfer, cleanup, return merging, recursion limits, and
       profitability.
-- [ ] Reuse commit maps and error vocabulary rather than adding importer-local
+- [x] Reuse commit maps and error vocabulary rather than adding importer-local
       identity tables or diagnostics.
 
 **Tests:** Synthetic complete and partial clone sets; every local identity gains
@@ -390,6 +390,28 @@ fixture supplies semantically valid boundaries.
 into another callable with total destination-local identity maps and explicit
 boundary substitutions, without delivering an inliner or changing production
 output.
+
+**Completed:** A supported crate-private importer now snapshots one immutable
+source callable and applies one explicit import request atomically to a cloned
+destination edit transaction. Requests select source storage with a required
+source-free destination kind, values, blocks, path conditions, logical records,
+and optional guards, and provide typed substitutions for all referenced local
+identities outside the selection. The importer validates source and destination
+ownership, exact storage/value types, selection uniqueness, storage provenance,
+and boundary completeness before publishing any edit. It allocates fresh
+storage, values, blocks, guards, and parent-ordered path slots first, then
+clones instructions, terminators, paths, and logical metadata through the
+authoritative exhaustive mapper. Returned total maps include fresh allocations
+and caller-supplied boundaries; repeated imports remain deterministic and guard
+slots cannot collide. Imported storage always has `source: None`, corrupt
+third-callable bindings and references fail at deterministic structured sites,
+and program-level semantic targets remain unchanged. Focused tests cover
+complete and partial regions, nested metadata, guard pairs, explicit entry and
+exit boundaries, missing substitutions, foreign bindings and references,
+ambiguous selections, atomic failure, repeated imports, dense commit, and a
+real parameterless imported region accepted by `verify_final_mir`. No
+call-site, argument, return, cleanup, recursion, or profitability policy was
+added.
 
 ### DMR6 — Integrate verified pipeline invalidation and resealing
 

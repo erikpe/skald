@@ -477,8 +477,9 @@ traversal, private sparse common callable state, and atomic dense common-state
 commit described below are implemented. Private adapters now cover every
 executable definition kind and rebuild whole programs atomically. The
 crate-private supported editing facade is also implemented. Cross-callable
-rehoming and pipeline invalidation/resealing remain roadmap work. The current
-pipeline still has no production MIR transformation.
+rehoming is implemented through the same boundary. Pipeline
+invalidation/resealing remains roadmap work. The current pipeline still has no
+production MIR transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -561,13 +562,28 @@ rejects dangling or foreign structure, while `verify_final_mir` remains the
 authority for dominance, lifetime, ownership, proof-metadata, and lifecycle
 meaning.
 
-Future inlining and specialization use a distinct two-phase rehoming primitive.
-It allocates destination slots before cloning through the exhaustive mapper and
-requires explicit substitutions for receiver, parameters, return destination,
-entry, exits, and any reference outside the selected region. Callee-local
-`BindingId` provenance cannot be forged in the destination; imported locals
-use an explicit compiler-owned storage role or a separately designed
-provenance extension. Rehoming does not itself define an inliner.
+Future inlining and specialization can use the implemented distinct two-phase
+rehoming primitive. An owned immutable source snapshot preserves common MIR
+without retaining program borrows. An import request names each selected
+storage declaration and its explicit source-free destination kind, value,
+block, path condition, logical record, and optional guard. It also supplies
+typed storage, value, block, path, and guard substitutions for receiver,
+parameter, result, entry, exit, or other references outside the selected
+region. The importer validates the complete selection and substitutions,
+allocates every destination identity before cloning executable nodes through
+the exhaustive mapper, and publishes the cloned destination transaction only
+if the whole import succeeds.
+
+Every imported local identity is owned by the destination callable; no raw
+source-local reference may survive. Program-level callable, type, field,
+static, declaration, and lifecycle identities pass through unchanged.
+Source-semantic `BindingId` values are never copied: source snapshots reject a
+binding owned by a third callable, and selected storage is materialized with
+`source: None` and the caller's explicit source-free storage kind. Complete
+source-to-destination maps include both fresh allocations and explicit
+boundary substitutions. Rehoming does not split call sites, transfer
+arguments, merge returns, design cleanup, limit recursion, choose
+profitability, or otherwise define an inliner.
 
 All analyses keyed by pre-commit local IDs or instruction positions are
 invalidated by default. Commit maps support attachments, tests, reporting, and

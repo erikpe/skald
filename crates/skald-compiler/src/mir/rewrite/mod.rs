@@ -15,15 +15,16 @@
 //! transformation is in progress. The supported crate-private facade is
 //! [`rewrite_program`], [`MirCallableEdit`], and their typed result and error
 //! vocabulary. Passes use explicit lookup, allocation, removal, substitution,
-//! instruction, terminator, and edge operations; sparse slots and compaction
-//! remain implementation details. Helpers never infer semantic cascading
-//! deletion of liveness or proof metadata.
+//! instruction, terminator, edge, and cross-callable import operations; sparse
+//! slots and compaction remain implementation details. Helpers never infer
+//! semantic cascading deletion of liveness or proof metadata.
 
 mod callable;
 mod commit;
 mod edit;
 mod error;
 mod identity;
+mod import;
 mod map;
 mod program;
 
@@ -35,6 +36,9 @@ pub(crate) use error::{MirReferenceFailure, MirRewriteError};
 
 pub(crate) use identity::{
     MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentityOwnershipError, MirLocalIdentitySite,
+};
+pub(crate) use import::{
+    MirImportMap, MirImportMaps, MirImportRequest, MirImportResult, MirImportSource,
 };
 pub(crate) use map::{
     map_function_local_identities, map_member_local_identities,

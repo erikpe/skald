@@ -8,7 +8,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The [dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 is in progress. Its exhaustive local-identity traversal and stable sparse edit
-storage are implemented; DMR2, deterministic dense commit, is next.
+storage, deterministic dense commit, all-definition integration, supported
+editing facade, and cross-callable rehoming are implemented; DMR6, verified
+pipeline invalidation and resealing, is next.
 
 ## Pending discoveries
 

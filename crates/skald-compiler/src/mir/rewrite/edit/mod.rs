@@ -16,6 +16,7 @@ use super::super::{
     OptionalGuardId, PathConditionId, StorageId, ValueId,
 };
 use super::error::MirRewriteError;
+pub(in crate::mir::rewrite) use guards::collect_optional_guards;
 use guards::OptionalGuardRegistry;
 pub(crate) use logical::LogicalRecordIndex;
 use logical::LogicalRecords;
@@ -221,6 +222,16 @@ impl MirCallableEdit {
         identity: PathConditionId,
     ) -> Result<MirPathCondition, MirRewriteError> {
         self.path_conditions.remove(identity)
+    }
+
+    pub(in crate::mir::rewrite) fn replace_imported_path_condition(
+        &mut self,
+        identity: PathConditionId,
+        condition: MirPathCondition,
+    ) -> Result<(), MirRewriteError> {
+        debug_assert_eq!(condition.id, identity);
+        *self.path_conditions.get_mut(identity)? = condition;
+        Ok(())
     }
 
     pub(crate) fn logical_record(
