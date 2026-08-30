@@ -1,15 +1,15 @@
 # Optimization Architecture Discoveries
 
-Status: pending architectural assessment. The first constraint is implemented
-by the
+Status: six architectural constraints remain pending. The static-lifecycle
+constraint is resolved by the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md);
-the remaining six have no implementation roadmap.
+the remaining constraints have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
 separates foundational changes from later high-effort opportunities so that a
-future implementation work can settle contracts and representation boundaries
-before scheduling individual optimization passes.
+future implementation roadmap can settle contracts and representation
+boundaries before scheduling individual optimization passes.
 
 ## Scope and fixed assumptions
 
@@ -64,77 +64,76 @@ roadmap:
 
 | Area | Limitation | Nature | Potential impact | Estimated effort | Recommended timing |
 |---|---|---|---|---|---|
-| Exact static-lifecycle certificate | Prevents effect- and call-graph-reducing transformations after lifecycle synthesis | Awkward compiler proof contract, not a language requirement | Very high architectural unlock | Large | Start first |
-| Dense index-coupled MIR identities | Makes deletion, replacement, and CFG rewriting require complete coordinated remapping | Representation and editing-infrastructure debt | Very high enabling value | Large | Start alongside the lifecycle contract |
+| Static-lifecycle optimization boundary | Resolved: exact verified baseline authority now permits monotone final-MIR realization | Implemented compiler proof and sealed phase-product contract | Very high architectural unlock delivered | Completed (large) | Foundation available |
+| Dense index-coupled MIR identities | Makes deletion, replacement, and CFG rewriting require complete coordinated remapping | Representation and editing-infrastructure debt | Very high enabling value | Large | Start next |
 | Block-local non-SSA values | Limits global scalar propagation, value numbering, code motion, and loop optimization | Deliberate initial representation with an eventual optimization ceiling | High for advanced portable optimization | Extra large | Defer until simpler MIR passes demonstrate the need |
 | Proof provenance mixed with executable MIR | Couples CFG transformations to exact lowering shapes and derived metadata | Awkward IR layering | High for CFG and loop work | Large | Normalize incrementally as CFG passes require it |
 | Direct physical-register backend lowering | Forces every MIR value and storage through a stack home and leaves no natural register-allocation layer | Deliberate bootstrap backend and the largest target-code ceiling | Very high eventual runtime value | Extra large | Largest eventual performance project |
 | Reachability after machine lowering | Retains unreachable work through legality, layout, frame planning, and instruction selection | Phase-placement debt | High for size, compile time, and whole-world follow-ons | Medium to large | Early whole-world optimization after lifecycle and rewrite foundations |
 | Conservative alias, effect, and ownership knowledge | Prevents memory and ownership optimizations unless each pass proves safety independently | Analysis-infrastructure gap under intentionally permissive language semantics | High, with precision improving incrementally | Large to extra large | Build a conservative shared analysis after the first MIR passes |
 
-The first two areas are enabling work rather than direct optimizations. Together
-they create a safe transformation boundary on which constant folding,
-algebraic simplification, copy propagation, dead-pure-definition elimination,
-and conservative CFG simplification can be implemented. Earlier reachability
-then offers a comparatively contained way to exploit permanent whole-world
-compilation. A virtual-register backend is likely to provide the largest
-eventual improvement in generated scalar code, but it is also the largest
-single investment and should not be the first optimizer change.
+The static-lifecycle foundation is implemented; it deliberately lands no
+production optimization or general pass registry. Dense-identity rewriting is
+the remaining enabling work needed for safe deletion and structural editing.
+Together those boundaries support later constant folding, algebraic
+simplification, copy propagation, dead-pure-definition elimination, and
+conservative CFG simplification. Earlier reachability then offers a
+comparatively contained way to exploit permanent whole-world compilation. A
+virtual-register backend is likely to provide the largest eventual improvement
+in generated scalar code, but it is also the largest single investment and
+should not be the first optimizer change.
 
-## 1. Exact static-lifecycle certificate
+## 1. Implemented static-lifecycle optimization boundary
 
-### Current constraint
+### Implemented state
 
-Static-lifecycle planning analyzes preliminary MIR and stores direct static
-effects, possible call targets, transitive summaries, dependency evidence, and
-the activation and shutdown plan in the final program. Final verification
-re-extracts the effect graph from final MIR and currently requires exact
-equality with the stored certificate. The current contract is described in
-[Static lifecycle planning and synthesis](../compiler/PHASES_AND_IR.md#pipeline-contract),
-and the MIR pipeline verifies that synthesized product before target lowering.
+Static-lifecycle planning still selects diagnostics and deterministic lifecycle
+order from the unoptimized whole program. It now issues compact baseline
+authority over normalized lifecycle-root facts instead of retaining exact
+cross-phase graph shape. Planned verification consumes draft
+`PlannedMirProgram`, independently proves exact authority issuance, and returns
+an opaque `VerifiedPlannedMirProgram`; synthesis accepts only that sealed
+product.
 
-An optimization that removes an unreachable call or static access can therefore
-invalidate the certificate even when it only makes the original lifecycle plan
-more conservative. The same problem applies to devirtualization that narrows a
-target set, inlining that removes a call edge, whole-program pruning, and CFG
-simplification that removes an effect-bearing unreachable region.
-
-### Nature and impact
-
-This is an awkward compiler proof contract, not a consequence of source
-lifecycle semantics. Optimization must not introduce a previously uncertified
-static dependency, but safe optimization frequently removes dependencies. Exact
-equality turns the certificate into an optimization fence and blocks several
-high-value whole-world transformations.
-
-### Resolution direction
-
-Keep source diagnostics and the selected lifecycle order based on the verified
-unoptimized program, then distinguish that conservative proof from effects
-realized by optimized MIR. The central invariant should permit removal while
-rejecting additions. The focused
-[static-lifecycle certificate redesign proposal](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
-refines the relation to lifecycle-root effects rather than direct graph shape:
+Final ordinary-MIR and lifecycle-realization verification re-extracts effects
+from the actual final program and enforces:
 
 ```text
-effects reachable from each optimized lifecycle root
-    are a subset of
-normalized effects certified for that unoptimized lifecycle root
+effects(final MIR, lifecycle root)
+    subset-of
+baseline authority[lifecycle root]
 ```
 
-Comparing direct effects and possible targets would still reject inlining,
-because the same root effect changes from indirect to direct. The proposal
-therefore preserves semantic field, access, phase, and lifecycle-ownership
-facts while allowing call-graph shape, spans, and witnesses to change. Passes
-should never edit certificate internals. The pipeline should re-extract
-realized effects and centrally verify the permitted relation after a pass that
-can change control flow or call targets.
+Fact identity retains target field, access kind, root phase, and
+lifecycle-owned status while excluding direct call-graph shape, spans, and
+witnesses. Analysis evidence is planning-only; final executable MIR retains the
+canonical lifecycle plan, structured coordinator, and immutable compact
+authority.
 
-Running all such transformations before lifecycle planning is not the preferred
-solution: static-cycle acceptance and diagnostics could then vary by
-optimization profile.
+`passes::verify_final_mir` is the central invalidation target and constructs a
+read-only `VerifiedFinalMirProgram`. `BackendInput` accepts only this sealed
+product, so no backend path can consume unchecked MIR or repeat
+target-independent verification. The measured pipeline reports one honest final
+verification execution and currently registers no production transformation.
 
-### Optimization possibilities unlocked
+Future passes are classified by their lifecycle effect behavior. A pass proven
+to preserve static accesses, reachability, lifecycle operations, and possible
+callees may use a preserving API when one is justified. Effect removal,
+target narrowing, inlining, and other call-graph or CFG reshaping invalidate the
+seal and must return raw MIR to `verify_final_mir`. Test-only transformations
+exercise removal, narrowing, and inlining-shaped rewriting through this same
+checker before backend emission. Compile-fail public API tests prove that draft
+planned MIR cannot enter synthesis and raw final MIR cannot construct backend
+input.
+
+The authoritative current contract is documented in
+[Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction).
+The rationale and implementation history are preserved in the
+[frozen design proposal](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+and
+[completed roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md).
+
+### Optimization possibilities enabled
 
 - dead call and unreachable-block elimination;
 - target-set narrowing and devirtualization;
@@ -146,10 +145,11 @@ optimization profile.
 
 ### Effort
 
-**Large.** The representation change is smaller than a new IR, but it affects a
-soundness boundary and therefore needs contract documentation, certificate and
-verifier changes, malformed-MIR tests, static-lifecycle integration tests, and
-optimized/unoptimized parity tests.
+**Completed (large).** Delivery included the proof representation, independent
+issuance and realization checkers, canonical planned and coordinator schemas,
+sealed public phase products, driver/reporting integration, malformed-product
+coverage, transformed-shape tests, documentation, and full repository,
+determinism, and MSRV validation.
 
 ## 2. Dense index-coupled MIR identities
 
@@ -407,9 +407,9 @@ reachability from simplifying MIR, call-target sets, and dispatch metadata.
 
 ### Resolution direction
 
-Add target-independent reachability over final MIR after the lifecycle
-certificate can tolerate effect removal. The root model must conservatively
-include:
+Add target-independent reachability over final MIR using the implemented
+monotone lifecycle certificate and final invalidation boundary. The root model
+must conservatively include:
 
 - the program entry and every contract-required exported artifact;
 - static activation and shutdown work;
