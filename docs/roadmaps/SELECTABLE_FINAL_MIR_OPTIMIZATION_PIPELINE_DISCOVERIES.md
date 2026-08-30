@@ -44,8 +44,9 @@ roadmap instead of this file.
   private clone rather than borrow the active callable directly.
 - **Evidence:** `mir::rewrite::map` accepts mutable MIR throughout, and the
   value-use census consequently clones `MirCallableEdit` before invoking
-  `map_live_references`. A fixed-point optimization repeats that snapshot once
-  per analysis wave.
+  `map_live_references`. The dead-pure canary's seal-preserving preflight must
+  first construct edit state from a dense definition and then census a private
+  snapshot; a changed callable repeats the snapshot once per fixed-point wave.
 - **Why deferred:** Introducing a shared immutable visitor/transform kernel
   would touch the complete exhaustive traversal and every mapper, importer,
   committer, substitution, and validation consumer. That is substantially

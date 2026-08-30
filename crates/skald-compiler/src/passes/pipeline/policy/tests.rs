@@ -9,6 +9,7 @@ use super::{
     schedule::{resolve_exact, resolve_identities},
 };
 use crate::passes::pipeline::execution::{MirPassCapability, MirPassFailure, MirPassOutcome};
+use crate::passes::pipeline::optimizations::dead_pure_definition_elimination;
 
 const ALPHA: MirPassIdentity = MirPassIdentity::new(1);
 const BETA: MirPassIdentity = MirPassIdentity::new(2);
@@ -41,8 +42,11 @@ fn valid_registry() -> MirPassRegistry {
 }
 
 #[test]
-fn production_registry_and_profiles_are_empty() {
-    assert!(registered_mir_pass_names().is_empty());
+fn production_registry_contains_the_default_inactive_canary() {
+    assert_eq!(
+        registered_mir_pass_names(),
+        ["dead-pure-definition-elimination"]
+    );
     assert_eq!(
         MirOptimizationProfile::default(),
         MirOptimizationProfile::Default
@@ -59,6 +63,13 @@ fn production_registry_and_profiles_are_empty() {
         assert_eq!(schedule.iter().count(), 0);
     }
     assert!(resolve_exact_mir_pass_schedule(&[]).unwrap().is_empty());
+    let exact =
+        resolve_exact_mir_pass_schedule(&[dead_pure_definition_elimination::IDENTITY]).unwrap();
+    assert_eq!(exact.len(), 1);
+    assert_eq!(
+        exact.as_slice()[0].name(),
+        "dead-pure-definition-elimination"
+    );
 }
 
 #[test]

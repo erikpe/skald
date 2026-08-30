@@ -15,7 +15,9 @@ threading are also implemented. The verified multi-pass runner now owns pass
 capabilities, atomic changed-result rewriting, immediate resealing, and
 structured failure attribution. Structured pass measurement/reporting,
 verified inspection checkpoints, and the exhaustive value-use census are also
-implemented. The dead-pure-definition canary implementation is next.
+implemented. The dead-pure-definition canary is now registered and exercised
+through exact internal schedules while remaining inactive in `default`; broad
+activation and parity hardening are next.
 
 ## Pending discoveries
 
@@ -58,10 +60,10 @@ into the living
 [driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
 and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
 contracts. The active roadmap owns implementation; no production optimization
-is implemented yet. Registry and schedule policy, request/CLI selection,
+is enabled by default yet. Registry and schedule policy, request/CLI selection,
 verified execution, occurrence reporting, checkpoint inspection, and the
-value-use census are current; the canary and activation hardening remain in
-progress.
+value-use census are current; the canary implementation is complete and its
+activation hardening remains in progress.
 
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented

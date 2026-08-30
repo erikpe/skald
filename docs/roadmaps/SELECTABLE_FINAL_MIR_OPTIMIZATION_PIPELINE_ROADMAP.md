@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: in progress. MPR0 through MPR5 are complete; MPR6 is next.
+Status: in progress. MPR0 through MPR6 are complete; MPR7 is next.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -90,7 +90,7 @@ rather than expanding an active task.
 - [x] MPR3 — Add structured pass measurements and reporting
 - [x] MPR4 — Add verified pipeline inspection checkpoints
 - [x] MPR5 — Publish an exhaustive value-use census
-- [ ] MPR6 — Implement the dead-pure-definition canary
+- [x] MPR6 — Implement the dead-pure-definition canary
 - [ ] MPR7 — Activate, harden, and close the canary pipeline
 
 ## PR-sized implementation sequence
@@ -467,30 +467,30 @@ expanding this milestone. `cargo test --locked -p skald-compiler mir::rewrite`,
 analysis, atomic rewrite, measurement, and verification boundaries without
 silently defining a general effect system.
 
-- [ ] Add one responsibility-oriented pass module named
+- [x] Add one responsibility-oriented pass module named
       `dead-pure-definition-elimination` and register it as the first
       production pass identity without placing it in `default` yet.
-- [ ] Match every `MirRvalueKind` explicitly and whitelist only scalar
+- [x] Match every `MirRvalueKind` explicitly and whitelist only scalar
       constants, exact unary operations, exact binary operations, primitive
       comparisons, and non-checked primitive casts.
-- [ ] Explicitly reject callable addresses, path conditions, loads, integer
+- [x] Explicitly reject callable addresses, path conditions, loads, integer
       division, shifts, checked binary64-to-integer conversion, type tests,
       optional-presence operations, array length, and all future unreviewed
       rvalue families.
-- [ ] Treat every non-`Assign` instruction as ineligible, including calls,
+- [x] Treat every non-`Assign` instruction as ineligible, including calls,
       I/O, allocation, initialization, copying, stores, cleanup, ownership,
       checked views, and array operations even when it defines a result.
-- [ ] For each executable callable package, compute the value-use census,
+- [x] For each executable callable package, compute the value-use census,
       select unused eligible assignments in stable block/instruction order,
       functionally remove instructions and matching value declarations, and
       repeat by deterministic waves to a fixed point.
-- [ ] Commit each changed callable once through the whole-program atomic
+- [x] Commit each changed callable once through the whole-program atomic
       coordinator; make no CFG, storage, path, logical, guard, lifecycle,
       ownership, metadata, folding, replacement, or instruction-order edit.
-- [ ] Return exact removed-assignment, removed-value-declaration,
+- [x] Return exact removed-assignment, removed-value-declaration,
       processed-callable, and changed-callable measurements without logging or
       rendering.
-- [ ] Exercise the pass through crate-private exact schedules and central
+- [x] Exercise the pass through crate-private exact schedules and central
       changed-result verification; keep supported `default` behavior unchanged
       until final activation.
 
@@ -514,6 +514,32 @@ work, re-verifies every change, and remains inactive in the supported default
 profile pending broad parity validation.
 
 **Completed:**
+
+The first production pass identity is now registered as
+`dead-pure-definition-elimination` while both supported profiles deliberately
+remain empty. Its responsibility-owned module exhaustively classifies every
+current rvalue and instruction family, accepting only unused non-failing
+scalar assignments and conservatively retaining calls, I/O, memory reads,
+checked operations, callable addresses, proof-coupled queries, ownership, and
+lifecycle operations. A verified-input preflight uses the authoritative
+value-use census to retain the existing seal for no-op occurrences. Changed
+occurrences enter one atomic whole-program rewrite, remove assignments and
+their declarations in stable fixed-point waves, compact once per callable,
+and immediately pass ordinary and lifecycle-realization verification.
+
+Structured occurrence data reports exact processed and changed callable
+counts plus removed assignment and value-declaration counters. Focused tests
+cover every eligible and excluded rvalue family, unused non-assignment call
+and I/O results, cascading trees, retained order and dense remapping, no-op
+seal preservation, exact metrics, all function/member/static-initializer
+callable kinds, production registration, exact scheduling, and unchanged
+default behavior. The dense preflight's additional snapshot cost extends the
+already-bounded immutable-observer finding in the companion discoveries
+record rather than expanding this milestone. `cargo test --locked -p
+skald-compiler passes`, `cargo test --locked -p skald-compiler mir::rewrite`,
+`cargo test --locked -p skald-compiler mir::verify`, `make compiler-test`,
+`make fmt-check`, `make lint`, `make docs-check`, `make msrv-check`, and
+`git diff --check` passed on 2026-08-30.
 
 ### MPR7 — Activate, harden, and close the canary pipeline
 

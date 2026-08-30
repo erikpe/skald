@@ -1,6 +1,9 @@
 //! Exhaustive pass-local value declaration, definition, and use census.
 
-use crate::{identity::CallableId, mir::ValueId};
+use crate::{
+    identity::CallableId,
+    mir::{MirDefinitionRef, ValueId},
+};
 
 use super::{
     edit::MirCallableEdit, MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentitySite,
@@ -92,6 +95,24 @@ impl MirCallableEdit {
             entries: collector.entries,
         })
     }
+}
+
+/// Computes value facts for one dense, read-only executable definition.
+///
+/// This is the analysis-side entry point for passes that must preserve the
+/// verified seal when they have no work. It deliberately constructs the same
+/// callable edit representation used by a real rewrite, so both paths share
+/// one exhaustive identity inventory.
+pub(crate) fn value_use_census_for_definition(
+    definition: MirDefinitionRef<'_>,
+) -> Result<MirValueUseCensus, MirRewriteError> {
+    MirCallableEdit::from_dense_parts(
+        definition.callable(),
+        definition.storage_entries().to_vec(),
+        definition.values().to_vec(),
+        definition.body().clone(),
+    )?
+    .value_use_census()
 }
 
 struct ValueCensusCollector {

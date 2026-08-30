@@ -637,18 +637,20 @@ are typed request and CLI selection. Every compiler adapter resolves its
 profile before provider or source work and passes that schedule to the MIR
 pipeline. Production schedule execution, structured failure attribution, pass
 measurement/reporting, verified inspection checkpoints, and the shared
-value-use census are implemented; the canary remains planned. Both supported
-profiles are empty, so ordinary production compilation still performs one
-final verification and no transformation.
+value-use census are implemented. The registered dead-pure-definition canary
+is exercised through crate-private exact schedules but remains absent from
+both supported profiles, so ordinary production compilation still performs
+one final verification and no transformation.
 
 One compiler-owned immutable registry couples each entry's typed identity,
 unique stable lowercase kebab-case name, description, implementation-declared
 identity, and transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity before schedule selection. The production
-registry is currently empty. The implemented `none` and `default` profiles
-both expand to empty explicit ordered schedules until the canary is activated;
-at roadmap completion `default` contains
+registry currently contains the default-inactive
+`dead-pure-definition-elimination` canary. The implemented `none` and
+`default` profiles both expand to empty explicit ordered schedules until the
+canary is activated; at roadmap completion `default` contains
 `dead-pure-definition-elimination` exactly once.
 
 A resolved schedule may deliberately repeat a pass, and every occurrence is
@@ -2646,8 +2648,10 @@ Target-specific legality and structured backend failures are defined by the
 The supported MIR profiles currently verify without transforming. The frozen
 registry, profiles, request selection, verified runner, per-occurrence
 reporting, verified inspection checkpoints, and shared value-use analysis are
-implemented; the dead-pure canary remains planned. Every transformation has
-explicit ordering and returns changed MIR through the same verifier boundary.
+implemented. The dead-pure canary is registered, reaches a conservative
+fixed point through exact internal schedules, and remains default-inactive
+pending activation hardening. Every transformation has explicit ordering and
+returns changed MIR through the same verifier boundary.
 Compiler correctness must not depend on an optimization pass being enabled.
 
 The shared-ownership implementation preserves this division of

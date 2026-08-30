@@ -41,6 +41,7 @@ pub(crate) struct MirPassSchedule {
 }
 
 impl MirPassSchedule {
+    #[cfg(test)]
     pub(crate) fn as_slice(&self) -> &[MirPassOccurrence] {
         &self.occurrences
     }
@@ -49,6 +50,7 @@ impl MirPassSchedule {
         self.occurrences.iter().copied()
     }
 
+    #[cfg(test)]
     pub(crate) fn is_empty(&self) -> bool {
         self.occurrences.is_empty()
     }
@@ -66,6 +68,7 @@ pub(super) fn resolve_profile<'a>(
     resolve_identities(registry, profile.identities(), disabled_names)
 }
 
+#[allow(dead_code)]
 pub(super) fn resolve_exact(
     registry: MirPassRegistry,
     identities: &[MirPassIdentity],

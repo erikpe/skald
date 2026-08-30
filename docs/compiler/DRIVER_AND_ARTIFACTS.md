@@ -124,7 +124,9 @@ and CLI. Its
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 is active. Typed request/CLI selection and the verified multi-pass runner are
 implemented, while both supported profiles still select the empty
-verification-only schedule.
+verification-only schedule. The registered
+`dead-pure-definition-elimination` canary is currently selectable only through
+crate-private exact schedules pending activation hardening.
 
 `CompilationRequest` contains a typed `MirOptimizationOptions` value and the
 non-breaking `with_mir_optimization` builder. Options select a typed

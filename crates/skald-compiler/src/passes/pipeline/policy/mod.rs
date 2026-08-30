@@ -15,7 +15,6 @@ pub use identity::MirPassIdentity;
 pub use profile::MirOptimizationProfile;
 pub(crate) use schedule::{MirPassOccurrence, MirPassSchedule};
 
-#[cfg(test)]
 pub(in crate::passes::pipeline) use descriptor::{
     MirPassDescriptor, MirPassImplementation, MirPassRegistration,
 };
@@ -34,6 +33,7 @@ pub(crate) fn resolve_mir_pass_schedule<'a>(
 ///
 /// The driver does not expose this surface. It exists for focused pass tests,
 /// composition checks, and compiler-owned tools.
+#[allow(dead_code)]
 pub(crate) fn resolve_exact_mir_pass_schedule(
     identities: &[MirPassIdentity],
 ) -> Result<MirPassSchedule, MirPassScheduleError> {
@@ -41,6 +41,7 @@ pub(crate) fn resolve_exact_mir_pass_schedule(
 }
 
 /// Returns every registered stable pass name in lexical order.
+#[allow(dead_code)]
 pub(crate) fn registered_mir_pass_names() -> Vec<&'static str> {
     production_registry().known_names()
 }

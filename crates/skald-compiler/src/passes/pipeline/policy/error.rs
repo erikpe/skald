@@ -61,6 +61,7 @@ impl MirPassRegistryErrors {
         Self { errors }
     }
 
+    #[cfg(test)]
     pub(super) fn as_slice(&self) -> &[MirPassRegistryError] {
         &self.errors
     }

@@ -156,6 +156,25 @@ fn census_is_read_only_and_deterministic_for_the_same_snapshot() {
 }
 
 #[test]
+fn dense_definition_census_matches_the_callable_edit_analysis() {
+    let definition = representative_function();
+    let expected = MirCallableEdit::from_dense_parts(
+        definition.callable(),
+        definition.storage.clone(),
+        definition.values.clone(),
+        definition.body.clone(),
+    )
+    .unwrap()
+    .value_use_census()
+    .unwrap();
+
+    assert_eq!(
+        value_use_census_for_definition((&definition).into()).unwrap(),
+        expected
+    );
+}
+
+#[test]
 fn census_rejects_foreign_unknown_and_deleted_value_references() {
     for (replacement, failure) in [
         (

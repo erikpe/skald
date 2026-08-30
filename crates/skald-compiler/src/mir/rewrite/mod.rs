@@ -29,7 +29,7 @@ mod import;
 mod map;
 mod program;
 
-pub(crate) use census::{MirValueCensusEntry, MirValueUseCensus};
+pub(crate) use census::{value_use_census_for_definition, MirValueCensusEntry, MirValueUseCensus};
 pub(crate) use commit::{
     MirCommitMap, MirCommitMaps, MirEntityChangeCount, MirRewriteChangeSummary,
 };

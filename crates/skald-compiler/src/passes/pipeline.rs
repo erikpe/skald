@@ -7,9 +7,7 @@ use crate::mir::{MirProgram, MirVerificationErrors};
 use super::static_lifecycle;
 
 mod execution;
-// Exact internal schedules and constructors remain compiler/test tooling until
-// the first production pass is registered.
-#[allow(dead_code)]
+mod optimizations;
 mod policy;
 
 pub(crate) use execution::{

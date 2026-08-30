@@ -44,11 +44,11 @@ fn mir_optimization_cli_selection_is_typed_and_precedes_source_io() {
     let cases = [
         (
             vec!["skac", "missing.ska", "--disable-mir-pass", "unknown-pass"],
-            "unknown MIR pass name: `unknown-pass`; no MIR passes are registered",
+            "unknown MIR pass name: `unknown-pass`; known MIR passes: `dead-pure-definition-elimination`",
         ),
         (
             vec!["skac", "--disable-mir-pass", "unknown-pass", "missing.ska"],
-            "unknown MIR pass name: `unknown-pass`; no MIR passes are registered",
+            "unknown MIR pass name: `unknown-pass`; known MIR passes: `dead-pure-definition-elimination`",
         ),
         (
             vec!["skac", "missing.ska", "--mir-optimization", "fast"],
