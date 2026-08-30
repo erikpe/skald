@@ -1,8 +1,11 @@
 # Dense Callable-Local MIR Identity Rewriting Design Proposal
 
-Status: proposed design. DMI1 through DMI12 are presented for review and are
-not yet frozen or promoted into the compiler contract. No implementation
-roadmap exists yet.
+Status: frozen design proposal. DMI1 through DMI12 were confirmed together on
+2026-08-30 and promoted into the
+[compiler phase and IR contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction).
+The planned
+[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md) owns
+delivery; this document preserves the reviewed decisions.
 
 This proposal removes the editing constraint created by Skald's dense,
 index-coupled callable-local MIR identities. It keeps dense final MIR as the
@@ -255,20 +258,20 @@ logical provenance describes the new CFG. Those are semantic verifier duties.
 
 ## Decision register
 
-| ID | Question | Proposed direction | State |
+| ID | Question | Confirmed direction | State |
 |---|---|---|---|
-| [DMI1](#dmi1--keep-committed-mir-dense) | Does final MIR become sparse? | No; dense committed tables remain the only verified and backend-facing form | **Proposed** |
-| [DMI2](#dmi2--use-a-private-sparse-callable-edit-transaction) | How are identities stable during edits? | Callable-owned sparse slots and tombstones inside a private owned transaction | **Proposed** |
-| [DMI3](#dmi3--compact-atomically-in-explicit-deterministic-order) | When and how are IDs renumbered? | Once at commit, from explicit live order, with complete maps | **Proposed** |
-| [DMI4](#dmi4--centralize-exhaustive-callable-local-id-traversal) | How are all references updated? | One model-wide exhaustive visitor/remapper including attachments and metadata | **Proposed** |
-| [DMI5](#dmi5--reject-dangling-or-foreign-references-without-guessing) | What happens to references to deleted nodes? | Commit fails deterministically; the pass must explicitly delete, redirect, or substitute | **Proposed** |
-| [DMI6](#dmi6--expose-narrow-edit-operations-not-mutable-definition-tables) | What may passes mutate? | An editor facade with typed allocation, lookup, replacement, deletion, and functional instruction editing | **Proposed** |
-| [DMI7](#dmi7--treat-path-logical-guard-and-publication-metadata-as-first-class) | How is non-instruction metadata handled? | It participates in the same transaction; no automatic semantic repair | **Proposed** |
-| [DMI8](#dmi8--adapt-all-executable-definition-kinds-without-restructuring-public-mir) | How are function, member, and initializer bodies unified? | Private owned adapters and narrow container take/replace APIs | **Proposed** |
-| [DMI9](#dmi9--provide-explicit-rehoming-for-future-inlining) | How may entities cross callable ownership? | Allocate destination slots first, then copy through explicit substitutions and complete maps | **Proposed** |
-| [DMI10](#dmi10--invalidate-local-id-keyed-analysis-at-commit) | What happens to analyses and edit IDs? | They are transaction-scoped; commit reports maps and changes but no durable cache remains valid implicitly | **Proposed** |
-| [DMI11](#dmi11--integrate-through-the-final-mir-seal-and-central-verification) | How does rewriting interact with verification? | Only the pass pipeline may invalidate the seal; commit returns raw MIR and central verification reseals it | **Proposed** |
-| [DMI12](#dmi12--deliver-by-reference-census-and-adversarial-rewrite-tests) | How is exhaustiveness demonstrated? | Inventory, no-op parity, gap compaction, deletion/insertion, malformed, all-definition-kind, and determinism tests | **Proposed** |
+| [DMI1](#dmi1--keep-committed-mir-dense) | Does final MIR become sparse? | No; dense committed tables remain the only verified and backend-facing form | **Confirmed** |
+| [DMI2](#dmi2--use-a-private-sparse-callable-edit-transaction) | How are identities stable during edits? | Callable-owned sparse slots and tombstones inside a private owned transaction | **Confirmed** |
+| [DMI3](#dmi3--compact-atomically-in-explicit-deterministic-order) | When and how are IDs renumbered? | Once at commit, from explicit live order, with complete maps | **Confirmed** |
+| [DMI4](#dmi4--centralize-exhaustive-callable-local-id-traversal) | How are all references updated? | One model-wide exhaustive visitor/remapper including attachments and metadata | **Confirmed** |
+| [DMI5](#dmi5--reject-dangling-or-foreign-references-without-guessing) | What happens to references to deleted nodes? | Commit fails deterministically; the pass must explicitly delete, redirect, or substitute | **Confirmed** |
+| [DMI6](#dmi6--expose-narrow-edit-operations-not-mutable-definition-tables) | What may passes mutate? | An editor facade with typed allocation, lookup, replacement, deletion, and functional instruction editing | **Confirmed** |
+| [DMI7](#dmi7--treat-path-logical-guard-and-publication-metadata-as-first-class) | How is non-instruction metadata handled? | It participates in the same transaction; no automatic semantic repair | **Confirmed** |
+| [DMI8](#dmi8--adapt-all-executable-definition-kinds-without-restructuring-public-mir) | How are function, member, and initializer bodies unified? | Private owned adapters and narrow container take/replace APIs | **Confirmed** |
+| [DMI9](#dmi9--provide-explicit-rehoming-for-future-inlining) | How may entities cross callable ownership? | Allocate destination slots first, then copy through explicit substitutions and complete maps | **Confirmed** |
+| [DMI10](#dmi10--invalidate-local-id-keyed-analysis-at-commit) | What happens to analyses and edit IDs? | They are transaction-scoped; commit reports maps and changes but no durable cache remains valid implicitly | **Confirmed** |
+| [DMI11](#dmi11--integrate-through-the-final-mir-seal-and-central-verification) | How does rewriting interact with verification? | Only the pass pipeline may invalidate the seal; commit returns raw MIR and central verification reseals it | **Confirmed** |
+| [DMI12](#dmi12--deliver-by-reference-census-and-adversarial-rewrite-tests) | How is exhaustiveness demonstrated? | Inventory, no-op parity, gap compaction, deletion/insertion, malformed, all-definition-kind, and determinism tests | **Confirmed** |
 
 ## DMI1 — Keep committed MIR dense
 
@@ -645,7 +648,7 @@ prove successful compaction and failure behavior. The first optimization pass
 should be planned separately and must use this boundary; likely early consumers
 are dead-pure-definition cleanup and conservative unreachable-block pruning.
 
-## Proposed module ownership
+## Frozen module ownership direction
 
 The exact file split remains implementation detail, but the ownership should
 follow Skald's facade-oriented Rust organization:
@@ -740,11 +743,11 @@ editing is sufficient for this foundation.
 | The common-body cleanup causes excessive migration churn | Use private adapters; defer public model restructuring |
 | Verification cost grows with a pass pipeline | Keep one required input and final check, support per-pass debug checks, measure before changing policy |
 
-## Implementation sequence after confirmation
+## Delivery ownership
 
-If these decisions are confirmed, promote the stable contract into
-`docs/compiler/PHASES_AND_IR.md`, freeze this proposal, and create a separate
-implementation roadmap. A likely dependency order is:
+The
+[dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+owns implementation in this dependency order:
 
 1. freeze the callable-local identity inventory and mapper contract;
 2. implement exhaustive collection/remapping with no-op and artificial-gap
@@ -765,9 +768,9 @@ optimization and the general selectable pass registry should receive their own
 explicit tasks or proposals so optimization policy does not become hidden
 inside identity compaction.
 
-## Review checklist
+## Frozen decision summary
 
-The proposal is ready to freeze when reviewers agree that:
+The confirmed design establishes that:
 
 - committed MIR should stay dense while edit transactions become sparse;
 - the transaction boundary is one complete callable package, not just

@@ -3,9 +3,11 @@
 Status: six architectural constraints remain pending. The static-lifecycle
 constraint is resolved by the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md);
-the next constraint has a proposed
-[dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md),
-but the remaining constraints have no implementation roadmap.
+the next constraint has a frozen
+[dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
+and a planned
+[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md), while the
+other five constraints have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -67,7 +69,7 @@ roadmap:
 | Area | Limitation | Nature | Potential impact | Estimated effort | Recommended timing |
 |---|---|---|---|---|---|
 | Static-lifecycle optimization boundary | Resolved: exact verified baseline authority now permits monotone final-MIR realization | Implemented compiler proof and sealed phase-product contract | Very high architectural unlock delivered | Completed (large) | Foundation available |
-| Dense index-coupled MIR identities | Makes deletion, replacement, and CFG rewriting require complete coordinated remapping | Representation and editing-infrastructure debt | Very high enabling value | Large | Start next |
+| Dense index-coupled MIR identities | Makes deletion, replacement, and CFG rewriting require complete coordinated remapping | Representation and editing-infrastructure debt | Very high enabling value | Large (roadmap planned) | Planned next |
 | Block-local non-SSA values | Limits global scalar propagation, value numbering, code motion, and loop optimization | Deliberate initial representation with an eventual optimization ceiling | High for advanced portable optimization | Extra large | Defer until simpler MIR passes demonstrate the need |
 | Proof provenance mixed with executable MIR | Couples CFG transformations to exact lowering shapes and derived metadata | Awkward IR layering | High for CFG and loop work | Large | Normalize incrementally as CFG passes require it |
 | Direct physical-register backend lowering | Forces every MIR value and storage through a stack home and leaves no natural register-allocation layer | Deliberate bootstrap backend and the largest target-code ceiling | Very high eventual runtime value | Extra large | Largest eventual performance project |
@@ -184,9 +186,12 @@ reliable structural editing.
 
 ### Resolution direction
 
-The detailed proposed direction is recorded in the
-[dense callable-local MIR identity rewriting design proposal](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md).
-Its decisions remain under review.
+The frozen direction is recorded in the
+[dense callable-local MIR identity rewriting design proposal](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md),
+promoted into the
+[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-dense-callable-local-mir-identity-rewriting-direction),
+and scheduled by the
+[implementation roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md).
 
 Introduce a private MIR rewriting boundary that can rebuild one callable while
 preserving program-level semantic identities. It should own:

@@ -465,6 +465,99 @@ complete field coverage, initialization modes and types, publication dominance,
 destination non-escape, exact-reverse destruction, deterministic dumps, and
 the existing `STA001` and `STA002` diagnostic behavior.
 
+### Frozen dense callable-local MIR identity rewriting direction
+
+The frozen
+[dense callable-local MIR identity rewriting design](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
+and its planned
+[implementation roadmap](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+define the target-independent structural editing boundary that follows the
+static-lifecycle certificate foundation. This section is a selected direction;
+the current pipeline still has no production MIR transformation.
+
+Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
+`PathConditionId` continue to contain their callable owner and direct vector
+position, and verified consumers may continue to index callable tables without
+building sparse maps. Program-level semantic identities and existing
+source-semantic `BindingId` provenance are not renumbered.
+
+A pass that structurally changes executable MIR instead opens one complete
+callable package in a private owned edit transaction. Storage, value, block,
+and path-condition entities occupy stable sparse slots with tombstones until
+commit. Logical-expression records have ordered tombstones, blocks have an
+explicit order independent from allocation, and a private registry owns
+optional guards without adding a committed guard table. The transaction is not
+a `MirProgram` and cannot enter ordinary verification, static-lifecycle
+analysis, dumping, or a backend.
+
+Commit is atomic and deterministic. Storage and values retain surviving slot
+order followed by allocation order; blocks use explicit editor order; path
+conditions retain parent-before-child order; optional guards are canonicalized
+from live guard slots; and logical records retain explicit relative order.
+Commit constructs complete old-slot-to-new-ID maps, validates every live-order
+entry and reference, rewrites declarations and attachments, and emits dense
+tables whose IDs equal their positions. A deleted, unknown, duplicate,
+missing-order, or foreign reference is a deterministic internal rewrite error.
+Compaction never guesses value substitution, edge forwarding, cascading
+deletion, proof-metadata repair, or any other semantic transformation.
+
+One private exhaustive visitor/remapper is authoritative for callable-local
+identity references. It covers declarations, receiver, parameters, return
+storage, body entry, instructions, rvalues, arguments, places, projections,
+all terminators, path-condition structure, logical-expression provenance,
+optional-view guards, and static-initializer publication blocks. Identity-
+bearing matches do not use wildcard variants or partial struct patterns, so a
+new reference form forces compiler review. Individual passes may not maintain
+competing remapping inventories.
+
+Function, member, and static-initializer definitions retain their public MIR
+shape. Private owned adapters share common transaction and commit logic while
+remapping each definition kind's attachments. Program containers provide only
+narrow crate-private ownership transfer; they do not gain a production
+`iter_mut` escape hatch. Initial HIR-to-MIR lowering remains append-oriented
+and does not use the optimization editor.
+
+The supported editor facade provides typed lookup, allocation, explicit
+deletion, functional block-instruction rewriting, checked value/place
+substitution, explicit edge redirection, block ordering, and commit. Helpers
+state structural preconditions but do not claim semantic facts such as
+dominance, effect freedom, ownership equivalence, or cleanup safety. Path,
+logical, guard, liveness, and publication metadata is retained and remapped,
+explicitly rebuilt, or explicitly deleted by the transformation; final MIR
+verification proves its meaning.
+
+Future inlining and specialization use a distinct two-phase rehoming primitive.
+It allocates destination slots before cloning through the exhaustive mapper and
+requires explicit substitutions for receiver, parameters, return destination,
+entry, exits, and any reference outside the selected region. Callee-local
+`BindingId` provenance cannot be forged in the destination; imported locals
+use an explicit compiler-owned storage role or a separately designed
+provenance extension. Rehoming does not itself define an inliner.
+
+All analyses keyed by pre-commit local IDs or instruction positions are
+invalidated by default. Commit maps support attachments, tests, reporting, and
+an immediately adjacent owner that explicitly updates its data; they do not
+silently preserve arbitrary caches. Change counts are pass-owned structured
+results, and the editor performs no logging or global mutation. Callable-local
+allocation and explicit order keep output deterministic even if independent
+compiler work is parallelized later. The generated Skald program remains
+single threaded.
+
+Only the target-independent pass pipeline may invalidate a
+`VerifiedFinalMirProgram` for transformation. A commit returns raw dense MIR
+and cannot recreate the seal. Once transformations exist, the pipeline verifies
+input before editing and returns rewritten output through
+`verify_final_mir`, which remains authoritative for ordinary MIR semantics and
+static-lifecycle realization. Debug and test configurations may verify after
+each transforming pass. The empty current pipeline retains its one final
+verification and zero transformation executions.
+
+This direction adds no SSA form, persistent instruction identity, public
+common callable-body restructuring, general pass registry, optimization-level
+CLI, production optimization, proof-provenance normalization, alias/effect
+analysis, or backend virtual-register layer. Those remain separate decisions
+that can consume the rewrite boundary after it is implemented.
+
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns recursive, bottom-up
 interned optional identities whose payloads may name earlier optional or array
@@ -2344,15 +2437,19 @@ target lowering, including:
 - branch, return, and terminator consistency on every block; and
 - access and ownership requirements for reads, writes, calls, and cleanup.
 
-Verification returns ordered structured errors. It runs at three deliberate
-boundaries:
+Verification returns ordered structured errors. It currently runs at two
+deliberate boundaries:
 
 1. after HIR lowering in debug builds, identifying producer defects close to
    their source;
-2. unconditionally in `passes::run_mir_pipeline`, protecting the input and
-   output of target-independent transformations; and
-3. again inside backend emission, preventing malformed library-created or
-   mutated MIR from reaching target legality and instruction selection.
+2. unconditionally in `passes::run_mir_pipeline` after the currently empty
+   target-independent transformation sequence, constructing the only sealed
+   final MIR accepted by backend input.
+
+The backend does not repeat target-independent verification. Under the frozen
+identity-rewriting direction, a non-empty transforming pipeline first verifies
+its input, invalidates that seal privately, and verifies again after its final
+rewrite. Optional per-pass debug verification localizes transformation defects.
 
 Target-specific legality and structured backend failures are defined by the
 [backend and target contract](BACKEND.md#input-and-legality-boundary).
