@@ -142,7 +142,6 @@ fn verify_activation(
         );
     }
 
-    let mut flattened = Vec::new();
     for (index, region) in coordinator.activation().iter().enumerate() {
         let Some(expected_field) = order.get(index) else {
             break;
@@ -212,13 +211,6 @@ fn verify_activation(
                 format!("activation work for {expected_field} has the wrong mode"),
             ),
         }
-        flattened.extend_from_slice(&region.transitions);
-    }
-    if flattened != view.lifecycle.activation() {
-        program_error(
-            errors,
-            "final activation regions disagree with certified transitions",
-        );
     }
     let expected_initializers = view
         .lifecycle
@@ -246,7 +238,6 @@ fn verify_shutdown(
     if coordinator.shutdown().len() != order.len() {
         program_error(errors, "final destruction regions do not cover every field");
     }
-    let mut flattened = Vec::new();
     for (index, region) in coordinator.shutdown().iter().enumerate() {
         let Some(expected_field) = order.get(index) else {
             break;
@@ -288,13 +279,6 @@ fn verify_shutdown(
                 format!("destruction cleanup for {expected_field} is malformed"),
             );
         }
-        flattened.extend([region.begin, region.finish]);
-    }
-    if flattened != view.lifecycle.shutdown() {
-        program_error(
-            errors,
-            "final destruction regions disagree with certified transitions",
-        );
     }
 }
 

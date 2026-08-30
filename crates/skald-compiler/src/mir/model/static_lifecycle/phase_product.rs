@@ -4,7 +4,7 @@ use crate::identity::StaticFieldId;
 
 use super::{
     plan::MirStaticLifecycleDefinitions, MirStaticLifecycleDefinition, MirStaticLifecycleProof,
-    MirStaticLifecycleTransition, StaticLifecyclePlan,
+    StaticLifecyclePlan,
 };
 
 /// Canonical planned lifecycle data shared unchanged with final MIR.
@@ -60,24 +60,18 @@ impl MirPlannedLifecycle {
     }
 }
 
+/// Canonical plan and proof retained by the final structured coordinator.
+///
+/// Executable transitions belong only to their activation or destruction
+/// regions and are deliberately absent from this phase product.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgramLifecycle {
     planned: MirPlannedLifecycle,
-    activation: Vec<MirStaticLifecycleTransition>,
-    shutdown: Vec<MirStaticLifecycleTransition>,
 }
 
 impl MirProgramLifecycle {
-    pub(crate) fn new(
-        planned: MirPlannedLifecycle,
-        activation: Vec<MirStaticLifecycleTransition>,
-        shutdown: Vec<MirStaticLifecycleTransition>,
-    ) -> Self {
-        Self {
-            planned,
-            activation,
-            shutdown,
-        }
+    pub(crate) const fn new(planned: MirPlannedLifecycle) -> Self {
+        Self { planned }
     }
 
     pub fn definitions(&self) -> &[MirStaticLifecycleDefinition] {
@@ -86,14 +80,6 @@ impl MirProgramLifecycle {
 
     pub fn definition(&self, field: StaticFieldId) -> Option<&MirStaticLifecycleDefinition> {
         self.planned.definition(field)
-    }
-
-    pub fn activation(&self) -> &[MirStaticLifecycleTransition] {
-        &self.activation
-    }
-
-    pub fn shutdown(&self) -> &[MirStaticLifecycleTransition] {
-        &self.shutdown
     }
 
     pub fn plan(&self) -> &StaticLifecyclePlan {
@@ -112,16 +98,6 @@ impl MirProgramLifecycle {
     #[cfg(test)]
     pub(crate) fn definitions_mut_for_test(&mut self) -> &mut Vec<MirStaticLifecycleDefinition> {
         self.planned.definitions_mut_for_test()
-    }
-
-    #[cfg(test)]
-    pub(crate) fn activation_mut_for_test(&mut self) -> &mut Vec<MirStaticLifecycleTransition> {
-        &mut self.activation
-    }
-
-    #[cfg(test)]
-    pub(crate) fn shutdown_mut_for_test(&mut self) -> &mut Vec<MirStaticLifecycleTransition> {
-        &mut self.shutdown
     }
 
     #[cfg(test)]

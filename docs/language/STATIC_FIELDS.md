@@ -333,8 +333,9 @@ source-facing witnesses; evidenced lifetime dependencies are reconstructed for
 diagnostics and inspection. The compiler then drops that report, moves the
 unchanged initializer bodies into final coordinator activation regions, retains
 post-publication full-expression cleanup, synthesizes type-selected reverse
-destruction regions, and independently verifies final MIR against its compact
-proof.
+destruction regions, and independently verifies those canonical structured
+regions and final MIR against the compact proof. No parallel executable
+transition vectors are stored.
 
 The x86-64 backend emits one private initializer body for every explicit
 declaration and one private program initializer that invokes those bodies in

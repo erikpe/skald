@@ -1016,9 +1016,10 @@ spelling remains a debugging detail rather than a source or ABI identity.
 Each explicit initializer also receives one deterministic target-private
 callable symbol derived from its canonical field identity. Fixed private
 program-initializer and program-finalizer symbols coordinate startup and
-shutdown. Verified lifecycle
-transitions select call order but emit no state slot, load, branch, or ordinary
-static-access guard; zero-default activation emits no instruction.
+shutdown. The backend consumes the same verified structured activation and
+destruction regions checked at the final MIR boundary. Their transitions select
+call order but emit no state slot, load, branch, or ordinary static-access
+guard; zero-default activation emits no instruction.
 
 External calls preserve the exact declared symbol. The backend also emits one
 exported C-compatible `main` wrapper, which checks runtime ABI compatibility

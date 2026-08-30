@@ -43,6 +43,30 @@ fn errors(program: &crate::mir::MirProgram) -> String {
 }
 
 #[test]
+fn empty_and_zero_default_only_programs_have_no_initializer_work() {
+    let empty = synthesized("fn main() -> i64 { return 0; }");
+    let coordinator = empty.static_lifecycle.as_ref().unwrap();
+    assert!(coordinator.activation().is_empty());
+    assert!(coordinator.initializers().is_empty());
+    assert!(coordinator.shutdown().is_empty());
+    verify_synthesized_mir(&empty).unwrap();
+
+    let zero_default = synthesized(
+        "class State { static value: i64; init() {} }
+         fn main() -> i64 { return State.value; }",
+    );
+    let coordinator = zero_default.static_lifecycle.as_ref().unwrap();
+    assert_eq!(coordinator.activation().len(), 1);
+    assert!(coordinator.initializers().is_empty());
+    assert_eq!(coordinator.shutdown().len(), 1);
+    assert!(matches!(
+        coordinator.activation()[0].work,
+        MirStaticActivationWork::ZeroDefault
+    ));
+    verify_synthesized_mir(&zero_default).unwrap();
+}
+
+#[test]
 fn moves_initializer_bodies_unchanged_into_planned_activation_regions() {
     let planned = planned(STORAGE_MATRIX);
     let expected_bodies = planned.static_initializers().cloned().collect::<Vec<_>>();
@@ -166,13 +190,13 @@ fn rejects_missing_reordered_and_wrong_cleanup_regions() {
     assert!(errors(&missing).contains("activation regions do not cover"));
 
     let mut duplicated_transition = valid.clone();
-    let coordinator = duplicated_transition.static_lifecycle.as_mut().unwrap();
-    let duplicate = coordinator.lifecycle().activation()[0];
-    coordinator
-        .lifecycle_mut_for_test()
-        .activation_mut_for_test()
-        .push(duplicate);
-    assert!(errors(&duplicated_transition).contains("certified transitions"));
+    let region = &mut duplicated_transition
+        .static_lifecycle
+        .as_mut()
+        .unwrap()
+        .activation_mut_for_test()[0];
+    region.transitions.push(region.transitions[0]);
+    assert!(errors(&duplicated_transition).contains("zero-default activation"));
 
     let mut reordered = valid.clone();
     reordered
@@ -191,6 +215,16 @@ fn rejects_missing_reordered_and_wrong_cleanup_regions() {
         .shutdown_mut_for_test()[0]
         .cleanup = MirStaticValueCleanup::None;
     assert!(errors(&wrong_cleanup).contains("cleanup"));
+
+    let mut wrong_transition = synthesized(STORAGE_MATRIX);
+    wrong_transition
+        .static_lifecycle
+        .as_mut()
+        .unwrap()
+        .shutdown_mut_for_test()[0]
+        .finish
+        .kind = crate::mir::MirStaticLifecycleTransitionKind::PublishLive;
+    assert!(errors(&wrong_transition).contains("destruction transitions"));
 
     let mut unstorable = synthesized(STORAGE_MATRIX);
     unstorable

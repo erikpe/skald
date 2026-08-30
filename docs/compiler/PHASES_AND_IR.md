@@ -293,22 +293,26 @@ bodies.
 `synthesize_static_lifecycle` consumes that verified product, moves every
 initializer body unchanged into the planned activation order, and produces the
 only final `MirProgram` used by the ordinary MIR pipeline. The planning report
-is dropped at this boundary; transition spans are derived from definitions and
-initializer publication metadata, and final MIR retains the canonical planned
-data plus compact baseline authority.
-A zero-default field
-has one direct activation-to-live transition at its planned position. An
-explicit field has begin and publish transitions, with publication fixed to the
-checked CFG edge before its preserved post-publication full-expression cleanup.
-The coordinator also owns exact-reverse destruction regions whose begin and
-finish transitions surround type-selected no-op, complete-object,
-optional-class, shared-owner, optional-shared, or array cleanup semantics.
+is dropped at this boundary. Synthesis constructs structured regions directly
+from definitions, activation order, initializer publication metadata, and
+stored types; it does not build or retain parallel flat transition vectors.
+Final MIR retains the canonical planned data plus compact baseline authority.
+A zero-default field has one direct activation-to-live transition at its
+planned position. An explicit field has begin and publish transitions, with
+publication fixed to the checked CFG edge before its preserved
+post-publication full-expression cleanup. The coordinator also owns
+exact-reverse destruction regions whose begin and finish transitions surround
+type-selected no-op, complete-object, optional-class, shared-owner,
+optional-shared, or array cleanup semantics.
 
 `verify_synthesized_mir` independently checks final definitions, exact region
 coverage and order, unique legal transitions, initializer publication and
 cleanup control flow, ordinary ownership/array/lifetime rules, lifecycle
 destination non-escape, and the final root-effect realization using only final
-MIR. It re-derives closed-world targets and normalized effects, requires exact
+MIR. Coordinator verification walks the same structured regions consumed by
+the backend and checks them directly against definitions and activation order;
+there is no mirrored transition-vector equality check. Realization verification
+re-derives closed-world targets and normalized effects, requires exact
 contractual lifecycle-root coverage and a subset of baseline authority, then
 checks realized dependencies against the frozen activation order.
 `run_mir_pipeline` and the backend trust boundary call this combined verifier.

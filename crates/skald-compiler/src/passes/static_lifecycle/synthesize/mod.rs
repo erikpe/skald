@@ -3,13 +3,13 @@
 use std::collections::BTreeMap;
 
 use crate::mir::{
-    MirProgram, MirProgramLifecycle, MirStaticActivationRegion, MirStaticActivationWork,
-    MirStaticDestructionRegion, MirStaticFieldInitialization, MirStaticLifecycleCoordinator,
-    MirStaticValueCleanup, MirVerificationErrors,
+    MirProgram, MirProgramLifecycle, MirStaticActivationRegion, MirStaticDestructionRegion,
+    MirStaticFieldInitialization, MirStaticLifecycleCoordinator, MirStaticValueCleanup,
+    MirVerificationErrors,
 };
 
 use super::{
-    plan::{derived, PlannedMirProgram},
+    plan::PlannedMirProgram,
     verify::{debug_assert_exact_synthesized_realization, verify_planned_mir},
     verify_synthesized_mir,
 };
@@ -21,85 +21,59 @@ pub fn synthesize_static_lifecycle(
 ) -> Result<MirProgram, MirVerificationErrors> {
     verify_planned_mir(&planned)?;
 
-    let transitions = derived::transitions(&planned);
-    let activation_transitions = transitions.activation;
-    let shutdown_transitions = transitions.shutdown;
     let (preliminary, planned_lifecycle) = planned.into_executable_parts();
     let (mut program, _fields, initializers) = preliminary.into_parts();
     let mut initializers = initializers
         .into_iter()
         .map(|initializer| (initializer.id, initializer))
         .collect::<BTreeMap<_, _>>();
-    let mut transitions = activation_transitions.iter().copied();
     let mut activation = Vec::with_capacity(planned_lifecycle.plan().activation().len());
     let mut ordered_initializers = Vec::with_capacity(initializers.len());
     for field in planned_lifecycle.plan().activation() {
         let definition = *planned_lifecycle
             .definition(*field)
             .expect("verified activation field must have a definition");
-        let (work, region_transitions) = match definition.initialization {
-            MirStaticFieldInitialization::ZeroDefault => (
-                MirStaticActivationWork::ZeroDefault,
-                vec![transitions
-                    .next()
-                    .expect("verified zero-default activation has one transition")],
-            ),
+        let region = match definition.initialization {
+            MirStaticFieldInitialization::ZeroDefault => {
+                MirStaticActivationRegion::zero_default(*field, definition.span)
+            }
             MirStaticFieldInitialization::Explicit(id) => {
-                ordered_initializers.push(
-                    initializers
-                        .remove(&id)
-                        .expect("verified explicit activation has one initializer body"),
+                let initializer = initializers
+                    .remove(&id)
+                    .expect("verified explicit activation has one initializer body");
+                let region = MirStaticActivationRegion::explicit(
+                    *field,
+                    id,
+                    initializer.span,
+                    initializer.publication.span,
                 );
-                (
-                    MirStaticActivationWork::Explicit(id),
-                    vec![
-                        transitions
-                            .next()
-                            .expect("verified explicit activation has a begin transition"),
-                        transitions
-                            .next()
-                            .expect("verified explicit activation has a publish transition"),
-                    ],
-                )
+                ordered_initializers.push(initializer);
+                region
             }
         };
-        activation.push(MirStaticActivationRegion {
-            field: *field,
-            work,
-            transitions: region_transitions,
-        });
+        activation.push(region);
     }
-    debug_assert!(transitions.next().is_none());
     debug_assert!(initializers.is_empty());
 
     let shutdown = planned_lifecycle
         .plan()
         .shutdown()
-        .enumerate()
-        .map(|(index, field)| {
+        .map(|field| {
             let definition = *planned_lifecycle
                 .definition(field)
                 .expect("verified shutdown field must have a definition");
-            MirStaticDestructionRegion {
+            let cleanup = MirStaticValueCleanup::for_field(
+                &program.optional_types,
+                definition.ty,
                 field,
-                begin: shutdown_transitions[index * 2],
-                cleanup: MirStaticValueCleanup::for_field(
-                    &program.optional_types,
-                    definition.ty,
-                    field,
-                    definition.span,
-                )
-                .expect("verified static lifecycle definitions have storable types"),
-                finish: shutdown_transitions[index * 2 + 1],
-            }
+                definition.span,
+            )
+            .expect("verified static lifecycle definitions have storable types");
+            MirStaticDestructionRegion::new(field, definition.span, cleanup)
         })
         .collect();
 
-    let lifecycle = MirProgramLifecycle::new(
-        planned_lifecycle,
-        activation_transitions,
-        shutdown_transitions,
-    );
+    let lifecycle = MirProgramLifecycle::new(planned_lifecycle);
 
     program.static_lifecycle = Some(MirStaticLifecycleCoordinator::new(
         lifecycle,

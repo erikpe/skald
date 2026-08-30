@@ -489,8 +489,6 @@ fn rejects_realized_dependency_that_violates_a_corrupted_frozen_order() {
             .plan_mut_for_test()
             .activation_mut_for_test()
             .reverse();
-        lifecycle.activation_mut_for_test().rotate_left(2);
-        lifecycle.shutdown_mut_for_test().rotate_left(2);
     }
 
     let message = errors(&program);

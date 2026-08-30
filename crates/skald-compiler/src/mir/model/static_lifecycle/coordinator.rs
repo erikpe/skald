@@ -1,13 +1,16 @@
 //! Structured activation and destruction coordinator representation.
 
-use crate::{identity::StaticFieldId, source::Span};
+use crate::{
+    identity::{StaticFieldId, StaticInitializerId},
+    source::Span,
+};
 
 use super::super::{
     MirAggregateOptionalCleanup, MirArrayInstruction, MirClassOptionalCleanup, MirCleanup,
     MirOptionalSharedCleanup, MirOptionalStorage, MirOptionalTypeTable, MirPlace, MirSharedTarget,
     MirStaticInitializerBody, MirType,
 };
-use super::{MirProgramLifecycle, MirStaticLifecycleTransition};
+use super::{MirProgramLifecycle, MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind};
 
 /// Value work performed at one planned activation position.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -24,6 +27,44 @@ pub struct MirStaticActivationRegion {
     /// A zero-default activation has one direct-to-live transition. Explicit
     /// initialization has begin and publish transitions in that order.
     pub transitions: Vec<MirStaticLifecycleTransition>,
+}
+
+impl MirStaticActivationRegion {
+    pub(crate) fn zero_default(field: StaticFieldId, span: Span) -> Self {
+        Self {
+            field,
+            work: MirStaticActivationWork::ZeroDefault,
+            transitions: vec![MirStaticLifecycleTransition {
+                field,
+                kind: MirStaticLifecycleTransitionKind::ActivateZeroDefault,
+                span,
+            }],
+        }
+    }
+
+    pub(crate) fn explicit(
+        field: StaticFieldId,
+        initializer: StaticInitializerId,
+        begin_span: Span,
+        publication_span: Span,
+    ) -> Self {
+        Self {
+            field,
+            work: MirStaticActivationWork::Explicit(initializer),
+            transitions: vec![
+                MirStaticLifecycleTransition {
+                    field,
+                    kind: MirStaticLifecycleTransitionKind::BeginInitialization,
+                    span: begin_span,
+                },
+                MirStaticLifecycleTransition {
+                    field,
+                    kind: MirStaticLifecycleTransitionKind::PublishLive,
+                    span: publication_span,
+                },
+            ],
+        }
+    }
 }
 
 /// Static shared-owner cleanup uses an ordinary live static place, unlike a
@@ -120,13 +161,33 @@ pub struct MirStaticDestructionRegion {
     pub finish: MirStaticLifecycleTransition,
 }
 
+impl MirStaticDestructionRegion {
+    pub(crate) fn new(field: StaticFieldId, span: Span, cleanup: MirStaticValueCleanup) -> Self {
+        Self {
+            field,
+            begin: MirStaticLifecycleTransition {
+                field,
+                kind: MirStaticLifecycleTransitionKind::BeginDestruction,
+                span,
+            },
+            cleanup,
+            finish: MirStaticLifecycleTransition {
+                field,
+                kind: MirStaticLifecycleTransitionKind::FinishDestruction,
+                span,
+            },
+        }
+    }
+}
+
 /// Final program-owned lifecycle code and the compact proof that justifies it.
 ///
 /// Initializer bodies remain independently identified CFGs so their existing
 /// storage/value/block IDs and full-expression order never need rewriting.
 /// Activation regions place their publication transition on the body's
 /// checked publication edge; the next region begins only after that body has
-/// completed its post-publication cleanup.
+/// completed its post-publication cleanup. These regions are the sole final
+/// executable transition representation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirStaticLifecycleCoordinator {
     lifecycle: MirProgramLifecycle,

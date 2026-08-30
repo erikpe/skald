@@ -1,6 +1,6 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: in progress; LCR0-LCR5 are complete and LCR6 is next.
+Status: in progress; LCR0-LCR6 are complete and LCR7 is next.
 
 This roadmap implements the frozen
 [static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
@@ -68,7 +68,7 @@ graph-reshaping passes can later rely.
 - [x] LCR3 — Separate analysis evidence from executable proof
 - [x] LCR4 — Reorganize lifecycle module ownership
 - [x] LCR5 — Canonicalize planned lifecycle data
-- [ ] LCR6 — Canonicalize the executable coordinator
+- [x] LCR6 — Canonicalize the executable coordinator
 - [ ] LCR7 — Seal phase products and publish the optimization boundary
 
 ## PR-sized implementation sequence
@@ -426,26 +426,26 @@ checks all pass.
 executable lifecycle representation and remove synthesis's build-then-reparse
 path.
 
-- [ ] Synthesize activation regions directly from canonical definitions,
+- [x] Synthesize activation regions directly from canonical definitions,
       activation order, initializer bodies, and publication boundaries.
-- [ ] Synthesize destruction regions directly by reverse activation iteration
+- [x] Synthesize destruction regions directly by reverse activation iteration
       and type-selected cleanup construction.
-- [ ] Remove stored flat activation/shutdown transition vectors and the code
+- [x] Remove stored flat activation/shutdown transition vectors and the code
       that consumes them with positional arithmetic.
-- [ ] Keep begin, publish, destruction, and finish transitions inside their
+- [x] Keep begin, publish, destruction, and finish transitions inside their
       owning structured regions where they carry executable spans or state
       changes.
-- [ ] Make final coordinator verification walk structured regions directly for
+- [x] Make final coordinator verification walk structured regions directly for
       exact field coverage, activation order, reverse destruction order,
       transition legality, publication dominance, cleanup type, and destination
       non-escape.
-- [ ] Remove final verification that merely flattens structured regions to
+- [x] Remove final verification that merely flattens structured regions to
       compare them with a mirrored vector; retain derived flat dump rendering
       if it improves inspection.
-- [ ] Preserve initializer CFG identities, storage/value/block identities,
+- [x] Preserve initializer CFG identities, storage/value/block identities,
       full-expression cleanup order, backend initializer/finalizer calls, and
       host-wrapper result preservation.
-- [ ] Keep zero-static and zero-explicit-initializer programs on their existing
+- [x] Keep zero-static and zero-explicit-initializer programs on their existing
       valid paths without inventing empty executable lifecycle work.
 
 **Tests:** Every static storage and cleanup category; zero-default and explicit
@@ -464,6 +464,23 @@ shutdown behavior.
 synthesis no longer creates or reparses mirrored transition vectors, verifier
 and backend consume the same canonical regions, and generated lifecycle
 behavior is unchanged.
+
+**Completed:** Final MIR now stores executable transitions only inside their
+owning structured activation and destruction regions. Synthesis constructs
+those regions directly from canonical definitions, activation order,
+initializer publication metadata, and type-selected cleanup; it no longer
+builds flat vectors or reparses them with positional arithmetic. Coordinator
+verification walks the same regions consumed by the backend and checks exact
+coverage, order, transition fields/kinds/spans, publication dominance,
+initializer coverage, cleanup legality, and destination non-escape without a
+mirror-equality check. Focused tests cover missing, reordered, duplicate, and
+malformed regions and transitions, every cleanup family, explicit and
+zero-default activation, generic statics, preserved initializer CFGs,
+post-publication cleanup, empty programs, and zero-explicit-initializer
+programs. The complete compiler suite, public API and pipeline determinism,
+static-field goldens, full golden determinism, formatting, lint,
+documentation, MSRV, and diff checks all pass with unchanged generated
+lifecycle behavior.
 
 ### LCR7 — Seal phase products and publish the optimization boundary
 

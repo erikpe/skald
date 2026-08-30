@@ -1126,8 +1126,9 @@ privacy, inheritance, shadowing, qualification, and cyclic modules; type
 checking and HIR own separate zero-default and explicit stored-value matrices.
 Preliminary, planned, and final MIR tests own publication, ownership, effects,
 derived evidenced dependencies and positions, canonical activation order, and
-reverse destruction; mutation tests break each certificate invariant
-independently. Backend tests
+structured activation and reverse-destruction regions; mutation tests break
+region coverage, ordering, transition, cleanup, publication, destination, and
+certificate invariants independently. Backend tests
 own private symbols, layout, relocations, sections, startup/finalizer calls,
 result preservation, native order, and the absence of per-access guards.
 Compile-failure goldens cover syntax, storage, access, overloads, wrong-kind
