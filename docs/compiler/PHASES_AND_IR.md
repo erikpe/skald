@@ -473,13 +473,10 @@ and its active
 [implementation roadmap](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 define the target-independent structural editing boundary that follows the
 static-lifecycle certificate foundation. The exhaustive local-identity
-traversal, private sparse common callable state, and atomic dense common-state
-commit described below are implemented. Private adapters now cover every
-executable definition kind and rebuild whole programs atomically. The
-crate-private supported editing facade is also implemented. Cross-callable
-rehoming is implemented through the same boundary. Pipeline
-invalidation/resealing remains roadmap work. The current pipeline still has no
-production MIR transformation.
+traversal, private sparse common callable state, atomic dense common-state
+commit, all-definition adapters, supported editing facade, cross-callable
+rehoming, and verified pipeline ownership path described below are implemented.
+The current pipeline still has no production MIR transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -595,13 +592,25 @@ compiler work is parallelized later. The generated Skald program remains
 single threaded.
 
 Only the target-independent pass pipeline may invalidate a
-`VerifiedFinalMirProgram` for transformation. A commit returns raw dense MIR
-and cannot recreate the seal. Once transformations exist, the pipeline verifies
-input before editing and returns rewritten output through
-`verify_final_mir`, which remains authoritative for ordinary MIR semantics and
-static-lifecycle realization. Debug and test configurations may verify after
-each transforming pass. The empty current pipeline retains its one final
-verification and zero transformation executions.
+`VerifiedFinalMirProgram` for transformation. Its private ownership bridge
+consumes the seal directly into the supported atomic whole-program rewrite
+coordinator. A successful rewrite yields raw dense MIR plus callable-scoped
+commit maps and change summaries; it cannot recreate the seal. The
+transforming coordinator verifies raw input before invoking the rewrite,
+distinguishes input-verification, structural-rewrite, and output-verification
+failures, and returns rewritten output through `verify_final_mir`. That central
+boundary remains authoritative for ordinary MIR semantics and immutable
+static-lifecycle baseline realization. A synthetic single-pass path exercises
+immediate post-pass verification for tests and debug localization without
+registering a production transformation.
+
+Pipeline accounting records verification and pass executions at the point they
+occur. Structurally successful commits contribute their already-known callable
+and retained/inserted/removed entity counts; the editor emits no report text.
+The driver renders those rewrite counts only when a transforming pass actually
+ran. The empty production pipeline therefore retains byte-for-byte MIR, one
+final verification, zero transformation executions, and its existing report
+shape.
 
 This direction adds no SSA form, persistent instruction identity, public
 common callable-body restructuring, general pass registry, optimization-level

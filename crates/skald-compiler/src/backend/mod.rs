@@ -40,6 +40,14 @@ pub enum RuntimeTracePolicy {
 /// let unchecked: MirProgram = todo!();
 /// let _ = BackendInput::without_runtime_trace(&unchecked);
 /// ```
+///
+/// Sparse callable edit state is compiler-private and cannot be named by a
+/// backend or downstream crate:
+///
+/// ```compile_fail
+/// use skald_compiler::mir::rewrite::MirCallableEdit;
+/// let _edit: MirCallableEdit = todo!();
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {
     verified: &'input VerifiedFinalMirProgram,

@@ -197,21 +197,54 @@ pub(super) fn lifecycle_synthesis_metrics(program: &MirProgram) -> Vec<ReportMet
 }
 
 pub(super) fn mir_pipeline_metrics(measured: &MeasuredMirPipeline) -> Vec<ReportMetric> {
-    let mut metrics = pipeline_execution_metrics(measured.statistics);
-    if let Ok(program) = &measured.result {
+    mir_pipeline_metrics_from(
+        measured.statistics,
+        measured
+            .result
+            .as_ref()
+            .ok()
+            .map(|program| program.program()),
+    )
+}
+
+fn mir_pipeline_metrics_from(
+    statistics: MirPipelineStatistics,
+    program: Option<&MirProgram>,
+) -> Vec<ReportMetric> {
+    let mut metrics = pipeline_execution_metrics(statistics);
+    if let Some(program) = program {
         metrics.extend(mir_metrics(program.reporting_statistics()));
     }
     metrics
 }
 
 fn pipeline_execution_metrics(statistics: MirPipelineStatistics) -> Vec<ReportMetric> {
-    vec![
+    let mut metrics = vec![
         ReportMetric::count(
             "verification executions",
             statistics.verification_executions(),
         ),
         ReportMetric::count("pass executions", statistics.pass_executions()),
-    ]
+    ];
+    if statistics.pass_executions() != 0 {
+        let changes = statistics.rewrite_changes();
+        metrics.extend([
+            ReportMetric::count("rewritten callables", statistics.rewritten_callables()),
+            ReportMetric::count(
+                "retained MIR entities",
+                u64::try_from(changes.retained()).unwrap_or(u64::MAX),
+            ),
+            ReportMetric::count(
+                "inserted MIR entities",
+                u64::try_from(changes.inserted()).unwrap_or(u64::MAX),
+            ),
+            ReportMetric::count(
+                "removed MIR entities",
+                u64::try_from(changes.removed()).unwrap_or(u64::MAX),
+            ),
+        ]);
+    }
+    metrics
 }
 
 fn mir_metrics(statistics: MirProgramStatistics) -> Vec<ReportMetric> {
@@ -250,4 +283,44 @@ fn diagnostic_metrics(diagnostics: &Diagnostics) -> Vec<ReportMetric> {
 
 fn count(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        passes::run_transforming_mir_pipeline, reporting::MetricValue,
+        test_support::lower_source_to_final_mir,
+    };
+
+    use super::*;
+
+    #[test]
+    fn transformed_pipeline_metrics_use_commit_counts_without_phantom_executions() {
+        let measured = run_transforming_mir_pipeline(
+            lower_source_to_final_mir("fn main() -> i64 { return 0; }"),
+            |_callable, _edit| Ok(()),
+        );
+        let program = measured
+            .result
+            .as_ref()
+            .ok()
+            .map(|verified| verified.program());
+        let metrics = mir_pipeline_metrics_from(measured.statistics, program);
+
+        assert_eq!(metric(&metrics, "verification executions"), Some(2));
+        assert_eq!(metric(&metrics, "pass executions"), Some(1));
+        assert_eq!(metric(&metrics, "rewritten callables"), Some(1));
+        assert!(metric(&metrics, "retained MIR entities").unwrap() > 0);
+        assert_eq!(metric(&metrics, "inserted MIR entities"), Some(0));
+        assert_eq!(metric(&metrics, "removed MIR entities"), Some(0));
+    }
+
+    fn metric(metrics: &[ReportMetric], name: &str) -> Option<u64> {
+        metrics.iter().find_map(|metric| {
+            (metric.name() == name).then(|| match metric.value() {
+                MetricValue::Count(value) => value,
+                MetricValue::Bytes(_) => panic!("pipeline execution metrics are counts"),
+            })
+        })
+    }
 }

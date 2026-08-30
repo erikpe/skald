@@ -1,6 +1,6 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: in progress; DMR0-DMR5 are implemented and DMR6 is next.
+Status: in progress; DMR0-DMR6 are implemented and DMR7 is next.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
@@ -69,7 +69,7 @@ rather than expanding a reviewed task.
 - [x] DMR3 — Integrate every executable definition kind
 - [x] DMR4 — Publish the supported callable editing facade
 - [x] DMR5 — Add explicit cross-callable rehoming
-- [ ] DMR6 — Integrate verified pipeline invalidation and resealing
+- [x] DMR6 — Integrate verified pipeline invalidation and resealing
 - [ ] DMR7 — Harden the boundary and close maintainability debt
 
 ## PR-sized implementation sequence
@@ -418,28 +418,28 @@ added.
 **Purpose:** Connect the editor to the existing final-MIR trust boundary so a
 future transforming pass cannot bypass input or output verification.
 
-- [ ] Add the narrow pipeline-private operation that consumes a
+- [x] Add the narrow pipeline-private operation that consumes a
       `VerifiedFinalMirProgram` into raw MIR when a transformation invalidates
       the seal; expose no equivalent public escape hatch.
-- [ ] Add an owned program-rewrite coordinator that applies callable
+- [x] Add an owned program-rewrite coordinator that applies callable
       transactions and returns raw dense MIR, commit maps/change summaries, or
       one structured rewrite failure.
-- [ ] Exercise the future transforming pipeline shape: verify raw input,
+- [x] Exercise the future transforming pipeline shape: verify raw input,
       invalidate internally, rewrite, and call `verify_final_mir` to construct
       the only backend-accepted result.
-- [ ] Preserve the current empty pipeline's single verification execution and
+- [x] Preserve the current empty pipeline's single verification execution and
       byte-for-byte result; do not create a production pass registry or enable
       a transformation.
-- [ ] Support test/debug verification after a synthetic transformation so a
+- [x] Support test/debug verification after a synthetic transformation so a
       semantic edit defect is localized without letting commit counterfeit the
       verifier seal.
-- [ ] Keep static-lifecycle baseline authority inaccessible and prove
+- [x] Keep static-lifecycle baseline authority inaccessible and prove
       lifecycle-effect-changing test rewrites return through realization
       verification.
-- [ ] Integrate already-known rewrite counts with pass-owned measured results;
+- [x] Integrate already-known rewrite counts with pass-owned measured results;
       the editor emits no report text and reporting records only executions
       that occurred.
-- [ ] Update public compile tests and compiler documentation for the sealed
+- [x] Update public compile tests and compiler documentation for the sealed
       ownership path without exposing private editor types.
 
 **Tests:** Compile-fail/public API coverage for raw and sparse products at the
@@ -458,6 +458,24 @@ backend-input tests; `cargo test --locked -p skald-compiler --test public_api`;
 **Exit criteria:** The pass owner can safely invalidate, rewrite, and centrally
 reseal final MIR, sparse or raw intermediate products cannot reach a backend,
 the empty production pipeline is unchanged, and accounting remains truthful.
+
+**Completed:** The pass pipeline now owns the only seal-consuming bridge into
+the atomic whole-program rewrite coordinator. It returns raw dense MIR with
+callable-scoped commit maps and change summaries or a structured rewrite
+failure; neither the editor nor commit can recreate a verified product. A
+pipeline-private synthetic transformation coordinator verifies its raw input,
+invalidates the seal, records the pass execution and successful commit counts,
+and immediately returns the candidate through `verify_final_mir`, with distinct
+input-verification, structural-rewrite, and output-verification failure stages.
+Tests cover valid value deletion and CFG insertion, malformed input rejection,
+atomic structural failure, a dominance-invalid commit rejected on output, and
+an unauthorized static-lifecycle fact rejected against immutable baseline
+authority. Backend input still accepts only `VerifiedFinalMirProgram`, and
+compile-fail coverage also proves sparse edit state is inaccessible downstream.
+Reporting derives retained, inserted, and removed entity totals from the
+commit-owned summaries only when a transforming pass ran. The production
+pipeline registers no transformation and continues to preserve input MIR
+exactly while reporting one verification and zero pass executions.
 
 ### DMR7 — Harden the boundary and close maintainability debt
 

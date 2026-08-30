@@ -2,14 +2,25 @@
 
 use std::ops::Deref;
 
+use crate::mir::rewrite::MirRewriteChangeSummary;
 use crate::mir::{MirProgram, MirVerificationErrors};
 
 use super::static_lifecycle;
+
+// This owner is intentionally dormant until the first production MIR pass.
+// Its unit tests exercise the complete invalidation and resealing path now.
+#[allow(dead_code)]
+mod rewrite;
+
+#[cfg(test)]
+pub(crate) use rewrite::run_transforming_mir_pipeline;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct MirPipelineStatistics {
     verification_executions: u64,
     pass_executions: u64,
+    rewritten_callables: u64,
+    rewrite_changes: MirRewriteChangeSummary,
 }
 
 impl MirPipelineStatistics {
@@ -19,6 +30,33 @@ impl MirPipelineStatistics {
 
     pub(crate) const fn pass_executions(self) -> u64 {
         self.pass_executions
+    }
+
+    pub(crate) const fn rewritten_callables(self) -> u64 {
+        self.rewritten_callables
+    }
+
+    pub(crate) const fn rewrite_changes(self) -> MirRewriteChangeSummary {
+        self.rewrite_changes
+    }
+
+    fn record_verification(&mut self) {
+        self.verification_executions = self.verification_executions.saturating_add(1);
+    }
+
+    #[allow(dead_code)]
+    fn record_pass_execution(&mut self) {
+        self.pass_executions = self.pass_executions.saturating_add(1);
+    }
+
+    #[allow(dead_code)]
+    fn record_rewrite(&mut self, rewrite: &crate::mir::rewrite::MirProgramRewriteResult) {
+        self.rewritten_callables = self
+            .rewritten_callables
+            .saturating_add(u64::try_from(rewrite.callables.len()).unwrap_or(u64::MAX));
+        for callable in &rewrite.callables {
+            self.rewrite_changes.accumulate(callable.changes);
+        }
     }
 }
 
@@ -40,6 +78,15 @@ pub struct VerifiedFinalMirProgram {
 impl VerifiedFinalMirProgram {
     pub const fn program(&self) -> &MirProgram {
         &self.program
+    }
+
+    /// Invalidates the final-MIR seal for a target-independent transformation.
+    ///
+    /// Visibility is deliberately restricted to the pass owner. Rewriters and
+    /// backends cannot extract raw MIR from a verified product themselves.
+    #[allow(dead_code)]
+    fn invalidate_for_transformation(self) -> MirProgram {
+        self.program
     }
 }
 
@@ -83,110 +130,11 @@ pub fn verify_final_mir(
 /// pass or driver, then records the execution and publishes those values. A
 /// pass must not format or emit reporting text itself.
 pub(crate) fn run_mir_pipeline_measured(program: MirProgram) -> MeasuredMirPipeline {
-    let statistics = MirPipelineStatistics {
-        verification_executions: 1,
-        pass_executions: 0,
-    };
+    let mut statistics = MirPipelineStatistics::default();
+    statistics.record_verification();
     let result = verify_final_mir(program);
     MeasuredMirPipeline { result, statistics }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::test_support::lower_source_to_mir;
-
-    use super::*;
-
-    fn lowered_program() -> MirProgram {
-        lower_source_to_mir("fn main() -> i64 { return 0; }")
-    }
-
-    #[test]
-    fn empty_pipeline_preserves_valid_mir_and_reports_only_verification() {
-        let mir = lowered_program();
-        let expected = mir.clone();
-        let measured = run_mir_pipeline_measured(mir);
-
-        assert_eq!(measured.result.unwrap().program(), &expected);
-        assert_eq!(measured.statistics.verification_executions(), 1);
-        assert_eq!(measured.statistics.pass_executions(), 0);
-    }
-
-    #[test]
-    fn pipeline_preserves_logical_path_and_cleanup_metadata() {
-        let mir = lower_source_to_mir(
-            "class Flag {
-               truth: bool;
-               init(truth: bool) { self.truth = truth; }
-               fn read() -> bool { return self.truth; }
-               destroy {}
-             }
-             fn make(truth: bool) -> shared Flag { return new Flag(truth); }
-             fn evaluate(left: bool) -> bool {
-               return left && make(true)->read();
-             }
-             fn main() -> i64 { return 0; }",
-        );
-        assert!(mir
-            .definitions
-            .iter()
-            .any(|definition| !definition.body.path_conditions.is_empty()));
-        let expected = mir.clone();
-
-        assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
-    }
-
-    #[test]
-    fn pipeline_preserves_valid_multi_block_mir() {
-        let mut mir = lowered_program();
-        let function = mir
-            .definitions
-            .get_mut_for_test(mir.entry_function)
-            .unwrap();
-        let span = function.span;
-        let second = crate::mir::BlockId::new(function.function, 1);
-        function.body.blocks.push(crate::mir::MirBasicBlock {
-            id: second,
-            instructions: Vec::new(),
-            terminator: Some(crate::mir::MirTerminator::Goto {
-                target: second,
-                span,
-            }),
-            span,
-        });
-        let expected = mir.clone();
-
-        assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
-    }
-
-    #[test]
-    fn pipeline_preserves_pure_and_checked_primitive_casts_exactly() {
-        let mir = lower_source_to_mir(
-            "fn source() -> f64 { return 7.9; }
-             fn main() -> i64 { return (i64) source() + (i64) (f64) 1u; }",
-        );
-        let expected = mir.clone();
-
-        assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
-    }
-
-    #[test]
-    fn rejected_mir_still_reports_the_verification_execution() {
-        let mut mir = lowered_program();
-        mir.definitions
-            .get_mut_for_test(mir.entry_function)
-            .unwrap()
-            .body
-            .blocks[0]
-            .terminator = None;
-
-        let measured = run_mir_pipeline_measured(mir);
-        assert!(measured
-            .result
-            .unwrap_err()
-            .to_string()
-            .contains("block has no terminator"));
-        assert_eq!(measured.statistics.verification_executions(), 1);
-        assert_eq!(measured.statistics.pass_executions(), 0);
-    }
-}
+mod tests;

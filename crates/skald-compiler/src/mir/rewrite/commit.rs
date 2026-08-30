@@ -174,6 +174,54 @@ impl MirRewriteChangeSummary {
             logical_expressions: record_changes(&inventory.logical_expressions),
         }
     }
+
+    pub(crate) fn accumulate(&mut self, other: Self) {
+        self.storage.accumulate(other.storage);
+        self.values.accumulate(other.values);
+        self.blocks.accumulate(other.blocks);
+        self.path_conditions.accumulate(other.path_conditions);
+        self.optional_guards.accumulate(other.optional_guards);
+        self.logical_expressions
+            .accumulate(other.logical_expressions);
+    }
+
+    pub(crate) fn retained(self) -> usize {
+        self.storage
+            .retained
+            .saturating_add(self.values.retained)
+            .saturating_add(self.blocks.retained)
+            .saturating_add(self.path_conditions.retained)
+            .saturating_add(self.optional_guards.retained)
+            .saturating_add(self.logical_expressions.retained)
+    }
+
+    pub(crate) fn inserted(self) -> usize {
+        self.storage
+            .inserted
+            .saturating_add(self.values.inserted)
+            .saturating_add(self.blocks.inserted)
+            .saturating_add(self.path_conditions.inserted)
+            .saturating_add(self.optional_guards.inserted)
+            .saturating_add(self.logical_expressions.inserted)
+    }
+
+    pub(crate) fn removed(self) -> usize {
+        self.storage
+            .removed
+            .saturating_add(self.values.removed)
+            .saturating_add(self.blocks.removed)
+            .saturating_add(self.path_conditions.removed)
+            .saturating_add(self.optional_guards.removed)
+            .saturating_add(self.logical_expressions.removed)
+    }
+}
+
+impl MirEntityChangeCount {
+    fn accumulate(&mut self, other: Self) {
+        self.retained = self.retained.saturating_add(other.retained);
+        self.inserted = self.inserted.saturating_add(other.inserted);
+        self.removed = self.removed.saturating_add(other.removed);
+    }
 }
 
 fn identity_changes<I>(inventory: &EditIdentityInventory<I>) -> MirEntityChangeCount {
