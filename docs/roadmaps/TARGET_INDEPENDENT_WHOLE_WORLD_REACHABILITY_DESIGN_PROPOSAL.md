@@ -1,7 +1,17 @@
 # Target-Independent Whole-World Reachability Design Proposal
 
-Status: proposed; WWR1 through WWR12 require confirmation before an
-implementation roadmap is created.
+Status: frozen. WWR1 through WWR12 were confirmed together on 2026-08-30 and
+promoted into the
+[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-target-independent-whole-world-reachability-direction),
+[backend contract](../compiler/BACKEND.md#frozen-target-independent-reachability-boundary),
+[driver contract](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-whole-world-reachability-selection),
+and
+[reporting contract](../compiler/REPORTING.md#frozen-whole-world-reachability-observation).
+The planned
+[implementation roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+owns delivery, and its
+[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
+keeps follow-up work outside that reviewed scope.
 
 This proposal moves semantic reachability ahead of target lowering and makes
 it reusable whole-program compiler infrastructure rather than logic hidden in
@@ -294,20 +304,20 @@ retention.
 
 ## Decision register
 
-| Decision | Question | Proposed decision | Status |
+| Decision | Question | Frozen decision | Status |
 |---|---|---|---|
-| [WWR1](#wwr1--introduce-one-reusable-final-mir-reachability-product) | What is the durable product? | Immutable seal-scoped graph and reachability facts, separate from pruning | **Proposed** |
-| [WWR2](#wwr2--separate-root-policy-from-dependency-extraction) | Who defines liveness? | Explicit target-independent root collector plus exhaustive dependency extractor | **Proposed** |
-| [WWR3](#wwr3--model-callables-and-implicit-lifecycle-work-as-execution-nodes) | What participates in closure? | Typed execution nodes for callables and implicit class/array lifecycle work | **Proposed** |
-| [WWR4](#wwr4--use-entry-and-complete-static-lifecycle-as-initial-roots) | What are today's roots? | Entry plus all coordinator activation and shutdown obligations | **Proposed** |
-| [WWR5](#wwr5--centralize-conservative-possible-target-expansion) | How are dynamic targets found? | Shared deterministic direct, virtual, interface, indirect, and lifecycle expansion | **Proposed** |
-| [WWR6](#wwr6--bind-analysis-facts-to-the-verified-final-mir-seal) | How long do facts live? | Compute during final verification, expose read-only, invalidate on every change | **Proposed** |
-| [WWR7](#wwr7--keep-global-identities-stable-and-permit-sparse-executable-definitions) | What is physically removed? | Definitions only; declarations and global IDs remain stable initially | **Proposed** |
-| [WWR8](#wwr8--add-a-narrow-atomic-program-retention-capability) | How may a pass prune? | A separate capability filters complete definition containers atomically | **Proposed** |
-| [WWR9](#wwr9--make-final-verification-prove-reachable-definition-completeness) | How is pruning checked? | Recompute closure and require bodies for every reachable internal target | **Proposed** |
-| [WWR10](#wwr10--make-backend-planning-consume-the-verified-retained-domain) | How does backend work shrink safely? | Lower retained definitions and only required dispatch/runtime metadata | **Proposed** |
-| [WWR11](#wwr11--keep-machine-artifact-retention-as-a-target-safety-net) | Does backend pruning remain? | Yes; it owns dependencies introduced after MIR | **Proposed** |
-| [WWR12](#wwr12--ship-one-conservative-selectable-pruning-client) | How is the foundation proven? | Register, observe, harden, then enable definition-only whole-world pruning | **Proposed** |
+| [WWR1](#wwr1--introduce-one-reusable-final-mir-reachability-product) | What is the durable product? | Immutable seal-scoped graph and reachability facts, separate from pruning | **Confirmed** |
+| [WWR2](#wwr2--separate-root-policy-from-dependency-extraction) | Who defines liveness? | Explicit target-independent root collector plus exhaustive dependency extractor | **Confirmed** |
+| [WWR3](#wwr3--model-callables-and-implicit-lifecycle-work-as-execution-nodes) | What participates in closure? | Typed execution nodes for callables and implicit class/array lifecycle work | **Confirmed** |
+| [WWR4](#wwr4--use-entry-and-complete-static-lifecycle-as-initial-roots) | What are today's roots? | Entry plus all coordinator activation and shutdown obligations | **Confirmed** |
+| [WWR5](#wwr5--centralize-conservative-possible-target-expansion) | How are dynamic targets found? | Shared deterministic direct, virtual, interface, indirect, and lifecycle expansion | **Confirmed** |
+| [WWR6](#wwr6--bind-analysis-facts-to-the-verified-final-mir-seal) | How long do facts live? | Compute during final verification, expose read-only, invalidate on every change | **Confirmed** |
+| [WWR7](#wwr7--keep-global-identities-stable-and-permit-sparse-executable-definitions) | What is physically removed? | Definitions only; declarations and global IDs remain stable initially | **Confirmed** |
+| [WWR8](#wwr8--add-a-narrow-atomic-program-retention-capability) | How may a pass prune? | A separate capability filters complete definition containers atomically | **Confirmed** |
+| [WWR9](#wwr9--make-final-verification-prove-reachable-definition-completeness) | How is pruning checked? | Recompute closure and require bodies for every reachable internal target | **Confirmed** |
+| [WWR10](#wwr10--make-backend-planning-consume-the-verified-retained-domain) | How does backend work shrink safely? | Lower retained definitions and only required dispatch/runtime metadata | **Confirmed** |
+| [WWR11](#wwr11--keep-machine-artifact-retention-as-a-target-safety-net) | Does backend pruning remain? | Yes; it owns dependencies introduced after MIR | **Confirmed** |
+| [WWR12](#wwr12--ship-one-conservative-selectable-pruning-client) | How is the foundation proven? | Register, observe, harden, then enable definition-only whole-world pruning | **Confirmed** |
 
 ## WWR1 — Introduce one reusable final-MIR reachability product
 
@@ -895,14 +905,14 @@ scope silently absorbed by this roadmap.
 
 ## Confirmation and promotion
 
-If confirmed, WWR1 through WWR12 should freeze together. Root completeness,
-possible-target expansion, sparse-definition validity, verification, and
-backend consumption form one correctness boundary; confirming only the
-pruning pass would leave its proof obligations undefined.
+WWR1 through WWR12 are frozen together. Root completeness, possible-target
+expansion, sparse-definition validity, verification, and backend consumption
+form one correctness boundary; freezing only the pruning pass would leave its
+proof obligations undefined.
 
-After confirmation, promote the durable direction into the compiler phase,
-MIR verification, backend, and optimization-selection contracts, then create
-an implementation roadmap plus a dedicated discoveries record. The roadmap
-should end with the registered and hardened production pass, but its primary
-success criterion is the reusable verified reachability foundation described
-here.
+The durable direction is promoted into the compiler phase, backend, driver,
+and reporting contracts linked from this proposal's status. The implementation
+roadmap and dedicated discoveries record divide delivery from follow-up work.
+The roadmap ends with the registered and hardened production pass, but its
+primary success criterion is the reusable verified reachability foundation
+described here.

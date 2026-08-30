@@ -355,6 +355,29 @@ no checkpoint formatting, dump rendering, allocation, or event construction.
 Filesystem publication and general CLI dump retention remain separate driver
 decisions.
 
+## Frozen whole-world reachability observation
+
+The confirmed
+[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+uses the existing occurrence, aggregate, inspection, and rendering ownership.
+Reachability analysis and pass implementations do not log or call observers.
+
+The registered pass will report deterministic already-known integer counters
+for examined, reachable, retained, and removed executable definitions, split
+where useful by function/member and dependency category. Reporting must keep
+declaration count, physically present definition count, and reachable callable
+count distinct. The pipeline owns elapsed time and occurrence conversion;
+reports own rendering; live durations remain excluded from deterministic
+assertions.
+
+The focused reachability graph dump remains separate from report events and
+ordinary MIR checkpoint bytes. Compiler tools and tests may inspect roots,
+typed edges, possible targets, witnesses, and summary counts through borrowed
+verified facts. The ordinary driver supplies no such inspector and performs no
+graph rendering, label construction, or related allocation. Analysis or
+retention failure uses the existing pass-attributed structured error and emits
+no invented successful occurrence or later phase product.
+
 ## CLI selection
 
 Operational detail and diagnostic visibility use separate controls.

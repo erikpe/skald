@@ -21,8 +21,10 @@ and the completed
 are preserved in the archive. The completed
 [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 adds the enabling layer around those foundations and activates one conservative
-default pass. The remaining five original constraints stay pending and have no
-implementation roadmap.
+default pass. The frozen whole-world reachability design now has a planned
+implementation roadmap and an active
+[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
+The other four original unresolved constraints have no implementation roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -30,17 +32,31 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No other implementation roadmap is currently planned.
+The planned
+[target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+starts with WRR0. It establishes reusable final-MIR execution-dependency and
+root analysis, seal-bound reachability facts, independently verified sparse
+executable definitions, atomic stable-identity retention, backend retained-
+domain consumption, and a selectable definition-pruning pass. It depends on
+the completed static-lifecycle certificate, dense MIR rewriting, and selectable
+pipeline roadmaps.
 
 ## Design proposals
 
-The proposed
+The frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 defines reusable final-MIR executable-dependency and root analysis, seal-bound
 reachability facts, stable-identity program retention, independently verified
 sparse executable definitions, backend retained-domain consumption, and one
-conservative definition-pruning client. Its decisions require confirmation
-before an implementation roadmap is created.
+conservative definition-pruning client. Its
+[implementation roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+is planned, and the direction is promoted into the living
+[compiler phase](../compiler/PHASES_AND_IR.md#frozen-target-independent-whole-world-reachability-direction),
+[backend](../compiler/BACKEND.md#frozen-target-independent-reachability-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-whole-world-reachability-selection),
+and
+[reporting](../compiler/REPORTING.md#frozen-whole-world-reachability-observation)
+contracts.
 
 The completed selectable final-MIR optimization pipeline design and delivery
 record are preserved in the [archive](../archive/README.md). Their typed static

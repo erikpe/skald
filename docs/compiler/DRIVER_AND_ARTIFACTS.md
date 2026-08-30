@@ -180,6 +180,31 @@ Verified checkpoint inspection is implemented by the pass facade's
 inspector and performs no checkpoint work. General driver/CLI dump destination
 and retention policy remain intentionally deferred.
 
+## Frozen whole-world reachability selection
+
+The confirmed
+[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+uses the existing final-MIR registry, profile, exclusion, listing, and verified
+runner contracts. It adds no new request field or command-line category.
+
+On delivery, the stable registered name will be
+`whole-world-reachability`. `--list-mir-passes`, the public descriptor query,
+unknown-name diagnostics, and repeatable `--disable-mir-pass` selection will
+discover it through the same canonical registry metadata as every other pass.
+The supported `default` schedule will place it after
+`dead-pure-definition-elimination`; `none` remains empty. Registration may land
+before default activation while the roadmap is in progress, but current
+default behavior may change only after backend retained-domain support and the
+full parity/determinism gates pass.
+
+Disabling reachability preserves complete final MIR and the prior backend
+input domain. Disabling both registered passes from `default` must match
+`none`. Selection never changes source loading, acceptance, diagnostics,
+static-lifecycle planning, target choice, runtime-trace policy, artifact paths,
+or publication behavior. A pass or changed-output verification failure stops
+before backend emission and artifact publication through the existing
+structured pipeline error boundary.
+
 ## Command-line modes
 
 `skac --help` is the exact option reference. One invocation requires exactly

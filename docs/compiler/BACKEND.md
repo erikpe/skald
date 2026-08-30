@@ -1038,6 +1038,47 @@ change this wrapper or the parameterless internal entry call. The
 `std::process` module reads the Linux host record through ordinary library I/O;
 there is no backend argument-capture path or target ABI addition.
 
+## Frozen target-independent reachability boundary
+
+The confirmed
+[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+and planned
+[roadmap](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+move semantic definition retention ahead of target lowering. This section is a
+selected future backend boundary; the current backend still receives complete
+final MIR and performs the machine-artifact retention described below.
+
+After implementation, `BackendInput` will expose verified reachability facts
+bound to its exact final-MIR program. Target legality, callable-signature
+checks, runtime-trace activation planning, fixed frames, and instruction
+selection will visit physically retained executable definitions rather than
+assuming that every dense declaration has a body. An absent final-MIR body is
+legal only because target-independent verification independently proved its
+declaration unreachable.
+
+Dispatch planning will distinguish complete semantic declarations from the
+virtual families and interface requirements reachable MIR can select. It may
+retain extra target metadata conservatively, but it may not demand an absent
+unreachable method body solely because an unused dense slot or conformance
+names the declaration. Every entry usable from a reachable call or implicit
+lifecycle operation must still select a verified retained body. Required
+class, array, optional-box, literal, static, and other runtime entities come
+from the target-independent retained-domain query rather than a second
+backend-specific semantic reachability walker.
+
+This changes no ABI, layout identity, symbol spelling contract, export rule,
+or target failure classification. Complete-emission diagnostics continue to
+emit every body physically present in their verified input; they cannot
+resurrect a body removed before lowering.
+
+The target-private exported-symbol walk remains mandatory after instruction
+selection. Entry wrappers, ABI shims, generated array/ownership/optional-box/
+finalization helpers, concrete dispatch tables, literal backings, panic
+messages, runtime-trace records, and any later target-generated dependency do
+not all have target-independent MIR identities. Earlier MIR retention reduces
+the input domain; machine-artifact retention proves the final emitted symbol
+closure.
+
 ## Assembly emission and artifact retention
 
 The production driver requests closed-world artifact retention after target

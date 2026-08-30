@@ -438,8 +438,9 @@ this boundary.
 Target expansion is re-derived from each MIR product. Whole-world compilation
 makes virtual, interface, exact-signature function-value, copy, finalization,
 cleanup, and array-lifecycle target sets finite. Function-value candidates are
-an analysis input; callable retention becomes a separate future reachability
-responsibility. No unknown external Skald target may be assumed effect-free.
+an analysis input; callable retention is owned by the frozen whole-world
+reachability direction below rather than the lifecycle certificate. No unknown
+external Skald target may be assumed effect-free.
 Single-threaded generated execution requires no runtime guards, atomics, lazy
 initialization, or synchronization state.
 
@@ -751,6 +752,78 @@ whole-world compilation and single-threaded generated programs make later
 analyses more tractable, but neither assumption weakens verification,
 determinism, evaluation-order, checked-failure, allocation, ownership, alias,
 or destruction requirements.
+
+### Frozen target-independent whole-world reachability direction
+
+The confirmed
+[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+selects a reusable final-MIR analysis and retention boundary for implementation.
+Its planned
+[roadmap](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+owns delivery. This subsection defines frozen direction, not current sparse-
+definition or pass behavior.
+
+Final MIR will expose one target-independent execution-dependency vocabulary
+covering ordinary callables plus implicit class copy, assignment, complete
+finalization, and array default/copy/assignment/destruction work. Root
+collection, dependency extraction, possible-target resolution, closure
+solving, program retention, verification, and backend consumption remain
+separate owners. Static-effect analysis will share exhaustive direct, virtual,
+interface, function-value, ownership, optional, array, copy, and destruction
+target selection without turning static-access phases or witnesses into the
+general reachability product.
+
+The current whole-program root contract is the identity-selected entry plus
+every static coordinator activation and reverse-shutdown obligation. Static
+startup and deterministic shutdown remain observable even when no ordinary
+callable reads the field. External and intrinsic declarations are reached
+leaves, not internal roots. Whole-world compilation makes this root and target
+inventory finite; single-threaded generated execution introduces no concurrent
+source roots, atomics, synchronization edges, or asynchronous callbacks.
+
+Direct and static calls retain exact targets. Virtual calls initially expand
+to the full verified family, interface calls to every verified implementation
+of the selected requirement, and implicit lifecycle operations through their
+canonical MIR plans. Function-value reachability uses a coupled monotone fixed
+point: callable-address formations become candidates only when their containing
+execution node is reachable, exact signatures select indirect targets, and
+forming an exact address retains the addressed callable even without a later
+indirect call. All structurally present blocks of a reachable callable are
+conservatively scanned until a separate CFG pass removes dead regions.
+
+Central final verification will bind immutable deterministic reachability facts
+to exactly one `VerifiedFinalMirProgram`. Unchanged pass outcomes preserve that
+seal and its facts. Every changed outcome invalidates both and rebuilds them
+before another occurrence, inspection checkpoint, or backend can observe the
+program. The product provides read-only root, reachable-node, callable-target,
+dispatch-use, runtime-entity, and explanation queries without introducing a
+global analysis manager or preservation declarations.
+
+Preliminary MIR remains definition-complete. Optimized final MIR may retain a
+dense semantic declaration while omitting its unreachable function or member
+body. Program-level IDs, declarations, classes, interfaces, fields, type
+tables, virtual families, lifecycle authority, literals, and spans remain
+stable. Final verification validates every body physically present,
+independently recomputes root closure, and requires a body for every reachable
+internal target selected by calls, callable addresses, dispatch, copy,
+assignment, destruction, ownership, optionals, arrays, or static lifecycle.
+The lifecycle realization set must still be a subset of immutable baseline
+authority.
+
+One private atomic program-retention capability will filter sparse function
+definition slots and callable-keyed member definitions using facts bound to
+the consumed seal. It will not expose mutable declaration tables, compact
+global identities, rewrite retained bodies, mutate lifecycle authority, log,
+verify, or render. The first `whole-world-reachability` pass will consume this
+capability and remove executable definitions only; declaration and metadata
+compaction, rapid-type analysis, points-to refinement, devirtualization,
+inlining, and broader interprocedural analysis remain later work.
+
+The existing final-MIR runner remains authoritative. Changed retention re-
+enters ordinary and lifecycle-realization verification immediately, and the
+backend continues to accept only the resealed product. Optimization-off mode
+still retains exact complete MIR and source diagnostics; computing seal-owned
+facts alone performs no pruning.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns recursive, bottom-up
