@@ -8,8 +8,8 @@ mod build;
 mod dump;
 mod lower;
 mod model;
-// The traversal is intentionally dormant until the edit transaction starts
-// consuming it; keeping it compiled makes model drift fail at the owner.
+// No production transformation consumes this boundary yet. Keeping it
+// compiled makes MIR model drift fail at the exhaustive rewrite owner.
 #[allow(dead_code, unused_imports)]
 pub(crate) mod rewrite;
 mod verify;

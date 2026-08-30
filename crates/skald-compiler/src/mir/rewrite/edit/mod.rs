@@ -2,6 +2,7 @@
 
 mod guards;
 mod logical;
+mod operations;
 mod order;
 mod slots;
 
@@ -16,12 +17,12 @@ use super::super::{
 };
 use super::error::MirRewriteError;
 use guards::OptionalGuardRegistry;
-pub(super) use logical::LogicalRecordIndex;
+pub(crate) use logical::LogicalRecordIndex;
 use logical::LogicalRecords;
 use order::{LiveOrder, OrderPlacement};
 use slots::SparseSlots;
 
-pub(super) type BlockPlacement = OrderPlacement<BlockId>;
+pub(crate) type BlockPlacement = OrderPlacement<BlockId>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct EditIdentityInventory<I> {
@@ -60,7 +61,7 @@ pub(super) struct MirCallableDenseCandidate {
 /// This type deliberately cannot be converted to [`MirBody`] or passed to a
 /// verifier. Dense reconstruction is a separate atomic operation.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct MirCallableEdit {
+pub(crate) struct MirCallableEdit {
     callable: CallableId,
     entry: BlockId,
     storage: SparseSlots<StorageId, MirStorage>,
@@ -108,64 +109,64 @@ impl MirCallableEdit {
         })
     }
 
-    pub(super) const fn callable(&self) -> CallableId {
+    pub(crate) const fn callable(&self) -> CallableId {
         self.callable
     }
 
-    pub(super) const fn entry(&self) -> BlockId {
+    pub(crate) const fn entry(&self) -> BlockId {
         self.entry
     }
 
-    pub(super) fn storage(&self, identity: StorageId) -> Result<&MirStorage, MirRewriteError> {
+    pub(crate) fn storage(&self, identity: StorageId) -> Result<&MirStorage, MirRewriteError> {
         self.storage.get(identity)
     }
 
-    pub(super) fn storage_ids(&self) -> impl Iterator<Item = StorageId> + '_ {
+    pub(crate) fn storage_ids(&self) -> impl Iterator<Item = StorageId> + '_ {
         self.storage.live_ids()
     }
 
-    pub(super) fn allocate_storage(
+    pub(crate) fn allocate_storage(
         &mut self,
         build: impl FnOnce(StorageId) -> MirStorage,
     ) -> Result<StorageId, MirRewriteError> {
         self.storage.allocate_with(build)
     }
 
-    pub(super) fn remove_storage(
+    pub(crate) fn remove_storage(
         &mut self,
         identity: StorageId,
     ) -> Result<MirStorage, MirRewriteError> {
         self.storage.remove(identity)
     }
 
-    pub(super) fn value(&self, identity: ValueId) -> Result<&MirValue, MirRewriteError> {
+    pub(crate) fn value(&self, identity: ValueId) -> Result<&MirValue, MirRewriteError> {
         self.values.get(identity)
     }
 
-    pub(super) fn value_ids(&self) -> impl Iterator<Item = ValueId> + '_ {
+    pub(crate) fn value_ids(&self) -> impl Iterator<Item = ValueId> + '_ {
         self.values.live_ids()
     }
 
-    pub(super) fn allocate_value(
+    pub(crate) fn allocate_value(
         &mut self,
         build: impl FnOnce(ValueId) -> MirValue,
     ) -> Result<ValueId, MirRewriteError> {
         self.values.allocate_with(build)
     }
 
-    pub(super) fn remove_value(&mut self, identity: ValueId) -> Result<MirValue, MirRewriteError> {
+    pub(crate) fn remove_value(&mut self, identity: ValueId) -> Result<MirValue, MirRewriteError> {
         self.values.remove(identity)
     }
 
-    pub(super) fn block(&self, identity: BlockId) -> Result<&MirBasicBlock, MirRewriteError> {
+    pub(crate) fn block(&self, identity: BlockId) -> Result<&MirBasicBlock, MirRewriteError> {
         self.blocks.get(identity)
     }
 
-    pub(super) fn block_order(&self) -> &[BlockId] {
+    pub(crate) fn block_order(&self) -> &[BlockId] {
         self.block_order.entries()
     }
 
-    pub(super) fn allocate_block(
+    pub(crate) fn allocate_block(
         &mut self,
         placement: BlockPlacement,
         build: impl FnOnce(BlockId) -> MirBasicBlock,
@@ -179,7 +180,7 @@ impl MirCallableEdit {
         Ok(identity)
     }
 
-    pub(super) fn remove_block(
+    pub(crate) fn remove_block(
         &mut self,
         identity: BlockId,
     ) -> Result<MirBasicBlock, MirRewriteError> {
@@ -193,18 +194,18 @@ impl MirCallableEdit {
         self.blocks.remove(identity)
     }
 
-    pub(super) fn path_condition(
+    pub(crate) fn path_condition(
         &self,
         identity: PathConditionId,
     ) -> Result<&MirPathCondition, MirRewriteError> {
         self.path_conditions.get(identity)
     }
 
-    pub(super) fn path_condition_ids(&self) -> impl Iterator<Item = PathConditionId> + '_ {
+    pub(crate) fn path_condition_ids(&self) -> impl Iterator<Item = PathConditionId> + '_ {
         self.path_conditions.live_ids()
     }
 
-    pub(super) fn allocate_path_condition(
+    pub(crate) fn allocate_path_condition(
         &mut self,
         build: impl FnOnce(PathConditionId) -> MirPathCondition,
     ) -> Result<PathConditionId, MirRewriteError> {
@@ -215,51 +216,51 @@ impl MirCallableEdit {
         self.path_conditions.append(condition)
     }
 
-    pub(super) fn remove_path_condition(
+    pub(crate) fn remove_path_condition(
         &mut self,
         identity: PathConditionId,
     ) -> Result<MirPathCondition, MirRewriteError> {
         self.path_conditions.remove(identity)
     }
 
-    pub(super) fn logical_record(
+    pub(crate) fn logical_record(
         &self,
         index: LogicalRecordIndex,
     ) -> Result<&MirLogicalExpression, MirRewriteError> {
         self.logical_expressions.get(index)
     }
 
-    pub(super) fn logical_order(&self) -> &[LogicalRecordIndex] {
+    pub(crate) fn logical_order(&self) -> &[LogicalRecordIndex] {
         self.logical_expressions.order()
     }
 
-    pub(super) fn allocate_logical_record(
+    pub(crate) fn allocate_logical_record(
         &mut self,
         expression: MirLogicalExpression,
     ) -> LogicalRecordIndex {
         self.logical_expressions.allocate(expression)
     }
 
-    pub(super) fn remove_logical_record(
+    pub(crate) fn remove_logical_record(
         &mut self,
         index: LogicalRecordIndex,
     ) -> Result<MirLogicalExpression, MirRewriteError> {
         self.logical_expressions.remove(index)
     }
 
-    pub(super) fn optional_guard(&self, identity: OptionalGuardId) -> Result<(), MirRewriteError> {
+    pub(crate) fn optional_guard(&self, identity: OptionalGuardId) -> Result<(), MirRewriteError> {
         self.optional_guards.get(identity)
     }
 
-    pub(super) fn optional_guard_ids(&self) -> impl Iterator<Item = OptionalGuardId> + '_ {
+    pub(crate) fn optional_guard_ids(&self) -> impl Iterator<Item = OptionalGuardId> + '_ {
         self.optional_guards.live_ids()
     }
 
-    pub(super) fn allocate_optional_guard(&mut self) -> OptionalGuardId {
+    pub(crate) fn allocate_optional_guard(&mut self) -> OptionalGuardId {
         self.optional_guards.allocate()
     }
 
-    pub(super) fn remove_optional_guard(
+    pub(crate) fn remove_optional_guard(
         &mut self,
         identity: OptionalGuardId,
     ) -> Result<(), MirRewriteError> {

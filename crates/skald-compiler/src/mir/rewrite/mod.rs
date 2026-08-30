@@ -12,10 +12,12 @@
 //! this traversal.
 //!
 //! Dense callable tables move into private sparse edit state while a
-//! transformation is in progress. Tombstones and explicit order never
-//! masquerade as committed MIR. The private commit boundary consumes that
-//! state and either returns one canonically compacted common callable with
-//! complete maps and change counts or one structured error.
+//! transformation is in progress. The supported crate-private facade is
+//! [`rewrite_program`], [`MirCallableEdit`], and their typed result and error
+//! vocabulary. Passes use explicit lookup, allocation, removal, substitution,
+//! instruction, terminator, and edge operations; sparse slots and compaction
+//! remain implementation details. Helpers never infer semantic cascading
+//! deletion of liveness or proof metadata.
 
 mod callable;
 mod commit;
@@ -25,6 +27,12 @@ mod identity;
 mod map;
 mod program;
 
+pub(crate) use commit::{
+    MirCommitMap, MirCommitMaps, MirEntityChangeCount, MirRewriteChangeSummary,
+};
+pub(crate) use edit::{BlockPlacement, LogicalRecordIndex, MirCallableEdit};
+pub(crate) use error::{MirReferenceFailure, MirRewriteError};
+
 pub(crate) use identity::{
     MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentityOwnershipError, MirLocalIdentitySite,
 };
@@ -33,6 +41,7 @@ pub(crate) use map::{
     map_static_initializer_local_identities, validate_function_local_identity_owners,
     validate_member_local_identity_owners, validate_static_initializer_local_identity_owners,
 };
+pub(crate) use program::{rewrite_program, MirCallableRewriteResult, MirProgramRewriteResult};
 
 #[cfg(test)]
 mod tests;

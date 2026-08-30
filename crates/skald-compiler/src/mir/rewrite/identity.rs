@@ -87,7 +87,7 @@ impl fmt::Display for MirLocalIdentity {
 /// Keeping this vocabulary beside [`MirLocalIdentity`] lets sparse editing and
 /// dense commit share one typed implementation without duplicating identity
 /// construction or classification.
-pub(super) trait MirLocalId: Copy + Eq + Ord {
+pub(crate) trait MirLocalId: Copy + Eq + Ord {
     fn new(owner: CallableId, index: usize) -> Self;
     fn callable(self) -> CallableId;
     fn index(self) -> usize;
@@ -143,6 +143,19 @@ pub(crate) trait MirLocalIdentityMapper {
         identity: ValueId,
     ) -> Result<ValueId, Self::Error> {
         Ok(identity)
+    }
+
+    /// Maps a value identity at the instruction that defines it.
+    ///
+    /// Dense compaction treats definitions like every other reference, while
+    /// use substitution deliberately preserves them. Mappers which do not
+    /// distinguish those operations inherit the ordinary value mapping.
+    fn map_value_definition(
+        &mut self,
+        site: MirLocalIdentitySite,
+        identity: ValueId,
+    ) -> Result<ValueId, Self::Error> {
+        self.map_value(site, identity)
     }
 
     fn map_block(

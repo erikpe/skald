@@ -2,10 +2,10 @@ use std::fmt;
 
 use crate::identity::CallableId;
 
-use super::{MirLocalIdentity, MirLocalIdentitySite};
+use super::{super::MirType, MirLocalIdentity, MirLocalIdentitySite};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum MirReferenceFailure {
+pub(crate) enum MirReferenceFailure {
     Foreign,
     Unknown,
     Deleted,
@@ -13,7 +13,7 @@ pub(super) enum MirReferenceFailure {
 
 /// A deterministic internal failure while editing or committing a callable.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) enum MirRewriteError {
+pub(crate) enum MirRewriteError {
     ForeignIdentity {
         expected: CallableId,
         identity: MirLocalIdentity,
@@ -43,6 +43,18 @@ pub(super) enum MirRewriteError {
     PathParentNotEarlier {
         condition: super::super::PathConditionId,
         parent: super::super::PathConditionId,
+    },
+    ValueTypeMismatch {
+        from: super::super::ValueId,
+        from_type: MirType,
+        to: super::super::ValueId,
+        to_type: MirType,
+    },
+    StorageTypeMismatch {
+        from: super::super::StorageId,
+        from_type: MirType,
+        to: super::super::StorageId,
+        to_type: MirType,
     },
     UnknownLogicalRecord {
         index: usize,
@@ -104,6 +116,24 @@ impl fmt::Display for MirRewriteError {
             Self::PathParentNotEarlier { condition, parent } => write!(
                 formatter,
                 "path condition {condition} requires earlier parent {parent}"
+            ),
+            Self::ValueTypeMismatch {
+                from,
+                from_type,
+                to,
+                to_type,
+            } => write!(
+                formatter,
+                "cannot substitute value {from} ({from_type}) with {to} ({to_type})"
+            ),
+            Self::StorageTypeMismatch {
+                from,
+                from_type,
+                to,
+                to_type,
+            } => write!(
+                formatter,
+                "cannot substitute storage {from} ({from_type}) with {to} ({to_type})"
             ),
             Self::UnknownLogicalRecord { index } => {
                 write!(formatter, "logical record {index} was never allocated")

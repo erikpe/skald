@@ -215,7 +215,7 @@ pub(super) fn map_body_local_identities<M: MirLocalIdentityMapper>(
     Ok(())
 }
 
-fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
+pub(super) fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
     condition: &mut MirPathCondition,
     mapper: &mut M,
     site: MirLocalIdentitySite,
@@ -239,7 +239,7 @@ fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
     map_block(mapper, site, merge)
 }
 
-fn map_logical_expression<M: MirLocalIdentityMapper>(
+pub(super) fn map_logical_expression<M: MirLocalIdentityMapper>(
     expression: &mut MirLogicalExpression,
     mapper: &mut M,
     site: MirLocalIdentitySite,
@@ -272,7 +272,7 @@ fn map_logical_expression<M: MirLocalIdentityMapper>(
     map_value(mapper, site, selected_result)
 }
 
-fn map_instruction<M: MirLocalIdentityMapper>(
+pub(super) fn map_instruction<M: MirLocalIdentityMapper>(
     instruction: &mut MirInstruction,
     mapper: &mut M,
     site: MirLocalIdentitySite,
@@ -487,7 +487,7 @@ fn map_assignment<M: MirLocalIdentityMapper>(
         rvalue,
         span: _,
     } = instruction;
-    map_value(mapper, site, result)?;
+    map_value_definition(mapper, site, result)?;
     map_rvalue(rvalue, mapper, site)
 }
 
@@ -597,7 +597,7 @@ fn map_call<M: MirLocalIdentityMapper>(
         map_argument(argument, mapper, site)?;
     }
     if let Some(result) = result {
-        map_value(mapper, site, result)?;
+        map_value_definition(mapper, site, result)?;
     }
     map_optional_storage(mapper, site, shared_result)?;
     if let Some(destination) = destination {
@@ -1053,7 +1053,7 @@ fn map_io_instruction<M: MirLocalIdentityMapper>(
         operation,
         span: _,
     } = instruction;
-    map_value(mapper, site, result)?;
+    map_value_definition(mapper, site, result)?;
     match operation {
         MirIoOperation::StandardHandle { stream } => map_value(mapper, site, stream),
         MirIoOperation::Open { path, mode } => {
@@ -1324,7 +1324,7 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
     }
 }
 
-fn map_terminator<M: MirLocalIdentityMapper>(
+pub(super) fn map_terminator<M: MirLocalIdentityMapper>(
     terminator: &mut MirTerminator,
     mapper: &mut M,
     site: MirLocalIdentitySite,
@@ -1652,6 +1652,15 @@ fn map_value<M: MirLocalIdentityMapper>(
     identity: &mut ValueId,
 ) -> Result<(), M::Error> {
     *identity = mapper.map_value(site, *identity)?;
+    Ok(())
+}
+
+fn map_value_definition<M: MirLocalIdentityMapper>(
+    mapper: &mut M,
+    site: MirLocalIdentitySite,
+    identity: &mut ValueId,
+) -> Result<(), M::Error> {
+    *identity = mapper.map_value_definition(site, *identity)?;
     Ok(())
 }
 

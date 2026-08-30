@@ -5,7 +5,7 @@ use crate::identity::CallableId;
 use super::super::{error::MirRewriteError, identity::MirLocalId};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::mir::rewrite) enum OrderPlacement<I> {
+pub(crate) enum OrderPlacement<I> {
     Append,
     Before(I),
     After(I),

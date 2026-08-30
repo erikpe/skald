@@ -11,21 +11,21 @@ use super::{
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct MirCallableRewriteResult {
-    pub(super) callable: CallableId,
-    pub(super) maps: MirCommitMaps,
-    pub(super) changes: MirRewriteChangeSummary,
+pub(crate) struct MirCallableRewriteResult {
+    pub(crate) callable: CallableId,
+    pub(crate) maps: MirCommitMaps,
+    pub(crate) changes: MirRewriteChangeSummary,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct MirProgramRewriteResult {
-    pub(super) program: MirProgram,
-    pub(super) callables: Vec<MirCallableRewriteResult>,
+pub(crate) struct MirProgramRewriteResult {
+    pub(crate) program: MirProgram,
+    pub(crate) callables: Vec<MirCallableRewriteResult>,
 }
 
 /// Consumes a program, applies one callback in deterministic executable-body
 /// order, and publishes rebuilt containers only after every body commits.
-pub(super) fn rewrite_program(
+pub(crate) fn rewrite_program(
     mut program: MirProgram,
     mut rewrite: impl FnMut(CallableId, &mut MirCallableEdit) -> Result<(), MirRewriteError>,
 ) -> Result<MirProgramRewriteResult, MirRewriteError> {

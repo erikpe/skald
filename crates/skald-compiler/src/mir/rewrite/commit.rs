@@ -24,13 +24,13 @@ enum SourceSlot<I> {
 
 /// Complete typed mapping from transaction slots to committed dense IDs.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct MirCommitMap<I> {
+pub(crate) struct MirCommitMap<I> {
     owner: CallableId,
     slots: Vec<SourceSlot<I>>,
 }
 
 impl<I: MirLocalId> MirCommitMap<I> {
-    pub(super) fn committed(&self, identity: I) -> Result<I, MirRewriteError> {
+    pub(crate) fn committed(&self, identity: I) -> Result<I, MirRewriteError> {
         if identity.callable() != self.owner {
             return Err(MirRewriteError::ForeignIdentity {
                 expected: self.owner,
@@ -120,12 +120,12 @@ impl<I: MirLocalId> MirCommitMap<I> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct MirCommitMaps {
-    pub(super) storage: MirCommitMap<StorageId>,
-    pub(super) values: MirCommitMap<ValueId>,
-    pub(super) blocks: MirCommitMap<BlockId>,
-    pub(super) path_conditions: MirCommitMap<PathConditionId>,
-    pub(super) optional_guards: MirCommitMap<OptionalGuardId>,
+pub(crate) struct MirCommitMaps {
+    pub(crate) storage: MirCommitMap<StorageId>,
+    pub(crate) values: MirCommitMap<ValueId>,
+    pub(crate) blocks: MirCommitMap<BlockId>,
+    pub(crate) path_conditions: MirCommitMap<PathConditionId>,
+    pub(crate) optional_guards: MirCommitMap<OptionalGuardId>,
 }
 
 impl MirCommitMaps {
@@ -147,20 +147,20 @@ impl MirCommitMaps {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(super) struct MirEntityChangeCount {
-    pub(super) retained: usize,
-    pub(super) inserted: usize,
-    pub(super) removed: usize,
+pub(crate) struct MirEntityChangeCount {
+    pub(crate) retained: usize,
+    pub(crate) inserted: usize,
+    pub(crate) removed: usize,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(super) struct MirRewriteChangeSummary {
-    pub(super) storage: MirEntityChangeCount,
-    pub(super) values: MirEntityChangeCount,
-    pub(super) blocks: MirEntityChangeCount,
-    pub(super) path_conditions: MirEntityChangeCount,
-    pub(super) optional_guards: MirEntityChangeCount,
-    pub(super) logical_expressions: MirEntityChangeCount,
+pub(crate) struct MirRewriteChangeSummary {
+    pub(crate) storage: MirEntityChangeCount,
+    pub(crate) values: MirEntityChangeCount,
+    pub(crate) blocks: MirEntityChangeCount,
+    pub(crate) path_conditions: MirEntityChangeCount,
+    pub(crate) optional_guards: MirEntityChangeCount,
+    pub(crate) logical_expressions: MirEntityChangeCount,
 }
 
 impl MirRewriteChangeSummary {

@@ -1,6 +1,6 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: in progress; DMR0-DMR3 are implemented and DMR4 is next.
+Status: in progress; DMR0-DMR4 are implemented and DMR5 is next.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
@@ -67,7 +67,7 @@ rather than expanding a reviewed task.
 - [x] DMR1 — Introduce stable sparse edit storage
 - [x] DMR2 — Commit deterministic dense callable state
 - [x] DMR3 — Integrate every executable definition kind
-- [ ] DMR4 — Publish the supported callable editing facade
+- [x] DMR4 — Publish the supported callable editing facade
 - [ ] DMR5 — Add explicit cross-callable rehoming
 - [ ] DMR6 — Integrate verified pipeline invalidation and resealing
 - [ ] DMR7 — Harden the boundary and close maintainability debt
@@ -295,26 +295,26 @@ no production mutable table iteration or pipeline transformation.
 **Purpose:** Give future passes small, explicit structural operations so they
 do not manipulate sparse internals or reproduce coordinated rewrites.
 
-- [ ] Expose crate-private typed iteration and lookup over live storage,
+- [x] Expose crate-private typed iteration and lookup over live storage,
       values, blocks, path conditions, logical records, and guards.
-- [ ] Expose typed allocation and explicit removal operations for each editable
+- [x] Expose typed allocation and explicit removal operations for each editable
       entity kind.
-- [ ] Add functional per-block instruction-list rewriting whose positional
+- [x] Add functional per-block instruction-list rewriting whose positional
       handles cannot be mistaken for durable committed identities.
-- [ ] Add same-type value-use substitution with callable ownership and MIR type
+- [x] Add same-type value-use substitution with callable ownership and MIR type
       checks while documenting that callers remain responsible for dominance
       and semantic equivalence.
-- [ ] Add explicit storage/place substitution and executable-edge redirection
+- [x] Add explicit storage/place substitution and executable-edge redirection
       primitives with similarly narrow preconditions.
-- [ ] Require callers to rebuild or delete path conditions, logical records,
+- [x] Require callers to rebuild or delete path conditions, logical records,
       guard pairs, storage-liveness operations, and other proof metadata;
       helpers must not infer semantic cascading deletion.
-- [ ] Add coordinated helper operations only where at least two concrete test
+- [x] Add coordinated helper operations only where at least two concrete test
       transformations demonstrate the repeated responsibility.
-- [ ] Replace touched ad-hoc test remapping utilities with the supported editor
+- [x] Replace touched ad-hoc test remapping utilities with the supported editor
       when they describe valid transformations; keep direct corruption local
       to verifier tests.
-- [ ] Keep the `mir::rewrite` facade concise and document supported versus
+- [x] Keep the `mir::rewrite` facade concise and document supported versus
       internal operations.
 
 **Tests:** Successful value substitution and definition deletion; storage
@@ -332,6 +332,23 @@ pass `verify_final_mir`; no-op and deterministic dump behavior remain stable.
 edits use only the supported facade, commit densely, and either pass central
 verification or fail at the correct structural/semantic boundary without
 pass-local remapping.
+
+**Completed:** The concise crate-private `mir::rewrite` facade now exposes the
+atomic program coordinator, typed results and errors, block placement,
+logical-record handles, and one callable editor while sparse slots and commit
+construction remain private. Live typed lookup/iteration, monotonic allocation,
+explicit removal, functional instruction-list and terminator replacement,
+same-type value-use and storage-reference substitution, and executable-edge
+redirection are supported operations. The exhaustive mapper now distinguishes
+value definitions from uses so substitution preserves definitions while dense
+commit continues to remap both. Helpers validate ownership, liveness, and exact
+MIR type where applicable but deliberately do not infer dominance, semantic
+equivalence, cascading proof cleanup, header replacement, or provenance repair.
+Tests exercise explicit value definition/declaration deletion, storage and
+liveness cleanup, ordered CFG insertion/redirection/removal, path/logical/guard
+cleanup, type and owner failures, dangling structural failures, exact no-op
+behavior, deterministic output, valid final verification, and a structurally
+committable dominance mistake rejected by `verify_final_mir`.
 
 ### DMR5 — Add explicit cross-callable rehoming
 

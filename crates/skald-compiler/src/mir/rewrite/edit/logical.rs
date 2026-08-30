@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use super::super::error::MirRewriteError;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(in crate::mir::rewrite) struct LogicalRecordIndex(usize);
+pub(crate) struct LogicalRecordIndex(usize);
 
 impl LogicalRecordIndex {
     pub(in crate::mir::rewrite) const fn new(index: usize) -> Self {
@@ -42,6 +42,18 @@ impl<T> LogicalRecords<T> {
 
     pub(super) fn get(&self, index: LogicalRecordIndex) -> Result<&T, MirRewriteError> {
         match self.entries.get(index.index()) {
+            Some(Some(entry)) => Ok(entry),
+            Some(None) => Err(MirRewriteError::DeletedLogicalRecord {
+                index: index.index(),
+            }),
+            None => Err(MirRewriteError::UnknownLogicalRecord {
+                index: index.index(),
+            }),
+        }
+    }
+
+    pub(super) fn get_mut(&mut self, index: LogicalRecordIndex) -> Result<&mut T, MirRewriteError> {
+        match self.entries.get_mut(index.index()) {
             Some(Some(entry)) => Ok(entry),
             Some(None) => Err(MirRewriteError::DeletedLogicalRecord {
                 index: index.index(),

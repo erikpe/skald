@@ -476,8 +476,9 @@ static-lifecycle certificate foundation. The exhaustive local-identity
 traversal, private sparse common callable state, and atomic dense common-state
 commit described below are implemented. Private adapters now cover every
 executable definition kind and rebuild whole programs atomically. The
-supported editing facade, rehoming, and pipeline integration remain roadmap
-work. The current pipeline still has no production MIR transformation.
+crate-private supported editing facade is also implemented. Cross-callable
+rehoming and pipeline invalidation/resealing remain roadmap work. The current
+pipeline still has no production MIR transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -537,14 +538,28 @@ unchanged. The model gains no production `iter_mut` escape hatch. Initial
 HIR-to-MIR lowering remains append-oriented and does not use the optimization
 editor.
 
-The planned supported editor facade provides typed lookup, allocation, explicit
-deletion, functional block-instruction rewriting, checked value/place
-substitution, explicit edge redirection, block ordering, and commit. Helpers
-state structural preconditions but do not claim semantic facts such as
-dominance, effect freedom, ownership equivalence, or cleanup safety. Path,
-logical, guard, liveness, and publication metadata is retained and remapped,
-explicitly rebuilt, or explicitly deleted by the transformation; final MIR
-verification proves its meaning.
+The implemented `mir::rewrite` facade publishes only crate-private program
+rewriting, typed results/errors, block placement, logical-record handles, and
+the callable editor. The editor provides live typed lookup and iteration,
+monotonic allocation, explicit deletion, functional instruction-list and
+terminator replacement, same-type value-use substitution, same-type storage
+reference substitution, executable-edge redirection, and explicit block
+ordering. Instruction positions exist only inside a borrowed rewrite snapshot
+and cannot be retained as committed identities. Value substitution preserves
+definition sites and checks callable ownership and exact MIR type, but callers
+remain responsible for dominance and semantic equivalence. Storage
+substitution does not rewrite callable header attachments, and edge
+redirection does not rewrite body entry, publication, path, or logical
+provenance.
+
+These helpers state structural preconditions but do not claim semantic facts
+such as effect freedom, ownership equivalence, or cleanup safety. They never
+infer cascading deletion. Path conditions, logical records, optional-guard
+pairs, storage liveness, and related proof operations must be explicitly
+rebuilt, retained, or deleted by the transformation. Atomic dense commit then
+rejects dangling or foreign structure, while `verify_final_mir` remains the
+authority for dominance, lifetime, ownership, proof-metadata, and lifecycle
+meaning.
 
 Future inlining and specialization use a distinct two-phase rehoming primitive.
 It allocates destination slots before cloning through the exhaustive mapper and

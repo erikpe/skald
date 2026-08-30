@@ -133,6 +133,19 @@ where
         }
     }
 
+    pub(super) fn get_mut(&mut self, identity: I) -> Result<&mut T, MirRewriteError> {
+        self.validate_owner(identity)?;
+        match self.entries.get_mut(identity.index()) {
+            Some(Some(entry)) => Ok(entry),
+            Some(None) => Err(MirRewriteError::DeletedIdentity {
+                identity: identity.local_identity(),
+            }),
+            None => Err(MirRewriteError::UnknownIdentity {
+                identity: identity.local_identity(),
+            }),
+        }
+    }
+
     pub(super) fn remove(&mut self, identity: I) -> Result<T, MirRewriteError> {
         self.validate_owner(identity)?;
         match self.entries.get_mut(identity.index()) {
@@ -155,6 +168,10 @@ where
 
     pub(super) fn live_entries(&self) -> impl Iterator<Item = &T> {
         self.entries.iter().filter_map(Option::as_ref)
+    }
+
+    pub(super) fn live_entries_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.entries.iter_mut().filter_map(Option::as_mut)
     }
 
     pub(super) const fn original_len(&self) -> usize {

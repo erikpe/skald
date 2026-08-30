@@ -1,14 +1,15 @@
 use crate::{
     identity::CallableId,
-    mir::{dump_mir, BlockId, MirBasicBlock, MirTerminator},
+    mir::{
+        dump_mir, BlockId, MirBasicBlock, MirInstruction, MirRvalueKind, MirTerminator, ValueId,
+    },
+    passes::verify_final_mir,
     test_support::lower_source_to_final_mir,
 };
 
 use super::*;
 use crate::mir::rewrite::{
-    edit::BlockPlacement,
-    error::{MirReferenceFailure, MirRewriteError},
-    MirLocalIdentity, MirLocalIdentitySite,
+    BlockPlacement, MirLocalIdentity, MirLocalIdentitySite, MirReferenceFailure, MirRewriteError,
 };
 
 const COMPLETE_EXECUTABLE_SURFACE: &str = concat!(
@@ -168,6 +169,122 @@ fn a_late_callable_failure_returns_no_partially_rewritten_program() {
         dump_mir(&original),
         dump_mir(&lower_source_to_final_mir(COMPLETE_EXECUTABLE_SURFACE))
     );
+}
+
+#[test]
+fn supported_value_deletion_commits_densely_and_passes_final_verification() {
+    let original = lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }");
+    let result = rewrite_program(original, |_callable, edit| {
+        let constants = constant_values(edit);
+        let (replacement_block, replacement) = constants[0];
+        let (deleted_block, deleted) = constants[1];
+        assert_eq!(replacement_block, deleted_block);
+
+        edit.replace_value_uses(deleted, replacement)?;
+        edit.rewrite_block_instructions(deleted_block, |instructions| {
+            instructions
+                .iter()
+                .filter(|instruction| {
+                    !matches!(instruction, MirInstruction::Assign(assignment) if assignment.result == deleted)
+                })
+                .cloned()
+                .collect()
+        })?;
+        edit.remove_value(deleted)?;
+        Ok(())
+    })
+    .expect("same-block equivalent value rewrite commits");
+
+    verify_final_mir(result.program).expect("dominance-preserving rewrite reseals");
+}
+
+#[test]
+fn semantic_substitution_mistake_is_rejected_by_final_verification() {
+    let original = lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }");
+    let result = rewrite_program(original, |_callable, edit| {
+        let constants = constant_values(edit);
+        let block = constants[0].0;
+        let deleted = constants[0].1;
+        let later_definition = edit
+            .block(block)?
+            .instructions
+            .iter()
+            .filter_map(|instruction| match instruction {
+                MirInstruction::Assign(assignment) => Some(assignment.result),
+                _ => None,
+            })
+            .next_back()
+            .expect("binary result follows constants");
+
+        edit.replace_value_uses(deleted, later_definition)?;
+        edit.rewrite_block_instructions(block, |instructions| {
+            instructions
+                .iter()
+                .filter(|instruction| {
+                    !matches!(instruction, MirInstruction::Assign(assignment) if assignment.result == deleted)
+                })
+                .cloned()
+                .collect()
+        })?;
+        edit.remove_value(deleted)?;
+        Ok(())
+    })
+    .expect("commit checks structure, not dominance");
+
+    assert!(verify_final_mir(result.program).is_err());
+}
+
+#[test]
+fn forwarding_block_edit_passes_final_verification() {
+    let original = lower_source_to_final_mir(
+        "fn main() -> i64 { var count: i64 = 0; while (count < 2) { count = count + 1; } return count; }",
+    );
+    let result = rewrite_program(original, |_callable, edit| {
+        assert!(edit.path_condition_ids().next().is_none());
+        assert!(edit.logical_order().is_empty());
+        let target = edit
+            .block_order()
+            .iter()
+            .find_map(|block| {
+                edit.block(*block)
+                    .ok()?
+                    .terminator
+                    .as_ref()?
+                    .successors()
+                    .next()
+            })
+            .expect("loop contains an executable edge");
+        let span = edit.block(target)?.span;
+        let forwarding = edit.allocate_block(BlockPlacement::Before(target), |identity| {
+            empty_block(identity, span)
+        })?;
+        assert!(edit.redirect_edges(target, forwarding)? > 0);
+        edit.rewrite_block_terminator(forwarding, |_| Some(MirTerminator::Goto { target, span }))?;
+        Ok(())
+    })
+    .expect("forwarding block commits");
+
+    verify_final_mir(result.program).expect("explicit CFG rewrite reseals");
+}
+
+fn constant_values(edit: &MirCallableEdit) -> Vec<(BlockId, ValueId)> {
+    edit.block_order()
+        .iter()
+        .flat_map(|block| {
+            edit.block(*block)
+                .expect("block order contains live blocks")
+                .instructions
+                .iter()
+                .filter_map(move |instruction| match instruction {
+                    MirInstruction::Assign(assignment)
+                        if assignment.rvalue.kind == MirRvalueKind::ConstantI64(1) =>
+                    {
+                        Some((*block, assignment.result))
+                    }
+                    _ => None,
+                })
+        })
+        .collect()
 }
 
 fn empty_block(identity: BlockId, span: crate::source::Span) -> MirBasicBlock {
