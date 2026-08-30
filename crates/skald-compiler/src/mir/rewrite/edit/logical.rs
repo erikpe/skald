@@ -1,10 +1,12 @@
+use std::collections::BTreeSet;
+
 use super::super::error::MirRewriteError;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(in crate::mir::rewrite) struct LogicalRecordIndex(usize);
 
 impl LogicalRecordIndex {
-    pub(super) const fn new(index: usize) -> Self {
+    pub(in crate::mir::rewrite) const fn new(index: usize) -> Self {
         Self(index)
     }
 
@@ -16,6 +18,7 @@ impl LogicalRecordIndex {
 /// Ordered logical records whose stable transaction indices survive deletion.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct LogicalRecords<T> {
+    original_len: usize,
     entries: Vec<Option<T>>,
     order: Vec<LogicalRecordIndex>,
 }
@@ -24,6 +27,7 @@ impl<T> LogicalRecords<T> {
     pub(super) fn from_dense(entries: Vec<T>) -> Self {
         let order = (0..entries.len()).map(LogicalRecordIndex::new).collect();
         Self {
+            original_len: entries.len(),
             entries: entries.into_iter().map(Some).collect(),
             order,
         }
@@ -76,5 +80,49 @@ impl<T> LogicalRecords<T> {
 
     pub(super) fn order(&self) -> &[LogicalRecordIndex] {
         &self.order
+    }
+
+    pub(super) const fn original_len(&self) -> usize {
+        self.original_len
+    }
+
+    pub(super) fn slot_liveness(&self) -> impl Iterator<Item = bool> + '_ {
+        self.entries.iter().map(Option::is_some)
+    }
+
+    pub(super) fn validate_order(&self) -> Result<(), MirRewriteError> {
+        let mut ordered = BTreeSet::new();
+        for index in self.order.iter().copied() {
+            if !ordered.insert(index) {
+                return Err(MirRewriteError::DuplicateLogicalOrder {
+                    index: index.index(),
+                });
+            }
+            self.get(index)?;
+        }
+        for (index, entry) in self.entries.iter().enumerate() {
+            if entry.is_some() && !ordered.contains(&LogicalRecordIndex::new(index)) {
+                return Err(MirRewriteError::MissingLogicalOrder { index });
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn into_explicit_order(mut self) -> Result<Vec<T>, MirRewriteError> {
+        self.validate_order()?;
+        let mut ordered = Vec::with_capacity(self.order.len());
+        for index in self.order {
+            ordered.push(
+                self.entries[index.index()]
+                    .take()
+                    .expect("logical live order was validated"),
+            );
+        }
+        Ok(ordered)
+    }
+
+    #[cfg(test)]
+    pub(super) fn replace_order_for_test(&mut self, order: Vec<LogicalRecordIndex>) {
+        self.order = order;
     }
 }

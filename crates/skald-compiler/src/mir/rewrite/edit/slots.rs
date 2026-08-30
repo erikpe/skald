@@ -1,46 +1,11 @@
 use std::marker::PhantomData;
 
-use crate::identity::CallableId;
-
 use super::super::super::{
     BlockId, MirBasicBlock, MirPathCondition, MirStorage, MirValue, PathConditionId, StorageId,
     ValueId,
 };
-use super::super::{error::MirRewriteError, MirLocalIdentity};
-
-pub(super) trait EditSlotId: Copy + Eq {
-    fn new(owner: CallableId, index: usize) -> Self;
-    fn callable(self) -> CallableId;
-    fn index(self) -> usize;
-    fn local_identity(self) -> MirLocalIdentity;
-}
-
-macro_rules! edit_slot_id {
-    ($identity:ty, $variant:ident) => {
-        impl EditSlotId for $identity {
-            fn new(owner: CallableId, index: usize) -> Self {
-                <$identity>::new(owner, index)
-            }
-
-            fn callable(self) -> CallableId {
-                self.callable()
-            }
-
-            fn index(self) -> usize {
-                self.index()
-            }
-
-            fn local_identity(self) -> MirLocalIdentity {
-                MirLocalIdentity::$variant(self)
-            }
-        }
-    };
-}
-
-edit_slot_id!(StorageId, Storage);
-edit_slot_id!(ValueId, Value);
-edit_slot_id!(BlockId, Block);
-edit_slot_id!(PathConditionId, PathCondition);
+use super::super::{error::MirRewriteError, identity::MirLocalId};
+use crate::identity::CallableId;
 
 pub(super) trait EditSlotEntry<I> {
     fn edit_slot_id(&self) -> I;
@@ -74,13 +39,14 @@ impl EditSlotEntry<PathConditionId> for MirPathCondition {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct SparseSlots<I, T> {
     owner: CallableId,
+    original_len: usize,
     entries: Vec<Option<T>>,
     identity: PhantomData<I>,
 }
 
 impl<I, T> SparseSlots<I, T>
 where
-    I: EditSlotId,
+    I: MirLocalId,
     T: EditSlotEntry<I>,
 {
     pub(super) fn from_dense(owner: CallableId, entries: Vec<T>) -> Result<Self, MirRewriteError> {
@@ -102,6 +68,7 @@ where
         }
         Ok(Self {
             owner,
+            original_len: entries.len(),
             entries: entries.into_iter().map(Some).collect(),
             identity: PhantomData,
         })
@@ -188,6 +155,45 @@ where
 
     pub(super) fn live_entries(&self) -> impl Iterator<Item = &T> {
         self.entries.iter().filter_map(Option::as_ref)
+    }
+
+    pub(super) const fn original_len(&self) -> usize {
+        self.original_len
+    }
+
+    pub(super) fn slot_liveness(&self) -> impl Iterator<Item = bool> + '_ {
+        self.entries.iter().map(Option::is_some)
+    }
+
+    pub(super) fn into_slot_order(self) -> Vec<T> {
+        self.entries.into_iter().flatten().collect()
+    }
+
+    pub(super) fn into_explicit_order(mut self, order: &[I]) -> Result<Vec<T>, MirRewriteError> {
+        let mut ordered = Vec::with_capacity(order.len());
+        for identity in order.iter().copied() {
+            self.validate_owner(identity)?;
+            let entry = match self.entries.get_mut(identity.index()) {
+                Some(slot @ Some(_)) => slot.take().expect("live edit slot was checked"),
+                Some(None) => {
+                    return Err(MirRewriteError::DeletedIdentity {
+                        identity: identity.local_identity(),
+                    });
+                }
+                None => {
+                    return Err(MirRewriteError::UnknownIdentity {
+                        identity: identity.local_identity(),
+                    });
+                }
+            };
+            ordered.push(entry);
+        }
+        if let Some(identity) = self.live_ids().next() {
+            return Err(MirRewriteError::MissingOrderIdentity {
+                identity: identity.local_identity(),
+            });
+        }
+        Ok(ordered)
     }
 
     fn validate_owner(&self, identity: I) -> Result<(), MirRewriteError> {

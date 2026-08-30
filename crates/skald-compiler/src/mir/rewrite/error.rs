@@ -2,9 +2,16 @@ use std::fmt;
 
 use crate::identity::CallableId;
 
-use super::MirLocalIdentity;
+use super::{MirLocalIdentity, MirLocalIdentitySite};
 
-/// A deterministic internal failure while constructing sparse callable state.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum MirReferenceFailure {
+    Foreign,
+    Unknown,
+    Deleted,
+}
+
+/// A deterministic internal failure while editing or committing a callable.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum MirRewriteError {
     ForeignIdentity {
@@ -27,6 +34,12 @@ pub(super) enum MirRewriteError {
     MissingOrderIdentity {
         identity: MirLocalIdentity,
     },
+    InvalidReference {
+        expected: CallableId,
+        identity: MirLocalIdentity,
+        site: MirLocalIdentitySite,
+        failure: MirReferenceFailure,
+    },
     PathParentNotEarlier {
         condition: super::super::PathConditionId,
         parent: super::super::PathConditionId,
@@ -38,6 +51,9 @@ pub(super) enum MirRewriteError {
         index: usize,
     },
     MissingLogicalOrder {
+        index: usize,
+    },
+    DuplicateLogicalOrder {
         index: usize,
     },
 }
@@ -66,6 +82,25 @@ impl fmt::Display for MirRewriteError {
             Self::MissingOrderIdentity { identity } => {
                 write!(formatter, "live {identity} is missing from live order")
             }
+            Self::InvalidReference {
+                expected,
+                identity,
+                site,
+                failure,
+            } => match failure {
+                MirReferenceFailure::Foreign => write!(
+                    formatter,
+                    "{identity} at {site} belongs to {}, expected {expected}",
+                    identity.callable()
+                ),
+                MirReferenceFailure::Unknown => write!(
+                    formatter,
+                    "{identity} at {site} does not name an allocated edit slot"
+                ),
+                MirReferenceFailure::Deleted => {
+                    write!(formatter, "{identity} at {site} names a deleted edit slot")
+                }
+            },
             Self::PathParentNotEarlier { condition, parent } => write!(
                 formatter,
                 "path condition {condition} requires earlier parent {parent}"
@@ -80,6 +115,12 @@ impl fmt::Display for MirRewriteError {
                 write!(
                     formatter,
                     "live logical record {index} is missing from live order"
+                )
+            }
+            Self::DuplicateLogicalOrder { index } => {
+                write!(
+                    formatter,
+                    "logical record {index} appears more than once in live order"
                 )
             }
         }

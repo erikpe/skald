@@ -22,7 +22,7 @@ pub(crate) fn map_function_local_identities<M: MirLocalIdentityMapper>(
     } = definition;
     map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
     map_parameters(parameters, mapper)?;
-    map_callable_body(storage, values, body, mapper)
+    map_common_local_identities(storage, values, body, mapper)
 }
 
 pub(crate) fn map_member_local_identities<M: MirLocalIdentityMapper>(
@@ -43,7 +43,7 @@ pub(crate) fn map_member_local_identities<M: MirLocalIdentityMapper>(
     map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
     map_optional_storage(mapper, MirLocalIdentitySite::Receiver, receiver)?;
     map_parameters(parameters, mapper)?;
-    map_callable_body(storage, values, body, mapper)
+    map_common_local_identities(storage, values, body, mapper)
 }
 
 pub(crate) fn map_static_initializer_local_identities<M: MirLocalIdentityMapper>(
@@ -75,7 +75,7 @@ pub(crate) fn map_static_initializer_local_identities<M: MirLocalIdentityMapper>
         MirLocalIdentitySite::StaticPublicationCleanupEntry,
         cleanup_entry,
     )?;
-    map_callable_body(storage, values, body, mapper)
+    map_common_local_identities(storage, values, body, mapper)
 }
 
 pub(crate) fn validate_function_local_identity_owners(
@@ -109,7 +109,7 @@ fn map_parameters<M: MirLocalIdentityMapper>(
     Ok(())
 }
 
-fn map_callable_body<M: MirLocalIdentityMapper>(
+pub(super) fn map_common_local_identities<M: MirLocalIdentityMapper>(
     storage: &mut [MirStorage],
     values: &mut [MirValue],
     body: &mut MirBody,

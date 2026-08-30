@@ -473,10 +473,10 @@ and its active
 [implementation roadmap](../roadmaps/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 define the target-independent structural editing boundary that follows the
 static-lifecycle certificate foundation. The exhaustive local-identity
-traversal and private sparse common callable state described below are
-implemented; dense commit, callable-specific adapters, and pipeline integration
-remain roadmap work. The current pipeline still has no production MIR
-transformation.
+traversal, private sparse common callable state, and atomic dense common-state
+commit described below are implemented. Callable-specific adapters, the
+supported editing facade, and pipeline integration remain roadmap work. The
+current pipeline still has no production MIR transformation.
 
 Committed MIR remains dense. `StorageId`, `ValueId`, `BlockId`, and
 `PathConditionId` continue to contain their callable owner and direct vector
@@ -495,14 +495,21 @@ Allocation is callable-local and monotonic, so deletion never renumbers a live
 edit slot. This state is not a `MirBody` or `MirProgram` and has no path into
 ordinary verification, static-lifecycle analysis, dumping, or a backend.
 
-Commit is atomic and deterministic. Storage and values retain surviving slot
-order followed by allocation order; blocks use explicit editor order; path
-conditions retain parent-before-child order; optional guards are canonicalized
+The implemented common-state commit is atomic and deterministic. Storage and
+values retain surviving slot order followed by allocation order; blocks use
+explicit editor order; path conditions retain parent-before-child order;
+optional guards are canonicalized
 from live guard slots; and logical records retain explicit relative order.
 Commit constructs complete old-slot-to-new-ID maps, validates every live-order
 entry and reference, rewrites declarations and attachments, and emits dense
 tables whose IDs equal their positions. A deleted, unknown, duplicate,
-missing-order, or foreign reference is a deterministic internal rewrite error.
+missing-order, or foreign reference is a deterministic internal rewrite error
+with its structural site. Commit consumes the private transaction and returns
+the dense common callable state, five typed identity maps, and structured
+retained/inserted/removed counts without logging, rendering, verifying, or
+updating an external analysis. Callable header and static-publication
+attachments join this atomic boundary through the remaining definition
+adapters.
 Compaction never guesses value substitution, edge forwarding, cascading
 deletion, proof-metadata repair, or any other semantic transformation.
 

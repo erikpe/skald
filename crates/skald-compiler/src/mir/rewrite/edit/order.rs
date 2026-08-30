@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use crate::identity::CallableId;
 
-use super::{super::error::MirRewriteError, slots::EditSlotId};
+use super::super::{error::MirRewriteError, identity::MirLocalId};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::mir::rewrite) enum OrderPlacement<I> {
@@ -18,7 +18,12 @@ pub(super) struct LiveOrder<I> {
     entries: Vec<I>,
 }
 
-impl<I: EditSlotId + Ord> LiveOrder<I> {
+impl<I: MirLocalId> LiveOrder<I> {
+    #[cfg(test)]
+    pub(super) fn unchecked_for_test(owner: CallableId, entries: Vec<I>) -> Self {
+        Self { owner, entries }
+    }
+
     pub(super) fn complete(
         owner: CallableId,
         live: impl IntoIterator<Item = I>,
@@ -52,6 +57,13 @@ impl<I: EditSlotId + Ord> LiveOrder<I> {
 
     pub(super) fn entries(&self) -> &[I] {
         &self.entries
+    }
+
+    pub(super) fn validate_complete(
+        &self,
+        live: impl IntoIterator<Item = I>,
+    ) -> Result<(), MirRewriteError> {
+        Self::complete(self.owner, live, self.entries.clone()).map(|_| ())
     }
 
     pub(super) fn contains(&self, identity: I) -> bool {
@@ -100,7 +112,7 @@ impl<I: EditSlotId + Ord> LiveOrder<I> {
     }
 }
 
-fn validate_owner<I: EditSlotId>(expected: CallableId, identity: I) -> Result<(), MirRewriteError> {
+fn validate_owner<I: MirLocalId>(expected: CallableId, identity: I) -> Result<(), MirRewriteError> {
     if identity.callable() == expected {
         Ok(())
     } else {

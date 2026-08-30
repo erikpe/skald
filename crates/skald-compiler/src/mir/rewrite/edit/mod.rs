@@ -5,6 +5,9 @@ mod logical;
 mod order;
 mod slots;
 
+#[cfg(test)]
+pub(super) mod test_support;
+
 use crate::identity::CallableId;
 
 use super::super::{
@@ -13,11 +16,44 @@ use super::super::{
 };
 use super::error::MirRewriteError;
 use guards::OptionalGuardRegistry;
-use logical::{LogicalRecordIndex, LogicalRecords};
+pub(super) use logical::LogicalRecordIndex;
+use logical::LogicalRecords;
 use order::{LiveOrder, OrderPlacement};
 use slots::SparseSlots;
 
 pub(super) type BlockPlacement = OrderPlacement<BlockId>;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct EditIdentityInventory<I> {
+    pub(super) original_len: usize,
+    pub(super) slots: Vec<Option<bool>>,
+    pub(super) order: Vec<I>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct EditRecordInventory {
+    pub(super) original_len: usize,
+    pub(super) live: Vec<bool>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct MirCallableEditInventory {
+    pub(super) callable: CallableId,
+    pub(super) storage: EditIdentityInventory<StorageId>,
+    pub(super) values: EditIdentityInventory<ValueId>,
+    pub(super) blocks: EditIdentityInventory<BlockId>,
+    pub(super) path_conditions: EditIdentityInventory<PathConditionId>,
+    pub(super) optional_guards: EditIdentityInventory<OptionalGuardId>,
+    pub(super) logical_expressions: EditRecordInventory,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct MirCallableDenseCandidate {
+    pub(super) callable: CallableId,
+    pub(super) storage: Vec<MirStorage>,
+    pub(super) values: Vec<MirValue>,
+    pub(super) body: MirBody,
+}
 
 /// Owned sparse common state for one callable under transformation.
 ///
@@ -55,7 +91,6 @@ impl MirCallableEdit {
         let storage = SparseSlots::from_dense(callable, storage)?;
         let values = SparseSlots::from_dense(callable, values)?;
         let blocks = SparseSlots::from_dense(callable, blocks)?;
-        blocks.get(entry)?;
         let block_order = LiveOrder::complete(callable, blocks.live_ids(), block_order)?;
         let path_conditions = SparseSlots::from_dense(callable, path_conditions)?;
         validate_path_parents(&path_conditions)?;
@@ -229,6 +264,84 @@ impl MirCallableEdit {
         identity: OptionalGuardId,
     ) -> Result<(), MirRewriteError> {
         self.optional_guards.remove(identity)
+    }
+
+    pub(super) fn commit_inventory(&self) -> Result<MirCallableEditInventory, MirRewriteError> {
+        self.block_order.validate_complete(self.blocks.live_ids())?;
+        self.logical_expressions.validate_order()?;
+        Ok(MirCallableEditInventory {
+            callable: self.callable,
+            storage: slot_inventory(&self.storage, self.storage.live_ids().collect()),
+            values: slot_inventory(&self.values, self.values.live_ids().collect()),
+            blocks: slot_inventory(&self.blocks, self.block_order.entries().to_vec()),
+            path_conditions: slot_inventory(
+                &self.path_conditions,
+                self.path_conditions.live_ids().collect(),
+            ),
+            optional_guards: EditIdentityInventory {
+                original_len: self.optional_guards.original_len(),
+                slots: self.optional_guards.slot_liveness().collect(),
+                order: self.optional_guards.live_ids().collect(),
+            },
+            logical_expressions: EditRecordInventory {
+                original_len: self.logical_expressions.original_len(),
+                live: self.logical_expressions.slot_liveness().collect(),
+            },
+        })
+    }
+
+    pub(super) fn into_dense_candidate(self) -> Result<MirCallableDenseCandidate, MirRewriteError> {
+        let Self {
+            callable,
+            entry,
+            storage,
+            values,
+            blocks,
+            block_order,
+            path_conditions,
+            logical_expressions,
+            optional_guards: _,
+        } = self;
+        let blocks = blocks.into_explicit_order(block_order.entries())?;
+        let logical_expressions = logical_expressions.into_explicit_order()?;
+        Ok(MirCallableDenseCandidate {
+            callable,
+            storage: storage.into_slot_order(),
+            values: values.into_slot_order(),
+            body: MirBody {
+                entry,
+                blocks,
+                path_conditions: path_conditions.into_slot_order(),
+                logical_expressions,
+            },
+        })
+    }
+
+    #[cfg(test)]
+    pub(super) fn replace_block_order_for_test(&mut self, entries: Vec<BlockId>) {
+        self.block_order = LiveOrder::unchecked_for_test(self.callable, entries);
+    }
+
+    #[cfg(test)]
+    pub(super) fn replace_logical_order_for_test(&mut self, entries: Vec<LogicalRecordIndex>) {
+        self.logical_expressions.replace_order_for_test(entries);
+    }
+
+    #[cfg(test)]
+    pub(super) fn forget_optional_guard_for_test(&mut self, identity: OptionalGuardId) {
+        self.optional_guards.forget_for_test(identity);
+    }
+}
+
+fn slot_inventory<I, T>(slots: &SparseSlots<I, T>, order: Vec<I>) -> EditIdentityInventory<I>
+where
+    I: super::identity::MirLocalId,
+    T: slots::EditSlotEntry<I>,
+{
+    EditIdentityInventory {
+        original_len: slots.original_len(),
+        slots: slots.slot_liveness().map(Some).collect(),
+        order,
     }
 }
 

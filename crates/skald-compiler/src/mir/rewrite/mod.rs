@@ -13,9 +13,11 @@
 //!
 //! Dense callable tables move into private sparse edit state while a
 //! transformation is in progress. Tombstones and explicit order never
-//! masquerade as committed MIR; deterministic dense reconstruction belongs to
-//! the separate commit boundary.
+//! masquerade as committed MIR. The private commit boundary consumes that
+//! state and either returns one canonically compacted common callable with
+//! complete maps and change counts or one structured error.
 
+mod commit;
 mod edit;
 mod error;
 mod identity;

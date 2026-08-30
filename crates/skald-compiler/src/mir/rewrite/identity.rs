@@ -82,6 +82,46 @@ impl fmt::Display for MirLocalIdentity {
     }
 }
 
+/// Common behavior of identities that occupy callable-local rewrite slots.
+///
+/// Keeping this vocabulary beside [`MirLocalIdentity`] lets sparse editing and
+/// dense commit share one typed implementation without duplicating identity
+/// construction or classification.
+pub(super) trait MirLocalId: Copy + Eq + Ord {
+    fn new(owner: CallableId, index: usize) -> Self;
+    fn callable(self) -> CallableId;
+    fn index(self) -> usize;
+    fn local_identity(self) -> MirLocalIdentity;
+}
+
+macro_rules! local_id {
+    ($identity:ty, $variant:ident) => {
+        impl MirLocalId for $identity {
+            fn new(owner: CallableId, index: usize) -> Self {
+                <$identity>::new(owner, index)
+            }
+
+            fn callable(self) -> CallableId {
+                self.callable()
+            }
+
+            fn index(self) -> usize {
+                self.index()
+            }
+
+            fn local_identity(self) -> MirLocalIdentity {
+                MirLocalIdentity::$variant(self)
+            }
+        }
+    };
+}
+
+local_id!(StorageId, Storage);
+local_id!(ValueId, Value);
+local_id!(BlockId, Block);
+local_id!(PathConditionId, PathCondition);
+local_id!(OptionalGuardId, OptionalGuard);
+
 /// Mutation hook used by the exhaustive MIR traversal.
 ///
 /// Defaults preserve identities, so a pass can override only the identity

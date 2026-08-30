@@ -20,6 +20,7 @@ enum GuardSlot {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct OptionalGuardRegistry {
     owner: CallableId,
+    original_len: usize,
     slots: Vec<GuardSlot>,
 }
 
@@ -38,7 +39,11 @@ impl OptionalGuardRegistry {
         for identity in collector.guards {
             slots[identity.index()] = GuardSlot::Live;
         }
-        Ok(Self { owner, slots })
+        Ok(Self {
+            owner,
+            original_len: slot_count,
+            slots,
+        })
     }
 
     pub(super) fn allocate(&mut self) -> OptionalGuardId {
@@ -84,6 +89,23 @@ impl OptionalGuardRegistry {
             .map(|(index, _)| OptionalGuardId::new(self.owner, index))
     }
 
+    pub(super) const fn original_len(&self) -> usize {
+        self.original_len
+    }
+
+    pub(super) fn slot_liveness(&self) -> impl Iterator<Item = Option<bool>> + '_ {
+        self.slots.iter().map(|slot| match slot {
+            GuardSlot::Unallocated => None,
+            GuardSlot::Live => Some(true),
+            GuardSlot::Deleted => Some(false),
+        })
+    }
+
+    #[cfg(test)]
+    pub(super) fn forget_for_test(&mut self, identity: OptionalGuardId) {
+        self.slots[identity.index()] = GuardSlot::Unallocated;
+    }
+
     fn validate_owner(&self, identity: OptionalGuardId) -> Result<(), MirRewriteError> {
         if identity.callable() == self.owner {
             Ok(())
@@ -109,13 +131,9 @@ impl MirLocalIdentityMapper for GuardCollector {
         _site: MirLocalIdentitySite,
         identity: OptionalGuardId,
     ) -> Result<OptionalGuardId, Self::Error> {
-        if identity.callable() != self.owner {
-            return Err(MirRewriteError::ForeignIdentity {
-                expected: self.owner,
-                identity: MirLocalIdentity::OptionalGuard(identity),
-            });
+        if identity.callable() == self.owner {
+            self.guards.insert(identity);
         }
-        self.guards.insert(identity);
         Ok(identity)
     }
 }

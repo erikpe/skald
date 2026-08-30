@@ -1,6 +1,6 @@
 # Dense Callable-Local MIR Identity Rewriting Roadmap
 
-Status: in progress; DMR0-DMR1 are implemented and DMR2 is next.
+Status: in progress; DMR0-DMR2 are implemented and DMR3 is next.
 
 This roadmap implements the frozen
 [dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
@@ -65,7 +65,7 @@ rather than expanding a reviewed task.
 
 - [x] DMR0 — Establish exhaustive local-identity traversal
 - [x] DMR1 — Introduce stable sparse edit storage
-- [ ] DMR2 — Commit deterministic dense callable state
+- [x] DMR2 — Commit deterministic dense callable state
 - [ ] DMR3 — Integrate every executable definition kind
 - [ ] DMR4 — Publish the supported callable editing facade
 - [ ] DMR5 — Add explicit cross-callable rehoming
@@ -178,24 +178,24 @@ entry point exists yet.
 **Purpose:** Turn a completed sparse transaction into one atomic, compact,
 directly indexable callable or reject it before malformed MIR is published.
 
-- [ ] Define typed commit maps for storage, values, blocks, path conditions,
+- [x] Define typed commit maps for storage, values, blocks, path conditions,
       and optional guards plus a structured pass-owned change summary.
-- [ ] Build maps from the frozen canonical policies: live slot/allocation order
+- [x] Build maps from the frozen canonical policies: live slot/allocation order
       for storage and values, explicit order for blocks, parent-valid creation
       order for path conditions, ascending live guard slots, and retained
       logical-record order.
-- [ ] Validate live-order coverage and every retained attachment and reference
+- [x] Validate live-order coverage and every retained attachment and reference
       before constructing the dense result.
-- [ ] Rewrite declarations and all references through the exhaustive traversal
+- [x] Rewrite declarations and all references through the exhaustive traversal
       and set each dense declaration ID to its exact table position.
-- [ ] Reject references to tombstoned, unknown, or foreign slots with the
+- [x] Reject references to tombstoned, unknown, or foreign slots with the
       deterministic structural site; do not redirect, substitute, delete, or
       reorder implicitly.
-- [ ] Ensure commit consumes private state and never installs a partially
+- [x] Ensure commit consumes private state and never installs a partially
       compacted result.
-- [ ] Return maps and already-known counts without logging, rendering,
+- [x] Return maps and already-known counts without logging, rendering,
       verifying, or updating external analyses.
-- [ ] Remove any temporary duplicate remapping helpers introduced during the
+- [x] Remove any temporary duplicate remapping helpers introduced during the
       traversal migration.
 
 **Tests:** No-op equality and dump parity for isolated callable packages;
@@ -212,6 +212,20 @@ counts.
 **Exit criteria:** A transaction either yields one deterministic dense callable
 with complete maps and no tombstones or one structured rewrite error, while
 semantic validity remains the ordinary verifier's responsibility.
+
+**Completed:** The private common-callable commit now consumes sparse edit
+state, validates explicit block and logical-record coverage, builds complete
+typed maps for all five callable-local identity families, and reconstructs one
+canonical dense storage/value/body package. The exhaustive mapper rewrites
+declarations and every retained reference, including the body-entry
+attachment, while tombstoned, unknown, and foreign references fail with their
+first deterministic structural site. Commit returns net retained, inserted,
+and removed counts derived from transaction state and performs no logging,
+dumping, semantic verification, or external-analysis update. Focused tests
+cover no-op equality and exact dump parity, gaps and new entries in every
+identity family, dense declaration positions, deleted/unknown/foreign
+references, malformed block and logical orders, and deterministic errors and
+counts. Callable-specific header and publication attachments remain DMR3.
 
 ### DMR3 — Integrate every executable definition kind
 
