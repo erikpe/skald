@@ -213,7 +213,9 @@ and
 editing, deterministic dense commit, all-definition ownership transfer,
 supported structural operations, cross-callable import, verified pipeline
 invalidation and resealing, adversarial malformed coverage, corpus parity, and
-independent-process determinism.
+independent-process determinism. The same exhaustive structural kernel now
+also supplies immutable identity observation, allowing analyses such as the
+value-use census to borrow dense or sparse MIR without callable snapshots.
 
 ## 3. Block-local non-SSA values
 

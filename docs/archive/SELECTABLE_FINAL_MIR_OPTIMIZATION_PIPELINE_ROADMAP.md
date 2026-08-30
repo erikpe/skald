@@ -17,9 +17,9 @@ The primary result is durable optimization infrastructure rather than a broad
 optimization suite. Because this work crosses phase ownership, request policy,
 reporting, inspection, analysis, and dense rewriting, each task should also
 remove small adjacent duplication, awkward ownership, and panic-prone internal
-handling when the cleanup is cohesive. Larger findings belong in the
-[dedicated discoveries record](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
-rather than expanding an active task.
+handling when the cleanup is cohesive. The sole larger post-roadmap finding,
+immutable identity observation without MIR snapshots, was resolved on
+2026-08-30 and its now-empty discoveries record was removed.
 
 ## Dependencies
 
@@ -448,14 +448,14 @@ records contribute through their existing mapper-owned sites. The shared live
 reference traversal now admits fallible observers as well as infallible
 substitution, avoiding a parallel MIR inventory. Foreign, unknown, deleted,
 and duplicate value definitions or references return structured rewrite
-errors. Documentation makes snapshot invalidation explicit: every rewrite
+errors. Documentation makes analysis invalidation explicit: every rewrite
 requires recomputation before another fixed-point wave. Focused tests cover
 zero and multiple uses, dead-definition chains, logical metadata, exact
 definition sites, sparse recomputation, deterministic read-only behavior,
 malformed identities, duplicate definitions, and functions, members, and
-static initializers. The broader mutation-oriented traversal refactor exposed
-by snapshotting is bounded in the companion discoveries record rather than
-expanding this milestone. `cargo test --locked -p skald-compiler mir::rewrite`,
+static initializers. A later post-roadmap refactor added an immutable observer
+from the same exhaustive structural kernel and removed these analysis
+snapshots. `cargo test --locked -p skald-compiler mir::rewrite`,
 `cargo test --locked -p skald-compiler mir::verify`,
 `cargo test --locked -p skald-compiler passes`, `make compiler-test`,
 `make fmt-check`, `make lint`, `make docs-check`, `make msrv-check`, and
@@ -533,9 +533,8 @@ cover every eligible and excluded rvalue family, unused non-assignment call
 and I/O results, cascading trees, retained order and dense remapping, no-op
 seal preservation, exact metrics, all function/member/static-initializer
 callable kinds, production registration, exact scheduling, and unchanged
-default behavior. The dense preflight's additional snapshot cost extends the
-already-bounded immutable-observer finding in the companion discoveries
-record rather than expanding this milestone. `cargo test --locked -p
+default behavior. A later shared immutable-observer refactor removed the dense
+preflight snapshot without changing this pass contract. `cargo test --locked -p
 skald-compiler passes`, `cargo test --locked -p skald-compiler mir::rewrite`,
 `cargo test --locked -p skald-compiler mir::verify`, `make compiler-test`,
 `make fmt-check`, `make lint`, `make docs-check`, `make msrv-check`, and
@@ -611,8 +610,9 @@ fingerprint covers schedule selection and repetition, structured pass errors,
 measurements, checkpoint labels and MIR bytes, and final MIR; existing driver
 and golden determinism coverage proves assembly, diagnostics, checked failure,
 panic, ownership/lifecycle, output, and native products. The larger immutable
-identity-observer opportunity remains evidence-backed and bounded in the
-active discoveries record.
+identity-observer opportunity was resolved after roadmap completion through a
+shared observation/remapping structural kernel; the empty discoveries record
+was then removed.
 
 `make check`, `make golden-determinism-test`, `make msrv-check`,
 `make docs-check`, and `git diff --check` passed on 2026-08-30. The final

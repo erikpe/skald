@@ -24,12 +24,6 @@ adds the enabling layer around those foundations and activates one conservative
 default pass. The remaining five original constraints stay pending and have no
 implementation roadmap.
 
-The
-[selectable pipeline discoveries](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
-are the active post-roadmap record for maintainability or architecture findings
-exposed during delivery. It currently records the mutation-oriented identity
-mapper's snapshot cost for read-only analyses as a bounded follow-up.
-
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).

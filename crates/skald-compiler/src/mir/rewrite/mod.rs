@@ -1,11 +1,12 @@
-//! Exhaustive rewriting of callable-local MIR identities.
+//! Exhaustive observation and rewriting of callable-local MIR identities.
 //!
 //! This module is the single maintenance point for every occurrence of
 //! [`StorageId`], [`ValueId`], [`BlockId`], [`PathConditionId`], and
 //! [`OptionalGuardId`] in executable MIR and its callable-owned metadata.
 //! Adding a new identity-bearing model field requires extending this traversal
-//! in the same change. Full destructuring and exhaustive enum matches make
-//! omissions compiler errors whenever the Rust model permits that.
+//! in the same change. Its shared structural kernel produces both immutable
+//! observation and mutable mapping, so full destructuring and exhaustive enum
+//! matches give both behaviors the same compile-time coverage.
 //!
 //! Program-semantic identities, including source
 //! [`BindingId`](crate::identity::BindingId) values, are deliberately outside
@@ -37,7 +38,8 @@ pub(crate) use edit::{BlockPlacement, LogicalRecordIndex, MirCallableEdit};
 pub(crate) use error::{MirReferenceFailure, MirRewriteError};
 
 pub(crate) use identity::{
-    MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentityOwnershipError, MirLocalIdentitySite,
+    MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentityObserver,
+    MirLocalIdentityOwnershipError, MirLocalIdentitySite,
 };
 pub(crate) use import::{
     MirImportMap, MirImportMaps, MirImportRequest, MirImportResult, MirImportSource,

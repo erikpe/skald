@@ -6,8 +6,8 @@ use crate::{
 };
 
 use super::{
-    edit::MirCallableEdit, MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentitySite,
-    MirReferenceFailure, MirRewriteError,
+    edit::MirCallableEdit, map::observe_body_local_identities, MirLocalIdentity,
+    MirLocalIdentityObserver, MirLocalIdentitySite, MirReferenceFailure, MirRewriteError,
 };
 
 /// Definition and actual-use facts for one live callable-local value.
@@ -32,7 +32,7 @@ impl MirValueCensusEntry {
     }
 }
 
-/// Deterministic value-indexed facts for one snapshot of callable edit state.
+/// Deterministic value-indexed facts for one observed callable state.
 ///
 /// The census is invalid after any rewrite. Callers must recompute it before
 /// making another decision keyed by values or instruction positions.
@@ -69,11 +69,7 @@ impl MirValueUseCensus {
 }
 
 impl MirCallableEdit {
-    /// Computes read-only value facts from the exhaustive identity mapper.
-    ///
-    /// A private snapshot lets the mutation-oriented mapper remain the single
-    /// inventory of value-bearing MIR without granting mutation through this
-    /// query or altering the active edit transaction.
+    /// Computes read-only value facts through the exhaustive identity observer.
     pub(crate) fn value_use_census(&self) -> Result<MirValueUseCensus, MirRewriteError> {
         let mut entries = vec![None; self.allocated_value_slots()];
         for value in self.value_ids() {
@@ -88,8 +84,7 @@ impl MirCallableEdit {
             callable: self.callable(),
             entries,
         };
-        let mut snapshot = self.clone();
-        snapshot.map_live_references(&mut collector)?;
+        self.observe_live_references(&mut collector)?;
         Ok(MirValueUseCensus {
             callable: collector.callable,
             entries: collector.entries,
@@ -100,19 +95,40 @@ impl MirCallableEdit {
 /// Computes value facts for one dense, read-only executable definition.
 ///
 /// This is the analysis-side entry point for passes that must preserve the
-/// verified seal when they have no work. It deliberately constructs the same
-/// callable edit representation used by a real rewrite, so both paths share
-/// one exhaustive identity inventory.
+/// verified seal when they have no work. It borrows dense MIR directly and
+/// shares the same exhaustive structural traversal used by rewriting.
 pub(crate) fn value_use_census_for_definition(
     definition: MirDefinitionRef<'_>,
 ) -> Result<MirValueUseCensus, MirRewriteError> {
-    MirCallableEdit::from_dense_parts(
-        definition.callable(),
-        definition.storage_entries().to_vec(),
-        definition.values().to_vec(),
-        definition.body().clone(),
-    )?
-    .value_use_census()
+    let callable = definition.callable();
+    let mut entries = Vec::with_capacity(definition.values().len());
+    for (index, declaration) in definition.values().iter().enumerate() {
+        let value = declaration.id;
+        if value.callable() != callable {
+            return Err(MirRewriteError::ForeignIdentity {
+                expected: callable,
+                identity: MirLocalIdentity::Value(value),
+            });
+        }
+        let expected = ValueId::new(callable, index);
+        if value != expected {
+            return Err(MirRewriteError::DeclarationIdentityMismatch {
+                expected: MirLocalIdentity::Value(expected),
+                actual: MirLocalIdentity::Value(value),
+            });
+        }
+        entries.push(Some(MirValueCensusEntry {
+            value,
+            definition: None,
+            uses: 0,
+        }));
+    }
+    let mut collector = ValueCensusCollector { callable, entries };
+    observe_body_local_identities(definition.body(), &mut collector)?;
+    Ok(MirValueUseCensus {
+        callable: collector.callable,
+        entries: collector.entries,
+    })
 }
 
 struct ValueCensusCollector {
@@ -152,23 +168,23 @@ impl ValueCensusCollector {
     }
 }
 
-impl MirLocalIdentityMapper for ValueCensusCollector {
+impl MirLocalIdentityObserver for ValueCensusCollector {
     type Error = MirRewriteError;
 
-    fn map_value(
+    fn observe_value(
         &mut self,
         site: MirLocalIdentitySite,
         value: ValueId,
-    ) -> Result<ValueId, Self::Error> {
+    ) -> Result<(), Self::Error> {
         self.entry_mut(site, value)?.uses += 1;
-        Ok(value)
+        Ok(())
     }
 
-    fn map_value_definition(
+    fn observe_value_definition(
         &mut self,
         site: MirLocalIdentitySite,
         value: ValueId,
-    ) -> Result<ValueId, Self::Error> {
+    ) -> Result<(), Self::Error> {
         let entry = self.entry_mut(site, value)?;
         if let Some(first) = entry.definition {
             return Err(MirRewriteError::DuplicateValueDefinition {
@@ -178,7 +194,7 @@ impl MirLocalIdentityMapper for ValueCensusCollector {
             });
         }
         entry.definition = Some(site);
-        Ok(value)
+        Ok(())
     }
 }
 

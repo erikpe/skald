@@ -141,7 +141,7 @@ fn values_used_only_by_another_dead_definition_remain_visible_to_fixed_point_pas
 }
 
 #[test]
-fn census_is_read_only_and_deterministic_for_the_same_snapshot() {
+fn census_is_read_only_and_deterministic_for_the_same_edit_state() {
     let edit = representative_edit();
     let expected = edit.clone();
 

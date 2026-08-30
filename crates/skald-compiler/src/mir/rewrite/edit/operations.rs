@@ -6,8 +6,12 @@ use super::{super::error::MirRewriteError, MirCallableEdit};
 use crate::mir::{BlockId, MirInstruction, MirTerminator, StorageId, ValueId};
 
 use super::super::{
-    map::{map_instruction, map_logical_expression, map_path_condition_metadata, map_terminator},
-    MirLocalIdentityMapper, MirLocalIdentitySite,
+    map::{
+        map_instruction, map_logical_expression, map_path_condition_metadata, map_terminator,
+        observe_instruction, observe_logical_expression, observe_path_condition_metadata,
+        observe_terminator,
+    },
+    MirLocalIdentityMapper, MirLocalIdentityObserver, MirLocalIdentitySite,
 };
 
 impl MirCallableEdit {
@@ -165,6 +169,55 @@ impl MirCallableEdit {
             map_logical_expression(
                 expression,
                 mapper,
+                MirLocalIdentitySite::LogicalExpression(index.index()),
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Observes all identities in live executable and proof-bearing edit state.
+    ///
+    /// Declarations, callable attachments, body entry, and block declarations
+    /// are intentionally excluded: this is the read-only counterpart of
+    /// [`Self::map_live_references`] used by reference analyses.
+    pub(in crate::mir::rewrite) fn observe_live_references<O: MirLocalIdentityObserver>(
+        &self,
+        observer: &mut O,
+    ) -> Result<(), O::Error> {
+        for block in self.blocks.live_entries() {
+            for (instruction, entry) in block.instructions.iter().enumerate() {
+                observe_instruction(
+                    entry,
+                    observer,
+                    MirLocalIdentitySite::Instruction {
+                        block: block.id.index(),
+                        instruction,
+                    },
+                )?;
+            }
+            if let Some(terminator) = &block.terminator {
+                observe_terminator(
+                    terminator,
+                    observer,
+                    MirLocalIdentitySite::Terminator(block.id.index()),
+                )?;
+            }
+        }
+        for condition in self.path_conditions.live_entries() {
+            observe_path_condition_metadata(
+                condition,
+                observer,
+                MirLocalIdentitySite::PathCondition(condition.id.index()),
+            )?;
+        }
+        for index in self.logical_expressions.order() {
+            let expression = self
+                .logical_expressions
+                .get(*index)
+                .expect("live logical order was established by the edit transaction");
+            observe_logical_expression(
+                expression,
+                observer,
                 MirLocalIdentitySite::LogicalExpression(index.index()),
             )?;
         }

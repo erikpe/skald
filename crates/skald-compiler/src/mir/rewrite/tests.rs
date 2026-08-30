@@ -84,6 +84,50 @@ impl MirLocalIdentityMapper for Collector {
     }
 }
 
+impl MirLocalIdentityObserver for Collector {
+    type Error = Infallible;
+
+    fn observe_storage(
+        &mut self,
+        site: MirLocalIdentitySite,
+        identity: StorageId,
+    ) -> Result<(), Self::Error> {
+        self.record(site, MirLocalIdentity::Storage(identity), ())
+    }
+
+    fn observe_value(
+        &mut self,
+        site: MirLocalIdentitySite,
+        identity: ValueId,
+    ) -> Result<(), Self::Error> {
+        self.record(site, MirLocalIdentity::Value(identity), ())
+    }
+
+    fn observe_block(
+        &mut self,
+        site: MirLocalIdentitySite,
+        identity: BlockId,
+    ) -> Result<(), Self::Error> {
+        self.record(site, MirLocalIdentity::Block(identity), ())
+    }
+
+    fn observe_path_condition(
+        &mut self,
+        site: MirLocalIdentitySite,
+        identity: PathConditionId,
+    ) -> Result<(), Self::Error> {
+        self.record(site, MirLocalIdentity::PathCondition(identity), ())
+    }
+
+    fn observe_optional_guard(
+        &mut self,
+        site: MirLocalIdentitySite,
+        identity: OptionalGuardId,
+    ) -> Result<(), Self::Error> {
+        self.record(site, MirLocalIdentity::OptionalGuard(identity), ())
+    }
+}
+
 struct ReindexBy(usize);
 
 impl MirLocalIdentityMapper for ReindexBy {
@@ -427,6 +471,20 @@ fn visit_order_is_deterministic() {
 }
 
 #[test]
+fn immutable_observer_and_mapper_share_the_exact_structural_inventory() {
+    let definition = representative_function();
+    let mut mapped = definition.clone();
+    let mut mapper_events = Collector::default();
+    let mut observer_events = Collector::default();
+
+    map_function_local_identities(&mut mapped, &mut mapper_events).unwrap();
+    super::map::observe_function_local_identities(&definition, &mut observer_events).unwrap();
+
+    assert_eq!(observer_events.visits, mapper_events.visits);
+    assert_eq!(mapped, definition);
+}
+
+#[test]
 fn owner_validation_reports_the_exact_structural_site() {
     let mut definition = representative_function();
     let foreign = CallableId::Function(crate::identity::FunctionId::new(99));
@@ -439,7 +497,7 @@ fn owner_validation_reports_the_exact_structural_site() {
     };
     *value = Some(ValueId::new(foreign, 0));
 
-    let error = validate_function_local_identity_owners(&mut definition).unwrap_err();
+    let error = validate_function_local_identity_owners(&definition).unwrap_err();
     assert_eq!(error.expected, definition.callable());
     assert_eq!(
         error.identity,
@@ -462,7 +520,7 @@ fn member_and_static_initializer_attachments_share_the_same_traversal() {
         .visits
         .iter()
         .any(|(site, _)| *site == MirLocalIdentitySite::Receiver));
-    validate_member_local_identity_owners(&mut member).unwrap();
+    validate_member_local_identity_owners(&member).unwrap();
 
     let field = StaticFieldId::new(class, 0);
     let static_callable = CallableId::StaticInitializer(field.into());
@@ -501,13 +559,13 @@ fn member_and_static_initializer_attachments_share_the_same_traversal() {
         static_collector.visits[1].0,
         MirLocalIdentitySite::StaticPublicationCleanupEntry
     );
-    validate_static_initializer_local_identity_owners(&mut initializer).unwrap();
+    validate_static_initializer_local_identity_owners(&initializer).unwrap();
 
     initializer.publication.cleanup_entry = BlockId::new(
         CallableId::Function(crate::identity::FunctionId::new(42)),
         0,
     );
-    let error = validate_static_initializer_local_identity_owners(&mut initializer).unwrap_err();
+    let error = validate_static_initializer_local_identity_owners(&initializer).unwrap_err();
     assert_eq!(
         error.site,
         MirLocalIdentitySite::StaticPublicationCleanupEntry

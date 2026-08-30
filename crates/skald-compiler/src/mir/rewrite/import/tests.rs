@@ -120,7 +120,7 @@ fn complete_region_rehomes_every_local_identity_and_metadata_family() {
         body: committed.callable.body,
         span: source.block(source.entry()).unwrap().span,
     };
-    validate_function_local_identity_owners(&mut function.clone())
+    validate_function_local_identity_owners(&function.clone())
         .expect("no source-local identity survives commit");
 }
 

@@ -154,7 +154,6 @@ Resolved final-MIR optimization pipeline inputs:
 
 - [Selectable final-MIR optimization pipeline design proposal](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 - [Selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-- [Active post-roadmap discoveries](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DISCOVERIES.md)
 
 Supporting records for the documentation overhaul:
 

@@ -1,14 +1,72 @@
 use super::super::*;
 use super::{
-    identity::LocalIdentityOwnerValidator, MirLocalIdentityMapper, MirLocalIdentityOwnershipError,
-    MirLocalIdentitySite,
+    identity::LocalIdentityOwnerValidator, MirLocalIdentityMapper, MirLocalIdentityObserver,
+    MirLocalIdentityOwnershipError, MirLocalIdentitySite,
 };
 
 #[cfg(test)]
 use super::identity::PreserveLocalIdentities;
 
+macro_rules! map_identity {
+    (storage, $mapper:expr, $site:expr, $identity:expr) => {{
+        *$identity = $mapper.map_storage($site, *$identity)?;
+        Ok(())
+    }};
+    (value, $mapper:expr, $site:expr, $identity:expr) => {{
+        *$identity = $mapper.map_value($site, *$identity)?;
+        Ok(())
+    }};
+    (value_definition, $mapper:expr, $site:expr, $identity:expr) => {{
+        *$identity = $mapper.map_value_definition($site, *$identity)?;
+        Ok(())
+    }};
+    (block, $mapper:expr, $site:expr, $identity:expr) => {{
+        *$identity = $mapper.map_block($site, *$identity)?;
+        Ok(())
+    }};
+    (path_condition, $mapper:expr, $site:expr, $identity:expr) => {{
+        *$identity = $mapper.map_path_condition($site, *$identity)?;
+        Ok(())
+    }};
+    (optional_guard, $mapper:expr, $site:expr, $identity:expr) => {{
+        *$identity = $mapper.map_optional_guard($site, *$identity)?;
+        Ok(())
+    }};
+}
+
+macro_rules! observe_identity {
+    (storage, $observer:expr, $site:expr, $identity:expr) => {
+        $observer.observe_storage($site, *$identity)
+    };
+    (value, $observer:expr, $site:expr, $identity:expr) => {
+        $observer.observe_value($site, *$identity)
+    };
+    (value_definition, $observer:expr, $site:expr, $identity:expr) => {
+        $observer.observe_value_definition($site, *$identity)
+    };
+    (block, $observer:expr, $site:expr, $identity:expr) => {
+        $observer.observe_block($site, *$identity)
+    };
+    (path_condition, $observer:expr, $site:expr, $identity:expr) => {
+        $observer.observe_path_condition($site, *$identity)
+    };
+    (optional_guard, $observer:expr, $site:expr, $identity:expr) => {
+        $observer.observe_optional_guard($site, *$identity)
+    };
+}
+
+/// Defines one traversal over either mutable or shared MIR.
+///
+/// The complete structural inventory lives in this macro body. Mapping and
+/// observation differ only at the six typed identity leaves.
+macro_rules! define_identity_traversal {
+    ($module:ident, $behavior:ident, ($($mir_mutability:tt)*), $leaf:ident) => {
+mod $module {
+use super::super::super::*;
+use super::super::{MirLocalIdentitySite, $behavior as MirLocalIdentityMapper};
+
 pub(crate) fn map_function_local_identities<M: MirLocalIdentityMapper>(
-    definition: &mut MirFunctionDefinition,
+    definition: &$($mir_mutability)* MirFunctionDefinition,
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     let MirFunctionDefinition {
@@ -25,7 +83,7 @@ pub(crate) fn map_function_local_identities<M: MirLocalIdentityMapper>(
 }
 
 pub(crate) fn map_member_local_identities<M: MirLocalIdentityMapper>(
-    definition: &mut MirMemberDefinition,
+    definition: &$($mir_mutability)* MirMemberDefinition,
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     let MirMemberDefinition {
@@ -44,7 +102,7 @@ pub(crate) fn map_member_local_identities<M: MirLocalIdentityMapper>(
 }
 
 pub(crate) fn map_static_initializer_local_identities<M: MirLocalIdentityMapper>(
-    definition: &mut MirStaticInitializerBody,
+    definition: &$($mir_mutability)* MirStaticInitializerBody,
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     let MirStaticInitializerBody {
@@ -61,19 +119,19 @@ pub(crate) fn map_static_initializer_local_identities<M: MirLocalIdentityMapper>
     map_common_local_identities(storage, values, body, mapper)
 }
 
-pub(super) fn map_function_attachments<M: MirLocalIdentityMapper>(
-    return_storage: &mut Option<StorageId>,
-    parameters: &mut [StorageId],
+pub(crate) fn map_function_attachments<M: MirLocalIdentityMapper>(
+    return_storage: &$($mir_mutability)* Option<StorageId>,
+    parameters: &$($mir_mutability)* [StorageId],
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
     map_parameters(parameters, mapper)
 }
 
-pub(super) fn map_member_attachments<M: MirLocalIdentityMapper>(
-    return_storage: &mut Option<StorageId>,
-    receiver: &mut Option<StorageId>,
-    parameters: &mut [StorageId],
+pub(crate) fn map_member_attachments<M: MirLocalIdentityMapper>(
+    return_storage: &$($mir_mutability)* Option<StorageId>,
+    receiver: &$($mir_mutability)* Option<StorageId>,
+    parameters: &$($mir_mutability)* [StorageId],
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
@@ -81,8 +139,8 @@ pub(super) fn map_member_attachments<M: MirLocalIdentityMapper>(
     map_parameters(parameters, mapper)
 }
 
-pub(super) fn map_static_publication_attachment<M: MirLocalIdentityMapper>(
-    publication: &mut MirStaticPublication,
+pub(crate) fn map_static_publication_attachment<M: MirLocalIdentityMapper>(
+    publication: &$($mir_mutability)* MirStaticPublication,
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     let MirStaticPublication {
@@ -102,44 +160,23 @@ pub(super) fn map_static_publication_attachment<M: MirLocalIdentityMapper>(
     )
 }
 
-pub(crate) fn validate_function_local_identity_owners(
-    definition: &mut MirFunctionDefinition,
-) -> Result<(), MirLocalIdentityOwnershipError> {
-    let mut validator = LocalIdentityOwnerValidator::new(definition.callable());
-    map_function_local_identities(definition, &mut validator)
-}
-
-pub(crate) fn validate_member_local_identity_owners(
-    definition: &mut MirMemberDefinition,
-) -> Result<(), MirLocalIdentityOwnershipError> {
-    let mut validator = LocalIdentityOwnerValidator::new(definition.callable);
-    map_member_local_identities(definition, &mut validator)
-}
-
-pub(crate) fn validate_static_initializer_local_identity_owners(
-    definition: &mut MirStaticInitializerBody,
-) -> Result<(), MirLocalIdentityOwnershipError> {
-    let mut validator = LocalIdentityOwnerValidator::new(definition.callable());
-    map_static_initializer_local_identities(definition, &mut validator)
-}
-
 fn map_parameters<M: MirLocalIdentityMapper>(
-    parameters: &mut [StorageId],
+    parameters: &$($mir_mutability)* [StorageId],
     mapper: &mut M,
 ) -> Result<(), M::Error> {
-    for (index, parameter) in parameters.iter_mut().enumerate() {
+    for (index, parameter) in parameters.into_iter().enumerate() {
         map_storage(mapper, MirLocalIdentitySite::Parameter(index), parameter)?;
     }
     Ok(())
 }
 
-pub(super) fn map_common_local_identities<M: MirLocalIdentityMapper>(
-    storage: &mut [MirStorage],
-    values: &mut [MirValue],
-    body: &mut MirBody,
+pub(crate) fn map_common_local_identities<M: MirLocalIdentityMapper>(
+    storage: &$($mir_mutability)* [MirStorage],
+    values: &$($mir_mutability)* [MirValue],
+    body: &$($mir_mutability)* MirBody,
     mapper: &mut M,
 ) -> Result<(), M::Error> {
-    for (index, declaration) in storage.iter_mut().enumerate() {
+    for (index, declaration) in storage.into_iter().enumerate() {
         let MirStorage {
             id,
             source: _,
@@ -150,15 +187,15 @@ pub(super) fn map_common_local_identities<M: MirLocalIdentityMapper>(
         } = declaration;
         map_storage(mapper, MirLocalIdentitySite::StorageDeclaration(index), id)?;
     }
-    for (index, declaration) in values.iter_mut().enumerate() {
+    for (index, declaration) in values.into_iter().enumerate() {
         let MirValue { id, ty: _, span: _ } = declaration;
         map_value(mapper, MirLocalIdentitySite::ValueDeclaration(index), id)?;
     }
     map_body_local_identities(body, mapper)
 }
 
-pub(super) fn map_body_local_identities<M: MirLocalIdentityMapper>(
-    body: &mut MirBody,
+pub(crate) fn map_body_local_identities<M: MirLocalIdentityMapper>(
+    body: &$($mir_mutability)* MirBody,
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     let MirBody {
@@ -168,7 +205,7 @@ pub(super) fn map_body_local_identities<M: MirLocalIdentityMapper>(
         logical_expressions,
     } = body;
     map_block(mapper, MirLocalIdentitySite::BodyEntry, entry)?;
-    for (block_index, block) in blocks.iter_mut().enumerate() {
+    for (block_index, block) in blocks.into_iter().enumerate() {
         let MirBasicBlock {
             id,
             instructions,
@@ -180,7 +217,7 @@ pub(super) fn map_body_local_identities<M: MirLocalIdentityMapper>(
             MirLocalIdentitySite::BlockDeclaration(block_index),
             id,
         )?;
-        for (instruction_index, instruction) in instructions.iter_mut().enumerate() {
+        for (instruction_index, instruction) in instructions.into_iter().enumerate() {
             map_instruction(
                 instruction,
                 mapper,
@@ -198,14 +235,14 @@ pub(super) fn map_body_local_identities<M: MirLocalIdentityMapper>(
             )?;
         }
     }
-    for (index, condition) in path_conditions.iter_mut().enumerate() {
+    for (index, condition) in path_conditions.into_iter().enumerate() {
         map_path_condition_metadata(
             condition,
             mapper,
             MirLocalIdentitySite::PathCondition(index),
         )?;
     }
-    for (index, expression) in logical_expressions.iter_mut().enumerate() {
+    for (index, expression) in logical_expressions.into_iter().enumerate() {
         map_logical_expression(
             expression,
             mapper,
@@ -215,8 +252,8 @@ pub(super) fn map_body_local_identities<M: MirLocalIdentityMapper>(
     Ok(())
 }
 
-pub(super) fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
-    condition: &mut MirPathCondition,
+pub(crate) fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
+    condition: &$($mir_mutability)* MirPathCondition,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -239,8 +276,8 @@ pub(super) fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
     map_block(mapper, site, merge)
 }
 
-pub(super) fn map_logical_expression<M: MirLocalIdentityMapper>(
-    expression: &mut MirLogicalExpression,
+pub(crate) fn map_logical_expression<M: MirLocalIdentityMapper>(
+    expression: &$($mir_mutability)* MirLogicalExpression,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -272,8 +309,8 @@ pub(super) fn map_logical_expression<M: MirLocalIdentityMapper>(
     map_value(mapper, site, selected_result)
 }
 
-pub(super) fn map_instruction<M: MirLocalIdentityMapper>(
-    instruction: &mut MirInstruction,
+pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
+    instruction: &$($mir_mutability)* MirInstruction,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -478,7 +515,7 @@ pub(super) fn map_instruction<M: MirLocalIdentityMapper>(
 }
 
 fn map_assignment<M: MirLocalIdentityMapper>(
-    instruction: &mut MirAssignment,
+    instruction: &$($mir_mutability)* MirAssignment,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -492,7 +529,7 @@ fn map_assignment<M: MirLocalIdentityMapper>(
 }
 
 fn map_rvalue<M: MirLocalIdentityMapper>(
-    rvalue: &mut MirRvalue,
+    rvalue: &$($mir_mutability)* MirRvalue,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -561,7 +598,7 @@ fn map_rvalue<M: MirLocalIdentityMapper>(
 }
 
 fn map_call<M: MirLocalIdentityMapper>(
-    call: &mut MirCall,
+    call: &$($mir_mutability)* MirCall,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -607,7 +644,7 @@ fn map_call<M: MirLocalIdentityMapper>(
 }
 
 fn map_argument<M: MirLocalIdentityMapper>(
-    argument: &mut MirArgument,
+    argument: &$($mir_mutability)* MirArgument,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -622,7 +659,7 @@ fn map_argument<M: MirLocalIdentityMapper>(
 }
 
 fn map_cleanup<M: MirLocalIdentityMapper>(
-    cleanup: &mut MirCleanup,
+    cleanup: &$($mir_mutability)* MirCleanup,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -635,7 +672,7 @@ fn map_cleanup<M: MirLocalIdentityMapper>(
 }
 
 fn map_initialize<M: MirLocalIdentityMapper>(
-    instruction: &mut MirInitialize,
+    instruction: &$($mir_mutability)* MirInitialize,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -653,7 +690,7 @@ fn map_initialize<M: MirLocalIdentityMapper>(
 }
 
 fn map_store<M: MirLocalIdentityMapper>(
-    instruction: &mut MirStore,
+    instruction: &$($mir_mutability)* MirStore,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -669,7 +706,7 @@ fn map_store<M: MirLocalIdentityMapper>(
 }
 
 fn map_copy_construction<M: MirLocalIdentityMapper>(
-    instruction: &mut MirCopyConstruction,
+    instruction: &$($mir_mutability)* MirCopyConstruction,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -685,7 +722,7 @@ fn map_copy_construction<M: MirLocalIdentityMapper>(
 }
 
 fn map_copy_assignment<M: MirLocalIdentityMapper>(
-    instruction: &mut MirCopyAssignment,
+    instruction: &$($mir_mutability)* MirCopyAssignment,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -703,7 +740,7 @@ fn map_copy_assignment<M: MirLocalIdentityMapper>(
 }
 
 fn map_checked_view_binding<M: MirLocalIdentityMapper>(
-    binding: &mut MirCheckedViewBinding,
+    binding: &$($mir_mutability)* MirCheckedViewBinding,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -717,7 +754,7 @@ fn map_checked_view_binding<M: MirLocalIdentityMapper>(
 }
 
 fn map_shared_allocate<M: MirLocalIdentityMapper>(
-    instruction: &mut MirSharedAllocate,
+    instruction: &$($mir_mutability)* MirSharedAllocate,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -737,7 +774,7 @@ fn map_shared_allocate<M: MirLocalIdentityMapper>(
 }
 
 fn map_shared_initialize<M: MirLocalIdentityMapper>(
-    instruction: &mut MirSharedInitialize,
+    instruction: &$($mir_mutability)* MirSharedInitialize,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -755,7 +792,7 @@ fn map_shared_initialize<M: MirLocalIdentityMapper>(
 }
 
 fn map_shared_cast<M: MirLocalIdentityMapper>(
-    cast: &mut MirSharedCast,
+    cast: &$($mir_mutability)* MirSharedCast,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -775,7 +812,7 @@ fn map_shared_cast<M: MirLocalIdentityMapper>(
 }
 
 fn map_string_initialize<M: MirLocalIdentityMapper>(
-    instruction: &mut MirStringInitialize,
+    instruction: &$($mir_mutability)* MirStringInitialize,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -797,7 +834,7 @@ fn map_string_initialize<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_source<M: MirLocalIdentityMapper>(
-    source: &mut MirOptionalSource,
+    source: &$($mir_mutability)* MirOptionalSource,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -809,7 +846,7 @@ fn map_optional_source<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_initialize<M: MirLocalIdentityMapper>(
-    instruction: &mut MirOptionalInitialize,
+    instruction: &$($mir_mutability)* MirOptionalInitialize,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -823,7 +860,7 @@ fn map_optional_initialize<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_assign<M: MirLocalIdentityMapper>(
-    instruction: &mut MirOptionalAssign,
+    instruction: &$($mir_mutability)* MirOptionalAssign,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -839,7 +876,7 @@ fn map_optional_assign<M: MirLocalIdentityMapper>(
 }
 
 fn map_aggregate_optional_source<M: MirLocalIdentityMapper>(
-    source: &mut MirAggregateOptionalSource,
+    source: &$($mir_mutability)* MirAggregateOptionalSource,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -850,7 +887,7 @@ fn map_aggregate_optional_source<M: MirLocalIdentityMapper>(
 }
 
 fn map_aggregate_optional_initialize<M: MirLocalIdentityMapper>(
-    instruction: &mut MirAggregateOptionalInitialize,
+    instruction: &$($mir_mutability)* MirAggregateOptionalInitialize,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -865,7 +902,7 @@ fn map_aggregate_optional_initialize<M: MirLocalIdentityMapper>(
 }
 
 fn map_aggregate_optional_assign<M: MirLocalIdentityMapper>(
-    instruction: &mut MirAggregateOptionalAssign,
+    instruction: &$($mir_mutability)* MirAggregateOptionalAssign,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -882,7 +919,7 @@ fn map_aggregate_optional_assign<M: MirLocalIdentityMapper>(
 }
 
 fn map_class_optional_source<M: MirLocalIdentityMapper>(
-    source: &mut MirClassOptionalSource,
+    source: &$($mir_mutability)* MirClassOptionalSource,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -895,7 +932,7 @@ fn map_class_optional_source<M: MirLocalIdentityMapper>(
 }
 
 fn map_class_optional_initialize<M: MirLocalIdentityMapper>(
-    instruction: &mut MirClassOptionalInitialize,
+    instruction: &$($mir_mutability)* MirClassOptionalInitialize,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -912,7 +949,7 @@ fn map_class_optional_initialize<M: MirLocalIdentityMapper>(
 }
 
 fn map_class_optional_assign<M: MirLocalIdentityMapper>(
-    instruction: &mut MirClassOptionalAssign,
+    instruction: &$($mir_mutability)* MirClassOptionalAssign,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -932,7 +969,7 @@ fn map_class_optional_assign<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_view_begin<M: MirLocalIdentityMapper>(
-    begin: &mut MirOptionalViewBegin,
+    begin: &$($mir_mutability)* MirOptionalViewBegin,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -948,7 +985,7 @@ fn map_optional_view_begin<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_view_end<M: MirLocalIdentityMapper>(
-    end: &mut MirOptionalViewEnd,
+    end: &$($mir_mutability)* MirOptionalViewEnd,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -964,7 +1001,7 @@ fn map_optional_view_end<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_box_view_begin<M: MirLocalIdentityMapper>(
-    begin: &mut MirOptionalBoxViewBegin,
+    begin: &$($mir_mutability)* MirOptionalBoxViewBegin,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -980,7 +1017,7 @@ fn map_optional_box_view_begin<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_box_view_end<M: MirLocalIdentityMapper>(
-    end: &mut MirOptionalBoxViewEnd,
+    end: &$($mir_mutability)* MirOptionalBoxViewEnd,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -996,7 +1033,7 @@ fn map_optional_box_view_end<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_shared_source<M: MirLocalIdentityMapper>(
-    source: &mut MirOptionalSharedSource,
+    source: &$($mir_mutability)* MirOptionalSharedSource,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1010,7 +1047,7 @@ fn map_optional_shared_source<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_shared_initialize<M: MirLocalIdentityMapper>(
-    instruction: &mut MirOptionalSharedInitialize,
+    instruction: &$($mir_mutability)* MirOptionalSharedInitialize,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1026,7 +1063,7 @@ fn map_optional_shared_initialize<M: MirLocalIdentityMapper>(
 }
 
 fn map_optional_shared_assign<M: MirLocalIdentityMapper>(
-    instruction: &mut MirOptionalSharedAssign,
+    instruction: &$($mir_mutability)* MirOptionalSharedAssign,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1044,7 +1081,7 @@ fn map_optional_shared_assign<M: MirLocalIdentityMapper>(
 }
 
 fn map_io_instruction<M: MirLocalIdentityMapper>(
-    instruction: &mut MirIoInstruction,
+    instruction: &$($mir_mutability)* MirIoInstruction,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1083,7 +1120,7 @@ fn map_io_instruction<M: MirLocalIdentityMapper>(
 }
 
 fn map_io_buffer<M: MirLocalIdentityMapper>(
-    buffer: &mut MirIoBuffer,
+    buffer: &$($mir_mutability)* MirIoBuffer,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1098,7 +1135,7 @@ fn map_io_buffer<M: MirLocalIdentityMapper>(
 }
 
 fn map_array_instruction<M: MirLocalIdentityMapper>(
-    instruction: &mut MirArrayInstruction,
+    instruction: &$($mir_mutability)* MirArrayInstruction,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1324,8 +1361,8 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
     }
 }
 
-pub(super) fn map_terminator<M: MirLocalIdentityMapper>(
-    terminator: &mut MirTerminator,
+pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
+    terminator: &$($mir_mutability)* MirTerminator,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1512,8 +1549,8 @@ pub(super) fn map_terminator<M: MirLocalIdentityMapper>(
 fn map_block_pair<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    first: &mut BlockId,
-    second: &mut BlockId,
+    first: &$($mir_mutability)* BlockId,
+    second: &$($mir_mutability)* BlockId,
 ) -> Result<(), M::Error> {
     map_block(mapper, site, first)?;
     map_block(mapper, site, second)
@@ -1522,9 +1559,9 @@ fn map_block_pair<M: MirLocalIdentityMapper>(
 fn map_block_triple<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    first: &mut BlockId,
-    second: &mut BlockId,
-    third: &mut BlockId,
+    first: &$($mir_mutability)* BlockId,
+    second: &$($mir_mutability)* BlockId,
+    third: &$($mir_mutability)* BlockId,
 ) -> Result<(), M::Error> {
     map_block(mapper, site, first)?;
     map_block(mapper, site, second)?;
@@ -1532,7 +1569,7 @@ fn map_block_triple<M: MirLocalIdentityMapper>(
 }
 
 fn map_place<M: MirLocalIdentityMapper>(
-    place: &mut MirPlace,
+    place: &$($mir_mutability)* MirPlace,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1568,7 +1605,7 @@ fn map_place<M: MirLocalIdentityMapper>(
 }
 
 fn map_object_view<M: MirLocalIdentityMapper>(
-    view: &mut MirObjectView,
+    view: &$($mir_mutability)* MirObjectView,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1585,7 +1622,7 @@ fn map_object_view<M: MirLocalIdentityMapper>(
 }
 
 fn map_method_receiver<M: MirLocalIdentityMapper>(
-    receiver: &mut MirMethodReceiver,
+    receiver: &$($mir_mutability)* MirMethodReceiver,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1600,7 +1637,7 @@ fn map_method_receiver<M: MirLocalIdentityMapper>(
 }
 
 fn map_object_origin<M: MirLocalIdentityMapper>(
-    origin: &mut MirObjectOrigin,
+    origin: &$($mir_mutability)* MirObjectOrigin,
     mapper: &mut M,
     site: MirLocalIdentitySite,
 ) -> Result<(), M::Error> {
@@ -1629,7 +1666,7 @@ fn map_object_origin<M: MirLocalIdentityMapper>(
 fn map_optional_storage<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    identity: &mut Option<StorageId>,
+    identity: &$($mir_mutability)* Option<StorageId>,
 ) -> Result<(), M::Error> {
     if let Some(identity) = identity {
         map_storage(mapper, site, identity)?;
@@ -1640,55 +1677,98 @@ fn map_optional_storage<M: MirLocalIdentityMapper>(
 fn map_storage<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    identity: &mut StorageId,
+    identity: &$($mir_mutability)* StorageId,
 ) -> Result<(), M::Error> {
-    *identity = mapper.map_storage(site, *identity)?;
-    Ok(())
+    $leaf!(storage, mapper, site, identity)
 }
 
 fn map_value<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    identity: &mut ValueId,
+    identity: &$($mir_mutability)* ValueId,
 ) -> Result<(), M::Error> {
-    *identity = mapper.map_value(site, *identity)?;
-    Ok(())
+    $leaf!(value, mapper, site, identity)
 }
 
 fn map_value_definition<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    identity: &mut ValueId,
+    identity: &$($mir_mutability)* ValueId,
 ) -> Result<(), M::Error> {
-    *identity = mapper.map_value_definition(site, *identity)?;
-    Ok(())
+    $leaf!(value_definition, mapper, site, identity)
 }
 
 fn map_block<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    identity: &mut BlockId,
+    identity: &$($mir_mutability)* BlockId,
 ) -> Result<(), M::Error> {
-    *identity = mapper.map_block(site, *identity)?;
-    Ok(())
+    $leaf!(block, mapper, site, identity)
 }
 
 fn map_path_condition<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    identity: &mut PathConditionId,
+    identity: &$($mir_mutability)* PathConditionId,
 ) -> Result<(), M::Error> {
-    *identity = mapper.map_path_condition(site, *identity)?;
-    Ok(())
+    $leaf!(path_condition, mapper, site, identity)
 }
 
 fn map_optional_guard<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
-    identity: &mut OptionalGuardId,
+    identity: &$($mir_mutability)* OptionalGuardId,
 ) -> Result<(), M::Error> {
-    *identity = mapper.map_optional_guard(site, *identity)?;
-    Ok(())
+    $leaf!(optional_guard, mapper, site, identity)
+}
+
+}
+    };
+}
+
+define_identity_traversal!(mapping, MirLocalIdentityMapper, (mut), map_identity);
+define_identity_traversal!(observation, MirLocalIdentityObserver, (), observe_identity);
+
+pub(super) use mapping::{
+    map_body_local_identities, map_common_local_identities, map_function_attachments,
+    map_instruction, map_logical_expression, map_member_attachments, map_path_condition_metadata,
+    map_static_publication_attachment, map_terminator,
+};
+pub(crate) use mapping::{
+    map_function_local_identities, map_member_local_identities,
+    map_static_initializer_local_identities,
+};
+pub(super) use observation::{
+    map_body_local_identities as observe_body_local_identities,
+    map_instruction as observe_instruction, map_logical_expression as observe_logical_expression,
+    map_path_condition_metadata as observe_path_condition_metadata,
+    map_terminator as observe_terminator,
+};
+pub(crate) use observation::{
+    map_function_local_identities as observe_function_local_identities,
+    map_member_local_identities as observe_member_local_identities,
+    map_static_initializer_local_identities as observe_static_initializer_local_identities,
+};
+
+pub(crate) fn validate_function_local_identity_owners(
+    definition: &MirFunctionDefinition,
+) -> Result<(), MirLocalIdentityOwnershipError> {
+    let mut validator = LocalIdentityOwnerValidator::new(definition.callable());
+    observe_function_local_identities(definition, &mut validator)
+}
+
+pub(crate) fn validate_member_local_identity_owners(
+    definition: &MirMemberDefinition,
+) -> Result<(), MirLocalIdentityOwnershipError> {
+    let mut validator = LocalIdentityOwnerValidator::new(definition.callable);
+    observe_member_local_identities(definition, &mut validator)
+}
+
+pub(crate) fn validate_static_initializer_local_identity_owners(
+    definition: &MirStaticInitializerBody,
+) -> Result<(), MirLocalIdentityOwnershipError> {
+    let mut validator = LocalIdentityOwnerValidator::new(definition.callable());
+    observe_static_initializer_local_identities(definition, &mut validator)
 }
 
 #[cfg(test)]

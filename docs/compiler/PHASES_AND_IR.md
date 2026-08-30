@@ -511,8 +511,11 @@ attachments join this atomic boundary through the definition adapters.
 Compaction never guesses value substitution, edge forwarding, cascading
 deletion, proof-metadata repair, or any other semantic transformation.
 
-The implemented private `mir::rewrite` visitor/remapper is authoritative for
-callable-local identity references. It covers declarations, receiver,
+The implemented private `mir::rewrite` identity traversal is authoritative for
+callable-local identity references. One shared structural kernel produces an
+immutable observer and a mutable remapper, so read-only analyses borrow MIR
+directly without maintaining a competing identity inventory or cloning a
+callable. It covers declarations, receiver,
 parameters, return storage, body entry, instructions, rvalues, arguments,
 places, projections, all terminators, path-condition structure,
 logical-expression provenance, optional-view guards, and static-initializer
@@ -681,17 +684,20 @@ no preservation declarations or global analysis manager. Whole-program
 analysis may inspect all verified definitions, but edits still commit through
 the single atomic program coordinator.
 
-The callable editor provides one read-only value-use census backed by that
-same exhaustive identity traversal. It records every live value declaration
+The callable editor and dense verified definitions provide one read-only
+value-use census backed by that same exhaustive identity traversal. Both
+borrow their MIR directly; no private callable or edit snapshot is built for
+analysis. The census records every live value declaration
 in value-index order, distinguishes the unique instruction definition site
 from actual uses, and counts uses in rvalues, calls, arguments, terminators,
-logical proof records, and every other value-bearing site owned by the mapper.
+logical proof records, and every other value-bearing site owned by the shared
+traversal.
 Definition positions and declarations are not uses. Foreign, unknown, deleted,
 and duplicate definition identities produce structured rewrite errors. A
-census describes only the edit snapshot from which it was computed: any
-rewrite invalidates it, and fixed-point passes must recompute before their next
-wave. This is deliberately not liveness, dominance, effect analysis, alias
-analysis, or a cached analysis manager.
+census describes only the MIR state from which it was computed: any rewrite
+invalidates it, and fixed-point passes must recompute before their next wave.
+This is deliberately not liveness, dominance, effect analysis, alias analysis,
+or a cached analysis manager.
 
 The runner now returns deterministic aggregates and, when trace observation is
 requested, one ordered typed record for every attempted occurrence. Records

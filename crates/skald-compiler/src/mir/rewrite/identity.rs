@@ -183,6 +183,68 @@ pub(crate) trait MirLocalIdentityMapper {
     }
 }
 
+/// Read-only hook used by the exhaustive MIR identity traversal.
+///
+/// Defaults ignore identities, so an analysis can observe only the identity
+/// families it needs. The structural traversal is shared with
+/// [`MirLocalIdentityMapper`]; adding an identity-bearing MIR field therefore
+/// remains a single compile-time-checked maintenance task.
+pub(crate) trait MirLocalIdentityObserver {
+    type Error;
+
+    fn observe_storage(
+        &mut self,
+        _site: MirLocalIdentitySite,
+        _identity: StorageId,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn observe_value(
+        &mut self,
+        _site: MirLocalIdentitySite,
+        _identity: ValueId,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    /// Observes a value identity at the instruction that defines it.
+    ///
+    /// Analyses which do not distinguish definitions from uses inherit the
+    /// ordinary value observation.
+    fn observe_value_definition(
+        &mut self,
+        site: MirLocalIdentitySite,
+        identity: ValueId,
+    ) -> Result<(), Self::Error> {
+        self.observe_value(site, identity)
+    }
+
+    fn observe_block(
+        &mut self,
+        _site: MirLocalIdentitySite,
+        _identity: BlockId,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn observe_path_condition(
+        &mut self,
+        _site: MirLocalIdentitySite,
+        _identity: PathConditionId,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn observe_optional_guard(
+        &mut self,
+        _site: MirLocalIdentitySite,
+        _identity: OptionalGuardId,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct PreserveLocalIdentities;
 
@@ -238,51 +300,46 @@ impl LocalIdentityOwnerValidator {
     }
 }
 
-impl MirLocalIdentityMapper for LocalIdentityOwnerValidator {
+impl MirLocalIdentityObserver for LocalIdentityOwnerValidator {
     type Error = MirLocalIdentityOwnershipError;
 
-    fn map_storage(
+    fn observe_storage(
         &mut self,
         site: MirLocalIdentitySite,
         identity: StorageId,
-    ) -> Result<StorageId, Self::Error> {
-        self.validate(site, MirLocalIdentity::Storage(identity))?;
-        Ok(identity)
+    ) -> Result<(), Self::Error> {
+        self.validate(site, MirLocalIdentity::Storage(identity))
     }
 
-    fn map_value(
+    fn observe_value(
         &mut self,
         site: MirLocalIdentitySite,
         identity: ValueId,
-    ) -> Result<ValueId, Self::Error> {
-        self.validate(site, MirLocalIdentity::Value(identity))?;
-        Ok(identity)
+    ) -> Result<(), Self::Error> {
+        self.validate(site, MirLocalIdentity::Value(identity))
     }
 
-    fn map_block(
+    fn observe_block(
         &mut self,
         site: MirLocalIdentitySite,
         identity: BlockId,
-    ) -> Result<BlockId, Self::Error> {
-        self.validate(site, MirLocalIdentity::Block(identity))?;
-        Ok(identity)
+    ) -> Result<(), Self::Error> {
+        self.validate(site, MirLocalIdentity::Block(identity))
     }
 
-    fn map_path_condition(
+    fn observe_path_condition(
         &mut self,
         site: MirLocalIdentitySite,
         identity: PathConditionId,
-    ) -> Result<PathConditionId, Self::Error> {
-        self.validate(site, MirLocalIdentity::PathCondition(identity))?;
-        Ok(identity)
+    ) -> Result<(), Self::Error> {
+        self.validate(site, MirLocalIdentity::PathCondition(identity))
     }
 
-    fn map_optional_guard(
+    fn observe_optional_guard(
         &mut self,
         site: MirLocalIdentitySite,
         identity: OptionalGuardId,
-    ) -> Result<OptionalGuardId, Self::Error> {
-        self.validate(site, MirLocalIdentity::OptionalGuard(identity))?;
-        Ok(identity)
+    ) -> Result<(), Self::Error> {
+        self.validate(site, MirLocalIdentity::OptionalGuard(identity))
     }
 }
