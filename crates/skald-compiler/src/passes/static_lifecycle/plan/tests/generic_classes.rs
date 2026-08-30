@@ -1,13 +1,12 @@
 //! Static lifetime planning for closed generic owners.
 
 use crate::{
-    identity::StaticFieldId,
-    mir::{PlannedMirProgram, PreliminaryMirProgram},
+    identity::StaticFieldId, mir::PreliminaryMirProgram,
     test_support::lower_generic_source_to_preliminary_mir,
 };
 
 use super::super::{
-    dump_planned_mir, dump_static_lifetime_plan, plan_static_lifetimes,
+    dump_planned_mir, dump_static_lifetime_plan, plan_static_lifetimes, PlannedMirProgram,
     STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
 };
 
@@ -61,12 +60,20 @@ fn direct_and_transitive_dependencies_are_local_to_each_closed_owner() {
             .unwrap();
         assert!(seed_index < direct_index);
         assert!(direct_index < transitive_index);
-        assert!(planned.dependencies().iter().any(|dependency| {
-            dependency.prerequisite == seed && dependency.dependent == direct
-        }));
-        assert!(planned.dependencies().iter().any(|dependency| {
-            dependency.prerequisite == direct && dependency.dependent == transitive
-        }));
+        assert!(planned
+            .planning_report()
+            .dependencies()
+            .iter()
+            .any(|dependency| {
+                dependency.prerequisite == seed && dependency.dependent == direct
+            }));
+        assert!(planned
+            .planning_report()
+            .dependencies()
+            .iter()
+            .any(|dependency| {
+                dependency.prerequisite == direct && dependency.dependent == transitive
+            }));
         for field in [seed, direct, transitive] {
             assert!(preliminary
                 .static_fields()
@@ -81,6 +88,7 @@ fn direct_and_transitive_dependencies_are_local_to_each_closed_owner() {
         }
     }
     assert!(planned
+        .planning_report()
         .dependencies()
         .iter()
         .all(|dependency| { dependency.prerequisite.class() == dependency.dependent.class() }));
@@ -118,12 +126,17 @@ fn plans_direct_and_transitive_dependencies_across_closed_owners() {
 
     assert_ne!(base.class(), direct.class());
     assert!(planned
+        .planning_report()
         .dependencies()
         .iter()
         .any(|dependency| { dependency.prerequisite == base && dependency.dependent == direct }));
-    assert!(planned.dependencies().iter().any(|dependency| {
-        dependency.prerequisite == base && dependency.dependent == transitive
-    }));
+    assert!(planned
+        .planning_report()
+        .dependencies()
+        .iter()
+        .any(|dependency| {
+            dependency.prerequisite == base && dependency.dependent == transitive
+        }));
     let activation = planned.lifecycle().activation();
     let base_index = activation.iter().position(|field| *field == base).unwrap();
     assert!(

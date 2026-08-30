@@ -22,7 +22,7 @@ pub(super) fn verify(program: LifecycleMirView<'_>, errors: &mut Vec<MirVerifica
             return;
         }
     };
-    let baseline = program.lifecycle.certificate().authority();
+    let baseline = program.lifecycle.proof().authority();
 
     verify_root_coverage_and_subset(baseline, &realized, errors);
     verify_realized_dependencies(program, &realized, errors);

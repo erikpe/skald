@@ -2,11 +2,11 @@
 
 use crate::{
     identity::StaticFieldId,
-    mir::{PreliminaryMirProgram, StaticEffectEdgeKind, StaticEffectNode},
+    mir::{PreliminaryMirProgram, StaticEffectNode},
     test_support::lower_generic_source_to_preliminary_mir,
 };
 
-use super::super::{dump_static_effects, infer_static_effects};
+use super::super::{dump_static_effects, infer_static_effects, StaticEffectEdgeKind};
 
 const CACHE_SOURCE: &str = "class Str { init() {} }
      class Cache<T> {

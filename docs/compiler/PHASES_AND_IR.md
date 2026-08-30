@@ -34,7 +34,7 @@ The target-independent compiler path is:
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
 | Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects with witnesses for every callable and implicit lifecycle operation |
-| Static lifecycle planning | `passes::static_lifecycle::plan_static_lifetimes` | `PlannedMirProgram` with effect summaries, evidenced dependencies, and deterministic activation/reverse-shutdown order |
+| Static lifecycle planning | `passes::static_lifecycle::plan_static_lifetimes` | `PlannedMirProgram` with a planning-only analysis report plus compact authority and deterministic activation/reverse-shutdown order |
 | Static lifecycle synthesis | `passes::static_lifecycle::synthesize_static_lifecycle` | final `MirProgram` with program-owned activation, publication, and reverse-destruction regions |
 | Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
@@ -237,9 +237,9 @@ their backend-realized calls do not disappear behind user body identities.
 Callable-address operations are separately inventoried by exact
 `FunctionTypeId` and `CallableId` without adding an effect. Each receiverless
 indirect call expands to every matching address-taken target through an
-`IndirectCall` edge. The inventory retains first reference spans, doubles as
-the explicit body-retention decision set, and remains part of the verified
-static-lifecycle certificate.
+`IndirectCall` edge. The inventory retains first reference spans in the
+planning report; it is neither executable proof nor a callable-retention
+contract.
 The pass condenses recursive components, propagates field sets over the
 component DAG, and retains minimum-call-edge, deterministically tied witnesses
 for each field in every node summary. Distinct access-kind and root-phase
@@ -267,21 +267,26 @@ self-dependency. Other pre-publication accesses to that field are invalid;
 cleanup proven to start after publication may use the newly live field.
 Accesses to other fields in either region remain ordinary dependencies.
 
-`PlannedMirProgram` privately owns preliminary MIR and explicit program
-lifecycle definitions. Those definitions retain field initialization modes,
-typed initializer bodies, begin/publish/destroy transitions, plan indices,
-direct effects, conservative summaries, possible targets, and one
-representative evidence record per lifetime edge. `verify_planned_mir`
-re-extracts direct effects and possible callees and checks summary closure,
-field and phase coverage, evidence, dependency order, and exact-reverse
-shutdown without repeating fixed-point solving or topological sorting. Stable
-`dump_planned_mir` and `dump_static_lifetime_plan` render the phase product. The
-private ownership boundary prevents final MIR passes and backends from
-consuming or re-inferring unplanned initializer bodies.
+`PlannedMirProgram` privately owns preliminary MIR, explicit program lifecycle
+definitions, and a `StaticLifecyclePlanningReport`. The executable lifecycle
+schema retains field initialization modes, typed initializer bodies,
+begin/publish/destroy transitions, plan indices, activation order, and compact
+baseline authority. The report separately owns direct effects, conservative
+targets and summaries, exact-signature candidates, recursive-component count,
+and one source-rich evidence record per lifetime edge. `verify_planned_mir`
+independently re-extracts normalized root facts, requires exact authority,
+derives dependency pairs from that authority, and checks field coverage,
+dependency order, phase structure, and exact-reverse shutdown. Stable
+`dump_planned_mir` and `dump_static_lifetime_plan` render report evidence only
+from the planned product. The private ownership boundary prevents final MIR
+passes and backends from consuming analysis evidence or unplanned initializer
+bodies.
 
 `synthesize_static_lifecycle` consumes that verified product, moves every
 initializer body unchanged into the planned activation order, and produces the
-only final `MirProgram` used by the ordinary MIR pipeline. A zero-default field
+only final `MirProgram` used by the ordinary MIR pipeline. The planning report
+is dropped at this boundary; final MIR retains only compact baseline authority.
+A zero-default field
 has one direct activation-to-live transition at its planned position. An
 explicit field has begin and publish transitions, with publication fixed to the
 checked CFG edge before its preserved post-publication full-expression cleanup.
@@ -332,12 +337,11 @@ public read-only inspection API.
 `verify_planned_mir` independently extracts preliminary MIR, recomputes the
 normalized root facts, and requires exact authority equality. It derives
 required dependency pairs from the authority and lifecycle definitions,
-checks every pair against activation order, and requires agreement with the
-temporarily retained witness-bearing dependency and solved-analysis
-certificate. This compatibility oracle preserves the existing `STA001` and
-`STA002` planning decisions while the certificate migration is incomplete.
-Planned dumps identify the compact proof separately as
-`StaticLifecycleBaselineAuthority` while retaining the analysis dump.
+and checks every pair against activation order. The solved graph is not a
+second proof oracle. `STA001` and `STA002` diagnostics still use its
+deterministically selected evidence during planning. Planned dumps identify the
+compact proof as `StaticLifecycleBaselineAuthority` and render the separate
+planning report's analysis and witnesses.
 
 `verify_synthesized_mir` is the distinct final realization checker. It extracts
 the actual final program and moved initializer bodies, re-derives virtual,
@@ -349,10 +353,11 @@ dependency pairs and checks them against the frozen activation order. Direct
 effects, call edges, source spans, witnesses, node inventory, and address-taken
 candidate inventory are no longer compared across the final boundary.
 
-The legacy solved analysis and witness-bearing dependency certificate remain
-temporarily stored and exactly checked only at planned issuance as a migration
-oracle. They do not constrain final graph reshaping and will move to a
-planning-report sidecar in the next roadmap milestone.
+Solved analysis, direct graph shape, candidate inventory, recursive-component
+metrics, access spans, and witness-bearing dependencies live only in
+`StaticLifecyclePlanningReport`. Synthesis drops that sidecar. Final
+`MirStaticLifecycleProof` owns only immutable baseline authority, so analysis
+evidence cannot constrain graph reshaping or reach backend-consumable MIR.
 
 For every explicit static initializer and implicit class or array lifecycle
 operation used to activate or destroy a static field, preliminary analysis
@@ -1608,7 +1613,7 @@ absence.
 
 A final static declaration retains its explicit initializer through the
 existing preliminary lifecycle definition, effect analysis, deterministic
-plan, certificate, coordinator synthesis, and final verification. The planned
+plan, compact proof, coordinator synthesis, and final verification. The planned
 schema must distinguish explicit final publication from an ordinary mutable
 static and reject zero-default initialization or any later source root write.
 Normal reverse shutdown remains a lifecycle cleanup, not an assignment.

@@ -53,7 +53,7 @@ fn baseline_fact_count(program: &crate::mir::MirProgram) -> usize {
         .as_ref()
         .unwrap()
         .lifecycle()
-        .certificate()
+        .proof()
         .authority()
         .roots()
         .map(|root| root.effects().len())
@@ -87,7 +87,7 @@ fn unoptimized_final_mir_realizes_baseline_authority_exactly() {
             .as_ref()
             .unwrap()
             .lifecycle()
-            .certificate()
+            .proof()
             .authority();
         assert_eq!(&realized(&program), baseline);
     }
@@ -104,7 +104,7 @@ fn rejects_missing_baseline_for_a_required_final_root() {
         .as_mut()
         .unwrap()
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .clear();

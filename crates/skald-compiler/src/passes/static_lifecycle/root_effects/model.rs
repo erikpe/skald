@@ -78,7 +78,8 @@ pub(super) fn lifecycle_root_uses_for_definitions(
     roots
 }
 
-pub(crate) fn dependency_pairs(
+#[cfg(test)]
+pub(super) fn dependency_pairs(
     program: &PreliminaryMirProgram,
     authority: &StaticLifecycleAuthority,
 ) -> Result<BTreeSet<(StaticFieldId, StaticFieldId)>, StaticLifecycleRootEffectError> {

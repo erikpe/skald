@@ -26,9 +26,9 @@ pub use model::{
 };
 pub use plan::{
     dump_planned_mir, dump_static_lifetime_plan, plan_static_lifetimes, PlannedMirProgram,
-    StaticLifecyclePlan, StaticLifecyclePlanningFailure, StaticLifetimeDependency,
-    StaticLifetimeEvidence, StaticLifetimePhase, STATIC_LIFECYCLE_DEPENDENCY_CYCLE,
-    STATIC_LIFECYCLE_SELF_DEPENDENCY,
+    StaticLifecyclePlan, StaticLifecyclePlanningFailure, StaticLifecyclePlanningReport,
+    StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
+    STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
 };
 pub use synthesize::synthesize_static_lifecycle;
 pub use verify::{verify_planned_mir, verify_synthesized_mir};
@@ -42,12 +42,6 @@ fn infer_static_effects_with_roots(
     let root_effects = root_effects::analyze(program, &graph)
         .expect("verified preliminary MIR must have valid lifecycle-root identities");
     let effects = solve::solve(graph);
-    debug_assert_eq!(
-        root_effects::project_solved_analysis(&root_effects, &effects)
-            .expect("solved analysis must cover every lifecycle root"),
-        root_effects,
-        "checker-oriented root effects must agree with solved summaries"
-    );
     (effects, root_effects)
 }
 

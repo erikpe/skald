@@ -4,10 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::mir::{
     MirStaticFieldInitialization, MirStaticLifecycleTransitionKind, MirVerificationError,
-    PlannedMirProgram,
 };
 
-use super::program_error;
+use super::{super::plan::PlannedMirProgram, program_error};
 
 pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificationError>) {
     let preliminary = program.preliminary();

@@ -4,16 +4,19 @@ use crate::{
     identity::{ClassId, StaticFieldId},
     mir::{
         lower_preliminary_hir, MirProgramLifecycle, MirStaticFieldInitialization,
-        MirStaticLifecycleCertificate, MirStaticLifecycleDefinition, MirStaticLifecycleIndices,
-        MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirType, PlannedMirProgram,
-        StaticAccessKind, StaticClassLifecycleOperation, StaticEffectEdgeKind, StaticEffectNode,
-        StaticEffectPhase, StaticLifecyclePlan,
+        MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleProof,
+        MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirType, StaticAccessKind,
+        StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase, StaticLifecyclePlan,
     },
     test_support::type_check_source,
 };
 
 use super::{
-    super::{infer_static_effects_with_roots, plan_static_lifetimes},
+    super::{
+        infer_static_effects_with_roots,
+        plan::{PlannedMirProgram, StaticLifecyclePlanningReport},
+        plan_static_lifetimes,
+    },
     verify_planned_mir,
 };
 
@@ -93,120 +96,12 @@ fn accepts_a_complete_hand_built_phase_product() {
             },
         ],
         plan,
-        MirStaticLifecycleCertificate::new(authority, effects, Vec::new()),
+        MirStaticLifecycleProof::new(authority),
     );
-    let planned = PlannedMirProgram::new(preliminary, lifecycle);
+    let report = StaticLifecyclePlanningReport::new(effects, Vec::new());
+    let planned = PlannedMirProgram::new(preliminary, lifecycle, report);
 
     verify_planned_mir(&planned).unwrap();
-}
-
-#[test]
-fn rejects_missing_direct_effects_and_summary_closure() {
-    let mut missing_direct = plan(DEPENDENCY_SOURCE);
-    let summary = missing_direct
-        .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
-        .effects_mut_for_test()
-        .summaries_mut_for_test()
-        .iter_mut()
-        .find(|summary| !summary.direct_effects.is_empty())
-        .unwrap();
-    summary.direct_effects.pop();
-    assert!(errors(&missing_direct).contains("direct effects"));
-
-    let mut missing_closure = plan(DEPENDENCY_SOURCE);
-    let summary = missing_closure
-        .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
-        .effects_mut_for_test()
-        .summaries_mut_for_test()
-        .iter_mut()
-        .find(|summary| {
-            summary
-                .effects
-                .iter()
-                .any(|effect| !effect.witness.is_empty())
-        })
-        .unwrap();
-    let index = summary
-        .effects
-        .iter()
-        .position(|effect| !effect.witness.is_empty())
-        .unwrap();
-    summary.effects.remove(index);
-    assert!(errors(&missing_closure).contains("not closed over target"));
-}
-
-#[test]
-fn rejects_missing_call_targets_and_dynamic_targets() {
-    let mut missing_call = plan(DEPENDENCY_SOURCE);
-    let summary = missing_call
-        .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
-        .effects_mut_for_test()
-        .summaries_mut_for_test()
-        .iter_mut()
-        .find(|summary| !summary.possible_targets.is_empty())
-        .unwrap();
-    summary.possible_targets.pop();
-    assert!(errors(&missing_call).contains("possible call targets"));
-
-    let mut missing_dynamic = plan(
-        "class State { static base: i64 = 1; static child: i64 = 2; init() {} }
-         interface View { fn read() -> i64; }
-         class Base implements View {
-           init() {}
-           virtual fn read() -> i64 { return State.base; }
-         }
-         class Child extends Base {
-           init() { super(); }
-           override fn read() -> i64 { return State.child; }
-         }
-         fn read_virtual(ref value: Base) -> i64 { return value.read(); }
-         fn main() -> i64 { return 0; }",
-    );
-    let summary = missing_dynamic
-        .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
-        .effects_mut_for_test()
-        .summaries_mut_for_test()
-        .iter_mut()
-        .find(|summary| {
-            summary
-                .possible_targets
-                .iter()
-                .any(|edge| edge.kind == StaticEffectEdgeKind::VirtualDispatch)
-        })
-        .unwrap();
-    let index = summary
-        .possible_targets
-        .iter()
-        .position(|edge| edge.kind == StaticEffectEdgeKind::VirtualDispatch)
-        .unwrap();
-    summary.possible_targets.remove(index);
-    assert!(errors(&missing_dynamic).contains("possible call targets"));
-}
-
-#[test]
-fn rejects_missing_function_value_candidate_and_retention_inventory() {
-    let mut planned = plan(
-        "fn read() -> i64 { return State.base; }
-         fn invoke(callback: fn() -> i64) -> i64 { return callback(); }
-         class State {
-           static base: i64 = 1;
-           static result: i64 = invoke(read);
-           init() {}
-         }
-         fn main() -> i64 { return State.result; }",
-    );
-    planned
-        .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
-        .effects_mut_for_test()
-        .function_value_candidates_mut_for_test()
-        .clear();
-
-    assert!(errors(&planned).contains("candidate and retention inventory"));
 }
 
 #[test]
@@ -214,7 +109,7 @@ fn rejects_missing_extra_and_duplicate_authority_entries() {
     let mut missing_root = plan(DEPENDENCY_SOURCE);
     missing_root
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .pop();
@@ -223,7 +118,7 @@ fn rejects_missing_extra_and_duplicate_authority_entries() {
     let mut duplicate_root = plan(DEPENDENCY_SOURCE);
     let roots = duplicate_root
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test();
     roots.insert(1, roots[0].clone());
@@ -232,7 +127,7 @@ fn rejects_missing_extra_and_duplicate_authority_entries() {
     let mut missing_fact = plan(DEPENDENCY_SOURCE);
     missing_fact
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .iter_mut()
@@ -245,7 +140,7 @@ fn rejects_missing_extra_and_duplicate_authority_entries() {
     let mut duplicate_fact = plan(DEPENDENCY_SOURCE);
     let root = duplicate_fact
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .iter_mut()
@@ -258,7 +153,7 @@ fn rejects_missing_extra_and_duplicate_authority_entries() {
     let mut extra_fact = plan(DEPENDENCY_SOURCE);
     let root = extra_fact
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .iter_mut()
@@ -272,14 +167,15 @@ fn rejects_missing_extra_and_duplicate_authority_entries() {
 
     let mut extra_root = plan(DEPENDENCY_SOURCE);
     let extra_node = extra_root
-        .effects()
+        .planning_report()
+        .analysis()
         .summaries()
         .map(|summary| summary.node)
         .find(|node| extra_root.authority().root(*node).is_none())
         .expect("fixture must contain a non-lifecycle effect node");
     let roots = extra_root
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test();
     let mut extra = roots[0].clone();
@@ -294,7 +190,7 @@ fn rejects_foreign_authority_identities() {
     let mut foreign_root = plan(DEPENDENCY_SOURCE);
     foreign_root
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()[0]
         .set_root_for_test(StaticEffectNode::class(
@@ -306,7 +202,7 @@ fn rejects_foreign_authority_identities() {
     let mut foreign_field = plan(DEPENDENCY_SOURCE);
     foreign_field
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .iter_mut()
@@ -322,7 +218,7 @@ fn rejects_changed_authority_access_phase_and_lifecycle_ownership() {
     let mut wrong_access = plan(DEPENDENCY_SOURCE);
     let fact = wrong_access
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .iter_mut()
@@ -338,7 +234,7 @@ fn rejects_changed_authority_access_phase_and_lifecycle_ownership() {
     let mut wrong_phase = plan(DEPENDENCY_SOURCE);
     let fact = wrong_phase
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .iter_mut()
@@ -354,7 +250,7 @@ fn rejects_changed_authority_access_phase_and_lifecycle_ownership() {
     let mut wrong_ownership = plan(DEPENDENCY_SOURCE);
     let fact = wrong_ownership
         .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
+        .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()
         .iter_mut()
@@ -365,15 +261,7 @@ fn rejects_changed_authority_access_phase_and_lifecycle_ownership() {
 }
 
 #[test]
-fn rejects_missing_lifetime_edges_and_order_violations() {
-    let mut missing_edge = plan(DEPENDENCY_SOURCE);
-    missing_edge
-        .lifecycle_mut_for_test()
-        .certificate_mut_for_test()
-        .dependencies_mut_for_test()
-        .clear();
-    assert!(errors(&missing_edge).contains("omits initialization edge"));
-
+fn rejects_authority_derived_order_violations() {
     let mut wrong_order = plan(DEPENDENCY_SOURCE);
     wrong_order
         .lifecycle_mut_for_test()

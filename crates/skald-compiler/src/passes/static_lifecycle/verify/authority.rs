@@ -2,12 +2,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::mir::{
-    MirVerificationError, PlannedMirProgram, StaticLifecycleAuthority, StaticLifecycleRootAuthority,
-};
+use crate::mir::{MirVerificationError, StaticLifecycleAuthority, StaticLifecycleRootAuthority};
 
 use super::{
-    super::{extract, root_effects},
+    super::{extract, plan::PlannedMirProgram, root_effects},
     program_error,
 };
 
@@ -23,10 +21,10 @@ pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificati
             return;
         }
     };
-    let authority = program.lifecycle_mir().certificate().authority();
+    let authority = program.lifecycle_mir().proof().authority();
 
     verify_canonical_authority(program, authority, &expected, &extracted, errors);
-    verify_dependency_compatibility(program, authority, errors);
+    verify_dependency_order(program, authority, errors);
 }
 
 fn verify_canonical_authority(
@@ -156,7 +154,7 @@ fn verify_root_shape(
     }
 }
 
-fn verify_dependency_compatibility(
+fn verify_dependency_order(
     program: &PlannedMirProgram,
     authority: &StaticLifecycleAuthority,
     errors: &mut Vec<MirVerificationError>,
@@ -175,18 +173,6 @@ fn verify_dependency_compatibility(
             return;
         }
     };
-    let legacy = program
-        .dependencies()
-        .iter()
-        .map(|dependency| (dependency.prerequisite, dependency.dependent))
-        .collect::<BTreeSet<_>>();
-    if derived != legacy {
-        program_error(
-            errors,
-            "baseline authority-derived dependencies disagree with the legacy certificate",
-        );
-    }
-
     let positions = program
         .lifecycle()
         .activation()

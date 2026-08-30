@@ -23,7 +23,7 @@ const SOURCE: &str = "class Item { init() {} destroy {} }
 #[test]
 fn specializes_replacement_cleanup_publication_and_reverse_shutdown() {
     let program = lower_generic_source_to_final_mir(SOURCE);
-    verify_synthesized_mir(&program).expect("closed generic lifecycle certificate must verify");
+    verify_synthesized_mir(&program).expect("closed generic lifecycle proof must verify");
     let coordinator = program
         .static_lifecycle
         .as_ref()

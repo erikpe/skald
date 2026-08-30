@@ -1,15 +1,16 @@
 //! Verification boundary for planned static-lifecycle MIR.
 
 mod authority;
-mod certificate;
 mod final_coordinator;
 mod lifecycle;
 mod realization;
 
 use crate::mir::{
     verify_mir, verify_preliminary_mir, MirProgram, MirProgramLifecycle, MirStaticInitializerBody,
-    MirVerificationError, MirVerificationErrors, PlannedMirProgram,
+    MirVerificationError, MirVerificationErrors,
 };
+
+use super::plan::PlannedMirProgram;
 
 #[derive(Clone, Copy)]
 pub(super) struct LifecycleMirView<'mir> {
@@ -18,22 +19,14 @@ pub(super) struct LifecycleMirView<'mir> {
     pub(super) initializers: &'mir [MirStaticInitializerBody],
 }
 
-/// Verifies the explicit lifecycle schema and its certificate without solving
-/// effects, strongly connected components, or a new lifecycle order.
+/// Verifies the explicit lifecycle schema and compact authority without
+/// solving effects, strongly connected components, or a new lifecycle order.
 pub fn verify_planned_mir(program: &PlannedMirProgram) -> Result<(), MirVerificationErrors> {
     verify_preliminary_mir(program.preliminary())?;
 
     let mut errors = Vec::new();
     lifecycle::verify(program, &mut errors);
     authority::verify(program, &mut errors);
-    certificate::verify(
-        LifecycleMirView {
-            program: program.preliminary().program(),
-            lifecycle: program.lifecycle_mir(),
-            initializers: program.preliminary().static_initializer_bodies(),
-        },
-        &mut errors,
-    );
     if errors.is_empty() {
         Ok(())
     } else {
@@ -97,7 +90,7 @@ pub(super) fn debug_assert_exact_synthesized_realization(program: &MirProgram) {
             .expect("unmodified synthesis must retain every issued lifecycle root");
         debug_assert_eq!(
             realized,
-            *coordinator.lifecycle().certificate().authority(),
+            *coordinator.lifecycle().proof().authority(),
             "unmodified synthesis must exactly realize baseline authority"
         );
     }

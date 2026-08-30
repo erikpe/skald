@@ -12,11 +12,7 @@ use crate::{
     test_support::type_check_source,
 };
 
-use super::{
-    super::{extract, plan_static_lifetimes},
-    analyze,
-    model::StaticLifecycleRootEffectError,
-};
+use super::{super::extract, analyze, model::StaticLifecycleRootEffectError};
 
 fn lower(text: &str) -> PreliminaryMirProgram {
     let checked = type_check_source(text);
@@ -268,34 +264,6 @@ fn preserves_access_kinds_in_normalized_facts() {
             && effect.access() == StaticAccessKind::Borrow
             && effect.phase() == StaticEffectPhase::InitializerBeforePublication
     }));
-}
-
-#[test]
-fn normalized_dependencies_match_the_existing_planner_oracle() {
-    let program = lower(
-        "fn read_base() -> i64 { return State.base; }
-         class State {
-           static result: i64 = read_base();
-           static item: Item?;
-           static base: i64 = 1;
-           static cleanup: i64 = 2;
-           init() {}
-         }
-         class Item {
-           init() {}
-           destroy { var observed: i64 = State.cleanup; }
-         }
-         fn main() -> i64 { return 0; }",
-    );
-    let expected = super::dependency_pairs(&program, &analyze_program(&program)).unwrap();
-    let planned = plan_static_lifetimes(program).unwrap();
-    let actual = planned
-        .dependencies()
-        .iter()
-        .map(|dependency| (dependency.prerequisite, dependency.dependent))
-        .collect::<BTreeSet<_>>();
-
-    assert_eq!(actual, expected);
 }
 
 #[test]

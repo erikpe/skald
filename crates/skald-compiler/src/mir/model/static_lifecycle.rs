@@ -1,4 +1,4 @@
-//! Static-lifecycle MIR schema and checkable whole-program certificate.
+//! Static-lifecycle MIR schema and compact whole-program proof.
 
 use std::fmt;
 
@@ -11,8 +11,7 @@ use crate::{
 
 use super::{
     MirArrayInstruction, MirClassOptionalCleanup, MirCleanup, MirOptionalSharedCleanup, MirPlace,
-    MirProgram, MirSharedTarget, MirStaticInitializerBody, MirType, PreliminaryMirProgram,
-    PreliminaryMirStaticField, PreliminaryMirStaticInitializer,
+    MirSharedTarget, MirStaticInitializerBody, MirType,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -356,18 +355,6 @@ impl StaticEffectAnalysis {
     pub const fn recursive_components(&self) -> usize {
         self.recursive_components
     }
-
-    #[cfg(test)]
-    pub(crate) fn summaries_mut_for_test(&mut self) -> &mut Vec<StaticEffectSummary> {
-        &mut self.summaries
-    }
-
-    #[cfg(test)]
-    pub(crate) fn function_value_candidates_mut_for_test(
-        &mut self,
-    ) -> &mut Vec<StaticFunctionValueCandidates> {
-        &mut self.function_value_candidates
-    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -594,45 +581,17 @@ pub struct MirStaticLifecycleDefinition {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirStaticLifecycleCertificate {
+pub struct MirStaticLifecycleProof {
     authority: StaticLifecycleAuthority,
-    effects: StaticEffectAnalysis,
-    dependencies: Vec<StaticLifetimeDependency>,
 }
 
-impl MirStaticLifecycleCertificate {
-    pub(crate) fn new(
-        authority: StaticLifecycleAuthority,
-        effects: StaticEffectAnalysis,
-        dependencies: Vec<StaticLifetimeDependency>,
-    ) -> Self {
-        Self {
-            authority,
-            effects,
-            dependencies,
-        }
+impl MirStaticLifecycleProof {
+    pub(crate) const fn new(authority: StaticLifecycleAuthority) -> Self {
+        Self { authority }
     }
 
     pub fn authority(&self) -> &StaticLifecycleAuthority {
         &self.authority
-    }
-
-    pub fn effects(&self) -> &StaticEffectAnalysis {
-        &self.effects
-    }
-
-    pub fn dependencies(&self) -> &[StaticLifetimeDependency] {
-        &self.dependencies
-    }
-
-    #[cfg(test)]
-    pub(crate) fn effects_mut_for_test(&mut self) -> &mut StaticEffectAnalysis {
-        &mut self.effects
-    }
-
-    #[cfg(test)]
-    pub(crate) fn dependencies_mut_for_test(&mut self) -> &mut Vec<StaticLifetimeDependency> {
-        &mut self.dependencies
     }
 
     #[cfg(test)]
@@ -647,10 +606,10 @@ pub struct MirProgramLifecycle {
     activation: Vec<MirStaticLifecycleTransition>,
     shutdown: Vec<MirStaticLifecycleTransition>,
     plan: StaticLifecyclePlan,
-    certificate: MirStaticLifecycleCertificate,
+    proof: MirStaticLifecycleProof,
 }
 
-/// Final program-owned lifecycle code and the certificate that justifies it.
+/// Final program-owned lifecycle code and the compact proof that justifies it.
 ///
 /// Initializer bodies remain independently identified CFGs so their existing
 /// storage/value/block IDs and full-expression order never need rewriting.
@@ -723,14 +682,14 @@ impl MirProgramLifecycle {
         activation: Vec<MirStaticLifecycleTransition>,
         shutdown: Vec<MirStaticLifecycleTransition>,
         plan: StaticLifecyclePlan,
-        certificate: MirStaticLifecycleCertificate,
+        proof: MirStaticLifecycleProof,
     ) -> Self {
         Self {
             definitions,
             activation,
             shutdown,
             plan,
-            certificate,
+            proof,
         }
     }
 
@@ -750,8 +709,8 @@ impl MirProgramLifecycle {
         &self.plan
     }
 
-    pub fn certificate(&self) -> &MirStaticLifecycleCertificate {
-        &self.certificate
+    pub fn proof(&self) -> &MirStaticLifecycleProof {
+        &self.proof
     }
 
     #[cfg(test)]
@@ -775,99 +734,7 @@ impl MirProgramLifecycle {
     }
 
     #[cfg(test)]
-    pub(crate) fn certificate_mut_for_test(&mut self) -> &mut MirStaticLifecycleCertificate {
-        &mut self.certificate
-    }
-}
-
-/// Preliminary MIR plus explicit, checkable static-lifecycle MIR metadata.
-///
-/// The wrapped preliminary program remains private, so no backend can consume
-/// initializer bodies before lifecycle coordinator synthesis.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PlannedMirProgram {
-    preliminary: PreliminaryMirProgram,
-    lifecycle: MirProgramLifecycle,
-}
-
-impl PlannedMirProgram {
-    pub(crate) fn new(preliminary: PreliminaryMirProgram, lifecycle: MirProgramLifecycle) -> Self {
-        Self {
-            preliminary,
-            lifecycle,
-        }
-    }
-
-    pub fn lifecycle_mir(&self) -> &MirProgramLifecycle {
-        &self.lifecycle
-    }
-
-    pub fn effects(&self) -> &StaticEffectAnalysis {
-        self.lifecycle.certificate.effects()
-    }
-
-    pub fn authority(&self) -> &StaticLifecycleAuthority {
-        self.lifecycle.certificate.authority()
-    }
-
-    pub fn dependencies(&self) -> &[StaticLifetimeDependency] {
-        self.lifecycle.certificate.dependencies()
-    }
-
-    pub fn lifecycle(&self) -> &StaticLifecyclePlan {
-        self.lifecycle.plan()
-    }
-
-    pub fn static_fields(&self) -> impl ExactSizeIterator<Item = &PreliminaryMirStaticField> {
-        self.preliminary.static_fields()
-    }
-
-    pub fn static_initializers(
-        &self,
-    ) -> impl ExactSizeIterator<Item = &PreliminaryMirStaticInitializer> {
-        self.preliminary.static_initializers()
-    }
-
-    /// Returns the typed storage, values, blocks, and publication boundary for
-    /// one program-owned lifecycle initializer identity.
-    pub fn static_initializer(
-        &self,
-        id: StaticInitializerId,
-    ) -> Option<&PreliminaryMirStaticInitializer> {
-        self.preliminary.static_initializer(id)
-    }
-
-    pub fn has_static_initializers(&self) -> bool {
-        self.preliminary.has_static_initializers()
-    }
-
-    /// Converts only a product needing no lifecycle synthesis into the legacy
-    /// final-MIR path. Explicit initializers remain unavailable to backends.
-    pub fn try_into_final(self) -> Result<MirProgram, Box<Self>> {
-        if self.has_static_initializers() {
-            return Err(Box::new(self));
-        }
-        Ok(self
-            .preliminary
-            .try_into_final()
-            .expect("initializer-free preliminary MIR must convert to final MIR"))
-    }
-
-    pub(crate) const fn preliminary(&self) -> &PreliminaryMirProgram {
-        &self.preliminary
-    }
-
-    pub(crate) fn into_parts(self) -> (PreliminaryMirProgram, MirProgramLifecycle) {
-        (self.preliminary, self.lifecycle)
-    }
-
-    #[cfg(test)]
-    pub(crate) fn preliminary_mut_for_test(&mut self) -> &mut PreliminaryMirProgram {
-        &mut self.preliminary
-    }
-
-    #[cfg(test)]
-    pub(crate) fn lifecycle_mut_for_test(&mut self) -> &mut MirProgramLifecycle {
-        &mut self.lifecycle
+    pub(crate) fn proof_mut_for_test(&mut self) -> &mut MirStaticLifecycleProof {
+        &mut self.proof
     }
 }

@@ -1,11 +1,11 @@
 //! Static-effect coverage for ordinary calls selected by structural brackets.
 
 use crate::{
-    mir::{StaticEffectEdgeKind, StaticEffectNode},
+    mir::StaticEffectNode,
     test_support::{lower_hir_to_final_mir, type_check_source},
 };
 
-use super::super::{dump_static_effects, infer_static_effects};
+use super::super::{dump_static_effects, infer_static_effects, StaticEffectEdgeKind};
 
 const STATIC_BRACKET_SOURCE: &str = concat!(
     "class Cell {\n",

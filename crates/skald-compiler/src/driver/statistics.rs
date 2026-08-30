@@ -4,14 +4,11 @@ use crate::{
     diagnostics::{Diagnostics, Severity},
     hir::HirProgram,
     lexer::LexOutput,
-    mir::{
-        MirProgram, MirProgramStatistics, MirVerificationErrors, PlannedMirProgram,
-        PreliminaryMirProgram,
-    },
+    mir::{MirProgram, MirProgramStatistics, MirVerificationErrors, PreliminaryMirProgram},
     module::{MeasuredModuleGraphLoad, ModuleLoadMeasurements, ModuleParseStage},
     passes::{
-        static_lifecycle::StaticLifecyclePlanningFailure, MeasuredMirPipeline,
-        MirPipelineStatistics,
+        static_lifecycle::{PlannedMirProgram, StaticLifecyclePlanningFailure},
+        MeasuredMirPipeline, MirPipelineStatistics,
     },
     reporting::{
         ReportDetail, ReportEvent, ReportMetric, ReportModuleStage, ReportObserver, ReportOutcome,
@@ -147,9 +144,12 @@ pub(super) fn lifecycle_planning_metrics(
         Ok(planned) => vec![
             ReportMetric::count(
                 "effect summaries",
-                count(planned.effects().summaries().len()),
+                count(planned.planning_report().analysis().summaries().len()),
             ),
-            ReportMetric::count("dependencies", count(planned.dependencies().len())),
+            ReportMetric::count(
+                "dependencies",
+                count(planned.planning_report().dependencies().len()),
+            ),
             ReportMetric::count(
                 "activation fields",
                 count(planned.lifecycle().activation().len()),

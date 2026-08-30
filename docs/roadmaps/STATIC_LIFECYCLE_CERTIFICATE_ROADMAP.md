@@ -1,6 +1,6 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: in progress; LCR0-LCR2 are complete and LCR3 is next.
+Status: in progress; LCR0-LCR3 are complete and LCR4 is next.
 
 This roadmap implements the frozen
 [static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
@@ -65,7 +65,7 @@ graph-reshaping passes can later rely.
 - [x] LCR0 — Establish normalized root-effect analysis
 - [x] LCR1 — Issue exact immutable baseline authority
 - [x] LCR2 — Verify monotone final-MIR realization
-- [ ] LCR3 — Separate analysis evidence from executable proof
+- [x] LCR3 — Separate analysis evidence from executable proof
 - [ ] LCR4 — Reorganize lifecycle module ownership
 - [ ] LCR5 — Canonicalize planned lifecycle data
 - [ ] LCR6 — Canonicalize the executable coordinator
@@ -255,26 +255,26 @@ documentation, formatting, MSRV, and diff gates all pass.
 **Purpose:** Retire the transitional exact graph certificate and give analysis,
 diagnostics, reporting, and MIR proof data clear owners.
 
-- [ ] Introduce a `StaticLifecyclePlanningReport` or equivalently explicit
+- [x] Introduce a `StaticLifecyclePlanningReport` or equivalently explicit
       sidecar owning the extracted graph, exact-signature candidate index,
       solved per-node summaries, recursive-component metric, selected
       dependency evidence, and deterministic witnesses.
-- [ ] Keep that sidecar in the planned phase product for inspection and drop it
+- [x] Keep that sidecar in the planned phase product for inspection and drop it
       during synthesis so it never reaches backend-consumable final MIR.
-- [ ] Remove `StaticEffectAnalysis`, graph edges, candidate inventories, SCC
+- [x] Remove `StaticEffectAnalysis`, graph edges, candidate inventories, SCC
       counts, access spans, and cloned witness paths from
       `MirStaticLifecycleCertificate` and replace that type with the compact
       baseline authority or rename it to reflect proof semantics.
-- [ ] Remove duplicate dependency evidence from executable MIR; derive proof
+- [x] Remove duplicate dependency evidence from executable MIR; derive proof
       pairs from authority and keep diagnostic paths only in the planning
       report.
-- [ ] Update `dump_static_effects`, `dump_static_lifetime_plan`, and
+- [x] Update `dump_static_effects`, `dump_static_lifetime_plan`, and
       `dump_planned_mir` to consume the correct analysis, planning, or phase
       product and label authority separately from evidence.
-- [ ] Deliberately migrate the repository-internal public inspection API and
+- [x] Deliberately migrate the repository-internal public inspection API and
       its compile test; do not preserve misleading `planned.effects()` or MIR
       re-exports solely for compatibility.
-- [ ] Remove transitional dual-certificate agreement code and mutation hooks
+- [x] Remove transitional dual-certificate agreement code and mutation hooks
       that no longer represent a production invariant.
 
 **Tests:** Planning-report ownership and deterministic rendering; synthesis
@@ -293,6 +293,20 @@ equivalent diagnostics and backend output.
 and evidence have one pass-owned sidecar, public paths reflect those ownership
 boundaries, deterministic inspection remains available, and no production
 consumer reads retired graph-certificate data.
+
+**Completed:** `StaticLifecyclePlanningReport` now owns solved summaries,
+direct graph and candidate evidence, recursive-component metrics, selected
+dependencies, spans, and witnesses in the pass-owned planned product. Synthesis
+drops that report and final `MirProgramLifecycle` carries only
+`MirStaticLifecycleProof` with compact baseline authority. Planned dumps and
+planning metrics read the report; final MIR dumps expose only proof root count.
+The legacy exact graph-certificate verifier, dual-oracle agreement checks,
+stored executable dependency evidence, obsolete analysis mutation hooks, and
+misleading `mir` inspection exports are removed. The intentional public API now
+exposes report evidence through `passes::static_lifecycle` and compact proof
+through `mir`. Focused lifecycle and dump tests, the complete compiler suite,
+public API and pipeline determinism tests, static-field goldens, formatting,
+lint, documentation, MSRV, and diff gates all pass.
 
 ### LCR4 — Reorganize lifecycle module ownership
 

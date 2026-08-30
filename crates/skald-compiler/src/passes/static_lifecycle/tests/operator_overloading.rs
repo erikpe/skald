@@ -2,13 +2,15 @@
 
 use crate::{
     identity::CallableId,
-    mir::{PreliminaryMirProgram, StaticEffectEdgeKind, StaticEffectNode},
+    mir::{PreliminaryMirProgram, StaticEffectNode},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
     typeck::type_check,
 };
 
-use super::super::{infer_static_effects, plan_static_lifetimes};
+use super::super::{
+    infer_static_effects, plan_static_lifetimes, StaticEffectEdgeKind, StaticEffectSummary,
+};
 
 fn operator_program() -> PreliminaryMirProgram {
     let (_workspace, graph) = load_module_sources_with_standard_library(
@@ -76,7 +78,7 @@ fn punctuation_and_explicit_protocol_calls_feed_identical_effect_and_target_owne
     let punctuation_summary = analysis.summary(punctuation).unwrap();
     let explicit_summary = analysis.summary(explicit).unwrap();
 
-    let targets = |summary: &crate::mir::StaticEffectSummary| {
+    let targets = |summary: &StaticEffectSummary| {
         summary
             .possible_targets
             .iter()
@@ -89,7 +91,7 @@ fn punctuation_and_explicit_protocol_calls_feed_identical_effect_and_target_owne
         .iter()
         .all(|(_, kind)| *kind == StaticEffectEdgeKind::InterfaceDispatch));
 
-    let fields = |summary: &crate::mir::StaticEffectSummary| {
+    let fields = |summary: &StaticEffectSummary| {
         summary
             .effects
             .iter()
@@ -102,5 +104,5 @@ fn punctuation_and_explicit_protocol_calls_feed_identical_effect_and_target_owne
     let planned = plan_static_lifetimes(preliminary)
         .expect("operator interface targets must survive lifecycle planning");
     crate::passes::static_lifecycle::verify_planned_mir(&planned)
-        .expect("operator calls must retain a valid static-effect certificate");
+        .expect("operator calls must retain valid static-lifecycle authority");
 }

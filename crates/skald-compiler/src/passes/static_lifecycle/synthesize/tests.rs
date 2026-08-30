@@ -27,7 +27,7 @@ const STORAGE_MATRIX: &str = concat!(
     "fn main() -> i64 { return 0; }\n",
 );
 
-fn planned(source: &str) -> crate::mir::PlannedMirProgram {
+fn planned(source: &str) -> super::super::PlannedMirProgram {
     let checked = type_check_source(source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());

@@ -105,16 +105,15 @@ pub use shared::{
 pub use shift::{MirRightShiftFlavor, MirShiftCountCheck, MirShiftDirection, MirShiftOperation};
 pub use static_lifecycle::{
     MirProgramLifecycle, MirStaticActivationRegion, MirStaticActivationWork,
-    MirStaticDestructionRegion, MirStaticFieldInitialization, MirStaticLifecycleCertificate,
-    MirStaticLifecycleCoordinator, MirStaticLifecycleDefinition, MirStaticLifecycleIndices,
+    MirStaticDestructionRegion, MirStaticFieldInitialization, MirStaticLifecycleCoordinator,
+    MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleProof,
     MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirStaticSharedCleanup,
-    MirStaticValueCleanup, PlannedMirProgram, StaticAccessEvidence, StaticAccessKind,
-    StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
-    StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
-    StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
-    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecyclePlan,
-    StaticLifecycleRootAuthority, StaticLifetimeDependency, StaticLifetimeEvidence,
-    StaticLifetimePhase,
+    MirStaticValueCleanup, StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
+    StaticClassLifecycleOperation, StaticEffectAnalysis, StaticEffectEdge, StaticEffectEdgeKind,
+    StaticEffectNode, StaticEffectPhase, StaticEffectSummary, StaticFunctionValueCandidates,
+    StaticFunctionValueTarget, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+    StaticLifecyclePlan, StaticLifecycleRootAuthority, StaticLifetimeDependency,
+    StaticLifetimeEvidence, StaticLifetimePhase,
 };
 pub(crate) use statistics::MirProgramStatistics;
 pub use strings::{

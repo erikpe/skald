@@ -1,10 +1,12 @@
 //! Static-effect model facade and deterministic comparison helpers.
 
+pub use crate::mir::model::{
+    StaticAccessEvidence, StaticEffectAnalysis, StaticEffectEdge, StaticEffectEdgeKind,
+    StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
+};
 pub use crate::mir::{
-    StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
-    StaticClassLifecycleOperation, StaticEffectAnalysis, StaticEffectEdge, StaticEffectEdgeKind,
-    StaticEffectNode, StaticEffectPhase, StaticEffectSummary, StaticFunctionValueCandidates,
-    StaticFunctionValueTarget,
+    StaticAccessKind, StaticArrayLifecycleOperation, StaticClassLifecycleOperation,
+    StaticEffectNode, StaticEffectPhase,
 };
 
 use crate::{identity::StaticFieldId, source::Span};

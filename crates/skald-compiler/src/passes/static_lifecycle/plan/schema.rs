@@ -3,11 +3,13 @@
 use std::collections::BTreeMap;
 
 use crate::mir::{
-    MirProgramLifecycle, MirStaticFieldInitialization, MirStaticLifecycleCertificate,
-    MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleTransition,
-    MirStaticLifecycleTransitionKind, PlannedMirProgram, PreliminaryMirProgram,
-    StaticEffectAnalysis, StaticLifecycleAuthority, StaticLifecyclePlan, StaticLifetimeDependency,
+    MirProgramLifecycle, MirStaticFieldInitialization, MirStaticLifecycleDefinition,
+    MirStaticLifecycleIndices, MirStaticLifecycleProof, MirStaticLifecycleTransition,
+    MirStaticLifecycleTransitionKind, PreliminaryMirProgram, StaticEffectAnalysis,
+    StaticLifecycleAuthority, StaticLifecyclePlan, StaticLifetimeDependency,
 };
+
+use super::model::{PlannedMirProgram, StaticLifecyclePlanningReport};
 
 pub(super) fn build_planned_program(
     mut preliminary: PreliminaryMirProgram,
@@ -116,7 +118,8 @@ pub(super) fn build_planned_program(
             ]
         })
         .collect();
-    let certificate = MirStaticLifecycleCertificate::new(authority, effects, dependencies);
-    let lifecycle = MirProgramLifecycle::new(definitions, activation, shutdown, plan, certificate);
-    PlannedMirProgram::new(preliminary, lifecycle)
+    let proof = MirStaticLifecycleProof::new(authority);
+    let lifecycle = MirProgramLifecycle::new(definitions, activation, shutdown, plan, proof);
+    let report = StaticLifecyclePlanningReport::new(effects, dependencies);
+    PlannedMirProgram::new(preliminary, lifecycle, report)
 }

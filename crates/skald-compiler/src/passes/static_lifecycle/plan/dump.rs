@@ -17,7 +17,7 @@ pub fn dump_planned_mir(program: &PlannedMirProgram) -> String {
     format!(
         "{}{}{}{}",
         dump_preliminary_mir(program.preliminary()),
-        dump_static_effects(program.effects()),
+        dump_static_effects(program.planning_report().analysis()),
         dump_baseline_authority(program),
         dump_static_lifetime_plan(program),
     )
@@ -44,7 +44,7 @@ fn dump_baseline_authority(program: &PlannedMirProgram) -> String {
 
 pub fn dump_static_lifetime_plan(program: &PlannedMirProgram) -> String {
     let mut output = String::from("StaticLifetimePlan\n");
-    for dependency in program.dependencies() {
+    for dependency in program.planning_report().dependencies() {
         write_dependency(&mut output, program, dependency);
     }
     output.push_str("  Activation");

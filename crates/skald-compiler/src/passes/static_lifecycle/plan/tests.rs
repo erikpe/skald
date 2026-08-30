@@ -2,7 +2,7 @@
 
 use crate::{
     mir::{
-        lower_preliminary_hir, MirStaticFieldInitialization, PreliminaryMirProgram,
+        dump_mir, lower_preliminary_hir, MirStaticFieldInitialization, PreliminaryMirProgram,
         StaticClassLifecycleOperation, StaticEffectNode,
     },
     test_support::type_check_source,
@@ -50,7 +50,7 @@ fn orders_initialization_dependencies_and_independent_fields_deterministically()
         planned.lifecycle().shutdown(),
         &[fields[0], fields[2], fields[1]]
     );
-    let dependency = planned.dependencies().first().unwrap();
+    let dependency = planned.planning_report().dependencies().first().unwrap();
     assert_eq!(dependency.prerequisite, fields[2]);
     assert_eq!(dependency.dependent, fields[0]);
     assert_eq!(
@@ -78,7 +78,7 @@ fn includes_destruction_of_initializer_free_replaceable_owning_fields() {
         .static_fields()
         .map(|field| field.field)
         .collect::<Vec<_>>();
-    let dependency = planned.dependencies().first().unwrap();
+    let dependency = planned.planning_report().dependencies().first().unwrap();
 
     assert_eq!(dependency.prerequisite, fields[1]);
     assert_eq!(dependency.dependent, fields[0]);
@@ -133,12 +133,13 @@ fn issues_exact_authority_for_explicit_zero_default_and_destructible_statics() {
         planned.authority(),
     )
     .unwrap();
-    let legacy_pairs = planned
+    let report_pairs = planned
+        .planning_report()
         .dependencies()
         .iter()
         .map(|dependency| (dependency.prerequisite, dependency.dependent))
         .collect();
-    assert_eq!(authority_pairs, legacy_pairs);
+    assert_eq!(authority_pairs, report_pairs);
 }
 
 #[test]
@@ -156,7 +157,7 @@ fn permits_post_publication_cleanup_to_access_the_newly_live_field() {
          fn main() -> i64 { return 0; }",
     );
 
-    assert!(planned.dependencies().is_empty());
+    assert!(planned.planning_report().dependencies().is_empty());
     assert_eq!(planned.lifecycle().activation().len(), 1);
 }
 
@@ -258,8 +259,8 @@ fn callable_recursion_remains_separate_from_static_lifetime_cycles() {
          fn main() -> i64 { return 0; }",
     );
 
-    assert!(planned.effects().recursive_components() >= 1);
-    assert_eq!(planned.dependencies().len(), 1);
+    assert!(planned.planning_report().analysis().recursive_components() >= 1);
+    assert_eq!(planned.planning_report().dependencies().len(), 1);
 }
 
 #[test]
@@ -329,6 +330,53 @@ fn exact_plan_dump_retains_effects_dependencies_witnesses_and_reverse_order() {
     assert!(planned_dump.contains("StaticEffectAnalysis\n"));
     assert!(planned_dump.contains("StaticLifecycleBaselineAuthority\n"));
     assert!(planned_dump.contains("  Root callable"));
+}
+
+#[test]
+fn planning_report_is_inspectable_but_synthesis_retains_only_compact_proof() {
+    let planned = plan(
+        "fn read() -> i64 { return State.base; }
+         fn invoke(callback: fn() -> i64) -> i64 { return callback(); }
+         class State {
+           static base: i64 = 1;
+           static result: i64 = invoke(read);
+           init() {}
+         }
+         fn main() -> i64 { return 0; }",
+    );
+    let report = planned.planning_report();
+    assert!(report.analysis().function_value_candidates().len() > 0);
+    assert!(report.analysis().summaries().len() > 0);
+    assert_eq!(report.analysis().recursive_components(), 0);
+    assert!(report
+        .dependencies()
+        .iter()
+        .any(|dependency| !dependency.evidence.witness.is_empty()));
+    let authority = planned.authority().clone();
+
+    let final_program = super::super::synthesize_static_lifecycle(planned).unwrap();
+    let proof = final_program
+        .static_lifecycle
+        .as_ref()
+        .unwrap()
+        .lifecycle()
+        .proof();
+    assert_eq!(proof.authority(), &authority);
+
+    let final_dump = dump_mir(&final_program);
+    assert!(
+        final_dump.contains("Proof authority-roots="),
+        "{final_dump}"
+    );
+    for planning_only in [
+        "StaticEffectAnalysis",
+        "FunctionValueCandidates",
+        "RecursiveComponents",
+        "summaries=",
+        "dependencies=",
+    ] {
+        assert!(!final_dump.contains(planning_only), "{final_dump}");
+    }
 }
 
 mod generic_classes;

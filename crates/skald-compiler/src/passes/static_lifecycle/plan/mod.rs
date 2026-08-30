@@ -10,7 +10,8 @@ pub use diagnostics::{STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_D
 pub use dump::{dump_planned_mir, dump_static_lifetime_plan};
 pub use model::{
     PlannedMirProgram, StaticLifecyclePlan, StaticLifecyclePlanningFailure,
-    StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
+    StaticLifecyclePlanningReport, StaticLifetimeDependency, StaticLifetimeEvidence,
+    StaticLifetimePhase,
 };
 
 use crate::{diagnostics::Diagnostics, mir::PreliminaryMirProgram};
@@ -24,16 +25,6 @@ pub fn plan_static_lifetimes(
 ) -> Result<PlannedMirProgram, StaticLifecyclePlanningFailure> {
     let (effects, root_effects) = infer_static_effects_with_roots(&preliminary);
     let graph = graph::LifetimeGraph::build(&preliminary, &effects);
-    debug_assert_eq!(
-        super::root_effects::dependency_pairs(&preliminary, &root_effects)
-            .expect("issued lifecycle roots must derive dependencies"),
-        graph
-            .dependencies()
-            .iter()
-            .map(|dependency| (dependency.prerequisite, dependency.dependent))
-            .collect(),
-        "normalized lifecycle-root effects must derive the planned dependencies"
-    );
     let cyclic_components = graph.cyclic_components();
     if !cyclic_components.is_empty() {
         let diagnostics = diagnostics::cycle_diagnostics(&preliminary, &graph, &cyclic_components)

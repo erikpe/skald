@@ -3,9 +3,8 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use crate::mir::{
-    MirProgram, MirStaticLifecycleDefinition, PreliminaryMirProgram, StaticEffectAnalysis,
-    StaticEffectNode, StaticLifecycleAuthority, StaticLifecycleEffectFact,
-    StaticLifecycleRootAuthority,
+    MirProgram, MirStaticLifecycleDefinition, PreliminaryMirProgram, StaticEffectNode,
+    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
 };
 
 use super::{
@@ -58,29 +57,6 @@ fn analyze_roots(
             effects_for(root, graph, &declared_fields).map(|effects| {
                 StaticLifecycleRootAuthority::new(root, effects.into_iter().collect())
             })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(StaticLifecycleAuthority::new(summaries))
-}
-
-pub(crate) fn project_solved_analysis(
-    roots: &StaticLifecycleAuthority,
-    analysis: &StaticEffectAnalysis,
-) -> Result<StaticLifecycleAuthority, StaticLifecycleRootEffectError> {
-    let summaries = roots
-        .roots()
-        .map(|root| {
-            let summary = analysis
-                .summary(root.root())
-                .ok_or(StaticLifecycleRootEffectError::MissingRoot(root.root()))?;
-            let effects = summary
-                .effects
-                .iter()
-                .map(|effect| StaticLifecycleEffectFact::from_evidence(effect, None))
-                .collect::<BTreeSet<_>>()
-                .into_iter()
-                .collect();
-            Ok(StaticLifecycleRootAuthority::new(root.root(), effects))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(StaticLifecycleAuthority::new(summaries))

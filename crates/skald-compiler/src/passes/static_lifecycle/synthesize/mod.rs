@@ -5,10 +5,11 @@ use std::collections::BTreeMap;
 use crate::mir::{
     MirProgram, MirStaticActivationRegion, MirStaticActivationWork, MirStaticDestructionRegion,
     MirStaticFieldInitialization, MirStaticLifecycleCoordinator, MirStaticValueCleanup,
-    MirVerificationErrors, PlannedMirProgram,
+    MirVerificationErrors,
 };
 
 use super::{
+    plan::PlannedMirProgram,
     verify::{debug_assert_exact_synthesized_realization, verify_planned_mir},
     verify_synthesized_mir,
 };
@@ -20,7 +21,7 @@ pub fn synthesize_static_lifecycle(
 ) -> Result<MirProgram, MirVerificationErrors> {
     verify_planned_mir(&planned)?;
 
-    let (preliminary, lifecycle) = planned.into_parts();
+    let (preliminary, lifecycle) = planned.into_executable_parts();
     let (mut program, _fields, initializers) = preliminary.into_parts();
     let mut initializers = initializers
         .into_iter()

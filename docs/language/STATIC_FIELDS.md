@@ -15,7 +15,7 @@ established without running Skald code and their type must admit one complete
 all-zero value. Declaration initializer expressions are accepted, resolved,
 type-checked as direct stored-value initialization, and lowered to structurally
 verified preliminary lifecycle MIR, planned into an explicit lifecycle schema,
-checked with a target-independent effect/dependency certificate, moved
+checked with target-independent baseline authority and a planning report, moved
 unchanged into verified final coordinator MIR, and executed eagerly before the
 selected Skald entry function.
 
@@ -325,13 +325,15 @@ when its operand or buffer happens to come from a static place.
 Every supported static field in the reachable program is live before the
 selected Skald entry function begins. After producing preliminary lifecycle
 MIR, the compiler constructs and verifies explicit lifecycle definitions,
-begin/publish/destroy transitions,
+begin/publish/destroy transitions, compact baseline authority, and the complete
+activation and reverse-shutdown plan. A planning-only report retains
 deterministic transitive static-effect summaries, conservative dynamic targets,
-source-facing witnesses, evidenced lifetime dependencies, and the complete
-activation and reverse-shutdown plan. It then moves the unchanged initializer
-bodies into final coordinator activation regions, retains post-publication
-full-expression cleanup, synthesizes type-selected reverse destruction regions,
-and independently verifies that final MIR and its certificate.
+source-facing witnesses, and evidenced lifetime dependencies for diagnostics
+and inspection. The compiler then drops that report, moves the unchanged
+initializer bodies into final coordinator activation regions, retains
+post-publication full-expression cleanup, synthesizes type-selected reverse
+destruction regions, and independently verifies final MIR against its compact
+proof.
 
 The x86-64 backend emits one private initializer body for every explicit
 declaration and one private program initializer that invokes those bodies in

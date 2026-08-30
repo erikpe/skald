@@ -2,16 +2,14 @@
 
 use crate::{
     identity::{CallableId, FunctionId},
-    mir::{
-        PreliminaryMirProgram, StaticEffectEdgeKind, StaticEffectNode,
-        StaticFunctionValueCandidates,
-    },
+    mir::{PreliminaryMirProgram, StaticEffectNode},
     test_support::lower_generic_source_to_preliminary_mir,
 };
 
 use super::super::{
-    dump_static_effects, infer_static_effects, plan_static_lifetimes,
-    STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
+    dump_static_effects, infer_static_effects, plan_static_lifetimes, StaticEffectAnalysis,
+    StaticEffectEdgeKind, StaticFunctionValueCandidates, STATIC_LIFECYCLE_DEPENDENCY_CYCLE,
+    STATIC_LIFECYCLE_SELF_DEPENDENCY,
 };
 use super::{effect_fields, lower};
 
@@ -25,7 +23,7 @@ fn function(program: &PreliminaryMirProgram, name: &str) -> CallableId {
         .unwrap_or_else(|| panic!("missing function `{name}`"))
 }
 
-fn only_candidates(analysis: &crate::mir::StaticEffectAnalysis) -> &StaticFunctionValueCandidates {
+fn only_candidates(analysis: &StaticEffectAnalysis) -> &StaticFunctionValueCandidates {
     let candidates = analysis.function_value_candidates().collect::<Vec<_>>();
     assert_eq!(candidates.len(), 1);
     candidates[0]
@@ -111,6 +109,7 @@ fn expands_each_indirect_call_to_every_exact_signature_target() {
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let result = fields[2];
     assert!(planned
+        .planning_report()
         .dependencies()
         .iter()
         .filter(|dependency| dependency.dependent == result)
@@ -121,6 +120,7 @@ fn expands_each_indirect_call_to_every_exact_signature_target() {
                 .iter()
                 .any(|edge| edge.kind == StaticEffectEdgeKind::IndirectCall)));
     assert!(planned
+        .planning_report()
         .dependencies()
         .iter()
         .any(|dependency| dependency.dependent == result && dependency.prerequisite == fields[1]));

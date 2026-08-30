@@ -50,7 +50,7 @@ preliminary lifecycle MIR. Whole-program effect and lifetime planning reports
 a dependency cycle, with declaration, static-use, and transitive
 call/lifecycle evidence. A valid plan retains deterministic activation and
 exact-reverse shutdown order in a separately verified lifecycle-MIR
-certificate; malformed certificate metadata is a MIR verification failure.
+proof; malformed proof metadata is a MIR verification failure.
 Every accepted initializer executes once in the verified dependency order
 before entry, while initializer-free fields activate without Skald value work.
 Primitive, object, optional, shared-owner, and inline-array declarations lower

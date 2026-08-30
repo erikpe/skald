@@ -7,7 +7,7 @@
 mod build;
 mod dump;
 mod lower;
-mod model;
+pub(crate) mod model;
 mod verify;
 
 #[cfg(test)]
@@ -62,22 +62,23 @@ pub use model::{
     MirSignedIntegerDivisionSemantics, MirSignedMinimumPairResult, MirSignedQuotientRounding,
     MirSignedRemainderSign, MirStaticActivationRegion, MirStaticActivationWork,
     MirStaticAllocationOrigin, MirStaticDataMutability, MirStaticDestructionRegion,
-    MirStaticFieldInitialization, MirStaticInitializerBody, MirStaticLifecycleCertificate,
-    MirStaticLifecycleCoordinator, MirStaticLifecycleDefinition, MirStaticLifecycleIndices,
+    MirStaticFieldInitialization, MirStaticInitializerBody, MirStaticLifecycleCoordinator,
+    MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleProof,
     MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirStaticPublication,
     MirStaticSharedCleanup, MirStaticValueCleanup, MirStorage, MirStorageDead, MirStorageKind,
     MirStorageLive, MirStore, MirStringInitialize, MirStringLanguageItem, MirSynthesizedCopy,
     MirSynthesizedFieldCopy, MirTerminationReason, MirTerminator, MirType, MirUnaryOperation,
     MirUserCopy, MirValue, MirViewProvenance, MirViewTarget, MirVirtualFamily,
-    MirVirtualFamilyTable, OptionalGuardId, PathConditionId, PlannedMirProgram,
-    PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget, PreliminaryMirStaticField,
-    PreliminaryMirStaticInitializer, StaticAccessEvidence, StaticAccessKind,
-    StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
-    StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
-    StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
-    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecyclePlan,
-    StaticLifecycleRootAuthority, StaticLifetimeDependency, StaticLifetimeEvidence,
-    StaticLifetimePhase, StorageId, ValueId,
+    MirVirtualFamilyTable, OptionalGuardId, PathConditionId, PreliminaryMirProgram,
+    PreliminaryMirSharedLifecycleTarget, PreliminaryMirStaticField,
+    PreliminaryMirStaticInitializer, StaticAccessKind, StaticArrayLifecycleOperation,
+    StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority,
+    StaticLifecycleEffectFact, StaticLifecyclePlan, StaticLifecycleRootAuthority, StorageId,
+    ValueId,
+};
+pub(crate) use model::{
+    StaticAccessEvidence, StaticEffectAnalysis, StaticFunctionValueCandidates,
+    StaticFunctionValueTarget, StaticLifetimeDependency,
 };
 pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,

@@ -34,8 +34,9 @@ use skald_compiler::{
         MirFunctionTypeTable, MirIndirectCallTarget, MirIntegerBitwiseOperation, MirIntegerType,
         MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
         MirPlaceProjection, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveComparison,
-        MirPrimitiveType, MirProgram, MirType, MirUnaryOperation, MirViewTarget,
-        StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
+        MirPrimitiveType, MirProgram, MirStaticLifecycleProof, MirType, MirUnaryOperation,
+        MirViewTarget, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+        StaticLifecycleRootAuthority,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -49,7 +50,8 @@ use skald_compiler::{
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
-            PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan, StaticLifetimeDependency,
+            PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan,
+            StaticLifecyclePlanningReport, StaticLifetimeDependency,
         },
     },
     resolve::{
@@ -226,7 +228,8 @@ fn intentional_phase_and_dump_paths_compose() {
     assert!(!preliminary.has_static_initializers());
     let planned: PlannedMirProgram = plan_static_lifetimes(preliminary).unwrap();
     verify_planned_mir(&planned).unwrap();
-    let static_effects: &StaticEffectAnalysis = planned.effects();
+    let report: &StaticLifecyclePlanningReport = planned.planning_report();
+    let static_effects: &StaticEffectAnalysis = report.analysis();
     let _static_effect_dump = dump_static_effects(static_effects);
     let _planned_dump = dump_planned_mir(&planned);
     let authority: &StaticLifecycleAuthority = planned.authority();
@@ -242,10 +245,16 @@ fn intentional_phase_and_dump_paths_compose() {
         }
     }
     let _lifecycle: &StaticLifecyclePlan = planned.lifecycle();
-    let _dependencies: &[StaticLifetimeDependency] = planned.dependencies();
+    let _dependencies: &[StaticLifetimeDependency] = report.dependencies();
     let synthesized = synthesize_static_lifecycle(planned).unwrap();
     verify_synthesized_mir(&synthesized).unwrap();
     assert!(synthesized.static_lifecycle.is_some());
+    let _proof: &MirStaticLifecycleProof = synthesized
+        .static_lifecycle
+        .as_ref()
+        .unwrap()
+        .lifecycle()
+        .proof();
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;
