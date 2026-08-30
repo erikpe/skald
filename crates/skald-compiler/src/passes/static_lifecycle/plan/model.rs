@@ -1,18 +1,48 @@
 //! Planned phase product, inspection report, and planning failure model.
 
 use crate::diagnostics::{Diagnostic, Diagnostics};
-use crate::mir::model::StaticEffectAnalysis;
 use crate::{
-    identity::StaticInitializerId,
+    identity::{StaticFieldId, StaticInitializerId},
     mir::{
         MirProgramLifecycle, PreliminaryMirProgram, PreliminaryMirStaticField,
-        PreliminaryMirStaticInitializer, StaticLifecycleAuthority,
+        PreliminaryMirStaticInitializer, StaticAccessKind, StaticEffectNode, StaticEffectPhase,
+        StaticLifecycleAuthority,
     },
+    source::Span,
 };
 
-pub use crate::mir::model::{
-    StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
-};
+pub use crate::mir::StaticLifecyclePlan;
+
+use super::super::analysis::{StaticEffectAnalysis, StaticEffectEdge};
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum StaticLifetimePhase {
+    Initialization,
+    Destruction,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StaticLifetimeEvidence {
+    pub root: StaticFieldId,
+    pub root_span: Span,
+    pub phase: StaticLifetimePhase,
+    pub root_effect: StaticEffectNode,
+    pub target: StaticFieldId,
+    pub target_span: Span,
+    pub access: StaticAccessKind,
+    pub effect_phase: StaticEffectPhase,
+    pub access_span: Span,
+    pub witness: Vec<StaticEffectEdge>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StaticLifetimeDependency {
+    /// The field that must be live before `dependent` is activated.
+    pub prerequisite: StaticFieldId,
+    /// The field whose initialization or destruction reaches `prerequisite`.
+    pub dependent: StaticFieldId,
+    pub evidence: StaticLifetimeEvidence,
+}
 
 /// Analysis evidence retained for deterministic inspection of lifecycle
 /// planning, but deliberately excluded from backend-consumable MIR.

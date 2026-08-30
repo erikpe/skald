@@ -7,7 +7,7 @@ use crate::mir::{
 };
 
 use super::{
-    super::{extract, root_effects},
+    super::analysis::{extract, root_effects},
     program_error, LifecycleMirView,
 };
 

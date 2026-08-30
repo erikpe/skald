@@ -1,3 +1,5 @@
+//! Static-place and call access extraction.
+
 use super::*;
 
 impl Extractor<'_> {

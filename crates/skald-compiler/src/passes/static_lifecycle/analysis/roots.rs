@@ -1,10 +1,12 @@
-//! Shared lifecycle-root semantics used by planning and verification.
+//! Shared lifecycle-root analysis semantics used by planning and verification.
 
 use crate::mir::{
-    MirProgram, MirSharedTarget, MirType, PreliminaryMirSharedLifecycleTarget,
-    StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
-    StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase,
+    MirProgram, MirSharedTarget, MirType, PreliminaryMirSharedLifecycleTarget, StaticAccessKind,
+    StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectNode,
+    StaticEffectPhase,
 };
+
+use super::model::StaticAccessEvidence;
 
 pub(crate) fn is_lifecycle_destination_or_published_self(
     root: crate::identity::StaticFieldId,

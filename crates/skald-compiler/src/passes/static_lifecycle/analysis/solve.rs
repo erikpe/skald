@@ -1,4 +1,4 @@
-//! Recursive-component condensation, effect propagation, and witnesses.
+//! Recursive-component condensation, effect propagation, and witness selection.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 

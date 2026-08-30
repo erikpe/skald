@@ -16,7 +16,7 @@ pub use model::{
 
 use crate::{diagnostics::Diagnostics, mir::PreliminaryMirProgram};
 
-use super::infer_static_effects_with_roots;
+use super::analysis::infer_static_effects_with_roots;
 
 /// Infers effects once and converts them into a deterministic whole-program
 /// activation and exact-reverse shutdown plan.

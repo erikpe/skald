@@ -1,4 +1,4 @@
-//! Static-effect equivalence between operator punctuation and explicit calls.
+//! Static-effect equivalence between operator syntax and explicit calls.
 
 use crate::{
     identity::CallableId,
@@ -8,9 +8,8 @@ use crate::{
     typeck::type_check,
 };
 
-use super::super::{
-    infer_static_effects, plan_static_lifetimes, StaticEffectEdgeKind, StaticEffectSummary,
-};
+use super::super::super::plan_static_lifetimes;
+use super::super::{infer_static_effects, StaticEffectEdgeKind, StaticEffectSummary};
 
 fn operator_program() -> PreliminaryMirProgram {
     let (_workspace, graph) = load_module_sources_with_standard_library(

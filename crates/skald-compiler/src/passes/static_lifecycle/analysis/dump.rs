@@ -1,4 +1,4 @@
-//! Stable textual rendering for static-effect analysis.
+//! Stable textual rendering for pass-owned static-effect analysis.
 
 use std::fmt::Write;
 

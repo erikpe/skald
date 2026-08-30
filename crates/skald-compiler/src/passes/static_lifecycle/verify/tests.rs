@@ -13,7 +13,7 @@ use crate::{
 
 use super::{
     super::{
-        infer_static_effects_with_roots,
+        analysis::infer_static_effects_with_roots,
         plan::{PlannedMirProgram, StaticLifecyclePlanningReport},
         plan_static_lifetimes,
     },

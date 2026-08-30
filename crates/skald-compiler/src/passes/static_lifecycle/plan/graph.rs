@@ -3,15 +3,16 @@
 use std::{cmp::Ordering, collections::BTreeMap};
 
 use crate::{
-    identity::StaticFieldId, mir::PreliminaryMirProgram,
+    identity::StaticFieldId,
+    mir::{PreliminaryMirProgram, StaticEffectNode},
     passes::graph::strongly_connected_components,
 };
 
 use super::{
-    super::{
-        model::{edge_key, span_key},
+    super::analysis::{
+        edge_key,
         roots::{destruction_roots, is_lifecycle_destination_or_published_self},
-        StaticAccessEvidence, StaticEffectAnalysis, StaticEffectEdge, StaticEffectNode,
+        span_key, StaticAccessEvidence, StaticEffectAnalysis, StaticEffectEdge,
     },
     model::{
         StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,

@@ -1,3 +1,5 @@
+//! Implicit lifecycle-edge extraction.
+
 use super::*;
 
 impl Extractor<'_> {

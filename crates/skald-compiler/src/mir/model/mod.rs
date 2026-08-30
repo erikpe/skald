@@ -108,12 +108,9 @@ pub use static_lifecycle::{
     MirStaticDestructionRegion, MirStaticFieldInitialization, MirStaticLifecycleCoordinator,
     MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleProof,
     MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirStaticSharedCleanup,
-    MirStaticValueCleanup, StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
-    StaticClassLifecycleOperation, StaticEffectAnalysis, StaticEffectEdge, StaticEffectEdgeKind,
-    StaticEffectNode, StaticEffectPhase, StaticEffectSummary, StaticFunctionValueCandidates,
-    StaticFunctionValueTarget, StaticLifecycleAuthority, StaticLifecycleEffectFact,
-    StaticLifecyclePlan, StaticLifecycleRootAuthority, StaticLifetimeDependency,
-    StaticLifetimeEvidence, StaticLifetimePhase,
+    MirStaticValueCleanup, StaticAccessKind, StaticArrayLifecycleOperation,
+    StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority,
+    StaticLifecycleEffectFact, StaticLifecyclePlan, StaticLifecycleRootAuthority,
 };
 pub(crate) use statistics::MirProgramStatistics;
 pub use strings::{

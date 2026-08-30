@@ -1,3 +1,5 @@
+//! MIR-instruction effect and edge extraction.
+
 use super::*;
 
 impl Extractor<'_> {

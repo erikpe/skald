@@ -1,4 +1,4 @@
-//! Focused normalized lifecycle-root analysis tests.
+//! Focused tests for normalized lifecycle-root analysis.
 
 use std::collections::BTreeSet;
 

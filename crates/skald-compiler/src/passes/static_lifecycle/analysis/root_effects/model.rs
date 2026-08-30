@@ -1,4 +1,4 @@
-//! Lifecycle-root inventory and dependency derivation.
+//! Analysis-owned lifecycle-root inventory and dependency derivation.
 
 use std::collections::BTreeSet;
 

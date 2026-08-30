@@ -936,7 +936,7 @@ cargo test --locked -p skald-compiler syntax::tests::bracket_projections
 cargo test --locked -p skald-compiler resolve::tests::structural_indexing
 cargo test --locked -p skald-compiler typeck::tests::structural_indexing
 cargo test --locked -p skald-compiler mir::tests::structural_indexing
-cargo test --locked -p skald-compiler passes::static_lifecycle::tests::structural_indexing
+cargo test --locked -p skald-compiler passes::static_lifecycle::analysis::tests::structural_indexing
 ./scripts/golden.sh --determinism full --filter 'structural_indexing/**'
 ./scripts/golden.sh --determinism full --filter 'standard_vec/**'
 ```

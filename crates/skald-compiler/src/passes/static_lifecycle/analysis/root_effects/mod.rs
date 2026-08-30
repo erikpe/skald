@@ -1,4 +1,4 @@
-//! Checker-oriented normalized effects reachable from lifecycle roots.
+//! Checker-oriented normalized analysis effects reachable from lifecycle roots.
 
 mod closure;
 mod model;

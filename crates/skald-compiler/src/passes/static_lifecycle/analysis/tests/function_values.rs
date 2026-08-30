@@ -1,4 +1,4 @@
-//! Closed-world function-value candidates and static-effect propagation.
+//! Closed-world function-value candidates and their static-effect propagation.
 
 use crate::{
     identity::{CallableId, FunctionId},
@@ -6,10 +6,12 @@ use crate::{
     test_support::lower_generic_source_to_preliminary_mir,
 };
 
+use super::super::super::{
+    plan_static_lifetimes, STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
+};
 use super::super::{
-    dump_static_effects, infer_static_effects, plan_static_lifetimes, StaticEffectAnalysis,
-    StaticEffectEdgeKind, StaticFunctionValueCandidates, STATIC_LIFECYCLE_DEPENDENCY_CYCLE,
-    STATIC_LIFECYCLE_SELF_DEPENDENCY,
+    dump_static_effects, infer_static_effects, StaticEffectAnalysis, StaticEffectEdgeKind,
+    StaticFunctionValueCandidates,
 };
 use super::{effect_fields, lower};
 

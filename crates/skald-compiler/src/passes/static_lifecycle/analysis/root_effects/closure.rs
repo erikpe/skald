@@ -1,4 +1,4 @@
-//! Independent graph closure for normalized lifecycle-root effects.
+//! Independent analysis closure for normalized lifecycle-root effects.
 
 use std::collections::{BTreeSet, VecDeque};
 
@@ -93,7 +93,12 @@ fn effects_for(
                     field: direct.field,
                 });
             }
-            effects.insert(StaticLifecycleEffectFact::from_evidence(direct, root_phase));
+            effects.insert(StaticLifecycleEffectFact::new(
+                direct.field,
+                direct.access,
+                root_phase.unwrap_or(direct.phase),
+                direct.lifecycle_owned,
+            ));
         }
         for edge in &draft.edges {
             if edge.source != node {

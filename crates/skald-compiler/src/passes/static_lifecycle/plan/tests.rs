@@ -127,7 +127,7 @@ fn issues_exact_authority_for_explicit_zero_default_and_destructible_statics() {
         }
     )));
 
-    let authority_pairs = super::super::root_effects::dependency_pairs_for_definitions(
+    let authority_pairs = super::super::analysis::root_effects::dependency_pairs_for_definitions(
         planned.preliminary().program(),
         definitions,
         planned.authority(),

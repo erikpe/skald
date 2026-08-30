@@ -1,4 +1,4 @@
-//! Focused whole-program static-effect analysis tests.
+//! Focused tests for whole-program static-effect analysis.
 
 use crate::{
     identity::{ClassId, FunctionId},

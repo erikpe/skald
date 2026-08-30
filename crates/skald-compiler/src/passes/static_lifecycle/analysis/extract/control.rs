@@ -1,3 +1,5 @@
+//! Control-flow and cleanup-edge extraction.
+
 use super::*;
 
 impl Extractor<'_> {

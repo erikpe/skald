@@ -1,27 +1,23 @@
-//! Whole-program static-field effect inference over preliminary MIR.
+//! Static-lifecycle analysis, planning, synthesis, and verification facade.
 //!
-//! This pass owns target-independent call/lifecycle graph construction,
-//! transitive effect propagation, static dependency planning, and source
-//! diagnostics before lifecycle MIR synthesis.
+//! Implementation details remain with their phase owners while this module
+//! preserves the supported cross-phase API.
 
-mod dump;
-mod extract;
-mod model;
+mod analysis;
 mod plan;
-mod root_effects;
-mod roots;
-mod solve;
 mod synthesize;
 mod verify;
 
 pub use crate::mir::{
+    StaticAccessKind, StaticArrayLifecycleOperation, StaticClassLifecycleOperation,
+    StaticEffectNode, StaticEffectPhase,
+};
+pub use crate::mir::{
     StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
 };
-pub use dump::dump_static_effects;
-pub use model::{
-    StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
-    StaticClassLifecycleOperation, StaticEffectAnalysis, StaticEffectEdge, StaticEffectEdgeKind,
-    StaticEffectNode, StaticEffectPhase, StaticEffectSummary, StaticFunctionValueCandidates,
+pub use analysis::{
+    dump_static_effects, infer_static_effects, StaticAccessEvidence, StaticEffectAnalysis,
+    StaticEffectEdge, StaticEffectEdgeKind, StaticEffectSummary, StaticFunctionValueCandidates,
     StaticFunctionValueTarget,
 };
 pub use plan::{
@@ -32,24 +28,3 @@ pub use plan::{
 };
 pub use synthesize::synthesize_static_lifecycle;
 pub use verify::{verify_planned_mir, verify_synthesized_mir};
-
-use crate::mir::PreliminaryMirProgram;
-
-fn infer_static_effects_with_roots(
-    program: &PreliminaryMirProgram,
-) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
-    let graph = extract::extract(program);
-    let root_effects = root_effects::analyze(program, &graph)
-        .expect("verified preliminary MIR must have valid lifecycle-root identities");
-    let effects = solve::solve(graph);
-    (effects, root_effects)
-}
-
-/// Infers direct and transitive static-field effects for every executable MIR
-/// body and every compiler-generated lifecycle operation in the closed program.
-pub fn infer_static_effects(program: &PreliminaryMirProgram) -> StaticEffectAnalysis {
-    solve::solve(extract::extract(program))
-}
-
-#[cfg(test)]
-mod tests;

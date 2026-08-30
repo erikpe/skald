@@ -5,11 +5,14 @@ use std::collections::BTreeMap;
 use crate::mir::{
     MirProgramLifecycle, MirStaticFieldInitialization, MirStaticLifecycleDefinition,
     MirStaticLifecycleIndices, MirStaticLifecycleProof, MirStaticLifecycleTransition,
-    MirStaticLifecycleTransitionKind, PreliminaryMirProgram, StaticEffectAnalysis,
-    StaticLifecycleAuthority, StaticLifecyclePlan, StaticLifetimeDependency,
+    MirStaticLifecycleTransitionKind, PreliminaryMirProgram, StaticLifecycleAuthority,
+    StaticLifecyclePlan,
 };
 
-use super::model::{PlannedMirProgram, StaticLifecyclePlanningReport};
+use super::{
+    super::analysis::StaticEffectAnalysis,
+    model::{PlannedMirProgram, StaticLifecyclePlanningReport, StaticLifetimeDependency},
+};
 
 pub(super) fn build_planned_program(
     mut preliminary: PreliminaryMirProgram,

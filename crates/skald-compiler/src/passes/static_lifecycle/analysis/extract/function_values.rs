@@ -1,17 +1,14 @@
-//! Deterministic address-taken inventory for indirect static-effect expansion.
+//! Deterministic address-taken inventory for indirect analysis expansion.
 
 use std::collections::BTreeMap;
 
 use crate::{
     identity::{CallableId, FunctionTypeId},
-    mir::{
-        MirDefinitionRef, MirInstruction, MirProgram, MirRvalueKind, MirStaticInitializerBody,
-        StaticFunctionValueCandidates, StaticFunctionValueTarget,
-    },
+    mir::{MirDefinitionRef, MirInstruction, MirProgram, MirRvalueKind, MirStaticInitializerBody},
     source::Span,
 };
 
-use super::super::model::span_key;
+use super::super::model::{span_key, StaticFunctionValueCandidates, StaticFunctionValueTarget};
 
 pub(super) fn collect(
     program: &MirProgram,

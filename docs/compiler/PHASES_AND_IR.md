@@ -240,6 +240,12 @@ indirect call expands to every matching address-taken target through an
 `IndirectCall` edge. The inventory retains first reference spans in the
 planning report; it is neither executable proof nor a callable-retention
 contract.
+The private `passes::static_lifecycle::analysis` owner contains graph
+extraction, candidate inventories, direct evidence, solved summaries,
+recursive-component results, normalized-root closure, witness selection, and
+their deterministic comparison helpers. The public
+`passes::static_lifecycle` facade exposes only supported analysis, planning,
+synthesis, and verification APIs.
 The pass condenses recursive components, propagates field sets over the
 component DAG, and retains minimum-call-edge, deterministically tied witnesses
 for each field in every node summary. Distinct access-kind and root-phase
@@ -358,6 +364,11 @@ metrics, access spans, and witness-bearing dependencies live only in
 `StaticLifecyclePlanningReport`. Synthesis drops that sidecar. Final
 `MirStaticLifecycleProof` owns only immutable baseline authority, so analysis
 evidence cannot constrain graph reshaping or reach backend-consumable MIR.
+The MIR-owned lifecycle schema is separately divided into compact proof,
+planned transition, structured coordinator, and phase-product modules behind
+the existing `mir` facade. Stable lifecycle-root identities and normalized
+authority remain MIR values because they cross planning, optimization,
+verification, and backend boundaries; source-rich analysis evidence does not.
 
 For every explicit static initializer and implicit class or array lifecycle
 operation used to activate or destroy a static field, preliminary analysis

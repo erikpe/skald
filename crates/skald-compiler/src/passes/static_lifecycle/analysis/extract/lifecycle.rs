@@ -1,3 +1,5 @@
+//! Class and aggregate lifecycle-edge extraction.
+
 use super::*;
 
 impl Extractor<'_> {

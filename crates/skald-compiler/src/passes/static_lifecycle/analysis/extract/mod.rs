@@ -1,4 +1,4 @@
-//! Exhaustive MIR and implicit-lifecycle graph extraction.
+//! Exhaustive MIR and implicit-lifecycle analysis graph extraction.
 
 mod access;
 mod control;

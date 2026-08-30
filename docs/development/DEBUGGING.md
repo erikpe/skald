@@ -397,7 +397,7 @@ Useful focused checks are:
 
 ```text
 cargo test --locked -p skald-compiler function_value
-cargo test --locked -p skald-compiler passes::static_lifecycle::tests::function_values
+cargo test --locked -p skald-compiler passes::static_lifecycle::analysis::tests::function_values
 cargo test --locked -p skald-compiler --test pipeline_determinism function_value_composition
 make golden-filter GOLDEN_FILTER='function_values/**'
 ```

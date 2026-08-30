@@ -5,7 +5,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::mir::{MirVerificationError, StaticLifecycleAuthority, StaticLifecycleRootAuthority};
 
 use super::{
-    super::{extract, plan::PlannedMirProgram, root_effects},
+    super::{
+        analysis::{extract, root_effects},
+        plan::PlannedMirProgram,
+    },
     program_error,
 };
 

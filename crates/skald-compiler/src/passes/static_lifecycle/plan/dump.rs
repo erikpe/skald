@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    super::{dump::write_node, dump_static_effects},
+    super::analysis::{dump_static_effects, write_node},
     model::{PlannedMirProgram, StaticLifetimeDependency},
 };
 

@@ -1,4 +1,4 @@
-//! Static-effect guarantees for closed generic class specializations.
+//! Static-effect guarantees for closed-world generic class specializations.
 
 use crate::{
     identity::StaticFieldId,

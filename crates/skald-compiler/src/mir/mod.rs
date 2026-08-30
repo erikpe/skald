@@ -7,7 +7,7 @@
 mod build;
 mod dump;
 mod lower;
-pub(crate) mod model;
+mod model;
 mod verify;
 
 #[cfg(test)]
@@ -75,10 +75,6 @@ pub use model::{
     StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority,
     StaticLifecycleEffectFact, StaticLifecyclePlan, StaticLifecycleRootAuthority, StorageId,
     ValueId,
-};
-pub(crate) use model::{
-    StaticAccessEvidence, StaticEffectAnalysis, StaticFunctionValueCandidates,
-    StaticFunctionValueTarget, StaticLifetimeDependency,
 };
 pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,

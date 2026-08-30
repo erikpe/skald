@@ -1,6 +1,6 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: in progress; LCR0-LCR3 are complete and LCR4 is next.
+Status: in progress; LCR0-LCR4 are complete and LCR5 is next.
 
 This roadmap implements the frozen
 [static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
@@ -66,7 +66,7 @@ graph-reshaping passes can later rely.
 - [x] LCR1 — Issue exact immutable baseline authority
 - [x] LCR2 — Verify monotone final-MIR realization
 - [x] LCR3 — Separate analysis evidence from executable proof
-- [ ] LCR4 — Reorganize lifecycle module ownership
+- [x] LCR4 — Reorganize lifecycle module ownership
 - [ ] LCR5 — Canonicalize planned lifecycle data
 - [ ] LCR6 — Canonicalize the executable coordinator
 - [ ] LCR7 — Seal phase products and publish the optimization boundary
@@ -313,24 +313,24 @@ lint, documentation, MSRV, and diff gates all pass.
 **Purpose:** Move the now-separated models to their semantic owners and leave
 concise facades before further plan and coordinator representation changes.
 
-- [ ] Move direct effect graphs, nodes, edges, candidate inventories, solved
+- [x] Move direct effect graphs, nodes, edges, candidate inventories, solved
       summaries, SCC results, access evidence, and witness utilities under the
       static-lifecycle analysis implementation.
-- [ ] Keep normalized authority and lifecycle-root identities in the MIR model
+- [x] Keep normalized authority and lifecycle-root identities in the MIR model
       because they cross the planning, optimization, verification, and backend
       phase boundaries.
-- [ ] Split the large static-lifecycle MIR model into responsibility-oriented
+- [x] Split the large static-lifecycle MIR model into responsibility-oriented
       `proof`, `plan`, `coordinator`, and phase-product modules.
-- [ ] Keep `mir::model::static_lifecycle` and `passes::static_lifecycle` as
+- [x] Keep `mir::model::static_lifecycle` and `passes::static_lifecycle` as
       concise facades with minimal intentional re-exports; consumers must not
       depend on private file layout.
-- [ ] Remove the circular-looking pass re-exports of MIR-owned analysis types
+- [x] Remove the circular-looking pass re-exports of MIR-owned analysis types
       and update imports to name the actual semantic owner.
-- [ ] Keep deterministic comparison helpers next to the analysis/evidence
+- [x] Keep deterministic comparison helpers next to the analysis/evidence
       values they order rather than in a generic MIR model facade.
-- [ ] Keep substantial unit tests beside their implementation owners and
+- [x] Keep substantial unit tests beside their implementation owners and
       cross-phase/public API tests in the crate integration-test directory.
-- [ ] Preserve behavior, dumps, verifier errors, public supported paths, and
+- [x] Preserve behavior, dumps, verifier errors, public supported paths, and
       phase-product sizes exactly during this physical reorganization.
 
 **Tests:** Static-lifecycle analysis, planning, synthesis, and verification unit
@@ -348,6 +348,18 @@ unchanged pipeline and backend behavior.
 products each have one clear module owner behind concise facades, no behavior
 or supported public path changed unintentionally, and the subsequent schema
 tasks can edit their owner without reopening unrelated analysis modules.
+
+**Completed:** Static-effect graph extraction, candidate inventories, solved
+summaries, SCC results, access evidence, root closure, witnesses, deterministic
+ordering helpers, dumps, and focused tests now live under the private analysis
+owner. Planning-only dependency evidence lives with the planning report. The
+MIR schema keeps only stable lifecycle-root identity, compact normalized
+authority, executable plan, coordinator, and final phase-product data, split
+across responsibility modules behind a 21-line facade. The pass facade remains
+the supported public entry point, `mir::model` is private again, and no consumer
+imports private file layout. Focused lifecycle, public API, pipeline
+determinism, full compiler, formatting, lint, documentation, MSRV, and diff
+checks pass without dump, diagnostic, behavior, path, or product-shape changes.
 
 ### LCR5 — Canonicalize planned lifecycle data
 

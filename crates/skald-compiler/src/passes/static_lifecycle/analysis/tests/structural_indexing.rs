@@ -1,4 +1,4 @@
-//! Static-effect coverage for ordinary calls selected by structural brackets.
+//! Static-effect coverage for calls selected by structural brackets.
 
 use crate::{
     mir::StaticEffectNode,
