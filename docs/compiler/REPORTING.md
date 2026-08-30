@@ -300,8 +300,10 @@ The confirmed
 extends this reporting boundary with structured pass-occurrence observation.
 Its
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is planned; the current event and metric inventory above remains implemented
-behavior until that roadmap lands.
+is active. Registry and request/CLI schedule selection are implemented, but no
+pass executes yet; the current event and metric inventory above therefore
+remains implemented behavior until the verified runner and observation tasks
+land.
 
 Every attempted selected occurrence will produce one pipeline-owned record in
 schedule order. Its stable identity consists of schedule position, typed pass

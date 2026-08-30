@@ -77,12 +77,57 @@ fn compilation_request_retains_explicit_process_and_artifact_inputs() {
     assert_eq!(request.artifact().output(), Some(Path::new("out/main.s")));
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(
+        request.mir_optimization().profile(),
+        MirOptimizationProfile::Default
+    );
+    assert!(request.mir_optimization().disabled_passes().is_empty());
+    assert_eq!(
         request.environment().working_directory(),
         Path::new("/work/project")
     );
     assert_eq!(
         request.environment().default_standard_library_root(),
         Path::new("/install/skald/std")
+    );
+}
+
+#[test]
+fn mir_optimization_options_are_canonical_request_identity() {
+    let base = CompilationRequest::new(
+        EntrySelector::Module("app::main".parse().unwrap()),
+        Vec::new(),
+        StandardLibrarySelection::Disabled,
+        Target::X86_64SysV,
+        ArtifactOptions::default(),
+        CompilationEnvironment::new("workspace".into(), "installed/std".into()),
+    );
+    let options = MirOptimizationOptions::new(MirOptimizationProfile::None)
+        .with_disabled_pass("zeta-pass")
+        .with_disabled_pass("alpha-pass")
+        .with_disabled_pass("zeta-pass");
+    let configured = base.clone().with_mir_optimization(options.clone());
+
+    assert_eq!(options.profile(), MirOptimizationProfile::None);
+    assert_eq!(options.disabled_passes(), ["alpha-pass", "zeta-pass"]);
+    assert_eq!(configured.mir_optimization(), &options);
+    assert_eq!(configured.clone(), configured);
+    assert_ne!(configured, base);
+}
+
+#[test]
+fn unknown_disabled_passes_are_one_sorted_configuration_error() {
+    let options = MirOptimizationOptions::default()
+        .with_disabled_pass("zeta-pass")
+        .with_disabled_pass("missing-pass")
+        .with_disabled_pass("zeta-pass");
+
+    let error = options.resolve_schedule().unwrap_err();
+
+    assert_eq!(error.names(), ["missing-pass", "zeta-pass"]);
+    assert!(error.known_names().is_empty());
+    assert_eq!(
+        error.to_string(),
+        "unknown MIR pass names: `missing-pass`, `zeta-pass`; no MIR passes are registered"
     );
 }
 

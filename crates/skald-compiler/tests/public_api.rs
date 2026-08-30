@@ -9,7 +9,8 @@ use skald_compiler::{
         compile_request_to_assembly, compile_request_to_assembly_observed,
         compile_source_to_assembly, compile_source_to_assembly_observed, run_cli, ArtifactKind,
         ArtifactOptions, AssemblyArtifact, CompilationEnvironment, CompilationError,
-        CompilationRequest, EntrySelector, StandardLibrarySelection, Toolchain,
+        CompilationRequest, EntrySelector, MirOptimizationOptions, MirOptimizationProfile,
+        StandardLibrarySelection, Toolchain,
     },
     external::{ExternalLink, ExternalLinkTable},
     hir::{
@@ -85,13 +86,15 @@ fn intentional_module_and_request_paths_compose() {
         Target::X86_64SysV,
         ArtifactOptions::new(ArtifactKind::Assembly, Some("main.s".into())),
         CompilationEnvironment::new("project".into(), "install/std".into()),
-    );
+    )
+    .with_mir_optimization(MirOptimizationOptions::new(MirOptimizationProfile::Default));
 
     assert_eq!(entry.to_string(), "app::main");
     assert_eq!(request.entry(), &EntrySelector::Module(entry));
     assert_eq!(request.module_roots().len(), 2);
     assert_eq!(request.artifact().output(), Some(Path::new("main.s")));
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
+    assert_eq!(request.mir_optimization().profile().name(), "default");
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent

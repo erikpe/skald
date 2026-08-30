@@ -75,7 +75,8 @@ pub(super) fn compile<Stderr: Write>(
             working_directory,
             toolchain.standard_library_root().to_owned(),
         ),
-    );
+    )
+    .with_mir_optimization(options.mir_optimization);
 
     let mut observer = TextObserver::new(&mut *stderr, options.report_detail);
     let result = observe_run(
@@ -214,6 +215,10 @@ fn present_result<Stderr: Write>(
         Ok(report) => {
             write_selected_diagnostics(stderr, &report, diagnostic_level)?;
             Ok(0)
+        }
+        Err(CommandError::Compilation(CompilationError::MirOptimizationConfiguration(error))) => {
+            writeln!(stderr, "skac: {error}")?;
+            Ok(EXIT_USAGE)
         }
         Err(CommandError::Compilation(CompilationError::ProviderConfiguration(errors))) => {
             for error in errors {

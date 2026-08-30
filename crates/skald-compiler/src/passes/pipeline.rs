@@ -18,11 +18,11 @@ mod policy;
 #[allow(dead_code)]
 mod rewrite;
 
+pub use policy::MirOptimizationProfile;
 #[allow(unused_imports)]
 pub(crate) use policy::{
     registered_mir_pass_names, resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
-    MirOptimizationProfile, MirPassIdentity, MirPassOccurrence, MirPassSchedule,
-    MirPassScheduleError,
+    MirPassIdentity, MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
 };
 
 #[cfg(test)]
@@ -120,7 +120,9 @@ impl Deref for VerifiedFinalMirProgram {
 pub fn run_mir_pipeline(
     program: MirProgram,
 ) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
-    run_mir_pipeline_measured(program).result
+    let schedule = resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty())
+        .expect("compiler-owned default MIR pass policy must be valid");
+    run_mir_pipeline_measured(program, &schedule).result
 }
 
 /// Seals final MIR after the central ordinary and lifecycle-realization check.
@@ -142,7 +144,14 @@ pub fn verify_final_mir(
 /// pass-owned statistics to this coordinator. The pipeline, rather than the
 /// pass or driver, then records the execution and publishes those values. A
 /// pass must not format or emit reporting text itself.
-pub(crate) fn run_mir_pipeline_measured(program: MirProgram) -> MeasuredMirPipeline {
+pub(crate) fn run_mir_pipeline_measured(
+    program: MirProgram,
+    schedule: &MirPassSchedule,
+) -> MeasuredMirPipeline {
+    assert!(
+        schedule.is_empty(),
+        "the production final-MIR pass runner is not implemented yet"
+    );
     let mut statistics = MirPipelineStatistics::default();
     statistics.record_verification();
     let result = verify_final_mir(program);

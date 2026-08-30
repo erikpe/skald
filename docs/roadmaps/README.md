@@ -10,7 +10,8 @@ The
 [selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 is in progress. Its typed registry, empty `none`/`default` profiles,
 deterministic schedule occurrence model, exclusions, and crate-private exact
-schedule resolver are implemented. Typed request and CLI selection is next.
+schedule resolver are implemented. Typed request/CLI selection and schedule
+threading are also implemented. The verified multi-pass runner is next.
 
 ## Pending discoveries
 
@@ -23,7 +24,7 @@ starting sequence. Its first two recommended changes are now implemented; the
 and the completed
 [dense callable-local MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 are preserved in the archive. The selectable final-MIR pipeline is now the
-planned enabling layer around those foundations. The remaining five original
+active enabling layer around those foundations. The remaining five original
 constraints stay pending and have no implementation roadmap.
 
 The
@@ -52,8 +53,8 @@ into the living
 [driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
 and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
 contracts. The active roadmap owns implementation; no production optimization
-is implemented yet. The registry and schedule-policy foundation is current;
-the remaining pipeline is in progress.
+is implemented yet. Registry, schedule policy, and request/CLI selection are
+current; the verified runner and remaining pipeline are in progress.
 
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented

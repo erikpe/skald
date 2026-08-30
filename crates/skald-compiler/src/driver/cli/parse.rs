@@ -5,11 +5,12 @@ use std::{ffi::OsString, path::PathBuf};
 use crate::{
     backend::{RuntimeTracePolicy, DEFAULT_TARGET_NAME},
     module::ModulePath,
+    passes::MirOptimizationProfile,
     reporting::ReportDetail,
 };
 
 use super::super::request::{
-    ArtifactKind, ArtifactOptions, EntrySelector, StandardLibrarySelection,
+    ArtifactKind, ArtifactOptions, EntrySelector, MirOptimizationOptions, StandardLibrarySelection,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -18,6 +19,7 @@ pub(super) struct CompileOptions {
     pub module_roots: Vec<PathBuf>,
     pub standard_library: StandardLibrarySelection,
     pub artifact: ArtifactOptions,
+    pub mir_optimization: MirOptimizationOptions,
     pub target: String,
     pub report_detail: ReportDetail,
     pub diagnostic_level: DiagnosticLevel,
@@ -51,6 +53,8 @@ where
     let mut emit_seen = false;
     let mut target = None;
     let mut omit_runtime_trace = false;
+    let mut mir_optimization_profile = None;
+    let mut disabled_mir_passes = Vec::new();
     let mut verbose = 0usize;
     let mut quiet = 0usize;
     let mut report_level = None;
@@ -124,6 +128,21 @@ where
                 }
                 omit_runtime_trace = true;
             }
+            Some("--mir-optimization") => {
+                if mir_optimization_profile.is_some() {
+                    return Err("MIR optimization profile specified more than once".to_owned());
+                }
+                let value =
+                    utf8_option_value(&mut args, "--mir-optimization", "`none` or `default`")?;
+                mir_optimization_profile = Some(parse_mir_optimization_profile(&value)?);
+            }
+            Some("--disable-mir-pass") => {
+                disabled_mir_passes.push(utf8_option_value(
+                    &mut args,
+                    "--disable-mir-pass",
+                    "a registered MIR pass name",
+                )?);
+            }
             Some("--report-level") => {
                 if report_level.is_some() {
                     return Err("report level specified more than once".to_owned());
@@ -165,6 +184,14 @@ where
         StandardLibrarySelection::from_options(standard_library_root, no_standard_library)
             .map_err(|error| error.to_string())?;
     let report_detail = resolve_report_detail(verbose, quiet, report_level)?;
+    let mut mir_optimization =
+        MirOptimizationOptions::new(mir_optimization_profile.unwrap_or_default());
+    for name in disabled_mir_passes {
+        mir_optimization = mir_optimization.with_disabled_pass(name);
+    }
+    mir_optimization
+        .resolve_schedule()
+        .map_err(|error| error.to_string())?;
     Ok(Command::Compile(CompileOptions {
         entry,
         module_roots,
@@ -176,10 +203,21 @@ where
                 RuntimeTracePolicy::Enabled
             },
         ),
+        mir_optimization,
         target: target.unwrap_or_else(|| DEFAULT_TARGET_NAME.to_owned()),
         report_detail,
         diagnostic_level: diagnostic_level.unwrap_or(DiagnosticLevel::Warning),
     }))
+}
+
+fn parse_mir_optimization_profile(value: &str) -> Result<MirOptimizationProfile, String> {
+    match value {
+        "none" => Ok(MirOptimizationProfile::None),
+        "default" => Ok(MirOptimizationProfile::Default),
+        _ => Err(format!(
+            "invalid MIR optimization profile `{value}`; expected `none` or `default`"
+        )),
+    }
 }
 
 fn report_shorthand(argument: &str) -> Option<(usize, usize)> {

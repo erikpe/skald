@@ -13,6 +13,7 @@ mod request;
 mod statistics;
 mod toolchain;
 
+pub use crate::passes::MirOptimizationProfile;
 pub use cli::run_cli;
 pub use pipeline::{
     compile_request_to_assembly, compile_request_to_assembly_observed, compile_source_to_assembly,
@@ -20,7 +21,8 @@ pub use pipeline::{
 };
 pub use request::{
     ArtifactKind, ArtifactOptions, CompilationEnvironment, CompilationRequest, EntrySelectionError,
-    EntrySelector, StandardLibrarySelection, StandardLibrarySelectionError,
+    EntrySelector, MirOptimizationConfigurationError, MirOptimizationOptions,
+    StandardLibrarySelection, StandardLibrarySelectionError,
 };
 pub use toolchain::{
     LinkInvocation, LinkObservation, Toolchain, ToolchainError, C_COMPILER_ENV,

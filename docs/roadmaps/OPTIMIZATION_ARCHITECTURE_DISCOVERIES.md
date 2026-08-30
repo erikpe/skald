@@ -10,9 +10,9 @@ frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 and an active
 [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
-The roadmap's typed registry and deterministic schedule-policy foundation are
-implemented, with request selection next. The remaining constraints have no
-implementation roadmap.
+The roadmap's typed registry, deterministic schedule policy, and request/CLI
+selection are implemented, with the verified multi-pass runner next. The
+remaining constraints have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It

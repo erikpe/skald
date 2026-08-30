@@ -39,7 +39,8 @@ repository; see the [compiler crate API policy](README.md#compiler-crate-api-pol
 
 The facade exposes the typed `CompilationRequest` contract:
 `EntrySelector`, repeatable module-root paths, `StandardLibrarySelection`,
-`Target`, `ArtifactOptions`, and an explicit `CompilationEnvironment`.
+`Target`, `ArtifactOptions`, `MirOptimizationOptions`, and an explicit
+`CompilationEnvironment`.
 Construction resolves mutually exclusive entry and standard-library option
 forms but performs no filesystem access. Request compilation normalizes the
 selected ordinary and standard-library roots, loads only the reachable parsed
@@ -121,14 +122,16 @@ The confirmed
 adds target-independent optimization policy to the typed compilation request
 and CLI. Its
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is planned. The options in this section are therefore frozen future behavior,
-not accepted by the current CLI, and current compilation still uses the empty
-verification-only pipeline.
+is active. Typed request and CLI selection are implemented, while current
+compilation still uses the empty verification-only pipeline.
 
-`CompilationRequest` will contain a typed optimization options value with a
-non-breaking builder. Existing request construction and singleton compilation
-helpers select the `default` profile. The initial profiles are `none` and
-`default`; the framework is complete only when `default` contains
+`CompilationRequest` contains a typed `MirOptimizationOptions` value and the
+non-breaking `with_mir_optimization` builder. Options select a typed
+`MirOptimizationProfile` and a canonical lexical set of disabled stable pass
+names; duplicate disabling is idempotent in request identity. Existing request
+construction and singleton compilation helpers select `default`. The initial
+profiles are `none` and `default`; both currently resolve to empty schedules,
+and the framework is complete only when `default` contains
 `dead-pure-definition-elimination` exactly once. `none` remains the reference
 unoptimized mode and preserves the current final MIR path after its required
 central verification.
@@ -140,10 +143,13 @@ The frozen command-line surface is:
 --disable-mir-pass <name>
 ```
 
-`--mir-optimization` may appear once. `--disable-mir-pass` is repeatable and
+These options are implemented. `--mir-optimization` may appear once.
+`--disable-mir-pass` is repeatable and
 removes every occurrence of the named pass from the selected profile;
 duplicate disabling is idempotent. Unknown profile or pass names are usage
-errors, and known pass names in errors and help are sorted lexically. The CLI
+errors before provider or source I/O, and unknown and known pass-name lists are
+sorted lexically. Because the current registry is empty, every disabled name
+is currently unknown. The CLI
 does not initially expose arbitrary pass order, `-O`, or numeric optimization
 levels. A crate-private exact-schedule API belongs to compiler tests and tools,
 not the public driver policy.

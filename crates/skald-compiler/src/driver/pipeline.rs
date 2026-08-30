@@ -16,6 +16,7 @@ use crate::{
         static_lifecycle::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
         },
+        MirPassSchedule,
     },
     reporting::{
         NoopObserver, ReportDetail, ReportObserver, ReportOutcome, ReportPhase, ReportScope,
@@ -28,7 +29,7 @@ use crate::{
 
 use super::{
     observation::{observe_phase, observe_phase_with_metrics, observe_run},
-    statistics, CompilationRequest,
+    statistics, CompilationRequest, MirOptimizationConfigurationError, MirOptimizationOptions,
 };
 
 #[derive(Debug)]
@@ -45,6 +46,7 @@ pub struct AssemblyArtifact {
 
 #[derive(Debug)]
 pub enum CompilationError {
+    MirOptimizationConfiguration(MirOptimizationConfigurationError),
     ProviderConfiguration(Vec<ProviderNormalizationError>),
     Diagnostics(CompilationReport),
     MirVerification(crate::mir::MirVerificationErrors),
@@ -71,6 +73,10 @@ pub fn compile_request_to_assembly_observed(
     request: &CompilationRequest,
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
+    let mir_schedule = request
+        .mir_optimization()
+        .resolve_schedule()
+        .map_err(CompilationError::MirOptimizationConfiguration)?;
     observe_run(
         observer,
         ReportScope::Compilation,
@@ -115,6 +121,7 @@ pub fn compile_request_to_assembly_observed(
                 graph,
                 request.target(),
                 request.runtime_trace(),
+                &mir_schedule,
                 observer,
             )
         },
@@ -144,6 +151,9 @@ pub fn compile_source_to_assembly_observed(
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let path = path.as_ref();
+    let mir_schedule = MirOptimizationOptions::default()
+        .resolve_schedule()
+        .map_err(CompilationError::MirOptimizationConfiguration)?;
     observe_run(
         observer,
         ReportScope::Compilation,
@@ -199,6 +209,7 @@ pub fn compile_source_to_assembly_observed(
                 resolved.program,
                 target,
                 RuntimeTracePolicy::Enabled,
+                &mir_schedule,
                 observer,
             )
         },
@@ -210,6 +221,7 @@ fn compile_module_graph_to_assembly(
     graph: ModuleGraph,
     target: Target,
     runtime_trace: RuntimeTracePolicy,
+    mir_schedule: &MirPassSchedule,
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let resolved = observe_phase_with_metrics(
@@ -226,6 +238,7 @@ fn compile_module_graph_to_assembly(
         resolved.program,
         target,
         runtime_trace,
+        mir_schedule,
         observer,
     )
 }
@@ -236,6 +249,7 @@ fn finish_compilation(
     resolved: ResolvedProgram,
     target: Target,
     runtime_trace: RuntimeTracePolicy,
+    mir_schedule: &MirPassSchedule,
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
     if diagnostics.has_errors() {
@@ -302,7 +316,7 @@ fn finish_compilation(
     let measured_pipeline = observe_phase_with_metrics(
         observer,
         ReportPhase::MirPipeline,
-        || run_mir_pipeline_measured(mir),
+        || run_mir_pipeline_measured(mir, mir_schedule),
         |measured| result_outcome(&measured.result),
         |measured, _| statistics::mir_pipeline_metrics(measured),
     );

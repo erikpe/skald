@@ -1,4 +1,5 @@
 use super::*;
+use crate::reporting::{MetricValue, ReportDetail, ReportEvent, ReportPhase};
 
 fn write_canonical_standard_library(root: &Path) {
     for (relative, source) in canonical_standard_library_sources(&[]) {
@@ -56,6 +57,65 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
         .assembly
         .contains("call .Lska.fn.lib.answer.value.f1"));
     assert!(artifact.assembly.contains(".globl main"));
+}
+
+#[test]
+fn request_profiles_reach_quiet_and_observed_pipelines_with_empty_schedule_parity() {
+    let directory = TemporaryDirectory::new("request-optimization-profile").unwrap();
+    let root = directory.join("modules");
+    fs::create_dir_all(&root).unwrap();
+    fs::write(root.join("app.ska"), "fn main() -> i64 { return 6 * 7; }\n").unwrap();
+    let default = module_request(
+        &directory,
+        EntrySelector::Module("app".parse().unwrap()),
+        vec![root.clone()],
+    );
+    let none = module_request(
+        &directory,
+        EntrySelector::Module("app".parse().unwrap()),
+        vec![root],
+    )
+    .with_mir_optimization(MirOptimizationOptions::new(MirOptimizationProfile::None));
+
+    let default_artifact = compile_request_to_assembly(&default).unwrap();
+    let mut observer = crate::reporting::RecordingObserver::new(ReportDetail::Details);
+    let none_artifact = compile_request_to_assembly_observed(&none, &mut observer).unwrap();
+
+    assert_eq!(default_artifact.assembly, none_artifact.assembly);
+    assert!(default_artifact.report.diagnostics.is_empty());
+    assert!(none_artifact.report.diagnostics.is_empty());
+    let pass_executions = observer.events().iter().find_map(|event| match event {
+        ReportEvent::PhaseFinished {
+            phase: ReportPhase::MirPipeline,
+            metrics,
+            ..
+        } => metrics
+            .iter()
+            .find(|metric| metric.name() == "pass executions")
+            .map(|metric| metric.value()),
+        _ => None,
+    });
+    assert_eq!(pass_executions, Some(MetricValue::Count(0)));
+}
+
+#[test]
+fn invalid_request_optimization_is_rejected_before_provider_or_source_io() {
+    let directory = TemporaryDirectory::new("invalid-request-optimization").unwrap();
+    let request = module_request(
+        &directory,
+        EntrySelector::File(directory.join("missing.ska")),
+        vec![directory.join("missing-root")],
+    )
+    .with_mir_optimization(MirOptimizationOptions::default().with_disabled_pass("unknown-pass"));
+    let mut observer = crate::reporting::RecordingObserver::new(ReportDetail::Trace);
+
+    let error = compile_request_to_assembly_observed(&request, &mut observer).unwrap_err();
+
+    let CompilationError::MirOptimizationConfiguration(error) = error else {
+        panic!("invalid optimization selection must retain its failure category")
+    };
+    assert_eq!(error.names(), ["unknown-pass"]);
+    assert!(observer.events().is_empty());
 }
 
 #[test]

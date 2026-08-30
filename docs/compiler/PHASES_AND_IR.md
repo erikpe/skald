@@ -629,10 +629,13 @@ foundation over final MIR. Its frozen complete design is preserved in the
 and its delivery is owned by the
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md).
 The typed registry, empty profiles, schedule occurrence model, exclusions, and
-exact compiler-internal schedule resolver described below are implemented.
-Request/CLI selection, production schedule execution, per-pass observation,
-verified checkpoints, and the canary remain planned. The production pipeline
-therefore still performs one final verification and no transformation.
+exact compiler-internal schedule resolver described below are implemented, as
+are typed request and CLI selection. Every compiler adapter resolves its
+profile before provider or source work and passes that schedule to the MIR
+pipeline. Production schedule execution, per-pass observation, verified
+checkpoints, and the canary remain planned. Both supported profiles are empty,
+so the production pipeline still performs one final verification and no
+transformation.
 
 One compiler-owned immutable registry couples each entry's typed identity,
 unique stable lowercase kebab-case name, description, and implementation-
@@ -650,7 +653,7 @@ occurrence, duplicate exclusions are idempotent, and unknown names plus the
 complete known-name inventory are sorted lexically. Filesystem order, module
 discovery, registry order, map iteration, or compiler worker completion never
 selects execution order. Exact schedules are a crate-private input for tests
-and compiler tools. The planned command line selects profiles and exclusions,
+and compiler tools. The command line selects profiles and exclusions,
 not arbitrary pass order.
 
 The planned transforming runner first calls central final-MIR verification,

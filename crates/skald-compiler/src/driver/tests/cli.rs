@@ -35,6 +35,45 @@ fn invalid_arguments_are_usage_errors() {
 }
 
 #[test]
+fn mir_optimization_cli_selection_is_typed_and_precedes_source_io() {
+    let (exit_code, stdout, stderr) = run(&["skac", "missing.ska", "--mir-optimization", "none"]);
+    assert_eq!(exit_code, EXIT_COMPILE_ERROR);
+    assert!(stdout.is_empty());
+    assert!(stderr.contains("error[MOD001]: invalid entry"));
+
+    let cases = [
+        (
+            vec!["skac", "missing.ska", "--disable-mir-pass", "unknown-pass"],
+            "unknown MIR pass name: `unknown-pass`; no MIR passes are registered",
+        ),
+        (
+            vec!["skac", "--disable-mir-pass", "unknown-pass", "missing.ska"],
+            "unknown MIR pass name: `unknown-pass`; no MIR passes are registered",
+        ),
+        (
+            vec!["skac", "missing.ska", "--mir-optimization", "fast"],
+            "invalid MIR optimization profile `fast`",
+        ),
+        (
+            vec!["skac", "missing.ska", "--mir-optimization"],
+            "expected `none` or `default` after `--mir-optimization`",
+        ),
+        (
+            vec!["skac", "missing.ska", "--disable-mir-pass"],
+            "expected a registered MIR pass name after `--disable-mir-pass`",
+        ),
+    ];
+
+    for (arguments, expected) in cases {
+        let (exit_code, stdout, stderr) = run(&arguments);
+        assert_eq!(exit_code, EXIT_USAGE, "{arguments:?}: {stderr}");
+        assert!(stdout.is_empty());
+        assert!(stderr.contains(expected), "{arguments:?}: {stderr}");
+        assert!(!stderr.contains("error[MOD001]"), "{arguments:?}: {stderr}");
+    }
+}
+
+#[test]
 fn module_arguments_are_order_independent_and_selector_conflicts_are_usage_errors() {
     let cases = [
         (

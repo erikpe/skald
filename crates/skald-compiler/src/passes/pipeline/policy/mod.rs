@@ -12,7 +12,7 @@ mod schedule;
 
 pub(crate) use error::MirPassScheduleError;
 pub(crate) use identity::MirPassIdentity;
-pub(crate) use profile::MirOptimizationProfile;
+pub use profile::MirOptimizationProfile;
 pub(crate) use schedule::{MirPassOccurrence, MirPassSchedule};
 
 use registry::production_registry;

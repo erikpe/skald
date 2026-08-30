@@ -74,6 +74,86 @@ fn explicit_report_and_diagnostic_levels_are_typed() {
 }
 
 #[test]
+fn mir_optimization_profiles_are_typed_and_default_explicitly() {
+    assert_eq!(
+        options(&["skac", "main.ska"]).mir_optimization.profile(),
+        MirOptimizationProfile::Default
+    );
+    assert_eq!(
+        options(&["skac", "--mir-optimization", "none", "main.ska",])
+            .mir_optimization
+            .profile(),
+        MirOptimizationProfile::None
+    );
+    assert_eq!(
+        options(&["skac", "main.ska", "--mir-optimization", "default",])
+            .mir_optimization
+            .profile(),
+        MirOptimizationProfile::Default
+    );
+}
+
+#[test]
+fn mir_optimization_selection_rejects_repetition_missing_and_invalid_values() {
+    let cases = [
+        (
+            &[
+                "skac",
+                "main.ska",
+                "--mir-optimization",
+                "none",
+                "--mir-optimization",
+                "default",
+            ][..],
+            "MIR optimization profile specified more than once",
+        ),
+        (
+            &["skac", "main.ska", "--mir-optimization"][..],
+            "expected `none` or `default` after `--mir-optimization`",
+        ),
+        (
+            &["skac", "main.ska", "--mir-optimization", "aggressive"][..],
+            "invalid MIR optimization profile `aggressive`",
+        ),
+    ];
+
+    for (arguments, expected) in cases {
+        assert!(error(arguments).contains(expected), "{arguments:?}");
+    }
+}
+
+#[test]
+fn disabled_pass_names_are_validated_once_in_deterministic_order() {
+    let first = error(&[
+        "skac",
+        "main.ska",
+        "--disable-mir-pass",
+        "zeta-pass",
+        "--disable-mir-pass",
+        "missing-pass",
+        "--disable-mir-pass",
+        "zeta-pass",
+    ]);
+    let second = error(&[
+        "skac",
+        "--disable-mir-pass",
+        "missing-pass",
+        "--disable-mir-pass",
+        "zeta-pass",
+        "main.ska",
+    ]);
+
+    let expected =
+        "unknown MIR pass names: `missing-pass`, `zeta-pass`; no MIR passes are registered";
+    assert_eq!(first, expected);
+    assert_eq!(second, expected);
+    assert_eq!(
+        error(&["skac", "main.ska", "--disable-mir-pass"]),
+        "expected a registered MIR pass name after `--disable-mir-pass`"
+    );
+}
+
+#[test]
 fn explicit_levels_reject_conflicts_repetition_and_invalid_values() {
     let cases = [
         (

@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: in progress. MPR0 is complete; MPR1 is next.
+Status: in progress. MPR0 and MPR1 are complete; MPR2 is next.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -85,7 +85,7 @@ rather than expanding an active task.
 ## Progress
 
 - [x] MPR0 — Establish registry, profiles, and schedule resolution
-- [ ] MPR1 — Add typed request and CLI selection
+- [x] MPR1 — Add typed request and CLI selection
 - [ ] MPR2 — Productionize the verified multi-pass runner
 - [ ] MPR3 — Add structured pass measurements and reporting
 - [ ] MPR4 — Add verified pipeline inspection checkpoints
@@ -151,26 +151,26 @@ on 2026-08-30.
 **Purpose:** Make optimization selection explicit request policy with one
 deterministic supported command-line surface.
 
-- [ ] Add a typed final-MIR optimization options value to
+- [x] Add a typed final-MIR optimization options value to
       `CompilationRequest` through a non-breaking builder and include it in
       request clone/equality behavior.
-- [ ] Make existing request construction and singleton helpers select
+- [x] Make existing request construction and singleton helpers select
       `default`; document that its schedule remains temporarily empty until the
       canary activation task.
-- [ ] Thread resolved options through both quiet and observed compilation
+- [x] Thread resolved options through both quiet and observed compilation
       adapters to the pass pipeline without coupling them to target, runtime
       trace, report detail, or artifact policy.
-- [ ] Parse `--mir-optimization <none|default>` exactly once and repeatable
+- [x] Parse `--mir-optimization <none|default>` exactly once and repeatable
       `--disable-mir-pass <name>` with idempotent duplicate disabling.
-- [ ] Render deterministic usage failures for missing, repeated, invalid, and
+- [x] Render deterministic usage failures for missing, repeated, invalid, and
       unknown values, with known pass names sorted lexically.
-- [ ] Update `skac --help` and driver-focused documentation without adding
+- [x] Update `skac --help` and driver-focused documentation without adding
       `-O`, numeric levels, arbitrary pass ordering, environment variables, or
       configuration files.
-- [ ] Ensure invalid selection performs no provider or source I/O and that
+- [x] Ensure invalid selection performs no provider or source I/O and that
       every existing CLI/request construction path retains its prior behavior
       under the temporarily empty `default` schedule.
-- [ ] Consolidate adjacent option parsing or request-default duplication when
+- [x] Consolidate adjacent option parsing or request-default duplication when
       it is small and directly reduces the new policy's maintenance cost.
 
 **Tests:** Request default, builder, clone, and equality; quiet/observed and
@@ -186,7 +186,21 @@ usage exit status and no-I/O behavior; current assembly and diagnostic parity.
 exclusions deterministically, the CLI exposes only the frozen two options, and
 the still-empty production schedules preserve exact current compilation.
 
-**Completed:**
+**Completed:** `CompilationRequest` now owns typed, cloneable, comparable
+final-MIR options with a non-breaking builder, a `default` profile default,
+and canonical sorted/deduplicated exclusions. Quiet, observed, singleton, and
+request compilation paths resolve and thread one immutable schedule into the
+pipeline independently of target, reporting, runtime-trace, and artifact
+policy. `skac` exposes only `--mir-optimization <none|default>` and repeatable
+`--disable-mir-pass <name>`; deterministic configuration errors are reported
+as usage failures before provider or source I/O. Focused request, driver,
+public-API, pass-pipeline, and real-binary tests cover defaults, builder
+identity, option order, invalid forms, no-I/O failure, zero pass execution, and
+exact assembly/process-output parity while both production schedules remain
+empty. `cargo test --locked -p skald-compiler driver`,
+`cargo test --locked -p skald-compiler passes`, `make cli-test`,
+`make fmt-check`, `make lint`, `make docs-check`, `make msrv-check`, and
+`git diff --check` passed on 2026-08-30.
 
 ### MPR2 — Productionize the verified multi-pass runner
 

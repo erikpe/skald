@@ -31,6 +31,50 @@ fn help_succeeds_through_the_binary_entry_point() {
     assert!(help.contains("-v, -q                  Increase or decrease operational report detail"));
     assert!(help.contains("--report-level <level>  Select off, phases, details, or trace reports"));
     assert!(help.contains("--diagnostic-level <l>  Render warning or error diagnostics"));
+    assert!(help.contains("--mir-optimization <none|default>"));
+    assert!(help.contains("--disable-mir-pass <name>"));
+}
+
+#[test]
+fn real_binary_accepts_both_empty_mir_profiles_with_exact_assembly_parity() {
+    let directory = TemporaryDirectory::new("mir-optimization-profiles").unwrap();
+    let source = directory.join("main.ska");
+    let default_assembly = directory.join("default.s");
+    let none_assembly = directory.join("none.s");
+    fs::write(&source, "fn main() -> i64 { return 6 * 7; }\n").unwrap();
+
+    let default = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args([
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "--mir-optimization",
+            "default",
+            "-o",
+        ])
+        .arg(&default_assembly)
+        .output()
+        .unwrap();
+    let none = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args([
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "--mir-optimization",
+            "none",
+            "-o",
+        ])
+        .arg(&none_assembly)
+        .output()
+        .unwrap();
+
+    assert_same_process_output(&default, &none);
+    assert_eq!(
+        fs::read(default_assembly).unwrap(),
+        fs::read(none_assembly).unwrap()
+    );
 }
 
 #[test]

@@ -22,11 +22,15 @@ fn lowered_program() -> MirProgram {
     lower_source_to_mir("fn main() -> i64 { return 0; }")
 }
 
+fn default_schedule() -> MirPassSchedule {
+    resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap()
+}
+
 #[test]
 fn empty_pipeline_preserves_valid_mir_and_reports_only_verification() {
     let mir = lowered_program();
     let expected = mir.clone();
-    let measured = run_mir_pipeline_measured(mir);
+    let measured = run_mir_pipeline_measured(mir, &default_schedule());
 
     assert_eq!(measured.result.unwrap().program(), &expected);
     assert_eq!(measured.statistics.verification_executions(), 1);
@@ -106,7 +110,7 @@ fn rejected_mir_still_reports_the_verification_execution() {
         .blocks[0]
         .terminator = None;
 
-    let measured = run_mir_pipeline_measured(mir);
+    let measured = run_mir_pipeline_measured(mir, &default_schedule());
     assert!(measured
         .result
         .unwrap_err()

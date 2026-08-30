@@ -10,8 +10,9 @@ The
 [implementation roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 owns delivery. Its typed registry, empty profiles, deterministic schedule and
 occurrence model, exclusions, and exact compiler-internal schedule resolver
-are implemented; request/CLI wiring, production pass execution, observation,
-and the canary remain planned.
+are implemented. Typed request/CLI selection is also implemented and threads
+the resolved empty schedule to the pipeline; production pass execution,
+observation, and the canary remain planned.
 
 This proposal defines the first production target-independent optimization
 framework for Skald. It builds on the implemented static-lifecycle authority

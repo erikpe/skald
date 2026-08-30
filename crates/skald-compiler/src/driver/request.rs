@@ -6,7 +6,119 @@ use std::{
 use crate::{
     backend::{RuntimeTracePolicy, Target},
     module::{ModulePath, ProviderRootConfiguration},
+    passes::{
+        resolve_mir_pass_schedule, MirOptimizationProfile, MirPassSchedule, MirPassScheduleError,
+    },
 };
+
+/// Target-independent final-MIR optimization policy for one compilation.
+///
+/// Disabled names are kept in lexical order without duplicates so equivalent
+/// option sequences have equal request identity.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptimizationOptions {
+    profile: MirOptimizationProfile,
+    disabled_passes: Vec<String>,
+}
+
+impl MirOptimizationOptions {
+    pub const fn new(profile: MirOptimizationProfile) -> Self {
+        Self {
+            profile,
+            disabled_passes: Vec::new(),
+        }
+    }
+
+    pub fn with_disabled_pass(mut self, name: impl Into<String>) -> Self {
+        let name = name.into();
+        match self.disabled_passes.binary_search(&name) {
+            Ok(_) => {}
+            Err(position) => self.disabled_passes.insert(position, name),
+        }
+        self
+    }
+
+    pub const fn profile(&self) -> MirOptimizationProfile {
+        self.profile
+    }
+
+    pub fn disabled_passes(&self) -> &[String] {
+        &self.disabled_passes
+    }
+
+    pub(crate) fn resolve_schedule(
+        &self,
+    ) -> Result<MirPassSchedule, MirOptimizationConfigurationError> {
+        match resolve_mir_pass_schedule(
+            self.profile,
+            self.disabled_passes.iter().map(String::as_str),
+        ) {
+            Ok(schedule) => Ok(schedule),
+            Err(MirPassScheduleError::UnknownNames { names, known_names }) => {
+                Err(MirOptimizationConfigurationError { names, known_names })
+            }
+            Err(
+                error @ (MirPassScheduleError::InvalidRegistry(_)
+                | MirPassScheduleError::UnknownIdentity { .. }),
+            ) => {
+                panic!("invalid compiler-owned final-MIR pass policy: {error}")
+            }
+        }
+    }
+}
+
+impl Default for MirOptimizationOptions {
+    fn default() -> Self {
+        Self::new(MirOptimizationProfile::Default)
+    }
+}
+
+/// Unknown stable pass names in target-independent optimization policy.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptimizationConfigurationError {
+    names: Vec<String>,
+    known_names: Vec<&'static str>,
+}
+
+impl MirOptimizationConfigurationError {
+    pub fn names(&self) -> &[String] {
+        &self.names
+    }
+
+    pub fn known_names(&self) -> &[&'static str] {
+        &self.known_names
+    }
+}
+
+impl fmt::Display for MirOptimizationConfigurationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "unknown MIR pass name{}: {}",
+            if self.names.len() == 1 { "" } else { "s" },
+            self.names
+                .iter()
+                .map(|name| format!("`{name}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )?;
+        if self.known_names.is_empty() {
+            formatter.write_str("; no MIR passes are registered")
+        } else {
+            write!(
+                formatter,
+                "; known MIR passes: {}",
+                self.known_names
+                    .iter()
+                    .map(|name| format!("`{name}`"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+    }
+}
+
+impl std::error::Error for MirOptimizationConfigurationError {}
 
 /// The selected source identity from which reachable compilation begins.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -171,6 +283,7 @@ pub struct CompilationRequest {
     standard_library: StandardLibrarySelection,
     target: Target,
     artifact: ArtifactOptions,
+    mir_optimization: MirOptimizationOptions,
     environment: CompilationEnvironment,
 }
 
@@ -189,8 +302,14 @@ impl CompilationRequest {
             standard_library,
             target,
             artifact,
+            mir_optimization: MirOptimizationOptions::default(),
             environment,
         }
+    }
+
+    pub fn with_mir_optimization(mut self, options: MirOptimizationOptions) -> Self {
+        self.mir_optimization = options;
+        self
     }
 
     pub const fn entry(&self) -> &EntrySelector {
@@ -215,6 +334,10 @@ impl CompilationRequest {
 
     pub const fn runtime_trace(&self) -> RuntimeTracePolicy {
         self.artifact.runtime_trace()
+    }
+
+    pub const fn mir_optimization(&self) -> &MirOptimizationOptions {
+        &self.mir_optimization
     }
 
     pub const fn environment(&self) -> &CompilationEnvironment {
