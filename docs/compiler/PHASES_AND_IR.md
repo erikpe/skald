@@ -605,17 +605,18 @@ transforming coordinator verifies raw input before invoking the rewrite,
 distinguishes input-verification, structural-rewrite, and output-verification
 failures, and returns rewritten output through `verify_final_mir`. That central
 boundary remains authoritative for ordinary MIR semantics and immutable
-static-lifecycle baseline realization. A synthetic single-pass path exercises
-immediate post-pass verification for tests and debug localization without
-registering a production transformation.
+static-lifecycle baseline realization. Exact internal schedules exercise the
+same production multi-pass runner without registering a production
+transformation.
 
 Pipeline accounting records verification and pass executions at the point they
-occur. Structurally successful commits contribute their already-known callable
-and retained/inserted/removed entity counts; the editor emits no report text.
-The driver renders those rewrite counts only when a transforming pass actually
-ran. The empty production pipeline therefore retains byte-for-byte MIR, one
-final verification, zero transformation executions, and its existing report
-shape.
+occur. Structurally successful commits contribute already-known processed and
+changed callable counts plus retained/inserted/removed entity counts; the
+editor emits no report text. Pass-owned integer counters retain deterministic
+first-owner and first-counter order. The driver renders aggregate counts at
+details level and typed occurrence records at trace level. The empty
+production pipeline therefore retains byte-for-byte MIR, one final
+verification, zero transformation executions, and no pass-finished events.
 
 This direction adds no SSA form, persistent instruction identity, public
 common callable-body restructuring, general pass registry, optimization-level
@@ -634,10 +635,11 @@ The typed registry, empty profiles, schedule occurrence model, exclusions, and
 exact compiler-internal schedule resolver described below are implemented, as
 are typed request and CLI selection. Every compiler adapter resolves its
 profile before provider or source work and passes that schedule to the MIR
-pipeline. Production schedule execution and structured failure attribution are
-implemented; per-pass observation, verified checkpoints, and the canary remain
-planned. Both supported profiles are empty, so ordinary production compilation
-still performs one final verification and no transformation.
+pipeline. Production schedule execution, structured failure attribution, and
+pass measurement/reporting are implemented; verified checkpoints and the
+canary remain planned. Both supported profiles are empty, so ordinary
+production compilation still performs one final verification and no
+transformation.
 
 One compiler-owned immutable registry couples each entry's typed identity,
 unique stable lowercase kebab-case name, description, implementation-declared
@@ -681,13 +683,20 @@ no preservation declarations or global analysis manager. Whole-program
 analysis may inspect all verified definitions, but edits still commit through
 the single atomic program coordinator.
 
-The next reporting and inspection layers add ordered occurrence measurements,
-deterministic aggregates, and optional borrowed checkpoints after initial
+The runner now returns deterministic aggregates and, when trace observation is
+requested, one ordered typed record for every attempted occurrence. Records
+distinguish unchanged, changed, and failed outcomes; identify repetitions by
+pass identity, stable name, schedule position, and occurrence number; and keep
+unavailable failure measurements absent. Pass timers and record allocation are
+skipped below trace detail. Reports contain compact typed metrics and events
+rather than MIR text, distinguish processed from actually changed callables,
+and treat elapsed durations as observations rather than deterministic
+products.
+
+The next inspection layer adds optional borrowed checkpoints after initial
 verification, each completed occurrence, and the complete schedule. Only
-verified products may be inspected. Reports contain compact typed metrics and
-events rather than MIR text; phase-owned dumps remain a separate observation
-surface. Pass metrics distinguish processed callables from callables actually
-changed. Elapsed durations are observations and never deterministic products.
+verified products may be inspected, and phase-owned dumps remain a separate
+observation surface.
 
 The framework's production canary removes only an unused
 `MirInstruction::Assign` whose rvalue is an integer, byte, binary64-bit, or

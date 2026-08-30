@@ -6,6 +6,7 @@ use crate::{
 };
 
 use super::super::VerifiedFinalMirProgram;
+use super::measurement::MirPassMeasurement;
 
 /// Deterministic internal failure reported by a pass outside dense commit.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,22 +32,63 @@ impl std::error::Error for MirPassExecutionError {}
 
 /// Pass-owned data retained with an explicit unchanged or changed outcome.
 ///
-/// Per-pass integer measurements are added by the reporting milestone. The
-/// changed-callable count is carried now because dense commit deliberately
-/// processes every executable callable, whether the pass edited it or not.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+/// Processed and changed callable counts remain separate because dense commit
+/// deliberately processes every executable callable, whether the pass edited
+/// it or not. Additional counters retain the pass's declaration order.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(in crate::passes::pipeline) struct MirPassData {
+    processed_callables: usize,
     changed_callables: usize,
+    measurements: Vec<MirPassMeasurement>,
 }
 
 impl MirPassData {
     #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn changed(changed_callables: usize) -> Self {
-        Self { changed_callables }
+        Self {
+            processed_callables: 0,
+            changed_callables,
+            measurements: Vec::new(),
+        }
     }
 
-    pub(super) const fn changed_callables(self) -> usize {
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) const fn processed(processed_callables: usize) -> Self {
+        Self {
+            processed_callables,
+            changed_callables: 0,
+            measurements: Vec::new(),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) fn with_measurement(
+        mut self,
+        measurement: MirPassMeasurement,
+    ) -> Self {
+        self.measurements.push(measurement);
+        self
+    }
+
+    pub(super) const fn processed_callables(&self) -> usize {
+        self.processed_callables
+    }
+
+    pub(super) const fn changed_callables(&self) -> usize {
         self.changed_callables
+    }
+
+    pub(super) fn measurements(&self) -> &[MirPassMeasurement] {
+        &self.measurements
+    }
+
+    pub(super) fn into_measurements(self) -> Vec<MirPassMeasurement> {
+        self.measurements
+    }
+
+    fn with_processed_callables(mut self, processed_callables: usize) -> Self {
+        self.processed_callables = processed_callables;
+        self
     }
 }
 
@@ -78,6 +120,22 @@ impl MirPassCapability {
     }
 
     #[allow(dead_code)]
+    pub(in crate::passes::pipeline) fn unchanged_with(
+        self,
+        data: MirPassData,
+    ) -> Result<MirPassOutcome, MirPassFailure> {
+        if data.changed_callables() != 0 {
+            return Err(MirPassFailure::execution(
+                "an unchanged pass outcome reported changed callables",
+            ));
+        }
+        Ok(MirPassOutcome::Unchanged {
+            verified: self.verified,
+            data,
+        })
+    }
+
+    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn rewrite(
         self,
         rewrite: impl FnMut(CallableId, &mut MirCallableEdit) -> Result<(), MirRewriteError>,
@@ -106,6 +164,7 @@ impl MirChangedProgram {
                 self.rewrite.callables.len()
             )));
         }
+        let data = data.with_processed_callables(self.rewrite.callables.len());
         Ok(MirPassOutcome::Changed {
             rewrite: self.rewrite,
             data,

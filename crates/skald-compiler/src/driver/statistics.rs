@@ -198,7 +198,7 @@ pub(super) fn lifecycle_synthesis_metrics(program: &MirProgram) -> Vec<ReportMet
 
 pub(super) fn mir_pipeline_metrics(measured: &MeasuredMirPipeline) -> Vec<ReportMetric> {
     mir_pipeline_metrics_from(
-        measured.statistics,
+        &measured.statistics,
         measured
             .result
             .as_ref()
@@ -208,7 +208,7 @@ pub(super) fn mir_pipeline_metrics(measured: &MeasuredMirPipeline) -> Vec<Report
 }
 
 fn mir_pipeline_metrics_from(
-    statistics: MirPipelineStatistics,
+    statistics: &MirPipelineStatistics,
     program: Option<&MirProgram>,
 ) -> Vec<ReportMetric> {
     let mut metrics = pipeline_execution_metrics(statistics);
@@ -218,7 +218,7 @@ fn mir_pipeline_metrics_from(
     metrics
 }
 
-fn pipeline_execution_metrics(statistics: MirPipelineStatistics) -> Vec<ReportMetric> {
+fn pipeline_execution_metrics(statistics: &MirPipelineStatistics) -> Vec<ReportMetric> {
     let mut metrics = vec![
         ReportMetric::count(
             "verification executions",
@@ -229,7 +229,8 @@ fn pipeline_execution_metrics(statistics: MirPipelineStatistics) -> Vec<ReportMe
     if statistics.pass_executions() != 0 {
         let changes = statistics.rewrite_changes();
         metrics.extend([
-            ReportMetric::count("rewritten callables", statistics.rewritten_callables()),
+            ReportMetric::count("processed callables", statistics.processed_callables()),
+            ReportMetric::count("changed callables", statistics.changed_callables()),
             ReportMetric::count(
                 "retained MIR entities",
                 u64::try_from(changes.retained()).unwrap_or(u64::MAX),
@@ -243,6 +244,13 @@ fn pipeline_execution_metrics(statistics: MirPipelineStatistics) -> Vec<ReportMe
                 u64::try_from(changes.removed()).unwrap_or(u64::MAX),
             ),
         ]);
+        metrics.extend(
+            statistics
+                .pass_measurements()
+                .map(|(_, pass_name, measurement)| {
+                    ReportMetric::pass_count(pass_name, measurement.name(), measurement.value())
+                }),
+        );
     }
     metrics
 }
@@ -308,12 +316,49 @@ mod tests {
             .as_ref()
             .ok()
             .map(|verified| verified.program());
-        let metrics = mir_pipeline_metrics_from(measured.statistics, program);
+        let metrics = mir_pipeline_metrics_from(&measured.statistics, program);
 
         assert_eq!(metric(&metrics, "verification executions"), Some(1));
         assert_eq!(metric(&metrics, "pass executions"), Some(0));
-        assert_eq!(metric(&metrics, "rewritten callables"), None);
+        assert_eq!(metric(&metrics, "processed callables"), None);
         assert_eq!(metric(&metrics, "retained MIR entities"), None);
+    }
+
+    #[test]
+    fn pipeline_metrics_preserve_pipeline_then_pass_owner_order() {
+        let statistics = MirPipelineStatistics::for_test(
+            2,
+            3,
+            9,
+            2,
+            vec![
+                (7, "first-pass", "visited values", 11),
+                (7, "first-pass", "removed values", 4),
+                (8, "second-pass", "folded values", 3),
+            ],
+        );
+
+        let metrics = pipeline_execution_metrics(&statistics);
+        assert_eq!(
+            metrics
+                .iter()
+                .map(|metric| (metric.owner(), metric.name()))
+                .collect::<Vec<_>>(),
+            [
+                (None, "verification executions"),
+                (None, "pass executions"),
+                (None, "processed callables"),
+                (None, "changed callables"),
+                (None, "retained MIR entities"),
+                (None, "inserted MIR entities"),
+                (None, "removed MIR entities"),
+                (Some("first-pass"), "visited values"),
+                (Some("first-pass"), "removed values"),
+                (Some("second-pass"), "folded values"),
+            ]
+        );
+        assert_eq!(metric(&metrics, "processed callables"), Some(9));
+        assert_eq!(metric(&metrics, "changed callables"), Some(2));
     }
 
     fn metric(metrics: &[ReportMetric], name: &str) -> Option<u64> {

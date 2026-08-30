@@ -1,6 +1,6 @@
 # Selectable Final-MIR Optimization Pipeline Roadmap
 
-Status: in progress. MPR0 through MPR2 are complete; MPR3 is next.
+Status: in progress. MPR0 through MPR3 are complete; MPR4 is next.
 
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -87,7 +87,7 @@ rather than expanding an active task.
 - [x] MPR0 — Establish registry, profiles, and schedule resolution
 - [x] MPR1 — Add typed request and CLI selection
 - [x] MPR2 — Productionize the verified multi-pass runner
-- [ ] MPR3 — Add structured pass measurements and reporting
+- [x] MPR3 — Add structured pass measurements and reporting
 - [ ] MPR4 — Add verified pipeline inspection checkpoints
 - [ ] MPR5 — Publish an exhaustive value-use census
 - [ ] MPR6 — Implement the dead-pure-definition canary
@@ -278,24 +278,24 @@ handoff, and function/member/static-initializer rewriting.
 **Purpose:** Make optimization work observable as typed deterministic data
 without coupling pass implementations to logging or presentation.
 
-- [ ] Define an ordered pass-occurrence record containing stable occurrence
+- [x] Define an ordered pass-occurrence record containing stable occurrence
       identity, elapsed duration, unchanged/changed outcome, and pass-owned
       integer measurements.
-- [ ] Clarify pipeline vocabulary and counters so processed callables and
+- [x] Clarify pipeline vocabulary and counters so processed callables and
       callables actually changed cannot be confused with successful commits.
-- [ ] Aggregate verification executions, pass executions, pass-owned counters,
+- [x] Aggregate verification executions, pass executions, pass-owned counters,
       and final MIR sizes in deterministic owner order on the MIR-pipeline
       phase finish event.
-- [ ] Extend trace reporting with one typed pass-finished event for every
+- [x] Extend trace reporting with one typed pass-finished event for every
       attempted occurrence in schedule order, including a failed outcome.
-- [ ] Preserve error ownership: the structured pipeline error remains
+- [x] Preserve error ownership: the structured pipeline error remains
       authoritative for a failed occurrence, and reporting does not fabricate
       a successful outcome, later occurrence, or unavailable measurement.
-- [ ] Keep pass modules limited to returning already-known counts; the runner
+- [x] Keep pass modules limited to returning already-known counts; the runner
       owns timing and event conversion, and reporting owns rendering.
-- [ ] Avoid report-only traversal, allocation, or formatting when the observer
+- [x] Avoid report-only traversal, allocation, or formatting when the observer
       does not request the relevant detail.
-- [ ] Keep elapsed values out of deterministic products and tests while making
+- [x] Keep elapsed values out of deterministic products and tests while making
       identity, order, outcome, and integer counts directly assertable.
 
 **Tests:** Exact occurrence order and identity including repetition; unchanged
@@ -314,6 +314,24 @@ aggregates with clear processed/changed vocabulary, reporting renders it at
 the intended levels, and observation cannot affect pipeline products.
 
 **Completed:**
+
+The production runner now owns optional ordered occurrence records with typed
+pass identity, stable name, schedule position, repetition number, outcome,
+elapsed duration, processed and changed callables, structural commit counts,
+occurrence-caused verification executions, and pass-owned integer counters.
+Aggregate accounting uses explicit processed/changed vocabulary and retains
+pass metrics in deterministic first-owner/first-counter order. Trace observers
+receive one typed `MirPassFinished` event per attempted occurrence before the
+MIR-pipeline finish event; pre-outcome failures omit unavailable pass data and
+the structured pipeline error remains authoritative. Off, phases-only, and
+details-only paths skip occurrence timing and record allocation, while fixed
+duration fixtures keep live timing out of deterministic assertions. Focused
+tests cover repetition, changed and unchanged results, output and pass
+failures, cut-off, aggregation, owner-qualified rendering, and detail-level
+filtering. `cargo test --locked -p skald-compiler reporting`,
+`cargo test --locked -p skald-compiler passes`, `make compiler-test`,
+`make cli-test`, `make fmt-check`, `make lint`, `make docs-check`,
+`make msrv-check`, and `git diff --check` passed on 2026-08-30.
 
 ### MPR4 — Add verified pipeline inspection checkpoints
 

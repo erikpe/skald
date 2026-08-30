@@ -31,6 +31,7 @@ const FAIL_SECOND: MirPassIdentity = MirPassIdentity::new(107);
 const RETARGET_STATIC: MirPassIdentity = MirPassIdentity::new(108);
 const REWRITE_ALL: MirPassIdentity = MirPassIdentity::new(109);
 const INVALID_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(110);
+const MEASURED_UNCHANGED: MirPassIdentity = MirPassIdentity::new(111);
 
 const fn registration(
     identity: MirPassIdentity,
@@ -43,7 +44,7 @@ const fn registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 11] = [
+static TEST_REGISTRATIONS: [MirPassRegistration; 12] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -74,6 +75,11 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 11] = [
         INVALID_ACCOUNTING,
         "invalid-accounting-pass",
         invalid_accounting_pass,
+    ),
+    registration(
+        MEASURED_UNCHANGED,
+        "measured-unchanged-pass",
+        measured_unchanged_pass,
     ),
 ];
 
@@ -120,7 +126,7 @@ fn empty_pipeline_preserves_valid_mir_and_reports_only_verification() {
     assert_eq!(measured.result.unwrap().program(), &expected);
     assert_eq!(measured.statistics.verification_executions(), 1);
     assert_eq!(measured.statistics.pass_executions(), 0);
-    assert_eq!(measured.statistics.rewritten_callables(), 0);
+    assert_eq!(measured.statistics.processed_callables(), 0);
     assert_eq!(measured.statistics.changed_callables(), 0);
     assert_eq!(
         measured.statistics.rewrite_changes(),
@@ -199,7 +205,7 @@ fn invalid_input_stops_before_the_first_pass() {
 
     let measured = run_mir_pipeline_measured(mir, &test_schedule(&[UNCHANGED, LATER]));
 
-    let error = measured.result.unwrap_err();
+    let error = measured.result.as_ref().unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::InputVerification);
     assert_eq!(error.pass_name(), None);
     assert!(execution_log().is_empty());
@@ -219,7 +225,116 @@ fn unchanged_pass_retains_the_verified_product_without_reverification() {
     assert_eq!(execution_log(), ["unchanged"]);
     assert_eq!(measured.statistics.verification_executions(), 1);
     assert_eq!(measured.statistics.pass_executions(), 1);
-    assert_eq!(measured.statistics.rewritten_callables(), 0);
+    assert_eq!(measured.statistics.processed_callables(), 0);
+}
+
+#[test]
+fn occurrence_records_preserve_schedule_identity_outcomes_and_pass_measurements() {
+    clear_test_state();
+    let measured = run_mir_pipeline_with_occurrences(
+        lowered_program(),
+        &test_schedule(&[MEASURED_UNCHANGED, UNCHANGED, MEASURED_UNCHANGED]),
+    );
+
+    assert!(measured.result.is_ok());
+    let records = measured.occurrences();
+    assert_eq!(records.len(), 3);
+    assert_eq!(
+        records
+            .iter()
+            .map(|record| (
+                record.position(),
+                record.identity(),
+                record.name(),
+                record.occurrence(),
+                record.outcome(),
+            ))
+            .collect::<Vec<_>>(),
+        [
+            (
+                0,
+                MEASURED_UNCHANGED,
+                "measured-unchanged-pass",
+                0,
+                MirPassOccurrenceOutcome::Unchanged,
+            ),
+            (
+                1,
+                UNCHANGED,
+                "unchanged-pass",
+                0,
+                MirPassOccurrenceOutcome::Unchanged,
+            ),
+            (
+                2,
+                MEASURED_UNCHANGED,
+                "measured-unchanged-pass",
+                1,
+                MirPassOccurrenceOutcome::Unchanged,
+            ),
+        ]
+    );
+    assert_eq!(records[0].processed_callables(), Some(4));
+    assert_eq!(records[0].changed_callables(), Some(0));
+    assert_eq!(records[0].verification_executions(), 0);
+    assert_eq!(
+        records[0].measurements(),
+        [
+            MirPassMeasurement::count("visited values", 7),
+            MirPassMeasurement::count("removed values", 2),
+        ]
+    );
+    assert_eq!(measured.statistics.processed_callables(), 8);
+    assert_eq!(measured.statistics.changed_callables(), 0);
+    assert_eq!(
+        measured.statistics.pass_measurements().collect::<Vec<_>>(),
+        [
+            (
+                MEASURED_UNCHANGED,
+                "measured-unchanged-pass",
+                MirPassMeasurement::count("visited values", 14),
+            ),
+            (
+                MEASURED_UNCHANGED,
+                "measured-unchanged-pass",
+                MirPassMeasurement::count("removed values", 4),
+            ),
+        ]
+    );
+}
+
+#[test]
+fn occurrence_records_stop_at_failure_without_fabricating_unavailable_data() {
+    clear_test_state();
+    let measured = run_mir_pipeline_with_occurrences(
+        lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }"),
+        &test_schedule(&[DELETE_EQUIVALENT, EXECUTION_FAILURE, LATER]),
+    );
+
+    assert!(measured.result.is_err());
+    let records = measured.occurrences();
+    assert_eq!(records.len(), 2);
+    assert_eq!(records[0].outcome(), MirPassOccurrenceOutcome::Changed);
+    assert!(records[0].processed_callables().unwrap() > 0);
+    assert_eq!(records[0].changed_callables(), Some(1));
+    assert_eq!(records[0].verification_executions(), 1);
+    assert!(records[0].removed_mir_entities().unwrap() > 0);
+    assert_eq!(records[1].outcome(), MirPassOccurrenceOutcome::Failed);
+    assert_eq!(records[1].name(), "execution-failure-pass");
+    assert_eq!(records[1].processed_callables(), None);
+    assert_eq!(records[1].changed_callables(), None);
+    assert!(records[1].measurements().is_empty());
+    assert_eq!(execution_log(), ["delete", "execution-failure"]);
+}
+
+#[test]
+fn aggregate_only_runner_skips_occurrence_recording() {
+    let measured =
+        run_mir_pipeline_measured(lowered_program(), &test_schedule(&[MEASURED_UNCHANGED]));
+
+    assert!(measured.result.is_ok());
+    assert!(measured.occurrences().is_empty());
+    assert_eq!(measured.statistics.processed_callables(), 4);
 }
 
 #[test]
@@ -292,22 +407,29 @@ fn structural_rewrite_failure_stops_without_publishing_partial_mir() {
     assert!(error.to_string().contains("names a deleted edit slot"));
     assert_eq!(execution_log(), ["rewrite-failure"]);
     assert_eq!(measured.statistics.verification_executions(), 1);
-    assert_eq!(measured.statistics.rewritten_callables(), 0);
+    assert_eq!(measured.statistics.processed_callables(), 0);
 }
 
 #[test]
 fn changed_output_verification_failure_stops_before_later_occurrences() {
     clear_test_state();
     let mir = lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }");
-    let measured = run_mir_pipeline_measured(mir, &test_schedule(&[INVALID_OUTPUT, LATER]));
+    let measured = run_mir_pipeline_with_occurrences(mir, &test_schedule(&[INVALID_OUTPUT, LATER]));
 
-    let error = measured.result.unwrap_err();
+    let error = measured.result.as_ref().unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::OutputVerification);
     assert_eq!(error.pass_name(), Some("invalid-output-pass"));
     assert_eq!(execution_log(), ["invalid-output"]);
     assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(measured.statistics.pass_executions(), 1);
-    assert!(measured.statistics.rewritten_callables() > 0);
+    assert!(measured.statistics.processed_callables() > 0);
+    assert_eq!(measured.occurrences().len(), 1);
+    assert_eq!(
+        measured.occurrences()[0].outcome(),
+        MirPassOccurrenceOutcome::Failed
+    );
+    assert!(measured.occurrences()[0].processed_callables().is_some());
+    assert_eq!(measured.occurrences()[0].verification_executions(), 1);
 }
 
 #[test]
@@ -354,7 +476,7 @@ fn atomic_rewrite_visits_functions_members_and_static_initializers() {
         CallableId::Function(_) | CallableId::StaticInitializer(_)
     )));
     assert_eq!(
-        measured.statistics.rewritten_callables(),
+        measured.statistics.processed_callables(),
         u64::try_from(callables.len()).unwrap()
     );
     assert!(measured.statistics.changed_callables() >= 3);
@@ -402,6 +524,17 @@ fn unchanged_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPa
     log_execution("unchanged");
     assert!(!capability.verified().definitions.is_empty());
     Ok(capability.unchanged())
+}
+
+fn measured_unchanged_pass(
+    capability: MirPassCapability,
+) -> Result<MirPassOutcome, MirPassFailure> {
+    log_execution("measured-unchanged");
+    capability.unchanged_with(
+        MirPassData::processed(4)
+            .with_measurement(MirPassMeasurement::count("visited values", 7))
+            .with_measurement(MirPassMeasurement::count("removed values", 2)),
+    )
 }
 
 fn delete_equivalent_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {

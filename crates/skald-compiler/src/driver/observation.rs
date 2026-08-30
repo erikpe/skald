@@ -7,6 +7,10 @@ use crate::reporting::{
     ReportScope,
 };
 
+mod mir_pipeline;
+
+pub(super) use mir_pipeline::observe_mir_pipeline;
+
 /// Runs one scoped operation and emits its total only when phase reporting is enabled.
 pub(super) fn observe_run<T>(
     observer: &mut dyn ReportObserver,

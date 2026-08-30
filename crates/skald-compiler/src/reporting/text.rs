@@ -7,6 +7,7 @@ use std::{
 };
 
 use super::{metrics::MetricValue, ReportDetail, ReportEvent, ReportObserver, ReportOutcome};
+use crate::passes::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord};
 
 /// Renders one event for the selected human detail level.
 ///
@@ -39,7 +40,7 @@ pub fn render_event(event: &ReportEvent, detail: ReportDetail) -> String {
             );
             if detail.includes(ReportDetail::Details) {
                 for metric in metrics {
-                    render_metric(&mut rendered, metric.name(), metric.value());
+                    render_metric(&mut rendered, metric);
                 }
             }
         }
@@ -56,6 +57,11 @@ pub fn render_event(event: &ReportEvent, detail: ReportDetail) -> String {
                     stage.label(),
                     outcome.label()
                 );
+            }
+        }
+        ReportEvent::MirPassFinished { occurrence } => {
+            if detail.includes(ReportDetail::Trace) {
+                render_mir_pass(&mut rendered, occurrence);
             }
         }
         ReportEvent::ArtifactPublished { kind, path } => {
@@ -108,16 +114,72 @@ fn render_completion(
     }
 }
 
-fn render_metric(rendered: &mut String, name: &str, value: MetricValue) {
-    match value {
-        MetricValue::Count(value) => {
+fn render_metric(rendered: &mut String, metric: &super::ReportMetric) {
+    let name = metric.name();
+    let value = metric.value();
+    match (metric.owner(), value) {
+        (Some(owner), MetricValue::Count(value)) => {
+            let _ = writeln!(rendered, "skac: stats: {owner}: {name}: {value}");
+        }
+        (None, MetricValue::Count(value)) => {
             let _ = writeln!(rendered, "skac: stats: {name}: {value}");
         }
-        MetricValue::Bytes(value) => {
+        (Some(owner), MetricValue::Bytes(value)) => {
+            let unit = if value == 1 { "byte" } else { "bytes" };
+            let _ = writeln!(rendered, "skac: stats: {owner}: {name}: {value} {unit}");
+        }
+        (None, MetricValue::Bytes(value)) => {
             let unit = if value == 1 { "byte" } else { "bytes" };
             let _ = writeln!(rendered, "skac: stats: {name}: {value} {unit}");
         }
     }
+}
+
+fn render_mir_pass(rendered: &mut String, occurrence: &MirPassOccurrenceRecord) {
+    let outcome = match occurrence.outcome() {
+        MirPassOccurrenceOutcome::Unchanged => "unchanged",
+        MirPassOccurrenceOutcome::Changed => "changed",
+        MirPassOccurrenceOutcome::Failed => "failed",
+    };
+    let _ = writeln!(
+        rendered,
+        "skac: trace: MIR pass `{}` ({}, schedule position {}, occurrence {}) {outcome} in {}",
+        occurrence.name(),
+        occurrence.identity(),
+        occurrence.position(),
+        occurrence.occurrence(),
+        DurationDisplay(occurrence.elapsed())
+    );
+    if let (Some(processed), Some(changed), Some(retained), Some(inserted), Some(removed)) = (
+        occurrence.processed_callables(),
+        occurrence.changed_callables(),
+        occurrence.retained_mir_entities(),
+        occurrence.inserted_mir_entities(),
+        occurrence.removed_mir_entities(),
+    ) {
+        for (name, value) in [
+            ("processed callables", processed),
+            ("changed callables", changed),
+            ("retained MIR entities", retained),
+            ("inserted MIR entities", inserted),
+            ("removed MIR entities", removed),
+        ] {
+            let _ = writeln!(rendered, "skac: trace stats: {name}: {value}");
+        }
+        for measurement in occurrence.measurements() {
+            let _ = writeln!(
+                rendered,
+                "skac: trace stats: {}: {}",
+                measurement.name(),
+                measurement.value()
+            );
+        }
+    }
+    let _ = writeln!(
+        rendered,
+        "skac: trace stats: verification executions: {}",
+        occurrence.verification_executions()
+    );
 }
 
 struct DurationDisplay(Duration);

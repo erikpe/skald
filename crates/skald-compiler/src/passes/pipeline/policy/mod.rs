@@ -11,7 +11,7 @@ mod registry;
 mod schedule;
 
 pub(crate) use error::MirPassScheduleError;
-pub(crate) use identity::MirPassIdentity;
+pub use identity::MirPassIdentity;
 pub use profile::MirOptimizationProfile;
 pub(crate) use schedule::{MirPassOccurrence, MirPassSchedule};
 

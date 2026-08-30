@@ -12,12 +12,19 @@ mod execution;
 #[allow(dead_code)]
 mod policy;
 
-pub(crate) use execution::{run_mir_pipeline_measured, MeasuredMirPipeline, MirPipelineStatistics};
-pub use execution::{MirPipelineError, MirPipelineFailureStage};
+pub(crate) use execution::{
+    run_mir_pipeline_measured, run_mir_pipeline_with_occurrences, MeasuredMirPipeline,
+    MirPipelineStatistics,
+};
+pub use execution::{
+    MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineError,
+    MirPipelineFailureStage,
+};
 pub use policy::MirOptimizationProfile;
+pub use policy::MirPassIdentity;
 pub(crate) use policy::{
     registered_mir_pass_names, resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
-    MirPassIdentity, MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
+    MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
 };
 
 /// Read-only final MIR that passed ordinary and lifecycle-realization checks.

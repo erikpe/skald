@@ -5,7 +5,7 @@ use std::fmt;
 /// The numeric representation is private. Stable external selection uses the
 /// descriptor name rather than this value.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(crate) struct MirPassIdentity(u16);
+pub struct MirPassIdentity(u16);
 
 impl MirPassIdentity {
     pub(in crate::passes::pipeline) const fn new(value: u16) -> Self {

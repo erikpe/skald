@@ -4,6 +4,8 @@ use std::{
     time::Duration,
 };
 
+use crate::passes::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord};
+
 use super::*;
 
 const ALL_PHASES: [ReportPhase; 15] = [
@@ -114,6 +116,28 @@ fn metric_constructors_preserve_name_value_unit_and_owner_order() {
 }
 
 #[test]
+fn pass_owned_metric_rendering_keeps_the_stable_owner() {
+    let event = ReportEvent::PhaseFinished {
+        phase: ReportPhase::MirPipeline,
+        elapsed: Duration::ZERO,
+        outcome: ReportOutcome::Completed,
+        metrics: vec![ReportMetric::pass_count(
+            "fixture-pass",
+            "removed values",
+            4,
+        )],
+    };
+
+    assert_eq!(
+        render_event(&event, ReportDetail::Details),
+        concat!(
+            "skac: phase: MIR pipeline completed in 0.000 ms\n",
+            "skac: stats: fixture-pass: removed values: 4\n",
+        )
+    );
+}
+
+#[test]
 fn phase_rendering_covers_every_typed_identity_and_detail_policy() {
     for phase in ALL_PHASES {
         let started = ReportEvent::PhaseStarted { phase };
@@ -174,6 +198,60 @@ fn module_parse_rendering_is_trace_only_and_keeps_typed_stage_identity() {
         trace.observe(event.clone());
         assert_eq!(trace.events(), &[event]);
     }
+}
+
+#[test]
+fn mir_pass_rendering_is_trace_only_and_uses_fixed_occurrence_data() {
+    let occurrence = MirPassOccurrenceRecord::for_test(
+        (2, 7, "fixture-pass", 1),
+        Duration::from_nanos(12_345_500),
+        MirPassOccurrenceOutcome::Changed,
+        Some((3, 1)),
+        vec![("removed values", 4)],
+    );
+    let event = ReportEvent::MirPassFinished { occurrence };
+
+    assert_eq!(render_event(&event, ReportDetail::Phases), "");
+    assert_eq!(render_event(&event, ReportDetail::Details), "");
+    assert_eq!(
+        render_event(&event, ReportDetail::Trace),
+        concat!(
+            "skac: trace: MIR pass `fixture-pass` (pass identity 7, schedule position 2, occurrence 1) changed in 12.346 ms\n",
+            "skac: trace stats: processed callables: 3\n",
+            "skac: trace stats: changed callables: 1\n",
+            "skac: trace stats: retained MIR entities: 0\n",
+            "skac: trace stats: inserted MIR entities: 0\n",
+            "skac: trace stats: removed MIR entities: 0\n",
+            "skac: trace stats: removed values: 4\n",
+            "skac: trace stats: verification executions: 0\n",
+        )
+    );
+
+    let mut details = RecordingObserver::new(ReportDetail::Details);
+    details.observe(event.clone());
+    assert!(details.events().is_empty());
+    let mut trace = RecordingObserver::new(ReportDetail::Trace);
+    trace.observe(event.clone());
+    assert_eq!(trace.events(), &[event]);
+}
+
+#[test]
+fn failed_pass_rendering_omits_unavailable_measurements() {
+    let event = ReportEvent::MirPassFinished {
+        occurrence: MirPassOccurrenceRecord::for_test(
+            (0, 8, "failed-pass", 0),
+            Duration::from_millis(1),
+            MirPassOccurrenceOutcome::Failed,
+            None,
+            Vec::new(),
+        ),
+    };
+
+    let rendered = render_event(&event, ReportDetail::Trace);
+    assert!(rendered.contains("failed in 1.000 ms"));
+    assert!(!rendered.contains("processed callables"));
+    assert!(!rendered.contains("changed callables"));
+    assert!(rendered.ends_with("verification executions: 0\n"));
 }
 
 #[test]

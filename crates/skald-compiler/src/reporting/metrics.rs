@@ -14,13 +14,18 @@ pub enum MetricValue {
 /// label.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ReportMetric {
+    owner: Option<&'static str>,
     name: &'static str,
     value: MetricValue,
 }
 
 impl ReportMetric {
     pub const fn new(name: &'static str, value: MetricValue) -> Self {
-        Self { name, value }
+        Self {
+            owner: None,
+            name,
+            value,
+        }
     }
 
     pub const fn count(name: &'static str, value: u64) -> Self {
@@ -29,6 +34,22 @@ impl ReportMetric {
 
     pub const fn bytes(name: &'static str, value: u64) -> Self {
         Self::new(name, MetricValue::Bytes(value))
+    }
+
+    pub(crate) const fn pass_count(
+        pass_name: &'static str,
+        name: &'static str,
+        value: u64,
+    ) -> Self {
+        Self {
+            owner: Some(pass_name),
+            name,
+            value: MetricValue::Count(value),
+        }
+    }
+
+    pub const fn owner(&self) -> Option<&'static str> {
+        self.owner
     }
 
     pub const fn name(&self) -> &'static str {

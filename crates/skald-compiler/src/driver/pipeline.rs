@@ -12,7 +12,6 @@ use crate::{
         ModuleLoadMeasurementOptions, ProviderNormalizationError,
     },
     passes::{
-        run_mir_pipeline_measured,
         static_lifecycle::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
         },
@@ -28,7 +27,7 @@ use crate::{
 };
 
 use super::{
-    observation::{observe_phase, observe_phase_with_metrics, observe_run},
+    observation::{observe_mir_pipeline, observe_phase, observe_phase_with_metrics, observe_run},
     statistics, CompilationRequest, MirOptimizationConfigurationError, MirOptimizationOptions,
 };
 
@@ -314,13 +313,7 @@ fn finish_compilation(
         |_| ReportOutcome::Completed,
         |program, _| statistics::lifecycle_synthesis_metrics(program),
     );
-    let measured_pipeline = observe_phase_with_metrics(
-        observer,
-        ReportPhase::MirPipeline,
-        || run_mir_pipeline_measured(mir, mir_schedule),
-        |measured| result_outcome(&measured.result),
-        |measured, _| statistics::mir_pipeline_metrics(measured),
-    );
+    let measured_pipeline = observe_mir_pipeline(observer, mir, mir_schedule);
     let mir = measured_pipeline
         .result
         .map_err(CompilationError::MirPipeline)?;

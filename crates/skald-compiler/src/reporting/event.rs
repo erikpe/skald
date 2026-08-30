@@ -3,6 +3,7 @@
 use std::{path::PathBuf, time::Duration};
 
 use super::metrics::ReportMetric;
+use crate::passes::MirPassOccurrenceRecord;
 
 /// The amount of operational observation requested by a consumer.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -145,6 +146,9 @@ pub enum ReportEvent {
         tokens: u64,
         outcome: ReportOutcome,
     },
+    MirPassFinished {
+        occurrence: MirPassOccurrenceRecord,
+    },
     ArtifactPublished {
         kind: ReportArtifactKind,
         path: PathBuf,
@@ -159,7 +163,7 @@ pub enum ReportEvent {
 impl ReportEvent {
     pub(super) const fn detail(&self) -> ReportDetail {
         match self {
-            Self::ModuleParsed { .. } => ReportDetail::Trace,
+            Self::ModuleParsed { .. } | Self::MirPassFinished { .. } => ReportDetail::Trace,
             Self::PhaseStarted { .. }
             | Self::PhaseFinished { .. }
             | Self::ArtifactPublished { .. }

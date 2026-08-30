@@ -263,7 +263,7 @@ The implemented metrics appear in this deterministic owner order:
 | MIR verification boundaries | verification executions; failed verification also includes verification errors |
 | Static-lifecycle planning | effect summaries, dependencies, activation fields, shutdown fields, static initializers |
 | Static-lifecycle synthesis | final MIR definitions, blocks, instructions, followed by lifecycle definitions and activation/shutdown regions when present |
-| MIR pass pipeline | verification executions, pass executions, then final MIR definitions, blocks, instructions |
+| MIR pass pipeline | verification executions, pass executions; when passes run, processed and changed callables, structural rewrite counts, and pass-owned counters grouped in first-owner/first-counter order; then successful final MIR definitions, blocks, instructions |
 | Backend emission | assembly bytes, assembly lines |
 
 A failed loader retains completed loader counters before diagnostic counts. A
@@ -288,11 +288,12 @@ formatting; already-known phase execution counts remain local to the observed
 adapter.
 
 The current supported MIR schedules perform one verification and zero
-transforming pass executions. The implemented runner already owns verified
-execution, atomic changed-result commit, immediate reverification, and
-execution counts. Passes return outcomes and pass-owned data; they do not
-format sentences or call a global logger. Per-occurrence measurement and
-report conversion remain the next reporting extension.
+transforming pass executions. The runner owns verified execution, atomic
+changed-result commit, immediate reverification, aggregate accounting, and
+optional per-occurrence timing. Passes return outcomes and already-known
+integer data; they do not format sentences or call a global logger. Aggregate
+metrics distinguish callables processed by the atomic coordinator from
+callables a pass actually changed.
 
 ## Frozen final-MIR pass reporting
 
@@ -301,23 +302,28 @@ The confirmed
 extends this reporting boundary with structured pass-occurrence observation.
 Its
 [implementation roadmap](../roadmaps/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-is active. Registry, request/CLI schedule selection, and the verified runner
-are implemented. No supported profile selects a pass yet, and occurrence
-records are not emitted until the observation task lands; the current event
-and metric inventory above therefore remains implemented behavior.
+is active. Registry, request/CLI schedule selection, the verified runner, and
+structured pass reporting are implemented. No supported profile selects a
+pass yet, so ordinary production traces contain no pass-finished event until
+the canary is selected through an exact internal schedule or later activated.
 
-Every attempted selected occurrence will produce one pipeline-owned record in
+Every attempted selected occurrence produces one pipeline-owned record in
 schedule order. Its stable identity consists of schedule position, typed pass
 identity and stable name, and that pass's zero-based occurrence number. The
-record carries elapsed duration, `unchanged` or `changed` outcome, and
-deterministically ordered pass-owned integer measurements. A failed occurrence
-is attributed by the pipeline error; no successful later occurrence or phase
-product is reported.
+record carries elapsed duration, `unchanged`, `changed`, or `failed` outcome,
+processed and changed callable counts when pass data exists, structural
+commit counts, verification executions caused by the occurrence, and
+deterministically ordered pass-owned integer measurements. A failure before a
+pass outcome carries no invented pass data. The structured pipeline error
+remains authoritative, and no successful later occurrence or phase product is
+reported.
 
-The MIR-pipeline finish event will retain aggregate owner order: verification
-executions, pass executions, pass-owned aggregate counters, then final MIR
-definitions, blocks, and instructions. Pass accounting must distinguish
-callables processed from callables actually changed. The first canary owns
+The MIR-pipeline finish event retains aggregate owner order: verification
+executions, pass executions, processed and changed callables plus structural
+rewrite counts when passes ran, pass-owned aggregate counters in first pass
+owner and first counter order, then successful final MIR definitions, blocks,
+and instructions. Text rendering qualifies pass-owned counters with their
+stable pass name. The first canary will own
 removed assignment, removed value-declaration, and changed-callable counts.
 Trace reporting additionally emits one typed pass-finished event per attempted
 occurrence, including a failed outcome for the occurrence attributed by the
@@ -326,6 +332,12 @@ parsing those events or a MIR dump. Timings remain
 nondeterministic observations, so correctness and determinism tests assert
 identity, order, outcome, and integer measurements rather than live duration
 values.
+
+Pass timers and the occurrence vector are enabled only after a trace-detail
+query succeeds. Off, phases-only, and details-only observation therefore runs
+the aggregate coordinator without occurrence timing or report-record
+allocation. Phase metric and event construction remains guarded by the
+existing detail queries.
 
 Pass modules return data and never call observers, loggers, formatters, or
 filesystem services. The pipeline coordinator converts outcomes into report

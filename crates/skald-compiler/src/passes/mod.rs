@@ -11,10 +11,14 @@ mod pipeline;
 #[allow(unused_imports)]
 pub(crate) use pipeline::{
     registered_mir_pass_names, resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
-    MirPassIdentity, MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
+    MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
 };
 pub use pipeline::{
-    run_mir_pipeline, verify_final_mir, MirOptimizationProfile, MirPipelineError,
+    run_mir_pipeline, verify_final_mir, MirOptimizationProfile, MirPassIdentity,
+    MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineError,
     MirPipelineFailureStage, VerifiedFinalMirProgram,
 };
-pub(crate) use pipeline::{run_mir_pipeline_measured, MeasuredMirPipeline, MirPipelineStatistics};
+pub(crate) use pipeline::{
+    run_mir_pipeline_measured, run_mir_pipeline_with_occurrences, MeasuredMirPipeline,
+    MirPipelineStatistics,
+};
