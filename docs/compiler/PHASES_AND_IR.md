@@ -771,12 +771,25 @@ remain distinct roles even when they refer to related semantic identities.
 Canonical comparison keys define deterministic node, edge-kind, root-reason,
 and source-span order without exposing future graph storage.
 
-This is a contract layer only. It does not yet collect roots, extract edges,
-resolve targets, compute closure, bind facts to final MIR, remove definitions,
-change a pass schedule, or affect backend output. Any new MIR operation that
-can select executable work, or new implicit lifecycle operation, must update
-the exhaustive dependency extraction and its focused coverage in the same
-change.
+The contract now has one read-only extraction implementation over borrowed
+ordinary functions, member definitions, and preliminary or final static
+initializer bodies. It records deterministic direct, static, instance,
+virtual-family, interface-conformance, exact callable-address, and indirect-
+signature dependencies; recursively expands canonical class, optional,
+shared-owner, and array lifecycle plans; and preserves external and intrinsic
+calls as typed leaves. Callable-address formations retain their containing
+execution node, exact function type, target, and span so the later closure can
+scope candidates without rescanning MIR.
+
+Static-effect analysis consumes these shared targets and lifecycle edges while
+retaining private ownership of static-place access evidence, publication
+phases, witnesses, authority, diagnostics, dumps, and solved effects. The
+superseded static-effect call, function-value, and lifecycle walkers have been
+removed. No root collection, closure, final-MIR fact binding, definition
+removal, schedule change, or backend behavior exists yet. Any new MIR operation
+that can select executable work, or new implicit lifecycle operation, must
+update the exhaustive dependency extraction and its focused coverage in the
+same change.
 
 ### Frozen target-independent whole-world reachability direction
 

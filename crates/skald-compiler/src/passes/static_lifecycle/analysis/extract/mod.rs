@@ -2,33 +2,30 @@
 
 mod access;
 mod control;
-mod edges;
-mod function_values;
 mod instruction;
-mod lifecycle;
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::passes::reachability::{
+    extract_final_dependency_parts, extract_preliminary_dependencies, MirDependencyEdgeKind,
+    MirDependencyExtraction, MirDependencyRegion, MirDependencyTarget,
+};
 use crate::{
-    identity::{CallableId, CopyAssignmentId, CopyConstructorId},
+    identity::CallableId,
     mir::{
-        MirAliasAccess, MirArgument, MirArrayAssignElement, MirArrayCopyElement,
-        MirArrayDefaultElement, MirArrayDestroyElement, MirArrayInstruction, MirCallReceiver,
-        MirCallTarget, MirClassOptionalSource, MirCopyCapability, MirDefinitionRef,
-        MirDestructionStep, MirInstruction, MirIoOperation, MirMethodCallTarget, MirObjectOrigin,
-        MirObjectView, MirOptionalSharedSource, MirOptionalSource, MirPlace, MirPlaceBase,
-        MirPlaceProjection, MirProgram, MirRvalue, MirRvalueKind, MirSelectedCopyOperation,
-        MirSharedCastSource, MirSharedTarget, MirStaticInitializerBody, MirSynthesizedCopy,
-        MirSynthesizedFieldCopy, MirTerminator, MirType, PreliminaryMirProgram,
-        PreliminaryMirSharedLifecycleTarget,
+        MirAliasAccess, MirArgument, MirArrayInstruction, MirCallReceiver, MirClassOptionalSource,
+        MirDefinitionRef, MirInstruction, MirIoOperation, MirObjectOrigin, MirObjectView,
+        MirOptionalSharedSource, MirOptionalSource, MirPlace, MirPlaceBase, MirProgram, MirRvalue,
+        MirRvalueKind, MirSharedCastSource, MirStaticInitializerBody, MirTerminator,
+        PreliminaryMirProgram,
     },
     source::Span,
 };
 
 use super::model::{
-    edge_key, evidence_key, StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
-    StaticClassLifecycleOperation, StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode,
-    StaticEffectPhase, StaticFunctionValueCandidates,
+    edge_key, evidence_key, StaticAccessEvidence, StaticAccessKind, StaticEffectEdge,
+    StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase, StaticFunctionValueCandidates,
+    StaticFunctionValueTarget,
 };
 
 #[derive(Default)]
@@ -43,29 +40,38 @@ pub(crate) struct ExtractedGraph {
 }
 
 pub(crate) fn extract(program: &PreliminaryMirProgram) -> ExtractedGraph {
-    extract_parts(program.program(), program.static_initializer_bodies())
+    let dependencies = extract_preliminary_dependencies(program)
+        .expect("verified preliminary MIR must have valid dependency identities");
+    extract_parts(
+        program.program(),
+        program.static_initializer_bodies(),
+        dependencies,
+    )
 }
 
 pub(crate) fn extract_final(
     program: &MirProgram,
     initializers: &[MirStaticInitializerBody],
 ) -> ExtractedGraph {
-    extract_parts(program, initializers)
+    let dependencies = extract_final_dependency_parts(program, initializers)
+        .expect("verified final MIR must have valid dependency identities");
+    extract_parts(program, initializers, dependencies)
 }
 
 fn extract_parts(
     program: &MirProgram,
     initializers: &[MirStaticInitializerBody],
+    dependencies: MirDependencyExtraction,
 ) -> ExtractedGraph {
-    let function_value_candidates = function_values::collect(program, initializers);
+    let function_value_candidates = collect_function_value_candidates(&dependencies);
     let mut extractor = Extractor {
         program,
         initializers,
         function_value_candidates,
         nodes: BTreeMap::new(),
     };
-    extractor.seed_nodes();
-    extractor.extract_implicit_lifecycle();
+    extractor.seed_nodes(&dependencies);
+    extractor.install_dependencies(&dependencies);
     extractor.extract_bodies();
     extractor.finish()
 }
@@ -78,19 +84,6 @@ struct Extractor<'mir> {
 }
 
 impl Extractor<'_> {
-    fn function_value_targets(
-        &self,
-        function_type: crate::identity::FunctionTypeId,
-    ) -> Vec<CallableId> {
-        self.function_value_candidates
-            .binary_search_by_key(&function_type, |candidates| candidates.function_type)
-            .ok()
-            .into_iter()
-            .flat_map(|index| &self.function_value_candidates[index].targets)
-            .map(|target| target.callable)
-            .collect()
-    }
-
     fn finish(mut self) -> ExtractedGraph {
         for draft in self.nodes.values_mut() {
             draft.direct.sort_by_key(evidence_key);
@@ -111,45 +104,38 @@ impl Extractor<'_> {
         }
     }
 
-    fn seed_nodes(&mut self) {
-        for definition in self
-            .program
-            .definitions
-            .iter()
-            .map(MirDefinitionRef::Function)
-            .chain(
-                self.program
-                    .member_definitions
-                    .iter()
-                    .map(MirDefinitionRef::Member),
-            )
-            .chain(self.initializers.iter().map(MirDefinitionRef::from))
-        {
-            self.nodes
-                .entry(StaticEffectNode::Callable(definition.callable()))
-                .or_default();
+    fn seed_nodes(&mut self, dependencies: &MirDependencyExtraction) {
+        for node in dependencies.nodes() {
+            self.nodes.entry(*node).or_default();
         }
-        for class in self.program.classes.iter() {
-            for operation in [
-                StaticClassLifecycleOperation::CopyConstructor,
-                StaticClassLifecycleOperation::CopyAssignment,
-                StaticClassLifecycleOperation::CompleteFinalizer,
-            ] {
-                self.nodes
-                    .entry(StaticEffectNode::class(class.id, operation))
-                    .or_default();
-            }
+    }
+
+    fn install_dependencies(&mut self, dependencies: &MirDependencyExtraction) {
+        for dependency in dependencies.dependencies() {
+            let edge = dependency.edge();
+            let MirDependencyTarget::Execution(target) = edge.target() else {
+                continue;
+            };
+            let Some(kind) = static_edge_kind(edge.kind()) else {
+                continue;
+            };
+            self.add_edge(
+                edge.source(),
+                target,
+                kind,
+                static_phase(dependency.region()),
+                edge.span(),
+            );
         }
-        for array in self.program.array_types.iter() {
-            for operation in [
-                StaticArrayLifecycleOperation::Default,
-                StaticArrayLifecycleOperation::Copy,
-                StaticArrayLifecycleOperation::Assignment,
-                StaticArrayLifecycleOperation::Destruction,
-            ] {
-                self.nodes
-                    .entry(StaticEffectNode::array(array.id, operation))
-                    .or_default();
+        for site in dependencies.indirect_calls() {
+            for target in dependencies.all_indirect_targets(site.function_type()) {
+                self.add_edge(
+                    site.source(),
+                    StaticEffectNode::callable(target),
+                    StaticEffectEdgeKind::IndirectCall,
+                    static_phase(site.region()),
+                    site.span(),
+                );
             }
         }
     }
@@ -178,4 +164,82 @@ impl Extractor<'_> {
                 span,
             });
     }
+}
+
+fn collect_function_value_candidates(
+    dependencies: &MirDependencyExtraction,
+) -> Vec<StaticFunctionValueCandidates> {
+    let mut candidates =
+        BTreeMap::<crate::identity::FunctionTypeId, BTreeMap<CallableId, Span>>::new();
+    for formation in dependencies.callable_addresses() {
+        let targets = candidates.entry(formation.function_type()).or_default();
+        targets
+            .entry(formation.target())
+            .and_modify(|span| {
+                if super::model::span_key(formation.span()) < super::model::span_key(*span) {
+                    *span = formation.span();
+                }
+            })
+            .or_insert(formation.span());
+    }
+    candidates
+        .into_iter()
+        .map(|(function_type, targets)| StaticFunctionValueCandidates {
+            function_type,
+            targets: targets
+                .into_iter()
+                .map(
+                    |(callable, first_reference_span)| StaticFunctionValueTarget {
+                        callable,
+                        first_reference_span,
+                    },
+                )
+                .collect(),
+        })
+        .collect()
+}
+
+const fn static_phase(region: MirDependencyRegion) -> StaticEffectPhase {
+    match region {
+        MirDependencyRegion::Ordinary => StaticEffectPhase::Ordinary,
+        MirDependencyRegion::StaticInitializerBeforePublication => {
+            StaticEffectPhase::InitializerBeforePublication
+        }
+        MirDependencyRegion::StaticInitializerAfterPublication => {
+            StaticEffectPhase::InitializerAfterPublication
+        }
+        MirDependencyRegion::Copy => StaticEffectPhase::Copy,
+        MirDependencyRegion::Destruction => StaticEffectPhase::Destruction,
+        MirDependencyRegion::ArrayLifecycle => StaticEffectPhase::ArrayLifecycle,
+    }
+}
+
+const fn static_edge_kind(kind: MirDependencyEdgeKind) -> Option<StaticEffectEdgeKind> {
+    Some(match kind {
+        MirDependencyEdgeKind::DirectCall => StaticEffectEdgeKind::DirectCall,
+        MirDependencyEdgeKind::StaticCall => StaticEffectEdgeKind::StaticCall,
+        MirDependencyEdgeKind::DirectMethodCall => StaticEffectEdgeKind::DirectMethodCall,
+        MirDependencyEdgeKind::VirtualDispatch => StaticEffectEdgeKind::VirtualDispatch,
+        MirDependencyEdgeKind::InterfaceDispatch => StaticEffectEdgeKind::InterfaceDispatch,
+        MirDependencyEdgeKind::CallableAddressRetention
+        | MirDependencyEdgeKind::RuntimeEntityReference => return None,
+        MirDependencyEdgeKind::IndirectCall => StaticEffectEdgeKind::IndirectCall,
+        MirDependencyEdgeKind::Initializer => StaticEffectEdgeKind::Initializer,
+        MirDependencyEdgeKind::CopyConstructor => StaticEffectEdgeKind::CopyConstructor,
+        MirDependencyEdgeKind::CopyAssignment => StaticEffectEdgeKind::CopyAssignment,
+        MirDependencyEdgeKind::UserCopyBody => StaticEffectEdgeKind::UserCopyBody,
+        MirDependencyEdgeKind::BaseCopy => StaticEffectEdgeKind::BaseCopy,
+        MirDependencyEdgeKind::FieldCopy => StaticEffectEdgeKind::FieldCopy,
+        MirDependencyEdgeKind::CompleteFinalizer => StaticEffectEdgeKind::CompleteFinalizer,
+        MirDependencyEdgeKind::UserDestructor => StaticEffectEdgeKind::UserDestructor,
+        MirDependencyEdgeKind::FieldFinalizer => StaticEffectEdgeKind::FieldFinalizer,
+        MirDependencyEdgeKind::BaseFinalizer => StaticEffectEdgeKind::BaseFinalizer,
+        MirDependencyEdgeKind::SharedFinalizer => StaticEffectEdgeKind::SharedFinalizer,
+        MirDependencyEdgeKind::TemporaryCleanup => StaticEffectEdgeKind::TemporaryCleanup,
+        MirDependencyEdgeKind::OptionalLifecycle => StaticEffectEdgeKind::OptionalCleanup,
+        MirDependencyEdgeKind::ArrayDefault => StaticEffectEdgeKind::ArrayDefault,
+        MirDependencyEdgeKind::ArrayCopy => StaticEffectEdgeKind::ArrayCopy,
+        MirDependencyEdgeKind::ArrayAssignment => StaticEffectEdgeKind::ArrayAssignment,
+        MirDependencyEdgeKind::ArrayDestruction => StaticEffectEdgeKind::ArrayDestruction,
+    })
 }

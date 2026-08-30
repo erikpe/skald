@@ -1,10 +1,7 @@
 //! Static-effect analysis evidence and deterministic comparison helpers.
 
 use crate::identity::{CallableId, FunctionTypeId};
-pub(crate) use crate::mir::{
-    StaticAccessKind, StaticArrayLifecycleOperation, StaticClassLifecycleOperation,
-    StaticEffectNode, StaticEffectPhase,
-};
+pub(crate) use crate::mir::{StaticAccessKind, StaticEffectNode, StaticEffectPhase};
 
 pub(crate) use crate::passes::reachability::mir_span_key as span_key;
 use crate::{identity::StaticFieldId, source::Span};

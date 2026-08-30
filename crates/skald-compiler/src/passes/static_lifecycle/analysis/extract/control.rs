@@ -112,14 +112,8 @@ impl Extractor<'_> {
             | MirArrayInstruction::PublishShared { .. }
             | MirArrayInstruction::AnchorEnd { .. }
             | MirArrayInstruction::SliceBoundsCheck { .. } => {}
-            MirArrayInstruction::InitializeNext { operation, .. } => {
-                self.add_array_default(source, *operation, span, phase)
-            }
-            MirArrayInstruction::CopyNext {
-                source: place,
-                operation,
-                ..
-            } => {
+            MirArrayInstruction::InitializeNext { .. } => {}
+            MirArrayInstruction::CopyNext { source: place, .. } => {
                 self.add_place(
                     source,
                     definition,
@@ -128,7 +122,6 @@ impl Extractor<'_> {
                     StaticAccessKind::Read,
                     span,
                 );
-                self.add_array_copy(source, *operation, span, phase);
             }
             MirArrayInstruction::Adopt { destination, .. } => self.add_place(
                 source,
@@ -138,9 +131,7 @@ impl Extractor<'_> {
                 StaticAccessKind::Initialize,
                 span,
             ),
-            MirArrayInstruction::Replace {
-                destination, array, ..
-            } => {
+            MirArrayInstruction::Replace { destination, .. } => {
                 self.add_place(
                     source,
                     definition,
@@ -149,24 +140,15 @@ impl Extractor<'_> {
                     StaticAccessKind::Replace,
                     span,
                 );
-                self.add_edge(
-                    source,
-                    StaticEffectNode::array(*array, StaticArrayLifecycleOperation::Destruction),
-                    StaticEffectEdgeKind::ArrayDestruction,
-                    phase,
-                    span,
-                );
             }
             MirArrayInstruction::ElementAssign {
                 destination,
                 source: source_place,
-                operation,
                 ..
             }
             | MirArrayInstruction::SliceAssignNext {
                 destination,
                 source: source_place,
-                operation,
                 ..
             } => {
                 self.add_place(
@@ -185,11 +167,8 @@ impl Extractor<'_> {
                     StaticAccessKind::Read,
                     span,
                 );
-                self.add_array_assignment(source, *operation, span, phase);
             }
-            MirArrayInstruction::DestroyNext {
-                owner, operation, ..
-            } => {
+            MirArrayInstruction::DestroyNext { owner, .. } => {
                 self.add_place(
                     source,
                     definition,
@@ -198,22 +177,14 @@ impl Extractor<'_> {
                     StaticAccessKind::Destroy,
                     span,
                 );
-                self.add_array_destruction(source, *operation, span, phase);
             }
-            MirArrayInstruction::Release { owner, array, .. } => {
+            MirArrayInstruction::Release { owner, .. } => {
                 self.add_place(
                     source,
                     definition,
                     phase,
                     owner,
                     StaticAccessKind::Destroy,
-                    span,
-                );
-                self.add_edge(
-                    source,
-                    StaticEffectNode::array(*array, StaticArrayLifecycleOperation::Destruction),
-                    StaticEffectEdgeKind::ArrayDestruction,
-                    phase,
                     span,
                 );
             }
@@ -236,11 +207,7 @@ impl Extractor<'_> {
                 StaticAccessKind::Borrow,
                 span,
             ),
-            MirArrayInstruction::SliceCopy {
-                source: place,
-                operation,
-                ..
-            } => {
+            MirArrayInstruction::SliceCopy { source: place, .. } => {
                 self.add_place(
                     source,
                     definition,
@@ -249,7 +216,6 @@ impl Extractor<'_> {
                     StaticAccessKind::Read,
                     span,
                 );
-                self.add_array_copy(source, *operation, span, phase);
             }
             MirArrayInstruction::SliceLengthCheck { source: place, .. } => self.add_place(
                 source,

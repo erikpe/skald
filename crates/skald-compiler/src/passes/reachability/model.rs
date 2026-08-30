@@ -120,6 +120,21 @@ pub(crate) enum MirDependencyEdgeKind {
     RuntimeEntityReference,
 }
 
+/// Structural execution region carried as dependency evidence.
+///
+/// This is deliberately not part of node, target, or edge-kind identity. The
+/// static-lifecycle consumer maps it to its private effect phases; reachability
+/// itself needs only the edge and source evidence.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(crate) enum MirDependencyRegion {
+    Ordinary,
+    StaticInitializerBeforePublication,
+    StaticInitializerAfterPublication,
+    Copy,
+    Destruction,
+    ArrayLifecycle,
+}
+
 /// One dependency and its deterministic source evidence.
 ///
 /// The span helps dumps and witnesses but is not part of either endpoint's
@@ -157,6 +172,109 @@ impl MirDependencyEdge {
 
     pub(crate) const fn kind(&self) -> MirDependencyEdgeKind {
         self.kind
+    }
+
+    pub(crate) const fn span(&self) -> Span {
+        self.span
+    }
+}
+
+/// One extracted dependency paired with its non-semantic execution region.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct MirDependencyRecord {
+    edge: MirDependencyEdge,
+    region: MirDependencyRegion,
+}
+
+impl MirDependencyRecord {
+    pub(crate) const fn new(edge: MirDependencyEdge, region: MirDependencyRegion) -> Self {
+        Self { edge, region }
+    }
+
+    pub(crate) const fn edge(&self) -> &MirDependencyEdge {
+        &self.edge
+    }
+
+    pub(crate) const fn region(&self) -> MirDependencyRegion {
+        self.region
+    }
+}
+
+/// One exact callable-address formation in its containing execution node.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct MirCallableAddressFormation {
+    source: MirExecutionNode,
+    function_type: FunctionTypeId,
+    target: CallableId,
+    span: Span,
+}
+
+impl MirCallableAddressFormation {
+    pub(crate) const fn new(
+        source: MirExecutionNode,
+        function_type: FunctionTypeId,
+        target: CallableId,
+        span: Span,
+    ) -> Self {
+        Self {
+            source,
+            function_type,
+            target,
+            span,
+        }
+    }
+
+    pub(crate) const fn source(&self) -> MirExecutionNode {
+        self.source
+    }
+
+    pub(crate) const fn function_type(&self) -> FunctionTypeId {
+        self.function_type
+    }
+
+    pub(crate) const fn target(&self) -> CallableId {
+        self.target
+    }
+
+    pub(crate) const fn span(&self) -> Span {
+        self.span
+    }
+}
+
+/// One indirect-call operation before reachability-scoped candidate expansion.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct MirIndirectCallSite {
+    source: MirExecutionNode,
+    function_type: FunctionTypeId,
+    region: MirDependencyRegion,
+    span: Span,
+}
+
+impl MirIndirectCallSite {
+    pub(crate) const fn new(
+        source: MirExecutionNode,
+        function_type: FunctionTypeId,
+        region: MirDependencyRegion,
+        span: Span,
+    ) -> Self {
+        Self {
+            source,
+            function_type,
+            region,
+            span,
+        }
+    }
+
+    pub(crate) const fn source(&self) -> MirExecutionNode {
+        self.source
+    }
+
+    pub(crate) const fn function_type(&self) -> FunctionTypeId {
+        self.function_type
+    }
+
+    pub(crate) const fn region(&self) -> MirDependencyRegion {
+        self.region
     }
 
     pub(crate) const fn span(&self) -> Span {

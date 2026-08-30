@@ -17,7 +17,6 @@ impl Extractor<'_> {
                 self.add_rvalue(source, definition, phase, &assign.rvalue, span)
             }
             MirInstruction::Call(call) => {
-                self.add_call_targets(source, call.target, phase, span);
                 if let Some(receiver) = &call.receiver {
                     match receiver {
                         MirCallReceiver::Method(receiver) => {
@@ -59,13 +58,6 @@ impl Extractor<'_> {
                     StaticAccessKind::Destroy,
                     cleanup.span,
                 );
-                self.add_complete_finalizer(
-                    source,
-                    cleanup.target,
-                    StaticEffectEdgeKind::CompleteFinalizer,
-                    phase,
-                    cleanup.span,
-                );
             }
             MirInstruction::Initialize(initialize) => {
                 self.add_place(
@@ -79,13 +71,6 @@ impl Extractor<'_> {
                 for argument in &initialize.arguments {
                     self.add_argument(source, definition, phase, argument, span);
                 }
-                self.add_edge(
-                    source,
-                    StaticEffectNode::Callable(initialize.target.into()),
-                    StaticEffectEdgeKind::Initializer,
-                    phase,
-                    span,
-                );
             }
             MirInstruction::Store(store) => self.add_place(
                 source,
@@ -112,13 +97,6 @@ impl Extractor<'_> {
                     StaticAccessKind::Read,
                     span,
                 );
-                self.add_copy_constructor_edge(
-                    source,
-                    copy.operation,
-                    StaticEffectEdgeKind::CopyConstructor,
-                    phase,
-                    span,
-                );
             }
             MirInstruction::CopyAssign(copy) => {
                 self.add_place(
@@ -137,13 +115,6 @@ impl Extractor<'_> {
                     StaticAccessKind::Read,
                     span,
                 );
-                self.add_copy_assignment_edge(
-                    source,
-                    copy.operation,
-                    StaticEffectEdgeKind::CopyAssignment,
-                    phase,
-                    span,
-                );
             }
             MirInstruction::EndFullExpression(end) => {
                 for cleanup in &end.temporaries {
@@ -153,13 +124,6 @@ impl Extractor<'_> {
                         phase,
                         &cleanup.destination,
                         StaticAccessKind::Destroy,
-                        cleanup.span,
-                    );
-                    self.add_complete_finalizer(
-                        source,
-                        cleanup.target,
-                        StaticEffectEdgeKind::TemporaryCleanup,
-                        phase,
                         cleanup.span,
                     );
                 }
@@ -185,13 +149,6 @@ impl Extractor<'_> {
                 for argument in &initialize.arguments {
                     self.add_argument(source, definition, phase, argument, span);
                 }
-                self.add_edge(
-                    source,
-                    StaticEffectNode::Callable(initialize.target.into()),
-                    StaticEffectEdgeKind::Initializer,
-                    phase,
-                    span,
-                );
             }
             MirInstruction::SharedPublish(_)
             | MirInstruction::SharedStatic(_)
@@ -209,34 +166,7 @@ impl Extractor<'_> {
             MirInstruction::SharedCast(cast) => {
                 self.add_shared_cast_source(source, definition, phase, &cast.source, span)
             }
-            MirInstruction::SharedRelease(release) => {
-                if let Some(storage) = definition.storage(release.owner) {
-                    if let MirType::Shared(target) = storage.ty {
-                        self.add_shared_finalizers(
-                            source,
-                            target,
-                            StaticEffectEdgeKind::SharedFinalizer,
-                            phase,
-                            span,
-                        );
-                    }
-                    if let MirType::Optional(optional) = storage.ty {
-                        if let Some(target) = self
-                            .program
-                            .optional_type(optional)
-                            .and_then(crate::mir::MirOptionalType::shared_owner)
-                        {
-                            self.add_shared_finalizers(
-                                source,
-                                target,
-                                StaticEffectEdgeKind::SharedFinalizer,
-                                phase,
-                                span,
-                            );
-                        }
-                    }
-                }
-            }
+            MirInstruction::SharedRelease(_) => {}
             MirInstruction::SharedFieldInitialize(initialize) => self.add_place(
                 source,
                 definition,
@@ -254,17 +184,6 @@ impl Extractor<'_> {
                     StaticAccessKind::Replace,
                     span,
                 );
-                if let Some(MirType::Shared(target)) =
-                    self.place_type(definition, &replace.destination)
-                {
-                    self.add_shared_finalizers(
-                        source,
-                        target,
-                        StaticEffectEdgeKind::SharedFinalizer,
-                        phase,
-                        span,
-                    );
-                }
             }
             MirInstruction::StringInitialize(initialize) => self.add_place(
                 source,
@@ -314,7 +233,6 @@ impl Extractor<'_> {
                         StaticAccessKind::Read,
                         span,
                     );
-                    self.add_optional_copy_edges(source, initialize.optional, phase, span);
                 }
             }
             MirInstruction::AggregateOptionalAssign(assign) => {
@@ -336,7 +254,6 @@ impl Extractor<'_> {
                         span,
                     );
                 }
-                self.add_optional_assignment_edges(source, assign.optional, phase, span);
             }
             MirInstruction::AggregateOptionalPublish(publish) => self.add_place(
                 source,
@@ -355,7 +272,6 @@ impl Extractor<'_> {
                     StaticAccessKind::Destroy,
                     span,
                 );
-                self.add_optional_cleanup_edges(source, cleanup.optional, phase, span);
             }
             MirInstruction::ClassOptionalInitialize(initialize) => {
                 self.add_place(
@@ -367,15 +283,6 @@ impl Extractor<'_> {
                     span,
                 );
                 self.add_class_optional_source(source, definition, phase, &initialize.source, span);
-                if let Some(operation) = initialize.copy_constructor {
-                    self.add_copy_constructor_edge(
-                        source,
-                        operation,
-                        StaticEffectEdgeKind::CopyConstructor,
-                        phase,
-                        span,
-                    );
-                }
             }
             MirInstruction::ClassOptionalAssign(assign) => {
                 self.add_place(
@@ -387,31 +294,6 @@ impl Extractor<'_> {
                     span,
                 );
                 self.add_class_optional_source(source, definition, phase, &assign.source, span);
-                self.add_complete_finalizer(
-                    source,
-                    assign.class,
-                    StaticEffectEdgeKind::OptionalCleanup,
-                    phase,
-                    span,
-                );
-                if let Some(operation) = assign.copy_constructor {
-                    self.add_copy_constructor_edge(
-                        source,
-                        operation,
-                        StaticEffectEdgeKind::CopyConstructor,
-                        phase,
-                        span,
-                    );
-                }
-                if let Some(operation) = assign.copy_assignment {
-                    self.add_copy_assignment_edge(
-                        source,
-                        operation,
-                        StaticEffectEdgeKind::CopyAssignment,
-                        phase,
-                        span,
-                    );
-                }
             }
             MirInstruction::ClassOptionalPublish(publish) => self.add_place(
                 source,
@@ -428,13 +310,6 @@ impl Extractor<'_> {
                     phase,
                     &cleanup.destination,
                     StaticAccessKind::Destroy,
-                    span,
-                );
-                self.add_complete_finalizer(
-                    source,
-                    cleanup.class,
-                    StaticEffectEdgeKind::OptionalCleanup,
-                    phase,
                     span,
                 );
             }
@@ -474,13 +349,6 @@ impl Extractor<'_> {
                     span,
                 );
                 self.add_optional_shared_source(source, definition, phase, &assign.source, span);
-                self.add_shared_finalizers(
-                    source,
-                    assign.target,
-                    StaticEffectEdgeKind::OptionalCleanup,
-                    phase,
-                    span,
-                );
             }
             MirInstruction::OptionalSharedCleanup(cleanup) => {
                 self.add_place(
@@ -489,13 +357,6 @@ impl Extractor<'_> {
                     phase,
                     &cleanup.destination,
                     StaticAccessKind::Destroy,
-                    span,
-                );
-                self.add_shared_finalizers(
-                    source,
-                    cleanup.target,
-                    StaticEffectEdgeKind::OptionalCleanup,
-                    phase,
                     span,
                 );
             }

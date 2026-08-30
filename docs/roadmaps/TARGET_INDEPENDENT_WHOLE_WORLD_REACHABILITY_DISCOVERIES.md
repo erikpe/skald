@@ -2,7 +2,36 @@
 
 Status: active companion to the in-progress
 [target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md).
-No follow-up discovery is currently recorded.
+## Static-effect inference still exposes an infallible legacy facade
+
+**Evidence.** Shared dependency extraction now returns
+`MirDependencyExtractionError` for malformed function, method, function-type,
+storage, field, optional, class, array, and related identities. Static-effect
+inference, however, predates structured analysis failures and exposes an
+infallible result API; its adapter can only assert the existing invariant that
+preliminary and final MIR were verified before analysis.
+
+**Why outside WRR1.** Changing that public and planner-facing API would require
+threading a new internal compiler-error channel through static planning,
+authority issuance, final realization, and their callers. WRR1 instead keeps
+all established lifecycle diagnostics and result shapes exactly stable while
+making the reusable extractor itself fallible.
+
+**Likely owner.** Static-lifecycle orchestration and the verified preliminary-
+MIR boundary, coordinated with the compiler driver.
+
+**Priority and impact.** Low while every production caller honors the verified-
+MIR precondition; medium for testability and defensive compiler robustness.
+It would remove one remaining assertion boundary and make malformed analysis
+inputs uniformly inspectable.
+
+**Bounded first step.** Introduce a verified preliminary-MIR wrapper or an
+internal `Result`-returning static-effect entry point, migrate planning and
+realization callers, then retain the current convenience API only where its
+verified precondition is encoded in the input type.
+
+**Dependencies.** Prefer doing this after WRR3 establishes the final verified-
+MIR reachability seal and its structured verification error plumbing.
 
 This document records maintainability improvements, precision opportunities,
 and broader optimization work found while implementing the frozen

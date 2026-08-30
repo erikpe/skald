@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 is complete and WRR1 is next.
+Status: in progress; WRR0 and WRR1 are complete and WRR2 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -92,7 +92,7 @@ instead of expanding reviewed scope.
 ## Progress
 
 - [x] WRR0 — Establish the execution-dependency contract
-- [ ] WRR1 — Centralize possible-target and lifecycle dependency extraction
+- [x] WRR1 — Centralize possible-target and lifecycle dependency extraction
 - [ ] WRR2 — Implement deterministic root closure and analysis queries
 - [ ] WRR3 — Bind reachability facts to verified final MIR
 - [ ] WRR4 — Verify sparse final executable definitions
@@ -161,29 +161,29 @@ schedule, backend, or artifact behavior changed.
 reachability and static-effect analysis before either relies on a new closure
 solver.
 
-- [ ] Implement a read-only executable-definition view that uniformly scans
+- [x] Implement a read-only executable-definition view that uniformly scans
       ordinary functions, member definitions, and final or preliminary static
       initializer bodies without snapshotting MIR.
-- [ ] Centralize direct function, static method, direct instance method,
+- [x] Centralize direct function, static method, direct instance method,
       virtual-family, interface-conformance, callable-address, and exact-
       signature indirect target selection behind typed deterministic queries.
-- [ ] Centralize implicit initializer, user copy, synthesized copy, copy
+- [x] Centralize implicit initializer, user copy, synthesized copy, copy
       assignment, user destructor, field/base finalizer, optional, shared-owner,
       and array lifecycle dependency selection.
-- [ ] Preserve external and intrinsic calls as typed leaf dependencies rather
+- [x] Preserve external and intrinsic calls as typed leaf dependencies rather
       than internal execution nodes with invented bodies.
-- [ ] Inventory callable-address formations by containing execution node,
+- [x] Inventory callable-address formations by containing execution node,
       exact function type, exact target, and stable evidence span so later
       closure can scope candidates to reachable formations.
-- [ ] Use exhaustive no-wildcard matches for every instruction, rvalue,
+- [x] Use exhaustive no-wildcard matches for every instruction, rvalue,
       terminator, type/lifecycle plan, dispatch target, and cleanup form that
       can select executable work.
-- [ ] Migrate static-effect extraction to consume the shared target/lifecycle
+- [x] Migrate static-effect extraction to consume the shared target/lifecycle
       resolver while retaining its separate static-access evidence, phases,
       witnesses, root-effect authority, diagnostics, dumps, and solved results.
-- [ ] Remove superseded duplicate target-selection helpers only after exact
+- [x] Remove superseded duplicate target-selection helpers only after exact
       static-effect parity is proven.
-- [ ] Return structured extraction errors for malformed identities instead of
+- [x] Return structured extraction errors for malformed identities instead of
       introducing new panics in analysis code.
 
 **Tests:** Exact direct/static/member targets; full virtual families; complete
@@ -200,6 +200,15 @@ deterministic edge order.
 **Exit criteria:** Reachability and static lifecycle can obtain every current
 possible executable target from one exhaustive service, existing lifecycle
 authority/diagnostic behavior is unchanged, and no reachability pruning runs.
+
+Completed on 2026-08-31. `passes::reachability` now owns a borrowed executable-
+definition view, structured extraction failures, deterministic call/dispatch
+resolution, scoped callable-address and indirect-call inventories, and the
+canonical class/optional/shared/array lifecycle walk. Static-effect extraction
+maps the neutral edges back to its private phases and witnesses; exact existing
+analysis, planning, realization, and dump tests pass after removal of its old
+target, function-value, and lifecycle helper modules. No closure is computed
+and no MIR definition is removed.
 
 ### WRR2 — Implement deterministic root closure and analysis queries
 
