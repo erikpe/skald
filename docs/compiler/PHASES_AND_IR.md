@@ -292,11 +292,13 @@ optional-class, shared-owner, optional-shared, or array cleanup semantics.
 `verify_synthesized_mir` independently checks final definitions, exact region
 coverage and order, unique legal transitions, initializer publication and
 cleanup control flow, ordinary ownership/array/lifetime rules, lifecycle
-destination non-escape, and the complete effect/dependency certificate using
-only final MIR. `run_mir_pipeline` and the backend trust boundary call this
-combined verifier. No runtime access guard is represented; certified ordinary
-static accesses are valid because their targets are earlier in activation and
-later in shutdown.
+destination non-escape, and the final root-effect realization using only final
+MIR. It re-derives closed-world targets and normalized effects, requires exact
+contractual lifecycle-root coverage and a subset of baseline authority, then
+checks realized dependencies against the frozen activation order.
+`run_mir_pipeline` and the backend trust boundary call this combined verifier.
+No runtime access guard is represented; certified ordinary static accesses are
+valid because their targets are earlier in activation and later in shutdown.
 
 Preliminary and planned products remain unavailable to ordinary passes and
 backends. The driver reports lifetime graph failures as ordinary source
@@ -312,11 +314,9 @@ contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 ### Frozen static-lifecycle certificate direction
 
-The current implementation requires final MIR to reproduce the preliminary
-certificate's direct effects, possible target edges, and function-value
-candidate inventory exactly. The frozen replacement keeps lifecycle planning
-before optimization but changes the cross-phase proof from graph equality to a
-root-effect authority relation. Delivery is owned by the
+The implementation keeps lifecycle planning before optimization and uses a
+root-effect authority relation rather than exact cross-phase graph equality.
+Delivery of the remaining certificate and schema cleanup is owned by the
 [static-lifecycle certificate roadmap](../roadmaps/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md),
 and the complete rationale is preserved in the
 [frozen design record](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md).
@@ -339,10 +339,20 @@ certificate. This compatibility oracle preserves the existing `STA001` and
 Planned dumps identify the compact proof separately as
 `StaticLifecycleBaselineAuthority` while retaining the analysis dump.
 
-Final-MIR verification still uses the legacy exact graph, candidate-inventory,
-and dependency certificate. Replacing that temporary optimization fence with
-the baseline-authority subset relation is the next roadmap milestone; the
-issued authority is not yet the final realization checker.
+`verify_synthesized_mir` is the distinct final realization checker. It extracts
+the actual final program and moved initializer bodies, re-derives virtual,
+interface, indirect, direct, and implicit lifecycle targets, and computes the
+normalized facts for every root required by the final definitions. Required
+root coverage remains exact, while each realized fact set need only be a
+subset of its immutable baseline authority. It independently derives realized
+dependency pairs and checks them against the frozen activation order. Direct
+effects, call edges, source spans, witnesses, node inventory, and address-taken
+candidate inventory are no longer compared across the final boundary.
+
+The legacy solved analysis and witness-bearing dependency certificate remain
+temporarily stored and exactly checked only at planned issuance as a migration
+oracle. They do not constrain final graph reshaping and will move to a
+planning-report sidecar in the next roadmap milestone.
 
 For every explicit static initializer and implicit class or array lifecycle
 operation used to activate or destroy a static field, preliminary analysis

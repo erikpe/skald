@@ -3,13 +3,16 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use crate::mir::{
-    PreliminaryMirProgram, StaticEffectAnalysis, StaticEffectNode, StaticLifecycleAuthority,
-    StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
+    MirProgram, MirStaticLifecycleDefinition, PreliminaryMirProgram, StaticEffectAnalysis,
+    StaticEffectNode, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+    StaticLifecycleRootAuthority,
 };
 
 use super::{
     super::extract::ExtractedGraph,
-    model::{lifecycle_root_uses, StaticLifecycleRootEffectError},
+    model::{
+        lifecycle_root_uses, lifecycle_root_uses_for_definitions, StaticLifecycleRootEffectError,
+    },
 };
 
 pub(crate) fn analyze(
@@ -24,6 +27,31 @@ pub(crate) fn analyze(
         .into_iter()
         .map(|root| root.node)
         .collect::<BTreeSet<_>>();
+    analyze_roots(graph, declared_fields, roots)
+}
+
+pub(crate) fn analyze_final(
+    program: &MirProgram,
+    definitions: &[MirStaticLifecycleDefinition],
+    graph: &ExtractedGraph,
+) -> Result<StaticLifecycleAuthority, StaticLifecycleRootEffectError> {
+    let declared_fields = program
+        .classes
+        .iter()
+        .flat_map(|class| class.static_fields.iter().map(|field| field.id))
+        .collect::<BTreeSet<_>>();
+    let roots = lifecycle_root_uses_for_definitions(program, definitions)
+        .into_iter()
+        .map(|root| root.node)
+        .collect::<BTreeSet<_>>();
+    analyze_roots(graph, declared_fields, roots)
+}
+
+fn analyze_roots(
+    graph: &ExtractedGraph,
+    declared_fields: BTreeSet<crate::identity::StaticFieldId>,
+    roots: BTreeSet<StaticEffectNode>,
+) -> Result<StaticLifecycleAuthority, StaticLifecycleRootEffectError> {
     let summaries = roots
         .into_iter()
         .map(|root| {

@@ -8,11 +8,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [static-lifecycle certificate redesign roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
-is in progress. Normalized lifecycle-root effect analysis and exact immutable
-baseline-authority issuance are complete; monotone final-MIR realization
-verification is next. The roadmap depends on the existing whole-world
-static-effect extractor and lifecycle planner; the later general optimization
-framework and dense-ID rewriter remain separate work.
+is in progress. Normalized lifecycle-root analysis, exact immutable authority
+issuance, and monotone final-MIR realization verification are complete;
+separating analysis evidence from executable proof is next. The roadmap
+depends on the existing whole-world static-effect extractor and lifecycle
+planner; the later general optimization framework and dense-ID rewriter remain
+separate work.
 
 ## Pending discoveries
 

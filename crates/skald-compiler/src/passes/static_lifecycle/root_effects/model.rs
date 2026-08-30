@@ -50,18 +50,10 @@ pub(super) fn lifecycle_root_uses(program: &PreliminaryMirProgram) -> Vec<Lifecy
     roots
 }
 
-pub(crate) fn dependency_pairs(
-    program: &PreliminaryMirProgram,
-    authority: &StaticLifecycleAuthority,
-) -> Result<BTreeSet<(StaticFieldId, StaticFieldId)>, StaticLifecycleRootEffectError> {
-    dependency_pairs_for_roots(lifecycle_root_uses(program), authority)
-}
-
-pub(crate) fn dependency_pairs_for_definitions(
+pub(super) fn lifecycle_root_uses_for_definitions(
     program: &MirProgram,
     definitions: &[MirStaticLifecycleDefinition],
-    authority: &StaticLifecycleAuthority,
-) -> Result<BTreeSet<(StaticFieldId, StaticFieldId)>, StaticLifecycleRootEffectError> {
+) -> Vec<LifecycleRootUse> {
     let mut roots = Vec::new();
     for definition in definitions {
         if let MirStaticFieldInitialization::Explicit(initializer) = definition.initialization {
@@ -83,7 +75,25 @@ pub(crate) fn dependency_pairs_for_definitions(
     }
     roots.sort_unstable();
     roots.dedup();
-    dependency_pairs_for_roots(roots, authority)
+    roots
+}
+
+pub(crate) fn dependency_pairs(
+    program: &PreliminaryMirProgram,
+    authority: &StaticLifecycleAuthority,
+) -> Result<BTreeSet<(StaticFieldId, StaticFieldId)>, StaticLifecycleRootEffectError> {
+    dependency_pairs_for_roots(lifecycle_root_uses(program), authority)
+}
+
+pub(crate) fn dependency_pairs_for_definitions(
+    program: &MirProgram,
+    definitions: &[MirStaticLifecycleDefinition],
+    authority: &StaticLifecycleAuthority,
+) -> Result<BTreeSet<(StaticFieldId, StaticFieldId)>, StaticLifecycleRootEffectError> {
+    dependency_pairs_for_roots(
+        lifecycle_root_uses_for_definitions(program, definitions),
+        authority,
+    )
 }
 
 fn dependency_pairs_for_roots(

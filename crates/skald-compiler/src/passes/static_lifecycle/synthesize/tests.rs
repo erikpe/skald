@@ -270,10 +270,10 @@ fn rejects_publication_bypass_and_initializer_destination_escape() {
     *argument = MirArgument::Place(MirPlace::static_lifecycle_destination(field));
     let message = errors(&escaped);
     assert!(
-        message.contains("direct effects")
-            || message.contains("invalid lifecycle-owned destination access"),
+        message.contains("unauthorized fact") || message.contains("violates activation order"),
         "{message}"
     );
+    assert!(message.contains("lifecycle_owned: true"), "{message}");
 }
 
 #[test]

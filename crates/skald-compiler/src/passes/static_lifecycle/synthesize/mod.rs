@@ -8,7 +8,10 @@ use crate::mir::{
     MirVerificationErrors, PlannedMirProgram,
 };
 
-use super::{verify_planned_mir, verify_synthesized_mir};
+use super::{
+    verify::{debug_assert_exact_synthesized_realization, verify_planned_mir},
+    verify_synthesized_mir,
+};
 
 /// Consumes a verified planned product and moves its existing initializer CFGs
 /// into one final program-owned lifecycle coordinator.
@@ -98,6 +101,7 @@ pub fn synthesize_static_lifecycle(
         activation,
         shutdown,
     ));
+    debug_assert_exact_synthesized_realization(&program);
     verify_synthesized_mir(&program)?;
     Ok(program)
 }

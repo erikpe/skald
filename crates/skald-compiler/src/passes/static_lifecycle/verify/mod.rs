@@ -4,6 +4,7 @@ mod authority;
 mod certificate;
 mod final_coordinator;
 mod lifecycle;
+mod realization;
 
 use crate::mir::{
     verify_mir, verify_preliminary_mir, MirProgram, MirProgramLifecycle, MirStaticInitializerBody,
@@ -40,8 +41,9 @@ pub fn verify_planned_mir(program: &PlannedMirProgram) -> Result<(), MirVerifica
     }
 }
 
-/// Re-verifies final coordinator structure, all moved bodies, and the effect
-/// certificate using only the backend-consumable `MirProgram`.
+/// Re-verifies final coordinator structure, all moved bodies, and their
+/// monotone realization of baseline authority using only backend-consumable
+/// `MirProgram`.
 pub fn verify_synthesized_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
     let structural = verify_mir(program);
     let structurally_valid = structural.is_ok();
@@ -62,7 +64,7 @@ pub fn verify_synthesized_mir(program: &MirProgram) -> Result<(), MirVerificatio
     };
     final_coordinator::verify(view, coordinator, &mut errors);
     if structurally_valid {
-        certificate::verify(view, &mut errors);
+        realization::verify(view, &mut errors);
     }
     if errors.is_empty() {
         Ok(())
@@ -79,5 +81,29 @@ pub(super) fn program_error(errors: &mut Vec<MirVerificationError>, message: imp
     });
 }
 
+pub(super) fn debug_assert_exact_synthesized_realization(program: &MirProgram) {
+    #[cfg(debug_assertions)]
+    {
+        let coordinator = program
+            .static_lifecycle
+            .as_ref()
+            .expect("synthesis must install its lifecycle coordinator");
+        let view = LifecycleMirView {
+            program,
+            lifecycle: coordinator.lifecycle(),
+            initializers: coordinator.initializers(),
+        };
+        let realized = realization::analyze(view)
+            .expect("unmodified synthesis must retain every issued lifecycle root");
+        debug_assert_eq!(
+            realized,
+            *coordinator.lifecycle().certificate().authority(),
+            "unmodified synthesis must exactly realize baseline authority"
+        );
+    }
+}
+
+#[cfg(test)]
+mod realization_tests;
 #[cfg(test)]
 mod tests;

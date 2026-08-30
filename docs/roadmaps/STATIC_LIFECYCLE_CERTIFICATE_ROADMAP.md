@@ -1,6 +1,6 @@
 # Static-Lifecycle Certificate Redesign Roadmap
 
-Status: in progress; LCR0-LCR1 are complete and LCR2 is next.
+Status: in progress; LCR0-LCR2 are complete and LCR3 is next.
 
 This roadmap implements the frozen
 [static-lifecycle certificate design](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
@@ -64,7 +64,7 @@ graph-reshaping passes can later rely.
 
 - [x] LCR0 — Establish normalized root-effect analysis
 - [x] LCR1 — Issue exact immutable baseline authority
-- [ ] LCR2 — Verify monotone final-MIR realization
+- [x] LCR2 — Verify monotone final-MIR realization
 - [ ] LCR3 — Separate analysis evidence from executable proof
 - [ ] LCR4 — Reorganize lifecycle module ownership
 - [ ] LCR5 — Canonicalize planned lifecycle data
@@ -196,30 +196,30 @@ suite, documentation checks, MSRV checks, lint, and diff validation all pass.
 **Purpose:** Remove the optimization fence by switching final lifecycle
 verification from exact graph identity to the frozen root-effect relation.
 
-- [ ] Add a distinct final realization checker that extracts the final program,
+- [x] Add a distinct final realization checker that extracts the final program,
       re-derives closed-world targets, computes lifecycle-root facts, and
       requires each fact set to be a subset of baseline authority.
-- [ ] Require exact final root coverage for lifecycle work that remains
+- [x] Require exact final root coverage for lifecycle work that remains
       contractually required by the static definitions; do not authorize whole
       static declaration or lifecycle-root pruning in this roadmap.
-- [ ] Independently derive realized dependencies and validate them against the
+- [x] Independently derive realized dependencies and validate them against the
       frozen activation order, self/publication rules, and lifecycle-owned
       destination constraints.
-- [ ] Remove exact final equality requirements for direct effects, target
+- [x] Remove exact final equality requirements for direct effects, target
       edges, node inventory, source spans, witnesses, and address-taken
       candidate inventory.
-- [ ] Keep ordinary `verify_mir`, coordinator coverage, publication dominance,
+- [x] Keep ordinary `verify_mir`, coordinator coverage, publication dominance,
       cleanup legality, destination non-escape, and exact-reverse shutdown
       checks unchanged.
-- [ ] Add verifier-local transformed fixtures that remove an unreachable
+- [x] Add verifier-local transformed fixtures that remove an unreachable
       static access, remove a dead effectful call, narrow dynamic and indirect
       targets, and replace a call path with an equivalent inlined root effect.
-- [ ] Add negative transformed fixtures for a new target field, access kind,
+- [x] Add negative transformed fixtures for a new target field, access kind,
       phase, lifecycle-owned destination access, missing surviving indirect
       target, and unsafe realized dependency.
-- [ ] Prove that all current unoptimized programs realize authority exactly at
+- [x] Prove that all current unoptimized programs realize authority exactly at
       synthesis, while the same verifier accepts the authorized reductions.
-- [ ] Update the compiler contract to make the subset realization relation the
+- [x] Update the compiler contract to make the subset realization relation the
       implemented final-MIR trust boundary.
 
 **Tests:** Positive removal, narrowing, and graph-reshaping mutation tests;
@@ -238,6 +238,17 @@ tests; `cargo test --locked -p skald-compiler --test pipeline_determinism`;
 without certificate edits, every new normalized root fact is rejected, the
 frozen plan is checked directly against realized dependencies, and no
 production optimization has been introduced.
+
+**Completed:** Final verification now extracts the actual synthesized MIR,
+re-derives its closed-world root effects and dependencies, requires exact
+contractual root coverage, accepts only baseline-authorized fact subsets, and
+checks the realized dependency order. The final trust boundary no longer
+compares legacy graph evidence, candidates, spans, or witnesses. Focused tests
+cover unoptimized exact realization, removal, target narrowing, inlining-shaped
+graph changes, unauthorized facts, missing targets, phase and ownership
+changes, and unsafe order; ordinary verification and backend emission remain in
+the path. The full compiler suite, pipeline determinism, static-field goldens,
+documentation, formatting, MSRV, and diff gates all pass.
 
 ### LCR3 — Separate analysis evidence from executable proof
 
