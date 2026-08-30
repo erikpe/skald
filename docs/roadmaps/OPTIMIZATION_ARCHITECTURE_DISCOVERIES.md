@@ -1,6 +1,9 @@
 # Optimization Architecture Discoveries
 
-Status: five architectural constraints remain pending. The static-lifecycle
+Status: five architectural constraints remain pending. The reachability
+constraint now has a proposed
+[target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
+but no implementation roadmap. The static-lifecycle
 and dense callable-local identity constraints are resolved by their completed
 [static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 and
@@ -426,6 +429,14 @@ must conservatively include:
 Preserve target-private artifact retention after lowering. It still owns
 generated helpers, target symbols, trace metadata, panic messages, and data
 that do not have target-independent identities.
+
+The proposed
+[whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+develops this direction as reusable seal-bound dependency and reachability
+infrastructure. Its first pruning client removes executable definitions while
+preserving dense semantic declarations and global identities; later passes may
+reuse the same possible-target and closure queries for devirtualization,
+inlining, effect analysis, specialization, and metadata pruning.
 
 ### Optimization possibilities unlocked
 

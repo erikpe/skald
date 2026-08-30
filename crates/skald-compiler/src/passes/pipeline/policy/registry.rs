@@ -1,5 +1,5 @@
 use super::{
-    descriptor::MirPassRegistration,
+    descriptor::{MirPassDescriptor, MirPassRegistration},
     error::{MirPassRegistryError, MirPassRegistryErrors},
     identity::MirPassIdentity,
 };
@@ -86,13 +86,20 @@ impl MirPassRegistry {
     }
 
     pub(super) fn known_names(self) -> Vec<&'static str> {
-        let mut names = self
+        self.descriptors()
+            .into_iter()
+            .map(MirPassDescriptor::name)
+            .collect()
+    }
+
+    pub(super) fn descriptors(self) -> Vec<MirPassDescriptor> {
+        let mut descriptors = self
             .registrations
             .iter()
-            .map(|registration| registration.descriptor().name())
+            .map(|registration| registration.descriptor())
             .collect::<Vec<_>>();
-        names.sort_unstable();
-        names
+        descriptors.sort_unstable_by_key(|descriptor| descriptor.name());
+        descriptors
     }
 }
 

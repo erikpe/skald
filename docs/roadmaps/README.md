@@ -34,6 +34,14 @@ No other implementation roadmap is currently planned.
 
 ## Design proposals
 
+The proposed
+[target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+defines reusable final-MIR executable-dependency and root analysis, seal-bound
+reachability facts, stable-identity program retention, independently verified
+sparse executable definitions, backend retained-domain consumption, and one
+conservative definition-pruning client. Its decisions require confirmation
+before an implementation roadmap is created.
+
 The completed selectable final-MIR optimization pipeline design and delivery
 record are preserved in the [archive](../archive/README.md). Their typed static
 registry, deterministic profiles and schedules, request and CLI selection,

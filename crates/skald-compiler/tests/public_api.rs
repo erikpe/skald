@@ -47,14 +47,14 @@ use skald_compiler::{
         ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::{
-        run_mir_pipeline, run_mir_pipeline_inspected,
+        available_mir_passes, run_mir_pipeline, run_mir_pipeline_inspected,
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
             PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan,
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
-        MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
+        MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
         MirPipelineFailureStage, VerifiedFinalMirProgram,
     },
     resolve::{
@@ -96,6 +96,8 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(request.artifact().output(), Some(Path::new("main.s")));
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(request.mir_optimization().profile().name(), "default");
+    let passes: Vec<MirPassDescriptor> = available_mir_passes();
+    assert_eq!(passes[0].name(), "dead-pure-definition-elimination");
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent

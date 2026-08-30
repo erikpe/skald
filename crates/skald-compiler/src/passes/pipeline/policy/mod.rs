@@ -10,16 +10,27 @@ mod profile;
 mod registry;
 mod schedule;
 
+pub use descriptor::MirPassDescriptor;
 pub(crate) use error::MirPassScheduleError;
 pub use identity::MirPassIdentity;
 pub use profile::MirOptimizationProfile;
 pub(crate) use schedule::{MirPassOccurrence, MirPassSchedule};
 
-pub(in crate::passes::pipeline) use descriptor::{
-    MirPassDescriptor, MirPassImplementation, MirPassRegistration,
-};
+pub(in crate::passes::pipeline) use descriptor::{MirPassImplementation, MirPassRegistration};
 
 use registry::production_registry;
+
+/// Returns every production final-MIR pass in stable-name order.
+///
+/// The descriptors come directly from the compiler-owned registry used for
+/// schedule resolution, so discovery and selection cannot drift apart.
+pub fn available_mir_passes() -> Vec<MirPassDescriptor> {
+    let registry = production_registry();
+    if let Err(error) = registry.validate() {
+        panic!("invalid compiler-owned final-MIR pass registry: {error}");
+    }
+    registry.descriptors()
+}
 
 /// Resolves one supported profile and a set of stable-name exclusions.
 pub(crate) fn resolve_mir_pass_schedule<'a>(

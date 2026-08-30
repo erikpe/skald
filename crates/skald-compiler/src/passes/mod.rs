@@ -10,16 +10,17 @@ mod pipeline;
 
 // The exact resolver is a frozen compiler-internal experiment surface; no
 // production adapter selects it yet.
+pub use pipeline::{
+    available_mir_passes, run_mir_pipeline, run_mir_pipeline_inspected, verify_final_mir,
+    MirOptimizationProfile, MirPassDescriptor, MirPassIdentity, MirPassMeasurement,
+    MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineCheckpoint,
+    MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage, MirPipelineInspector,
+    VerifiedFinalMirProgram,
+};
 #[allow(unused_imports)]
 pub(crate) use pipeline::{
     resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, MirPassSchedule,
     MirPassScheduleError,
-};
-pub use pipeline::{
-    run_mir_pipeline, run_mir_pipeline_inspected, verify_final_mir, MirOptimizationProfile,
-    MirPassIdentity, MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord,
-    MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage,
-    MirPipelineInspector, VerifiedFinalMirProgram,
 };
 pub(crate) use pipeline::{
     run_mir_pipeline_measured, run_mir_pipeline_with_occurrences, MeasuredMirPipeline,

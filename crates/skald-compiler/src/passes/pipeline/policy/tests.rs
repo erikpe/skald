@@ -1,4 +1,5 @@
 use super::{
+    available_mir_passes,
     descriptor::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
     error::{MirPassRegistryError, MirPassScheduleError},
     identity::MirPassIdentity,
@@ -83,6 +84,30 @@ fn production_profiles_select_the_canary_only_by_default() {
     assert_eq!(
         exact.as_slice()[0].name(),
         "dead-pure-definition-elimination"
+    );
+}
+
+#[test]
+fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
+    let passes = available_mir_passes();
+    assert_eq!(passes.len(), 1);
+    assert_eq!(
+        passes[0].identity(),
+        dead_pure_definition_elimination::IDENTITY
+    );
+    assert_eq!(passes[0].name(), "dead-pure-definition-elimination");
+    assert_eq!(
+        passes[0].description(),
+        "Removes unused non-failing scalar MIR definitions."
+    );
+
+    assert_eq!(
+        valid_registry()
+            .descriptors()
+            .into_iter()
+            .map(MirPassDescriptor::name)
+            .collect::<Vec<_>>(),
+        vec!["alpha-pass", "beta-pass", "gamma-2-pass"]
     );
 }
 

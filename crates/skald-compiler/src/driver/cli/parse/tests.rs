@@ -8,6 +8,18 @@ fn options(arguments: &[&str]) -> CompileOptions {
     options
 }
 
+#[test]
+fn mir_pass_listing_is_an_input_free_command() {
+    assert!(matches!(
+        parse_command(["skac", "--list-mir-passes"].map(OsString::from)).unwrap(),
+        Command::ListMirPasses
+    ));
+    assert!(matches!(
+        parse_command(["skac", "missing.ska", "--list-mir-passes"].map(OsString::from)).unwrap(),
+        Command::ListMirPasses
+    ));
+}
+
 fn error(arguments: &[&str]) -> String {
     parse_command(arguments.iter().map(OsString::from))
         .err()

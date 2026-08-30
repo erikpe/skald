@@ -18,8 +18,9 @@ pub use execution::{
     MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineCheckpoint,
     MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage, MirPipelineInspector,
 };
-pub use policy::MirOptimizationProfile;
-pub use policy::MirPassIdentity;
+pub use policy::{
+    available_mir_passes, MirOptimizationProfile, MirPassDescriptor, MirPassIdentity,
+};
 pub(crate) use policy::{
     resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, MirPassOccurrence, MirPassSchedule,
     MirPassScheduleError,

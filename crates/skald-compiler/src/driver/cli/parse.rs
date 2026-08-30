@@ -33,6 +33,7 @@ pub(super) enum DiagnosticLevel {
 
 pub(super) enum Command {
     Help,
+    ListMirPasses,
     Version,
     Compile(CompileOptions),
 }
@@ -63,6 +64,7 @@ where
     while let Some(argument) = args.next() {
         match argument.to_str() {
             Some("-h" | "--help") => return Ok(Command::Help),
+            Some("--list-mir-passes") => return Ok(Command::ListMirPasses),
             Some("--version") => return Ok(Command::Version),
             Some("--entry") => {
                 if logical_entry.is_some() {

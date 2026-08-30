@@ -33,6 +33,22 @@ fn help_succeeds_through_the_binary_entry_point() {
     assert!(help.contains("--diagnostic-level <l>  Render warning or error diagnostics"));
     assert!(help.contains("--mir-optimization <none|default>"));
     assert!(help.contains("--disable-mir-pass <name>"));
+    assert!(help.contains("--list-mir-passes"));
+}
+
+#[test]
+fn real_binary_lists_registered_mir_passes_without_an_input() {
+    let output = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg("--list-mir-passes")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        "Available final-MIR passes:\n  dead-pure-definition-elimination\n      Removes unused non-failing scalar MIR definitions.\n"
+    );
+    assert!(output.stderr.is_empty());
 }
 
 #[test]
@@ -252,7 +268,7 @@ fn real_binary_default_output_matches_explicit_quiet_selection() {
         .unwrap();
     assert_same_process_output(&default, &explicit);
 
-    for special in ["--help", "--version"] {
+    for special in ["--help", "--version", "--list-mir-passes"] {
         let default = Command::new(env!("CARGO_BIN_EXE_skac"))
             .arg(special)
             .output()

@@ -647,7 +647,10 @@ unique stable lowercase kebab-case name, description, implementation-declared
 identity, and transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity before schedule selection. The production
-registry contains `dead-pure-definition-elimination`. The `none` profile
+registry contains `dead-pure-definition-elimination`. Its validated descriptors
+are exposed in stable-name order for the public read-only query and the
+input-free `--list-mir-passes` CLI command; discovery therefore reads the same
+metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule, and `default` contains the
 canary exactly once. Disabling the canary from `default`, including duplicate
 disabling, produces the same schedule as `none`.

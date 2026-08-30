@@ -396,6 +396,10 @@ fn default_and_explicit_quiet_modes_are_byte_identical_across_cli_outcomes() {
         run(&["skac", "--version"]),
         run(&["skac", "--diagnostic-level", "warning", "--version"])
     );
+    assert_eq!(
+        run(&["skac", "--list-mir-passes"]),
+        run(&["skac", "--report-level", "off", "--list-mir-passes",])
+    );
 }
 
 #[test]

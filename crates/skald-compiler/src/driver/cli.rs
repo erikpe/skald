@@ -10,6 +10,7 @@ use super::{
     request::{ArtifactKind, EntrySelector},
     Toolchain,
 };
+use crate::passes::available_mir_passes;
 
 mod compile;
 mod parse;
@@ -35,6 +36,7 @@ pub(super) const HELP: &str = concat!(
     "                          Select the final-MIR optimization profile\n",
     "  --disable-mir-pass <name>\n",
     "                          Disable a named final-MIR pass; repeatable\n",
+    "  --list-mir-passes       List registered final-MIR passes\n",
     "  -v, -q                  Increase or decrease operational report detail\n",
     "  --report-level <level>  Select off, phases, details, or trace reports\n",
     "  --diagnostic-level <l>  Render warning or error diagnostics\n",
@@ -89,6 +91,10 @@ where
             writeln!(stdout, "{HELP}")?;
             Ok(0)
         }
+        Ok(Command::ListMirPasses) => {
+            write_available_mir_passes(stdout)?;
+            Ok(0)
+        }
         Ok(Command::Version) => {
             writeln!(stdout, "skac {}", env!("CARGO_PKG_VERSION"))?;
             Ok(0)
@@ -99,6 +105,20 @@ where
         }
         Ok(Command::Compile(options)) => compile(options, stderr, toolchain),
     }
+}
+
+fn write_available_mir_passes(output: &mut impl Write) -> io::Result<()> {
+    let passes = available_mir_passes();
+    if passes.is_empty() {
+        return writeln!(output, "No final-MIR passes are registered.");
+    }
+
+    writeln!(output, "Available final-MIR passes:")?;
+    for pass in passes {
+        writeln!(output, "  {}", pass.name())?;
+        writeln!(output, "      {}", pass.description())?;
+    }
+    Ok(())
 }
 
 pub(super) fn default_output_path(entry: &EntrySelector, output_kind: ArtifactKind) -> PathBuf {

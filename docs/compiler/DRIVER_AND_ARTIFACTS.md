@@ -138,11 +138,12 @@ verification-only schedule, while `default` contains
 product as `none`. `none` remains the reference unoptimized mode and preserves
 raw final MIR after its required central verification.
 
-The frozen command-line surface is:
+The implemented command-line surface is:
 
 ```text
 --mir-optimization <none|default>
 --disable-mir-pass <name>
+--list-mir-passes
 ```
 
 These options are implemented. `--mir-optimization` may appear once.
@@ -151,7 +152,11 @@ removes every occurrence of the named pass from the selected profile;
 duplicate disabling is idempotent. Unknown profile or pass names are usage
 errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
-`dead-pure-definition-elimination` name. The CLI
+`dead-pure-definition-elimination` name. `--list-mir-passes` succeeds without
+an input file and prints every registered stable name and description in
+lexical name order. Library tools can inspect the same canonical metadata
+through `passes::available_mir_passes` and `MirPassDescriptor`; neither query
+constructs a schedule or performs source or provider I/O. The CLI
 does not initially expose arbitrary pass order, `-O`, or numeric optimization
 levels. A crate-private exact-schedule API belongs to compiler tests and tools,
 not the public driver policy.

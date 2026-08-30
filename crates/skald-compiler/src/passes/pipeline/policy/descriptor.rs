@@ -3,7 +3,7 @@ use crate::passes::pipeline::execution::MirPassTransform;
 
 /// Stable selection and inspection metadata for one pass.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline) struct MirPassDescriptor {
+pub struct MirPassDescriptor {
     identity: MirPassIdentity,
     name: &'static str,
     description: &'static str,
@@ -22,15 +22,15 @@ impl MirPassDescriptor {
         }
     }
 
-    pub(in crate::passes::pipeline) const fn identity(self) -> MirPassIdentity {
+    pub const fn identity(self) -> MirPassIdentity {
         self.identity
     }
 
-    pub(in crate::passes::pipeline) const fn name(self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         self.name
     }
 
-    pub(in crate::passes::pipeline) const fn description(self) -> &'static str {
+    pub const fn description(self) -> &'static str {
         self.description
     }
 }

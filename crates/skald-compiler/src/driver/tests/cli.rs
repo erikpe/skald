@@ -2,7 +2,7 @@ use super::*;
 use std::os::unix::ffi::OsStringExt;
 
 #[test]
-fn help_and_version_are_available_without_compilation() {
+fn help_version_and_mir_pass_listing_are_available_without_compilation() {
     let (exit_code, stdout, stderr) = run(&["skac", "--help"]);
     assert_eq!(exit_code, 0);
     assert_eq!(stdout, format!("{HELP}\n"));
@@ -11,6 +11,14 @@ fn help_and_version_are_available_without_compilation() {
     let (exit_code, stdout, stderr) = run(&["skac", "--version"]);
     assert_eq!(exit_code, 0);
     assert_eq!(stdout, format!("skac {}\n", env!("CARGO_PKG_VERSION")));
+    assert!(stderr.is_empty());
+
+    let (exit_code, stdout, stderr) = run(&["skac", "--list-mir-passes"]);
+    assert_eq!(exit_code, 0);
+    assert_eq!(
+        stdout,
+        "Available final-MIR passes:\n  dead-pure-definition-elimination\n      Removes unused non-failing scalar MIR definitions.\n"
+    );
     assert!(stderr.is_empty());
 }
 
