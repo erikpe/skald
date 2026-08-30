@@ -16,8 +16,10 @@ target-specific optimization, their interaction with permanent whole-world and
 single-threaded program semantics, expected impact and effort, and a recommended
 starting sequence. Its first recommended change is now implemented; the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
-is preserved in the archive. The remaining six constraints stay pending and
-are not part of that roadmap.
+is preserved in the archive. The next constraint now has a proposed
+[dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
+under review. The remaining constraints stay pending and are not part of the
+completed lifecycle roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -28,6 +30,12 @@ generic-interface roadmaps are preserved in the
 No other implementation roadmap is currently planned.
 
 ## Design proposals
+
+The [dense callable-local MIR identity rewriting proposal](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
+defines a private sparse edit transaction, exhaustive local-ID remapping,
+deterministic dense commit, all-executable-definition integration, and future
+cross-callable rehoming. Its decisions are proposed, not yet frozen, and it has
+no implementation roadmap.
 
 The static-lifecycle certificate decisions are promoted into the
 [compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-static-lifecycle-certificate-direction),

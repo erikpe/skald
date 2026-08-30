@@ -3,7 +3,9 @@
 Status: six architectural constraints remain pending. The static-lifecycle
 constraint is resolved by the
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md);
-the remaining constraints have no implementation roadmap.
+the next constraint has a proposed
+[dense callable-local MIR identity rewriting design](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md),
+but the remaining constraints have no implementation roadmap.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -181,6 +183,10 @@ inlining, block merging, block forwarding, and value replacement all depend on
 reliable structural editing.
 
 ### Resolution direction
+
+The detailed proposed direction is recorded in the
+[dense callable-local MIR identity rewriting design proposal](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md).
+Its decisions remain under review.
 
 Introduce a private MIR rewriting boundary that can rebuild one callable while
 preserving program-level semantic identities. It should own:
