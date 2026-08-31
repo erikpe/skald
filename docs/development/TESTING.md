@@ -1160,6 +1160,14 @@ replacement, and reverse destruction. Cross-process phase tests and the golden
 runner's full audit compare deterministic diagnostics, products, assembly,
 stdout, stderr, and status; passing sandboxes are removed after each run.
 
+The current eager baseline also includes an imported module whose explicit
+static initializer and destructor are otherwise unused. Its cross-process test
+records preliminary, planned, final, and assembly products; its native golden
+pins initializer-before-entry and destructor-after-entry output under the
+default, optimization-none, and reachability-disabled schedules. This fixture
+must remain eager until the documented semantic cutover deliberately changes
+its expectation.
+
 The frozen reachability-gated direction extends this ownership without moving
 ordinary source checking. Shared dependency tests will own exhaustive direct
 static accesses and possible targets; activation-analysis tests will own the

@@ -186,6 +186,9 @@ const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
 const STATIC_FIELD_MODULE_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_MODULE_DETERMINISM_OUTPUT";
 const STATIC_FIELD_MODULE_TEST_NAME: &str =
     "static_field_module_products_are_deterministic_across_processes";
+const EAGER_UNUSED_STATIC_HELPER_OUTPUT: &str = "SKALD_EAGER_UNUSED_STATIC_DETERMINISM_OUTPUT";
+const EAGER_UNUSED_STATIC_TEST_NAME: &str =
+    "eager_unused_static_products_are_deterministic_across_processes";
 const MIR_CHECKPOINT_HELPER_OUTPUT: &str = "SKALD_MIR_CHECKPOINT_DETERMINISM_OUTPUT";
 const MIR_CHECKPOINT_TEST_NAME: &str =
     "mir_pipeline_checkpoints_are_deterministic_across_processes";
@@ -346,6 +349,16 @@ fn static_field_module_products_are_deterministic_across_processes() {
         STATIC_FIELD_MODULE_HELPER_OUTPUT,
         STATIC_FIELD_MODULE_TEST_NAME,
         PERMUTATION_HELPER_VARIANT,
+    );
+}
+
+#[test]
+fn eager_unused_static_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "eager-unused-static-products",
+        EAGER_UNUSED_STATIC_HELPER_OUTPUT,
+        EAGER_UNUSED_STATIC_TEST_NAME,
+        eager_unused_static_phase_dump,
     );
 }
 
@@ -2008,6 +2021,89 @@ fn static_field_module_phase_dump(variant: usize) -> String {
             dump_resolved(&resolved.program),
             dump_hir(&hir),
             dump_mir(&mir),
+            assembly,
+        ),
+    )
+}
+
+fn eager_unused_static_phase_dump() -> String {
+    let fixture = ModuleFixture::new("eager-unused-static-products", 0);
+    let application = fixture.path.join("application");
+    let standard_library = fixture.path.join("standard-library");
+    let mut sources = vec![
+        (
+            application.join("app.ska"),
+            include_str!(
+                "../../../tests/golden/static_fields/cases/eager_unused_import/modules/app.ska"
+            ),
+        ),
+        (
+            application.join("dormant.ska"),
+            include_str!(
+                "../../../tests/golden/static_fields/cases/eager_unused_import/modules/dormant.ska"
+            ),
+        ),
+    ];
+    sources.extend(
+        canonical_standard_library_sources(&[])
+            .into_iter()
+            .map(|(relative, source)| (standard_library.join(relative), source)),
+    );
+    for (path, source) in sources {
+        write_source(&path, source);
+    }
+    let providers = normalize_provider_roots(
+        &fixture.path,
+        &[
+            ProviderRootConfiguration::module_root(application),
+            ProviderRootConfiguration::standard_library(standard_library),
+        ],
+    )
+    .unwrap();
+    let graph = load_module_graph(
+        &EntrySelector::Module("app".parse().unwrap()),
+        &fixture.path,
+        &providers,
+    )
+    .unwrap();
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.unwrap();
+    let preliminary = lower_preliminary_hir(&hir);
+    let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let planned = plan_static_lifetimes(preliminary).unwrap();
+    let planned_dump = dump_planned_mir(&planned);
+    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
+        verify_planned_mir(planned).unwrap(),
+    ))
+    .unwrap();
+    let final_dump = dump_mir(&final_mir);
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&final_mir),
+    )
+    .unwrap();
+
+    for product in [&preliminary_dump, &planned_dump, &final_dump, &assembly] {
+        assert!(product.contains("marker"), "missing eager static marker");
+    }
+
+    normalize_fixture_paths(
+        &fixture.path,
+        format!(
+            "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
+            dump_module_graph(&graph),
+            dump_resolved(&resolved.program),
+            dump_hir(&hir),
+            preliminary_dump,
+            planned_dump,
+            final_dump,
             assembly,
         ),
     )

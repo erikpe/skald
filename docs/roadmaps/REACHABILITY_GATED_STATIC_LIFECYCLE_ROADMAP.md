@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: planned; RSR0 is next.
+Status: in progress; RSR0 is complete and RSR1 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -87,7 +87,7 @@ reduce future optimization cost; larger findings belong in the
 
 ## Progress
 
-- [ ] RSR0 — Establish activation vocabulary and behavioral baselines
+- [x] RSR0 — Establish activation vocabulary and behavioral baselines
 - [ ] RSR1 — Centralize preliminary static-access extraction
 - [ ] RSR2 — Compute and inspect the shadow activation closure
 - [ ] RSR3 — Generalize lifecycle proof and schema for an active subset
@@ -104,22 +104,22 @@ reduce future optimization cost; larger findings belong in the
 **Purpose:** Give the new semantic analysis one cohesive owner and pin the
 current eager behavior before any extraction or lifecycle product changes.
 
-- [ ] Add a private responsibility-oriented activation-analysis module behind
+- [x] Add a private responsibility-oriented activation-analysis module behind
       the static-lifecycle facade with typed field, execution-node, trigger,
       edge, witness, and count vocabulary but no closure solver or behavior
       change.
-- [ ] Define canonical comparison keys and immutable borrowed queries up front;
+- [x] Define canonical comparison keys and immutable borrowed queries up front;
       keep stable identities and source spans rather than source-name lookup.
-- [ ] Add reusable focused fixtures for direct access, every stored family,
+- [x] Add reusable focused fixtures for direct access, every stored family,
       dynamic and indirect calls, implicit lifecycle work, inactive-only
       dependencies, self-dependencies, cycles, and deterministic ordering.
-- [ ] Add source-to-native/golden baselines showing that an imported unused
+- [x] Add source-to-native/golden baselines showing that an imported unused
       explicit initializer currently executes, while recording preliminary,
       planned, final, assembly, stdout/stderr, status, and shutdown observations.
-- [ ] Inventory the current analysis, planner, proof, synthesis, verifier,
+- [x] Inventory the current analysis, planner, proof, synthesis, verifier,
       driver, backend-slot, dump, reporting, and test owners in module comments
       or living architecture only where that ownership is durable.
-- [ ] Preserve current source acceptance, diagnostics, MIR, assembly, runtime
+- [x] Preserve current source acceptance, diagnostics, MIR, assembly, runtime
       behavior, public facade paths, and runtime ABI exactly.
 
 **Tests:** New activation model ordering/query unit tests; existing static-
@@ -134,6 +134,15 @@ dump checks.
 **Exit criteria:** Activation has one clear internal vocabulary and reusable
 fixtures, the old eager semantics are observably pinned, and production
 compilation is unchanged.
+
+Completed on 2026-08-31. The private activation owner now supplies typed,
+canonically ordered, immutable model vocabulary and focused source and identity
+fixtures without participating in production compilation. An imported-unused
+static golden case pins preliminary, planned, final, assembly, process, and
+reverse-shutdown behavior under default, optimization-disabled, and
+reachability-disabled selection. The durable compiler ownership inventory is
+published in the living phase documentation; current eager semantics, public
+facades, and the runtime ABI are unchanged.
 
 ### RSR1 — Centralize preliminary static-access extraction
 

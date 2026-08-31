@@ -24,3 +24,16 @@ compiler_args = [
 [[test.run]]
 name = "imports_inheritance_and_privacy"
 expect = { stdout = { file = "data/initialized_modules.stdout" } }
+
+[[test]]
+name = "eager_unused_import"
+mode = "run"
+variants = ["default", "optimization-none", "reachability-disabled"]
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/eager_unused_import/modules",
+]
+
+[[test.run]]
+name = "initializer_entry_shutdown"
+expect = { stdout = { file = "data/eager_unused_import.stdout" } }

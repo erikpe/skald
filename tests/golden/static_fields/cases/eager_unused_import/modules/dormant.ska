@@ -1,0 +1,23 @@
+import std::io;
+
+fn make_marker() -> Marker {
+    std::io::println_i64(70);
+    return Marker(71);
+}
+
+class Marker {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        std::io::println_i64(self.value);
+    }
+}
+
+public class Dormant {
+    static marker: Marker = make_marker();
+    init() {}
+}

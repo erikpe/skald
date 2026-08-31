@@ -542,6 +542,25 @@ not fork into a second call/lifecycle walker. Activation dumps are deterministic
 inspection products; structured reports receive only typed already-known
 counts; neither becomes certificate identity or pass logging.
 
+The migration boundary has the following durable ownership map:
+
+| Concern | Owner |
+|---|---|
+| Neutral execution identities, possible targets, implicit lifecycle expansion, and final executable closure | `passes::reachability` |
+| Complete preliminary static effects and source-rich lifecycle evidence | `passes::static_lifecycle::analysis` |
+| Entry-rooted field-activation policy, canonical reasons, witnesses, and counts | `passes::static_lifecycle::activation` |
+| Dependency graph, diagnostics, activation order, and planning report | `passes::static_lifecycle::plan` |
+| Active coordinator construction | `passes::static_lifecycle::synthesize` |
+| Certificate issuance and final realization checks | `passes::static_lifecycle::verify` plus central final-MIR verification |
+| Phase sequencing and typed observation adaptation | `driver` and the MIR pipeline boundary |
+| Private slots, initializer/finalizer lowering, and generated-symbol retention | the selected backend |
+
+The activation owner currently contains only the private immutable vocabulary,
+canonical comparison keys, and reusable fixtures. It has no extractor, solver,
+driver call, report event, or effect on the declaration-wide eager lifecycle.
+That additive boundary lets later work reuse the reachability extractor without
+exposing an incomplete analysis as compiler behavior.
+
 ### Dense callable-local MIR identity rewriting
 
 The implemented target-independent structural editing boundary follows the

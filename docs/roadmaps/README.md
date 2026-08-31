@@ -6,7 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
+changes runtime lifecycle from declaration-wide eager activation to one exact
+entry-rooted active-field closure while keeping declarations and preliminary
+initializer checking whole-world. RSR0 established the private activation
+vocabulary and pinned current eager behavior; RSR1 is next. It depends on the
+completed static-lifecycle certificate, selectable final-MIR pipeline, dense
+MIR rewriting, and target-independent reachability foundations.
 
 ## Pending discoveries
 
@@ -32,7 +39,7 @@ The other four original unresolved constraints have no implementation roadmap.
 
 The
 [reachability-gated static lifecycle discoveries](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md)
-will retain out-of-scope findings from the planned semantic migration. It is
+will retain out-of-scope findings from the active semantic migration. It is
 currently empty and does not expand the frozen contract or roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and
@@ -41,13 +48,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The planned
-[reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
-changes runtime lifecycle from declaration-wide eager activation to one exact
-entry-rooted active-field closure while keeping declarations and preliminary
-initializer checking whole-world. RSR0 is next. It depends on the completed
-static-lifecycle certificate, selectable final-MIR pipeline, dense MIR
-rewriting, and target-independent reachability foundations.
+No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
@@ -62,7 +63,7 @@ decisions are promoted into the living
 [language](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction)
 and
 [compiler](../compiler/PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction)
-contracts, and implementation is scheduled by the planned roadmap above.
+contracts, and implementation is scheduled by the active roadmap above.
 
 The completed selectable final-MIR optimization pipeline design and delivery
 record are preserved in the [archive](../archive/README.md). Their typed static
