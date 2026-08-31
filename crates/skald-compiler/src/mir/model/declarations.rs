@@ -214,6 +214,52 @@ impl MirProgram {
             )
     }
 
+    /// Whether one declared callable has a body physically retained in this
+    /// final-MIR product.
+    pub(crate) fn has_executable_definition(&self, callable: CallableId) -> bool {
+        match callable {
+            CallableId::Function(function) => self.definitions.get(function).is_some(),
+            CallableId::StaticInitializer(initializer) => {
+                self.static_lifecycle.as_ref().is_some_and(|coordinator| {
+                    coordinator
+                        .initializers()
+                        .iter()
+                        .any(|body| body.id == initializer)
+                })
+            }
+            CallableId::Initializer(_)
+            | CallableId::CopyConstructor(_)
+            | CallableId::CopyAssignment(_)
+            | CallableId::Destructor(_)
+            | CallableId::Method(_) => self.member_definition(callable).is_some(),
+        }
+    }
+
+    /// Removes exactly one executable body for sparse final-MIR verifier tests.
+    /// Production definition retention is introduced through its own atomic
+    /// ownership boundary rather than through mutable table access.
+    #[cfg(test)]
+    pub(crate) fn remove_executable_definition_for_test(&mut self, callable: CallableId) {
+        assert!(
+            self.has_executable_definition(callable),
+            "test fixture must contain executable definition {callable}"
+        );
+        match callable {
+            CallableId::Function(function) => self.definitions.remove_for_test(function),
+            CallableId::StaticInitializer(initializer) => self
+                .static_lifecycle
+                .as_mut()
+                .expect("static initializer definition requires a coordinator")
+                .initializers_mut_for_test()
+                .retain(|body| body.id != initializer),
+            CallableId::Initializer(_)
+            | CallableId::CopyConstructor(_)
+            | CallableId::CopyAssignment(_)
+            | CallableId::Destructor(_)
+            | CallableId::Method(_) => self.member_definitions.remove_for_test(callable),
+        }
+    }
+
     /// Expands a shared static view to the finite set of linked dynamic
     /// lifecycle implementations that may own its allocation.
     pub(crate) fn shared_lifecycle_targets(

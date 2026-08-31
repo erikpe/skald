@@ -816,6 +816,25 @@ global cache or preservation protocol. Checkpoint labels and ordinary MIR dump
 bytes remain unchanged, while focused compiler tests may separately inspect
 the reachability dump.
 
+Final-MIR structural verification now distinguishes declarations from retained
+executable definitions. It validates every physically present function,
+member, and static-initializer body against its declaration and all ordinary
+body invariants, but an internal declaration need not have a body merely
+because it remains in the closed-world semantic inventory. Preliminary MIR
+uses a separate producer-completeness mode and still requires every internal
+function and every declared lifecycle/member body.
+
+The central final boundary owns the stronger executable-completeness proof.
+After structural and static-lifecycle verification, it independently derives
+the exact root closure and requires a retained body for every reachable
+internal callable. Missing reachable definitions produce canonical callable-
+attributed verification errors naming the final selecting root or dependency
+category. Virtual families, interface conformances, and other stable metadata
+may therefore name a bodyless method only when no reachable operation selects
+it. Every retained body remains fully verified even when unreachable, and
+static activation, reverse shutdown, and immutable lifecycle baseline
+authority remain enforced with unrelated sparse definitions.
+
 Reachability is not yet registered as a pass, used to remove definitions, or
 consumed by backend lowering. Any new MIR operation that can select executable
 work, or new implicit lifecycle operation, must update the exhaustive
@@ -828,8 +847,9 @@ The confirmed
 selects a reusable final-MIR analysis and retention boundary for implementation.
 Its planned
 [roadmap](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-owns delivery. This subsection defines frozen direction, not current sparse-
-definition or pass behavior.
+owns delivery. This subsection defines the complete frozen direction. Sparse-
+definition verification is current; atomic retention, backend consumption,
+and pass behavior described below remain planned.
 
 Final MIR will expose one target-independent execution-dependency vocabulary
 covering ordinary callables plus implicit class copy, assignment, complete

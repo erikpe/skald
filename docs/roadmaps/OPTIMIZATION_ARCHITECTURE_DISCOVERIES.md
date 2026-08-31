@@ -9,8 +9,10 @@ and active
 [discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
 Its dependency vocabulary, shared target/lifecycle extraction, explicit roots,
 deterministic closure, analysis-query foundation, and coherent final-MIR seal
-binding are implemented through WRR3; sparse definitions, backend consumption,
-and pruning remain in progress.
+binding are implemented. WRR4 also makes independently verified sparse final
+definitions legal while preserving definition-complete preliminary and current
+production output; atomic retention, backend consumption, and pruning remain
+in progress.
 The static-lifecycle
 and dense callable-local identity constraints are resolved by their completed
 [static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)

@@ -46,7 +46,7 @@ fn lowers_complete_source_ordered_initializer_vectors_from_hir() {
 }
 
 #[test]
-fn verifier_rejects_initializer_density_and_missing_bodies() {
+fn verifier_rejects_initializer_density_and_accepts_an_unreachable_missing_body() {
     let mut wrong_density = lower_text(concat!(
         "class Empty { init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
@@ -64,8 +64,10 @@ fn verifier_rejects_initializer_density_and_missing_bodies() {
     missing_body
         .member_definitions
         .remove_for_test(initializer.into());
-    let errors = verify_mir(&missing_body).unwrap_err().to_string();
-    assert!(errors.contains("initializer c0:init0 has no member definition"));
+    verify_mir(&missing_body)
+        .expect("ordinary final-MIR structure permits an absent definition slot");
+    crate::passes::verify_final_mir(missing_body)
+        .expect("the unreachable initializer declaration does not require a retained body");
 }
 
 #[test]

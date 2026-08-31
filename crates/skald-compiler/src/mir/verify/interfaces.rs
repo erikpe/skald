@@ -206,12 +206,6 @@ impl Verifier<'_> {
                     interface.id, requirement.id
                 ));
             }
-            if self.program.member_definition(method.id.into()).is_none() {
-                self.program_error(format!(
-                    "class {class} conformance to {} maps {} to method {} without an executable definition",
-                    interface.id, requirement.id, method.id
-                ));
-            }
         }
     }
 

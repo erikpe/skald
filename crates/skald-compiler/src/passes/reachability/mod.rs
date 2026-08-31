@@ -20,6 +20,7 @@ mod model;
 mod roots;
 mod solve;
 mod target;
+mod verify;
 
 pub(crate) use crate::mir::mir_execution_node_key;
 pub(crate) use analysis::{
@@ -42,6 +43,7 @@ pub(crate) use model::{
     MirRetainedDefinition, MirRuntimeEntity, MirSemanticDeclaration,
 };
 pub(crate) use solve::analyze_reachability;
+pub(super) use verify::verify_reachable_definitions;
 
 #[cfg(test)]
 mod analysis_tests;

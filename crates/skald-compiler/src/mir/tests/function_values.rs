@@ -435,9 +435,14 @@ fn verifier_rejects_ineligible_and_missing_callable_address_definitions() {
 
     let mut missing = lower_text(source);
     missing.member_definitions.remove_for_test(selected.into());
-    assert!(messages(&missing).iter().any(
-        |message| message.contains("callable address target c0:method1 has no MIR definition")
-    ));
+    verify_mir(&missing).expect("ordinary final-MIR structure permits an absent definition slot");
+    let errors = crate::passes::verify_final_mir(missing).unwrap_err();
+    assert!(errors.iter().any(|error| {
+        error.callable == Some(selected.into())
+            && error
+                .message
+                .contains("dependency category `callable-address-retention`")
+    }));
 }
 
 #[test]

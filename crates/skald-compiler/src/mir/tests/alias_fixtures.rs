@@ -192,6 +192,7 @@ pub(super) fn alias_mir() -> (MirProgram, AliasFixtureIds) {
     });
     let initializer_parameters = class_declaration.initializers[1].parameters.clone();
     let ordinary_initializer = class_declaration.initializers[0].clone();
+    let ordinary_method = class_declaration.methods[0].clone();
     let method_parameters = class_declaration.methods[1].parameters.clone();
     program.member_definitions = MirMemberDefinitionTable::new(vec![
         fixture_empty_member_definition(
@@ -201,6 +202,13 @@ pub(super) fn alias_mir() -> (MirProgram, AliasFixtureIds) {
             span,
         ),
         empty_member_definition(initializer.into(), class, &initializer_parameters, span),
+        getter_definition(
+            ordinary_method.id,
+            class,
+            object_ids.outer_inner,
+            object_ids.inner_value,
+            span,
+        ),
         empty_member_definition(method.into(), class, &method_parameters, span),
     ]);
 
@@ -215,6 +223,64 @@ pub(super) fn alias_mir() -> (MirProgram, AliasFixtureIds) {
             method,
         },
     )
+}
+
+fn getter_definition(
+    id: MethodId,
+    class: ClassId,
+    outer_inner: FieldId,
+    inner_value: FieldId,
+    span: crate::source::Span,
+) -> MirMemberDefinition {
+    let callable = CallableId::Method(id);
+    let receiver = StorageId::new(callable, 0);
+    let result = ValueId::new(callable, 0);
+    MirMemberDefinition {
+        callable,
+        class_owner: class,
+        return_storage: None,
+        receiver: Some(receiver),
+        parameters: vec![],
+        storage: vec![MirStorage {
+            id: receiver,
+            source: Some(BindingId::Receiver(callable)),
+            name: "self".to_owned(),
+            kind: MirStorageKind::Receiver,
+            ty: MirType::Class(class),
+            span,
+        }],
+        values: vec![MirValue {
+            id: result,
+            ty: MirType::I64,
+            span,
+        }],
+        body: MirBody {
+            entry: BlockId::new(callable, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(callable, 0),
+                instructions: vec![MirInstruction::Assign(MirAssignment {
+                    result,
+                    rvalue: MirRvalue {
+                        kind: MirRvalueKind::Load(
+                            MirPlace::base(receiver)
+                                .project_field(outer_inner)
+                                .project_field(inner_value),
+                        ),
+                        ty: MirType::I64,
+                    },
+                    span,
+                })],
+                terminator: Some(MirTerminator::Return {
+                    value: Some(result),
+                    span,
+                }),
+                span,
+            }],
+            path_conditions: vec![],
+            logical_expressions: vec![],
+        },
+        span,
+    }
 }
 
 fn declaration(

@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    definitions::MirExecutableDefinitionView,
+    definitions::{declared_executable_callables, MirExecutableDefinitionView},
     mir_dependency_edge_kind_key, mir_execution_node_key, mir_span_key,
     target::{MirResolvedCallTarget, MirTargetResolver},
     MirCallableAddressFormation, MirDependencyEdge, MirDependencyEdgeKind,
@@ -125,6 +125,8 @@ impl<'mir> MirDependencyExtractor<'mir> {
     }
 
     fn seed_nodes(&mut self) {
+        self.nodes
+            .extend(declared_executable_callables(self.program()).map(MirExecutionNode::callable));
         self.nodes.extend(
             self.definitions
                 .iter()

@@ -139,17 +139,11 @@ fn rejects_an_unknown_selected_entry_module() {
 }
 
 #[test]
-fn preserves_entry_then_declaration_error_order_for_a_missing_definition() {
+fn final_structural_verification_permits_a_sparse_entry_slot() {
     let mut program = lower_source_to_mir("fn main() -> i64 { return 0; }");
     program.definitions.remove_for_test(program.entry_function);
 
-    assert_eq!(
-        messages(&program),
-        [
-            "entry function f0 has no definition",
-            "internal function has no definition",
-        ]
-    );
+    verify_mir(&program).expect("reachable completeness belongs to central final verification");
 }
 
 #[test]

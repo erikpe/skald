@@ -131,14 +131,6 @@ impl Verifier<'_> {
                     );
                     return None;
                 }
-                if self.program.definitions.get(id).is_none() {
-                    self.block_error(
-                        function.callable(),
-                        block.id,
-                        format!("{operation} target {target} has no MIR definition"),
-                    );
-                    return None;
-                }
                 Some((declaration.parameters.clone(), declaration.return_type))
             }
             CallableId::Method(id) => {
@@ -155,14 +147,6 @@ impl Verifier<'_> {
                         function.callable(),
                         block.id,
                         format!("{operation} target {target} is not a static method"),
-                    );
-                    return None;
-                }
-                if self.program.member_definition(target).is_none() {
-                    self.block_error(
-                        function.callable(),
-                        block.id,
-                        format!("{operation} target {target} has no MIR definition"),
                     );
                     return None;
                 }

@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 through WRR3 are complete and WRR4 is next.
+Status: in progress; WRR0 through WRR4 are complete and WRR5 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -95,7 +95,7 @@ instead of expanding reviewed scope.
 - [x] WRR1 — Centralize possible-target and lifecycle dependency extraction
 - [x] WRR2 — Implement deterministic root closure and analysis queries
 - [x] WRR3 — Bind reachability facts to verified final MIR
-- [ ] WRR4 — Verify sparse final executable definitions
+- [x] WRR4 — Verify sparse final executable definitions
 - [ ] WRR5 — Add atomic stable-identity definition retention
 - [ ] WRR6 — Make backend planning consume the retained domain
 - [ ] WRR7 — Register and observe whole-world reachability pruning
@@ -327,28 +327,28 @@ preservation declaration, or new report accounting was introduced.
 survive without unreachable bodies while central verification still rejects
 every semantically executable missing definition.
 
-- [ ] Separate preliminary producer completeness from final retained-
+- [x] Separate preliminary producer completeness from final retained-
       definition completeness in verifier ownership and diagnostics.
-- [ ] Keep preliminary MIR requiring every internal source definition and
+- [x] Keep preliminary MIR requiring every internal source definition and
       lifecycle member body produced by lowering.
-- [ ] In final MIR, validate every physically present function, member, and
+- [x] In final MIR, validate every physically present function, member, and
       static-initializer definition against its declaration and full ordinary
       body invariants without requiring all declarations to have bodies.
-- [ ] Recompute roots and reachability independently, then require a retained
+- [x] Recompute roots and reachability independently, then require a retained
       body for every reachable internal callable selected by entry, direct,
       dynamic, indirect, callable-address, copy, assignment, destruction,
       optional, shared, array, or static-lifecycle work.
-- [ ] Permit virtual families and interface conformances to name declared
+- [x] Permit virtual families and interface conformances to name declared
       methods whose bodies are absent only when no reachable operation can
       select them.
-- [ ] Preserve exact static-lifecycle root coverage and baseline-authority
+- [x] Preserve exact static-lifecycle root coverage and baseline-authority
       subset realization with sparse unrelated definitions.
-- [ ] Produce deterministic missing-target errors containing callable and
+- [x] Produce deterministic missing-target errors containing callable and
       dependency category without exposing source diagnostics or relying on
       pass claims.
-- [ ] Add narrow test-only sparse-definition fixture construction; do not add
+- [x] Add narrow test-only sparse-definition fixture construction; do not add
       production mutable table access.
-- [ ] Update final-MIR architecture documentation when the implemented
+- [x] Update final-MIR architecture documentation when the implemented
       distinction becomes current, while leaving the production compiler
       definition-complete until retention lands.
 
@@ -368,6 +368,24 @@ lifecycle authority; deterministic error ordering.
 absent unreachable bodies and independently rejects every absent reachable
 body, while preliminary MIR remains definition-complete and production output
 is still unchanged.
+
+Completed on 2026-08-31. Ordinary final-MIR verification now validates every
+retained body and its declaration/metadata relationships without treating a
+missing declaration slot as malformed. Preliminary verification has an
+explicit producer-completeness mode that still requires every internal
+function and every declared initializer, copy operation, destructor, and
+method body. Central final verification derives fresh whole-world reachability
+after structural and static-lifecycle checks, then deterministically rejects
+each reachable callable with no retained body and names the selecting root or
+dependency category. Declaration nodes remain in the graph even when their
+bodies are absent, so virtual/interface selection and static activation cannot
+silently disappear. Focused tests cover sparse unreachable functions and all
+member kinds, every callable-selection family, optional/shared/array and
+static activation/shutdown lifecycle work, malformed retained bodies,
+preliminary completeness, lifecycle authority, and stable error ordering. A
+narrow test-only body-removal helper builds sparse fixtures; production tables
+remain immutable and the compiler still emits definition-complete final MIR
+until WRR5 introduces atomic retention.
 
 ### WRR5 — Add atomic stable-identity definition retention
 

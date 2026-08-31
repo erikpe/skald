@@ -174,10 +174,10 @@ fn verify_activation(
                 MirStaticActivationWork::Explicit(actual),
             ) if expected == actual => {
                 let Some(initializer) = initializers.get(&expected).copied() else {
-                    program_error(
-                        errors,
-                        format!("explicit activation for {expected_field} has no body"),
-                    );
+                    // Sparse final MIR may omit a body. Reachability
+                    // completeness independently rejects this rooted target;
+                    // coordinator structure can still validate its declared
+                    // activation identity here.
                     continue;
                 };
                 if initializer.field != *expected_field
@@ -221,10 +221,13 @@ fn verify_activation(
             MirStaticFieldInitialization::ZeroDefault => None,
         })
         .collect::<BTreeSet<_>>();
-    if initializers.keys().copied().collect::<BTreeSet<_>>() != expected_initializers {
+    if !initializers
+        .keys()
+        .all(|initializer| expected_initializers.contains(initializer))
+    {
         program_error(
             errors,
-            "final coordinator initializer bodies lack exact explicit-field coverage",
+            "final coordinator contains an initializer body without an explicit field",
         );
     }
 }

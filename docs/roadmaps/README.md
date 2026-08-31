@@ -8,9 +8,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-has established its neutral execution-dependency contract. WRR1 is next: it
-will centralize possible-target and implicit-lifecycle dependency extraction
-without yet computing reachability or pruning MIR.
+has now completed WRR0 through WRR4. Central final verification owns coherent
+reachability facts and accepts sparse executable definitions only when every
+reachable callable body remains present; preliminary and current production
+MIR remain definition-complete. WRR5 is next and will introduce the narrow
+atomic stable-identity retention capability without exposing mutable program
+tables.
 
 ## Pending discoveries
 

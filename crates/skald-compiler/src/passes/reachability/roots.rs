@@ -66,15 +66,6 @@ pub(super) fn collect_reachability_roots(
                     span,
                 ),
                 MirStaticActivationWork::Explicit(initializer) => {
-                    if !coordinator
-                        .initializers()
-                        .iter()
-                        .any(|body| body.id == initializer)
-                    {
-                        return Err(MirDependencyExtractionError::UnknownCallable(
-                            initializer.into(),
-                        ));
-                    }
                     collector.add_root(
                         MirReachabilityRootTarget::Execution(MirExecutionNode::callable(
                             initializer.into(),

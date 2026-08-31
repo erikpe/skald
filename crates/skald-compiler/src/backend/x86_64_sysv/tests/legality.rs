@@ -308,27 +308,38 @@ fn initializer_without_a_definition_is_rejected_at_the_backend_boundary() {
         .definitions
         .get_mut_for_test(mir.entry_function)
         .unwrap();
-    function.body.blocks[0]
+    let insertion = function.body.blocks[0]
         .instructions
-        .push(MirInstruction::Initialize(MirInitialize {
-            destination: ids.first.into(),
-            target: initializer,
-            arguments: vec![],
-            span: mir.span,
-        }));
-    function.body.blocks[0]
-        .instructions
-        .push(MirInstruction::Cleanup(MirCleanup {
-            destination: ids.first.into(),
-            target: ids.container,
-            span: mir.span,
-        }));
+        .iter()
+        .position(|instruction| {
+            matches!(instruction, MirInstruction::StorageDead(dead) if dead.storage == ids.first)
+        })
+        .expect("fixture must end the destination storage lifetime");
+    function.body.blocks[0].instructions.splice(
+        insertion..insertion,
+        [
+            MirInstruction::Initialize(MirInitialize {
+                destination: ids.first.into(),
+                target: initializer,
+                arguments: vec![],
+                span: mir.span,
+            }),
+            MirInstruction::Cleanup(MirCleanup {
+                destination: ids.first.into(),
+                target: ids.container,
+                span: mir.span,
+            }),
+        ],
+    );
 
-    let errors = verify_mir(&mir).unwrap_err().to_string();
-    assert!(errors.contains("initializer c1:init0 has no member definition"));
+    verify_mir(&mir).expect("sparse final structure is valid before reachability checking");
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
     assert_eq!(error.target(), Target::X86_64SysV);
     assert!(error.message().contains("input MIR failed verification"));
+    assert!(error.message().contains("c1:init0"));
+    assert!(error
+        .message()
+        .contains("dependency category `initializer`"));
 }
 
 #[test]

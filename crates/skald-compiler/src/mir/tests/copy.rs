@@ -98,7 +98,7 @@ fn lowers_selected_copy_operations_and_lifecycle_definitions_structurally() {
 }
 
 #[test]
-fn verifier_checks_copy_constructor_identity_and_definition_independently() {
+fn verifier_checks_copy_constructor_identity_and_reachable_definition_independently() {
     let mut wrong_identity = lower_text(COPY_SOURCE);
     let class = ClassId::new(0);
     wrong_identity.classes.entries_mut_for_test()[0]
@@ -114,8 +114,13 @@ fn verifier_checks_copy_constructor_identity_and_definition_independently() {
     missing_definition
         .member_definitions
         .remove_for_test(copy.into());
-    let errors = verify_mir(&missing_definition).unwrap_err().to_string();
-    assert!(errors.contains("copy constructor c0:copy0 has no member definition"));
+    verify_mir(&missing_definition)
+        .expect("ordinary final-MIR structure permits an absent definition slot");
+    let errors = crate::passes::verify_final_mir(missing_definition)
+        .unwrap_err()
+        .to_string();
+    assert!(errors.contains("c0:copy0"));
+    assert!(errors.contains("dependency category `user-copy-body`"));
 }
 
 #[test]

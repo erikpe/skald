@@ -16,7 +16,14 @@ use super::{
 pub(super) struct Verifier<'mir> {
     pub(super) program: &'mir MirProgram,
     preliminary_static_fields: Option<&'mir [PreliminaryMirStaticField]>,
+    definition_completeness: MirDefinitionCompleteness,
     pub(super) errors: ErrorSink,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MirDefinitionCompleteness {
+    RetainedFinal,
+    CompleteProducer,
 }
 
 impl<'mir> Verifier<'mir> {
@@ -46,6 +53,7 @@ impl<'mir> Verifier<'mir> {
         Self {
             program,
             preliminary_static_fields: None,
+            definition_completeness: MirDefinitionCompleteness::RetainedFinal,
             errors: ErrorSink::new(),
         }
     }
@@ -57,8 +65,16 @@ impl<'mir> Verifier<'mir> {
         Self {
             program,
             preliminary_static_fields: Some(static_fields),
+            definition_completeness: MirDefinitionCompleteness::CompleteProducer,
             errors: ErrorSink::new(),
         }
+    }
+
+    pub(super) const fn requires_complete_producer_definitions(&self) -> bool {
+        matches!(
+            self.definition_completeness,
+            MirDefinitionCompleteness::CompleteProducer
+        )
     }
 
     pub(super) fn static_field_type_is_supported(

@@ -10,8 +10,8 @@ use crate::{identity::CallableId, lexical_policy::is_source_identifier, source::
 
 use super::{
     super::model::{
-        MirClassDeclaration, MirCopyCapability, MirDestructionStep, MirFunctionLinkage,
-        MirParameter, MirParameterMode, MirReceiverAccess, MirSynthesizedCopy,
+        MirClassDeclaration, MirCopyCapability, MirDestructionStep, MirFunctionDeclaration,
+        MirFunctionLinkage, MirParameter, MirParameterMode, MirReceiverAccess, MirSynthesizedCopy,
         MirSynthesizedFieldCopy, MirType,
     },
     context::Verifier,
@@ -43,11 +43,12 @@ impl<'mir> Verifier<'mir> {
             ) {
                 self.program_error("entry function must have internal linkage");
             }
-            if self
-                .program
-                .definitions
-                .get(self.program.entry_function)
-                .is_none()
+            if self.requires_complete_producer_definitions()
+                && self
+                    .program
+                    .definitions
+                    .get(self.program.entry_function)
+                    .is_none()
             {
                 self.program_error(format!(
                     "entry function {} has no definition",
@@ -204,22 +205,8 @@ impl<'mir> Verifier<'mir> {
             );
         }
 
-        for declaration in declarations {
-            match (
-                &declaration.linkage,
-                self.program.definitions.get(declaration.id),
-            ) {
-                (MirFunctionLinkage::Internal, None) => {
-                    self.function_error(declaration.id, "internal function has no definition");
-                }
-                (MirFunctionLinkage::External { .. }, Some(_)) => {
-                    // Reported while walking definition slots above.
-                }
-                (MirFunctionLinkage::Intrinsic { .. }, Some(_)) => {
-                    // Reported while walking definition slots above.
-                }
-                _ => {}
-            }
+        if self.requires_complete_producer_definitions() {
+            self.verify_producer_definition_completeness(&declarations);
         }
 
         for (table_key, definition) in self.program.member_definitions.indexed_entries() {
@@ -264,6 +251,58 @@ impl<'mir> Verifier<'mir> {
         if let Some(coordinator) = &self.program.static_lifecycle {
             for initializer in coordinator.initializers() {
                 self.verify_definition(&[], MirType::Unit, initializer.into());
+            }
+        }
+    }
+
+    fn verify_producer_definition_completeness(
+        &mut self,
+        declarations: &[&MirFunctionDeclaration],
+    ) {
+        for declaration in declarations {
+            if declaration.linkage == MirFunctionLinkage::Internal
+                && self.program.definitions.get(declaration.id).is_none()
+            {
+                self.function_error(declaration.id, "internal function has no definition");
+            }
+        }
+
+        let mut missing = Vec::new();
+        for class in self.program.classes.iter() {
+            for initializer in &class.initializers {
+                missing.push((
+                    initializer.id.into(),
+                    format!("initializer {} has no member definition", initializer.id),
+                ));
+            }
+            if let Some(copy) = &class.copy_constructor_declaration {
+                missing.push((
+                    copy.id.into(),
+                    format!("copy constructor {} has no member definition", copy.id),
+                ));
+            }
+            if let Some(copy) = &class.copy_assignment_declaration {
+                missing.push((
+                    copy.id.into(),
+                    format!("copy assignment {} has no member definition", copy.id),
+                ));
+            }
+            if let Some(destructor) = &class.destruction.destructor {
+                missing.push((
+                    destructor.id.into(),
+                    format!("destructor {} has no member definition", destructor.id),
+                ));
+            }
+            for method in &class.methods {
+                missing.push((
+                    method.id.into(),
+                    format!("method {} has no member definition", method.id),
+                ));
+            }
+        }
+        for (callable, message) in missing {
+            if self.program.member_definition(callable).is_none() {
+                self.function_error(callable, message);
             }
         }
     }
@@ -528,16 +567,6 @@ impl<'mir> Verifier<'mir> {
                     &format!("initializer {}", initializer.id),
                     &initializer.parameters,
                 );
-                if self
-                    .program
-                    .member_definition(initializer.id.into())
-                    .is_none()
-                {
-                    self.program_error(format!(
-                        "initializer {} has no member definition",
-                        initializer.id
-                    ));
-                }
             }
             self.verify_copy_constructor_metadata(class);
             self.verify_copy_assignment_metadata(class);
@@ -551,16 +580,6 @@ impl<'mir> Verifier<'mir> {
                 if destructor.receiver_access != MirReceiverAccess::Mutable {
                     self.program_error(format!(
                         "destructor {} must have mutable receiver access",
-                        destructor.id
-                    ));
-                }
-                if self
-                    .program
-                    .member_definition(destructor.id.into())
-                    .is_none()
-                {
-                    self.program_error(format!(
-                        "destructor {} has no member definition",
                         destructor.id
                     ));
                 }
@@ -668,16 +687,6 @@ impl<'mir> Verifier<'mir> {
                         class.id
                     ));
                 }
-                if self
-                    .program
-                    .member_definition(copy.operation.into())
-                    .is_none()
-                {
-                    self.program_error(format!(
-                        "copy constructor {} has no member definition",
-                        copy.operation
-                    ));
-                }
                 self.verify_constructor_base(class, copy.base);
             }
             MirCopyCapability::Synthesized(copy) => {
@@ -726,16 +735,6 @@ impl<'mir> Verifier<'mir> {
                     self.program_error(format!(
                         "class {} user copy-assignment capability has no matching declaration",
                         class.id
-                    ));
-                }
-                if self
-                    .program
-                    .member_definition(copy.operation.into())
-                    .is_none()
-                {
-                    self.program_error(format!(
-                        "copy assignment {} has no member definition",
-                        copy.operation
                     ));
                 }
                 self.verify_assignment_base(class, copy.base);
