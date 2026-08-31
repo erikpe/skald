@@ -13,11 +13,11 @@ use crate::{
 
 use super::{
     definitions::{declared_executable_callables, MirExecutableDefinitionView},
-    mir_dependency_edge_kind_key, mir_execution_node_key, mir_span_key,
+    mir_dependency_edge_kind_key, mir_execution_node_key, mir_span_key, mir_static_access_key,
     target::{MirResolvedCallTarget, MirTargetResolver},
     MirCallableAddressFormation, MirDependencyEdge, MirDependencyEdgeKind,
     MirDependencyExtractionError, MirDependencyRecord, MirDependencyRegion, MirDependencyTarget,
-    MirIndirectCallSite, MirRuntimeEntity,
+    MirIndirectCallSite, MirRuntimeEntity, MirStaticAccess,
 };
 
 /// Deterministic dependency inventory before root closure.
@@ -25,6 +25,7 @@ use super::{
 pub(crate) struct MirDependencyExtraction {
     nodes: Vec<MirExecutionNode>,
     dependencies: Vec<MirDependencyRecord>,
+    static_accesses: Vec<MirStaticAccess>,
     callable_addresses: Vec<MirCallableAddressFormation>,
     indirect_calls: Vec<MirIndirectCallSite>,
 }
@@ -36,6 +37,20 @@ impl MirDependencyExtraction {
 
     pub(crate) fn dependencies(&self) -> &[MirDependencyRecord] {
         &self.dependencies
+    }
+
+    pub(crate) fn static_accesses(&self) -> &[MirStaticAccess] {
+        &self.static_accesses
+    }
+
+    pub(crate) fn static_accesses_from(&self, source: MirExecutionNode) -> &[MirStaticAccess] {
+        let source_key = mir_execution_node_key(source);
+        let start = self
+            .static_accesses
+            .partition_point(|access| mir_execution_node_key(access.source()) < source_key);
+        let count = self.static_accesses[start..]
+            .partition_point(|access| mir_execution_node_key(access.source()) == source_key);
+        &self.static_accesses[start..start + count]
     }
 
     pub(crate) fn callable_addresses(&self) -> &[MirCallableAddressFormation] {
@@ -104,6 +119,7 @@ pub(crate) fn extract_dependencies(
 pub(super) struct MirDependencyExtractor<'mir> {
     pub(super) definitions: MirExecutableDefinitionView<'mir>,
     pub(super) dependencies: Vec<MirDependencyRecord>,
+    pub(super) static_accesses: Vec<MirStaticAccess>,
     pub(super) callable_addresses: Vec<MirCallableAddressFormation>,
     pub(super) indirect_calls: Vec<MirIndirectCallSite>,
     nodes: Vec<MirExecutionNode>,
@@ -114,6 +130,7 @@ impl<'mir> MirDependencyExtractor<'mir> {
         Self {
             definitions,
             dependencies: Vec::new(),
+            static_accesses: Vec::new(),
             callable_addresses: Vec::new(),
             indirect_calls: Vec::new(),
             nodes: Vec::new(),
@@ -160,6 +177,8 @@ impl<'mir> MirDependencyExtractor<'mir> {
         self.nodes.dedup();
         self.dependencies.sort_by_key(dependency_key);
         self.dependencies.dedup();
+        self.static_accesses.sort_by_key(mir_static_access_key);
+        self.static_accesses.dedup();
         self.callable_addresses.sort_by_key(|formation| {
             (
                 formation.function_type(),
@@ -181,6 +200,7 @@ impl<'mir> MirDependencyExtractor<'mir> {
         MirDependencyExtraction {
             nodes: self.nodes,
             dependencies: self.dependencies,
+            static_accesses: self.static_accesses,
             callable_addresses: self.callable_addresses,
             indirect_calls: self.indirect_calls,
         }
@@ -240,9 +260,11 @@ impl<'mir> MirDependencyExtractor<'mir> {
             for block in &definition.body().blocks {
                 let region = definition_region(definition, &after_publication, block.id);
                 for instruction in &block.instructions {
+                    self.extract_static_instruction(source, definition, region, instruction)?;
                     self.extract_instruction(source, definition, region, instruction)?;
                 }
                 if let Some(terminator) = &block.terminator {
+                    self.extract_static_terminator(source, definition, region, terminator)?;
                     self.extract_terminator(source, region, terminator);
                 }
             }

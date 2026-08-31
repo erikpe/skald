@@ -1,10 +1,6 @@
-//! Exhaustive MIR and implicit-lifecycle analysis graph extraction.
+//! Static-effect graph adaptation from the shared MIR dependency inventory.
 
-mod access;
-mod control;
-mod instruction;
-
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::passes::reachability::{
     extract_final_dependency_parts, extract_preliminary_dependencies, MirDependencyEdgeKind,
@@ -12,20 +8,13 @@ use crate::passes::reachability::{
 };
 use crate::{
     identity::CallableId,
-    mir::{
-        MirAliasAccess, MirArgument, MirArrayInstruction, MirCallReceiver, MirClassOptionalSource,
-        MirDefinitionRef, MirInstruction, MirIoOperation, MirObjectOrigin, MirObjectView,
-        MirOptionalSharedSource, MirOptionalSource, MirPlace, MirPlaceBase, MirProgram, MirRvalue,
-        MirRvalueKind, MirSharedCastSource, MirStaticInitializerBody, MirTerminator,
-        PreliminaryMirProgram,
-    },
+    mir::{MirProgram, MirStaticInitializerBody, PreliminaryMirProgram},
     source::Span,
 };
 
 use super::model::{
-    edge_key, evidence_key, StaticAccessEvidence, StaticAccessKind, StaticEffectEdge,
-    StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase, StaticFunctionValueCandidates,
-    StaticFunctionValueTarget,
+    edge_key, evidence_key, StaticAccessEvidence, StaticEffectEdge, StaticEffectEdgeKind,
+    StaticEffectNode, StaticEffectPhase, StaticFunctionValueCandidates, StaticFunctionValueTarget,
 };
 
 #[derive(Default)]
@@ -42,11 +31,7 @@ pub(crate) struct ExtractedGraph {
 pub(crate) fn extract(program: &PreliminaryMirProgram) -> ExtractedGraph {
     let dependencies = extract_preliminary_dependencies(program)
         .expect("verified preliminary MIR must have valid dependency identities");
-    extract_parts(
-        program.program(),
-        program.static_initializer_bodies(),
-        dependencies,
-    )
+    extract_parts(dependencies)
 }
 
 pub(crate) fn extract_final(
@@ -55,35 +40,27 @@ pub(crate) fn extract_final(
 ) -> ExtractedGraph {
     let dependencies = extract_final_dependency_parts(program, initializers)
         .expect("verified final MIR must have valid dependency identities");
-    extract_parts(program, initializers, dependencies)
+    extract_parts(dependencies)
 }
 
-fn extract_parts(
-    program: &MirProgram,
-    initializers: &[MirStaticInitializerBody],
-    dependencies: MirDependencyExtraction,
-) -> ExtractedGraph {
+fn extract_parts(dependencies: MirDependencyExtraction) -> ExtractedGraph {
     let function_value_candidates = collect_function_value_candidates(&dependencies);
     let mut extractor = Extractor {
-        program,
-        initializers,
         function_value_candidates,
         nodes: BTreeMap::new(),
     };
     extractor.seed_nodes(&dependencies);
     extractor.install_dependencies(&dependencies);
-    extractor.extract_bodies();
+    extractor.install_static_accesses(&dependencies);
     extractor.finish()
 }
 
-struct Extractor<'mir> {
-    program: &'mir MirProgram,
-    initializers: &'mir [MirStaticInitializerBody],
+struct Extractor {
     function_value_candidates: Vec<StaticFunctionValueCandidates>,
     nodes: BTreeMap<StaticEffectNode, NodeDraft>,
 }
 
-impl Extractor<'_> {
+impl Extractor {
     fn finish(mut self) -> ExtractedGraph {
         for draft in self.nodes.values_mut() {
             draft.direct.sort_by_key(evidence_key);
@@ -137,6 +114,23 @@ impl Extractor<'_> {
                     site.span(),
                 );
             }
+        }
+    }
+
+    fn install_static_accesses(&mut self, dependencies: &MirDependencyExtraction) {
+        for access in dependencies.static_accesses() {
+            self.nodes
+                .entry(access.source())
+                .or_default()
+                .direct
+                .push(StaticAccessEvidence {
+                    field: access.target(),
+                    access: access.kind(),
+                    phase: static_phase(access.region()),
+                    lifecycle_owned: access.is_lifecycle_owned(),
+                    span: access.span(),
+                    witness: Vec::new(),
+                });
         }
     }
 

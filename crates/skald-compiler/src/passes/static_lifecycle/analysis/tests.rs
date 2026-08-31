@@ -3,6 +3,7 @@
 use crate::{
     identity::{ClassId, FunctionId},
     mir::{lower_preliminary_hir, PreliminaryMirProgram},
+    passes::reachability::{extract_preliminary_dependencies, MirDependencyRegion},
     resolve::resolve_module_graph,
     test_support::{load_module_sources_with_standard_library, type_check_source},
     typeck::type_check,
@@ -27,6 +28,80 @@ fn effect_fields(
         .iter()
         .map(|effect| effect.field)
         .collect()
+}
+
+#[test]
+fn direct_effects_are_an_exact_adapter_of_shared_static_accesses() {
+    let preliminary = lower(
+        "class Item {
+           value: i64;
+           init(value: i64) { self.value = value; }
+           copy(ref other: Item) { self.value = other.value; }
+           assign(ref other: Item) { self.value = other.value; }
+         }
+         class State {
+           static scalar: i64 = 1;
+           static item: Item = Item(2);
+           init() {}
+         }
+         fn inspect(ref value: i64) -> i64 { return value; }
+         fn main() -> i64 {
+           var observed: i64 = State.scalar;
+           State.scalar = inspect(State.scalar);
+           var replacement: Item = Item(3);
+           State.item = replacement;
+           return observed;
+         }",
+    );
+    let extracted = extract_preliminary_dependencies(&preliminary).unwrap();
+    let analysis = infer_static_effects(&preliminary);
+
+    for summary in analysis.summaries() {
+        let shared = extracted
+            .static_accesses()
+            .iter()
+            .filter(|access| access.source() == summary.node)
+            .map(|access| {
+                (
+                    access.target(),
+                    access.kind(),
+                    match access.region() {
+                        MirDependencyRegion::Ordinary => StaticEffectPhase::Ordinary,
+                        MirDependencyRegion::StaticInitializerBeforePublication => {
+                            StaticEffectPhase::InitializerBeforePublication
+                        }
+                        MirDependencyRegion::StaticInitializerAfterPublication => {
+                            StaticEffectPhase::InitializerAfterPublication
+                        }
+                        MirDependencyRegion::Copy => StaticEffectPhase::Copy,
+                        MirDependencyRegion::Destruction => StaticEffectPhase::Destruction,
+                        MirDependencyRegion::ArrayLifecycle => StaticEffectPhase::ArrayLifecycle,
+                    },
+                    access.is_lifecycle_owned(),
+                    access.span(),
+                )
+            })
+            .collect::<Vec<_>>();
+        let adapted = summary
+            .direct_effects
+            .iter()
+            .map(|effect| {
+                assert!(effect.witness.is_empty());
+                (
+                    effect.field,
+                    effect.access,
+                    effect.phase,
+                    effect.lifecycle_owned,
+                    effect.span,
+                )
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            adapted, shared,
+            "direct effects differ for {:?}",
+            summary.node
+        );
+    }
 }
 
 #[test]

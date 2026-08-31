@@ -6,7 +6,7 @@ use crate::{
         LiteralDataId, OptionalBoxTypeId, OptionalTypeId, StaticFieldId, VirtualFamilyId,
     },
     intrinsic::Intrinsic,
-    mir::MirExecutionNode,
+    mir::{MirExecutionNode, StaticAccessKind},
     source::Span,
 };
 
@@ -198,6 +198,101 @@ impl MirDependencyRecord {
     pub(crate) const fn region(&self) -> MirDependencyRegion {
         self.region
     }
+}
+
+/// Whether a static-place access is ordinary program behavior or the private
+/// unpublished destination owned by its field's initializer.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub(crate) enum MirStaticAccessOrigin {
+    Ordinary,
+    LifecycleOwnedDestination,
+}
+
+/// One direct static-place access found while traversing executable MIR.
+///
+/// The record retains the containing execution node and structural phase so
+/// activation and static-effect consumers do not need to rescan MIR. It does
+/// not imply that the source node is reachable from any particular root.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct MirStaticAccess {
+    source: MirExecutionNode,
+    target: StaticFieldId,
+    kind: StaticAccessKind,
+    region: MirDependencyRegion,
+    origin: MirStaticAccessOrigin,
+    span: Span,
+}
+
+impl MirStaticAccess {
+    pub(crate) const fn new(
+        source: MirExecutionNode,
+        target: StaticFieldId,
+        kind: StaticAccessKind,
+        region: MirDependencyRegion,
+        origin: MirStaticAccessOrigin,
+        span: Span,
+    ) -> Self {
+        Self {
+            source,
+            target,
+            kind,
+            region,
+            origin,
+            span,
+        }
+    }
+
+    pub(crate) const fn source(&self) -> MirExecutionNode {
+        self.source
+    }
+
+    pub(crate) const fn target(&self) -> StaticFieldId {
+        self.target
+    }
+
+    pub(crate) const fn kind(&self) -> StaticAccessKind {
+        self.kind
+    }
+
+    pub(crate) const fn region(&self) -> MirDependencyRegion {
+        self.region
+    }
+
+    pub(crate) const fn origin(&self) -> MirStaticAccessOrigin {
+        self.origin
+    }
+
+    pub(crate) const fn is_lifecycle_owned(&self) -> bool {
+        matches!(
+            self.origin,
+            MirStaticAccessOrigin::LifecycleOwnedDestination
+        )
+    }
+
+    pub(crate) const fn span(&self) -> Span {
+        self.span
+    }
+}
+
+pub(crate) type MirStaticAccessKey = (
+    (u8, usize, usize, usize),
+    StaticFieldId,
+    StaticAccessKind,
+    MirDependencyRegion,
+    MirStaticAccessOrigin,
+    (usize, usize, usize),
+);
+
+/// Canonical ordering for shared static-place evidence.
+pub(crate) const fn mir_static_access_key(access: &MirStaticAccess) -> MirStaticAccessKey {
+    (
+        crate::mir::mir_execution_node_key(access.source),
+        access.target,
+        access.kind,
+        access.region,
+        access.origin,
+        mir_span_key(access.span),
+    )
 }
 
 /// One exact callable-address formation in its containing execution node.

@@ -546,8 +546,8 @@ The migration boundary has the following durable ownership map:
 
 | Concern | Owner |
 |---|---|
-| Neutral execution identities, possible targets, implicit lifecycle expansion, and final executable closure | `passes::reachability` |
-| Complete preliminary static effects and source-rich lifecycle evidence | `passes::static_lifecycle::analysis` |
+| Neutral execution identities, possible targets, direct static-place records, implicit lifecycle expansion, and final executable closure | `passes::reachability` |
+| Complete propagated preliminary static effects and source-rich lifecycle evidence | `passes::static_lifecycle::analysis` |
 | Entry-rooted field-activation policy, canonical reasons, witnesses, and counts | `passes::static_lifecycle::activation` |
 | Dependency graph, diagnostics, activation order, and planning report | `passes::static_lifecycle::plan` |
 | Active coordinator construction | `passes::static_lifecycle::synthesize` |
@@ -874,17 +874,25 @@ initializer bodies. It records deterministic direct, static, instance,
 virtual-family, interface-conformance, exact callable-address, and indirect-
 signature dependencies; recursively expands canonical class, optional,
 shared-owner, and array lifecycle plans; and preserves external and intrinsic
-calls as typed leaves. Callable-address formations retain their containing
-execution node, exact function type, target, and span so the later closure can
-scope candidates without rescanning MIR. Shared optional and owner lifecycle
-resolvers also drive exact reverse-shutdown root expansion, so dependency and
-root policy do not maintain separate cleanup walks.
+calls as typed leaves. The same traversal records every direct static-place
+read, write, replacement, borrow, initialization, and destruction with its
+containing execution node, target field, structural phase, source span, and a
+typed ordinary versus lifecycle-owned-destination classification. All
+structurally present blocks contribute evidence; extraction performs no local
+CFG pruning. Invalid field and lifecycle-destination identities return the
+same structured extraction failure channel as invalid dependency targets.
 
-Static-effect analysis consumes these shared targets and lifecycle edges while
-retaining private ownership of static-place access evidence, publication
-phases, witnesses, authority, diagnostics, dumps, and solved effects. The
-superseded static-effect call, function-value, and lifecycle walkers have been
-removed.
+Callable-address formations retain their containing execution node, exact
+function type, target, and span so later closure can scope candidates without
+rescanning MIR. Shared optional and owner lifecycle resolvers also drive exact
+reverse-shutdown root expansion, so dependency and root policy do not maintain
+separate cleanup walks.
+
+Static-effect analysis adapts the shared static-access records, targets, and
+lifecycle edges into its private summaries. It retains ownership of propagated
+witnesses, authority, diagnostics, dumps, and solved effects, but owns no MIR
+body scanner. The superseded static-effect static-place, call, function-value,
+and lifecycle walkers have been removed.
 
 On complete final MIR, the same facade collects typed roots for the
 internal entry, every static activation, and every reverse-shutdown cleanup,

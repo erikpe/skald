@@ -7,8 +7,9 @@ use crate::{
     intrinsic::Intrinsic,
     mir::{
         MirArrayLifecycleOperation, MirCallTarget, MirClassLifecycleOperation, MirExecutionNode,
-        MirFunctionLinkage, MirInstruction, StaticArrayLifecycleOperation,
-        StaticClassLifecycleOperation, StaticEffectNode, StaticLifecycleRootAuthority,
+        MirFunctionLinkage, MirInstruction, MirPlaceBase, MirRvalueKind, StaticAccessKind,
+        StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectNode,
+        StaticLifecycleRootAuthority,
     },
     test_support::{lower_generic_source_to_final_mir, lower_generic_source_to_preliminary_mir},
 };
@@ -315,6 +316,166 @@ fn extraction_centralizes_dispatch_and_scoped_function_value_targets() {
             .all_indirect_targets(first.indirect_calls()[0].function_type())
             .collect::<Vec<_>>(),
         vec![first.callable_addresses()[0].target()]
+    );
+}
+
+#[test]
+fn extraction_inventories_direct_static_access_kinds_in_canonical_order() {
+    let preliminary = lower_generic_source_to_preliminary_mir(
+        "class Item {
+           value: i64;
+           init(value: i64) { self.value = value; }
+           copy(ref other: Item) { self.value = other.value; }
+           assign(ref other: Item) { self.value = other.value; }
+         }
+         class State {
+           static scalar: i64 = 1;
+           static item: Item = Item(2);
+           init() {}
+         }
+         fn inspect(ref value: i64) -> i64 { return value; }
+         fn modify(mut ref value: i64) -> unit { value = value + 1; }
+         fn main() -> i64 {
+           var observed: i64 = State.scalar;
+           State.scalar = 3;
+           observed = inspect(State.scalar);
+           modify(State.scalar);
+           var replacement: Item = Item(4);
+           State.item = replacement;
+           return observed;
+         }",
+    );
+    let first = extract_preliminary_dependencies(&preliminary).unwrap();
+    let second = extract_preliminary_dependencies(&preliminary).unwrap();
+    assert_eq!(first, second);
+    assert!(first
+        .static_accesses()
+        .windows(2)
+        .all(|pair| mir_static_access_key(&pair[0]) < mir_static_access_key(&pair[1])));
+
+    let entry = MirExecutionNode::callable(preliminary.program().entry_function.into());
+    let entry_accesses = first.static_accesses_from(entry);
+    let kinds = entry_accesses
+        .iter()
+        .map(|access| access.kind())
+        .collect::<BTreeSet<_>>();
+    assert!(kinds.contains(&StaticAccessKind::Read));
+    assert!(kinds.contains(&StaticAccessKind::Write));
+    assert!(kinds.contains(&StaticAccessKind::Borrow));
+    assert!(kinds.contains(&StaticAccessKind::Replace));
+    assert!(
+        entry_accesses
+            .iter()
+            .filter(|access| access.kind() == StaticAccessKind::Borrow)
+            .count()
+            >= 2,
+        "immutable and mutable static borrows must both be inventoried"
+    );
+    assert!(entry_accesses
+        .iter()
+        .all(|access| access.origin() == MirStaticAccessOrigin::Ordinary));
+}
+
+#[test]
+fn extraction_distinguishes_initializer_destination_from_ordinary_self_access() {
+    let preliminary = lower_generic_source_to_preliminary_mir(
+        "class State {
+           static value: i64 = State.value;
+           init() {}
+         }
+         fn main() -> i64 {
+           if (false) { return State.value; }
+           return 0;
+         }",
+    );
+    let field = preliminary.static_fields().next().unwrap().field;
+    let initializer = preliminary.static_initializers().next().unwrap().callable();
+    let extracted = extract_preliminary_dependencies(&preliminary).unwrap();
+    let initializer_accesses =
+        extracted.static_accesses_from(MirExecutionNode::callable(initializer));
+
+    assert!(initializer_accesses.iter().any(|access| {
+        access.target() == field
+            && access.kind() == StaticAccessKind::Initialize
+            && access.region() == MirDependencyRegion::StaticInitializerBeforePublication
+            && access.origin() == MirStaticAccessOrigin::LifecycleOwnedDestination
+    }));
+    assert!(initializer_accesses.iter().any(|access| {
+        access.target() == field
+            && access.kind() == StaticAccessKind::Read
+            && access.region() == MirDependencyRegion::StaticInitializerBeforePublication
+            && access.origin() == MirStaticAccessOrigin::Ordinary
+    }));
+
+    let entry = MirExecutionNode::callable(preliminary.program().entry_function.into());
+    assert!(extracted.static_accesses().iter().any(|access| {
+        access.source() == entry
+            && access.target() == field
+            && access.kind() == StaticAccessKind::Read
+    }));
+}
+
+#[test]
+fn static_access_extraction_reports_malformed_field_and_destination_identities() {
+    let preliminary = lower_generic_source_to_preliminary_mir(
+        "class State { static value: i64 = 1; init() {} }
+         fn main() -> i64 { return State.value; }",
+    );
+    let field = preliminary.static_fields().next().unwrap().field;
+    let mut unknown_field = preliminary.clone();
+    let unknown_entry = unknown_field.program().entry_function;
+    let place = unknown_field
+        .program_mut()
+        .definitions
+        .get_mut_for_test(unknown_entry)
+        .unwrap()
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assign) => match &mut assign.rvalue.kind {
+                MirRvalueKind::Load(place) => Some(place),
+                _ => None,
+            },
+            _ => None,
+        })
+        .unwrap();
+    let missing = StaticFieldId::new(ClassId::new(999), 0);
+    place.base = MirPlaceBase::StaticField(missing);
+    assert_eq!(
+        extract_preliminary_dependencies(&unknown_field),
+        Err(MirDependencyExtractionError::UnknownStaticField(missing))
+    );
+
+    let mut foreign_destination = preliminary;
+    let entry = foreign_destination.program().entry_function;
+    let place = foreign_destination
+        .program_mut()
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap()
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assign) => match &mut assign.rvalue.kind {
+                MirRvalueKind::Load(place) => Some(place),
+                _ => None,
+            },
+            _ => None,
+        })
+        .unwrap();
+    place.base = MirPlaceBase::StaticLifecycleDestination(field);
+    assert_eq!(
+        extract_preliminary_dependencies(&foreign_destination),
+        Err(
+            MirDependencyExtractionError::InvalidStaticLifecycleDestination {
+                source: entry.into(),
+                field,
+            }
+        )
     );
 }
 

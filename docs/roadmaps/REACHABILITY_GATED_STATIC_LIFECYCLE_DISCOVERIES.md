@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Discoveries
 
-Status: active companion record for the planned
+Status: active companion record for the in-progress
 [reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md).
 
 This document records maintainability improvements, missing abstraction

@@ -37,6 +37,10 @@ pub(crate) enum MirDependencyExtractionError {
     UnknownOptionalBoxType(OptionalBoxTypeId),
     UnknownStorage(StorageId),
     InvalidPlaceBase(MirPlaceBase),
+    InvalidStaticLifecycleDestination {
+        source: CallableId,
+        field: StaticFieldId,
+    },
     InvalidLifecycleFieldType(FieldId),
     InvalidStaticCleanup(StaticFieldId),
     CyclicOptionalLifecycle(OptionalTypeId),
@@ -100,6 +104,10 @@ impl fmt::Display for MirDependencyExtractionError {
             Self::InvalidPlaceBase(base) => {
                 write!(formatter, "invalid dependency place base {base:?}")
             }
+            Self::InvalidStaticLifecycleDestination { source, field } => write!(
+                formatter,
+                "static lifecycle destination {field} is invalid in source callable {source}"
+            ),
             Self::InvalidLifecycleFieldType(field) => {
                 write!(formatter, "field {field} has an invalid lifecycle type")
             }

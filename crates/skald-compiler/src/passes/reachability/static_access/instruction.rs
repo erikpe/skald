@@ -1,153 +1,157 @@
-//! MIR-instruction effect and edge extraction.
+//! Static-place extraction from MIR instructions.
 
 use super::*;
 
-impl Extractor<'_> {
-    pub(super) fn extract_instruction(
+impl MirDependencyExtractor<'_> {
+    pub(in crate::passes::reachability) fn extract_static_instruction(
         &mut self,
-        source: StaticEffectNode,
+        source: crate::mir::MirExecutionNode,
         definition: MirDefinitionRef<'_>,
-        phase: StaticEffectPhase,
+        region: MirDependencyRegion,
         instruction: &MirInstruction,
-    ) {
+    ) -> Result<(), MirDependencyExtractionError> {
         let span = instruction.span();
         match instruction {
             MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
             MirInstruction::Assign(assign) => {
-                self.add_rvalue(source, definition, phase, &assign.rvalue, span)
+                self.extract_static_rvalue(source, definition, region, &assign.rvalue, span)?;
             }
             MirInstruction::Call(call) => {
                 if let Some(receiver) = &call.receiver {
                     match receiver {
                         MirCallReceiver::Method(receiver) => {
-                            self.add_place(
+                            self.add_static_place(
                                 source,
                                 definition,
-                                phase,
+                                region,
                                 &receiver.place,
                                 StaticAccessKind::Borrow,
                                 span,
-                            );
-                            self.add_origin(source, definition, phase, &receiver.origin, span);
+                            )?;
+                            self.add_static_origin(
+                                source,
+                                definition,
+                                region,
+                                &receiver.origin,
+                                span,
+                            )?;
                         }
                         MirCallReceiver::Interface(view) => {
-                            self.add_view(source, definition, phase, view, span)
+                            self.add_static_view(source, definition, region, view, span)?;
                         }
                     }
                 }
                 for argument in &call.arguments {
-                    self.add_argument(source, definition, phase, argument, span);
+                    self.add_static_argument(source, definition, region, argument, span)?;
                 }
                 if let Some(destination) = &call.destination {
-                    self.add_place(
+                    self.add_static_place(
                         source,
                         definition,
-                        phase,
+                        region,
                         destination,
                         StaticAccessKind::Initialize,
                         span,
-                    );
+                    )?;
                 }
             }
-            MirInstruction::Cleanup(cleanup) => {
-                self.add_place(
-                    source,
-                    definition,
-                    phase,
-                    &cleanup.destination,
-                    StaticAccessKind::Destroy,
-                    cleanup.span,
-                );
-            }
+            MirInstruction::Cleanup(cleanup) => self.add_static_place(
+                source,
+                definition,
+                region,
+                &cleanup.destination,
+                StaticAccessKind::Destroy,
+                cleanup.span,
+            )?,
             MirInstruction::Initialize(initialize) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &initialize.destination,
                     StaticAccessKind::Initialize,
                     span,
-                );
+                )?;
                 for argument in &initialize.arguments {
-                    self.add_argument(source, definition, phase, argument, span);
+                    self.add_static_argument(source, definition, region, argument, span)?;
                 }
             }
-            MirInstruction::Store(store) => self.add_place(
+            MirInstruction::Store(store) => self.add_static_place(
                 source,
                 definition,
-                phase,
+                region,
                 &store.destination,
                 StaticAccessKind::Write,
                 span,
-            ),
+            )?,
             MirInstruction::CopyConstruct(copy) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &copy.destination,
                     StaticAccessKind::Initialize,
                     span,
-                );
-                self.add_place(
+                )?;
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &copy.source,
                     StaticAccessKind::Read,
                     span,
-                );
+                )?;
             }
             MirInstruction::CopyAssign(copy) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &copy.destination,
                     StaticAccessKind::Replace,
                     span,
-                );
-                self.add_place(
+                )?;
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &copy.source,
                     StaticAccessKind::Read,
                     span,
-                );
+                )?;
             }
             MirInstruction::EndFullExpression(end) => {
                 for cleanup in &end.temporaries {
-                    self.add_place(
+                    self.add_static_place(
                         source,
                         definition,
-                        phase,
+                        region,
                         &cleanup.destination,
                         StaticAccessKind::Destroy,
                         cleanup.span,
-                    );
+                    )?;
                 }
             }
             MirInstruction::BindCheckedView(binding) => {
-                self.add_view(source, definition, phase, &binding.view, span)
+                self.add_static_view(source, definition, region, &binding.view, span)?;
             }
             MirInstruction::EndCheckedView(_) => {}
             MirInstruction::SharedAllocate(allocate) => {
                 if let crate::mir::MirSharedAllocationMode::Copy { source: place } = &allocate.mode
                 {
-                    self.add_place(
+                    self.add_static_place(
                         source,
                         definition,
-                        phase,
+                        region,
                         place,
                         StaticAccessKind::Read,
                         span,
-                    );
+                    )?;
                 }
             }
             MirInstruction::SharedInitialize(initialize) => {
                 for argument in &initialize.arguments {
-                    self.add_argument(source, definition, phase, argument, span);
+                    self.add_static_argument(source, definition, region, argument, span)?;
                 }
             }
             MirInstruction::SharedPublish(_)
@@ -155,241 +159,258 @@ impl Extractor<'_> {
             | MirInstruction::SharedAdopt(_)
             | MirInstruction::SharedCopy(_)
             | MirInstruction::SharedMove(_) => {}
-            MirInstruction::SharedFieldCopy(copy) => self.add_place(
+            MirInstruction::SharedFieldCopy(copy) => self.add_static_place(
                 source,
                 definition,
-                phase,
+                region,
                 &copy.source,
                 StaticAccessKind::Read,
                 span,
-            ),
+            )?,
             MirInstruction::SharedCast(cast) => {
-                self.add_shared_cast_source(source, definition, phase, &cast.source, span)
+                self.add_static_shared_cast_source(source, definition, region, &cast.source, span)?;
             }
             MirInstruction::SharedRelease(_) => {}
-            MirInstruction::SharedFieldInitialize(initialize) => self.add_place(
+            MirInstruction::SharedFieldInitialize(initialize) => self.add_static_place(
                 source,
                 definition,
-                phase,
+                region,
                 &initialize.destination,
                 StaticAccessKind::Initialize,
                 span,
-            ),
-            MirInstruction::SharedFieldReplace(replace) => {
-                self.add_place(
-                    source,
-                    definition,
-                    phase,
-                    &replace.destination,
-                    StaticAccessKind::Replace,
-                    span,
-                );
-            }
-            MirInstruction::StringInitialize(initialize) => self.add_place(
+            )?,
+            MirInstruction::SharedFieldReplace(replace) => self.add_static_place(
                 source,
                 definition,
-                phase,
+                region,
+                &replace.destination,
+                StaticAccessKind::Replace,
+                span,
+            )?,
+            MirInstruction::StringInitialize(initialize) => self.add_static_place(
+                source,
+                definition,
+                region,
                 &initialize.destination,
                 StaticAccessKind::Initialize,
                 span,
-            ),
+            )?,
             MirInstruction::OptionalInitialize(initialize) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &initialize.destination,
                     StaticAccessKind::Initialize,
                     span,
-                );
-                self.add_optional_source(source, definition, phase, &initialize.source, span);
-            }
-            MirInstruction::OptionalAssign(assign) => {
-                self.add_place(
+                )?;
+                self.add_static_optional_source(
                     source,
                     definition,
-                    phase,
+                    region,
+                    &initialize.source,
+                    span,
+                )?;
+            }
+            MirInstruction::OptionalAssign(assign) => {
+                self.add_static_place(
+                    source,
+                    definition,
+                    region,
                     &assign.destination,
                     StaticAccessKind::Replace,
                     span,
-                );
-                self.add_optional_source(source, definition, phase, &assign.source, span);
+                )?;
+                self.add_static_optional_source(source, definition, region, &assign.source, span)?;
             }
             MirInstruction::AggregateOptionalInitialize(initialize) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &initialize.destination,
                     StaticAccessKind::Initialize,
                     span,
-                );
+                )?;
                 if let crate::mir::MirAggregateOptionalSource::Copy(copy) = &initialize.source {
-                    self.add_place(
+                    self.add_static_place(
                         source,
                         definition,
-                        phase,
+                        region,
                         copy,
                         StaticAccessKind::Read,
                         span,
-                    );
+                    )?;
                 }
             }
             MirInstruction::AggregateOptionalAssign(assign) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &assign.destination,
                     StaticAccessKind::Replace,
                     span,
-                );
+                )?;
                 if let crate::mir::MirAggregateOptionalSource::Copy(copy) = &assign.source {
-                    self.add_place(
+                    self.add_static_place(
                         source,
                         definition,
-                        phase,
+                        region,
                         copy,
                         StaticAccessKind::Read,
                         span,
-                    );
+                    )?;
                 }
             }
-            MirInstruction::AggregateOptionalPublish(publish) => self.add_place(
+            MirInstruction::AggregateOptionalPublish(publish) => self.add_static_place(
                 source,
                 definition,
-                phase,
+                region,
                 &publish.destination,
                 StaticAccessKind::Write,
                 span,
-            ),
-            MirInstruction::AggregateOptionalCleanup(cleanup) => {
-                self.add_place(
-                    source,
-                    definition,
-                    phase,
-                    &cleanup.destination,
-                    StaticAccessKind::Destroy,
-                    span,
-                );
-            }
+            )?,
+            MirInstruction::AggregateOptionalCleanup(cleanup) => self.add_static_place(
+                source,
+                definition,
+                region,
+                &cleanup.destination,
+                StaticAccessKind::Destroy,
+                span,
+            )?,
             MirInstruction::ClassOptionalInitialize(initialize) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &initialize.destination,
                     StaticAccessKind::Initialize,
                     span,
-                );
-                self.add_class_optional_source(source, definition, phase, &initialize.source, span);
-            }
-            MirInstruction::ClassOptionalAssign(assign) => {
-                self.add_place(
+                )?;
+                self.add_static_class_optional_source(
                     source,
                     definition,
-                    phase,
+                    region,
+                    &initialize.source,
+                    span,
+                )?;
+            }
+            MirInstruction::ClassOptionalAssign(assign) => {
+                self.add_static_place(
+                    source,
+                    definition,
+                    region,
                     &assign.destination,
                     StaticAccessKind::Replace,
                     span,
-                );
-                self.add_class_optional_source(source, definition, phase, &assign.source, span);
+                )?;
+                self.add_static_class_optional_source(
+                    source,
+                    definition,
+                    region,
+                    &assign.source,
+                    span,
+                )?;
             }
-            MirInstruction::ClassOptionalPublish(publish) => self.add_place(
+            MirInstruction::ClassOptionalPublish(publish) => self.add_static_place(
                 source,
                 definition,
-                phase,
+                region,
                 &publish.destination,
                 StaticAccessKind::Write,
                 span,
-            ),
-            MirInstruction::ClassOptionalCleanup(cleanup) => {
-                self.add_place(
-                    source,
-                    definition,
-                    phase,
-                    &cleanup.destination,
-                    StaticAccessKind::Destroy,
-                    span,
-                );
-            }
-            MirInstruction::EndOptionalView(end) => self.add_place(
+            )?,
+            MirInstruction::ClassOptionalCleanup(cleanup) => self.add_static_place(
                 source,
                 definition,
-                phase,
+                region,
+                &cleanup.destination,
+                StaticAccessKind::Destroy,
+                span,
+            )?,
+            MirInstruction::EndOptionalView(end) => self.add_static_place(
+                source,
+                definition,
+                region,
                 &end.source,
                 StaticAccessKind::Borrow,
                 span,
-            ),
+            )?,
             MirInstruction::EndOptionalBoxView(_) => {}
             MirInstruction::OptionalSharedInitialize(initialize) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &initialize.destination,
                     StaticAccessKind::Initialize,
                     span,
-                );
-                self.add_optional_shared_source(
+                )?;
+                self.add_static_optional_shared_source(
                     source,
                     definition,
-                    phase,
+                    region,
                     &initialize.source,
                     span,
-                );
+                )?;
             }
             MirInstruction::OptionalSharedAssign(assign) => {
-                self.add_place(
+                self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &assign.destination,
                     StaticAccessKind::Replace,
                     span,
-                );
-                self.add_optional_shared_source(source, definition, phase, &assign.source, span);
-            }
-            MirInstruction::OptionalSharedCleanup(cleanup) => {
-                self.add_place(
+                )?;
+                self.add_static_optional_shared_source(
                     source,
                     definition,
-                    phase,
-                    &cleanup.destination,
-                    StaticAccessKind::Destroy,
+                    region,
+                    &assign.source,
                     span,
-                );
+                )?;
             }
+            MirInstruction::OptionalSharedCleanup(cleanup) => self.add_static_place(
+                source,
+                definition,
+                region,
+                &cleanup.destination,
+                StaticAccessKind::Destroy,
+                span,
+            )?,
             MirInstruction::Array(array) => {
-                self.extract_array_instruction(source, definition, phase, array)
+                self.extract_static_array_instruction(source, definition, region, array)?;
             }
             MirInstruction::Io(io) => match &io.operation {
                 MirIoOperation::StandardHandle { .. } | MirIoOperation::Close { .. } => {}
-                MirIoOperation::Open { path, .. } => self.add_place(
+                MirIoOperation::Open { path, .. } => self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &path.place,
                     super::control::alias_access(path.access),
                     span,
-                ),
-                MirIoOperation::Read { destination, .. } => self.add_place(
+                )?,
+                MirIoOperation::Read { destination, .. } => self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &destination.place,
                     StaticAccessKind::Borrow,
                     span,
-                ),
-                MirIoOperation::Write { source: buffer, .. } => self.add_place(
+                )?,
+                MirIoOperation::Write { source: buffer, .. } => self.add_static_place(
                     source,
                     definition,
-                    phase,
+                    region,
                     &buffer.place,
                     StaticAccessKind::Borrow,
                     span,
-                ),
+                )?,
             },
         }
+        Ok(())
     }
 }

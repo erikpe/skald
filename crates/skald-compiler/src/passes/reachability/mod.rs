@@ -1,14 +1,14 @@
 //! Target-independent execution-dependency and whole-program root contract.
 //!
 //! This facade owns semantic vocabulary, deterministic comparison, and the
-//! shared read-only extraction of executable and lifecycle dependencies. It
-//! also owns deterministic root collection, closure solving, query facts, and
-//! a focused dump. Analysis performs no reachability pruning or MIR
-//! transformation.
+//! shared read-only extraction of executable and lifecycle dependencies plus
+//! direct static-place accesses. It also owns deterministic root collection,
+//! closure solving, query facts, and a focused dump. Analysis performs no
+//! reachability pruning or MIR transformation.
 //!
 //! Maintenance rule: every new MIR operation that can select executable work,
-//! and every new implicit lifecycle variant, must update dependency extraction
-//! and exhaustive coverage in the same change.
+//! access a static place, or add implicit lifecycle behavior must update shared
+//! extraction and exhaustive coverage in the same change.
 
 mod analysis;
 mod definitions;
@@ -19,6 +19,7 @@ mod lifecycle;
 mod model;
 mod roots;
 mod solve;
+mod static_access;
 mod target;
 mod verify;
 
@@ -37,10 +38,11 @@ pub(crate) use extract::{
 };
 pub(crate) use model::{
     mir_dependency_edge_key, mir_dependency_edge_kind_key, mir_reachability_root_reason_key,
-    mir_span_key, MirCallableAddressFormation, MirDependencyEdge, MirDependencyEdgeKey,
-    MirDependencyEdgeKind, MirDependencyRecord, MirDependencyRegion, MirDependencyTarget,
-    MirIndirectCallSite, MirReachabilityRoot, MirReachabilityRootReason, MirReachabilityRootTarget,
-    MirRetainedDefinition, MirRuntimeEntity, MirSemanticDeclaration,
+    mir_span_key, mir_static_access_key, MirCallableAddressFormation, MirDependencyEdge,
+    MirDependencyEdgeKey, MirDependencyEdgeKind, MirDependencyRecord, MirDependencyRegion,
+    MirDependencyTarget, MirIndirectCallSite, MirReachabilityRoot, MirReachabilityRootReason,
+    MirReachabilityRootTarget, MirRetainedDefinition, MirRuntimeEntity, MirSemanticDeclaration,
+    MirStaticAccess, MirStaticAccessOrigin,
 };
 pub(crate) use solve::analyze_reachability;
 pub(super) use verify::verify_reachable_definitions;

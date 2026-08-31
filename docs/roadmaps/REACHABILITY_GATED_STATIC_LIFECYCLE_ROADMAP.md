@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 is complete and RSR1 is next.
+Status: in progress; RSR0 and RSR1 are complete and RSR2 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -88,7 +88,7 @@ reduce future optimization cost; larger findings belong in the
 ## Progress
 
 - [x] RSR0 — Establish activation vocabulary and behavioral baselines
-- [ ] RSR1 — Centralize preliminary static-access extraction
+- [x] RSR1 — Centralize preliminary static-access extraction
 - [ ] RSR2 — Compute and inspect the shadow activation closure
 - [ ] RSR3 — Generalize lifecycle proof and schema for an active subset
 - [ ] RSR4 — Verify final access against exact activation authority
@@ -150,23 +150,23 @@ facades, and the runtime ABI are unchanged.
 exhaustive read-only source of ordinary static accesses and executable
 dependencies before either analysis solves a graph.
 
-- [ ] Extend the shared preliminary dependency inventory with typed direct
+- [x] Extend the shared preliminary dependency inventory with typed direct
       static-place accesses containing source node, target field, access kind,
       phase, span, and lifecycle-owned destination classification.
-- [ ] Cover reads, writes, replacement, immutable and mutable borrows, calls,
+- [x] Cover reads, writes, replacement, immutable and mutable borrows, calls,
       every rvalue/terminator form, initializer publication, and current class,
       optional, shared-owner, and array lifecycle expansion through exhaustive
       matches.
-- [ ] Keep a field's own unpublished initializer destination distinct from an
+- [x] Keep a field's own unpublished initializer destination distinct from an
       ordinary pre-publication self-access; do not let one hide the other.
-- [ ] Retain structurally present accesses without local CFG pruning and keep
+- [x] Retain structurally present accesses without local CFG pruning and keep
       target resolution target-independent and deterministic.
-- [ ] Migrate static-effect inference to the shared access inventory, prove
+- [x] Migrate static-effect inference to the shared access inventory, prove
       exact diagnostic/report/dump parity, and remove the superseded direct
       scanner only after parity passes.
-- [ ] Return structured extraction failures from verified preliminary inputs
+- [x] Return structured extraction failures from verified preliminary inputs
       instead of adding assertions or panic-prone lookup paths.
-- [ ] Split the oversized shared lifecycle extractor only if the behavior-
+- [x] Split the oversized shared lifecycle extractor only if the behavior-
       preserving facade refactor remains cohesive with this change; otherwise
       record it in discoveries.
 
@@ -184,6 +184,20 @@ planning parity; deterministic extraction order.
 **Exit criteria:** One exhaustive service supplies preliminary executable and
 static-access dependencies to both consumers, with no activation closure and
 no behavior change.
+
+Completed on 2026-08-31. The shared reachability traversal now emits immutable,
+canonically ordered direct static-access records beside executable and
+lifecycle dependencies, with borrowed whole-inventory and per-source queries.
+Typed ordinary versus lifecycle-owned destination evidence preserves exact
+source node, target field, access kind, structural phase, and span. Static-
+effect analysis consumes that inventory without owning a MIR body scanner; its
+former place, instruction, and control-flow walkers were removed after exact
+direct-effect, plan, diagnostic, dump, and realization parity passed. Invalid
+field and lifecycle-destination identities use structured extraction failures.
+The independent lifecycle extractor split remains deferred under the existing
+indexed discovery because moving its class, optional/shared, and array owners
+was not cohesive with this semantic extraction change. Production activation
+and declaration-wide eager behavior are unchanged.
 
 ### RSR2 — Compute and inspect the shadow activation closure
 

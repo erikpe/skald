@@ -134,8 +134,11 @@ over-budget syntax diagnostics.
 | Documentation tests | `crates/skald-docs-check/` | Repository-local Markdown links, anchors, and required indexes |
 
 Whole-world reachability coverage is split by owner. Colocated analysis and
-verifier tests pin roots, exhaustive dependency families, witnesses, sparse
-definition validity, and deterministic dumps. Pipeline and driver tests pin
+verifier tests pin roots, exhaustive dependency families, typed static-place
+accesses and lifecycle-owned destinations, structured malformed-identity
+failures, witnesses, sparse definition validity, and deterministic dumps.
+Static-lifecycle analysis tests require its direct effects to be an exact
+adapter of that shared access inventory. Pipeline and driver tests pin
 the explicit `dead-pure-definition-elimination` then
 `whole-world-reachability` default order, `none` parity, selective disabling,
 measurements, retained-definition counts, backend visits, and assembly
@@ -1169,7 +1172,7 @@ must remain eager until the documented semantic cutover deliberately changes
 its expectation.
 
 The frozen reachability-gated direction extends this ownership without moving
-ordinary source checking. Shared dependency tests will own exhaustive direct
+ordinary source checking. Shared dependency tests now own exhaustive direct
 static accesses and possible targets; activation-analysis tests will own the
 coupled entry/execution/field fixed point, exact triggers, witnesses, and
 deterministic dump; planned/final verifier tests will own exact active
