@@ -52,7 +52,7 @@ fn rejects_corrupt_virtual_metadata_before_instruction_selection() {
 }
 
 #[test]
-fn rejects_a_virtual_table_selection_without_an_executable_body() {
+fn permits_an_absent_body_in_an_unused_virtual_table_slot() {
     let mut program = lower_text(concat!(
         "class Root { init() {} virtual fn value() -> i64 { return 1; } }\n",
         "class Leaf extends Root {\n",
@@ -65,10 +65,13 @@ fn rejects_a_virtual_table_selection_without_an_executable_body() {
     program.member_definitions.remove_for_test(missing.into());
     verify_mir(&program).unwrap();
 
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert!(error
-        .message()
-        .contains("virtual table for class c1 selects method c1:method0 without a MIR definition"));
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert!(output.contains(concat!(
+        ".Lska.class.main.Leaf.c1.dispatch:\n",
+        "    .quad 0\n",
+    )));
+    assert!(!output.contains(".Lska.class.main.Leaf.c1.method.value.m0:"));
+    assert_system_assembler_accepts(&output);
 }
 
 #[test]

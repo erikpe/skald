@@ -13,6 +13,7 @@ use super::{
     layout::DataLayout,
     literal_data::LiteralPool,
     machine::{AssemblyFunction, AssemblyProgram, Instruction, Label, Register},
+    planning::{DefinitionPlanningPhase, PlanningObserver},
     runtime_trace, symbol,
 };
 
@@ -45,6 +46,7 @@ pub(super) fn lower(
     dispatch: &DispatchMetadata,
     activations: &runtime_trace::Activations,
     metadata: &runtime_trace::Metadata<'_>,
+    observer: &mut impl PlanningObserver,
 ) -> Result<AssemblyProgram, BackendError> {
     let literal_pool = LiteralPool::build(program);
     let context = LoweringContext {
@@ -61,7 +63,7 @@ pub(super) fn lower(
             let signature = program
                 .callable_signature(definition.callable())
                 .expect("verified definition must have a declaration");
-            lower_definition(&context, signature, definition)
+            lower_definition(&context, signature, definition, observer)
         })
         .collect::<Result<Vec<_>, _>>()?;
     functions.extend(array::lower_helpers(program, data_layout)?);
@@ -107,8 +109,10 @@ fn lower_definition(
     context: &LoweringContext<'_>,
     signature: MirCallableSignature<'_>,
     function: MirDefinitionRef<'_>,
+    observer: &mut impl PlanningObserver,
 ) -> Result<AssemblyFunction, BackendError> {
     let initial_location = context.activations.initial_location(function.callable());
+    observer.visits_definition(DefinitionPlanningPhase::Frame, function.callable());
     let frame = if initial_location.is_some() {
         FrameLayout::plan_with_runtime_trace(function, context.data_layout)?
     } else {
@@ -142,6 +146,10 @@ fn lower_definition(
         )));
     }
     let epilogue = epilogue_label(context.program, function.callable());
+    observer.visits_definition(
+        DefinitionPlanningPhase::InstructionSelection,
+        function.callable(),
+    );
     for block in &function.body().blocks {
         instructions.push(Instruction::Label(block_label(context.program, block.id)));
         let mut selector =

@@ -1044,30 +1044,38 @@ there is no backend argument-capture path or target ABI addition.
 
 The confirmed
 [whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
-and planned
+and active
 [roadmap](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 move semantic definition retention ahead of target lowering. This section is a
-selected future backend boundary; the current backend still receives complete
-final MIR and performs the machine-artifact retention described below.
+current backend boundary. Backends accept both complete and verified sparse
+final MIR and still perform the machine-artifact retention described below.
 
 `VerifiedFinalMirProgram` now owns verified reachability facts bound to its
-exact final-MIR program. WRR6 will expose only the query needed by backend
-lowering through `BackendInput`. Target legality, callable-signature
-checks, runtime-trace activation planning, fixed frames, and instruction
-selection will visit physically retained executable definitions rather than
-assuming that every dense declaration has a body. An absent final-MIR body is
-legal only because target-independent verification independently proved its
-declaration unreachable.
+exact final-MIR program. `BackendInput` projects only canonical required-
+runtime-entity identities and used virtual-family/interface-requirement
+queries; target code does not consume the analysis representation or pass
+policy. Target legality, callable-signature checks, runtime-trace activation
+planning, fixed frames, and instruction selection visit physically retained
+executable definitions rather than assuming that every dense declaration has
+a body. An absent final-MIR body is legal only because target-independent
+verification independently proved its declaration unreachable. Class and
+value layout remains declaration-driven; it does not walk callable bodies and
+may conservatively cover unused semantic metadata.
 
-Dispatch planning will distinguish complete semantic declarations from the
+Dispatch planning distinguishes complete semantic declarations from the
 virtual families and interface requirements reachable MIR can select. It may
 retain extra target metadata conservatively, but it may not demand an absent
 unreachable method body solely because an unused dense slot or conformance
-names the declaration. Every entry usable from a reachable call or implicit
-lifecycle operation must still select a verified retained body. Required
-class, array, optional-box, literal, static, and other runtime entities come
-from the target-independent retained-domain query rather than a second
-backend-specific semantic reachability walker.
+names the declaration. Dense ABI slot positions remain stable. A physically
+present unused implementation remains available to complete-emission mode; an
+absent implementation becomes null only in a verified-unused slot. Every
+entry usable from a reachable call or implicit lifecycle operation still
+selects a verified retained body. Required class, array, optional-box, literal,
+static, and other runtime entities come from the target-independent retained-
+domain query rather than a second backend-specific semantic reachability
+walker. The x86-64 boundary validates those required identities before
+planning and conservatively retains extra metadata where pruning is
+unnecessary for sparse-body correctness.
 
 This changes no ABI, layout identity, symbol spelling contract, export rule,
 or target failure classification. Complete-emission diagnostics continue to

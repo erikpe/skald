@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 through WRR5 are complete and WRR6 is next.
+Status: in progress; WRR0 through WRR6 are complete and WRR7 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -97,7 +97,7 @@ instead of expanding reviewed scope.
 - [x] WRR3 — Bind reachability facts to verified final MIR
 - [x] WRR4 — Verify sparse final executable definitions
 - [x] WRR5 — Add atomic stable-identity definition retention
-- [ ] WRR6 — Make backend planning consume the retained domain
+- [x] WRR6 — Make backend planning consume the retained domain
 - [ ] WRR7 — Register and observe whole-world reachability pruning
 - [ ] WRR8 — Activate, harden, and close whole-world reachability
 
@@ -462,32 +462,32 @@ the next task.
 unreachable bodies from entering target legality and lowering while preserving
 required dispatch/runtime metadata and final machine-artifact pruning.
 
-- [ ] Expose only the verified reachability query needed by `BackendInput`;
+- [x] Expose only the verified reachability query needed by `BackendInput`;
       keep analysis representation and pass policy private to target-
       independent owners.
-- [ ] Make x86-64 legality, signature checks, runtime-trace activation, frame
+- [x] Make x86-64 legality, signature checks, runtime-trace activation, frame
       planning, and instruction selection iterate physically retained
       executable definitions rather than dense declarations.
-- [ ] Make dispatch planning distinguish declared slots from virtual families
+- [x] Make dispatch planning distinguish declared slots from virtual families
       and interface requirements reachable MIR can select; require bodies only
       for verified reachable selections.
-- [ ] Permit unreachable declaration-only methods to occupy unused semantic
+- [x] Permit unreachable declaration-only methods to occupy unused semantic
       metadata without causing target errors or invented null-call behavior on
       a reachable path.
-- [ ] Consume required runtime-entity facts for class/array/optional-box
+- [x] Consume required runtime-entity facts for class/array/optional-box
       dispatch metadata, literals, and static data where needed; retain extra
       target metadata conservatively if removal is not required for body
       pruning correctness.
-- [ ] Add instrumentation or focused test hooks proving pruned definitions do
+- [x] Add instrumentation or focused test hooks proving pruned definitions do
       not enter target legality, layout, trace, frame, or instruction-selection
       work.
-- [ ] Preserve complete-emission behavior over every physically present
+- [x] Preserve complete-emission behavior over every physically present
       definition for direct backend diagnostics/tests; do not resurrect absent
       bodies.
-- [ ] Keep the target-private exported-symbol artifact walk after lowering and
+- [x] Keep the target-private exported-symbol artifact walk after lowering and
       preserve its target-generated helper, dispatch, literal, panic, and trace
       dependencies.
-- [ ] Update the implemented backend contract as each retained-domain behavior
+- [x] Update the implemented backend contract as each retained-domain behavior
       becomes current.
 
 **Tests:** Sparse verified functions and members through backend input;
@@ -505,6 +505,30 @@ survival; deterministic assembly; structured missing-required-entity errors.
 retained executable definitions and required runtime metadata, and still
 performs final target-private artifact retention without changing current
 complete-program source behavior.
+
+Completed on 2026-08-31. `BackendInput` now projects only canonical required-
+runtime-entity and used-dispatch queries from its sealed reachability product;
+the x86-64 backend never receives the analysis representation or pass policy.
+Required entity identities are defensively validated before target planning,
+while the first implementation conservatively retains additional declaration
+metadata. Array and general legality, ABI signature checks, trace activation,
+frame planning, and instruction selection consume the physical executable-
+definition iterator. Class layout remains declaration-driven and performs no
+callable-body walk.
+
+Dispatch planning retains dense ABI slot positions but requires executable
+bodies only for used virtual families and interface requirements. A physically
+present implementation remains in complete-emission metadata; an absent body
+may produce a null entry only in a verified-unused slot, so no reachable
+dispatch path gains invented null-call behavior. Focused observer tests prove
+that sparse functions and members never enter callable-oriented backend
+phases, while direct complete emission still visits every present body.
+Additional tests cover unused virtual/interface declarations, enabled runtime
+traces, deterministic complete versus artifact-retained assembly, callable-
+address survival through the unchanged machine-symbol walk, and sparse static
+startup, reverse shutdown, and array-helper execution. The final target-
+private artifact-retention walk remains unchanged and WRR7 can now register
+the first selectable semantic pruning client.
 
 ### WRR7 — Register and observe whole-world reachability pruning
 

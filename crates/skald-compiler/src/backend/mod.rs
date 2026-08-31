@@ -10,7 +10,10 @@ use crate::{
     identity::CallableId, mir::MirProgram, passes::VerifiedFinalMirProgram, source::SourceDatabase,
 };
 
+mod retained_domain;
 mod x86_64_sysv;
+
+pub(crate) use retained_domain::BackendRequiredRuntimeEntity;
 
 // Keep this link guard synchronized with runtime/include/skald_runtime.h and
 // docs/compiler/RUNTIME_ABI.md. Every incompatible runtime ABI revision must

@@ -1,6 +1,39 @@
 use super::*;
 
 #[test]
+fn permits_an_absent_body_in_an_unused_interface_witness_slot() {
+    let mut program = lower_text(concat!(
+        "interface Reader { fn read() -> i64; }\n",
+        "class Dormant implements Reader {\n",
+        "  init() {}\n",
+        "  fn read() -> i64 { return 7; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let dormant = program
+        .classes
+        .iter()
+        .find(|class| class.name == "Dormant")
+        .unwrap();
+    let read = dormant
+        .methods
+        .iter()
+        .find(|method| method.name == "read")
+        .unwrap()
+        .id;
+    program.member_definitions.remove_for_test(read.into());
+    verify_mir(&program).unwrap();
+
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert!(output.contains(concat!(
+        ".Lska.class.main.Dormant.c0.dispatch:\n",
+        "    .quad 0\n",
+    )));
+    assert!(!output.contains(".Lska.class.main.Dormant.c0.method.read.m0:"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
 fn emits_witness_entries_in_typed_identity_order() {
     let output = assembly(concat!(
         "interface Ordered {\n",

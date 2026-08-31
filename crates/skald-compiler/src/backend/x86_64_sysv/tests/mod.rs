@@ -86,6 +86,7 @@ mod primitive_casts;
 mod produced_aliases;
 mod produced_fields;
 mod produced_receivers;
+mod retained_domain;
 mod shared_optional_boxes;
 mod shared_ownership;
 mod shifts;

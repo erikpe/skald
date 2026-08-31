@@ -10,7 +10,12 @@ use crate::{
     },
 };
 
-pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
+use super::planning::{DefinitionPlanningPhase, PlanningObserver};
+
+pub(super) fn check(
+    program: &MirProgram,
+    observer: &mut impl PlanningObserver,
+) -> Result<(), BackendError> {
     if program.array_types.is_empty() {
         return Ok(());
     }
@@ -38,6 +43,10 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
         }
     }
     for definition in program.executable_definitions() {
+        observer.visits_definition(
+            DefinitionPlanningPhase::ArrayLegality,
+            definition.callable(),
+        );
         check_definition(program, definition)?;
     }
     Ok(())

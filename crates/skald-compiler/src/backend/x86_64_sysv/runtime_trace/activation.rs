@@ -4,7 +4,10 @@ use std::collections::BTreeMap;
 
 use crate::{backend::BackendError, identity::CallableId, mir::MirProgram};
 
-use super::Metadata;
+use super::{
+    super::planning::{DefinitionPlanningPhase, PlanningObserver},
+    Metadata,
+};
 
 /// Initial trace locations for source-authored executable bodies.
 ///
@@ -19,9 +22,14 @@ impl Activations {
     pub(in crate::backend::x86_64_sysv) fn plan(
         program: &MirProgram,
         metadata: &Metadata<'_>,
+        observer: &mut impl PlanningObserver,
     ) -> Result<Self, BackendError> {
         let mut locations = BTreeMap::new();
         for definition in program.executable_definitions() {
+            observer.visits_definition(
+                DefinitionPlanningPhase::RuntimeTraceActivation,
+                definition.callable(),
+            );
             if let Some(location) =
                 metadata.request_location(definition.callable(), definition.span())?
             {

@@ -5,7 +5,7 @@
 //! machine details never leak back into target-independent IR.
 
 use crate::{
-    backend::{BackendError, Target},
+    backend::{BackendError, BackendInput, Target},
     identity::{ClassId, InterfaceRequirementId, MethodId, VirtualSlotId},
     mir::{MirProgram, MirVirtualFamily},
 };
@@ -28,27 +28,32 @@ pub(super) struct DispatchMetadata {
 }
 
 impl DispatchMetadata {
-    pub(super) fn compute(program: &MirProgram) -> Result<Self, BackendError> {
+    pub(super) fn compute(input: BackendInput<'_>) -> Result<Self, BackendError> {
+        let program = input.program();
         let (interface_starts, entry_count) = interface_layout(program)?;
         let mut tables = Vec::with_capacity(program.classes.len());
         for class in program.classes.iter() {
             let mut entries = vec![None; entry_count];
             for family in program.virtual_families.iter() {
                 let selected = select_for_class(program, family, class.id);
-                verify_executable_selection(program, class.id, "virtual table", selected)?;
-                entries[family.slot.index()] = selected;
+                entries[family.slot.index()] = retained_selection(
+                    program,
+                    class.id,
+                    "virtual table",
+                    selected,
+                    input.uses_virtual_family(family.id),
+                )?;
             }
             for conformance in &class.conformances {
                 let start = interface_starts[conformance.interface.index()];
                 for implementation in &conformance.implementations {
-                    verify_executable_selection(
+                    entries[start + implementation.requirement.index()] = retained_selection(
                         program,
                         class.id,
                         "interface witness",
                         Some(implementation.method),
+                        input.uses_interface_requirement(implementation.requirement),
                     )?;
-                    entries[start + implementation.requirement.index()] =
-                        Some(implementation.method);
                 }
             }
             tables.push(entries);
@@ -171,14 +176,21 @@ fn interface_layout(program: &MirProgram) -> Result<(Vec<usize>, usize), Backend
     Ok((starts, entry_count))
 }
 
-fn verify_executable_selection(
+/// Keeps complete-emission metadata for every physically present body. An
+/// absent body is represented only in an unused slot; a slot reachable MIR
+/// can select must remain backed by executable code.
+fn retained_selection(
     program: &MirProgram,
     class: ClassId,
     table: &str,
     selected: Option<MethodId>,
-) -> Result<(), BackendError> {
+    required: bool,
+) -> Result<Option<MethodId>, BackendError> {
     if let Some(method) = selected {
-        if program.member_definition(method.into()).is_none() {
+        if program.member_definition(method.into()).is_some() {
+            return Ok(Some(method));
+        }
+        if required {
             return Err(BackendError::new(
                 Target::X86_64SysV,
                 None,
@@ -188,7 +200,7 @@ fn verify_executable_selection(
             ));
         }
     }
-    Ok(())
+    Ok(None)
 }
 
 fn entry_displacement(index: usize, table: &str) -> Result<i32, BackendError> {

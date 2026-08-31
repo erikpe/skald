@@ -18,6 +18,7 @@ mod legality;
 mod literal_data;
 mod lower;
 mod machine;
+mod planning;
 mod runtime_trace;
 mod static_fields;
 mod symbol;
@@ -25,11 +26,26 @@ mod symbol;
 use super::{BackendError, BackendInput};
 
 pub fn emit_assembly(input: BackendInput<'_>) -> Result<String, BackendError> {
+    emit_assembly_observed(input, &mut planning::Unobserved)
+}
+
+fn emit_assembly_observed(
+    input: BackendInput<'_>,
+    observer: &mut impl planning::PlanningObserver,
+) -> Result<String, BackendError> {
     let program = input.program();
-    let (data_layout, dispatch) = legality::check(program)?;
+    planning::validate_required_runtime_entities(input)?;
+    let (data_layout, dispatch) = legality::check(input, observer)?;
     let metadata = runtime_trace::Metadata::new(input);
-    let activations = runtime_trace::Activations::plan(program, &metadata)?;
-    let mut assembly = lower::lower(program, &data_layout, &dispatch, &activations, &metadata)?;
+    let activations = runtime_trace::Activations::plan(program, &metadata, observer)?;
+    let mut assembly = lower::lower(
+        program,
+        &data_layout,
+        &dispatch,
+        &activations,
+        &metadata,
+        observer,
+    )?;
     assembly.runtime_trace = metadata.finish();
     if input.reachable_artifacts_only() {
         artifacts::retain_reachable(&mut assembly);

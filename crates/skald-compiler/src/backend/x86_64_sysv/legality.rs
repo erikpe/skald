@@ -1,21 +1,31 @@
 //! Target legality checks performed before instruction selection.
 
 use crate::{
-    backend::{BackendError, Target},
+    backend::{BackendError, BackendInput, Target},
     identity::CallableId,
     mir::{
         MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind, MirParameter, MirProgram,
     },
 };
 
-use super::{abi, array_legality, dispatch::DispatchMetadata, layout::DataLayout};
+use super::{
+    abi, array_legality,
+    dispatch::DispatchMetadata,
+    layout::DataLayout,
+    planning::{DefinitionPlanningPhase, PlanningObserver},
+};
 
-pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadata), BackendError> {
-    array_legality::check(program)?;
-    let dispatch = DispatchMetadata::compute(program)?;
+pub(super) fn check(
+    input: BackendInput<'_>,
+    observer: &mut impl PlanningObserver,
+) -> Result<(DataLayout, DispatchMetadata), BackendError> {
+    let program = input.program();
+    array_legality::check(program, observer)?;
+    let dispatch = DispatchMetadata::compute(input)?;
     let data_layout = DataLayout::compute(program)?;
 
     for function in program.executable_definitions() {
+        observer.visits_definition(DefinitionPlanningPhase::Legality, function.callable());
         let signature = program
             .callable_signature(function.callable())
             .expect("verified definition must be declared");
