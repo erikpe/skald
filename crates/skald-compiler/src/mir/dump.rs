@@ -252,8 +252,9 @@ fn dump_static_lifecycle_coordinator(
     let lifecycle = coordinator.lifecycle();
     let _ = writeln!(
         output,
-        "    Proof authority-roots={}",
+        "    Proof authority-roots={} active-fields={}",
         lifecycle.proof().authority().roots().len(),
+        lifecycle.proof().activation().len(),
     );
     output.push_str("    Definitions\n");
     let positions = lifecycle

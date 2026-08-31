@@ -23,6 +23,6 @@ pub use plan::{
     MirStaticLifecycleTransitionKind, StaticLifecyclePlan,
 };
 pub use proof::{
-    MirStaticLifecycleProof, StaticAccessKind, StaticEffectPhase, StaticLifecycleAuthority,
-    StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
+    MirStaticLifecycleProof, StaticAccessKind, StaticActivationAuthority, StaticEffectPhase,
+    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
 };

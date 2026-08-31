@@ -27,12 +27,34 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
         .classes
         .iter()
         .flat_map(|class| &class.static_fields)
-        .collect::<Vec<_>>();
-    let definitions = view.lifecycle.definitions();
-    if definitions.len() != declarations.len() {
+        .map(|field| field.id)
+        .collect::<BTreeSet<_>>();
+    let active_fields = view.lifecycle.proof().activation().fields();
+    for pair in active_fields.windows(2) {
+        match pair[0].cmp(&pair[1]) {
+            std::cmp::Ordering::Equal => program_error(
+                errors,
+                "final active-field authority contains a duplicate field",
+            ),
+            std::cmp::Ordering::Greater => program_error(
+                errors,
+                "final active-field authority is not in canonical field order",
+            ),
+            std::cmp::Ordering::Less => {}
+        }
+    }
+    let active_fields = active_fields.iter().copied().collect::<BTreeSet<_>>();
+    if let Some(field) = active_fields.difference(&declarations).next() {
         program_error(
             errors,
-            "final static lifecycle definitions do not cover every field",
+            format!("final active-field authority names undeclared static field {field}"),
+        );
+    }
+    let definitions = view.lifecycle.definitions();
+    if definitions.len() != active_fields.len() {
+        program_error(
+            errors,
+            "final static lifecycle definitions do not cover every active field",
         );
     }
     let mut fields = BTreeSet::new();
@@ -97,6 +119,12 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
             );
         }
     }
+    if fields != active_fields {
+        program_error(
+            errors,
+            "final static lifecycle definitions do not exactly cover active-field authority",
+        );
+    }
     let planned = view
         .lifecycle
         .plan()
@@ -128,7 +156,10 @@ fn verify_activation(
 ) {
     let order = view.lifecycle.plan().activation();
     if coordinator.activation().len() != order.len() {
-        program_error(errors, "final activation regions do not cover every field");
+        program_error(
+            errors,
+            "final activation regions do not cover every active field",
+        );
     }
     let initializers = coordinator
         .initializers()
@@ -221,13 +252,11 @@ fn verify_activation(
             MirStaticFieldInitialization::ZeroDefault => None,
         })
         .collect::<BTreeSet<_>>();
-    if !initializers
-        .keys()
-        .all(|initializer| expected_initializers.contains(initializer))
-    {
+    let actual_initializers = initializers.keys().copied().collect::<BTreeSet<_>>();
+    if actual_initializers != expected_initializers {
         program_error(
             errors,
-            "final coordinator contains an initializer body without an explicit field",
+            "final coordinator initializer bodies do not exactly cover active explicit fields",
         );
     }
 }
@@ -239,7 +268,10 @@ fn verify_shutdown(
 ) {
     let order = view.lifecycle.plan().shutdown().collect::<Vec<_>>();
     if coordinator.shutdown().len() != order.len() {
-        program_error(errors, "final destruction regions do not cover every field");
+        program_error(
+            errors,
+            "final destruction regions do not cover every active field",
+        );
     }
     for (index, region) in coordinator.shutdown().iter().enumerate() {
         let Some(expected_field) = order.get(index) else {

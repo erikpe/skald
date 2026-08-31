@@ -5,13 +5,15 @@ use crate::{
     mir::{
         lower_preliminary_hir, MirPlannedLifecycle, MirStaticFieldInitialization,
         MirStaticLifecycleDefinition, MirStaticLifecycleProof, MirType, StaticAccessKind,
-        StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase, StaticLifecyclePlan,
+        StaticActivationAuthority, StaticClassLifecycleOperation, StaticEffectNode,
+        StaticEffectPhase, StaticLifecyclePlan,
     },
     test_support::type_check_source,
 };
 
 use super::{
     super::{
+        activation::analyze_static_activation,
         analysis::infer_static_effects_with_roots,
         plan::{PlannedMirProgram, StaticLifecyclePlanningReport},
         plan_static_lifetimes,
@@ -38,6 +40,8 @@ fn errors(program: &PlannedMirProgram) -> String {
     verify_planned_mir(program.clone()).unwrap_err().to_string()
 }
 
+mod subsets;
+
 #[test]
 fn accepts_a_complete_hand_built_phase_product() {
     let checked = type_check_source(
@@ -58,9 +62,10 @@ fn accepts_a_complete_hand_built_phase_product() {
             span: field.span,
         }],
         plan,
-        MirStaticLifecycleProof::new(authority),
+        MirStaticLifecycleProof::new(StaticActivationAuthority::new(vec![field.field]), authority),
     );
-    let report = StaticLifecyclePlanningReport::new(effects);
+    let activation = analyze_static_activation(&preliminary).unwrap();
+    let report = StaticLifecyclePlanningReport::new(effects, activation);
     let planned = PlannedMirProgram::new(preliminary, lifecycle, report);
 
     verify_planned_mir(planned).unwrap();

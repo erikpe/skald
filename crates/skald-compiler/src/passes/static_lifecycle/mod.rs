@@ -18,7 +18,8 @@ pub use crate::mir::{
     StaticEffectNode, StaticEffectPhase,
 };
 pub use crate::mir::{
-    StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
+    StaticActivationAuthority, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+    StaticLifecycleRootAuthority,
 };
 pub use analysis::{
     dump_static_effects, infer_static_effects, StaticAccessEvidence, StaticEffectAnalysis,

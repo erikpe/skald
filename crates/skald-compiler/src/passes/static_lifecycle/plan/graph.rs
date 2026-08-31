@@ -34,20 +34,29 @@ struct LifetimeRoot {
 }
 
 impl LifetimeGraph {
-    pub(crate) fn build(program: &PreliminaryMirProgram, effects: &StaticEffectAnalysis) -> Self {
-        let fields = program
-            .static_fields()
-            .map(|field| field.field)
-            .collect::<Vec<_>>();
+    pub(crate) fn build_for_fields(
+        program: &PreliminaryMirProgram,
+        effects: &StaticEffectAnalysis,
+        fields: Vec<StaticFieldId>,
+    ) -> Self {
         let field_indices = fields
             .iter()
             .copied()
             .enumerate()
             .map(|(index, field)| (field, index))
             .collect::<BTreeMap<_, _>>();
-        let mut by_edge = BTreeMap::<(usize, usize), StaticLifetimeDependency>::new();
+        let mut by_edge =
+            BTreeMap::<(StaticFieldId, StaticFieldId), StaticLifetimeDependency>::new();
+        let field_inventory = program
+            .static_fields()
+            .map(|field| (field.field, field))
+            .collect::<BTreeMap<_, _>>();
 
-        for field in program.static_fields() {
+        for field_id in &fields {
+            let field = field_inventory
+                .get(field_id)
+                .copied()
+                .expect("active authority must name a declared static field");
             if let Some(initializer) = field.initializer {
                 let root = StaticEffectNode::callable(initializer.into());
                 let summary = effects
@@ -96,8 +105,9 @@ impl LifetimeGraph {
         let dependencies = by_edge.into_values().collect::<Vec<_>>();
         let mut adjacency = vec![Vec::new(); fields.len()];
         for dependency in &dependencies {
-            adjacency[field_indices[&dependency.prerequisite]]
-                .push(field_indices[&dependency.dependent]);
+            if let Some(prerequisite) = field_indices.get(&dependency.prerequisite) {
+                adjacency[*prerequisite].push(field_indices[&dependency.dependent]);
+            }
         }
         for targets in &mut adjacency {
             targets.sort_unstable();
@@ -215,12 +225,12 @@ impl LifetimeGraph {
 fn insert_dependency(
     program: &PreliminaryMirProgram,
     field_indices: &BTreeMap<StaticFieldId, usize>,
-    by_edge: &mut BTreeMap<(usize, usize), StaticLifetimeDependency>,
+    by_edge: &mut BTreeMap<(StaticFieldId, StaticFieldId), StaticLifetimeDependency>,
     root: LifetimeRoot,
     effect: &StaticAccessEvidence,
 ) {
-    let prerequisite = field_indices[&effect.field];
-    let dependent = field_indices[&root.field];
+    let prerequisite = effect.field;
+    let dependent = root.field;
     let target_span = program
         .program()
         .static_field(effect.field)
@@ -242,6 +252,7 @@ fn insert_dependency(
             witness: effect.witness.clone(),
         },
     };
+    debug_assert!(field_indices.contains_key(&dependent));
     match by_edge.entry((prerequisite, dependent)) {
         std::collections::btree_map::Entry::Vacant(entry) => {
             entry.insert(candidate);

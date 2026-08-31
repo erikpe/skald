@@ -25,6 +25,49 @@ fn plan(text: &str) -> PlannedMirProgram {
     })
 }
 
+fn plan_subset(text: &str, active_indices: &[usize]) -> PlannedMirProgram {
+    let preliminary = lower(text);
+    let fields = preliminary
+        .static_fields()
+        .map(|field| field.field)
+        .collect::<Vec<_>>();
+    let active = active_indices.iter().map(|index| fields[*index]).collect();
+    plan_static_lifetimes_for_fields_for_test(preliminary, active).unwrap_or_else(|failure| {
+        panic!(
+            "unexpected subset lifetime diagnostics: {:?}",
+            failure.diagnostics().collect::<Vec<_>>()
+        )
+    })
+}
+
+#[test]
+fn sparse_planning_orders_only_active_dependencies() {
+    let planned = plan_subset(
+        "fn read_base() -> i64 { return State.base; }
+         class State {
+           static result: i64 = read_base();
+           static inactive: i64 = 2;
+           static base: i64 = 1;
+           init() {}
+         }
+         fn main() -> i64 { return 0; }",
+        &[0, 2],
+    );
+    let fields = planned
+        .static_fields()
+        .map(|field| field.field)
+        .collect::<Vec<_>>();
+
+    assert_eq!(planned.lifecycle().activation(), &[fields[2], fields[0]]);
+    assert_eq!(
+        planned.lifecycle().shutdown().collect::<Vec<_>>(),
+        [fields[0], fields[2]]
+    );
+    assert_eq!(planned.dependencies().len(), 1);
+    assert_eq!(planned.dependencies()[0].prerequisite, fields[2]);
+    assert_eq!(planned.dependencies()[0].dependent, fields[0]);
+}
+
 #[test]
 fn orders_initialization_dependencies_and_independent_fields_deterministically() {
     let planned = plan(
@@ -349,6 +392,11 @@ fn planning_report_is_inspectable_but_synthesis_retains_only_compact_proof() {
     assert!(report.analysis().function_value_candidates().len() > 0);
     assert!(report.analysis().summaries().len() > 0);
     assert_eq!(report.analysis().recursive_components(), 0);
+    assert_eq!(
+        report.activation().counts().declared_fields,
+        planned.static_fields().len()
+    );
+    assert!(!report.activation().reachable_execution().is_empty());
     assert!(planned
         .dependencies()
         .iter()

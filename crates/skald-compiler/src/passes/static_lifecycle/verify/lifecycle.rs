@@ -15,8 +15,37 @@ use super::{super::plan::PlannedMirProgram, program_error};
 
 pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificationError>) {
     let index = PlannedVerificationIndex::new(program, errors);
-    verify_activation_order(program, &index.declared_fields, errors);
+    let active_fields = verify_active_authority(program, &index.declared_fields, errors);
+    verify_activation_order(program, &active_fields, errors);
     verify_definitions(program, &index, errors);
+}
+
+fn verify_active_authority(
+    program: &PlannedMirProgram,
+    declared: &BTreeSet<StaticFieldId>,
+    errors: &mut Vec<MirVerificationError>,
+) -> BTreeSet<StaticFieldId> {
+    let fields = program.activation_authority().fields();
+    for pair in fields.windows(2) {
+        match pair[0].cmp(&pair[1]) {
+            std::cmp::Ordering::Equal => {
+                program_error(errors, "active-field authority contains a duplicate field")
+            }
+            std::cmp::Ordering::Greater => program_error(
+                errors,
+                "active-field authority is not in canonical field order",
+            ),
+            std::cmp::Ordering::Less => {}
+        }
+    }
+    let active = fields.iter().copied().collect::<BTreeSet<_>>();
+    if let Some(field) = active.difference(declared).next() {
+        program_error(
+            errors,
+            format!("active-field authority names undeclared static field {field}"),
+        );
+    }
+    active
 }
 
 fn verify_activation_order(
@@ -29,7 +58,7 @@ fn verify_activation_order(
     if activation.len() != declared.len() || unique != *declared {
         program_error(
             errors,
-            "static activation order does not cover every field exactly once",
+            "static activation order does not cover every field exactly once in active authority",
         );
     }
 }
@@ -53,10 +82,16 @@ fn verify_definitions(
             std::cmp::Ordering::Less => {}
         }
     }
-    if definitions.len() != index.fields.len() {
+    let active_fields = program
+        .activation_authority()
+        .fields()
+        .iter()
+        .copied()
+        .collect::<BTreeSet<_>>();
+    if definitions.len() != active_fields.len() {
         program_error(
             errors,
-            "lifecycle definition table does not cover every static field",
+            "lifecycle definition table does not cover every static field in active authority",
         );
     }
 
@@ -75,10 +110,10 @@ fn verify_definitions(
         };
         verify_definition(definition, field, index, errors);
     }
-    if definition_fields != index.declared_fields {
+    if definition_fields != active_fields {
         program_error(
             errors,
-            "lifecycle definition table does not cover every static field",
+            "lifecycle definition table does not cover every static field in active authority",
         );
     }
 }

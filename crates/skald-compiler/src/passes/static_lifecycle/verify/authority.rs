@@ -14,7 +14,11 @@ use super::{
 
 pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificationError>) {
     let extracted = extract::extract(program.preliminary());
-    let expected = match root_effects::analyze(program.preliminary(), &extracted) {
+    let expected = match root_effects::analyze_for_fields(
+        program.preliminary(),
+        &extracted,
+        program.activation_authority().fields(),
+    ) {
         Ok(authority) => authority,
         Err(error) => {
             program_error(

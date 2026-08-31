@@ -26,6 +26,12 @@ pub fn dump_planned_mir(program: &PlannedMirProgram) -> String {
 
 fn dump_baseline_authority(program: &PlannedMirProgram) -> String {
     let mut output = String::from("StaticLifecycleBaselineAuthority\n");
+    output.push_str("  ActiveFields");
+    for field in program.activation_authority().fields() {
+        output.push(' ');
+        write_field_reference(&mut output, program, *field);
+    }
+    output.push('\n');
     for root in program.authority().roots() {
         output.push_str("  Root ");
         write_node(&mut output, root.root());

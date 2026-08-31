@@ -3,7 +3,9 @@
 mod closure;
 mod model;
 
-pub(crate) use closure::{analyze, analyze_final};
+#[cfg(test)]
+pub(crate) use closure::analyze;
+pub(crate) use closure::{analyze_final, analyze_for_fields};
 pub(crate) use model::{dependency_pairs_for_definitions, StaticLifecycleRootEffectError};
 
 #[cfg(test)]

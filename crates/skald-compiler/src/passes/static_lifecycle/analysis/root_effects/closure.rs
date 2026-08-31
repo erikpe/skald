@@ -10,10 +10,15 @@ use crate::mir::{
 use super::{
     super::extract::ExtractedGraph,
     model::{
-        lifecycle_root_uses, lifecycle_root_uses_for_definitions, StaticLifecycleRootEffectError,
+        lifecycle_root_uses_for_definitions, lifecycle_root_uses_for_fields,
+        StaticLifecycleRootEffectError,
     },
 };
 
+#[cfg(test)]
+use super::model::lifecycle_root_uses;
+
+#[cfg(test)]
 pub(crate) fn analyze(
     program: &PreliminaryMirProgram,
     graph: &ExtractedGraph,
@@ -23,6 +28,23 @@ pub(crate) fn analyze(
         .map(|field| field.field)
         .collect::<BTreeSet<_>>();
     let roots = lifecycle_root_uses(program)
+        .into_iter()
+        .map(|root| root.node)
+        .collect::<BTreeSet<_>>();
+    analyze_roots(graph, declared_fields, roots)
+}
+
+pub(crate) fn analyze_for_fields(
+    program: &PreliminaryMirProgram,
+    graph: &ExtractedGraph,
+    active_fields: &[crate::identity::StaticFieldId],
+) -> Result<StaticLifecycleAuthority, StaticLifecycleRootEffectError> {
+    let declared_fields = program
+        .static_fields()
+        .map(|field| field.field)
+        .collect::<BTreeSet<_>>();
+    let active_fields = active_fields.iter().copied().collect::<BTreeSet<_>>();
+    let roots = lifecycle_root_uses_for_fields(program, &active_fields)
         .into_iter()
         .map(|root| root.node)
         .collect::<BTreeSet<_>>();

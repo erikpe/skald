@@ -431,7 +431,17 @@ fn optional_shared_array_and_static_roots_retain_their_transitive_bodies() {
         .unwrap()
         .initializers()[0]
         .callable();
-    assert_missing_category(static_program, initializer, "static-activation-root");
+    let mut missing_initializer = static_program;
+    missing_initializer.remove_executable_definition_for_test(initializer);
+    let analysis = analyze_reachability(&missing_initializer).unwrap();
+    assert!(analysis.roots().iter().any(|root| matches!(
+        root.reason(),
+        MirReachabilityRootReason::StaticActivation(_)
+    )));
+    let errors = verify_final_mir(missing_initializer).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("initializer bodies do not exactly cover active explicit fields")));
 
     let static_shutdown = lower_generic_source_to_final_mir(
         "class Item { init() {} destroy {} }

@@ -6,6 +6,50 @@ use crate::identity::StaticFieldId;
 
 use super::StaticEffectNode;
 
+/// Exact static fields whose lifecycle work belongs to the executable program.
+///
+/// The field identities are stored in canonical sorted, unique order. Public
+/// consumers can query membership and cardinality, but only lifecycle planning
+/// can issue authority.
+///
+/// ```compile_fail
+/// use skald_compiler::mir::StaticActivationAuthority;
+/// let _forged = StaticActivationAuthority::new(Vec::new());
+/// ```
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StaticActivationAuthority {
+    active_fields: Vec<StaticFieldId>,
+}
+
+impl StaticActivationAuthority {
+    pub(crate) fn new(mut active_fields: Vec<StaticFieldId>) -> Self {
+        active_fields.sort_unstable();
+        active_fields.dedup();
+        Self { active_fields }
+    }
+
+    pub fn contains(&self, field: StaticFieldId) -> bool {
+        self.active_fields.binary_search(&field).is_ok()
+    }
+
+    pub fn len(&self) -> usize {
+        self.active_fields.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.active_fields.is_empty()
+    }
+
+    pub(crate) fn fields(&self) -> &[StaticFieldId] {
+        &self.active_fields
+    }
+
+    #[cfg(test)]
+    pub(crate) fn fields_mut_for_test(&mut self) -> &mut Vec<StaticFieldId> {
+        &mut self.active_fields
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum StaticAccessKind {
     Read,
@@ -168,12 +212,23 @@ impl StaticLifecycleAuthority {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirStaticLifecycleProof {
+    activation: StaticActivationAuthority,
     authority: StaticLifecycleAuthority,
 }
 
 impl MirStaticLifecycleProof {
-    pub(crate) const fn new(authority: StaticLifecycleAuthority) -> Self {
-        Self { authority }
+    pub(crate) const fn new(
+        activation: StaticActivationAuthority,
+        authority: StaticLifecycleAuthority,
+    ) -> Self {
+        Self {
+            activation,
+            authority,
+        }
+    }
+
+    pub const fn activation(&self) -> &StaticActivationAuthority {
+        &self.activation
     }
 
     pub fn authority(&self) -> &StaticLifecycleAuthority {
@@ -183,5 +238,10 @@ impl MirStaticLifecycleProof {
     #[cfg(test)]
     pub(crate) fn authority_mut_for_test(&mut self) -> &mut StaticLifecycleAuthority {
         &mut self.authority
+    }
+
+    #[cfg(test)]
+    pub(crate) fn activation_mut_for_test(&mut self) -> &mut StaticActivationAuthority {
+        &mut self.activation
     }
 }

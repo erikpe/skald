@@ -53,7 +53,10 @@ pub fn synthesize_static_lifecycle(verified: VerifiedPlannedMirProgram) -> MirPr
         };
         activation.push(region);
     }
-    debug_assert!(initializers.is_empty());
+    debug_assert!(initializers.values().all(|initializer| !planned_lifecycle
+        .proof()
+        .activation()
+        .contains(initializer.field)));
 
     let shutdown = planned_lifecycle
         .plan()

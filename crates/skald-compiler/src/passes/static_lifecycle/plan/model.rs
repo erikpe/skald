@@ -5,15 +5,18 @@ use crate::{
     identity::{StaticFieldId, StaticInitializerId},
     mir::{
         MirPlannedLifecycle, PreliminaryMirProgram, PreliminaryMirStaticField,
-        PreliminaryMirStaticInitializer, StaticAccessKind, StaticEffectNode, StaticEffectPhase,
-        StaticLifecycleAuthority,
+        PreliminaryMirStaticInitializer, StaticAccessKind, StaticActivationAuthority,
+        StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority,
     },
     source::Span,
 };
 
 pub use crate::mir::StaticLifecyclePlan;
 
-use super::super::analysis::{StaticEffectAnalysis, StaticEffectEdge};
+use super::super::{
+    activation::StaticActivationAnalysis,
+    analysis::{StaticEffectAnalysis, StaticEffectEdge},
+};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum StaticLifetimePhase {
@@ -44,21 +47,33 @@ pub struct StaticLifetimeDependency {
     pub evidence: StaticLifetimeEvidence,
 }
 
-/// Analysis evidence retained for deterministic inspection of lifecycle
-/// planning, including on-demand dependency evidence, but deliberately
-/// excluded from backend-consumable MIR.
+/// Source-rich effect and shadow-activation evidence retained for deterministic
+/// inspection of lifecycle planning, but deliberately excluded from compact
+/// backend-consumable certificate identity.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticLifecyclePlanningReport {
     analysis: StaticEffectAnalysis,
+    activation: StaticActivationAnalysis,
 }
 
 impl StaticLifecyclePlanningReport {
-    pub(crate) const fn new(analysis: StaticEffectAnalysis) -> Self {
-        Self { analysis }
+    pub(crate) const fn new(
+        analysis: StaticEffectAnalysis,
+        activation: StaticActivationAnalysis,
+    ) -> Self {
+        Self {
+            analysis,
+            activation,
+        }
     }
 
     pub const fn analysis(&self) -> &StaticEffectAnalysis {
         &self.analysis
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn activation(&self) -> &StaticActivationAnalysis {
+        &self.activation
     }
 }
 
@@ -98,6 +113,10 @@ impl PlannedMirProgram {
 
     pub fn authority(&self) -> &StaticLifecycleAuthority {
         self.lifecycle.proof().authority()
+    }
+
+    pub fn activation_authority(&self) -> &StaticActivationAuthority {
+        self.lifecycle.proof().activation()
     }
 
     pub fn lifecycle(&self) -> &StaticLifecyclePlan {

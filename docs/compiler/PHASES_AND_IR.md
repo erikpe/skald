@@ -460,8 +460,9 @@ backend boundary regardless of pass declarations.
 The promoted schema direction has one canonical representation for each
 durable fact:
 
-- one lifecycle definition per static field;
+- one lifecycle definition per certified active static field;
 - one activation-order vector, with shutdown and position indices derived;
+- one immutable sorted active-field authority;
 - one immutable baseline authority map keyed by lifecycle root; and
 - structured activation and destruction regions as the executable coordinator
   form, with flat transitions available only as derived dump views.
@@ -470,16 +471,19 @@ Required dependency pairs derive from authority and definitions. Direct effect
 graphs, target inventories, SCC metrics, solved per-callable summaries, source
 witnesses, and diagnostic paths remain pass-owned analysis or reporting data
 rather than executable MIR certificate identity. The migration preserves
-complete field coverage, initialization modes and types, publication dominance,
-destination non-escape, exact-reverse destruction, deterministic dumps, and
-the existing `STA001` and `STA002` diagnostic behavior.
+complete declaration identity, initialization modes and types, publication
+dominance, destination non-escape, exact-reverse destruction over the
+certified set, deterministic dumps, and the existing `STA001` and `STA002`
+diagnostic behavior.
 
 ### Frozen reachability-gated static lifecycle direction
 
-Status: **frozen direction, shadow analysis implemented; semantic cutover not
-yet implemented**. The compiler now computes the exact activation closure at
-the accepted preliminary-MIR boundary, but still plans every declared static
-and therefore preserves current eager runtime behavior. The source-visible contract is owned by
+Status: **frozen direction, shadow analysis and subset-capable lifecycle schema
+implemented; semantic cutover not yet implemented**. The compiler now computes
+the exact activation closure at the accepted preliminary-MIR boundary, and its
+proof, planner, synthesis, dumps, and verifiers can represent any exact active
+subset. The production entry point still certifies every declared static and
+therefore preserves current eager runtime behavior. The source-visible contract is owned by
 [Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
 the complete decisions by the
 [frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
@@ -564,9 +568,16 @@ consumes the same extracted execution dependencies, direct static accesses,
 scoped callable-address formations, indirect-call sites, entry policy, and
 static cleanup target resolver as target-independent reachability. Static-
 lifecycle planning extracts those facts once, computes and validates the
-shadow result, then deliberately continues through the existing all-declared
-effect graph and eager plan. The result is not yet certificate authority,
-reporting data, public inspection state, or a selector of diagnostics or MIR.
+shadow result, then deliberately issues `StaticActivationAuthority` for the
+all-declared compatibility set. The compact proof stores that sorted authority
+beside only the lifecycle roots required by it. Definitions, dependency order,
+derived shutdown/transitions, moved initializer bodies, and coordinator regions
+must exactly cover the authority; declarations and preliminary initializer
+bodies remain complete and keep stable IDs. Internal empty and sparse fixtures
+exercise this boundary. The shadow result and its source-rich triggers,
+witnesses, edges, target counts, and summary counts remain planning-report data;
+they are not certificate authority, public observation state, or a selector of
+diagnostics or production MIR yet.
 
 ### Dense callable-local MIR identity rewriting
 

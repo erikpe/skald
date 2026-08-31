@@ -34,16 +34,19 @@ pub(super) fn infer_static_effects_with_roots(
     infer_static_effects_with_roots_from_graph(program, graph)
 }
 
-pub(super) fn infer_static_effects_with_roots_from_dependencies(
+pub(super) fn infer_static_effects_with_roots_for_fields_from_dependencies(
     program: &PreliminaryMirProgram,
     dependencies: &MirDependencyExtraction,
+    active_fields: &[crate::identity::StaticFieldId],
 ) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
-    infer_static_effects_with_roots_from_graph(
-        program,
-        extract::extract_from_dependencies(dependencies),
-    )
+    let graph = extract::extract_from_dependencies(dependencies);
+    let root_effects = root_effects::analyze_for_fields(program, &graph, active_fields)
+        .expect("verified preliminary MIR must have valid lifecycle-root identities");
+    let effects = solve::solve(graph);
+    (effects, root_effects)
 }
 
+#[cfg(test)]
 fn infer_static_effects_with_roots_from_graph(
     program: &PreliminaryMirProgram,
     graph: extract::ExtractedGraph,

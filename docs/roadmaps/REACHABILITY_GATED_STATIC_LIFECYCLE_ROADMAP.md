@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 through RSR2 are complete and RSR3 is next.
+Status: in progress; RSR0 through RSR3 are complete and RSR4 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -90,7 +90,7 @@ reduce future optimization cost; larger findings belong in the
 - [x] RSR0 — Establish activation vocabulary and behavioral baselines
 - [x] RSR1 — Centralize preliminary static-access extraction
 - [x] RSR2 — Compute and inspect the shadow activation closure
-- [ ] RSR3 — Generalize lifecycle proof and schema for an active subset
+- [x] RSR3 — Generalize lifecycle proof and schema for an active subset
 - [ ] RSR4 — Verify final access against exact activation authority
 - [ ] RSR5 — Switch lifecycle planning and synthesis to reachable activation
 - [ ] RSR6 — Align backend planning and artifact retention
@@ -263,26 +263,26 @@ lint, documentation, and diff gates preserve current behavior.
 **Purpose:** Remove the complete-declaration assumption from lifecycle products
 and verifiers while production still uses the current all-declared set.
 
-- [ ] Extend the compact lifecycle proof with one canonically sorted exact
+- [x] Extend the compact lifecycle proof with one canonically sorted exact
       active-field authority and expose only read-only membership/count queries.
-- [ ] Define declared fields separately from active lifecycle definitions;
+- [x] Define declared fields separately from active lifecycle definitions;
       require definitions, activation order, root authority, and coordinator
       regions to cover exactly the certified active set.
-- [ ] Derive shutdown, positions, dependency pairs, and transition views from
+- [x] Derive shutdown, positions, dependency pairs, and transition views from
       the active plan without compacting `StaticFieldId` or any program-level
       declaration table.
-- [ ] Generalize planning, planned verification, synthesis, final realization
+- [x] Generalize planning, planned verification, synthesis, final realization
       verification, MIR dumping, cloning, and malformed-product fixtures for
       empty and sparse active subsets.
-- [ ] Independently verify sorted field authority, definitions, lifecycle roots,
+- [x] Independently verify sorted field authority, definitions, lifecycle roots,
       and coordinator coverage for subset fixtures; production continues to
       certify its current all-declared field set in this compatibility slice.
-- [ ] Keep source-rich triggers, witnesses, SCCs, and counts in the planning
+- [x] Keep source-rich triggers, witnesses, SCCs, and counts in the planning
       report rather than certificate identity.
-- [ ] Keep production orchestration on the all-declared lifecycle set until
+- [x] Keep production orchestration on the all-declared lifecycle set until
       final reachable-access safety is implemented; no source behavior or
       lifecycle diagnostic changes in this task.
-- [ ] Preserve public API privacy and unforgeable planned/final seals.
+- [x] Preserve public API privacy and unforgeable planned/final seals.
 
 **Tests:** Empty, one-field, sparse, and complete active plans; malformed active
 authority and every missing/extra proof/coordinator component; exact schema
@@ -297,6 +297,15 @@ public-API tests; `make compiler-test`; `make fmt-check`; `make lint`;
 **Exit criteria:** Lifecycle products and independent verifiers correctly
 represent any exact active subset while the production driver still emits the
 same all-declared eager program.
+
+Implemented in RSR3: `StaticActivationAuthority` now carries the immutable
+sorted active set beside normalized root-effect authority. Planning and both
+verification boundaries require definitions, order, roots, initializer bodies,
+and coordinator regions to agree with that set. Internal empty and sparse
+fixtures exercise synthesis while retaining complete declarations and stable
+IDs; the production entry point deliberately continues to issue authority for
+every declared field. The source-rich shadow activation result is retained only
+in the planning report and is dropped before final MIR.
 
 ### RSR4 — Verify final access against exact activation authority
 

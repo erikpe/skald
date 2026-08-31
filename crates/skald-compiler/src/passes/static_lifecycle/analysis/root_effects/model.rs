@@ -25,9 +25,26 @@ pub(super) struct LifecycleRootUse {
     pub(super) node: StaticEffectNode,
 }
 
+#[cfg(test)]
 pub(super) fn lifecycle_root_uses(program: &PreliminaryMirProgram) -> Vec<LifecycleRootUse> {
+    lifecycle_root_uses_for_fields(
+        program,
+        &program
+            .static_fields()
+            .map(|field| field.field)
+            .collect::<BTreeSet<_>>(),
+    )
+}
+
+pub(super) fn lifecycle_root_uses_for_fields(
+    program: &PreliminaryMirProgram,
+    active_fields: &BTreeSet<StaticFieldId>,
+) -> Vec<LifecycleRootUse> {
     let mut roots = Vec::new();
-    for field in program.static_fields() {
+    for field in program
+        .static_fields()
+        .filter(|field| active_fields.contains(&field.field))
+    {
         if let Some(initializer) = field.initializer {
             roots.push(LifecycleRootUse {
                 owner: field.field,

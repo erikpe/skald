@@ -81,9 +81,9 @@ pub use model::{
     MirViewProvenance, MirViewTarget, MirVirtualFamily, MirVirtualFamilyTable, OptionalGuardId,
     PathConditionId, PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget,
     PreliminaryMirStaticField, PreliminaryMirStaticInitializer, StaticAccessKind,
-    StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectNode,
-    StaticEffectPhase, StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecyclePlan,
-    StaticLifecycleRootAuthority, StorageId, ValueId,
+    StaticActivationAuthority, StaticArrayLifecycleOperation, StaticClassLifecycleOperation,
+    StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+    StaticLifecyclePlan, StaticLifecycleRootAuthority, StorageId, ValueId,
 };
 pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,

@@ -43,6 +43,8 @@ fn errors(program: &crate::mir::MirProgram) -> String {
     verify_synthesized_mir(program).unwrap_err().to_string()
 }
 
+mod subsets;
+
 #[test]
 fn empty_and_zero_default_only_programs_have_no_initializer_work() {
     let empty = synthesized("fn main() -> i64 { return 0; }");
