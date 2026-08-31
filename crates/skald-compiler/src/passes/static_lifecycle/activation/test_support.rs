@@ -172,8 +172,12 @@ pub(super) fn activation_analysis_fixture(reverse: bool) -> StaticActivationAnal
     );
     let initializer_edge =
         StaticActivationEdge::initializer(fixture.active, fixture.initializer, fixture.spans[3]);
-    let destruction_edge =
-        StaticActivationEdge::destruction(fixture.active, fixture.destruction, fixture.spans[3]);
+    let destruction_edge = StaticActivationEdge::destruction(
+        fixture.active,
+        fixture.destruction,
+        MirDependencyEdgeKind::ArrayDestruction,
+        fixture.spans[3],
+    );
     let entry = StaticActivationExecution::new(
         fixture.entry,
         StaticActivationWitness::new(root, Vec::new()),

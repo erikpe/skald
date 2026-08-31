@@ -12,7 +12,9 @@ changes runtime lifecycle from declaration-wide eager activation to one exact
 entry-rooted active-field closure while keeping declarations and preliminary
 initializer checking whole-world. RSR0 established the private activation
 vocabulary and pinned current eager behavior; RSR1 centralized direct static-
-place extraction in the shared dependency inventory; RSR2 is next. It depends
+place extraction in the shared dependency inventory; RSR2 added the exact
+coupled activation closure, private queries and dump, deterministic evidence,
+and mandatory shadow execution while preserving the eager plan; RSR3 is next. It depends
 on the completed static-lifecycle certificate, selectable final-MIR pipeline,
 dense MIR rewriting, and target-independent reachability foundations.
 
@@ -40,8 +42,9 @@ The other four original unresolved constraints have no implementation roadmap.
 
 The
 [reachability-gated static lifecycle discoveries](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md)
-will retain out-of-scope findings from the active semantic migration. It is
-currently empty and does not expand the frozen contract or roadmap.
+retains out-of-scope findings from the active semantic migration, including a
+future shared owner for the duplicated function-value closure mechanics. It
+does not expand the frozen contract or roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the

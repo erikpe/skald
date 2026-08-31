@@ -15,16 +15,30 @@ pub use model::{
     StaticLifetimePhase,
 };
 
-use crate::{diagnostics::Diagnostics, mir::PreliminaryMirProgram};
+use crate::{
+    diagnostics::Diagnostics, mir::PreliminaryMirProgram,
+    passes::reachability::extract_preliminary_dependencies,
+};
 
-use super::analysis::infer_static_effects_with_roots;
+use super::{
+    activation::analyze_static_activation_from_dependencies,
+    analysis::infer_static_effects_with_roots_from_dependencies,
+};
 
 /// Infers effects once and converts them into a deterministic whole-program
 /// activation and exact-reverse shutdown plan.
 pub fn plan_static_lifetimes(
     preliminary: PreliminaryMirProgram,
 ) -> Result<PlannedMirProgram, StaticLifecyclePlanningFailure> {
-    let (effects, root_effects) = infer_static_effects_with_roots(&preliminary);
+    let dependencies = extract_preliminary_dependencies(&preliminary)
+        .expect("verified preliminary MIR must have valid dependency identities");
+    // Compute the frozen semantic selection at its permanent boundary, but do
+    // not let it narrow lifecycle planning until subset proof is available.
+    let _shadow_activation =
+        analyze_static_activation_from_dependencies(&preliminary, &dependencies)
+            .expect("verified preliminary MIR must have a valid static activation closure");
+    let (effects, root_effects) =
+        infer_static_effects_with_roots_from_dependencies(&preliminary, &dependencies);
     let graph = graph::LifetimeGraph::build(&preliminary, &effects);
     let cyclic_components = graph.cyclic_components();
     if !cyclic_components.is_empty() {

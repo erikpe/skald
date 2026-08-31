@@ -476,8 +476,10 @@ the existing `STA001` and `STA002` diagnostic behavior.
 
 ### Frozen reachability-gated static lifecycle direction
 
-Status: **frozen direction, not yet implemented**. The current compiler still
-plans every declared static. The source-visible contract is owned by
+Status: **frozen direction, shadow analysis implemented; semantic cutover not
+yet implemented**. The compiler now computes the exact activation closure at
+the accepted preliminary-MIR boundary, but still plans every declared static
+and therefore preserves current eager runtime behavior. The source-visible contract is owned by
 [Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
 the complete decisions by the
 [frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
@@ -555,11 +557,16 @@ The migration boundary has the following durable ownership map:
 | Phase sequencing and typed observation adaptation | `driver` and the MIR pipeline boundary |
 | Private slots, initializer/finalizer lowering, and generated-symbol retention | the selected backend |
 
-The activation owner currently contains only the private immutable vocabulary,
-canonical comparison keys, and reusable fixtures. It has no extractor, solver,
-driver call, report event, or effect on the declaration-wide eager lifecycle.
-That additive boundary lets later work reuse the reachability extractor without
-exposing an incomplete analysis as compiler behavior.
+The private activation owner now contains the immutable vocabulary, coupled
+deterministic solver, borrowed queries, canonical witnesses and first triggers,
+per-cause conservative target counts, and a focused deterministic dump. It
+consumes the same extracted execution dependencies, direct static accesses,
+scoped callable-address formations, indirect-call sites, entry policy, and
+static cleanup target resolver as target-independent reachability. Static-
+lifecycle planning extracts those facts once, computes and validates the
+shadow result, then deliberately continues through the existing all-declared
+effect graph and eager plan. The result is not yet certificate authority,
+reporting data, public inspection state, or a selector of diagnostics or MIR.
 
 ### Dense callable-local MIR identity rewriting
 

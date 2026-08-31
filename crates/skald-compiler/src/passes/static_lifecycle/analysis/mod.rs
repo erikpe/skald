@@ -15,7 +15,10 @@ pub use model::{
     StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
 };
 
-use crate::mir::{PreliminaryMirProgram, StaticLifecycleAuthority};
+use crate::{
+    mir::{PreliminaryMirProgram, StaticLifecycleAuthority},
+    passes::reachability::MirDependencyExtraction,
+};
 
 #[cfg(test)]
 use crate::mir::{
@@ -23,10 +26,28 @@ use crate::mir::{
     StaticEffectNode, StaticEffectPhase,
 };
 
+#[cfg(test)]
 pub(super) fn infer_static_effects_with_roots(
     program: &PreliminaryMirProgram,
 ) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
     let graph = extract::extract(program);
+    infer_static_effects_with_roots_from_graph(program, graph)
+}
+
+pub(super) fn infer_static_effects_with_roots_from_dependencies(
+    program: &PreliminaryMirProgram,
+    dependencies: &MirDependencyExtraction,
+) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
+    infer_static_effects_with_roots_from_graph(
+        program,
+        extract::extract_from_dependencies(dependencies),
+    )
+}
+
+fn infer_static_effects_with_roots_from_graph(
+    program: &PreliminaryMirProgram,
+    graph: extract::ExtractedGraph,
+) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
     let root_effects = root_effects::analyze(program, &graph)
         .expect("verified preliminary MIR must have valid lifecycle-root identities");
     let effects = solve::solve(graph);

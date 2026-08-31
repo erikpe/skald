@@ -4,10 +4,10 @@
 //! preserves the supported cross-phase API.
 
 mod analysis;
-// The frozen activation vocabulary lands before its extraction and solver
-// consumers. Keeping the additive model private prevents it from becoming a
-// second reachability API while the later analysis boundary is assembled.
-#[allow(dead_code, unused_imports)]
+// Keep the complete query and dump surface private while production computes
+// it in shadow mode; later lifecycle products will carry its exact authority
+// across phase boundaries.
+#[allow(dead_code)]
 mod activation;
 mod plan;
 mod synthesize;

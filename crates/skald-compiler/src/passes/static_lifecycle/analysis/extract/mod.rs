@@ -31,7 +31,7 @@ pub(crate) struct ExtractedGraph {
 pub(crate) fn extract(program: &PreliminaryMirProgram) -> ExtractedGraph {
     let dependencies = extract_preliminary_dependencies(program)
         .expect("verified preliminary MIR must have valid dependency identities");
-    extract_parts(dependencies)
+    extract_from_dependencies(&dependencies)
 }
 
 pub(crate) fn extract_final(
@@ -40,18 +40,18 @@ pub(crate) fn extract_final(
 ) -> ExtractedGraph {
     let dependencies = extract_final_dependency_parts(program, initializers)
         .expect("verified final MIR must have valid dependency identities");
-    extract_parts(dependencies)
+    extract_from_dependencies(&dependencies)
 }
 
-fn extract_parts(dependencies: MirDependencyExtraction) -> ExtractedGraph {
-    let function_value_candidates = collect_function_value_candidates(&dependencies);
+pub(crate) fn extract_from_dependencies(dependencies: &MirDependencyExtraction) -> ExtractedGraph {
+    let function_value_candidates = collect_function_value_candidates(dependencies);
     let mut extractor = Extractor {
         function_value_candidates,
         nodes: BTreeMap::new(),
     };
-    extractor.seed_nodes(&dependencies);
-    extractor.install_dependencies(&dependencies);
-    extractor.install_static_accesses(&dependencies);
+    extractor.seed_nodes(dependencies);
+    extractor.install_dependencies(dependencies);
+    extractor.install_static_accesses(dependencies);
     extractor.finish()
 }
 
@@ -194,18 +194,7 @@ fn collect_function_value_candidates(
 }
 
 const fn static_phase(region: MirDependencyRegion) -> StaticEffectPhase {
-    match region {
-        MirDependencyRegion::Ordinary => StaticEffectPhase::Ordinary,
-        MirDependencyRegion::StaticInitializerBeforePublication => {
-            StaticEffectPhase::InitializerBeforePublication
-        }
-        MirDependencyRegion::StaticInitializerAfterPublication => {
-            StaticEffectPhase::InitializerAfterPublication
-        }
-        MirDependencyRegion::Copy => StaticEffectPhase::Copy,
-        MirDependencyRegion::Destruction => StaticEffectPhase::Destruction,
-        MirDependencyRegion::ArrayLifecycle => StaticEffectPhase::ArrayLifecycle,
-    }
+    region.static_effect_phase()
 }
 
 const fn static_edge_kind(kind: MirDependencyEdgeKind) -> Option<StaticEffectEdgeKind> {

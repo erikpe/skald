@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 and RSR1 are complete and RSR2 is next.
+Status: in progress; RSR0 through RSR2 are complete and RSR3 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -89,7 +89,7 @@ reduce future optimization cost; larger findings belong in the
 
 - [x] RSR0 — Establish activation vocabulary and behavioral baselines
 - [x] RSR1 — Centralize preliminary static-access extraction
-- [ ] RSR2 — Compute and inspect the shadow activation closure
+- [x] RSR2 — Compute and inspect the shadow activation closure
 - [ ] RSR3 — Generalize lifecycle proof and schema for an active subset
 - [ ] RSR4 — Verify final access against exact activation authority
 - [ ] RSR5 — Switch lifecycle planning and synthesis to reachable activation
@@ -204,26 +204,26 @@ and declaration-wide eager behavior are unchanged.
 **Purpose:** Prove the exact field-grained semantic set beside current eager
 planning before that set can affect execution or diagnostics.
 
-- [ ] Implement an iterative deterministic least fixed point over two queues:
+- [x] Implement an iterative deterministic least fixed point over two queues:
       activation-reachable execution nodes and active `StaticFieldId`s.
-- [ ] Root the execution domain at the selected entry, follow the frozen full
+- [x] Root the execution domain at the selected entry, follow the frozen full
       direct/dynamic/lifecycle/function-value target rules, and scan every
       structural block of each reached definition.
-- [ ] Activate fields for ordinary access records; add each active field's
+- [x] Activate fields for ordinary access records; add each active field's
       explicit initializer and eventual-destruction lifecycle nodes; exclude
       only its lifecycle-owned unpublished destination.
-- [ ] Keep callable-address candidates scoped to activation-reachable address
+- [x] Keep callable-address candidates scoped to activation-reachable address
       formations and exact function types, matching the frozen whole-world
       reachability rule.
-- [ ] Produce one immutable analysis with sorted active/inactive fields,
+- [x] Produce one immutable analysis with sorted active/inactive fields,
       outgoing dependencies, conservative target counts, canonical first
       triggers, witness paths, and summary counts.
-- [ ] Add a deterministic focused activation dump separate from MIR dumps and
+- [x] Add a deterministic focused activation dump separate from MIR dumps and
       report events.
-- [ ] Run the analysis in shadow mode at the mandatory post-preliminary-
+- [x] Run the analysis in shadow mode at the mandatory post-preliminary-
       verification boundary while continuing to plan and execute all declared
       statics.
-- [ ] Assert that repeated runs, declaration/provider discovery permutations,
+- [x] Assert that repeated runs, declaration/provider discovery permutations,
       and independent compiler processes select identical sets and witnesses.
 
 **Tests:** Empty and direct roots; transitive calls; recursion; direct and
@@ -242,6 +242,21 @@ dump output; imported-unused decimal parsing as an inactive shadow result.
 queryable exact activation result from verified preliminary MIR, but current
 eager lifecycle planning, diagnostics, final MIR, and native behavior remain
 unchanged.
+
+Completed on 2026-08-31. Static-lifecycle planning now extracts the verified
+preliminary dependency inventory once, computes a private exact shadow
+activation result, and feeds the same inventory to the existing complete
+static-effect analysis before building the unchanged all-declared eager plan.
+The activation owner supplies deterministic two-domain closure, field and
+execution witnesses, first triggers, outgoing edges, per-cause conservative
+target counts, and a focused dump. Entry and static-cleanup root resolution are
+shared with target-independent reachability; callable-address formations stay
+scoped to reached execution and exact function types. Focused tests cover
+structural branches, recursion, transitive initialization and destruction,
+dynamic dispatch, indirect calls, unreachable formations, generic siblings,
+provider-order and process determinism, and the inactive imported decimal
+power table. Compiler, pipeline-determinism, eager-runtime golden, formatting,
+lint, documentation, and diff gates preserve current behavior.
 
 ### RSR3 — Generalize lifecycle proof and schema for an active subset
 

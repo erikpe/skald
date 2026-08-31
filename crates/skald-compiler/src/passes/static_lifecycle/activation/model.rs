@@ -1,6 +1,6 @@
 //! Immutable activation facts and canonical comparison helpers.
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::BTreeMap};
 
 use crate::{
     identity::StaticFieldId,
@@ -40,7 +40,7 @@ pub(crate) enum StaticActivationTrigger {
         phase: StaticEffectPhase,
     },
     Initializer,
-    Destruction,
+    Destruction(MirDependencyEdgeKind),
 }
 
 /// The selected entry that starts every activation explanation.
@@ -95,13 +95,6 @@ impl StaticActivationEdge {
         phase: StaticEffectPhase,
         span: Span,
     ) -> Self {
-        debug_assert!(matches!(
-            access,
-            StaticAccessKind::Read
-                | StaticAccessKind::Write
-                | StaticAccessKind::Borrow
-                | StaticAccessKind::Replace
-        ));
         Self {
             source: StaticActivationNode::execution(source),
             target: StaticActivationNode::field(target),
@@ -126,12 +119,13 @@ impl StaticActivationEdge {
     pub(crate) const fn destruction(
         field: StaticFieldId,
         target: MirExecutionNode,
+        kind: MirDependencyEdgeKind,
         span: Span,
     ) -> Self {
         Self {
             source: StaticActivationNode::field(field),
             target: StaticActivationNode::execution(target),
-            trigger: StaticActivationTrigger::Destruction,
+            trigger: StaticActivationTrigger::Destruction(kind),
             span,
         }
     }
@@ -264,6 +258,23 @@ pub(crate) struct StaticActivationCounts {
     pub(crate) destruction_roots: usize,
 }
 
+/// Number of conservative execution targets selected for one semantic cause.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct StaticActivationTargetCount {
+    kind: MirDependencyEdgeKind,
+    targets: usize,
+}
+
+impl StaticActivationTargetCount {
+    pub(crate) const fn kind(self) -> MirDependencyEdgeKind {
+        self.kind
+    }
+
+    pub(crate) const fn targets(self) -> usize {
+        self.targets
+    }
+}
+
 /// Immutable planning-only activation facts.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct StaticActivationAnalysis {
@@ -271,6 +282,7 @@ pub(crate) struct StaticActivationAnalysis {
     inactive_fields: Vec<StaticFieldId>,
     reachable_execution: Vec<StaticActivationExecution>,
     edges: Vec<StaticActivationEdge>,
+    target_counts: Vec<StaticActivationTargetCount>,
     counts: StaticActivationCounts,
 }
 
@@ -306,11 +318,13 @@ impl StaticActivationAnalysis {
         }));
 
         let counts = counts_for(&parts);
+        let target_counts = target_counts_for(&parts.edges);
         Self {
             active_fields: parts.active_fields,
             inactive_fields: parts.inactive_fields,
             reachable_execution: parts.reachable_execution,
             edges: parts.edges,
+            target_counts,
             counts,
         }
     }
@@ -361,6 +375,32 @@ impl StaticActivationAnalysis {
         &self.edges
     }
 
+    pub(crate) fn outgoing_dependencies(
+        &self,
+        source: StaticActivationNode,
+    ) -> &[StaticActivationEdge] {
+        let source_key = static_activation_node_key(source);
+        let start = self
+            .edges
+            .partition_point(|edge| static_activation_node_key(edge.source()) < source_key);
+        let count = self.edges[start..]
+            .partition_point(|edge| static_activation_node_key(edge.source()) == source_key);
+        &self.edges[start..start + count]
+    }
+
+    pub(crate) fn target_counts(&self) -> &[StaticActivationTargetCount] {
+        &self.target_counts
+    }
+
+    pub(crate) fn target_count(&self, kind: MirDependencyEdgeKind) -> usize {
+        self.target_counts
+            .binary_search_by_key(&mir_dependency_edge_kind_key(kind), |count| {
+                mir_dependency_edge_kind_key(count.kind)
+            })
+            .ok()
+            .map_or(0, |index| self.target_counts[index].targets)
+    }
+
     pub(crate) const fn counts(&self) -> StaticActivationCounts {
         self.counts
     }
@@ -392,7 +432,7 @@ const fn trigger_key(trigger: StaticActivationTrigger) -> StaticActivationTrigge
             (1, static_access_key(access), static_phase_key(phase))
         }
         StaticActivationTrigger::Initializer => (2, 0, 0),
-        StaticActivationTrigger::Destruction => (3, 0, 0),
+        StaticActivationTrigger::Destruction(kind) => (3, mir_dependency_edge_kind_key(kind), 0),
     }
 }
 
@@ -484,8 +524,32 @@ fn counts_for(parts: &StaticActivationAnalysisParts) -> StaticActivationCounts {
             }
             StaticActivationTrigger::StaticAccess { .. } => counts.static_accesses += 1,
             StaticActivationTrigger::Initializer => counts.initializer_roots += 1,
-            StaticActivationTrigger::Destruction => counts.destruction_roots += 1,
+            StaticActivationTrigger::Destruction(_) => counts.destruction_roots += 1,
         }
     }
+    counts
+}
+
+fn target_counts_for(edges: &[StaticActivationEdge]) -> Vec<StaticActivationTargetCount> {
+    let mut counts = BTreeMap::<MirDependencyEdgeKind, usize>::new();
+    for edge in edges {
+        match edge.trigger() {
+            StaticActivationTrigger::ExecutionDependency(kind)
+            | StaticActivationTrigger::Destruction(kind) => {
+                *counts.entry(kind).or_default() += 1;
+            }
+            StaticActivationTrigger::Initializer => {
+                *counts
+                    .entry(MirDependencyEdgeKind::Initializer)
+                    .or_default() += 1;
+            }
+            StaticActivationTrigger::StaticAccess { .. } => {}
+        }
+    }
+    let mut counts = counts
+        .into_iter()
+        .map(|(kind, targets)| StaticActivationTargetCount { kind, targets })
+        .collect::<Vec<_>>();
+    counts.sort_unstable_by_key(|count| mir_dependency_edge_kind_key(count.kind));
     counts
 }

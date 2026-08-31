@@ -206,11 +206,15 @@ structured pipeline error boundary.
 
 ## Frozen static activation orchestration
 
-Status: **frozen direction, not yet implemented**. The driver currently sends
-all declared statics through lifecycle planning. Under the accepted
+Status: **frozen direction, shadow analysis implemented; semantic cutover not
+yet implemented**. After successful preliminary-MIR verification, the static-
+lifecycle planning boundary now extracts shared dependencies and computes the
+exact activation closure in shadow mode. It deliberately discards the result
+after validation and still sends all declared statics through eager lifecycle
+planning. Under the accepted
 [reachability-gated contract](PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction),
-the driver will run exact static activation once after verified preliminary MIR
-and before lifecycle planning. That phase is mandatory compiler semantics and
+the driver runs exact static activation once after verified preliminary MIR
+and before the eager plan is built. That analysis is mandatory compiler semantics and
 is not represented by `MirOptimizationProfile`, `--mir-optimization`, or
 `--disable-mir-pass`.
 

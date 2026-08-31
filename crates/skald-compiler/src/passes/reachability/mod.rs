@@ -36,6 +36,7 @@ pub(crate) use extract::{
     extract_final_dependencies, extract_final_dependency_parts, extract_preliminary_dependencies,
     MirDependencyExtraction,
 };
+pub(crate) use lifecycle::{resolve_static_field_destruction_dependencies, MirLifecycleDependency};
 pub(crate) use model::{
     mir_dependency_edge_key, mir_dependency_edge_kind_key, mir_reachability_root_reason_key,
     mir_span_key, mir_static_access_key, MirCallableAddressFormation, MirDependencyEdge,
@@ -44,6 +45,7 @@ pub(crate) use model::{
     MirReachabilityRootTarget, MirRetainedDefinition, MirRuntimeEntity, MirSemanticDeclaration,
     MirStaticAccess, MirStaticAccessOrigin,
 };
+pub(crate) use roots::resolve_entry_execution;
 pub(crate) use solve::analyze_reachability;
 pub(super) use verify::verify_reachable_definitions;
 

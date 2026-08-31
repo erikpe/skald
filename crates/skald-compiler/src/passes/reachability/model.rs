@@ -135,6 +135,23 @@ pub(crate) enum MirDependencyRegion {
     ArrayLifecycle,
 }
 
+impl MirDependencyRegion {
+    pub(crate) const fn static_effect_phase(self) -> crate::mir::StaticEffectPhase {
+        match self {
+            Self::Ordinary => crate::mir::StaticEffectPhase::Ordinary,
+            Self::StaticInitializerBeforePublication => {
+                crate::mir::StaticEffectPhase::InitializerBeforePublication
+            }
+            Self::StaticInitializerAfterPublication => {
+                crate::mir::StaticEffectPhase::InitializerAfterPublication
+            }
+            Self::Copy => crate::mir::StaticEffectPhase::Copy,
+            Self::Destruction => crate::mir::StaticEffectPhase::Destruction,
+            Self::ArrayLifecycle => crate::mir::StaticEffectPhase::ArrayLifecycle,
+        }
+    }
+}
+
 /// One dependency and its deterministic source evidence.
 ///
 /// The span helps dumps and witnesses but is not part of either endpoint's

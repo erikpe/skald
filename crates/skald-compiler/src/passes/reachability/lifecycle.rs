@@ -11,8 +11,8 @@ use crate::{
         MirArrayInstruction, MirArrayLifecycleOperation, MirClassLifecycleOperation,
         MirCopyCapability, MirDestructionStep, MirExecutionNode, MirOptionalAssignmentPlan,
         MirOptionalCleanupPlan, MirOptionalCopyPlan, MirProgram, MirSelectedCopyOperation,
-        MirSharedTarget, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirType,
-        PreliminaryMirSharedLifecycleTarget,
+        MirSharedTarget, MirStaticValueCleanup, MirSynthesizedCopy, MirSynthesizedFieldCopy,
+        MirType, PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget,
     },
     source::Span,
 };
@@ -23,9 +23,108 @@ use super::{
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) struct MirLifecycleDependency {
-    pub(super) target: MirDependencyTarget,
-    pub(super) kind: MirDependencyEdgeKind,
+pub(crate) struct MirLifecycleDependency {
+    target: MirDependencyTarget,
+    kind: MirDependencyEdgeKind,
+}
+
+impl MirLifecycleDependency {
+    pub(crate) const fn target(self) -> MirDependencyTarget {
+        self.target
+    }
+
+    pub(crate) const fn kind(self) -> MirDependencyEdgeKind {
+        self.kind
+    }
+}
+
+/// Resolves the target-independent dependencies needed to destroy one
+/// preliminary static's eventual value. Static activation and final root
+/// collection deliberately share this lifecycle policy.
+pub(crate) fn resolve_static_field_destruction_dependencies(
+    program: &PreliminaryMirProgram,
+    field: crate::identity::StaticFieldId,
+) -> Result<Vec<MirLifecycleDependency>, MirDependencyExtractionError> {
+    let declaration = program
+        .static_fields()
+        .find(|candidate| candidate.field == field)
+        .ok_or(MirDependencyExtractionError::UnknownStaticField(field))?;
+    let cleanup = MirStaticValueCleanup::for_field(
+        &program.program().optional_types,
+        declaration.ty,
+        field,
+        declaration.span,
+    )
+    .ok_or(MirDependencyExtractionError::InvalidStaticCleanup(field))?;
+    resolve_static_cleanup_dependencies(program.program(), field, &cleanup)
+}
+
+pub(super) fn resolve_static_cleanup_dependencies(
+    program: &MirProgram,
+    field: crate::identity::StaticFieldId,
+    cleanup: &MirStaticValueCleanup,
+) -> Result<Vec<MirLifecycleDependency>, MirDependencyExtractionError> {
+    let dependencies = match cleanup {
+        MirStaticValueCleanup::None => Vec::new(),
+        MirStaticValueCleanup::CompleteObject(cleanup) => vec![MirLifecycleDependency {
+            target: class_finalizer_target(program, cleanup.target)?,
+            kind: MirDependencyEdgeKind::CompleteFinalizer,
+        }],
+        MirStaticValueCleanup::OptionalClass(cleanup) => vec![MirLifecycleDependency {
+            target: class_finalizer_target(program, cleanup.class)?,
+            kind: MirDependencyEdgeKind::OptionalLifecycle,
+        }],
+        MirStaticValueCleanup::Shared(cleanup) => resolve_shared_finalizer_dependencies(
+            program,
+            cleanup.target,
+            MirDependencyEdgeKind::SharedFinalizer,
+        )?,
+        MirStaticValueCleanup::OptionalShared(cleanup) => resolve_shared_finalizer_dependencies(
+            program,
+            cleanup.target,
+            MirDependencyEdgeKind::SharedFinalizer,
+        )?,
+        MirStaticValueCleanup::AggregateOptional(cleanup) => {
+            resolve_optional_cleanup_dependencies(program, cleanup.optional)?
+        }
+        MirStaticValueCleanup::Array(MirArrayInstruction::Release { array, .. }) => {
+            if program.array_type(*array).is_none() {
+                return Err(MirDependencyExtractionError::UnknownArrayType(*array));
+            }
+            vec![
+                MirLifecycleDependency {
+                    target: MirDependencyTarget::Execution(MirExecutionNode::array(
+                        *array,
+                        MirArrayLifecycleOperation::Destruction,
+                    )),
+                    kind: MirDependencyEdgeKind::ArrayDestruction,
+                },
+                MirLifecycleDependency {
+                    target: MirDependencyTarget::RuntimeEntity(MirRuntimeEntity::ArrayLifecycle(
+                        *array,
+                    )),
+                    kind: MirDependencyEdgeKind::RuntimeEntityReference,
+                },
+            ]
+        }
+        MirStaticValueCleanup::Array(_) => {
+            return Err(MirDependencyExtractionError::InvalidStaticCleanup(field));
+        }
+    };
+    Ok(dependencies)
+}
+
+fn class_finalizer_target(
+    program: &MirProgram,
+    class: ClassId,
+) -> Result<MirDependencyTarget, MirDependencyExtractionError> {
+    if program.class(class).is_none() {
+        return Err(MirDependencyExtractionError::UnknownClass(class));
+    }
+    Ok(MirDependencyTarget::Execution(MirExecutionNode::class(
+        class,
+        MirClassLifecycleOperation::CompleteFinalizer,
+    )))
 }
 
 pub(super) fn resolve_shared_finalizer_dependencies(

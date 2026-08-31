@@ -3,7 +3,6 @@
 use crate::{
     identity::StaticFieldId,
     mir::{
-        MirArrayInstruction, MirArrayLifecycleOperation, MirClassLifecycleOperation,
         MirExecutionNode, MirFunctionLinkage, MirProgram, MirStaticActivationWork,
         MirStaticValueCleanup,
     },
@@ -11,13 +10,10 @@ use crate::{
 };
 
 use super::{
-    lifecycle::{
-        resolve_optional_cleanup_dependencies, resolve_shared_finalizer_dependencies,
-        MirLifecycleDependency,
-    },
-    mir_reachability_root_reason_key, mir_span_key, MirDependencyEdgeKind,
-    MirDependencyExtractionError, MirDependencyTarget, MirReachabilityRoot,
-    MirReachabilityRootReason, MirReachabilityRootTarget, MirRuntimeEntity,
+    lifecycle::{resolve_static_cleanup_dependencies, MirLifecycleDependency},
+    mir_reachability_root_reason_key, mir_span_key, MirDependencyExtractionError,
+    MirDependencyTarget, MirReachabilityRoot, MirReachabilityRootReason, MirReachabilityRootTarget,
+    MirRuntimeEntity,
 };
 
 pub(super) struct MirReachabilityRoots {
@@ -25,9 +21,9 @@ pub(super) struct MirReachabilityRoots {
     pub(super) runtime_entities: Vec<MirRuntimeEntity>,
 }
 
-pub(super) fn collect_reachability_roots(
+pub(crate) fn resolve_entry_execution(
     program: &MirProgram,
-) -> Result<MirReachabilityRoots, MirDependencyExtractionError> {
+) -> Result<(MirExecutionNode, Span), MirDependencyExtractionError> {
     let entry = program.declarations.get(program.entry_function).ok_or(
         MirDependencyExtractionError::UnknownFunction(program.entry_function),
     )?;
@@ -36,14 +32,22 @@ pub(super) fn collect_reachability_roots(
             program.entry_function,
         ));
     }
+    Ok((
+        MirExecutionNode::callable(program.entry_function.into()),
+        entry.span,
+    ))
+}
+
+pub(super) fn collect_reachability_roots(
+    program: &MirProgram,
+) -> Result<MirReachabilityRoots, MirDependencyExtractionError> {
+    let (entry, entry_span) = resolve_entry_execution(program)?;
     let mut collector = RootCollector {
         program,
         roots: vec![MirReachabilityRoot::new(
-            MirReachabilityRootTarget::Execution(MirExecutionNode::callable(
-                program.entry_function.into(),
-            )),
+            MirReachabilityRootTarget::Execution(entry),
             MirReachabilityRootReason::Entry,
-            entry.span,
+            entry_span,
         )],
         runtime_entities: Vec::new(),
     };
@@ -122,111 +126,16 @@ impl RootCollector<'_> {
         fallback_span: Span,
     ) -> Result<(), MirDependencyExtractionError> {
         let reason = MirReachabilityRootReason::StaticShutdown(field);
-        match cleanup {
-            MirStaticValueCleanup::None => self.add_root(
+        let dependencies = resolve_static_cleanup_dependencies(self.program, field, cleanup)?;
+        if dependencies.is_empty() {
+            self.add_root(
                 MirReachabilityRootTarget::RuntimeEntity(MirRuntimeEntity::StaticStorage(field)),
                 reason,
                 fallback_span,
-            ),
-            MirStaticValueCleanup::CompleteObject(cleanup) => {
-                self.add_class_finalizer_root(cleanup.target, reason, cleanup.span)?
-            }
-            MirStaticValueCleanup::OptionalClass(cleanup) => {
-                self.add_class_finalizer_root(cleanup.class, reason, cleanup.span)?
-            }
-            MirStaticValueCleanup::Shared(cleanup) => {
-                let dependencies = resolve_shared_finalizer_dependencies(
-                    self.program,
-                    cleanup.target,
-                    MirDependencyEdgeKind::SharedFinalizer,
-                )?;
-                self.add_lifecycle_roots(field, dependencies, reason, cleanup.span)?
-            }
-            MirStaticValueCleanup::OptionalShared(cleanup) => {
-                let dependencies = resolve_shared_finalizer_dependencies(
-                    self.program,
-                    cleanup.target,
-                    MirDependencyEdgeKind::SharedFinalizer,
-                )?;
-                self.add_lifecycle_roots(field, dependencies, reason, cleanup.span)?
-            }
-            MirStaticValueCleanup::AggregateOptional(cleanup) => {
-                let dependencies =
-                    resolve_optional_cleanup_dependencies(self.program, cleanup.optional)?;
-                self.add_lifecycle_roots(field, dependencies, reason, cleanup.span)?
-            }
-            MirStaticValueCleanup::Array(instruction) => match instruction {
-                MirArrayInstruction::Release { array, span, .. } => {
-                    self.add_array_destruction_root(*array, reason, *span)?
-                }
-                MirArrayInstruction::Allocate { .. }
-                | MirArrayInstruction::AllocateElements { .. }
-                | MirArrayInstruction::InitializeElement { .. }
-                | MirArrayInstruction::CompleteElement { .. }
-                | MirArrayInstruction::InitializeNext { .. }
-                | MirArrayInstruction::CopyNext { .. }
-                | MirArrayInstruction::Publish { .. }
-                | MirArrayInstruction::PublishShared { .. }
-                | MirArrayInstruction::Adopt { .. }
-                | MirArrayInstruction::Replace { .. }
-                | MirArrayInstruction::ElementAssign { .. }
-                | MirArrayInstruction::DestroyNext { .. }
-                | MirArrayInstruction::AnchorBegin { .. }
-                | MirArrayInstruction::AnchorEnd { .. }
-                | MirArrayInstruction::AliasBind { .. }
-                | MirArrayInstruction::Normalize { .. }
-                | MirArrayInstruction::Offset { .. }
-                | MirArrayInstruction::Boundary { .. }
-                | MirArrayInstruction::SliceCopy { .. }
-                | MirArrayInstruction::SliceAssignNext { .. }
-                | MirArrayInstruction::SliceBoundsCheck { .. }
-                | MirArrayInstruction::SliceLengthCheck { .. } => {
-                    return Err(MirDependencyExtractionError::InvalidStaticCleanup(field));
-                }
-            },
+            );
+        } else {
+            self.add_lifecycle_roots(field, dependencies, reason, fallback_span)?;
         }
-        Ok(())
-    }
-
-    fn add_class_finalizer_root(
-        &mut self,
-        class: crate::identity::ClassId,
-        reason: MirReachabilityRootReason,
-        span: Span,
-    ) -> Result<(), MirDependencyExtractionError> {
-        if self.program.class(class).is_none() {
-            return Err(MirDependencyExtractionError::UnknownClass(class));
-        }
-        self.add_root(
-            MirReachabilityRootTarget::Execution(MirExecutionNode::class(
-                class,
-                MirClassLifecycleOperation::CompleteFinalizer,
-            )),
-            reason,
-            span,
-        );
-        Ok(())
-    }
-
-    fn add_array_destruction_root(
-        &mut self,
-        array: crate::identity::ArrayTypeId,
-        reason: MirReachabilityRootReason,
-        span: Span,
-    ) -> Result<(), MirDependencyExtractionError> {
-        if self.program.array_type(array).is_none() {
-            return Err(MirDependencyExtractionError::UnknownArrayType(array));
-        }
-        self.runtime_entities
-            .push(MirRuntimeEntity::ArrayLifecycle(array));
-        self.add_root(
-            MirReachabilityRootTarget::Execution(MirExecutionNode::array(
-                array,
-                MirArrayLifecycleOperation::Destruction,
-            )),
-            reason,
-            span,
-        );
         Ok(())
     }
 
@@ -238,7 +147,7 @@ impl RootCollector<'_> {
         span: Span,
     ) -> Result<(), MirDependencyExtractionError> {
         for dependency in dependencies {
-            match dependency.target {
+            match dependency.target() {
                 MirDependencyTarget::Execution(node) => {
                     self.add_root(MirReachabilityRootTarget::Execution(node), reason, span)
                 }
