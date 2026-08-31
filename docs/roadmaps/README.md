@@ -40,6 +40,15 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
+The proposed
+[reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
+changes class-owned statics from import-wide eager activation to one exact,
+mandatory, field-grained activation closure rooted at the selected entry.
+Active fields would still initialize eagerly before entry and shut down in
+exact reverse order; declarations and preliminary initializer checking would
+remain whole-world. The proposal adds no eager/module-initialization syntax and
+awaits confirmation before promotion or implementation planning.
+
 The completed selectable final-MIR optimization pipeline design and delivery
 record are preserved in the [archive](../archive/README.md). Their typed static
 registry, deterministic profiles and schedules, request and CLI selection,
