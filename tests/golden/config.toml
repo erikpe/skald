@@ -2,3 +2,9 @@ schema = 1
 
 [variant.omit-runtime-trace]
 compiler_args = ["--omit-runtime-trace"]
+
+[variant.optimization-none]
+compiler_args = ["--mir-optimization", "none"]
+
+[variant.reachability-disabled]
+compiler_args = ["--disable-mir-pass", "whole-world-reachability"]

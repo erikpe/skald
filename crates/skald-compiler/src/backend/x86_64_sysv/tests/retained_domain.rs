@@ -7,7 +7,7 @@ use crate::{
     },
     identity::CallableId,
     mir::retain::{prepare_reachable_definition_retention, MirDefinitionRetention},
-    test_support::lower_source_to_final_mir_with_sources,
+    test_support::lower_source_to_complete_final_mir_with_sources,
 };
 
 #[derive(Default)]
@@ -53,7 +53,7 @@ fn callable(program: &MirProgram, name: &str) -> CallableId {
 
 #[test]
 fn sparse_backend_planning_visits_only_physically_retained_definitions() {
-    let fixture = lower_source_to_final_mir_with_sources(
+    let fixture = lower_source_to_complete_final_mir_with_sources(
         "retained-domain.ska",
         concat!(
             "interface Reader { fn read() -> i64; }\n",
@@ -113,7 +113,7 @@ fn sparse_backend_planning_visits_only_physically_retained_definitions() {
 
 #[test]
 fn sparse_complete_and_artifact_retained_emission_never_resurrect_absent_bodies() {
-    let fixture = lower_source_to_final_mir_with_sources(
+    let fixture = lower_source_to_complete_final_mir_with_sources(
         "sparse-emission.ska",
         "fn dead() -> i64 { return 9; }\nfn main() -> i64 { return 0; }\n",
     );
@@ -147,7 +147,7 @@ fn sparse_complete_and_artifact_retained_emission_never_resurrect_absent_bodies(
 
 #[test]
 fn sparse_function_value_targets_survive_target_artifact_retention() {
-    let fixture = lower_source_to_final_mir_with_sources(
+    let fixture = lower_source_to_complete_final_mir_with_sources(
         "sparse-function-values.ska",
         concat!(
             "fn live() -> i64 { return 7; }\n",
@@ -170,7 +170,7 @@ fn sparse_function_value_targets_survive_target_artifact_retention() {
 
 #[test]
 fn sparse_static_lifecycle_and_array_helpers_execute_natively() {
-    let fixture = lower_source_to_final_mir_with_sources(
+    let fixture = lower_source_to_complete_final_mir_with_sources(
         "sparse-lifecycle.ska",
         concat!(
             "class Item {\n",

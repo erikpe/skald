@@ -1,16 +1,16 @@
 # Target-Independent Whole-World Reachability Design Proposal
 
-Status: frozen. WWR1 through WWR12 were confirmed together on 2026-08-30 and
-promoted into the
-[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-target-independent-whole-world-reachability-direction),
-[backend contract](../compiler/BACKEND.md#frozen-target-independent-reachability-boundary),
-[driver contract](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-whole-world-reachability-selection),
+Status: frozen decision record; implementation completed on 2026-08-31. WWR1
+through WWR12 were confirmed together on 2026-08-30 and promoted into the
+[compiler phase contract](../compiler/PHASES_AND_IR.md#target-independent-whole-world-reachability),
+[backend contract](../compiler/BACKEND.md#target-independent-reachability-boundary),
+[driver contract](../compiler/DRIVER_AND_ARTIFACTS.md#whole-world-reachability-selection),
 and
-[reporting contract](../compiler/REPORTING.md#frozen-whole-world-reachability-observation).
-The planned
+[reporting contract](../compiler/REPORTING.md#whole-world-reachability-observation).
+The completed
 [implementation roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-owns delivery, and its
-[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
+records delivery, and its active
+[discoveries record](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
 keeps follow-up work outside that reviewed scope.
 
 This proposal moves semantic reachability ahead of target lowering and makes
@@ -124,15 +124,15 @@ answer different questions even where they share edge discovery.
 The proposal depends on three completed designs:
 
 - the
-  [static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
+  [static-lifecycle certificate](STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
   allows effect-removing final-MIR transformations to realize a subset of
   immutable baseline lifecycle authority;
 - the
-  [dense callable-local MIR rewriting boundary](../archive/DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
+  [dense callable-local MIR rewriting boundary](DENSE_MIR_IDENTITY_REWRITING_DESIGN_PROPOSAL.md)
   provides safe local editing and deterministic recompaction without changing
   program-level semantic identities; and
 - the
-  [selectable final-MIR optimization pipeline](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
+  [selectable final-MIR optimization pipeline](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
   provides typed registration, deterministic scheduling, verified ownership
   transfer, pass inspection, and structured accounting.
 

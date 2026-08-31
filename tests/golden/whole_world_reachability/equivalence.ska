@@ -1,0 +1,111 @@
+import std::io;
+from std::error import panic;
+
+interface Reader {
+    fn read() -> i64;
+}
+
+class Root {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Leaf extends Root implements Reader {
+    init(value: i64) {
+        super(value);
+    }
+
+    override fn read() -> i64 {
+        return self.value + 1;
+    }
+}
+
+class Owned {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {}
+}
+
+class StaticResource {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        std::io::println_i64(30);
+    }
+}
+
+fn create_static_resource() -> StaticResource {
+    std::io::println_i64(10);
+    return StaticResource(7);
+}
+
+class State {
+    static resource: StaticResource = create_static_resource();
+
+    init() {}
+}
+
+class Dormant {
+    init() {}
+    copy(ref other: Dormant) {}
+    assign(ref other: Dormant) {}
+    destroy {}
+    fn method() -> i64 { return 90; }
+    static fn static_method() -> i64 { return 91; }
+}
+
+fn unreachable() -> i64 {
+    return Dormant.static_method();
+}
+
+fn direct(value: i64) -> i64 {
+    return value + 1;
+}
+
+fn recursive(depth: i64) -> i64 {
+    if (depth == 0) {
+        return 0;
+    }
+    return recursive(depth - 1) + 1;
+}
+
+fn invoke(callback: fn(i64) -> i64, value: i64) -> i64 {
+    return callback(value);
+}
+
+fn call_virtual(ref value: Root) -> i64 {
+    return value.read();
+}
+
+fn call_interface(ref value: Reader) -> i64 {
+    return value.read();
+}
+
+fn main() -> i64 {
+    var leaf: Leaf = Leaf(5);
+    var owner: shared Owned = new Owned(3);
+    var maybe: i64? = 4;
+    var values: i64[] = i64[]{1, 5};
+    var callback: fn(i64) -> i64 = direct;
+    if (false) {
+        panic("unreached failure");
+    }
+    std::io::println_i64(20);
+    return call_virtual(leaf) + call_interface(leaf) + invoke(callback, 1)
+        + recursive(2) + maybe! + values[1] + owner->value + State.resource.value;
+}

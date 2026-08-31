@@ -97,6 +97,7 @@ Archived plans:
 - [Static-lifecycle certificate redesign](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 - [Dense callable-local MIR identity rewriting](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 - [Selectable final-MIR optimization pipeline](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+- [Target-independent whole-world reachability](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -154,6 +155,11 @@ Resolved final-MIR optimization pipeline inputs:
 
 - [Selectable final-MIR optimization pipeline design proposal](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 - [Selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+
+Resolved whole-world reachability inputs:
+
+- [Target-independent whole-world reachability design proposal](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+- [Target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
 

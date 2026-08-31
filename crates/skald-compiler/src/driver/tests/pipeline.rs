@@ -25,6 +25,10 @@ fn module_request(
 }
 
 fn mir_pipeline_pass_executions(events: &[ReportEvent]) -> Option<MetricValue> {
+    mir_pipeline_metric(events, "pass executions")
+}
+
+fn mir_pipeline_metric(events: &[ReportEvent], name: &str) -> Option<MetricValue> {
     events.iter().find_map(|event| match event {
         ReportEvent::PhaseFinished {
             phase: ReportPhase::MirPipeline,
@@ -32,7 +36,7 @@ fn mir_pipeline_pass_executions(events: &[ReportEvent]) -> Option<MetricValue> {
             ..
         } => metrics
             .iter()
-            .find(|metric| metric.name() == "pass executions")
+            .find(|metric| metric.name() == name)
             .map(|metric| metric.value()),
         _ => None,
     })
@@ -78,7 +82,11 @@ fn request_selection_matrix_reaches_quiet_and_observed_pipelines() {
     let directory = TemporaryDirectory::new("request-optimization-profile").unwrap();
     let root = directory.join("modules");
     fs::create_dir_all(&root).unwrap();
-    fs::write(root.join("app.ska"), "fn main() -> i64 { return 6 * 7; }\n").unwrap();
+    fs::write(
+        root.join("app.ska"),
+        "fn dead() -> i64 { return 9; }\nfn main() -> i64 { return 6 * 7; }\n",
+    )
+    .unwrap();
     let base = module_request(
         &directory,
         EntrySelector::Module("app".parse().unwrap()),
@@ -89,30 +97,42 @@ fn request_selection_matrix_reaches_quiet_and_observed_pipelines() {
     assert!(quiet_default.report.diagnostics.is_empty());
 
     let cases = [
-        (MirOptimizationOptions::default(), 1),
-        (MirOptimizationOptions::new(MirOptimizationProfile::None), 0),
+        (MirOptimizationOptions::default(), 2, 1),
         (
-            MirOptimizationOptions::default()
-                .with_disabled_pass("dead-pure-definition-elimination"),
+            MirOptimizationOptions::new(MirOptimizationProfile::None),
             0,
+            2,
+        ),
+        (
+            MirOptimizationOptions::default().with_disabled_pass("whole-world-reachability"),
+            1,
+            2,
         ),
         (
             MirOptimizationOptions::default()
                 .with_disabled_pass("dead-pure-definition-elimination")
-                .with_disabled_pass("dead-pure-definition-elimination"),
+                .with_disabled_pass("whole-world-reachability"),
             0,
+            2,
         ),
     ];
-    for (options, expected_executions) in cases {
+    for (options, expected_executions, expected_definitions) in cases {
         let request = base.clone().with_mir_optimization(options);
         let mut observer = crate::reporting::RecordingObserver::new(ReportDetail::Details);
         let artifact = compile_request_to_assembly_observed(&request, &mut observer).unwrap();
+        let repeated = compile_request_to_assembly(&request).unwrap();
 
-        assert_eq!(artifact.assembly, quiet_default.assembly);
+        assert_eq!(artifact.assembly, repeated.assembly);
+        assert!(artifact.assembly.contains(".globl main"));
+        assert!(!artifact.assembly.contains(".fn.app.dead.f0"));
         assert!(artifact.report.diagnostics.is_empty());
         assert_eq!(
             mir_pipeline_pass_executions(observer.events()),
             Some(MetricValue::Count(expected_executions))
+        );
+        assert_eq!(
+            mir_pipeline_metric(observer.events(), "definitions"),
+            Some(MetricValue::Count(expected_definitions))
         );
     }
 }

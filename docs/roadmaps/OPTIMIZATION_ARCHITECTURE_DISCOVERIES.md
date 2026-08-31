@@ -1,18 +1,16 @@
 # Optimization Architecture Discoveries
 
 Status: four architectural constraints remain without implementation plans.
-The reachability constraint now has a frozen
-[target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
-planned
-[implementation roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
-and active
+The reachability constraint is resolved by the completed
+[target-independent whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
+[implementation roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
+and active follow-up
 [discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
-Its dependency vocabulary, shared target/lifecycle extraction, explicit roots,
-deterministic closure, analysis-query foundation, and coherent final-MIR seal
-binding are implemented. WRR4 also makes independently verified sparse final
-definitions legal, and WRR5 adds the private atomic stable-identity retention
-capability. Preliminary and current production output remain definition-
-complete; backend consumption and selectable pruning remain in progress.
+Its dependency vocabulary, shared target/lifecycle extraction, roots, closure,
+queries, seal binding, sparse verification, stable-identity retention, backend
+consumption, selectable pass, and default activation are implemented.
+Preliminary MIR remains definition-complete; default final MIR now removes
+unreachable executable bodies before target lowering.
 The static-lifecycle
 and dense callable-local identity constraints are resolved by their completed
 [static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
@@ -55,7 +53,8 @@ boundaries before scheduling individual optimization passes.
 The implemented pipeline lowers typed HIR to preliminary MIR, plans and
 synthesizes static lifecycle work, runs the selected final-MIR pass schedule,
 and then enters target legality and emission. `none` is the empty unoptimized
-schedule and `default` runs dead-pure-definition elimination once. The
+schedule and `default` runs dead-pure-definition elimination followed by
+whole-world reachability. The
 authoritative current sequence is documented in
 [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#pipeline-contract).
 
@@ -91,17 +90,16 @@ roadmap:
 | Block-local non-SSA values | Limits global scalar propagation, value numbering, code motion, and loop optimization | Deliberate initial representation with an eventual optimization ceiling | High for advanced portable optimization | Extra large | Defer until simpler MIR passes demonstrate the need |
 | Proof provenance mixed with executable MIR | Couples CFG transformations to exact lowering shapes and derived metadata | Awkward IR layering | High for CFG and loop work | Large | Normalize incrementally as CFG passes require it |
 | Direct physical-register backend lowering | Forces every MIR value and storage through a stack home and leaves no natural register-allocation layer | Deliberate bootstrap backend and the largest target-code ceiling | Very high eventual runtime value | Extra large | Largest eventual performance project |
-| Reachability after machine lowering | Retains unreachable work through legality, layout, frame planning, and instruction selection | Phase-placement debt with extraction, root, closure, query, and verified-seal foundations implemented through WRR3 | High for size, compile time, and whole-world follow-ons | Large | Continue active foundational implementation |
+| Reachability after machine lowering | Resolved: default final MIR removes unreachable executable bodies before target legality, frame planning, and instruction selection | Implemented target-independent whole-world analysis, sparse verification, retention, and selectable pass | High architectural and code-size unlock delivered | Completed (large) | Foundation available |
 | Conservative alias, effect, and ownership knowledge | Prevents memory and ownership optimizations unless each pass proves safety independently | Analysis-infrastructure gap under intentionally permissive language semantics | High, with precision improving incrementally | Large to extra large | Build a conservative shared analysis after the first MIR passes |
 
-The static-lifecycle, dense-identity rewriting, and selectable-pipeline
-foundations are implemented. The pipeline provides a typed static registry,
-profiles, deterministic schedule resolution, a verified atomic multi-pass
-runner, and default dead-pure-definition elimination. Together those
+The static-lifecycle, dense-identity rewriting, selectable-pipeline, and
+whole-world reachability foundations are implemented. The pipeline provides a
+typed static registry, profiles, deterministic schedule resolution, a verified
+atomic multi-pass runner, dead-pure-definition elimination, and semantic
+definition pruning. Together those
 boundaries support later constant folding, algebraic simplification, copy
-propagation, and conservative CFG simplification. The planned reachability
-foundation is the next step chosen to exploit permanent whole-world
-compilation before broadening the optimization suite. A
+propagation, and conservative CFG simplification. A
 virtual-register backend is likely to provide the largest eventual improvement
 in generated scalar code, but it is also the largest single investment and
 should not be the first optimizer change.
@@ -402,30 +400,31 @@ verification, analyses, allocation, ABI integration, tracing integration,
 dumps, and native tests. It likely offers the largest eventual runtime payoff,
 but it should build on a stable target-independent optimization contract.
 
-## 6. Reachability after machine lowering
+## 6. Implemented target-independent reachability
 
-### Current constraint
+### Implemented state
 
-The backend currently lowers executable definitions and generated helpers into
-the assembly model before retaining only artifacts reachable from exported
-machine symbols. This produces a pruned artifact, but unreachable definitions
-have already participated in target legality, layout, trace planning, frame
-planning, and instruction selection. The current target-private pass is
-described in
+The default final-MIR schedule now removes unreachable executable definitions
+before backend legality, trace activation, frame planning, and instruction
+selection. Dense semantic declarations and global identities remain stable;
+central final verification independently requires a body for every reachable
+internal target. The backend still retains only artifacts reachable from
+exported machine symbols, as described in
 [closed-world artifact retention](../compiler/BACKEND.md#assembly-emission-and-artifact-retention).
 
 ### Nature and impact
 
-This is phase-placement debt. Permanent whole-world compilation means Skald can
-know the complete semantic root set before backend lowering. Deferring all
-pruning loses compile-time and code-generation benefits and prevents
-reachability from simplifying MIR, call-target sets, and dispatch metadata.
+The former phase-placement debt is resolved for executable definitions.
+Permanent whole-world compilation gives Skald a finite root and target set,
+while single-threaded generated execution requires no concurrent source roots.
+Later work may use the same analysis to narrow call-target sets or compact
+semantic metadata.
 
-### Resolution direction
+### Implemented resolution
 
-Add target-independent reachability over final MIR using the implemented
-monotone lifecycle certificate and final invalidation boundary. The root model
-must conservatively include:
+Target-independent reachability uses the monotone lifecycle certificate and
+final invalidation boundary. Its root and dependency model conservatively
+includes:
 
 - the program entry and every contract-required exported artifact;
 - static activation and shutdown work;
@@ -435,19 +434,19 @@ must conservatively include:
 - static data and literal dependencies; and
 - any opaque external boundary that can make a definition reachable.
 
-Preserve target-private artifact retention after lowering. It still owns
+Target-private artifact retention remains after lowering. It still owns
 generated helpers, target symbols, trace metadata, panic messages, and data
 that do not have target-independent identities.
 
-The frozen
-[whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+The completed
+[whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 develops this direction as reusable seal-bound dependency and reachability
 infrastructure. Its first pruning client removes executable definitions while
 preserving dense semantic declarations and global identities; later passes may
 reuse the same possible-target and closure queries for devirtualization,
 inlining, effect analysis, specialization, and metadata pruning.
-Delivery is divided by the planned
-[whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md).
+Delivery is recorded by the completed
+[whole-world reachability roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md).
 
 ### Optimization possibilities unlocked
 
@@ -460,8 +459,8 @@ Delivery is divided by the planned
 
 ### Effort
 
-**Large.** The graph traversal itself is moderate. The difficult part
-is specifying complete roots across function values, dispatch, static
+**Completed (large).** The graph traversal itself was moderate. The difficult
+part was specifying complete roots across function values, dispatch, static
 lifecycle, ownership, arrays, and generated operations, plus coordinating the
 result with stable semantic declarations, sparse executable definition tables,
 lifecycle certification, final verification, and backend planning.
@@ -567,11 +566,11 @@ local constant folding or dead pure definition elimination. Building a large
 pass manager without a safe rewrite and verification contract would not remove
 the actual architectural constraints.
 
-### Next foundational layer
+### Whole-world foundation and next analysis layer
 
-4. Implement the frozen target-independent whole-world reachability design and
-   retain machine-artifact pruning as the final target safety net.
-5. Generalize callable effects and alias queries as real passes demonstrate
+4. The target-independent whole-world reachability design is implemented, with
+   machine-artifact pruning retained as the final target safety net.
+5. Next, generalize callable effects and alias queries as real passes demonstrate
    where conservative barriers cost useful transformations.
 
 ### First broader optimization layer

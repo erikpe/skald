@@ -195,6 +195,29 @@ pub(crate) fn lower_source_to_final_mir_with_sources(
     path: impl AsRef<Path>,
     text: impl Into<String>,
 ) -> FinalMirWithSources {
+    lower_source_to_final_mir_with_sources_using(path, text, |mir| {
+        run_mir_pipeline(mir).expect("test source must produce verified final MIR")
+    })
+}
+
+/// Retains every synthesized definition while sealing source-backed final MIR.
+///
+/// Backend tests use this only when their subject is the complete physical MIR
+/// domain rather than the optimized program selected by the default pipeline.
+pub(crate) fn lower_source_to_complete_final_mir_with_sources(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+) -> FinalMirWithSources {
+    lower_source_to_final_mir_with_sources_using(path, text, |mir| {
+        verify_final_mir(mir).expect("test source must produce verified final MIR")
+    })
+}
+
+fn lower_source_to_final_mir_with_sources_using(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+    seal: impl FnOnce(MirProgram) -> VerifiedFinalMirProgram,
+) -> FinalMirWithSources {
     let path = path.as_ref();
     let mut sources = SourceDatabase::new();
     let source_id = sources.add(path, text);
@@ -214,8 +237,7 @@ pub(crate) fn lower_source_to_final_mir_with_sources(
         .expect("successful type checking must produce typed HIR");
     FinalMirWithSources {
         sources,
-        mir: run_mir_pipeline(lower_hir_to_final_mir(&hir))
-            .expect("test source must produce verified final MIR"),
+        mir: seal(lower_hir_to_final_mir(&hir)),
     }
 }
 

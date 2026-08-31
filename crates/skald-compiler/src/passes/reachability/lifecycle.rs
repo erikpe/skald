@@ -67,12 +67,18 @@ pub(super) fn resolve_shared_finalizer_dependencies(
                 });
             }
             PreliminaryMirSharedLifecycleTarget::OptionalBox(target) => {
+                let metadata = program
+                    .optional_box_type(target)
+                    .ok_or(MirDependencyExtractionError::UnknownOptionalBoxType(target))?;
                 dependencies.push(MirLifecycleDependency {
                     target: MirDependencyTarget::RuntimeEntity(
                         MirRuntimeEntity::OptionalBoxLayout(target),
                     ),
                     kind: MirDependencyEdgeKind::RuntimeEntityReference,
                 });
+                if let Some(optional) = metadata.exact_optional {
+                    dependencies.extend(resolve_optional_cleanup_dependencies(program, optional)?);
+                }
             }
         }
     }

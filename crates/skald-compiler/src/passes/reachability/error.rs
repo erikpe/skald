@@ -6,7 +6,7 @@ use crate::{
     identity::{
         ArrayTypeId, CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId,
         FieldId, FunctionId, FunctionTypeId, InitializerId, InterfaceRequirementId, MethodId,
-        OptionalTypeId, StaticFieldId, VirtualFamilyId,
+        OptionalBoxTypeId, OptionalTypeId, StaticFieldId, VirtualFamilyId,
     },
     mir::{MirExecutionNode, MirPlaceBase, StorageId},
 };
@@ -34,6 +34,7 @@ pub(crate) enum MirDependencyExtractionError {
     UnknownField(FieldId),
     UnknownStaticField(StaticFieldId),
     UnknownOptionalType(OptionalTypeId),
+    UnknownOptionalBoxType(OptionalBoxTypeId),
     UnknownStorage(StorageId),
     InvalidPlaceBase(MirPlaceBase),
     InvalidLifecycleFieldType(FieldId),
@@ -91,6 +92,9 @@ impl fmt::Display for MirDependencyExtractionError {
             Self::UnknownStaticField(field) => write!(formatter, "unknown static field {field}"),
             Self::UnknownOptionalType(optional) => {
                 write!(formatter, "unknown optional type {optional}")
+            }
+            Self::UnknownOptionalBoxType(optional_box) => {
+                write!(formatter, "unknown optional-box type {optional_box}")
             }
             Self::UnknownStorage(storage) => write!(formatter, "unknown storage {storage}"),
             Self::InvalidPlaceBase(base) => {

@@ -1,8 +1,8 @@
 use crate::{
     passes::{
-        resolve_exact_mir_pass_schedule, run_mir_pipeline_measured,
-        run_mir_pipeline_with_occurrences, MirPassMeasurement, MirPassOccurrenceOutcome,
-        MirPassOccurrenceRecord,
+        resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, run_mir_pipeline_measured,
+        run_mir_pipeline_with_occurrences, MirOptimizationProfile, MirPassMeasurement,
+        MirPassOccurrenceOutcome, MirPassOccurrenceRecord,
     },
     test_support::{lower_source_to_final_mir, lower_source_to_mir},
 };
@@ -106,6 +106,58 @@ fn composes_before_and_after_the_canary() {
 
     assert_eq!(before, after);
     assert_eq!(before.definitions.len(), 1);
+}
+
+#[test]
+fn supported_profiles_preserve_complete_mir_unless_reachability_is_enabled() {
+    let source = concat!(
+        "class Dormant {\n",
+        "  init() {}\n",
+        "  copy(ref other: Dormant) {}\n",
+        "  assign(ref other: Dormant) {}\n",
+        "  destroy {}\n",
+        "  fn method() -> i64 { return 1; }\n",
+        "  static fn static_method() -> i64 { return 2; }\n",
+        "}\n",
+        "fn dead() -> i64 { return 3; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let complete = lower_source_to_final_mir(source);
+    let none = run_profile(complete.clone(), MirOptimizationProfile::None, &[]);
+    let reachability_disabled = run_profile(
+        complete.clone(),
+        MirOptimizationProfile::Default,
+        &["whole-world-reachability"],
+    );
+    let all_disabled = run_profile(
+        complete.clone(),
+        MirOptimizationProfile::Default,
+        &[
+            "dead-pure-definition-elimination",
+            "whole-world-reachability",
+        ],
+    );
+    let default = run_profile(complete.clone(), MirOptimizationProfile::Default, &[]);
+
+    assert_eq!(none.program(), &complete);
+    assert_eq!(reachability_disabled, none);
+    assert_eq!(all_disabled, none);
+    assert_eq!(none.program().executable_definitions().count(), 8);
+    assert_eq!(default.program().executable_definitions().count(), 1);
+    assert_eq!(default.declarations, none.declarations);
+    assert_eq!(default.classes, none.classes);
+    assert_eq!(default.interfaces, none.interfaces);
+}
+
+fn run_profile(
+    program: crate::mir::MirProgram,
+    profile: MirOptimizationProfile,
+    disabled: &[&str],
+) -> crate::passes::VerifiedFinalMirProgram {
+    let schedule = resolve_mir_pass_schedule(profile, disabled.iter().copied()).unwrap();
+    run_mir_pipeline_measured(program, &schedule)
+        .result
+        .expect("profile must accept valid final MIR")
 }
 
 fn schedule(identities: &[crate::passes::MirPassIdentity]) -> crate::passes::MirPassSchedule {

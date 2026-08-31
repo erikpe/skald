@@ -115,7 +115,7 @@ executions are counted by their owning phases; synthesis is infallible after
 its sealed input, and the backend does not hide another target-independent
 verification execution.
 
-## Frozen final-MIR optimization selection
+## Final-MIR optimization selection
 
 The confirmed
 [selectable final-MIR pipeline design](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -133,10 +133,11 @@ names; duplicate disabling is idempotent in request identity. Existing request
 construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to the empty
 verification-only schedule, while `default` contains
-`dead-pure-definition-elimination` exactly once. Disabling that pass from
-`default`, including duplicate disabling, resolves to the same schedule and
-product as `none`. `none` remains the reference unoptimized mode and preserves
-raw final MIR after its required central verification.
+`dead-pure-definition-elimination` followed by `whole-world-reachability`,
+each exactly once. Disabling both passes from `default`, including duplicate
+disabling, resolves to the same schedule and product as `none`. `none` remains
+the reference unoptimized mode and preserves raw final MIR after its required
+central verification.
 
 The implemented command-line surface is:
 
@@ -181,21 +182,19 @@ Verified checkpoint inspection is implemented by the pass facade's
 inspector and performs no checkpoint work. General driver/CLI dump destination
 and retention policy remain intentionally deferred.
 
-## Frozen whole-world reachability selection
+## Whole-world reachability selection
 
 The confirmed
-[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+[whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 uses the existing final-MIR registry, profile, exclusion, listing, and verified
 runner contracts. It adds no new request field or command-line category.
 
 The stable registered name is `whole-world-reachability`.
 `--list-mir-passes`, the public descriptor query,
-unknown-name diagnostics, and repeatable `--disable-mir-pass` selection will
+unknown-name diagnostics, and repeatable `--disable-mir-pass` selection
 discover it through the same canonical registry metadata as every other pass.
-The supported `default` schedule still contains only
-`dead-pure-definition-elimination`, and `none` remains empty. The next roadmap
-task may place reachability after the canary only after its broad
-parity/determinism gates pass.
+The supported `default` schedule contains `dead-pure-definition-elimination`
+followed by `whole-world-reachability`, while `none` remains empty.
 
 Disabling reachability preserves complete final MIR and the prior backend
 input domain. Disabling both registered passes from `default` must match

@@ -187,7 +187,10 @@ fn pipeline_preserves_logical_path_and_cleanup_metadata() {
          fn evaluate(left: bool) -> bool {
            return left && make(true)->read();
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 {
+           if (evaluate(false)) { return 1; }
+           return 0;
+         }",
     );
     assert!(mir
         .definitions

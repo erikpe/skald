@@ -6,18 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-has now completed WRR0 through WRR7. Central final verification owns coherent
-reachability facts and accepts sparse executable definitions only when every
-reachable callable body remains present, while the private pipeline capability
-can atomically retain exactly those bodies without changing declarations or
-global IDs. Backend planning consumes the physical retained-definition domain,
-requires bodies only for reachable dispatch selections, and preserves its
-target-private artifact walk. The registered `whole-world-reachability` pass
-is listable, measurable, inspectable, and available to exact compiler-internal
-schedules, while `default` still runs only the dead-pure canary. WRR8 is next
-and will harden and activate reachability in the supported default schedule.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -32,8 +21,12 @@ and the completed
 are preserved in the archive. The completed
 [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 adds the enabling layer around those foundations and activates one conservative
-default pass. The frozen whole-world reachability design now has an in-progress
-implementation roadmap and an active
+default pass. The completed
+[whole-world reachability roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+adds reusable whole-program roots and dependency analysis, independently
+verified sparse definitions, target-independent semantic retention before
+backend lowering, and default activation after the canary. Its remaining
+follow-ups stay in the active
 [discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
 The other four original unresolved constraints have no implementation roadmap.
 
@@ -47,30 +40,25 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
-The frozen
-[target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
-defines reusable final-MIR executable-dependency and root analysis, seal-bound
-reachability facts, stable-identity program retention, independently verified
-sparse executable definitions, backend retained-domain consumption, and one
-conservative definition-pruning client. Its
-[implementation roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-is in progress, and the direction is promoted into the living
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-target-independent-whole-world-reachability-direction),
-[backend](../compiler/BACKEND.md#frozen-target-independent-reachability-boundary),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-whole-world-reachability-selection),
-and
-[reporting](../compiler/REPORTING.md#frozen-whole-world-reachability-observation)
-contracts.
-
 The completed selectable final-MIR optimization pipeline design and delivery
 record are preserved in the [archive](../archive/README.md). Their typed static
 registry, deterministic profiles and schedules, request and CLI selection,
 verified pass ownership, structured measurements, verified checkpoints, and
 default dead-pure-definition elimination canary are promoted into the living
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
-and [reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
+[compiler phase](../compiler/PHASES_AND_IR.md#selectable-final-mir-optimization-pipeline),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection),
+and [reporting](../compiler/REPORTING.md#final-mir-pass-reporting)
 contracts.
+
+The completed target-independent whole-world reachability design and delivery
+record are preserved in the [archive](../archive/README.md). Their implemented
+root, dependency, closure, verified sparse-definition, retention, backend, and
+selection contracts are authoritative in the living
+[compiler phase](../compiler/PHASES_AND_IR.md#target-independent-whole-world-reachability),
+[backend](../compiler/BACKEND.md#target-independent-reachability-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#whole-world-reachability-selection),
+and [reporting](../compiler/REPORTING.md#whole-world-reachability-observation)
+documentation.
 
 The completed dense callable-local MIR identity rewriting design and delivery
 record are preserved in the [archive](../archive/README.md); the implemented

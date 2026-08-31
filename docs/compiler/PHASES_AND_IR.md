@@ -431,7 +431,8 @@ classes in their own implementation and tests:
 The current pipeline has two registered production transformations and no
 shared analysis cache. Its immutable registry makes dead-pure-definition
 elimination and whole-world reachability discoverable, while the supported
-`default` profile still executes only dead-pure-definition elimination;
+`default` profile executes dead-pure-definition elimination followed by
+whole-world reachability;
 `none` records one final verification execution and returns the unmodified
 sealed product required by every backend. A changed default product is
 immediately reverified.
@@ -442,8 +443,8 @@ this boundary.
 Target expansion is re-derived from each MIR product. Whole-world compilation
 makes virtual, interface, exact-signature function-value, copy, finalization,
 cleanup, and array-lifecycle target sets finite. Function-value candidates are
-an analysis input; callable retention is owned by the frozen whole-world
-reachability direction below rather than the lifecycle certificate. No unknown
+an analysis input; callable retention is owned by the whole-world reachability
+boundary below rather than the lifecycle certificate. No unknown
 external Skald target may be assumed effect-free.
 Single-threaded generated execution requires no runtime guards, atomics, lazy
 initialization, or synchronization state.
@@ -633,7 +634,7 @@ CLI, broader optimization suite, proof-provenance normalization, alias/effect
 analysis, or backend virtual-register layer. Those remain separate decisions
 that can consume the implemented pipeline boundary.
 
-### Frozen selectable final-MIR optimization pipeline direction
+### Selectable final-MIR optimization pipeline
 
 The target-independent optimizer now has a deterministic selection-policy
 foundation over final MIR. Its frozen complete design is preserved in the
@@ -657,9 +658,10 @@ registry contains `dead-pure-definition-elimination` and
 are exposed in stable-name order for the public read-only query and the
 input-free `--list-mir-passes` CLI command; discovery therefore reads the same
 metadata used by schedule resolution. The `none` profile
-expands to an empty explicit ordered schedule, and `default` contains the
-canary exactly once. Disabling the canary from `default`, including duplicate
-disabling, produces the same schedule as `none`.
+expands to an empty explicit ordered schedule. `default` contains the canary
+exactly once followed by whole-world reachability exactly once. Disabling both
+passes from `default`, including duplicate disabling, produces the same
+schedule as `none`.
 
 A resolved schedule may deliberately repeat a pass, and every occurrence is
 identified by its resolved schedule position, pass identity, and that pass's
@@ -746,14 +748,15 @@ initializer, the canary computes value uses through the exhaustive MIR
 identity traversal, deletes unused eligible assignments and their matching
 value declarations in stable waves to a fixed point, and commits the callable
 once. It performs no CFG, storage, metadata, ownership, lifecycle, folding,
-replacement, or reordering edit. The canary is registered in `default`;
+replacement, or reordering edit. The canary runs first in `default`, followed
+by whole-world reachability;
 `none` preserves the exact verification-only path, selective disabling
 provides parity, and every changed product passes ordinary and
 lifecycle-realization verification.
 
 This boundary adds no dynamic pass ABI, target-specific pass, numerical
-optimization level, SSA, proof-provenance normalization, interprocedural
-reachability, general alias/effect analysis, devirtualization, inlining,
+optimization level, SSA, proof-provenance normalization, general alias/effect
+analysis, devirtualization, inlining,
 constant folding, CFG cleanup, register allocation, or target LIR. Permanent
 whole-world compilation and single-threaded generated programs make later
 analyses more tractable, but neither assumption weakens verification,
@@ -861,32 +864,28 @@ The registered whole-world reachability pass is the sole production client.
 It reads already-derived counts, invokes this capability once, and adds no
 second MIR traversal or broader mutation authority.
 
-Whole-world reachability is registered and selectable through compiler-internal
-exact schedules but is not yet in the supported `default` profile. Backend
-planning consumes the physical retained-definition domain and requires bodies
-only for reachable dispatch selections.
+Whole-world reachability runs after the canary in the supported `default`
+profile and remains independently disableable. Backend planning consumes the
+physical retained-definition domain and requires bodies only for reachable
+dispatch selections.
 Any new MIR operation that can select executable work, or new implicit
 lifecycle operation, must update the exhaustive dependency extraction and its
 focused coverage in the same change.
 
-### Frozen target-independent whole-world reachability direction
+### Target-independent whole-world reachability
 
 The confirmed
-[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
-selects a reusable final-MIR analysis and retention boundary for implementation.
-Its in-progress
-[roadmap](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-owns delivery. This subsection defines the complete frozen direction. Analysis,
-sparse-definition verification, atomic retention, backend retained-domain
-consumption, and selectable pass behavior are current; default activation and
-broad hardening remain planned.
+[whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+and its
+[completed roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+define the implemented reusable final-MIR analysis and retention boundary.
 
-Final MIR will expose one target-independent execution-dependency vocabulary
+Final MIR exposes one target-independent execution-dependency vocabulary
 covering ordinary callables plus implicit class copy, assignment, complete
 finalization, and array default/copy/assignment/destruction work. Root
 collection, dependency extraction, possible-target resolution, closure
 solving, program retention, verification, and backend consumption remain
-separate owners. Static-effect analysis will share exhaustive direct, virtual,
+separate owners. Static-effect analysis shares exhaustive direct, virtual,
 interface, function-value, ownership, optional, array, copy, and destruction
 target selection without turning static-access phases or witnesses into the
 general reachability product.
@@ -2831,8 +2830,8 @@ deliberate boundaries:
    reverification after each changed occurrence, constructing the only sealed
    final MIR accepted by backend input.
 
-The backend does not repeat target-independent verification. Under the frozen
-[selectable pipeline direction](#frozen-selectable-final-mir-optimization-pipeline-direction),
+The backend does not repeat target-independent verification. Under the
+[selectable pipeline](#selectable-final-mir-optimization-pipeline),
 a non-empty pipeline first verifies its input, retains the seal after an
 unchanged occurrence, and privately invalidates and immediately rebuilds the
 seal after every changed occurrence. Per-changed-pass verification localizes
@@ -2841,12 +2840,11 @@ transformation defects before another pass or backend can inspect the result.
 Target-specific legality and structured backend failures are defined by the
 [backend and target contract](BACKEND.md#input-and-legality-boundary).
 
-The supported MIR profiles share the frozen registry, request selection,
+The supported MIR profiles share the registry, request selection,
 verified runner, per-occurrence reporting, inspection checkpoints, and
 value-use analysis. `none` verifies without transforming; `default` runs the
-dead-pure canary exactly once to a conservative fixed point. The registered
-whole-world reachability pass is available to compiler-internal exact schedules
-but is not yet part of either supported profile. Every
+dead-pure canary exactly once to a conservative fixed point and then runs
+whole-world reachability exactly once. Every
 transformation has explicit ordering and returns changed MIR through the same
 verifier boundary.
 Compiler correctness must not depend on an optimization pass being enabled.

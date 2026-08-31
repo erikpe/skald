@@ -44,7 +44,7 @@ fn valid_registry() -> MirPassRegistry {
 }
 
 #[test]
-fn production_profiles_select_the_canary_only_by_default() {
+fn production_profiles_select_the_supported_default_order() {
     assert_eq!(
         MirOptimizationProfile::default(),
         MirOptimizationProfile::Default
@@ -55,7 +55,7 @@ fn production_profiles_select_the_canary_only_by_default() {
 
     let default =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
-    assert_eq!(default.len(), 1);
+    assert_eq!(default.len(), 2);
     assert_eq!(default.as_slice()[0].position(), 0);
     assert_eq!(default.as_slice()[0].occurrence(), 0);
     assert_eq!(
@@ -66,18 +66,34 @@ fn production_profiles_select_the_canary_only_by_default() {
         default.as_slice()[0].name(),
         "dead-pure-definition-elimination"
     );
+    assert_eq!(default.as_slice()[1].position(), 1);
+    assert_eq!(default.as_slice()[1].occurrence(), 0);
+    assert_eq!(
+        default.as_slice()[1].identity(),
+        whole_world_reachability::IDENTITY
+    );
+    assert_eq!(default.as_slice()[1].name(), "whole-world-reachability");
 
-    for disabled in [
-        vec!["dead-pure-definition-elimination"],
-        vec![
+    let reachability_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["whole-world-reachability"],
+    )
+    .unwrap();
+    assert_eq!(reachability_disabled.len(), 1);
+    assert_eq!(
+        reachability_disabled.as_slice()[0].identity(),
+        dead_pure_definition_elimination::IDENTITY
+    );
+
+    let all_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        [
             "dead-pure-definition-elimination",
-            "dead-pure-definition-elimination",
+            "whole-world-reachability",
         ],
-    ] {
-        let schedule =
-            resolve_mir_pass_schedule(MirOptimizationProfile::Default, disabled).unwrap();
-        assert_eq!(schedule, none);
-    }
+    )
+    .unwrap();
+    assert_eq!(all_disabled, none);
 
     assert!(resolve_exact_mir_pass_schedule(&[]).unwrap().is_empty());
     let exact =
@@ -144,15 +160,6 @@ fn production_exact_schedules_can_order_and_repeat_reachability_without_changing
             (4, "whole-world-reachability", 2),
         ]
     );
-
-    let default_without_inactive_reachability = resolve_mir_pass_schedule(
-        MirOptimizationProfile::Default,
-        ["whole-world-reachability"],
-    )
-    .unwrap();
-    let default =
-        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
-    assert_eq!(default_without_inactive_reachability, default);
 }
 
 #[test]

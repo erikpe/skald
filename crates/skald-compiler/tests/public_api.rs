@@ -335,6 +335,11 @@ fn intentional_phase_and_dump_paths_compose() {
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 0,
             },
+            MirPipelineCheckpointLabel::After {
+                position: 1,
+                pass_name: "whole-world-reachability",
+                occurrence: 0,
+            },
             MirPipelineCheckpointLabel::Final,
         ]
     );

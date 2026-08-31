@@ -1,0 +1,18 @@
+from std::error import panic;
+
+fn unreachable() -> i64 {
+    panic("unreachable failure");
+    return 0;
+}
+
+fn fail(depth: i64) -> i64 {
+    if (depth == 0) {
+        panic("reachable failure");
+        return 0;
+    }
+    return fail(depth - 1);
+}
+
+fn main() -> i64 {
+    return fail(1);
+}

@@ -1040,15 +1040,15 @@ change this wrapper or the parameterless internal entry call. The
 `std::process` module reads the Linux host record through ordinary library I/O;
 there is no backend argument-capture path or target ABI addition.
 
-## Frozen target-independent reachability boundary
+## Target-independent reachability boundary
 
 The confirmed
-[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
-and active
-[roadmap](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-move semantic definition retention ahead of target lowering. This section is a
-current backend boundary. Backends accept both complete and verified sparse
-final MIR and still perform the machine-artifact retention described below.
+[whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+and
+[completed roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+move semantic definition retention ahead of target lowering. Backends accept
+both complete and verified sparse final MIR and still perform the
+machine-artifact retention described below.
 
 `VerifiedFinalMirProgram` now owns verified reachability facts bound to its
 exact final-MIR program. `BackendInput` projects only canonical required-

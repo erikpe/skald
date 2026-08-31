@@ -5,10 +5,10 @@ Status: complete. MPR0 through MPR7 were delivered on 2026-08-30.
 This roadmap implements the frozen
 [selectable final-MIR optimization pipeline design](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
 and its promoted
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
+[compiler phase](../compiler/PHASES_AND_IR.md#selectable-final-mir-optimization-pipeline),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection),
 and
-[reporting](../compiler/REPORTING.md#frozen-final-mir-pass-reporting)
+[reporting](../compiler/REPORTING.md#final-mir-pass-reporting)
 contracts. It turns the current verification-only final-MIR boundary into a
 deterministic selectable production pass runner and finishes by enabling one
 narrow dead-pure-definition elimination canary.

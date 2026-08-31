@@ -22,6 +22,7 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Static effects | `passes::static_lifecycle::dump_static_effects` | closed-world static access summaries and call/lifecycle witnesses |
 | Planned MIR | `passes::static_lifecycle::dump_planned_mir` | static activation/destruction regions and selected lifecycle certificates |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
+| Whole-world reachability | checkpoint `reachability_dump` | roots, execution dependencies, retained targets, and witnesses for verified final MIR |
 | Diagnostics | `diagnostics::render_diagnostics` | diagnostic model, wording, spans, and source lookup |
 | GNU assembly in Intel syntax | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
 
@@ -45,6 +46,13 @@ execution by canonical logical module path. The CLI additionally observes host
 linking, atomic artifact publication, artifact notices, and a separate driver
 total. Reports do not replace deterministic dumps or structured source
 diagnostics.
+
+Use `--mir-optimization none` to inspect the complete reference final MIR, or
+`--disable-mir-pass whole-world-reachability` to keep the default canary while
+retaining every executable definition. The request-local MIR pipeline
+inspector can compare the `input`, after-pass, and `final` verified products;
+its reachability dump is deterministic and intentionally separate from report
+events and ordinary MIR text.
 
 When hand-built or future lowered MIR uses path-dependent state, the MIR dump
 prints a `PathConditions` table before the block list. Each row identifies the

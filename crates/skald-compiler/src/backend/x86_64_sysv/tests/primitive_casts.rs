@@ -353,7 +353,7 @@ fn complete_cast_object_uses_only_the_existing_runtime_abi_surface() {
         "fn byte(value: f64) -> u8 { return (u8) value; }\n",
         "fn main() -> i64 { return 0; }\n",
     );
-    let output = assembly(source);
+    let output = complete_assembly(source);
     let undefined = undefined_object_symbols(&output);
 
     assert!(undefined

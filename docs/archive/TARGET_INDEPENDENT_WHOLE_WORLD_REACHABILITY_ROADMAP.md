@@ -1,15 +1,15 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 through WRR7 are complete and WRR8 is next.
+Status: complete; WRR0 through WRR8 were completed on 2026-08-31.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 and its promoted
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-target-independent-whole-world-reachability-direction),
-[backend](../compiler/BACKEND.md#frozen-target-independent-reachability-boundary),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-whole-world-reachability-selection),
+[compiler phase](../compiler/PHASES_AND_IR.md#target-independent-whole-world-reachability),
+[backend](../compiler/BACKEND.md#target-independent-reachability-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#whole-world-reachability-selection),
 and
-[reporting](../compiler/REPORTING.md#frozen-whole-world-reachability-observation)
+[reporting](../compiler/REPORTING.md#whole-world-reachability-observation)
 contracts. It establishes reusable target-independent execution-dependency
 and root analysis, binds deterministic reachability facts to verified final
 MIR, permits stable-identity sparse executable definitions, moves semantic
@@ -20,21 +20,21 @@ The primary result is whole-program compiler infrastructure rather than a
 large optimization suite. Each task should remove small adjacent duplication,
 unclear ownership, or panic-prone handling when that cleanup is cohesive with
 the task. Larger findings belong in the
-[reachability discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
+[reachability discoveries record](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
 instead of expanding reviewed scope.
 
 ## Dependencies
 
 - The completed
-  [static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+  [static-lifecycle certificate roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
   provides immutable baseline authority and monotone realization after
   effect-removing transformations.
 - The completed
-  [dense callable-local MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+  [dense callable-local MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
   provides stable program-level identities, atomic executable-body ownership
   transfer, and immediate resealing after local edits.
 - The completed
-  [selectable final-MIR optimization pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+  [selectable final-MIR optimization pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
   provides typed registration, deterministic schedules, pass capabilities,
   verified checkpoints, structured failures, and measurement ownership.
 - Existing static-effect extraction, function-value candidate analysis,
@@ -99,7 +99,7 @@ instead of expanding reviewed scope.
 - [x] WRR5 — Add atomic stable-identity definition retention
 - [x] WRR6 — Make backend planning consume the retained domain
 - [x] WRR7 — Register and observe whole-world reachability pruning
-- [ ] WRR8 — Activate, harden, and close whole-world reachability
+- [x] WRR8 — Activate, harden, and close whole-world reachability
 
 ## PR-sized implementation sequence
 
@@ -602,33 +602,33 @@ determinism. All WRR7 gates passed; `default` still contains only
 in the supported default schedule, resolve maintainability debt, and promote
 the implementation from frozen direction to current architecture.
 
-- [ ] Place `whole-world-reachability` after
+- [x] Place `whole-world-reachability` after
       `dead-pure-definition-elimination` in `default`; keep `none` empty and
       preserve deterministic explicit order independent of registry order.
-- [ ] Prove disabling reachability from `default` retains the prior complete
+- [x] Prove disabling reachability from `default` retains the prior complete
       final MIR and that disabling both passes matches `none` exactly.
-- [ ] Add source-to-MIR, assembly, and native fixtures containing unreachable
+- [x] Add source-to-MIR, assembly, and native fixtures containing unreachable
       functions, recursion, every member kind, direct/dynamic/indirect calls,
       static lifecycle, ownership, optional, shared, array, panic, trace, and
       literal dependencies.
-- [ ] Verify native behavior, stdout/stderr, exit status, panic behavior,
+- [x] Verify native behavior, stdout/stderr, exit status, panic behavior,
       static activation/shutdown, destruction timing, and runtime traces are
       equivalent across `none`, default, and reachability-disabled modes.
-- [ ] Demonstrate deterministic reductions in retained MIR definitions,
+- [x] Demonstrate deterministic reductions in retained MIR definitions,
       backend-visited callables, and emitted artifacts on representative
       fixtures without promising benchmark-specific runtime improvements.
-- [ ] Run repeated-process determinism for analysis dumps, optimized MIR,
+- [x] Run repeated-process determinism for analysis dumps, optimized MIR,
       measurements excluding elapsed time, assembly, and native observations.
-- [ ] Audit target selection, lifecycle extraction, final verification,
+- [x] Audit target selection, lifecycle extraction, final verification,
       retention, pass execution, and backend planning for duplicate walkers,
       oversized owners, broad mutation, stale terminology, and avoidable
       panics; resolve high-priority issues within the roadmap.
-- [ ] Record lower-priority or materially broader findings with evidence,
+- [x] Record lower-priority or materially broader findings with evidence,
       likely owner, priority, and bounded follow-up in the discoveries record.
-- [ ] Update living compiler, backend, driver, reporting, debugging, and test
+- [x] Update living compiler, backend, driver, reporting, debugging, and test
       documentation to current implemented behavior and remove rollout
       language or roadmap codes outside roadmap/archive records.
-- [ ] Run the full repository gate from an artifact-free snapshot, plus the
+- [x] Run the full repository gate from an artifact-free snapshot, plus the
       supported-toolchain gate, confirm every task and exit criterion, archive
       the completed roadmap/design record, and index any remaining discoveries.
 
@@ -647,6 +647,32 @@ unoptimized reference, every reachable executable dependency is independently
 verified, backend target-artifact retention remains intact, living docs are
 authoritative, and no high-priority roadmap-owned maintainability issue
 remains.
+
+Completed on 2026-08-31. The supported `default` schedule now runs
+`dead-pure-definition-elimination` followed by `whole-world-reachability`,
+while `none` remains empty and exclusions recover the prior complete-final-MIR
+behavior exactly. Broad source, MIR, backend, native, trace, and golden
+fixtures cover every executable definition kind and dependency family. The
+representative MIR parity fixture deterministically shrinks from eight
+executable definitions to one under the default profile; backend observers and
+artifact inspection independently prove that removed bodies do not enter
+callable lowering or final output.
+
+The closing audit fixed one correctness gap in optional-box lifecycle
+extraction by retaining the payload cleanup and destructor dependencies of a
+reachable optional-box finalizer. It also replaced an avoidable reachability
+explanation panic with structured verification failure and gave tests an
+explicit complete-final-MIR lowering path where physical-domain inspection is
+intentional. Lower-priority lifecycle-owner size and runtime-trace dump-quality
+findings remain bounded in the indexed discoveries record.
+
+The complete repository gate passed from an artifact-free snapshot: all 433
+golden cases, 2,585 compiler unit tests, integration tests, runtime tests,
+Clippy, formatting, and documentation validation succeeded. Full golden
+determinism then passed all 433 cases across 774 compiler processes, and the
+workspace passed `cargo +1.82.0 check --locked --workspace --all-targets`.
+The frozen design and completed roadmap are archived; living architecture
+documentation now owns the implemented contracts.
 
 ## Ordering and dependencies
 
@@ -669,8 +695,8 @@ to make an earlier test pass.
 ## Discoveries and deferred work
 
 The dedicated
-[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
-owns findings that are useful but not necessary for WWR0 through WRR8. Likely
+[discoveries record](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
+owns findings that are useful but not necessary for WRR0 through WRR8. Likely
 examples include declaration/metadata compaction, rapid-type analysis,
 call-site points-to precision, reachability preservation proofs, broader
 interprocedural analyses, and target metadata reduction beyond what sparse

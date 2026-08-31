@@ -4,7 +4,8 @@ use crate::{
     mir::{MirCallTarget, MirInstruction, MirMethodCallTarget, MirTerminator},
     passes::verify_final_mir,
     test_support::{
-        lower_source_to_final_mir_with_sources, run_native_assembly_with_runtime_trace_probe,
+        lower_source_to_complete_final_mir_with_sources, lower_source_to_final_mir_with_sources,
+        run_native_assembly_with_runtime_trace_probe,
     },
 };
 
@@ -120,7 +121,7 @@ fn runtime_trace_location_precedes_every_explicit_call_target_after_marshalling(
 
 #[test]
 fn runtime_trace_location_is_failure_only_and_immediately_precedes_reporters() {
-    let fixture = lower_source_to_final_mir_with_sources(
+    let fixture = lower_source_to_complete_final_mir_with_sources(
         "app/main.ska",
         concat!(
             "class Leaf { init() {} fn code() -> i64 { return 7; } }\n",

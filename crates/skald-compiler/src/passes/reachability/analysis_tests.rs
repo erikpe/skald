@@ -233,6 +233,40 @@ fn lifecycle_cycles_terminate_and_keep_the_complete_cycle() {
 }
 
 #[test]
+fn optional_box_finalizers_retain_payload_lifecycle_bodies() {
+    let (program, analysis) = analyze(
+        "class Tracked {
+           init() {}
+           destroy {}
+         }
+         fn build() -> unit {
+           var owner: shared Tracked? = new Tracked?(Tracked());
+           return;
+         }
+         fn main() -> i64 { build(); return 0; }",
+    );
+    let destructor = program
+        .classes
+        .iter()
+        .find(|class| class.name == "Tracked")
+        .and_then(|class| class.destruction.destructor.as_ref())
+        .expect("Tracked has a user destructor")
+        .id
+        .into();
+
+    assert!(analysis.is_reachable(MirExecutionNode::callable(destructor)));
+    assert!(analysis
+        .runtime_entities()
+        .iter()
+        .any(|entity| matches!(entity, MirRuntimeEntity::OptionalBoxLayout(_))));
+    assert!(analysis
+        .outgoing()
+        .iter()
+        .flat_map(|outgoing| outgoing.dependencies())
+        .any(|dependency| dependency.kind() == MirDependencyEdgeKind::UserDestructor));
+}
+
+#[test]
 fn roots_queries_witnesses_and_dump_are_deterministic_on_repeated_analysis() {
     let program = lower_generic_source_to_final_mir(determinism_source());
     let first = analyze_reachability(&program).unwrap();

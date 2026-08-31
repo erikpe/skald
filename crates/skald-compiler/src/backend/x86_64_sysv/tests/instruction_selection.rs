@@ -73,8 +73,8 @@ fn selects_every_integer_comparison_with_exact_signedness_and_canonical_results(
     }
     source.push_str("fn main() -> i64 { return 0; }\n");
 
-    let output = assembly(&source);
-    assert_eq!(output, assembly(&source));
+    let output = complete_assembly(&source);
+    assert_eq!(output, complete_assembly(&source));
 
     for (mnemonic, expected_count) in [
         ("sete al", 3),
@@ -200,8 +200,8 @@ fn selects_every_integer_cast_through_canonical_scalar_moves() {
     }
     source.push_str("fn main() -> i64 { return 0; }\n");
 
-    let output = assembly(&source);
-    assert_eq!(output, assembly(&source));
+    let output = complete_assembly(&source);
+    assert_eq!(output, complete_assembly(&source));
     for (index, (source_type, target_type)) in functions.into_iter().enumerate() {
         let function = function_assembly(
             &output,

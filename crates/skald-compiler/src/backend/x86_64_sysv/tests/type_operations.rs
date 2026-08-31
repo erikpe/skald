@@ -26,7 +26,7 @@ class Other { init() {} }\n";
 
 #[test]
 fn emits_unique_class_metadata_membership_checks_and_failure_reports() {
-    let output = assembly(&format!(
+    let output = complete_assembly(&format!(
         "{TYPE_OPERATION_TYPES}\
          fn inspect(ref any: Obj) -> bool {{ return any is Leaf; }}\n\
          fn cast_value(ref any: Obj) -> i64 {{\n\

@@ -18,18 +18,29 @@ pub(in crate::passes) fn verify_reachable_definitions(
         .copied()
         .filter(|callable| !program.has_executable_definition(*callable))
         .map(|callable| {
-            let explanation = analysis
+            let category = analysis
                 .explanation(MirExecutionNode::callable(callable))
-                .expect("every reachable callable has a canonical explanation");
-            let category = explanation.dependencies().last().map_or_else(
-                || MirReachableDefinitionCategory::Root(explanation.root().reason()),
-                |dependency| MirReachableDefinitionCategory::Dependency(dependency.kind()),
-            );
+                .map(|explanation| {
+                    explanation.dependencies().last().map_or_else(
+                        || MirReachableDefinitionCategory::Root(explanation.root().reason()),
+                        |dependency| {
+                            MirReachableDefinitionCategory::Dependency(dependency.kind())
+                        },
+                    )
+                });
             MirVerificationError {
                 callable: Some(callable),
                 block: None,
-                message: format!(
-                    "reachable callable has no retained definition; selected by dependency category `{category}`"
+                message: category.map_or_else(
+                    || {
+                        "reachable callable has no retained definition or canonical reachability explanation"
+                            .to_owned()
+                    },
+                    |category| {
+                        format!(
+                            "reachable callable has no retained definition; selected by dependency category `{category}`"
+                        )
+                    },
                 ),
             }
         })

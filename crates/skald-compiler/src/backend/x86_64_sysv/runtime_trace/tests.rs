@@ -7,8 +7,9 @@ use crate::{
     source::Span,
     test_support::{
         assembly_relocations, assert_system_assembler_accepts, load_module_sources,
-        lower_hir_to_final_mir, lower_source_to_final_mir_with_sources,
-        run_native_assembly_with_runtime_trace_probe, FinalMirWithSources,
+        lower_hir_to_final_mir, lower_source_to_complete_final_mir_with_sources,
+        lower_source_to_final_mir_with_sources, run_native_assembly_with_runtime_trace_probe,
+        FinalMirWithSources,
     },
     typeck::type_check,
 };
@@ -42,7 +43,7 @@ const CALLABLE_SOURCE: &str = concat!(
 );
 
 fn callable_fixture(path: impl AsRef<Path>) -> FinalMirWithSources {
-    lower_source_to_final_mir_with_sources(path, CALLABLE_SOURCE)
+    lower_source_to_complete_final_mir_with_sources(path, CALLABLE_SOURCE)
 }
 
 fn function(fixture: &FinalMirWithSources, name: &str) -> CallableId {

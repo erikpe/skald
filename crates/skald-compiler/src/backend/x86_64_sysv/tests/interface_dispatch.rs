@@ -35,7 +35,7 @@ fn permits_an_absent_body_in_an_unused_interface_witness_slot() {
 
 #[test]
 fn emits_witness_entries_in_typed_identity_order() {
-    let output = assembly(concat!(
+    let output = complete_assembly(concat!(
         "interface Ordered {\n",
         "  fn later(value: u64) -> u64;\n",
         "  fn earlier() -> u64;\n",

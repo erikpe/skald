@@ -233,8 +233,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
         pipeline[..7],
         [
             ReportMetric::count("verification executions", 1),
-            ReportMetric::count("pass executions", 1),
-            ReportMetric::count("processed callables", 1),
+            ReportMetric::count("pass executions", 2),
+            ReportMetric::count("processed callables", 2),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -257,8 +257,36 @@ fn details_publish_deterministic_phase_owned_metrics() {
             0,
         )
     );
-    assert_eq!(pipeline[9], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[10], ReportMetric::count("blocks", 1));
+    let reachability =
+        |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
+    assert_eq!(
+        pipeline[9..30],
+        [
+            reachability("examined definitions", 1),
+            reachability("examined function definitions", 1),
+            reachability("examined static-initializer definitions", 0),
+            reachability("examined member definitions", 0),
+            reachability("reachable definitions", 1),
+            reachability("reachable function definitions", 1),
+            reachability("reachable static-initializer definitions", 0),
+            reachability("reachable member definitions", 0),
+            reachability("removed definitions", 0),
+            reachability("removed function definitions", 0),
+            reachability("removed static-initializer definitions", 0),
+            reachability("removed member definitions", 0),
+            reachability("whole-program roots", 1),
+            reachability("reachable execution nodes", 1),
+            reachability("reachable callables", 1),
+            reachability("dependency edges", 0),
+            reachability("runtime entity targets", 0),
+            reachability("virtual dispatch families", 0),
+            reachability("interface dispatch requirements", 0),
+            reachability("function-value signatures", 0),
+            reachability("function-value targets", 0),
+        ]
+    );
+    assert_eq!(pipeline[30], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[31], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[

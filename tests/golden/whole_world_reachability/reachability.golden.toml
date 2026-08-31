@@ -1,0 +1,24 @@
+schema = 1
+
+[[test]]
+name = "profile_equivalence"
+mode = "run"
+source = "equivalence.ska"
+variants = ["default", "optimization-none", "reachability-disabled"]
+[[test.run]]
+name = "startup_entry_shutdown_and_ownership"
+expect = { exit = 35, stdout = { inline = "10\n20\n30\n" } }
+
+[[test]]
+name = "panic_trace_equivalence"
+mode = "run"
+source = "panic_trace.ska"
+variants = ["default", "optimization-none", "reachability-disabled"]
+[[test.run]]
+name = "recursive_failure"
+expect = { exit = "failure", stderr = { inline = """panic: reachable failure
+stacktrace:
+  at panic_trace::fail (tests/golden/whole_world_reachability/panic_trace.ska:10:9)
+  at panic_trace::fail (tests/golden/whole_world_reachability/panic_trace.ska:13:12)
+  at panic_trace::main (tests/golden/whole_world_reachability/panic_trace.ska:17:12)
+""" } }

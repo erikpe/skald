@@ -4,10 +4,10 @@ Status: frozen and delivered. MOP1 through MOP12 were confirmed together on
 2026-08-30, implemented by the completed
 [roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md), and promoted
 into the
-[compiler phase contract](../compiler/PHASES_AND_IR.md#frozen-selectable-final-mir-optimization-pipeline-direction),
-[driver contract](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-final-mir-optimization-selection),
+[compiler phase contract](../compiler/PHASES_AND_IR.md#selectable-final-mir-optimization-pipeline),
+[driver contract](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection),
 and
-[reporting contract](../compiler/REPORTING.md#frozen-final-mir-pass-reporting).
+[reporting contract](../compiler/REPORTING.md#final-mir-pass-reporting).
 The living compiler, driver, and reporting contracts are authoritative. This
 record preserves the decisions that produced the typed registry, selectable
 schedules, verified runner, observation and inspection boundaries, shared

@@ -288,7 +288,8 @@ formatting; already-known phase execution counts remain local to the observed
 adapter.
 
 The `none` MIR schedule performs one verification and zero pass executions.
-The `default` schedule executes `dead-pure-definition-elimination` once; an
+The `default` schedule executes `dead-pure-definition-elimination` followed by
+`whole-world-reachability`, each once; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
 changed-result commit, immediate reverification, aggregate accounting, and
@@ -297,7 +298,7 @@ integer data; they do not format sentences or call a global logger. Aggregate
 metrics distinguish callables processed by a pass from callables it actually
 changed.
 
-## Frozen final-MIR pass reporting
+## Final-MIR pass reporting
 
 The confirmed
 [selectable final-MIR pipeline design](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md)
@@ -306,8 +307,8 @@ Its
 [completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 records delivery. Registry, request/CLI schedule selection, the verified
 runner, and structured pass reporting are implemented. Ordinary production
-traces contain one pass-finished event for the default canary; `none` and a
-default request disabling the canary contain none.
+traces contain one pass-finished event for each of the two default passes;
+`none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
 schedule order. Its stable identity consists of schedule position, typed pass
@@ -357,10 +358,10 @@ construction.
 Filesystem publication and general CLI dump retention remain separate driver
 decisions.
 
-## Frozen whole-world reachability observation
+## Whole-world reachability observation
 
 The confirmed
-[whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
+[whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 uses the existing occurrence, aggregate, inspection, and rendering ownership.
 Reachability analysis and pass implementations do not log or call observers.
 
@@ -387,8 +388,8 @@ no invented successful occurrence or later phase product.
 Central final verification now derives and seal-binds those facts. Its existing
 verification-execution counter counts that complete boundary once; unchanged
 pass outcomes do not recompute it, and changed outcomes count the immediate
-reverification that rebuilds program and facts. WRR3 adds no separate analysis
-event, timing, cache statistic, or preservation record.
+reverification that rebuilds program and facts. Reachability adds no separate
+analysis event, timing, cache statistic, or preservation record.
 
 ## CLI selection
 

@@ -133,6 +133,18 @@ over-budget syntax diagnostics.
 | Runtime tests | `tests/runtime/` | The C runtime contract independently of compiler code generation |
 | Documentation tests | `crates/skald-docs-check/` | Repository-local Markdown links, anchors, and required indexes |
 
+Whole-world reachability coverage is split by owner. Colocated analysis and
+verifier tests pin roots, exhaustive dependency families, witnesses, sparse
+definition validity, and deterministic dumps. Pipeline and driver tests pin
+the explicit `dead-pure-definition-elimination` then
+`whole-world-reachability` default order, `none` parity, selective disabling,
+measurements, retained-definition counts, backend visits, and assembly
+determinism. The `whole_world_reachability` golden group runs the same native
+fixtures under `default`, `optimization-none`, and `reachability-disabled` to
+compare startup, stdout/stderr, status, reverse shutdown, ownership,
+destruction, panic, and runtime traces. Full golden determinism repeats every
+variant in independent compiler and native processes.
+
 Reusable non-Rust compiler corpus data belongs under `tests/compiler/`.
 Production crates must not depend on the top-level test tree at runtime.
 
