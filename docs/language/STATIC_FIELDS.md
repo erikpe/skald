@@ -1,9 +1,9 @@
 # Static Fields
 
-Status: **eager static initialization and reverse normal-return shutdown
-implemented**. This document is
-authoritative for the current source-visible mutable and final static-field
-profile. The
+Status: **declaration-wide eager static initialization and reverse normal-
+return shutdown implemented; reachability-gated activation direction frozen**.
+This document is authoritative for the current source-visible mutable and
+final static-field profile and for the next accepted lifetime contract. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
 the current compiler.
@@ -376,6 +376,61 @@ remaining-static cleanup. A destructor panic stops the program finalizer at
 that point. Ordinary replacement effects during execution and cleanup of
 locals, parameters, results, temporaries, instance fields, or full-expression
 anchors remain unchanged.
+
+## Frozen reachability-gated activation direction
+
+Status: **frozen direction, not yet implemented**. Until the active
+[implementation roadmap](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
+reaches its semantic cutover, the declaration-wide eager behavior above
+remains current. The complete rationale and exact decisions are preserved in
+the [frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md).
+
+The accepted contract separates declaration from runtime activation. Loading,
+importing, resolving, specializing, type-checking, or lowering a static field
+continues to retain and check its declaration and initializer, but does not by
+itself give the field a runtime lifetime. Using its class as a type,
+constructing an instance, calling an unrelated member, or retaining class,
+layout, conformance, or dispatch metadata likewise does not activate the
+field.
+
+A field becomes active when an ordinary read, write, replacement, immutable
+borrow, mutable borrow, or other static-place access appears in the exact
+canonical execution closure rooted at the selected entry. The closure follows
+direct calls, full virtual families, every verified interface implementation,
+exact-type function-value targets, and all current implicit copy, assignment,
+destruction, optional, shared-owner, and array lifecycle work. Every
+structurally present block of an activation-reachable definition participates,
+including a branch guarded by a compile-time `false` value. An unreachable
+callable, module import, class use, declaration initializer merely existing,
+or the lifecycle-owned unpublished destination of a field's own initializer
+does not activate that field.
+
+Activating a field adds its explicit initializer, eventual-value destruction,
+and their execution dependencies to the same coupled closure. Ordinary static
+accesses discovered there can activate more fields. The compiler computes the
+deterministic least fixed point once from verified preliminary MIR before any
+selectable optimization. Later optimization may remove calls or accesses, but
+cannot narrow the already selected lifecycle or make an inactive access
+reachable.
+
+Only active fields participate in lifetime planning, `STA001`/`STA002`
+diagnostics, final lifecycle definitions, coordinator regions, startup, and
+shutdown. Every active field still becomes live before entry, uses the current
+stable dependency order, and is destroyed after normal return in exact reverse
+order. An inactive initializer never executes, publishes, allocates, prints,
+panics, mutates another static, or performs eventual-value cleanup. All its
+ordinary syntax, resolution, type, privacy, ownership, and preliminary-MIR
+checks still run; only lifecycle ordering diagnostics are gated by activation.
+
+The exact active set is part of the immutable static-lifecycle certificate and
+is independent of `none`, `default`, pass exclusions, and target selection.
+Skald's closed world makes the set finite, and its single-threaded generated
+execution requires no lazy access guards, initialized-state byte,
+synchronization, or atomic protocol. This direction adds no source syntax,
+eager-static modifier, module initializer, registration hook, force-retention
+annotation, or runtime lazy initialization. Until such a separate feature is
+designed, intentional global side effects must be reached through ordinary
+code.
 
 ## Failure and diagnostics
 

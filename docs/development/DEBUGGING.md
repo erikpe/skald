@@ -31,6 +31,15 @@ for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
 Their text is a deterministic
 debugging and regression format, not a stable interchange format.
 
+The frozen reachability-gated static lifecycle direction will add a focused
+activation dump after preliminary MIR verification. It will show declared,
+active, and inactive fields; canonical first triggers and witnesses; coupled
+execution/static edges; conservative target counts; and the resulting
+activation and reverse-shutdown order. Until the active roadmap implements
+that boundary, compare preliminary static-access evidence with the complete
+planned lifecycle dump; every declared field still activates in the current
+compiler.
+
 Use `skac -v` for phase progress, `skac -vv` for timings and phase-owned
 statistics, and `skac -vvv` for discovery/final module parse records. The
 explicit equivalents are `--report-level phases|details|trace`; operational

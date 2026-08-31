@@ -204,6 +204,29 @@ or publication behavior. A pass or changed-output verification failure stops
 before backend emission and artifact publication through the existing
 structured pipeline error boundary.
 
+## Frozen static activation orchestration
+
+Status: **frozen direction, not yet implemented**. The driver currently sends
+all declared statics through lifecycle planning. Under the accepted
+[reachability-gated contract](PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction),
+the driver will run exact static activation once after verified preliminary MIR
+and before lifecycle planning. That phase is mandatory compiler semantics and
+is not represented by `MirOptimizationProfile`, `--mir-optimization`, or
+`--disable-mir-pass`.
+
+The resulting immutable active authority will flow through planned
+verification, synthesis, final verification, and backend input. The driver may
+adapt its already-known counts to structured reporting and expose its focused
+dump through request-local inspection, but cannot select, expand, narrow, or
+recompute activation after final-MIR optimization. `none`, `default`, selective
+pass disabling, assembly emission, executable linking, and every target must
+therefore share one active set and identical static startup/shutdown effects.
+
+No CLI flag, request field, environment setting, module-loading switch, or
+target option will force eager or lazy activation in this design. Whole-world
+source loading and checking remain unchanged, and single-threaded generated
+execution adds no runtime coordination path.
+
 ## Command-line modes
 
 `skac --help` is the exact option reference. One invocation requires exactly

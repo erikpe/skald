@@ -391,6 +391,25 @@ pass outcomes do not recompute it, and changed outcomes count the immediate
 reverification that rebuilds program and facts. Reachability adds no separate
 analysis event, timing, cache statistic, or preservation record.
 
+## Frozen static activation observation
+
+Status: **frozen direction, not yet implemented**. Exact activation is a
+mandatory semantic phase rather than a pass occurrence. Its owner will expose
+deterministic already-known integer counts for declared, active, inactive,
+explicit, zero-default, and inactive-explicit statics plus activation edges and
+conservative targets. The driver will adapt those values to the existing phase
+finish event and detail filtering; activation analysis itself will not observe,
+log, time, render, or write.
+
+Canonical triggers, witness paths, active/inactive field inventories, and
+activation/reverse-shutdown order belong to a focused deterministic activation
+dump available through request-local inspection. They do not become report
+event text, MIR checkpoint bytes, source diagnostics, request identity,
+certificate identity, generated artifacts, or quiet-default work. There is no
+per-inactive-static warning: ordinary pay-for-use library declarations are not
+operational warnings, and the frozen contract deliberately adds no eager
+annotation that could silence one.
+
 ## CLI selection
 
 Operational detail and diagnostic visibility use separate controls.

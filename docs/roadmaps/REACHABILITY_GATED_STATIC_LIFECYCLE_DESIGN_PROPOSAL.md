@@ -1,7 +1,10 @@
 # Reachability-Gated Static Lifecycle Design Proposal
 
-Status: proposed; RSL1 through RSL12 await confirmation. This document does
-not describe current language behavior.
+Status: frozen design proposal. RSL1 through RSL12 were confirmed together on
+2026-08-31. The contract is promoted into the living language and compiler
+documentation, but it does not describe current compiler behavior until the
+[implementation roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
+reaches its semantic cutover.
 
 The current [static-field language contract](../language/STATIC_FIELDS.md)
 activates every declared static field in the loaded closed program before the
@@ -53,7 +56,7 @@ The current behavior has three costs:
 - large table-driven library features cannot become pay-for-use without
   manually splitting their types or modules.
 
-The proposed behavior makes a static lifetime follow executable need while
+The frozen behavior makes a static lifetime follow executable need while
 preserving eager-before-entry access, deterministic ordering, exact reverse
 shutdown, and all existing ownership guarantees for fields that are active.
 
@@ -124,7 +127,7 @@ computed from verified preliminary MIR before selectable optimization. It is
 not actual path coverage from one run and is not a compiler-chosen
 conservative approximation that may vary by profile.
 
-## Proposed language contract
+## Frozen language contract
 
 ### Declaration does not imply activation
 
@@ -524,8 +527,9 @@ lifetime to order and is accepted. If a later source edit makes any member of
 that component activation-reachable, the complete transitive component and
 its existing source-rich evidence participate in diagnostics.
 
-No permanent warning is proposed for an inactive explicit initializer. Such a
-warning would make normal pay-for-use library tables noisy, and this proposal
+The frozen contract adds no permanent warning for an inactive explicit
+initializer. Such a warning would make normal pay-for-use library tables noisy,
+and this proposal
 deliberately supplies no eager annotation to silence it. Debug inspection
 instead needs deterministic visibility:
 
@@ -552,7 +556,7 @@ intended to remove.
 
 Skald already has stable per-field identities, per-field initializer
 identities, an evidenced static dependency graph, exact activation order, and
-reverse shutdown. The proposed implementation therefore remains field-grained
+reverse shutdown. The frozen implementation direction therefore remains field-grained
 and reuses canonical execution/lifecycle extraction rather than copying
 Niflheim's class-promotion policy.
 
@@ -585,20 +589,20 @@ behavior and material backend reduction.
 
 ## Decision register
 
-| ID | Question | Proposed direction | State |
+| ID | Question | Frozen direction | State |
 |---|---|---|---|
-| [RSL1](#rsl1--separate-declaration-from-runtime-activation) | Does every declared static acquire a lifetime? | No; declaration remains whole-world, activation is entry-reachability gated | **Proposed** |
-| [RSL2](#rsl2--define-field-grained-activation-triggers) | What activates a field? | Ordinary static access from canonical activation-reachable execution | **Proposed** |
-| [RSL3](#rsl3--freeze-activation-before-selectable-optimization) | Where does activation run? | Mandatory verified preliminary-MIR boundary before lifecycle planning | **Proposed** |
-| [RSL4](#rsl4--use-a-coupled-execution-and-field-fixed-point) | How are transitive dependencies found? | One deterministic closure over execution nodes and active fields | **Proposed** |
-| [RSL5](#rsl5--freeze-conservative-control-flow-and-target-expansion) | May analysis precision change effects? | No; all structural blocks and current full dynamic target rules are semantic | **Proposed** |
-| [RSL6](#rsl6--plan-and-synthesize-only-the-active-subset) | What crosses into final lifecycle MIR? | Definitions, bodies, activation, and shutdown only for active fields | **Proposed** |
-| [RSL7](#rsl7--extend-the-lifecycle-certificate-with-exact-active-authority) | How is the set trusted later? | Immutable exact active-field authority issued from preliminary MIR | **Proposed** |
-| [RSL8](#rsl8--verify-reachable-static-access-against-active-authority) | What prevents missing activation? | Independent issuance closure plus final reachable-access validation | **Proposed** |
-| [RSL9](#rsl9--keep-static-lifetime-independent-of-optimization-policy) | Can passes replan activation? | No; removal preserves activation and newly reachable inactive access is invalid | **Proposed** |
-| [RSL10](#rsl10--limit-lifecycle-diagnostics-to-active-fields) | Do inactive cycles fail compilation? | No; ordinary checking remains complete, lifecycle diagnostics use active graph | **Proposed** |
-| [RSL11](#rsl11--let-backends-consume-active-lifecycle-with-conservative-slot-fallback) | What may the backend emit? | Active coordinator only; extra private slots allowed temporarily and pruned later | **Proposed** |
-| [RSL12](#rsl12--defer-explicit-eager-and-runtime-lazy-features) | How can side-effect-only initialization be requested? | No new mechanism in this design; use ordinary reachable code | **Proposed** |
+| [RSL1](#rsl1--separate-declaration-from-runtime-activation) | Does every declared static acquire a lifetime? | No; declaration remains whole-world, activation is entry-reachability gated | **Frozen** |
+| [RSL2](#rsl2--define-field-grained-activation-triggers) | What activates a field? | Ordinary static access from canonical activation-reachable execution | **Frozen** |
+| [RSL3](#rsl3--freeze-activation-before-selectable-optimization) | Where does activation run? | Mandatory verified preliminary-MIR boundary before lifecycle planning | **Frozen** |
+| [RSL4](#rsl4--use-a-coupled-execution-and-field-fixed-point) | How are transitive dependencies found? | One deterministic closure over execution nodes and active fields | **Frozen** |
+| [RSL5](#rsl5--freeze-conservative-control-flow-and-target-expansion) | May analysis precision change effects? | No; all structural blocks and current full dynamic target rules are semantic | **Frozen** |
+| [RSL6](#rsl6--plan-and-synthesize-only-the-active-subset) | What crosses into final lifecycle MIR? | Definitions, bodies, activation, and shutdown only for active fields | **Frozen** |
+| [RSL7](#rsl7--extend-the-lifecycle-certificate-with-exact-active-authority) | How is the set trusted later? | Immutable exact active-field authority issued from preliminary MIR | **Frozen** |
+| [RSL8](#rsl8--verify-reachable-static-access-against-active-authority) | What prevents missing activation? | Independent issuance closure plus final reachable-access validation | **Frozen** |
+| [RSL9](#rsl9--keep-static-lifetime-independent-of-optimization-policy) | Can passes replan activation? | No; removal preserves activation and newly reachable inactive access is invalid | **Frozen** |
+| [RSL10](#rsl10--limit-lifecycle-diagnostics-to-active-fields) | Do inactive cycles fail compilation? | No; ordinary checking remains complete, lifecycle diagnostics use active graph | **Frozen** |
+| [RSL11](#rsl11--let-backends-consume-active-lifecycle-with-conservative-slot-fallback) | What may the backend emit? | Active coordinator only; extra private slots allowed temporarily and pruned later | **Frozen** |
+| [RSL12](#rsl12--defer-explicit-eager-and-runtime-lazy-features) | How can side-effect-only initialization be requested? | No new mechanism in this design; use ordinary reachable code | **Frozen** |
 
 ## RSL1 — Separate declaration from runtime activation
 
@@ -815,23 +819,26 @@ weakening inactive-body checking.
 | Standard-library, golden, migration, and documentation hardening | Medium | Proven semantic transition and representative pay-for-use reduction |
 
 The implementation should first add analysis and inspection beside current
-eager planning, proving the proposed active set without changing execution.
+eager planning, proving the frozen active set without changing execution.
 Only after exact issuance verification exists should planning and synthesis
 switch to the subset. Backend pruning and broad library reduction come after
 the final verifier can reject a missing activation independently.
 
-## Confirmation and promotion
+## Frozen decision and promotion
 
-RSL1 through RSL12 should be confirmed together. Activation triggers, phase
-placement, certificate authority, lifecycle diagnostics, optimization
-independence, and backend consumption form one observable correctness
-boundary; freezing only the table-removal outcome would leave initializer
-side effects and `none` behavior undefined.
+RSL1 through RSL12 were confirmed together on 2026-08-31. Activation triggers,
+phase placement, certificate authority, lifecycle diagnostics, optimization
+independence, and backend consumption are one observable correctness boundary.
 
-After confirmation, promote the source-visible contract into
-`docs/language/STATIC_FIELDS.md`, the status matrix, grammar cross-references,
-and error semantics. Promote phase ownership into compiler phases, backend,
-driver, reporting, debugging, and testing documentation. Then create a
-PR-sized implementation roadmap and a separate discoveries record. The
-roadmap should preserve behavior-characterization and independent verification
-before changing which static lifecycle work executes.
+The direction is promoted into the authoritative
+[static-field](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
+[compiler phase](../compiler/PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction),
+[backend](../compiler/BACKEND.md#frozen-reachability-gated-static-lifecycle-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-static-activation-orchestration),
+[reporting](../compiler/REPORTING.md#frozen-static-activation-observation),
+[debugging](../development/DEBUGGING.md), and
+[testing](../development/TESTING.md#static-field-coverage) documentation.
+Implementation is divided into reviewable slices by the
+[active roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md), with
+out-of-scope findings kept in its separate
+[discoveries record](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).

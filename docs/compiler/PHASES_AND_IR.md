@@ -474,6 +474,74 @@ complete field coverage, initialization modes and types, publication dominance,
 destination non-escape, exact-reverse destruction, deterministic dumps, and
 the existing `STA001` and `STA002` diagnostic behavior.
 
+### Frozen reachability-gated static lifecycle direction
+
+Status: **frozen direction, not yet implemented**. The current compiler still
+plans every declared static. The source-visible contract is owned by
+[Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
+the complete decisions by the
+[frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
+and delivery by the
+[active roadmap](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md).
+
+The accepted phase boundary inserts one mandatory target-independent static-
+activation analysis after preliminary MIR is structurally verified and before
+static-lifecycle planning. It is language semantics, not a registered final-
+MIR pass. `none`, `default`, pass exclusions, target selection, and future
+compiler-internal parallelism must all observe the same result. Preliminary MIR
+remains definition-complete: inactive declarations and initializer bodies are
+still lowered and checked before the activation boundary.
+
+The analysis reuses the shared target-independent execution-dependency
+extractor and adds exhaustive ordinary static-place access records. It computes
+one iterative least fixed point over activation-reachable execution nodes and
+active `StaticFieldId`s. The selected entry roots execution; reached reads,
+writes, replacements, and borrows activate fields; each newly active field adds
+its explicit initializer and eventual-destruction lifecycle execution. The
+field's own lifecycle-owned unpublished destination is not an activation edge.
+All structural blocks and the current full virtual-family, interface-
+conformance, exact-function-type, copy, assignment, destruction, optional,
+shared-owner, and array target rules are part of the frozen semantic analysis.
+
+One immutable analysis product owns the canonically sorted active set,
+activation edges, conservative targets, counts, and canonical first triggers
+and witnesses. Planning reports and dumps may retain explanations, but proof
+identity remains compact. Independent issuance re-extracts preliminary MIR and
+binds the exact active-field set plus normalized active lifecycle-root effects
+into the static-lifecycle certificate; it does not trust solved summaries or
+witness paths.
+
+Planned and final lifecycle MIR contain definitions, order, initializer bodies,
+activation regions, destruction regions, and root authority for exactly the
+active subset. Program-level declarations, field IDs, classes, types, layouts,
+and preliminary bodies are not compacted. Shutdown and positions remain
+derived from the one activation-order vector. `STA001` and `STA002` are computed
+only over the active dependency graph, while every ordinary source and
+preliminary-MIR diagnostic remains definition-complete.
+
+Final verification independently checks exact coordinator coverage and
+monotone realization of active baseline authority. It also combines canonical
+whole-world reachability with static-place extraction: every access in a
+reachable final execution node must target an active field. A physically
+retained but unreachable body may mention an inactive declaration. Any changed
+pass invalidates both final reachability and lifecycle realization; a pass that
+makes an inactive access reachable or adds an unauthorized active-root effect
+fails central verification.
+
+Optimization may remove every surviving ordinary access to an already-active
+field, narrow executable targets, or delete unreachable bodies without
+replanning its lifetime. This deliberately freezes source-side initializer and
+destructor effects before selectable optimization. Whole-world compilation
+makes the closure finite, and single-threaded generated execution needs no
+runtime initialized-state flag, access guard, atomics, locking, or lazy-
+initialization protocol.
+
+The activation analysis, lifecycle planner, final reachability verifier, and
+backend remain separate owners behind concise facades. Shared extraction must
+not fork into a second call/lifecycle walker. Activation dumps are deterministic
+inspection products; structured reports receive only typed already-known
+counts; neither becomes certificate identity or pass logging.
+
 ### Dense callable-local MIR identity rewriting
 
 The implemented target-independent structural editing boundary follows the

@@ -63,6 +63,16 @@ Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional
 unwrap, array bounds, allocation, and ownership-count failure.
 
+The frozen
+[reachability-gated activation direction](STATIC_FIELDS.md#frozen-reachability-gated-activation-direction)
+changes only the lifecycle-diagnostic domain. `STA001` and `STA002` will apply
+to the exact active static graph, so a wholly inactive self-dependency or cycle
+will not be rejected. Making any member activation-reachable brings its
+transitive active component and the existing source-rich evidence back into
+those diagnostics. Syntax, resolution, typing, privacy, stored-value,
+ownership, and preliminary-MIR failures remain mandatory for inactive
+declarations. This is frozen direction, not current compiler behavior.
+
 ## Current runtime failures
 
 The compiler implements executable `std::error::panic` call statements and

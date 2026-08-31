@@ -32,7 +32,10 @@ are not implicitly treated as inline objects. The
 [static-field profile](docs/language/STATIC_FIELDS.md) supports class-owned
 zero-default or explicitly initialized stored values, conservative
 whole-program dependency ordering, eager startup before entry, and exact-
-reverse cleanup after normal entry return. The
+reverse cleanup after normal entry return. Its frozen next contract keeps
+whole-world declaration checking while gating that runtime lifecycle on exact
+entry-rooted field reachability; the current compiler remains declaration-wide
+eager until its implementation roadmap reaches the semantic cutover. The
 [language status matrix](docs/language/STATUS.md) is the authoritative support
 summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
 accepted syntax.

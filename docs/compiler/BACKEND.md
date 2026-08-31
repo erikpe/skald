@@ -1090,6 +1090,35 @@ not all have target-independent MIR identities. Earlier MIR retention reduces
 the input domain; machine-artifact retention proves the final emitted symbol
 closure.
 
+## Frozen reachability-gated static lifecycle boundary
+
+Status: **frozen direction, not yet implemented**. Current backend input still
+contains lifecycle work for every declared static. The future source semantics
+are defined by
+[Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
+and phase ownership is defined by
+[Phases and IR](PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction).
+
+The backend will continue to accept only verified final MIR and will not infer,
+narrow, or replan static activation. Its private program initializer and
+finalizer will be generated solely from the certified active coordinator
+regions, so no inactive initializer or eventual-value destruction may execute.
+Target planning should use the verified active-static query for storage and
+metadata where safe.
+
+A first implementation may conservatively plan an addressable private slot for
+an inactive declaration when a physically retained unreachable body still
+mentions it. Such a slot has no source-visible lifetime, initializer, or
+destructor. The existing target-generated symbol walk must remove it and all
+initializer, helper, literal, trace, and metadata artifacts reachable only from
+inactive work in ordinary emitted output.
+
+This direction changes no public runtime service, ABI version, host wrapper,
+entry/result protocol, object layout, field layout, calling convention,
+relocation rule, or public symbol. Whole-world compilation makes active storage
+known before target lowering, while single-threaded execution requires no
+guard, once-state, synchronization, atomic operation, or thread-local variant.
+
 ## Assembly emission and artifact retention
 
 The production driver requests closed-world artifact retention after target

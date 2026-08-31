@@ -1159,3 +1159,15 @@ family, imports, inherited aliases, privacy, side-effect and dependency order,
 replacement, and reverse destruction. Cross-process phase tests and the golden
 runner's full audit compare deterministic diagnostics, products, assembly,
 stdout, stderr, and status; passing sandboxes are removed after each run.
+
+The frozen reachability-gated direction extends this ownership without moving
+ordinary source checking. Shared dependency tests will own exhaustive direct
+static accesses and possible targets; activation-analysis tests will own the
+coupled entry/execution/field fixed point, exact triggers, witnesses, and
+deterministic dump; planned/final verifier tests will own exact active
+authority, sparse coordinator coverage, and reachable-inactive-access
+rejection. Golden and backend tests will compare imported-unused versus used
+statics, active-only `STA001`/`STA002`, startup and exact-reverse shutdown,
+profile parity, emitted slots/helpers/artifacts, and representative decimal-
+parsing table retention. Inactive initializer bodies must remain covered by
+the ordinary syntax-through-preliminary-MIR error suites.
