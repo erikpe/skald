@@ -2,12 +2,12 @@ use std::cell::{Cell, RefCell};
 
 use crate::{
     backend::{emit_assembly, BackendInput, Target},
-    identity::{CallableId, StaticFieldId},
+    identity::{CallableId, FunctionId, StaticFieldId},
     mir::{
         dump_mir,
         rewrite::{MirReferenceFailure, MirRewriteChangeSummary, MirRewriteError},
-        BlockId, MirAssignment, MirBasicBlock, MirInstruction, MirPlace, MirRvalueKind,
-        MirTerminator, ValueId,
+        BlockId, MirAssignment, MirBasicBlock, MirCallTarget, MirInstruction, MirPlace,
+        MirRvalueKind, MirTerminator, ValueId,
     },
     test_support::{lower_source_to_final_mir, lower_source_to_mir},
 };
@@ -33,6 +33,8 @@ const RETARGET_STATIC: MirPassIdentity = MirPassIdentity::new(108);
 const REWRITE_ALL: MirPassIdentity = MirPassIdentity::new(109);
 const INVALID_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(110);
 const MEASURED_UNCHANGED: MirPassIdentity = MirPassIdentity::new(111);
+const RETARGET_CALL: MirPassIdentity = MirPassIdentity::new(112);
+const OBSERVE_RETARGET: MirPassIdentity = MirPassIdentity::new(113);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -48,7 +50,7 @@ const fn registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 12] = [
+static TEST_REGISTRATIONS: [MirPassRegistration; 14] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -85,12 +87,19 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 12] = [
         "measured-unchanged-pass",
         measured_unchanged_pass,
     ),
+    registration(RETARGET_CALL, "retarget-call-pass", retarget_call_pass),
+    registration(
+        OBSERVE_RETARGET,
+        "observe-retarget-pass",
+        observe_retarget_pass,
+    ),
 ];
 
 thread_local! {
     static EXECUTION_LOG: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
     static FAIL_SECOND_CALLS: Cell<usize> = const { Cell::new(0) };
     static RETARGET_CONFIGURATION: Cell<Option<(CallableId, StaticFieldId)>> = const { Cell::new(None) };
+    static RETARGET_CALL_CONFIGURATION: Cell<Option<(CallableId, FunctionId, FunctionId)>> = const { Cell::new(None) };
     static REWRITTEN_CALLABLES: RefCell<Vec<CallableId>> = const { RefCell::new(Vec::new()) };
 }
 
@@ -110,6 +119,7 @@ fn clear_test_state() {
     EXECUTION_LOG.with(|log| log.borrow_mut().clear());
     FAIL_SECOND_CALLS.with(|calls| calls.set(0));
     RETARGET_CONFIGURATION.with(|configuration| configuration.set(None));
+    RETARGET_CALL_CONFIGURATION.with(|configuration| configuration.set(None));
     REWRITTEN_CALLABLES.with(|callables| callables.borrow_mut().clear());
 }
 
@@ -345,6 +355,8 @@ fn aggregate_only_runner_skips_occurrence_recording() {
 struct CheckpointCollector {
     labels: Vec<String>,
     dumps: Vec<String>,
+    reachability_dumps: Vec<String>,
+    reachable_callables: Vec<Vec<CallableId>>,
     definition_counts: Vec<usize>,
 }
 
@@ -352,6 +364,17 @@ impl MirPipelineInspector for CheckpointCollector {
     fn inspect(&mut self, checkpoint: MirPipelineCheckpoint<'_>) {
         self.labels.push(checkpoint.label().to_string());
         self.dumps.push(dump_mir(checkpoint.verified()));
+        self.reachability_dumps
+            .push(crate::passes::reachability::dump_reachability(
+                checkpoint.verified().reachability(),
+            ));
+        self.reachable_callables.push(
+            checkpoint
+                .verified()
+                .reachability()
+                .reachable_callables()
+                .to_vec(),
+        );
         self.definition_counts
             .push(checkpoint.verified().definitions.len());
     }
@@ -383,6 +406,10 @@ fn none_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
     assert!(measured.result.is_ok());
     assert_eq!(collector.labels, ["input", "final"]);
     assert_eq!(collector.dumps, [expected_dump.clone(), expected_dump]);
+    assert_eq!(
+        collector.reachability_dumps[0],
+        collector.reachability_dumps[1]
+    );
     assert_eq!(collector.definition_counts.len(), 2);
 }
 
@@ -521,6 +548,64 @@ fn unchanged_and_repeated_passes_each_publish_one_verified_after_checkpoint() {
         ]
     );
     assert!(collector.dumps.windows(2).all(|pair| pair[0] == pair[1]));
+    assert!(collector
+        .reachability_dumps
+        .windows(2)
+        .all(|pair| pair[0] == pair[1]));
+    assert_eq!(measured.statistics.verification_executions(), 1);
+}
+
+#[test]
+fn changed_call_targets_rebuild_facts_before_later_passes_and_checkpoints() {
+    clear_test_state();
+    let mir = lower_source_to_final_mir(
+        "fn left() -> i64 { return 1; }
+         fn right() -> i64 { return 2; }
+         fn main() -> i64 { return left(); }",
+    );
+    let function = |name: &str| {
+        mir.declarations
+            .iter()
+            .find(|declaration| declaration.name == name)
+            .unwrap()
+            .id
+    };
+    let main = CallableId::Function(function("main"));
+    let left = function("left");
+    let right = function("right");
+    RETARGET_CALL_CONFIGURATION.with(|configuration| {
+        configuration.set(Some((main, left, right)));
+    });
+    let mut collector = CheckpointCollector::default();
+
+    let measured = run_mir_pipeline_measured_inspected(
+        mir,
+        &test_schedule(&[RETARGET_CALL, OBSERVE_RETARGET]),
+        Some(&mut collector),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        collector.labels,
+        [
+            "input",
+            "after-0-retarget-call-pass-0",
+            "after-1-observe-retarget-pass-0",
+            "final",
+        ]
+    );
+    assert!(collector.reachable_callables[0].contains(&left.into()));
+    assert!(!collector.reachable_callables[0].contains(&right.into()));
+    for callables in &collector.reachable_callables[1..] {
+        assert!(!callables.contains(&left.into()));
+        assert!(callables.contains(&right.into()));
+    }
+    assert_ne!(
+        collector.reachability_dumps[0],
+        collector.reachability_dumps[1]
+    );
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(execution_log(), ["retarget-call", "observe-retarget"]);
 }
 
 #[test]
@@ -889,6 +974,40 @@ fn retarget_static_pass(capability: MirPassCapability) -> Result<MirPassOutcome,
     changed.finish(MirPassData::changed(1))
 }
 
+fn retarget_call_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+    log_execution("retarget-call");
+    let (source, old, target) = RETARGET_CALL_CONFIGURATION
+        .with(Cell::get)
+        .expect("retarget test configures source and targets");
+    let changed = capability.rewrite(|callable, edit| {
+        if callable != source {
+            return Ok(());
+        }
+        for block in edit.block_order().to_vec() {
+            edit.rewrite_block_instructions(block, |instructions| {
+                instructions
+                    .iter()
+                    .cloned()
+                    .map(|instruction| retarget_direct_call(instruction, old, target))
+                    .collect()
+            })?;
+        }
+        Ok(())
+    })?;
+    changed.finish(MirPassData::changed(1))
+}
+
+fn observe_retarget_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+    log_execution("observe-retarget");
+    let (_, old, target) = RETARGET_CALL_CONFIGURATION
+        .with(Cell::get)
+        .expect("retarget test configures source and targets");
+    let reachable = capability.verified().reachability().reachable_callables();
+    assert!(!reachable.contains(&old.into()));
+    assert!(reachable.contains(&target.into()));
+    Ok(capability.unchanged())
+}
+
 fn rewrite_all_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
     log_execution("rewrite-all");
     rewrite_equivalent_constants(capability, true)
@@ -1005,6 +1124,20 @@ fn retarget_static_load(instruction: MirInstruction, target: StaticFieldId) -> M
                 rvalue,
                 span,
             })
+        }
+        instruction => instruction,
+    }
+}
+
+fn retarget_direct_call(
+    instruction: MirInstruction,
+    old: FunctionId,
+    target: FunctionId,
+) -> MirInstruction {
+    match instruction {
+        MirInstruction::Call(mut call) if call.target == MirCallTarget::Direct(old) => {
+            call.target = MirCallTarget::Direct(target);
+            MirInstruction::Call(call)
         }
         instruction => instruction,
     }

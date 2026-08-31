@@ -318,11 +318,13 @@ there is no mirrored transition-vector equality check. Realization verification
 re-derives closed-world targets and normalized effects, requires exact
 contractual lifecycle-root coverage and a subset of baseline authority, then
 checks realized dependencies against the frozen activation order.
-`passes::verify_final_mir` owns this combined verifier and constructs the
-opaque, read-only `VerifiedFinalMirProgram`. `run_mir_pipeline` calls that
-boundary once after all target-independent transformations. `BackendInput`
-accepts only the sealed result and does not repeat target-independent
-verification.
+`passes::verify_final_mir` owns this combined verifier, then derives
+target-independent whole-world reachability from the structurally and
+lifecycle-valid program. It constructs one opaque, read-only
+`VerifiedFinalMirProgram` that owns both exact MIR and the facts derived from
+it. `run_mir_pipeline` calls that boundary initially and after every changed
+target-independent transformation. `BackendInput` accepts only the sealed
+result and does not repeat target-independent verification.
 No runtime access guard is represented; certified ordinary static accesses are
 valid because their targets are earlier in activation and later in shutdown.
 
@@ -667,17 +669,18 @@ and compiler tools. The command line selects profiles and exclusions,
 not arbitrary pass order.
 
 The transforming runner first calls central final-MIR verification, including
-immutable static-lifecycle realization. Every occurrence then receives
-read-only access to that verified product and one pipeline-owned capability to
-consume the seal through the atomic whole-program rewrite coordinator. An
-unchanged outcome retains the same seal and adds no verification execution. A
-changed outcome yields raw dense MIR, rewrite maps, change summaries, and
-explicit changed-callable pass data; the runner immediately calls central
-verification before any later pass, inspection checkpoint, or backend can
-observe it. Input-verification, pass execution, structural-rewrite, and
-output-verification failures identify the exact pass name, identity, schedule
-position, and occurrence where applicable, then stop without exposing a
-partial or later product.
+immutable static-lifecycle realization and target-independent reachability.
+Every occurrence then receives read-only access to that verified program-plus-
+facts product and one pipeline-owned capability to consume the seal through
+the atomic whole-program rewrite coordinator. An unchanged outcome retains the
+same seal and facts and adds no verification execution. A changed outcome
+invalidates program and facts together, yields raw dense MIR, rewrite maps,
+change summaries, and explicit changed-callable pass data, and immediately
+calls central verification before any later pass, inspection checkpoint, or
+backend can observe it. Input-verification, pass execution, structural-
+rewrite, and output-verification failures identify the exact pass name,
+identity, schedule position, and occurrence where applicable, then stop
+without exposing a partial or later product.
 
 Passes cannot construct seals, mutate dense definition tables directly,
 change lifecycle authority, emit diagnostics, log, write files, render dumps,
@@ -789,7 +792,7 @@ phases, witnesses, authority, diagnostics, dumps, and solved effects. The
 superseded static-effect call, function-value, and lifecycle walkers have been
 removed.
 
-On complete final MIR, the same facade now collects typed roots for the
+On complete final MIR, the same facade collects typed roots for the
 internal entry, every static activation, and every reverse-shutdown cleanup,
 then computes an iterative deterministic least fixed point. Reached address
 formations populate only their exact function-type candidate set; reached
@@ -801,11 +804,22 @@ function-value candidates, dispatch use, runtime entities, stable counts, and
 canonical first-witness explanations. A separate target-independent dump is
 available to focused compiler tests and tools.
 
-This analysis is not yet bound to `VerifiedFinalMirProgram`, invoked by central
-verification, registered as a pass, used to remove definitions, or consumed by
-the backend. Any new MIR operation that can select executable work, or new
-implicit lifecycle operation, must update the exhaustive dependency extraction
-and its focused coverage in the same change.
+Central verification now runs this analysis only after ordinary structure and
+static-lifecycle realization succeed, and binds its immutable facts to the
+exact `VerifiedFinalMirProgram`. A crate-private borrowed query lets pass
+capabilities and later backend work inspect those facts without exposing their
+construction or mutation publicly. Unchanged pass outcomes preserve them;
+changed outcomes discard them with the old program and rebuild a coherent
+product before any later pass, checkpoint, or backend boundary. Existing
+verification-execution accounting covers this complete boundary; there is no
+global cache or preservation protocol. Checkpoint labels and ordinary MIR dump
+bytes remain unchanged, while focused compiler tests may separately inspect
+the reachability dump.
+
+Reachability is not yet registered as a pass, used to remove definitions, or
+consumed by backend lowering. Any new MIR operation that can select executable
+work, or new implicit lifecycle operation, must update the exhaustive
+dependency extraction and its focused coverage in the same change.
 
 ### Frozen target-independent whole-world reachability direction
 
@@ -845,13 +859,13 @@ forming an exact address retains the addressed callable even without a later
 indirect call. All structurally present blocks of a reachable callable are
 conservatively scanned until a separate CFG pass removes dead regions.
 
-Central final verification will bind immutable deterministic reachability facts
-to exactly one `VerifiedFinalMirProgram`. Unchanged pass outcomes preserve that
+Central final verification binds immutable deterministic reachability facts to
+exactly one `VerifiedFinalMirProgram`. Unchanged pass outcomes preserve that
 seal and its facts. Every changed outcome invalidates both and rebuilds them
 before another occurrence, inspection checkpoint, or backend can observe the
-program. The product provides read-only root, reachable-node, callable-target,
-dispatch-use, runtime-entity, and explanation queries without introducing a
-global analysis manager or preservation declarations.
+program. The product provides crate-private read-only root, reachable-node,
+callable-target, dispatch-use, runtime-entity, and explanation queries without
+introducing a global analysis manager or preservation declarations.
 
 Preliminary MIR remains definition-complete. Optimized final MIR may retain a
 dense semantic declaration while omitting its unreachable function or member

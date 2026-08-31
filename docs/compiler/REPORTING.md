@@ -378,6 +378,12 @@ graph rendering, label construction, or related allocation. Analysis or
 retention failure uses the existing pass-attributed structured error and emits
 no invented successful occurrence or later phase product.
 
+Central final verification now derives and seal-binds those facts. Its existing
+verification-execution counter counts that complete boundary once; unchanged
+pass outcomes do not recompute it, and changed outcomes count the immediate
+reverification that rebuilds program and facts. WRR3 adds no separate analysis
+event, timing, cache statistic, or preservation record.
+
 ## CLI selection
 
 Operational detail and diagnostic visibility use separate controls.

@@ -7,7 +7,8 @@ pub mod static_lifecycle;
 
 mod graph;
 mod pipeline;
-// The contract lands before its first extraction and closure consumers.
+// Reachability is seal-bound but remains compiler-internal until its first
+// retention and backend consumers land.
 #[allow(dead_code, unused_imports)]
 pub(crate) mod reachability;
 

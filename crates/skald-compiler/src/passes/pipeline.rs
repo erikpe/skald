@@ -1,10 +1,13 @@
 //! Target-independent MIR pass registration, execution, and accounting.
 
-use std::ops::Deref;
+use std::{fmt, ops::Deref};
 
 use crate::mir::{MirProgram, MirVerificationErrors};
 
-use super::static_lifecycle;
+use super::{
+    reachability::{analyze_reachability, MirDependencyExtractionError, MirReachabilityAnalysis},
+    static_lifecycle,
+};
 
 mod execution;
 mod optimizations;
@@ -26,7 +29,8 @@ pub(crate) use policy::{
     MirPassScheduleError,
 };
 
-/// Read-only final MIR that passed ordinary and lifecycle-realization checks.
+/// Read-only final MIR with verified structure, lifecycle realization, and
+/// target-independent reachability facts.
 ///
 /// The private representation is the backend trust token. Any future pass
 /// that changes executable MIR must produce raw MIR and call [`verify_final_mir`]
@@ -42,14 +46,34 @@ pub(crate) use policy::{
 /// }
 /// ```
 ///
+/// Seal-bound reachability facts are implementation-private and cannot be
+/// detached, replaced, or mutated by external code:
+///
+/// ```compile_fail
+/// use skald_compiler::passes::VerifiedFinalMirProgram;
+///
+/// fn detach(verified: &VerifiedFinalMirProgram) {
+///     let _ = verified.reachability();
+/// }
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::passes::VerifiedFinalMirProgram;
+///
+/// fn replace_facts(verified: &mut VerifiedFinalMirProgram) {
+///     verified.reachability = verified.reachability.clone();
+/// }
+/// ```
+///
 /// The pass rewrite capability is also implementation-private:
 ///
 /// ```compile_fail
 /// use skald_compiler::passes::MirPassCapability;
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct VerifiedFinalMirProgram {
     program: MirProgram,
+    reachability: Box<MirReachabilityAnalysis>,
 }
 
 impl VerifiedFinalMirProgram {
@@ -57,12 +81,30 @@ impl VerifiedFinalMirProgram {
         &self.program
     }
 
+    #[allow(dead_code)]
+    pub(crate) const fn reachability(&self) -> &MirReachabilityAnalysis {
+        &self.reachability
+    }
+
     /// Invalidates the final-MIR seal for a target-independent transformation.
     ///
     /// Visibility is deliberately restricted to the pass owner. Rewriters and
     /// backends cannot extract raw MIR from a verified product themselves.
     fn invalidate_for_transformation(self) -> MirProgram {
-        self.program
+        let Self {
+            program,
+            reachability: _,
+        } = self;
+        program
+    }
+}
+
+impl fmt::Debug for VerifiedFinalMirProgram {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("VerifiedFinalMirProgram")
+            .field("program", &self.program)
+            .finish()
     }
 }
 
@@ -102,7 +144,8 @@ fn default_mir_pass_schedule() -> MirPassSchedule {
         .expect("compiler-owned default MIR pass policy must be valid")
 }
 
-/// Seals final MIR after the central ordinary and lifecycle-realization check.
+/// Seals final MIR after central ordinary, lifecycle-realization, and
+/// target-independent reachability analysis.
 ///
 /// This is the invalidation target for future transformations that can change
 /// static accesses, control-flow reachability, lifecycle operations, or
@@ -112,8 +155,18 @@ pub fn verify_final_mir(
     program: MirProgram,
 ) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
     static_lifecycle::verify_synthesized_mir(&program)?;
-    Ok(VerifiedFinalMirProgram { program })
+    let reachability = analyze_reachability(&program).map_err(reachability_verification_errors)?;
+    Ok(VerifiedFinalMirProgram {
+        program,
+        reachability: Box::new(reachability),
+    })
 }
 
+fn reachability_verification_errors(error: MirDependencyExtractionError) -> MirVerificationErrors {
+    MirVerificationErrors::program(format!("reachability analysis failed: {error}"))
+}
+
+#[cfg(test)]
+mod seal_tests;
 #[cfg(test)]
 mod tests;

@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 through WRR2 are complete and WRR3 is next.
+Status: in progress; WRR0 through WRR3 are complete and WRR4 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -94,7 +94,7 @@ instead of expanding reviewed scope.
 - [x] WRR0 — Establish the execution-dependency contract
 - [x] WRR1 — Centralize possible-target and lifecycle dependency extraction
 - [x] WRR2 — Implement deterministic root closure and analysis queries
-- [ ] WRR3 — Bind reachability facts to verified final MIR
+- [x] WRR3 — Bind reachability facts to verified final MIR
 - [ ] WRR4 — Verify sparse final executable definitions
 - [ ] WRR5 — Add atomic stable-identity definition retention
 - [ ] WRR6 — Make backend planning consume the retained domain
@@ -272,27 +272,27 @@ mutate MIR.
 **Purpose:** Give future passes, verification, and backends one coherent
 program-plus-analysis product with conservative invalidation.
 
-- [ ] Extend the private representation of `VerifiedFinalMirProgram` to retain
+- [x] Extend the private representation of `VerifiedFinalMirProgram` to retain
       reachability facts derived from exactly its `MirProgram`, while
       preserving its read-only public program view and unforgeable seal.
-- [ ] Order central final verification so ordinary structure and lifecycle
+- [x] Order central final verification so ordinary structure and lifecycle
       realization make complete current MIR safe before reachability facts are
       published; attribute analysis failure structurally.
-- [ ] Add a crate-private read-only reachability query on the verified product
+- [x] Add a crate-private read-only reachability query on the verified product
       for pass capabilities and backend input without exposing mutable facts or
       construction.
-- [ ] Preserve reachability facts and avoid recomputation for unchanged pass
+- [x] Preserve reachability facts and avoid recomputation for unchanged pass
       outcomes.
-- [ ] Invalidate program and reachability facts together for every changed
+- [x] Invalidate program and reachability facts together for every changed
       pass occurrence, then rebuild both only through immediate central final
       verification.
-- [ ] Ensure verified checkpoint inspection observes the correct seal-bound
+- [x] Ensure verified checkpoint inspection observes the correct seal-bound
       facts at input, after-occurrence, and final boundaries without changing
       existing checkpoint labels or MIR dump bytes.
-- [ ] Extend verification/pipeline accounting only with already-known
+- [x] Extend verification/pipeline accounting only with already-known
       deterministic counts; do not add a global analysis cache or pass-declared
       preservation protocol.
-- [ ] Add compile-fail/public-API coverage proving external code cannot forge,
+- [x] Add compile-fail/public-API coverage proving external code cannot forge,
       detach, replace, or mutate reachability facts.
 
 **Tests:** Program/fact coherence; unchanged seal preservation; changed
@@ -308,6 +308,18 @@ visibility; unchanged optimization-off MIR and dumps.
 **Exit criteria:** Every verified final-MIR seal owns deterministic facts for
 exactly its program, every transformation invalidates them, and no definition
 or backend behavior has yet changed.
+
+Completed on 2026-08-31. Central final verification now derives reachability
+only after ordinary and static-lifecycle verification and owns the result in
+the same opaque seal as its exact MIR. Passes can borrow facts through the
+crate-private verified query; unchanged outcomes carry the coherent product
+without verification, while changed outcomes discard MIR and facts together
+and rebuild both before later passes, checkpoints, or backend input. Focused
+tests cover coherence, cloning, changed call-target closure, unchanged and
+repeated schedules, checkpoint facts and stable MIR dumps, structured analysis
+failure attribution, exact verification counts, backend handoff, and external
+seal/fact privacy. No definition retention, backend behavior, global cache,
+preservation declaration, or new report accounting was introduced.
 
 ### WRR4 — Verify sparse final executable definitions
 

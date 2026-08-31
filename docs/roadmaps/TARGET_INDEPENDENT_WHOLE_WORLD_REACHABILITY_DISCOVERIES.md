@@ -30,8 +30,9 @@ internal `Result`-returning static-effect entry point, migrate planning and
 realization callers, then retain the current convenience API only where its
 verified precondition is encoded in the input type.
 
-**Dependencies.** Prefer doing this after WRR3 establishes the final verified-
-MIR reachability seal and its structured verification error plumbing.
+**Dependencies.** WRR3 now supplies the final verified-MIR reachability seal
+and structured program-level analysis-failure plumbing. This remains a bounded
+follow-up rather than part of later reachability roadmap tasks.
 
 This document records maintainability improvements, precision opportunities,
 and broader optimization work found while implementing the frozen

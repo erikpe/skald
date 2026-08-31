@@ -47,8 +47,10 @@ Backends consume an explicit `BackendInput`: an opaque, read-only
 `VerifiedFinalMirProgram`, source lookup only when tracing is enabled, and a
 typed runtime-trace policy. Only `passes::run_mir_pipeline` and
 `passes::verify_final_mir` construct that sealed product after ordinary and
-static-lifecycle realization verification. The backend cannot accept raw
-`MirProgram` and does not repeat target-independent verification. This
+static-lifecycle realization verification and target-independent reachability
+analysis. The product owns the reachability facts derived from its exact MIR,
+although backend lowering does not consume them yet. The backend cannot accept
+raw `MirProgram` and does not repeat target-independent verification. This
 boundary does not expose AST, resolved IR, HIR, or type-checker state to a
 backend. The public backend facade provides:
 
@@ -1048,8 +1050,9 @@ move semantic definition retention ahead of target lowering. This section is a
 selected future backend boundary; the current backend still receives complete
 final MIR and performs the machine-artifact retention described below.
 
-After implementation, `BackendInput` will expose verified reachability facts
-bound to its exact final-MIR program. Target legality, callable-signature
+`VerifiedFinalMirProgram` now owns verified reachability facts bound to its
+exact final-MIR program. WRR6 will expose only the query needed by backend
+lowering through `BackendInput`. Target legality, callable-signature
 checks, runtime-trace activation planning, fixed frames, and instruction
 selection will visit physically retained executable definitions rather than
 assuming that every dense declaration has a body. An absent final-MIR body is

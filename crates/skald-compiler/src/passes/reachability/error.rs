@@ -1,5 +1,7 @@
 //! Structured failures from target-independent dependency extraction.
 
+use std::fmt;
+
 use crate::{
     identity::{
         ArrayTypeId, CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId,
@@ -39,3 +41,81 @@ pub(crate) enum MirDependencyExtractionError {
     CyclicOptionalLifecycle(OptionalTypeId),
     MissingReachabilityExplanation(MirExecutionNode),
 }
+
+impl fmt::Display for MirDependencyExtractionError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnknownFunction(function) => write!(formatter, "unknown function {function}"),
+            Self::NonInternalEntry(function) => {
+                write!(formatter, "entry function {function} is not internal")
+            }
+            Self::UnknownMethod(method) => write!(formatter, "unknown method {method}"),
+            Self::UnknownVirtualFamily(family) => {
+                write!(formatter, "unknown virtual family {family}")
+            }
+            Self::UnknownInterfaceRequirement(requirement) => {
+                write!(formatter, "unknown interface requirement {requirement}")
+            }
+            Self::UnknownCallable(callable) => write!(formatter, "unknown callable {callable}"),
+            Self::UnknownFunctionType(function_type) => {
+                write!(formatter, "unknown function type {function_type}")
+            }
+            Self::UnknownInitializer(initializer) => {
+                write!(formatter, "unknown initializer {initializer}")
+            }
+            Self::UnknownCopyConstructor(copy) => {
+                write!(formatter, "unknown copy constructor {copy}")
+            }
+            Self::UnknownCopyAssignment(copy) => {
+                write!(formatter, "unknown copy assignment {copy}")
+            }
+            Self::UnknownDestructor(destructor) => {
+                write!(formatter, "unknown destructor {destructor}")
+            }
+            Self::CallableFunctionTypeMismatch {
+                callable,
+                function_type,
+            } => write!(
+                formatter,
+                "callable {callable} does not match function type {function_type}"
+            ),
+            Self::NonInternalCallableAddress(callable) => {
+                write!(
+                    formatter,
+                    "callable address target {callable} is not internal"
+                )
+            }
+            Self::UnknownClass(class) => write!(formatter, "unknown class {class}"),
+            Self::UnknownArrayType(array) => write!(formatter, "unknown array type {array}"),
+            Self::UnknownField(field) => write!(formatter, "unknown field {field}"),
+            Self::UnknownStaticField(field) => write!(formatter, "unknown static field {field}"),
+            Self::UnknownOptionalType(optional) => {
+                write!(formatter, "unknown optional type {optional}")
+            }
+            Self::UnknownStorage(storage) => write!(formatter, "unknown storage {storage}"),
+            Self::InvalidPlaceBase(base) => {
+                write!(formatter, "invalid dependency place base {base:?}")
+            }
+            Self::InvalidLifecycleFieldType(field) => {
+                write!(formatter, "field {field} has an invalid lifecycle type")
+            }
+            Self::InvalidStaticCleanup(field) => {
+                write!(
+                    formatter,
+                    "static field {field} has an invalid cleanup plan"
+                )
+            }
+            Self::CyclicOptionalLifecycle(optional) => {
+                write!(formatter, "optional lifecycle for {optional} is cyclic")
+            }
+            Self::MissingReachabilityExplanation(node) => {
+                write!(
+                    formatter,
+                    "reachable dependency source {node:?} has no explanation"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for MirDependencyExtractionError {}

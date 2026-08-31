@@ -76,6 +76,14 @@ impl MirVerificationErrors {
         Self { errors }
     }
 
+    pub(crate) fn program(message: impl Into<String>) -> Self {
+        Self::new(vec![MirVerificationError {
+            callable: None,
+            block: None,
+            message: message.into(),
+        }])
+    }
+
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirVerificationError> {
         self.errors.iter()
     }
