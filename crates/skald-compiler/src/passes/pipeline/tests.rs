@@ -14,6 +14,7 @@ use crate::{
 
 use super::{
     execution::{MirPassCapability, MirPassData, MirPassFailure, MirPassOutcome},
+    optimizations::whole_world_reachability,
     policy::{
         resolve_test_mir_pass_schedule, MirPassDescriptor, MirPassImplementation,
         MirPassRegistration,
@@ -37,6 +38,7 @@ const RETARGET_CALL: MirPassIdentity = MirPassIdentity::new(112);
 const OBSERVE_RETARGET: MirPassIdentity = MirPassIdentity::new(113);
 const RETAIN_REACHABLE: MirPassIdentity = MirPassIdentity::new(114);
 const OBSERVE_RETENTION: MirPassIdentity = MirPassIdentity::new(115);
+const INVALID_RETENTION_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(116);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -52,7 +54,7 @@ const fn registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 16] = [
+static TEST_REGISTRATIONS: [MirPassRegistration; 18] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -105,6 +107,12 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 16] = [
         "observe-retention-pass",
         observe_retention_pass,
     ),
+    registration(
+        INVALID_RETENTION_ACCOUNTING,
+        "invalid-retention-accounting-pass",
+        invalid_retention_accounting_pass,
+    ),
+    whole_world_reachability::REGISTRATION,
 ];
 
 thread_local! {
@@ -126,6 +134,10 @@ fn none_schedule() -> MirPassSchedule {
 
 fn test_schedule(identities: &[MirPassIdentity]) -> MirPassSchedule {
     resolve_test_mir_pass_schedule(&TEST_REGISTRATIONS, identities).unwrap()
+}
+
+fn production_schedule(identities: &[MirPassIdentity]) -> MirPassSchedule {
+    resolve_exact_mir_pass_schedule(identities).unwrap()
 }
 
 fn clear_test_state() {
@@ -341,6 +353,53 @@ fn repeated_definition_retention_is_changed_then_idempotently_unchanged() {
 }
 
 #[test]
+fn reachability_uses_facts_rebuilt_after_a_synthetic_edge_change() {
+    clear_test_state();
+    let mir = lower_source_to_final_mir(
+        "fn left() -> i64 { return 1; }
+         fn right() -> i64 { return 2; }
+         fn main() -> i64 { return left(); }",
+    );
+    let function = |name: &str| {
+        mir.declarations
+            .iter()
+            .find(|declaration| declaration.name == name)
+            .unwrap()
+            .id
+    };
+    let main = CallableId::Function(function("main"));
+    let left = function("left");
+    let right = function("right");
+    RETARGET_CALL_CONFIGURATION.with(|configuration| {
+        configuration.set(Some((main, left, right)));
+    });
+
+    let measured = run_mir_pipeline_with_occurrences(
+        mir,
+        &test_schedule(&[RETARGET_CALL, whole_world_reachability::IDENTITY]),
+    );
+    let verified = measured.result.as_ref().unwrap();
+
+    assert!(verified.definitions.get(left).is_none());
+    assert!(verified.definitions.get(right).is_some());
+    assert_eq!(measured.statistics.verification_executions(), 3);
+    assert_eq!(measured.occurrences()[1].name(), "whole-world-reachability");
+    assert_eq!(
+        measurement_value(&measured.occurrences()[1], "removed definitions"),
+        1
+    );
+}
+
+fn measurement_value(record: &MirPassOccurrenceRecord, name: &str) -> u64 {
+    record
+        .measurements()
+        .iter()
+        .find(|measurement| measurement.name() == name)
+        .unwrap_or_else(|| panic!("missing `{name}` pass measurement"))
+        .value()
+}
+
+#[test]
 fn occurrence_records_preserve_schedule_identity_outcomes_and_pass_measurements() {
     clear_test_state();
     let measured = run_mir_pipeline_with_occurrences(
@@ -462,10 +521,7 @@ impl MirPipelineInspector for CheckpointCollector {
     fn inspect(&mut self, checkpoint: MirPipelineCheckpoint<'_>) {
         self.labels.push(checkpoint.label().to_string());
         self.dumps.push(dump_mir(checkpoint.verified()));
-        self.reachability_dumps
-            .push(crate::passes::reachability::dump_reachability(
-                checkpoint.verified().reachability(),
-            ));
+        self.reachability_dumps.push(checkpoint.reachability_dump());
         self.reachable_callables.push(
             checkpoint
                 .verified()
@@ -509,6 +565,50 @@ fn none_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
         collector.reachability_dumps[1]
     );
     assert_eq!(collector.definition_counts.len(), 2);
+}
+
+#[test]
+fn repeated_reachability_checkpoints_expose_resealed_deterministic_facts() {
+    let mir = lower_source_to_final_mir(
+        "fn dead() -> i64 { return 9; }
+         fn main() -> i64 { return 0; }",
+    );
+    let mut collector = CheckpointCollector::default();
+
+    let measured = run_mir_pipeline_measured_inspected(
+        mir,
+        &production_schedule(&[
+            whole_world_reachability::IDENTITY,
+            whole_world_reachability::IDENTITY,
+        ]),
+        Some(&mut collector),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        collector.labels,
+        [
+            "input",
+            "after-0-whole-world-reachability-0",
+            "after-1-whole-world-reachability-1",
+            "final",
+        ]
+    );
+    assert_ne!(collector.dumps[0], collector.dumps[1]);
+    assert_eq!(collector.dumps[1], collector.dumps[2]);
+    assert_eq!(collector.dumps[2], collector.dumps[3]);
+    assert_ne!(
+        collector.reachability_dumps[0],
+        collector.reachability_dumps[1]
+    );
+    assert_eq!(
+        collector.reachability_dumps[1],
+        collector.reachability_dumps[2]
+    );
+    assert_eq!(
+        collector.reachability_dumps[2],
+        collector.reachability_dumps[3]
+    );
 }
 
 #[test]
@@ -568,6 +668,21 @@ fn pipeline_determinism_fingerprint() -> String {
         run_mir_pipeline_measured_inspected(lowered_program(), &default, Some(&mut collector));
     let final_dump = dump_mir(inspected.result.as_ref().unwrap().program());
 
+    let mut reachability_collector = CheckpointCollector::default();
+    let reachability_schedule = production_schedule(&[
+        whole_world_reachability::IDENTITY,
+        whole_world_reachability::IDENTITY,
+    ]);
+    let reachability = run_mir_pipeline_measured_inspected(
+        lower_source_to_final_mir(
+            "fn dead() -> i64 { return 1; }
+             fn main() -> i64 { return 0; }",
+        ),
+        &reachability_schedule,
+        Some(&mut reachability_collector),
+    );
+    assert!(reachability.result.is_ok());
+
     clear_test_state();
     let measured = run_mir_pipeline_with_occurrences(lowered_program(), &repeated);
     let measurements = measured
@@ -588,7 +703,8 @@ fn pipeline_determinism_fingerprint() -> String {
     format!(
         "none={:?}\ndefault={:?}\ndisabled={:?}\nrepeated={:?}\n\
          metrics=({}, {}, {}, {:?})\nerror=({:?}, {:?}, {:?}, {:?}, {})\n\
-         checkpoints={:?}\ncheckpoint-dumps={:?}\nfinal-mir=\n{}",
+         checkpoints={:?}\ncheckpoint-dumps={:?}\nreachability-checkpoints={:?}\n\
+         reachability-dumps={:?}\nfinal-mir=\n{}",
         schedule_fingerprint(&none),
         schedule_fingerprint(&default),
         schedule_fingerprint(&disabled),
@@ -604,6 +720,8 @@ fn pipeline_determinism_fingerprint() -> String {
         error,
         collector.labels,
         collector.dumps,
+        reachability_collector.labels,
+        reachability_collector.reachability_dumps,
         final_dump,
     )
 }
@@ -889,6 +1007,33 @@ fn invalid_changed_callable_accounting_is_a_pass_failure() {
 }
 
 #[test]
+fn definition_retention_failure_is_attributed_to_the_exact_occurrence() {
+    clear_test_state();
+    let measured = run_mir_pipeline_with_occurrences(
+        lower_source_to_final_mir(
+            "fn dead() -> i64 { return 1; }
+             fn main() -> i64 { return 0; }",
+        ),
+        &test_schedule(&[INVALID_RETENTION_ACCOUNTING, LATER]),
+    );
+
+    let error = measured.result.as_ref().unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
+    assert_eq!(error.pass_position(), Some(0));
+    assert_eq!(error.pass_name(), Some("invalid-retention-accounting-pass"));
+    assert_eq!(error.pass_occurrence(), Some(0));
+    assert!(error.to_string().contains("definition retention removed 1"));
+    assert_eq!(execution_log(), ["invalid-retention-accounting"]);
+    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.statistics.pass_executions(), 1);
+    assert_eq!(measured.occurrences().len(), 1);
+    assert_eq!(
+        measured.occurrences()[0].outcome(),
+        MirPassOccurrenceOutcome::Failed
+    );
+}
+
+#[test]
 fn atomic_rewrite_visits_functions_members_and_static_initializers() {
     clear_test_state();
     let mir = lower_source_to_final_mir(
@@ -1126,6 +1271,14 @@ fn observe_retention_pass(capability: MirPassCapability) -> Result<MirPassOutcom
         )));
     });
     Ok(capability.unchanged())
+}
+
+fn invalid_retention_accounting_pass(
+    capability: MirPassCapability,
+) -> Result<MirPassOutcome, MirPassFailure> {
+    log_execution("invalid-retention-accounting");
+    let retention = capability.retain_reachable_definitions()?;
+    retention.finish(MirPassData::changed(usize::MAX))
 }
 
 fn rewrite_all_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {

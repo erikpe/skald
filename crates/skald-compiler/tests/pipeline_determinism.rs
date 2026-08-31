@@ -2494,13 +2494,14 @@ fn mir_pipeline_checkpoint_dump() -> String {
         checkpoints.push((
             checkpoint.label().to_string(),
             dump_mir(checkpoint.verified()),
+            checkpoint.reachability_dump(),
         ));
     };
     run_mir_pipeline_inspected(lower_hir(&checked.hir.unwrap()), &mut inspector).unwrap();
 
     checkpoints
         .into_iter()
-        .map(|(label, dump)| format!("CHECKPOINT {label}\n{dump}"))
+        .map(|(label, mir, reachability)| format!("CHECKPOINT {label}\n{mir}{reachability}"))
         .collect()
 }
 

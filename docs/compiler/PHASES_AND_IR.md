@@ -428,11 +428,13 @@ classes in their own implementation and tests:
   inlining, and call-graph reshaping even when the expected effect set only
   shrinks.
 
-The current pipeline has one production transformation and no shared analysis
-cache. Its immutable registry and verified multi-pass runner execute
-dead-pure-definition elimination under `default`; `none` records one final
-verification execution and returns the unmodified sealed product required by
-every backend. A changed default product is immediately reverified.
+The current pipeline has two registered production transformations and no
+shared analysis cache. Its immutable registry makes dead-pure-definition
+elimination and whole-world reachability discoverable, while the supported
+`default` profile still executes only dead-pure-definition elimination;
+`none` records one final verification execution and returns the unmodified
+sealed product required by every backend. A changed default product is
+immediately reverified.
 Whole-world compilation makes target re-derivation finite, and single-threaded
 generated execution requires no synchronization or runtime lifecycle guard at
 this boundary.
@@ -650,7 +652,8 @@ unique stable lowercase kebab-case name, description, implementation-declared
 identity, and transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity before schedule selection. The production
-registry contains `dead-pure-definition-elimination`. Its validated descriptors
+registry contains `dead-pure-definition-elimination` and
+`whole-world-reachability`. Its validated descriptors
 are exposed in stable-name order for the public read-only query and the
 input-free `--list-mir-passes` CLI command; discovery therefore reads the same
 metadata used by schedule resolution. The `none` profile
@@ -725,8 +728,9 @@ passes cannot collide. Changed MIR is centrally resealed before inspection;
 pass, rewrite, or output-verification failure emits no failed after-checkpoint
 and no final checkpoint. The ordinary path passes no inspector and therefore
 constructs no checkpoint label strings, dumps, collections, or report events.
-The inspected entry point may invoke phase-owned `mir::dump_mir` or collect
-in-memory facts, but filesystem retention and CLI dump policy remain separate.
+The inspected entry point may invoke phase-owned `mir::dump_mir`, request the
+checkpoint's deterministic seal-bound reachability dump, or collect in-memory
+facts, but filesystem retention and CLI dump policy remain separate.
 
 The framework's production canary removes only an unused
 `MirInstruction::Assign` whose rvalue is an integer, byte, binary64-bit, or
@@ -853,10 +857,14 @@ runner immediately sends that product through central final verification and
 rebuilds coherent reachability facts before a later pass or checkpoint can see
 it. Retention never rewrites a body, static initializer, declaration, global
 identity, metadata table, source span, coordinator region, or lifecycle proof.
-No production optimization invokes the capability yet.
+The registered whole-world reachability pass is the sole production client.
+It reads already-derived counts, invokes this capability once, and adds no
+second MIR traversal or broader mutation authority.
 
-No reachability optimization is yet registered or used by production to remove
-definitions, and backend lowering does not yet consume the retained domain.
+Whole-world reachability is registered and selectable through compiler-internal
+exact schedules but is not yet in the supported `default` profile. Backend
+planning consumes the physical retained-definition domain and requires bodies
+only for reachable dispatch selections.
 Any new MIR operation that can select executable work, or new implicit
 lifecycle operation, must update the exhaustive dependency extraction and its
 focused coverage in the same change.
@@ -866,11 +874,12 @@ focused coverage in the same change.
 The confirmed
 [whole-world reachability design](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 selects a reusable final-MIR analysis and retention boundary for implementation.
-Its planned
+Its in-progress
 [roadmap](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-owns delivery. This subsection defines the complete frozen direction. Sparse-
-definition verification is current; atomic retention, backend consumption,
-and pass behavior described below remain planned.
+owns delivery. This subsection defines the complete frozen direction. Analysis,
+sparse-definition verification, atomic retention, backend retained-domain
+consumption, and selectable pass behavior are current; default activation and
+broad hardening remain planned.
 
 Final MIR will expose one target-independent execution-dependency vocabulary
 covering ordinary callables plus implicit class copy, assignment, complete
@@ -919,12 +928,12 @@ assignment, destruction, ownership, optionals, arrays, or static lifecycle.
 The lifecycle realization set must still be a subset of immutable baseline
 authority.
 
-One private atomic program-retention capability will filter sparse function
+One private atomic program-retention capability filters sparse function
 definition slots and callable-keyed member definitions using facts bound to
-the consumed seal. It will not expose mutable declaration tables, compact
+the consumed seal. It does not expose mutable declaration tables, compact
 global identities, rewrite retained bodies, mutate lifecycle authority, log,
-verify, or render. The first `whole-world-reachability` pass will consume this
-capability and remove executable definitions only; declaration and metadata
+verify, or render. The registered `whole-world-reachability` pass consumes this
+capability and removes executable definitions only; declaration and metadata
 compaction, rapid-type analysis, points-to refinement, devirtualization,
 inlining, and broader interprocedural analysis remain later work.
 
@@ -2835,7 +2844,9 @@ Target-specific legality and structured backend failures are defined by the
 The supported MIR profiles share the frozen registry, request selection,
 verified runner, per-occurrence reporting, inspection checkpoints, and
 value-use analysis. `none` verifies without transforming; `default` runs the
-dead-pure canary exactly once to a conservative fixed point. Every
+dead-pure canary exactly once to a conservative fixed point. The registered
+whole-world reachability pass is available to compiler-internal exact schedules
+but is not yet part of either supported profile. Every
 transformation has explicit ordering and returns changed MIR through the same
 verifier boundary.
 Compiler correctness must not depend on an optimization pass being enabled.

@@ -3,6 +3,7 @@
 use std::fmt;
 
 use super::super::VerifiedFinalMirProgram;
+use crate::passes::reachability::dump_reachability;
 
 /// Stable identity of one final-MIR pipeline inspection checkpoint.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -55,6 +56,15 @@ impl<'a> MirPipelineCheckpoint<'a> {
 
     pub const fn verified(self) -> &'a VerifiedFinalMirProgram {
         self.verified
+    }
+
+    /// Renders the deterministic reachability facts sealed with this exact
+    /// checkpoint for focused compiler tools and tests.
+    ///
+    /// The dump is constructed only when requested by an inspector. It is not
+    /// a report event or a command-line publication policy.
+    pub fn reachability_dump(self) -> String {
+        dump_reachability(self.verified.reachability())
     }
 
     pub(super) const fn new(

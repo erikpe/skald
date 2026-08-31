@@ -152,7 +152,8 @@ removes every occurrence of the named pass from the selected profile;
 duplicate disabling is idempotent. Unknown profile or pass names are usage
 errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
-`dead-pure-definition-elimination` name. `--list-mir-passes` succeeds without
+`dead-pure-definition-elimination` and `whole-world-reachability` names.
+`--list-mir-passes` succeeds without
 an input file and prints every registered stable name and description in
 lexical name order. Library tools can inspect the same canonical metadata
 through `passes::available_mir_passes` and `MirPassDescriptor`; neither query
@@ -187,15 +188,14 @@ The confirmed
 uses the existing final-MIR registry, profile, exclusion, listing, and verified
 runner contracts. It adds no new request field or command-line category.
 
-On delivery, the stable registered name will be
-`whole-world-reachability`. `--list-mir-passes`, the public descriptor query,
+The stable registered name is `whole-world-reachability`.
+`--list-mir-passes`, the public descriptor query,
 unknown-name diagnostics, and repeatable `--disable-mir-pass` selection will
 discover it through the same canonical registry metadata as every other pass.
-The supported `default` schedule will place it after
-`dead-pure-definition-elimination`; `none` remains empty. Registration may land
-before default activation while the roadmap is in progress, but current
-default behavior may change only after backend retained-domain support and the
-full parity/determinism gates pass.
+The supported `default` schedule still contains only
+`dead-pure-definition-elimination`, and `none` remains empty. The next roadmap
+task may place reachability after the canary only after its broad
+parity/determinism gates pass.
 
 Disabling reachability preserves complete final MIR and the prior backend
 input domain. Disabling both registered passes from `default` must match

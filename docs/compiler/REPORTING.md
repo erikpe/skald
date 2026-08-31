@@ -325,7 +325,7 @@ executions, pass executions, processed and changed callables plus structural
 rewrite counts when passes ran, pass-owned aggregate counters in first pass
 owner and first counter order, then successful final MIR definitions, blocks,
 and instructions. Text rendering qualifies pass-owned counters with their
-stable pass name. The first canary will own
+stable pass name. The first canary owns
 removed assignment, removed value-declaration, and changed-callable counts.
 Trace reporting additionally emits one typed pass-finished event per attempted
 occurrence, including a failed outcome for the occurrence attributed by the
@@ -349,9 +349,11 @@ service and accept only borrowed verified final MIR. Labels are `input`,
 `after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, and
 `final`. Changed results are resealed before callbacks; failures produce no
 failed after-checkpoint or final checkpoint. Checkpoint labels and bytes are
-deterministic, but dump contents do not become report events, metrics,
-semantic request identity, or pass logs. The disabled ordinary path performs
-no checkpoint formatting, dump rendering, allocation, or event construction.
+deterministic. Inspectors may also request the seal-bound deterministic
+reachability dump from a checkpoint, but dump contents do not become report
+events, metrics, semantic request identity, or pass logs. The disabled ordinary
+path performs no checkpoint formatting, dump rendering, allocation, or event
+construction.
 Filesystem publication and general CLI dump retention remain separate driver
 decisions.
 
@@ -362,16 +364,20 @@ The confirmed
 uses the existing occurrence, aggregate, inspection, and rendering ownership.
 Reachability analysis and pass implementations do not log or call observers.
 
-The registered pass will report deterministic already-known integer counters
-for examined, reachable, retained, and removed executable definitions, split
-where useful by function/member and dependency category. Reporting must keep
+The registered `whole-world-reachability` pass reports deterministic,
+already-known integer counters for examined, reachable, and removed executable
+definitions, split into function, static-initializer, and member categories.
+It also reports roots, reachable execution nodes and callables, dependency
+edges, runtime-entity targets, virtual/interface selection, and function-value
+target counts. Reporting keeps
 declaration count, physically present definition count, and reachable callable
 count distinct. The pipeline owns elapsed time and occurrence conversion;
 reports own rendering; live durations remain excluded from deterministic
 assertions.
 
 The focused reachability graph dump remains separate from report events and
-ordinary MIR checkpoint bytes. Compiler tools and tests may inspect roots,
+ordinary MIR checkpoint bytes. A checkpoint's `reachability_dump` method lets
+compiler tools and tests inspect roots,
 typed edges, possible targets, witnesses, and summary counts through borrowed
 verified facts. The ordinary driver supplies no such inspector and performs no
 graph rendering, label construction, or related allocation. Analysis or

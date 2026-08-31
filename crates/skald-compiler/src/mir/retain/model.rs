@@ -16,7 +16,6 @@ pub(crate) struct MirDefinitionKindCounts {
     methods: usize,
 }
 
-#[allow(dead_code)] // Category queries become pass measurements in the next roadmap task.
 impl MirDefinitionKindCounts {
     pub(crate) const fn functions(self) -> usize {
         self.functions
@@ -101,7 +100,6 @@ impl MirDefinitionRetentionSummary {
         self.examined
     }
 
-    #[allow(dead_code)] // Consumed by the reachability pass when it is registered.
     pub(crate) const fn retained(&self) -> MirDefinitionKindCounts {
         self.retained
     }

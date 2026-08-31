@@ -124,10 +124,16 @@ fn unknown_disabled_passes_are_one_sorted_configuration_error() {
     let error = options.resolve_schedule().unwrap_err();
 
     assert_eq!(error.names(), ["missing-pass", "zeta-pass"]);
-    assert_eq!(error.known_names(), ["dead-pure-definition-elimination"]);
+    assert_eq!(
+        error.known_names(),
+        [
+            "dead-pure-definition-elimination",
+            "whole-world-reachability"
+        ]
+    );
     assert_eq!(
         error.to_string(),
-        "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `dead-pure-definition-elimination`"
+        "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `dead-pure-definition-elimination`, `whole-world-reachability`"
     );
 }
 

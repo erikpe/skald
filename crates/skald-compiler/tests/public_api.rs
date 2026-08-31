@@ -99,7 +99,9 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(request.mir_optimization().profile().name(), "default");
     let passes: Vec<MirPassDescriptor> = available_mir_passes();
+    assert_eq!(passes.len(), 2);
     assert_eq!(passes[0].name(), "dead-pure-definition-elimination");
+    assert_eq!(passes[1].name(), "whole-world-reachability");
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent
@@ -320,6 +322,8 @@ fn intentional_phase_and_dump_paths_compose() {
     let mut inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
         checkpoint_labels.push(checkpoint.label());
         let _verified_dump = dump_mir(checkpoint.verified());
+        let reachability_dump = checkpoint.reachability_dump();
+        assert!(reachability_dump.starts_with("MirReachabilityAnalysis\n"));
     };
     run_mir_pipeline_inspected(mir.clone(), &mut inspector).unwrap();
     assert_eq!(

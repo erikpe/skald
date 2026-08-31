@@ -9,7 +9,9 @@ use super::{
     schedule::{resolve_exact, resolve_identities},
 };
 use crate::passes::pipeline::execution::{MirPassCapability, MirPassFailure, MirPassOutcome};
-use crate::passes::pipeline::optimizations::dead_pure_definition_elimination;
+use crate::passes::pipeline::optimizations::{
+    dead_pure_definition_elimination, whole_world_reachability,
+};
 
 const ALPHA: MirPassIdentity = MirPassIdentity::new(1);
 const BETA: MirPassIdentity = MirPassIdentity::new(2);
@@ -90,7 +92,7 @@ fn production_profiles_select_the_canary_only_by_default() {
 #[test]
 fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     let passes = available_mir_passes();
-    assert_eq!(passes.len(), 1);
+    assert_eq!(passes.len(), 2);
     assert_eq!(
         passes[0].identity(),
         dead_pure_definition_elimination::IDENTITY
@@ -99,6 +101,12 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     assert_eq!(
         passes[0].description(),
         "Removes unused non-failing scalar MIR definitions."
+    );
+    assert_eq!(passes[1].identity(), whole_world_reachability::IDENTITY);
+    assert_eq!(passes[1].name(), "whole-world-reachability");
+    assert_eq!(
+        passes[1].description(),
+        "Removes unreachable executable MIR definitions."
     );
 
     assert_eq!(
@@ -109,6 +117,42 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
             .collect::<Vec<_>>(),
         vec!["alpha-pass", "beta-pass", "gamma-2-pass"]
     );
+}
+
+#[test]
+fn production_exact_schedules_can_order_and_repeat_reachability_without_changing_default() {
+    let dead = dead_pure_definition_elimination::IDENTITY;
+    let reachability = whole_world_reachability::IDENTITY;
+    let schedule =
+        resolve_exact_mir_pass_schedule(&[reachability, dead, reachability, dead, reachability])
+            .unwrap();
+
+    assert_eq!(
+        schedule
+            .iter()
+            .map(|occurrence| (
+                occurrence.position(),
+                occurrence.name(),
+                occurrence.occurrence()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            (0, "whole-world-reachability", 0),
+            (1, "dead-pure-definition-elimination", 0),
+            (2, "whole-world-reachability", 1),
+            (3, "dead-pure-definition-elimination", 1),
+            (4, "whole-world-reachability", 2),
+        ]
+    );
+
+    let default_without_inactive_reachability = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["whole-world-reachability"],
+    )
+    .unwrap();
+    let default =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    assert_eq!(default_without_inactive_reachability, default);
 }
 
 #[test]

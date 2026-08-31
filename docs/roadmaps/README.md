@@ -8,15 +8,16 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-has now completed WRR0 through WRR6. Central final verification owns coherent
+has now completed WRR0 through WRR7. Central final verification owns coherent
 reachability facts and accepts sparse executable definitions only when every
 reachable callable body remains present, while the private pipeline capability
 can atomically retain exactly those bodies without changing declarations or
 global IDs. Backend planning consumes the physical retained-definition domain,
 requires bodies only for reachable dispatch selections, and preserves its
-target-private artifact walk. Preliminary and current production MIR remain
-definition-complete. WRR7 is next and will register the selectable production
-pruning pass without enabling it in the default schedule yet.
+target-private artifact walk. The registered `whole-world-reachability` pass
+is listable, measurable, inspectable, and available to exact compiler-internal
+schedules, while `default` still runs only the dead-pure canary. WRR8 is next
+and will harden and activate reachability in the supported default schedule.
 
 ## Pending discoveries
 

@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 through WRR6 are complete and WRR7 is next.
+Status: in progress; WRR0 through WRR7 are complete and WRR8 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -98,7 +98,7 @@ instead of expanding reviewed scope.
 - [x] WRR4 — Verify sparse final executable definitions
 - [x] WRR5 — Add atomic stable-identity definition retention
 - [x] WRR6 — Make backend planning consume the retained domain
-- [ ] WRR7 — Register and observe whole-world reachability pruning
+- [x] WRR7 — Register and observe whole-world reachability pruning
 - [ ] WRR8 — Activate, harden, and close whole-world reachability
 
 ## PR-sized implementation sequence
@@ -536,28 +536,28 @@ the first selectable semantic pruning client.
 analysis and retention foundation without changing the supported default
 schedule yet.
 
-- [ ] Add one cohesive optimization module with typed identity, stable name
+- [x] Add one cohesive optimization module with typed identity, stable name
       `whole-world-reachability`, description, and transformation entry point.
-- [ ] Register the descriptor exactly once and expose it through
+- [x] Register the descriptor exactly once and expose it through
       `available_mir_passes`, `--list-mir-passes`, unknown-name diagnostics,
       and crate-private exact schedule resolution.
-- [ ] Implement the pass solely by consuming the verified reachability product
+- [x] Implement the pass solely by consuming the verified reachability product
       through atomic definition retention; do not rescan MIR or mutate
       declarations/metadata in the pass module.
-- [ ] Return unchanged when no body is removed and changed only after atomic
+- [x] Return unchanged when no body is removed and changed only after atomic
       retention; report examined, reachable, removed, and conservative target
       counts by stable owner/counter names.
-- [ ] Extend occurrence/aggregate reporting without adding pass logging,
+- [x] Extend occurrence/aggregate reporting without adding pass logging,
       graph dumps to report events, live-duration determinism assertions, or
       report-only MIR traversal.
-- [ ] Add deterministic reachability inspection alongside existing verified
+- [x] Add deterministic reachability inspection alongside existing verified
       MIR checkpoints for focused compiler tools/tests, not as new CLI dump
       publication policy.
-- [ ] Keep `none` empty and keep production `default` containing only the
+- [x] Keep `none` empty and keep production `default` containing only the
       existing dead-pure-definition elimination pass during this task.
-- [ ] Prove crate-private schedules containing reachability once, repeatedly,
+- [x] Prove crate-private schedules containing reachability once, repeatedly,
       before/after the canary, and after a synthetic edge-removing pass.
-- [ ] Update driver, reporting, and phase documentation for the registered but
+- [x] Update driver, reporting, and phase documentation for the registered but
       not yet default-enabled pass.
 
 **Tests:** Registry uniqueness and lexical listing; description/help output;
@@ -574,6 +574,27 @@ failures; checkpoint order; deterministic dumps; current default exact parity.
 **Exit criteria:** The pass is registered, listable, selectable by exact
 compiler schedules, measurable, inspectable, repeatable, and fully verified,
 while the supported default compiler still runs only the existing canary.
+
+Completed on 2026-08-31. The immutable registry now contains the typed
+`whole-world-reachability` entry and exposes its stable description through
+the public descriptor query, input-free CLI listing, diagnostics, exclusions,
+and compiler-internal exact schedules. The pass is a thin client of seal-bound
+reachability and atomic definition retention: it performs no MIR rescan or
+metadata mutation, preserves the verified seal when nothing is removed, and
+immediately re-enters central verification after a changed retention commit.
+Its stable pass-owned measurements cover examined/reachable/removed function,
+static-initializer, and member definitions plus whole-program roots, reachable
+nodes/callables, dependency edges, runtime targets, conservative dispatch
+families/requirements, and function-value candidates. Existing occurrence and
+aggregate reporting transports these counters without pass logging or graph
+events. Verified checkpoints now provide an explicitly requested deterministic
+reachability dump for focused tools and tests while the ordinary driver remains
+allocation-free for inspection. Tests cover lexical discovery and diagnostics,
+default/none parity, exact order and repetition, changed and unchanged
+accounting, failure attribution, canary composition, fresh facts after a
+synthetic edge change, checkpoint order, and independent-process dump
+determinism. All WRR7 gates passed; `default` still contains only
+`dead-pure-definition-elimination`, leaving activation to WRR8.
 
 ### WRR8 — Activate, harden, and close whole-world reachability
 
