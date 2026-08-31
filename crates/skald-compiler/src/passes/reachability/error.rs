@@ -6,12 +6,13 @@ use crate::{
         FieldId, FunctionId, FunctionTypeId, InitializerId, InterfaceRequirementId, MethodId,
         OptionalTypeId, StaticFieldId, VirtualFamilyId,
     },
-    mir::{MirPlaceBase, StorageId},
+    mir::{MirExecutionNode, MirPlaceBase, StorageId},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum MirDependencyExtractionError {
     UnknownFunction(FunctionId),
+    NonInternalEntry(FunctionId),
     UnknownMethod(MethodId),
     UnknownVirtualFamily(VirtualFamilyId),
     UnknownInterfaceRequirement(InterfaceRequirementId),
@@ -25,6 +26,7 @@ pub(crate) enum MirDependencyExtractionError {
         callable: CallableId,
         function_type: FunctionTypeId,
     },
+    NonInternalCallableAddress(CallableId),
     UnknownClass(ClassId),
     UnknownArrayType(ArrayTypeId),
     UnknownField(FieldId),
@@ -33,4 +35,7 @@ pub(crate) enum MirDependencyExtractionError {
     UnknownStorage(StorageId),
     InvalidPlaceBase(MirPlaceBase),
     InvalidLifecycleFieldType(FieldId),
+    InvalidStaticCleanup(StaticFieldId),
+    CyclicOptionalLifecycle(OptionalTypeId),
+    MissingReachabilityExplanation(MirExecutionNode),
 }

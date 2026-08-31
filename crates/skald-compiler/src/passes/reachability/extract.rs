@@ -341,6 +341,12 @@ impl<'mir> MirDependencyExtractor<'mir> {
                 let ty = self.place_type(definition, &replace.destination)?;
                 self.add_shared_type_finalizers(source, ty, region, span)?;
             }
+            MirInstruction::StringInitialize(initialize) => self.add_runtime_entity(
+                source,
+                MirRuntimeEntity::LiteralBacking(initialize.data),
+                region,
+                span,
+            ),
             MirInstruction::AggregateOptionalInitialize(initialize) => {
                 if matches!(
                     initialize.source,
@@ -429,7 +435,6 @@ impl<'mir> MirDependencyExtractor<'mir> {
             | MirInstruction::SharedCast(_)
             | MirInstruction::SharedMove(_)
             | MirInstruction::SharedFieldInitialize(_)
-            | MirInstruction::StringInitialize(_)
             | MirInstruction::OptionalInitialize(_)
             | MirInstruction::OptionalAssign(_)
             | MirInstruction::AggregateOptionalPublish(_)

@@ -1,5 +1,7 @@
 //! Target-independent explicit and implicit lifecycle dependencies.
 
+use std::collections::BTreeSet;
+
 use crate::{
     identity::{
         ArrayTypeId, ClassId, CopyAssignmentId, CopyConstructorId, InitializerId, OptionalTypeId,
@@ -8,16 +10,143 @@ use crate::{
         MirArrayAssignElement, MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement,
         MirArrayInstruction, MirArrayLifecycleOperation, MirClassLifecycleOperation,
         MirCopyCapability, MirDestructionStep, MirExecutionNode, MirOptionalAssignmentPlan,
-        MirOptionalCleanupPlan, MirOptionalCopyPlan, MirSelectedCopyOperation, MirSharedTarget,
-        MirSynthesizedCopy, MirSynthesizedFieldCopy, MirType, PreliminaryMirSharedLifecycleTarget,
+        MirOptionalCleanupPlan, MirOptionalCopyPlan, MirProgram, MirSelectedCopyOperation,
+        MirSharedTarget, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirType,
+        PreliminaryMirSharedLifecycleTarget,
     },
     source::Span,
 };
 
 use super::{
     extract::MirDependencyExtractor, MirDependencyEdgeKind, MirDependencyExtractionError,
-    MirDependencyRegion, MirRuntimeEntity,
+    MirDependencyRegion, MirDependencyTarget, MirRuntimeEntity,
 };
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct MirLifecycleDependency {
+    pub(super) target: MirDependencyTarget,
+    pub(super) kind: MirDependencyEdgeKind,
+}
+
+pub(super) fn resolve_shared_finalizer_dependencies(
+    program: &MirProgram,
+    target: MirSharedTarget,
+    kind: MirDependencyEdgeKind,
+) -> Result<Vec<MirLifecycleDependency>, MirDependencyExtractionError> {
+    let mut dependencies = Vec::new();
+    for target in program.shared_lifecycle_targets(target) {
+        match target {
+            PreliminaryMirSharedLifecycleTarget::Class(class) => {
+                if program.class(class).is_none() {
+                    return Err(MirDependencyExtractionError::UnknownClass(class));
+                }
+                dependencies.push(MirLifecycleDependency {
+                    target: MirDependencyTarget::Execution(MirExecutionNode::class(
+                        class,
+                        MirClassLifecycleOperation::CompleteFinalizer,
+                    )),
+                    kind,
+                });
+            }
+            PreliminaryMirSharedLifecycleTarget::Array(array) => {
+                if program.array_type(array).is_none() {
+                    return Err(MirDependencyExtractionError::UnknownArrayType(array));
+                }
+                dependencies.push(MirLifecycleDependency {
+                    target: MirDependencyTarget::Execution(MirExecutionNode::array(
+                        array,
+                        MirArrayLifecycleOperation::Destruction,
+                    )),
+                    kind,
+                });
+                dependencies.push(MirLifecycleDependency {
+                    target: MirDependencyTarget::RuntimeEntity(MirRuntimeEntity::ArrayLifecycle(
+                        array,
+                    )),
+                    kind: MirDependencyEdgeKind::RuntimeEntityReference,
+                });
+            }
+            PreliminaryMirSharedLifecycleTarget::OptionalBox(target) => {
+                dependencies.push(MirLifecycleDependency {
+                    target: MirDependencyTarget::RuntimeEntity(
+                        MirRuntimeEntity::OptionalBoxLayout(target),
+                    ),
+                    kind: MirDependencyEdgeKind::RuntimeEntityReference,
+                });
+            }
+        }
+    }
+    Ok(dependencies)
+}
+
+pub(super) fn resolve_optional_cleanup_dependencies(
+    program: &MirProgram,
+    optional: OptionalTypeId,
+) -> Result<Vec<MirLifecycleDependency>, MirDependencyExtractionError> {
+    let mut dependencies = Vec::new();
+    let mut pending = vec![optional];
+    let mut visited = BTreeSet::new();
+    while let Some(optional) = pending.pop() {
+        if !visited.insert(optional) {
+            return Err(MirDependencyExtractionError::CyclicOptionalLifecycle(
+                optional,
+            ));
+        }
+        dependencies.push(MirLifecycleDependency {
+            target: MirDependencyTarget::RuntimeEntity(MirRuntimeEntity::OptionalLifecycle(
+                optional,
+            )),
+            kind: MirDependencyEdgeKind::RuntimeEntityReference,
+        });
+        let cleanup = program
+            .optional_type(optional)
+            .ok_or(MirDependencyExtractionError::UnknownOptionalType(optional))?
+            .lifecycle
+            .cleanup;
+        match cleanup {
+            MirOptionalCleanupPlan::Class(class) => {
+                if program.class(class).is_none() {
+                    return Err(MirDependencyExtractionError::UnknownClass(class));
+                }
+                dependencies.push(MirLifecycleDependency {
+                    target: MirDependencyTarget::Execution(MirExecutionNode::class(
+                        class,
+                        MirClassLifecycleOperation::CompleteFinalizer,
+                    )),
+                    kind: MirDependencyEdgeKind::OptionalLifecycle,
+                });
+            }
+            MirOptionalCleanupPlan::Optional(nested) => pending.push(nested),
+            MirOptionalCleanupPlan::Array(array) => {
+                if program.array_type(array).is_none() {
+                    return Err(MirDependencyExtractionError::UnknownArrayType(array));
+                }
+                dependencies.push(MirLifecycleDependency {
+                    target: MirDependencyTarget::Execution(MirExecutionNode::array(
+                        array,
+                        MirArrayLifecycleOperation::Destruction,
+                    )),
+                    kind: MirDependencyEdgeKind::ArrayDestruction,
+                });
+                dependencies.push(MirLifecycleDependency {
+                    target: MirDependencyTarget::RuntimeEntity(MirRuntimeEntity::ArrayLifecycle(
+                        array,
+                    )),
+                    kind: MirDependencyEdgeKind::RuntimeEntityReference,
+                });
+            }
+            MirOptionalCleanupPlan::Shared(target) => {
+                dependencies.extend(resolve_shared_finalizer_dependencies(
+                    program,
+                    target,
+                    MirDependencyEdgeKind::SharedFinalizer,
+                )?)
+            }
+            MirOptionalCleanupPlan::Trivial => {}
+        }
+    }
+    Ok(dependencies)
+}
 
 impl MirDependencyExtractor<'_> {
     pub(super) fn extract_implicit_lifecycle(
@@ -406,27 +535,8 @@ impl MirDependencyExtractor<'_> {
         region: MirDependencyRegion,
         span: Span,
     ) -> Result<(), MirDependencyExtractionError> {
-        for target in self.program().shared_lifecycle_targets(target) {
-            match target {
-                PreliminaryMirSharedLifecycleTarget::Class(class) => {
-                    self.add_complete_finalizer(source, class, kind, region, span)?
-                }
-                PreliminaryMirSharedLifecycleTarget::Array(array) => self.add_array_lifecycle(
-                    source,
-                    array,
-                    MirArrayLifecycleOperation::Destruction,
-                    kind,
-                    region,
-                    span,
-                )?,
-                PreliminaryMirSharedLifecycleTarget::OptionalBox(target) => self
-                    .add_runtime_entity(
-                        source,
-                        MirRuntimeEntity::OptionalBoxLayout(target),
-                        region,
-                        span,
-                    ),
-            }
+        for dependency in resolve_shared_finalizer_dependencies(self.program(), target, kind)? {
+            self.add_dependency(source, dependency.target, dependency.kind, region, span);
         }
         Ok(())
     }
@@ -748,45 +858,8 @@ impl MirDependencyExtractor<'_> {
         region: MirDependencyRegion,
         span: Span,
     ) -> Result<(), MirDependencyExtractionError> {
-        let cleanup = self
-            .program()
-            .optional_type(optional)
-            .ok_or(MirDependencyExtractionError::UnknownOptionalType(optional))?
-            .lifecycle
-            .cleanup;
-        self.add_runtime_entity(
-            source,
-            MirRuntimeEntity::OptionalLifecycle(optional),
-            region,
-            span,
-        );
-        match cleanup {
-            MirOptionalCleanupPlan::Class(class) => self.add_complete_finalizer(
-                source,
-                class,
-                MirDependencyEdgeKind::OptionalLifecycle,
-                region,
-                span,
-            )?,
-            MirOptionalCleanupPlan::Optional(nested) => {
-                self.add_optional_cleanup(source, nested, region, span)?
-            }
-            MirOptionalCleanupPlan::Array(array) => self.add_array_lifecycle(
-                source,
-                array,
-                MirArrayLifecycleOperation::Destruction,
-                MirDependencyEdgeKind::ArrayDestruction,
-                region,
-                span,
-            )?,
-            MirOptionalCleanupPlan::Shared(target) => self.add_shared_finalizers(
-                source,
-                target,
-                MirDependencyEdgeKind::SharedFinalizer,
-                region,
-                span,
-            )?,
-            MirOptionalCleanupPlan::Trivial => {}
+        for dependency in resolve_optional_cleanup_dependencies(self.program(), optional)? {
+            self.add_dependency(source, dependency.target, dependency.kind, region, span);
         }
         Ok(())
     }

@@ -153,6 +153,19 @@ impl<'mir> MirTargetResolver<'mir> {
                 function_type: function_type.id,
             });
         }
+        if let CallableId::Function(function) = callable {
+            let linkage = self
+                .program
+                .declarations
+                .get(function)
+                .ok_or(MirDependencyExtractionError::UnknownFunction(function))?
+                .linkage;
+            if linkage != MirFunctionLinkage::Internal {
+                return Err(MirDependencyExtractionError::NonInternalCallableAddress(
+                    callable,
+                ));
+            }
+        }
         Ok(())
     }
 

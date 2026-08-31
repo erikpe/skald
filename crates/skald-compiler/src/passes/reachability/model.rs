@@ -354,6 +354,23 @@ pub(crate) const fn mir_dependency_edge_kind_key(kind: MirDependencyEdgeKind) ->
     }
 }
 
+pub(crate) type MirDependencyEdgeKey = (
+    (u8, usize, usize, usize),
+    u8,
+    MirDependencyTarget,
+    (usize, usize, usize),
+);
+
+/// Canonical dependency ordering shared by extraction, closure, and dumps.
+pub(crate) const fn mir_dependency_edge_key(edge: &MirDependencyEdge) -> MirDependencyEdgeKey {
+    (
+        crate::mir::mir_execution_node_key(edge.source),
+        mir_dependency_edge_kind_key(edge.kind),
+        edge.target,
+        mir_span_key(edge.span),
+    )
+}
+
 /// Canonical ordering of whole-program root policy.
 pub(crate) const fn mir_reachability_root_reason_key(
     reason: MirReachabilityRootReason,

@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 and WRR1 are complete and WRR2 is next.
+Status: in progress; WRR0 through WRR2 are complete and WRR3 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -93,7 +93,7 @@ instead of expanding reviewed scope.
 
 - [x] WRR0 — Establish the execution-dependency contract
 - [x] WRR1 — Centralize possible-target and lifecycle dependency extraction
-- [ ] WRR2 — Implement deterministic root closure and analysis queries
+- [x] WRR2 — Implement deterministic root closure and analysis queries
 - [ ] WRR3 — Bind reachability facts to verified final MIR
 - [ ] WRR4 — Verify sparse final executable definitions
 - [ ] WRR5 — Add atomic stable-identity definition retention
@@ -215,28 +215,28 @@ and no MIR definition is removed.
 **Purpose:** Build the reusable immutable whole-program analysis on complete
 final MIR before changing seals, definition validity, or backend behavior.
 
-- [ ] Collect explicit roots for the program entry, every lifecycle
+- [x] Collect explicit roots for the program entry, every lifecycle
       coordinator activation obligation, and every reverse-shutdown cleanup
       using typed reasons; do not root imported external declarations.
-- [ ] Compute iterative deterministic least-fixed-point reachability over
+- [x] Compute iterative deterministic least-fixed-point reachability over
       execution nodes without recursive compiler-stack traversal.
-- [ ] Implement the coupled function-value fixed point: only address
+- [x] Implement the coupled function-value fixed point: only address
       formations in reached execution nodes populate exact-signature indirect
       candidates, while every reached formation retains its exact target.
-- [ ] Scan all structurally retained blocks of a reached callable
+- [x] Scan all structurally retained blocks of a reached callable
       conservatively; do not infer local CFG reachability in this roadmap.
-- [ ] Record reachable callables, used virtual families, used interface
+- [x] Record reachable callables, used virtual families, used interface
       requirements, function-value signatures/targets, and the initial runtime-
       entity references needed by backend planning.
-- [ ] Provide borrowed deterministic queries for roots, reachability,
+- [x] Provide borrowed deterministic queries for roots, reachability,
       outgoing possible targets, reachable callables, dispatch use, runtime
       entities, and canonical first-witness explanation.
-- [ ] Reuse the existing deterministic graph algorithms where appropriate and
+- [x] Reuse the existing deterministic graph algorithms where appropriate and
       keep internal sets/maps private so representation can be tuned later.
-- [ ] Add a deterministic reachability dump separate from MIR dumps and
+- [x] Add a deterministic reachability dump separate from MIR dumps and
       reporting; include roots, reachable nodes, edge kinds, candidates,
       witnesses, and summary counts without target data.
-- [ ] Expose analysis for focused compiler tests/tools without registering a
+- [x] Expose analysis for focused compiler tests/tools without registering a
       pass or adding a public driver option.
 
 **Tests:** Entry-only and transitive chains; unreachable definitions; self and
@@ -253,6 +253,19 @@ and dumps across repeated and independent-process runs.
 **Exit criteria:** Complete valid final MIR can produce one deterministic,
 queryable target-independent reachability product whose results do not mutate
 MIR, affect pass policy, or enter target lowering.
+
+Completed on 2026-08-31. `passes::reachability` now collects typed entry,
+static-activation, and reverse-shutdown roots and computes an iterative
+least-fixed-point closure over the shared WRR1 dependency inventory. The
+closure couples reached callable-address formations with reached exact-
+signature indirect sites, records runtime and dispatch use, retains canonical
+first explanations, and exposes only borrowed deterministic queries over
+private sorted storage. A separate target-independent dump and focused tests
+cover dead code, structural blocks, recursion, dispatch, function values,
+static lifecycle, lifecycle cycles, external leaves, repeated analysis, and
+independent-process determinism. Analysis remains test/tool-only: it is not
+seal-bound, registered as a pass, consumed by the backend, or allowed to
+mutate MIR.
 
 ### WRR3 — Bind reachability facts to verified final MIR
 

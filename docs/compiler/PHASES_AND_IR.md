@@ -771,7 +771,7 @@ remain distinct roles even when they refer to related semantic identities.
 Canonical comparison keys define deterministic node, edge-kind, root-reason,
 and source-span order without exposing future graph storage.
 
-The contract now has one read-only extraction implementation over borrowed
+The contract has one read-only extraction implementation over borrowed
 ordinary functions, member definitions, and preliminary or final static
 initializer bodies. It records deterministic direct, static, instance,
 virtual-family, interface-conformance, exact callable-address, and indirect-
@@ -779,17 +779,33 @@ signature dependencies; recursively expands canonical class, optional,
 shared-owner, and array lifecycle plans; and preserves external and intrinsic
 calls as typed leaves. Callable-address formations retain their containing
 execution node, exact function type, target, and span so the later closure can
-scope candidates without rescanning MIR.
+scope candidates without rescanning MIR. Shared optional and owner lifecycle
+resolvers also drive exact reverse-shutdown root expansion, so dependency and
+root policy do not maintain separate cleanup walks.
 
 Static-effect analysis consumes these shared targets and lifecycle edges while
 retaining private ownership of static-place access evidence, publication
 phases, witnesses, authority, diagnostics, dumps, and solved effects. The
 superseded static-effect call, function-value, and lifecycle walkers have been
-removed. No root collection, closure, final-MIR fact binding, definition
-removal, schedule change, or backend behavior exists yet. Any new MIR operation
-that can select executable work, or new implicit lifecycle operation, must
-update the exhaustive dependency extraction and its focused coverage in the
-same change.
+removed.
+
+On complete final MIR, the same facade now collects typed roots for the
+internal entry, every static activation, and every reverse-shutdown cleanup,
+then computes an iterative deterministic least fixed point. Reached address
+formations populate only their exact function-type candidate set; reached
+indirect sites and newly discovered candidates are coupled until stable, and
+every reached formation independently retains its addressed internal callable.
+All structurally retained blocks are scanned. Immutable private sorted storage
+backs borrowed queries for roots, nodes, outgoing edges, callable definitions,
+function-value candidates, dispatch use, runtime entities, stable counts, and
+canonical first-witness explanations. A separate target-independent dump is
+available to focused compiler tests and tools.
+
+This analysis is not yet bound to `VerifiedFinalMirProgram`, invoked by central
+verification, registered as a pass, used to remove definitions, or consumed by
+the backend. Any new MIR operation that can select executable work, or new
+implicit lifecycle operation, must update the exhaustive dependency extraction
+and its focused coverage in the same change.
 
 ### Frozen target-independent whole-world reachability direction
 
