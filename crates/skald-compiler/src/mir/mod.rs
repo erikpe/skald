@@ -8,6 +8,10 @@ mod build;
 mod dump;
 mod lower;
 mod model;
+// Program-level executable-definition retention is deliberately separate
+// from callable-local identity rewriting. The final-MIR pass capability is
+// the only production caller permitted to consume its prepared plan.
+pub(crate) mod retain;
 // The final-MIR pass runner is the only production owner permitted to consume
 // this atomic rewrite boundary.
 #[allow(dead_code, unused_imports)]

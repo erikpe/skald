@@ -35,6 +35,8 @@ const INVALID_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(110);
 const MEASURED_UNCHANGED: MirPassIdentity = MirPassIdentity::new(111);
 const RETARGET_CALL: MirPassIdentity = MirPassIdentity::new(112);
 const OBSERVE_RETARGET: MirPassIdentity = MirPassIdentity::new(113);
+const RETAIN_REACHABLE: MirPassIdentity = MirPassIdentity::new(114);
+const OBSERVE_RETENTION: MirPassIdentity = MirPassIdentity::new(115);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -50,7 +52,7 @@ const fn registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 14] = [
+static TEST_REGISTRATIONS: [MirPassRegistration; 16] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -93,6 +95,16 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 14] = [
         "observe-retarget-pass",
         observe_retarget_pass,
     ),
+    registration(
+        RETAIN_REACHABLE,
+        "retain-reachable-pass",
+        retain_reachable_pass,
+    ),
+    registration(
+        OBSERVE_RETENTION,
+        "observe-retention-pass",
+        observe_retention_pass,
+    ),
 ];
 
 thread_local! {
@@ -101,6 +113,7 @@ thread_local! {
     static RETARGET_CONFIGURATION: Cell<Option<(CallableId, StaticFieldId)>> = const { Cell::new(None) };
     static RETARGET_CALL_CONFIGURATION: Cell<Option<(CallableId, FunctionId, FunctionId)>> = const { Cell::new(None) };
     static REWRITTEN_CALLABLES: RefCell<Vec<CallableId>> = const { RefCell::new(Vec::new()) };
+    static RETENTION_OBSERVATION: Cell<Option<(usize, usize)>> = const { Cell::new(None) };
 }
 
 fn lowered_program() -> MirProgram {
@@ -121,6 +134,7 @@ fn clear_test_state() {
     RETARGET_CONFIGURATION.with(|configuration| configuration.set(None));
     RETARGET_CALL_CONFIGURATION.with(|configuration| configuration.set(None));
     REWRITTEN_CALLABLES.with(|callables| callables.borrow_mut().clear());
+    RETENTION_OBSERVATION.with(|observation| observation.set(None));
 }
 
 fn log_execution(name: &'static str) {
@@ -240,6 +254,90 @@ fn unchanged_pass_retains_the_verified_product_without_reverification() {
     assert_eq!(measured.statistics.verification_executions(), 1);
     assert_eq!(measured.statistics.pass_executions(), 1);
     assert_eq!(measured.statistics.processed_callables(), 0);
+}
+
+#[test]
+fn unchanged_definition_retention_preserves_the_verified_seal() {
+    clear_test_state();
+    let mir = lowered_program();
+    let expected = verify_final_mir(mir.clone()).unwrap();
+
+    let measured = run_mir_pipeline_measured(mir, &test_schedule(&[RETAIN_REACHABLE]));
+
+    assert_eq!(measured.result.unwrap(), expected);
+    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.statistics.pass_executions(), 1);
+    assert_eq!(measured.statistics.processed_callables(), 1);
+    assert_eq!(measured.statistics.changed_callables(), 0);
+}
+
+#[test]
+fn changed_definition_retention_is_reverified_with_fresh_reachability_facts() {
+    clear_test_state();
+    let mir = lower_source_to_final_mir(
+        "fn dead() -> i64 { return 9; }
+         fn main() -> i64 { return 0; }",
+    );
+    let dead = mir
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "dead")
+        .unwrap()
+        .id;
+
+    let measured =
+        run_mir_pipeline_measured(mir, &test_schedule(&[RETAIN_REACHABLE, OBSERVE_RETENTION]));
+    let verified = measured.result.unwrap();
+
+    assert!(verified.definitions.get(dead).is_none());
+    assert_eq!(
+        RETENTION_OBSERVATION.with(Cell::get),
+        Some((1, 1)),
+        "the later pass must observe matching retained bodies and refreshed facts"
+    );
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.pass_executions(), 2);
+    assert_eq!(measured.statistics.processed_callables(), 2);
+    assert_eq!(measured.statistics.changed_callables(), 1);
+}
+
+#[test]
+fn repeated_definition_retention_is_changed_then_idempotently_unchanged() {
+    clear_test_state();
+    let mir = lower_source_to_final_mir(
+        "fn first_dead() -> i64 { return 1; }
+         fn second_dead() -> i64 { return 2; }
+         fn main() -> i64 { return 0; }",
+    );
+
+    let measured = run_mir_pipeline_with_occurrences(
+        mir,
+        &test_schedule(&[RETAIN_REACHABLE, RETAIN_REACHABLE]),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.processed_callables(), 4);
+    assert_eq!(measured.statistics.changed_callables(), 2);
+    assert_eq!(
+        measured
+            .occurrences()
+            .iter()
+            .map(|record| record.outcome())
+            .collect::<Vec<_>>(),
+        [
+            MirPassOccurrenceOutcome::Changed,
+            MirPassOccurrenceOutcome::Unchanged,
+        ]
+    );
+    assert_eq!(
+        measured
+            .occurrences()
+            .iter()
+            .map(|record| record.verification_executions())
+            .collect::<Vec<_>>(),
+        [1, 0]
+    );
 }
 
 #[test]
@@ -1005,6 +1103,28 @@ fn observe_retarget_pass(capability: MirPassCapability) -> Result<MirPassOutcome
     let reachable = capability.verified().reachability().reachable_callables();
     assert!(!reachable.contains(&old.into()));
     assert!(reachable.contains(&target.into()));
+    Ok(capability.unchanged())
+}
+
+fn retain_reachable_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+    log_execution("retain-reachable");
+    let retention = capability.retain_reachable_definitions()?;
+    let removed = retention.summary().removed().total();
+    retention.finish(MirPassData::changed(removed))
+}
+
+fn observe_retention_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+    log_execution("observe-retention");
+    RETENTION_OBSERVATION.with(|observation| {
+        observation.set(Some((
+            capability.verified().definitions.len(),
+            capability
+                .verified()
+                .reachability()
+                .retained_definitions()
+                .len(),
+        )));
+    });
     Ok(capability.unchanged())
 }
 

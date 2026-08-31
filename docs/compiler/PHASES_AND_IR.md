@@ -835,10 +835,31 @@ it. Every retained body remains fully verified even when unreachable, and
 static activation, reverse shutdown, and immutable lifecycle baseline
 authority remain enforced with unrelated sparse definitions.
 
-Reachability is not yet registered as a pass, used to remove definitions, or
-consumed by backend lowering. Any new MIR operation that can select executable
-work, or new implicit lifecycle operation, must update the exhaustive
-dependency extraction and its focused coverage in the same change.
+MIR now also owns a private program-level definition-retention facade separate
+from callable-local identity rewriting. The pipeline capability asks this
+facade to prepare an opaque plan from the reachability facts sealed with the
+exact verified input; callers cannot provide a retained-ID set or predicate.
+Preparation borrows MIR, validates that every current static initializer is
+rooted, and computes canonical removed IDs plus examined, retained, and removed
+counts for functions, static initializers, initializers, copy constructors,
+copy assignments, destructors, and methods. An error therefore occurs before
+any definition container is consumed.
+
+An unchanged plan returns the original verified product without another
+verification execution. A changed plan alone may invalidate the seal, move
+retained function and member bodies into rebuilt containers, preserve existing
+function holes and member-key order, and publish complete raw MIR. The pass
+runner immediately sends that product through central final verification and
+rebuilds coherent reachability facts before a later pass or checkpoint can see
+it. Retention never rewrites a body, static initializer, declaration, global
+identity, metadata table, source span, coordinator region, or lifecycle proof.
+No production optimization invokes the capability yet.
+
+No reachability optimization is yet registered or used by production to remove
+definitions, and backend lowering does not yet consume the retained domain.
+Any new MIR operation that can select executable work, or new implicit
+lifecycle operation, must update the exhaustive dependency extraction and its
+focused coverage in the same change.
 
 ### Frozen target-independent whole-world reachability direction
 

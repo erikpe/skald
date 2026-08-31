@@ -6,7 +6,7 @@ use super::{
     error::MirPipelineError,
     inspection::{MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineInspector},
     measurement::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord},
-    model::{MirPassCapability, MirPassFailure, MirPassOutcome},
+    model::{MirPassCapability, MirPassChange, MirPassFailure, MirPassOutcome},
     statistics::{MeasuredMirPipeline, MirPipelineStatistics},
 };
 use crate::passes::pipeline::{verify_final_mir, MirPassOccurrence, MirPassSchedule};
@@ -101,10 +101,16 @@ fn run(
                 verified = unchanged;
                 inspect_checkpoint(&mut inspector, after_label(occurrence), &verified);
             }
-            MirPassOutcome::Changed { rewrite, data } => {
+            MirPassOutcome::Changed { change, data } => {
                 statistics.record_pass_data(occurrence, &data);
-                let rewrite_changes = statistics.record_rewrite(&rewrite);
-                let MirProgramRewriteResult { program, .. } = rewrite;
+                let (program, rewrite_changes) = match change {
+                    MirPassChange::Rewrite(rewrite) => {
+                        let rewrite_changes = statistics.record_rewrite(&rewrite);
+                        let MirProgramRewriteResult { program, .. } = rewrite;
+                        (program, rewrite_changes)
+                    }
+                    MirPassChange::DefinitionRetention(program) => (program, Default::default()),
+                };
                 statistics.record_verification();
                 verified = match verify_final_mir(program) {
                     Ok(verified) => {

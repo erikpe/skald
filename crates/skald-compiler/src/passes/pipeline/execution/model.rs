@@ -2,7 +2,14 @@ use std::fmt;
 
 use crate::{
     identity::CallableId,
-    mir::rewrite::{rewrite_program, MirCallableEdit, MirProgramRewriteResult, MirRewriteError},
+    mir::{
+        retain::{
+            prepare_reachable_definition_retention, MirDefinitionRetention,
+            MirDefinitionRetentionSummary,
+        },
+        rewrite::{rewrite_program, MirCallableEdit, MirProgramRewriteResult, MirRewriteError},
+        MirProgram,
+    },
 };
 
 use super::super::VerifiedFinalMirProgram;
@@ -144,6 +151,39 @@ impl MirPassCapability {
             .map(|rewrite| MirChangedProgram { rewrite })
             .map_err(MirPassFailure::Rewrite)
     }
+
+    /// Prepares exact whole-world definition retention from the facts sealed
+    /// with this verified product. An unchanged result keeps the original seal;
+    /// a changed result consumes it only after every retention precondition
+    /// has succeeded.
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) fn retain_reachable_definitions(
+        self,
+    ) -> Result<MirDefinitionRetentionOutcome, MirPassFailure> {
+        let retention = prepare_reachable_definition_retention(
+            self.verified.program(),
+            self.verified.reachability(),
+        )
+        .map_err(|error| {
+            MirPassFailure::execution(format!("definition retention failed: {error}"))
+        })?;
+        Ok(match retention {
+            MirDefinitionRetention::Unchanged(summary) => {
+                MirDefinitionRetentionOutcome::Unchanged {
+                    verified: self.verified,
+                    summary,
+                }
+            }
+            MirDefinitionRetention::Changed(prepared) => {
+                let program = self.verified.invalidate_for_transformation();
+                let change = prepared.apply(program);
+                MirDefinitionRetentionOutcome::Changed {
+                    program: change.program,
+                    summary: change.summary,
+                }
+            }
+        })
+    }
 }
 
 /// Successful atomic dense commit awaiting pass-owned change accounting.
@@ -166,10 +206,62 @@ impl MirChangedProgram {
         }
         let data = data.with_processed_callables(self.rewrite.callables.len());
         Ok(MirPassOutcome::Changed {
-            rewrite: self.rewrite,
+            change: MirPassChange::Rewrite(self.rewrite),
             data,
         })
     }
+}
+
+/// Seal-preserving unchanged or raw changed result from exact definition
+/// retention, awaiting pass-owned accounting.
+pub(in crate::passes::pipeline) enum MirDefinitionRetentionOutcome {
+    Unchanged {
+        verified: VerifiedFinalMirProgram,
+        summary: MirDefinitionRetentionSummary,
+    },
+    Changed {
+        program: MirProgram,
+        summary: MirDefinitionRetentionSummary,
+    },
+}
+
+impl MirDefinitionRetentionOutcome {
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) const fn summary(&self) -> &MirDefinitionRetentionSummary {
+        match self {
+            Self::Unchanged { summary, .. } | Self::Changed { summary, .. } => summary,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) fn finish(
+        self,
+        data: MirPassData,
+    ) -> Result<MirPassOutcome, MirPassFailure> {
+        let summary = self.summary();
+        let examined = summary.examined().total();
+        let removed = summary.removed().total();
+        if data.changed_callables() != removed {
+            return Err(MirPassFailure::execution(format!(
+                "definition retention removed {removed} callables but the pass reported {} changed callables",
+                data.changed_callables()
+            )));
+        }
+        let data = data.with_processed_callables(examined);
+        Ok(match self {
+            Self::Unchanged { verified, .. } => MirPassOutcome::Unchanged { verified, data },
+            Self::Changed { program, .. } => MirPassOutcome::Changed {
+                change: MirPassChange::DefinitionRetention(program),
+                data,
+            },
+        })
+    }
+}
+
+/// Complete raw MIR from one supported atomic transformation owner.
+pub(in crate::passes::pipeline) enum MirPassChange {
+    Rewrite(MirProgramRewriteResult),
+    DefinitionRetention(MirProgram),
 }
 
 /// Explicit ownership result from one pass occurrence.
@@ -179,7 +271,7 @@ pub(in crate::passes::pipeline) enum MirPassOutcome {
         data: MirPassData,
     },
     Changed {
-        rewrite: MirProgramRewriteResult,
+        change: MirPassChange,
         data: MirPassData,
     },
 }

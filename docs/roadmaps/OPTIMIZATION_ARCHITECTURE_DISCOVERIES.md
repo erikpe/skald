@@ -10,9 +10,9 @@ and active
 Its dependency vocabulary, shared target/lifecycle extraction, explicit roots,
 deterministic closure, analysis-query foundation, and coherent final-MIR seal
 binding are implemented. WRR4 also makes independently verified sparse final
-definitions legal while preserving definition-complete preliminary and current
-production output; atomic retention, backend consumption, and pruning remain
-in progress.
+definitions legal, and WRR5 adds the private atomic stable-identity retention
+capability. Preliminary and current production output remain definition-
+complete; backend consumption and selectable pruning remain in progress.
 The static-lifecycle
 and dense callable-local identity constraints are resolved by their completed
 [static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)

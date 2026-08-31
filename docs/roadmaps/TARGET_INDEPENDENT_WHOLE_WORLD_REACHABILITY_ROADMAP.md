@@ -1,6 +1,6 @@
 # Target-Independent Whole-World Reachability Roadmap
 
-Status: in progress; WRR0 through WRR4 are complete and WRR5 is next.
+Status: in progress; WRR0 through WRR5 are complete and WRR6 is next.
 
 This roadmap implements the frozen
 [target-independent whole-world reachability design](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
@@ -96,7 +96,7 @@ instead of expanding reviewed scope.
 - [x] WRR2 — Implement deterministic root closure and analysis queries
 - [x] WRR3 — Bind reachability facts to verified final MIR
 - [x] WRR4 — Verify sparse final executable definitions
-- [ ] WRR5 — Add atomic stable-identity definition retention
+- [x] WRR5 — Add atomic stable-identity definition retention
 - [ ] WRR6 — Make backend planning consume the retained domain
 - [ ] WRR7 — Register and observe whole-world reachability pruning
 - [ ] WRR8 — Activate, harden, and close whole-world reachability
@@ -393,31 +393,31 @@ until WRR5 introduces atomic retention.
 physically remove unreachable bodies without turning global retention into
 general mutable MIR access.
 
-- [ ] Add a concise `mir` retention facade separate from callable-local
+- [x] Add a concise `mir` retention facade separate from callable-local
       `mir::rewrite`, with cohesive function, member, lifecycle-initializer,
       result, summary, and structured-error owners.
-- [ ] Consume a verified final-MIR product and its seal-bound reachability
+- [x] Consume a verified final-MIR product and its seal-bound reachability
       facts through one pipeline-owned capability; do not accept a caller-
       constructed retained-ID set as proof.
-- [ ] Preserve dense function declarations and sparse definition-slot
+- [x] Preserve dense function declarations and sparse definition-slot
       positions, member declarations and keys, static lifecycle coordinator,
       all global identities, spans, metadata, proof authority, and every
       retained body byte-for-byte.
-- [ ] Remove unreachable ordinary function and member definitions in canonical
+- [x] Remove unreachable ordinary function and member definitions in canonical
       identity order; assert that all current static initializer bodies remain
       rooted and retained.
-- [ ] Publish rebuilt definition containers only after every retention
+- [x] Publish rebuilt definition containers only after every retention
       precondition succeeds, and expose no partially filtered `MirProgram` on
       error.
-- [ ] Return stable removed callable IDs plus examined, retained, and removed
+- [x] Return stable removed callable IDs plus examined, retained, and removed
       counts by callable kind without logging, verification, dumping, or
       reporting.
-- [ ] Add an explicit unchanged result that preserves the verified seal and
+- [x] Add an explicit unchanged result that preserves the verified seal and
       avoids another final verification execution when no definition is
       removed.
-- [ ] Route changed results through the existing immediate central
+- [x] Route changed results through the existing immediate central
       reverification boundary and refresh reachability facts before exposure.
-- [ ] Keep arbitrary declaration deletion, global compaction, target narrowing,
+- [x] Keep arbitrary declaration deletion, global compaction, target narrowing,
       metadata rewriting, and caller-supplied retention predicates outside the
       facade.
 
@@ -437,6 +437,24 @@ repeated retention idempotence.
 definition tables equal the verified reachable callable set without changing
 semantic declarations or IDs, and every changed result is independently
 resealed.
+
+Completed on 2026-08-31. `mir::retain` now prepares one opaque retention plan
+directly from seal-bound reachability facts while borrowing the exact verified
+program. Preparation inventories ordinary functions, every member kind, and
+static initializer bodies in canonical identity order, returns stable removed
+IDs and per-kind examined/retained/removed counts, and rejects an unrooted
+static initializer before consuming any container. An unchanged plan preserves
+the original verified product. Only a validated changed plan may invalidate
+the seal, move retained function/member bodies into rebuilt sparse/ordered
+containers, and publish complete raw MIR for immediate central
+reverification. The operation leaves declarations, global identities,
+metadata, spans, retained bodies, coordinator regions, and lifecycle authority
+untouched and exposes no predicate or mutable table API. Focused tests cover
+all definition kinds, static roots, existing holes, canonical order, exact
+metadata/body preservation, summaries, atomic failure, unchanged verification
+accounting, fresh changed facts, and repeated idempotence. The capability is
+not yet registered as a production optimization; backend preparation remains
+the next task.
 
 ### WRR6 — Make backend planning consume the retained domain
 
