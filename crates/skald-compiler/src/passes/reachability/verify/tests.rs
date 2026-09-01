@@ -1,9 +1,15 @@
 //! Sparse final-MIR completeness tests at the central verification boundary.
 
 use crate::{
-    identity::{CallableId, ClassId},
+    identity::{CallableId, ClassId, StaticFieldId},
     mir::{verify_mir, verify_preliminary_mir, MirProgram},
-    passes::{verify_final_mir, VerifiedFinalMirProgram},
+    passes::{
+        static_lifecycle::{
+            plan_static_lifetimes_for_fields_for_test, synthesize_static_lifecycle,
+            verify_planned_mir,
+        },
+        verify_final_mir, VerifiedFinalMirProgram,
+    },
     test_support::{lower_generic_source_to_final_mir, lower_generic_source_to_preliminary_mir},
 };
 
@@ -38,6 +44,38 @@ fn method(program: &MirProgram, class_name: &str, name: &str) -> CallableId {
         .id
         .into()
 }
+
+fn static_field(program: &MirProgram, class_name: &str, name: &str) -> StaticFieldId {
+    program
+        .classes
+        .iter()
+        .find(|class| class.name == class_name)
+        .unwrap_or_else(|| panic!("missing class `{class_name}`"))
+        .static_fields
+        .iter()
+        .find(|field| field.name == name)
+        .unwrap_or_else(|| panic!("missing static field `{class_name}.{name}`"))
+        .id
+}
+
+fn sparse_static_program(source: &str, active_names: &[&str]) -> MirProgram {
+    let preliminary = lower_generic_source_to_preliminary_mir(source);
+    let active = active_names
+        .iter()
+        .map(|name| static_field(preliminary.program(), "State", name))
+        .collect();
+    let planned = plan_static_lifetimes_for_fields_for_test(preliminary, active)
+        .expect("test program must have an acyclic sparse lifecycle plan");
+    synthesize_static_lifecycle(verify_planned_mir(planned).unwrap())
+}
+
+const SPARSE_ACCESS_SOURCE: &str = "class State {
+       static live: i64 = 1;
+       static inactive: i64 = 2;
+       init() {}
+     }
+     fn dead() -> i64 { return State.inactive; }
+     fn main() -> i64 { return State.live; }";
 
 fn missing_definition_error(
     mut program: MirProgram,
@@ -88,6 +126,110 @@ fn assert_reachable_graph_contains_kind(
 
 fn assert_verified(program: MirProgram) -> VerifiedFinalMirProgram {
     verify_final_mir(program).expect("unreachable definitions may be absent from final MIR")
+}
+
+#[test]
+fn inactive_static_access_is_allowed_only_in_unreachable_retained_code() {
+    let program = sparse_static_program(SPARSE_ACCESS_SOURCE, &["live"]);
+    let dead = function(&program, "dead");
+    let verified = verify_final_mir(program).expect("unreachable access is not executable");
+
+    assert!(verified.program().has_executable_definition(dead));
+    assert!(!verified
+        .reachability()
+        .static_accesses()
+        .iter()
+        .any(|access| {
+            access.target() == static_field(verified.program(), "State", "inactive")
+        }));
+}
+
+#[test]
+fn reachable_inactive_static_access_has_exact_deterministic_failure() {
+    let source = SPARSE_ACCESS_SOURCE.replace(
+        "fn main() -> i64 { return State.live; }",
+        "fn main() -> i64 { return State.inactive; }",
+    );
+    let program = sparse_static_program(&source, &["live"]);
+    let entry = program.entry_function;
+    let inactive = static_field(&program, "State", "inactive");
+    let first = verify_final_mir(program.clone()).unwrap_err();
+    let second = verify_final_mir(program).unwrap_err();
+
+    assert_eq!(first, second);
+    assert!(first.iter().any(|error| {
+        error.callable == Some(entry.into())
+            && error
+                .message
+                .contains(&format!("targets inactive field {inactive}"))
+            && error.message.contains("Entry")
+    }));
+}
+
+#[test]
+fn structural_false_branch_does_not_hide_reachable_inactive_access() {
+    let program = sparse_static_program(
+        "class State {
+           static live: i64 = 1;
+           static inactive: i64 = 2;
+           init() {}
+         }
+         fn main() -> i64 {
+           if (false) { return State.inactive; }
+           return State.live;
+         }",
+        &["live"],
+    );
+
+    assert!(verify_final_mir(program)
+        .unwrap_err()
+        .iter()
+        .any(|error| error.message.contains("targets inactive field")));
+}
+
+#[test]
+fn changed_entry_rebuilds_reachability_and_rejects_new_inactive_access() {
+    let mut program = sparse_static_program(SPARSE_ACCESS_SOURCE, &["live"]);
+    verify_final_mir(program.clone()).expect("original entry accesses only active storage");
+    program.entry_function = match function(&program, "dead") {
+        CallableId::Function(function) => function,
+        _ => unreachable!(),
+    };
+
+    assert!(verify_final_mir(program)
+        .unwrap_err()
+        .iter()
+        .any(|error| error.message.contains("targets inactive field")));
+}
+
+#[test]
+fn active_lifecycle_remains_reachable_after_ordinary_access_disappears() {
+    let program = sparse_static_program(
+        "class State { static live: i64 = 1; init() {} }
+         fn main() -> i64 { return 0; }",
+        &["live"],
+    );
+    let live = static_field(&program, "State", "live");
+    let verified = verify_final_mir(program).expect("activation is monotone across final MIR");
+
+    assert!(verified
+        .program()
+        .static_lifecycle
+        .as_ref()
+        .unwrap()
+        .lifecycle()
+        .proof()
+        .activation()
+        .contains(live));
+    assert!(verified
+        .reachability()
+        .runtime_entities()
+        .contains(&super::super::MirRuntimeEntity::StaticStorage(live)));
+    assert!(!verified
+        .reachability()
+        .static_accesses()
+        .iter()
+        .any(|access| access.target() == live && !access.is_lifecycle_owned()));
 }
 
 #[test]

@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     mir_execution_node_key, MirCallableAddressFormation, MirDependencyEdge, MirReachabilityRoot,
-    MirRetainedDefinition, MirRuntimeEntity,
+    MirRetainedDefinition, MirRuntimeEntity, MirStaticAccess,
 };
 
 /// Canonical reachable candidates for one exact function type.
@@ -137,6 +137,7 @@ pub(crate) struct MirReachabilityCounts {
     pub(crate) reachable_callables: usize,
     pub(crate) retained_definitions: usize,
     pub(crate) dependencies: usize,
+    pub(crate) static_accesses: usize,
     pub(crate) runtime_entities: usize,
     pub(crate) virtual_families: usize,
     pub(crate) interface_requirements: usize,
@@ -152,6 +153,7 @@ pub(crate) struct MirReachabilityAnalysis {
     reachable_callables: Vec<CallableId>,
     retained_definitions: Vec<MirRetainedDefinition>,
     outgoing: Vec<MirReachableOutgoingDependencies>,
+    static_accesses: Vec<MirStaticAccess>,
     function_values: Vec<MirReachableFunctionValueCandidates>,
     runtime_entities: Vec<MirRuntimeEntity>,
     virtual_families: Vec<VirtualFamilyId>,
@@ -166,6 +168,7 @@ pub(super) struct MirReachabilityAnalysisParts {
     pub(super) reachable_callables: Vec<CallableId>,
     pub(super) retained_definitions: Vec<MirRetainedDefinition>,
     pub(super) outgoing: Vec<MirReachableOutgoingDependencies>,
+    pub(super) static_accesses: Vec<MirStaticAccess>,
     pub(super) function_values: Vec<MirReachableFunctionValueCandidates>,
     pub(super) runtime_entities: Vec<MirRuntimeEntity>,
     pub(super) virtual_families: Vec<VirtualFamilyId>,
@@ -182,6 +185,7 @@ impl MirReachabilityAnalysis {
             reachable_callables: parts.reachable_callables,
             retained_definitions: parts.retained_definitions,
             outgoing: parts.outgoing,
+            static_accesses: parts.static_accesses,
             function_values: parts.function_values,
             runtime_entities: parts.runtime_entities,
             virtual_families: parts.virtual_families,
@@ -235,6 +239,35 @@ impl MirReachabilityAnalysis {
 
     pub(crate) fn outgoing(&self) -> &[MirReachableOutgoingDependencies] {
         &self.outgoing
+    }
+
+    /// Exact direct static-place accesses contained in reachable execution
+    /// nodes, in canonical source/effect order.
+    pub(crate) fn static_accesses(&self) -> &[MirStaticAccess] {
+        &self.static_accesses
+    }
+
+    pub(crate) fn static_accesses_from(&self, source: MirExecutionNode) -> &[MirStaticAccess] {
+        let source_key = mir_execution_node_key(source);
+        let start = self
+            .static_accesses
+            .partition_point(|access| mir_execution_node_key(access.source()) < source_key);
+        let count = self.static_accesses[start..]
+            .partition_point(|access| mir_execution_node_key(access.source()) == source_key);
+        &self.static_accesses[start..start + count]
+    }
+
+    /// Canonical root and dependency path selecting an access's source node.
+    pub(crate) fn static_access_explanation(
+        &self,
+        access: &MirStaticAccess,
+    ) -> Option<&MirReachabilityExplanation> {
+        self.static_accesses
+            .binary_search_by_key(&super::mir_static_access_key(access), |candidate| {
+                super::mir_static_access_key(candidate)
+            })
+            .ok()
+            .and_then(|_| self.explanation(access.source()))
     }
 
     pub(crate) fn function_value_candidates(&self) -> &[MirReachableFunctionValueCandidates] {

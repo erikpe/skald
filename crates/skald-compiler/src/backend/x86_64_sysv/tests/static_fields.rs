@@ -21,7 +21,7 @@ const SOURCE: &str = concat!(
 
 #[test]
 fn emits_deterministic_aligned_zero_slots_and_rip_relative_addresses() {
-    let program = lower_source_to_mir(SOURCE);
+    let program = lower_source_to_final_mir(SOURCE);
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     assert_eq!(output, emit_assembly(Target::X86_64SysV, &program).unwrap());
     for (index, size) in [8, 1, 8, 1].into_iter().enumerate() {
@@ -138,7 +138,7 @@ fn optional_static_layout_reuses_inline_layout_without_changing_instances() {
         "class State { static number: i64?; static item: Item?; init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
     );
-    let program = lower_source_to_mir(source);
+    let program = lower_source_to_final_mir(source);
     let layout = DataLayout::compute(&program).unwrap();
     let primitive = layout
         .ty(MirType::Optional(

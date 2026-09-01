@@ -20,7 +20,10 @@ use super::verify::{debug_assert_exact_synthesized_realization, VerifiedPlannedM
 /// let _ = synthesize_static_lifecycle(draft);
 /// ```
 pub fn synthesize_static_lifecycle(verified: VerifiedPlannedMirProgram) -> MirProgram {
-    let planned = verified.into_program();
+    // Independently issued semantic activation reaches this boundary, while
+    // production synthesis deliberately remains driven by the compatibility
+    // lifecycle proof until semantic cutover.
+    let (planned, _semantic_activation) = verified.into_parts();
     let (preliminary, planned_lifecycle) = planned.into_executable_parts();
     let (mut program, _fields, initializers) = preliminary.into_parts();
     let mut initializers = initializers

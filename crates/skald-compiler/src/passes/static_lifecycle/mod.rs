@@ -26,6 +26,8 @@ pub use analysis::{
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectSummary, StaticFunctionValueCandidates,
     StaticFunctionValueTarget,
 };
+#[cfg(test)]
+pub(crate) use plan::plan_static_lifetimes_for_fields_for_test;
 pub use plan::{
     dump_planned_mir, dump_static_lifetime_plan, plan_static_lifetimes, PlannedMirProgram,
     StaticLifecyclePlan, StaticLifecyclePlanningFailure, StaticLifecyclePlanningReport,

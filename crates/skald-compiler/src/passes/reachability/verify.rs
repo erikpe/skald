@@ -1,10 +1,16 @@
 //! Reachability-owned completeness verification for sparse final MIR.
 
+mod access;
+mod lifecycle;
+
 use std::fmt;
 
 use crate::mir::{MirExecutionNode, MirProgram, MirVerificationError, MirVerificationErrors};
 
 use super::{MirDependencyEdgeKind, MirReachabilityAnalysis, MirReachabilityRootReason};
+
+pub(in crate::passes) use access::verify_reachable_static_accesses;
+pub(in crate::passes) use lifecycle::verify_active_lifecycle_reachability;
 
 /// Requires a retained body only when independently computed reachability
 /// proves that the callable can execute in this exact final-MIR product.

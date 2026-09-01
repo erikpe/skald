@@ -43,6 +43,47 @@ fn errors(program: &PlannedMirProgram) -> String {
 mod subsets;
 
 #[test]
+fn planned_verification_independently_seals_exact_shadow_activation() {
+    let planned = plan(
+        "class State {
+           static used: i64 = 1;
+           static unused: i64 = 2;
+           init() {}
+         }
+         fn main() -> i64 { return State.used; }",
+    );
+
+    assert_eq!(planned.activation_authority().len(), 2);
+    let verified = verify_planned_mir(planned).unwrap();
+    assert_eq!(verified.semantic_activation_for_test().len(), 1);
+}
+
+#[test]
+fn planned_verification_rejects_untrusted_shadow_activation_claims() {
+    let mut planned = plan(
+        "class State {
+           static used: i64 = 1;
+           static unused: i64 = 2;
+           init() {}
+         }
+         fn main() -> i64 { return State.used; }",
+    );
+    planned
+        .planning_report_mut_for_test()
+        .activation_mut_for_test()
+        .active_fields_mut_for_test()
+        .clear();
+
+    let first = errors(&planned);
+    let second = errors(&planned);
+    assert_eq!(first, second);
+    assert!(first.contains(
+        "planning report shadow activation disagrees with independent preliminary-MIR activation"
+    ));
+    assert!(first.contains("missing"));
+}
+
+#[test]
 fn accepts_a_complete_hand_built_phase_product() {
     let checked = type_check_source(
         "class State { static value: i64 = 1; init() {} }

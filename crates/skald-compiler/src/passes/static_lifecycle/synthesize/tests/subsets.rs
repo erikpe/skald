@@ -72,6 +72,10 @@ fn moves_only_active_bodies_without_compacting_declarations() {
 fn rejects_missing_and_extra_coordinator_components() {
     let valid = sparse_synthesized(&[0, 2]);
 
+    let mut missing_coordinator = valid.clone();
+    missing_coordinator.static_lifecycle = None;
+    assert!(errors(&missing_coordinator).contains("has no lifecycle coordinator"));
+
     let mut missing_initializer = valid.clone();
     missing_initializer
         .static_lifecycle

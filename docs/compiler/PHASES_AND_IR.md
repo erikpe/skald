@@ -478,12 +478,14 @@ diagnostic behavior.
 
 ### Frozen reachability-gated static lifecycle direction
 
-Status: **frozen direction, shadow analysis and subset-capable lifecycle schema
-implemented; semantic cutover not yet implemented**. The compiler now computes
-the exact activation closure at the accepted preliminary-MIR boundary, and its
-proof, planner, synthesis, dumps, and verifiers can represent any exact active
-subset. The production entry point still certifies every declared static and
-therefore preserves current eager runtime behavior. The source-visible contract is owned by
+Status: **frozen direction, independently sealed shadow activation and final
+safety boundary implemented; semantic cutover not yet implemented**. The
+compiler now computes and independently re-solves the exact activation closure
+at the accepted preliminary-MIR boundary. Its proof, planner, synthesis, dumps,
+and verifiers can represent any exact active subset, and central final
+verification rejects reachable accesses outside the certified subset. The
+production entry point still certifies every declared static and therefore
+preserves current eager runtime behavior. The source-visible contract is owned by
 [Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
 the complete decisions by the
 [frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
@@ -512,10 +514,11 @@ shared-owner, and array target rules are part of the frozen semantic analysis.
 One immutable analysis product owns the canonically sorted active set,
 activation edges, conservative targets, counts, and canonical first triggers
 and witnesses. Planning reports and dumps may retain explanations, but proof
-identity remains compact. Independent issuance re-extracts preliminary MIR and
-binds the exact active-field set plus normalized active lifecycle-root effects
-into the static-lifecycle certificate; it does not trust solved summaries or
-witness paths.
+identity remains compact. Planned-MIR verification re-extracts preliminary MIR,
+re-solves activation without trusting the planning report, solved summaries, or
+witness paths, and seals the resulting exact field set separately in the
+verified phase product. Until semantic cutover, lifecycle planning deliberately
+continues to issue its production certificate for the all-declared set.
 
 Planned and final lifecycle MIR contain definitions, order, initializer bodies,
 activation regions, destruction regions, and root authority for exactly the
@@ -526,13 +529,21 @@ only over the active dependency graph, while every ordinary source and
 preliminary-MIR diagnostic remains definition-complete.
 
 Final verification independently checks exact coordinator coverage and
-monotone realization of active baseline authority. It also combines canonical
-whole-world reachability with static-place extraction: every access in a
-reachable final execution node must target an active field. A physically
-retained but unreachable body may mention an inactive declaration. Any changed
-pass invalidates both final reachability and lifecycle realization; a pass that
-makes an inactive access reachable or adds an unauthorized active-root effect
-fails central verification.
+monotone realization of active baseline authority. Canonical whole-world
+reachability now retains the exact static-place accesses from reachable
+execution nodes together with their selecting root and dependency explanation.
+Central verification independently reconstructs the program roots and requires
+every such access to target the lifecycle certificate's active authority, every
+active field's storage to remain reachable, and every activation or shutdown
+root to remain present. Final MIR containing any static declaration must retain
+a lifecycle coordinator and activation authority, including when the certified
+active set is empty, so deleting the complete certificate cannot masquerade as
+an empty lifecycle. A physically retained but unreachable body may mention
+an inactive declaration and is still fully structurally verified. Any changed
+pass invalidates and rebuilds final MIR, reachability facts, static-access facts,
+and lifecycle realization together; a pass that makes an inactive access
+reachable, loses active lifecycle work, or adds an unauthorized active-root
+effect fails central verification.
 
 Optimization may remove every surviving ordinary access to an already-active
 field, narrow executable targets, or delete unreachable bodies without
@@ -567,17 +578,21 @@ per-cause conservative target counts, and a focused deterministic dump. It
 consumes the same extracted execution dependencies, direct static accesses,
 scoped callable-address formations, indirect-call sites, entry policy, and
 static cleanup target resolver as target-independent reachability. Static-
-lifecycle planning extracts those facts once, computes and validates the
-shadow result, then deliberately issues `StaticActivationAuthority` for the
-all-declared compatibility set. The compact proof stores that sorted authority
+lifecycle planning extracts those facts once and computes the shadow result.
+Planned verification separately extracts and solves them again, rejects a
+mismatching report claim, and binds its independently issued semantic
+`StaticActivationAuthority` into `VerifiedPlannedMirProgram`. Planning still
+deliberately issues a distinct production `StaticActivationAuthority` for the
+all-declared compatibility set. The compact final proof stores that authority
 beside only the lifecycle roots required by it. Definitions, dependency order,
 derived shutdown/transitions, moved initializer bodies, and coordinator regions
 must exactly cover the authority; declarations and preliminary initializer
 bodies remain complete and keep stable IDs. Internal empty and sparse fixtures
-exercise this boundary. The shadow result and its source-rich triggers,
-witnesses, edges, target counts, and summary counts remain planning-report data;
-they are not certificate authority, public observation state, or a selector of
-diagnostics or production MIR yet.
+exercise this boundary. Source-rich triggers, witnesses, edges, target counts,
+and summary counts remain untrusted planning-report data; they are not
+certificate authority, public observation state, or a selector of diagnostics
+or production MIR yet. The independently sealed exact set is ready for the
+production lifecycle planner to consume at semantic cutover.
 
 ### Dense callable-local MIR identity rewriting
 
@@ -1022,12 +1037,14 @@ indirect call. All structurally present blocks of a reachable callable are
 conservatively scanned until a separate CFG pass removes dead regions.
 
 Central final verification binds immutable deterministic reachability facts to
-exactly one `VerifiedFinalMirProgram`. Unchanged pass outcomes preserve that
-seal and its facts. Every changed outcome invalidates both and rebuilds them
-before another occurrence, inspection checkpoint, or backend can observe the
-program. The product provides crate-private read-only root, reachable-node,
-callable-target, dispatch-use, runtime-entity, and explanation queries without
-introducing a global analysis manager or preservation declarations.
+exactly one `VerifiedFinalMirProgram`. These facts include exact static-place
+accesses from reachable execution nodes and canonical selecting explanations.
+Unchanged pass outcomes preserve that seal and its facts. Every changed outcome
+invalidates both and rebuilds them before another occurrence, inspection
+checkpoint, or backend can observe the program. The product provides
+crate-private read-only root, reachable-node, callable-target, static-access,
+dispatch-use, runtime-entity, and explanation queries without introducing a
+global analysis manager or preservation declarations.
 
 Preliminary MIR remains definition-complete. Optimized final MIR may retain a
 dense semantic declaration while omitting its unreachable function or member

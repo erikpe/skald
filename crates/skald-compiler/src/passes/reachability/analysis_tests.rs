@@ -3,7 +3,7 @@
 use std::process::Command;
 
 use crate::{
-    identity::CallableId,
+    identity::{CallableId, StaticFieldId},
     mir::{MirExecutionNode, MirFunctionLinkage, MirProgram},
     test_support::lower_generic_source_to_final_mir,
 };
@@ -35,6 +35,19 @@ fn function(program: &MirProgram, name: &str) -> CallableId {
 
 fn node(program: &MirProgram, name: &str) -> MirExecutionNode {
     MirExecutionNode::callable(function(program, name))
+}
+
+fn static_field(program: &MirProgram, class_name: &str, name: &str) -> StaticFieldId {
+    program
+        .classes
+        .iter()
+        .find(|class| class.name == class_name)
+        .unwrap_or_else(|| panic!("missing class {class_name}"))
+        .static_fields
+        .iter()
+        .find(|field| field.name == name)
+        .unwrap_or_else(|| panic!("missing static field {class_name}.{name}"))
+        .id
 }
 
 #[test]
@@ -101,6 +114,57 @@ fn reached_callables_scan_all_structurally_retained_blocks() {
     );
 
     assert!(analysis.is_reachable(node(&program, "hidden")));
+}
+
+#[test]
+fn final_facts_retain_only_static_accesses_from_reachable_execution() {
+    let (program, analysis) = analyze(
+        "class State {
+           static live: i64 = 1;
+           static dead: i64 = 2;
+           init() {}
+         }
+         fn unreachable() -> i64 { return State.dead; }
+         fn read_live() -> i64 { return State.live; }
+         fn main() -> i64 { return read_live(); }",
+    );
+    let live = static_field(&program, "State", "live");
+    let unreachable = node(&program, "unreachable");
+
+    assert!(analysis
+        .static_accesses()
+        .iter()
+        .any(|access| access.target() == live));
+    assert!(analysis.static_accesses_from(unreachable).is_empty());
+    assert_eq!(
+        analysis.counts().static_accesses,
+        analysis.static_accesses().len()
+    );
+    for access in analysis.static_accesses() {
+        analysis
+            .static_access_explanation(access)
+            .expect("every retained access has selecting evidence");
+    }
+    let live_read = analysis
+        .static_accesses_from(node(&program, "read_live"))
+        .iter()
+        .find(|access| access.target() == live)
+        .unwrap();
+    assert_eq!(
+        analysis
+            .static_access_explanation(live_read)
+            .unwrap()
+            .root()
+            .reason(),
+        MirReachabilityRootReason::Entry
+    );
+    let dump = dump_reachability(&analysis);
+    assert!(dump.contains("static-accesses="));
+    assert!(dump.contains(&format!("StaticAccess {live}")));
+    assert!(!dump.contains(&format!(
+        "Node callable {}",
+        function(&program, "unreachable")
+    )));
 }
 
 #[test]

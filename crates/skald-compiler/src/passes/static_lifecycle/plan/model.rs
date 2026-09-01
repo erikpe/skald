@@ -71,9 +71,13 @@ impl StaticLifecyclePlanningReport {
         &self.analysis
     }
 
-    #[cfg(test)]
     pub(crate) const fn activation(&self) -> &StaticActivationAnalysis {
         &self.activation
+    }
+
+    #[cfg(test)]
+    pub(crate) fn activation_mut_for_test(&mut self) -> &mut StaticActivationAnalysis {
+        &mut self.activation
     }
 }
 
@@ -162,6 +166,11 @@ impl PlannedMirProgram {
     #[cfg(test)]
     pub(crate) fn lifecycle_mut_for_test(&mut self) -> &mut MirPlannedLifecycle {
         &mut self.lifecycle
+    }
+
+    #[cfg(test)]
+    pub(crate) fn planning_report_mut_for_test(&mut self) -> &mut StaticLifecyclePlanningReport {
+        &mut self.report
     }
 }
 

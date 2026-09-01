@@ -333,6 +333,11 @@ impl StaticActivationAnalysis {
         &self.active_fields
     }
 
+    #[cfg(test)]
+    pub(crate) fn active_fields_mut_for_test(&mut self) -> &mut Vec<StaticActivationField> {
+        &mut self.active_fields
+    }
+
     pub(crate) fn inactive_fields(&self) -> &[StaticFieldId] {
         &self.inactive_fields
     }

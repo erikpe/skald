@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 through RSR3 are complete and RSR4 is next.
+Status: in progress; RSR0 through RSR4 are complete and RSR5 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -91,7 +91,7 @@ reduce future optimization cost; larger findings belong in the
 - [x] RSR1 — Centralize preliminary static-access extraction
 - [x] RSR2 — Compute and inspect the shadow activation closure
 - [x] RSR3 — Generalize lifecycle proof and schema for an active subset
-- [ ] RSR4 — Verify final access against exact activation authority
+- [x] RSR4 — Verify final access against exact activation authority
 - [ ] RSR5 — Switch lifecycle planning and synthesis to reachable activation
 - [ ] RSR6 — Align backend planning and artifact retention
 - [ ] RSR7 — Publish activation observation and migration diagnostics
@@ -312,28 +312,28 @@ in the planning report and is dropped before final MIR.
 **Purpose:** Establish the independent final safety condition required before
 inactive lifecycle definitions may disappear from production MIR.
 
-- [ ] Extend final reachability facts or their verifier-owned extraction with
+- [x] Extend final reachability facts or their verifier-owned extraction with
       exact reachable static-place accesses and deterministic selecting
       evidence.
-- [ ] Seal the exact shadow activation result at the post-preliminary boundary
+- [x] Seal the exact shadow activation result at the post-preliminary boundary
       and independently recompute it without trusting its solved summaries,
       canonical witnesses, or planning report; keep production eager until the
       next task consumes the seal.
-- [ ] Require every static access in an execution-reachable final definition to
+- [x] Require every static access in an execution-reachable final definition to
       name a field in the lifecycle certificate's active authority.
-- [ ] Continue fully validating every physically retained definition while
+- [x] Continue fully validating every physically retained definition while
       permitting an unreachable retained body to mention an inactive declared
       field.
-- [ ] Require every active field's storage, initializer when explicit,
+- [x] Require every active field's storage, initializer when explicit,
       destruction dependencies, lifecycle roots, and coordinator regions to be
       reachable and present under existing sparse-definition rules.
-- [ ] Reject a transformed product that introduces a reachable inactive access,
+- [x] Reject a transformed product that introduces a reachable inactive access,
       expands active root effects beyond baseline authority, or loses required
       active lifecycle work.
-- [ ] Prove changed passes discard and rebuild final MIR, reachability facts,
+- [x] Prove changed passes discard and rebuild final MIR, reachability facts,
       and static realization together; unchanged outcomes preserve only one
       coherent seal.
-- [ ] Keep verification independent of pass claims, schedules, profiles,
+- [x] Keep verification independent of pass claims, schedules, profiles,
       backend slot planning, and shadow-analysis witnesses.
 
 **Tests:** Reachable versus unreachable inactive access; missing active storage,
@@ -349,6 +349,22 @@ pipeline suites; public-API tests; `make compiler-test`; `make fmt-check`;
 **Exit criteria:** Central final verification independently rejects every
 reachable inactive static access and missing active obligation, while current
 all-declared production behavior remains unchanged.
+
+Completed on 2026-08-31. Final reachability now seals exact static-place
+accesses only for reachable execution nodes, exposes canonical selecting
+explanations, and includes them in its deterministic dump and counts. Planned-
+MIR verification independently re-extracts and re-solves semantic activation,
+rejects an untrusted mismatching planning report, and binds the exact result in
+the verified planned product while production authority remains all-declared.
+Central final verification checks reachable static accesses against certificate
+activation, independently reconstructs exact lifecycle roots and runtime
+entities, and requires active storage plus every executable activation and
+shutdown obligation to remain reachable. Sparse tests prove unreachable
+retained accesses remain legal, structural false branches cannot hide an
+access, a changed entry rebuilds facts and exposes a new violation, and removal
+of the last ordinary access cannot deactivate a certified field. Existing
+coordinator, initializer, destructor, realization, and pipeline resealing tests
+continue to enforce the other active-lifecycle obligations.
 
 ### RSR5 — Switch lifecycle planning and synthesis to reachable activation
 

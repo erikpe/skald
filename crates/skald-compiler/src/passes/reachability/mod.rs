@@ -47,7 +47,10 @@ pub(crate) use model::{
 };
 pub(crate) use roots::resolve_entry_execution;
 pub(crate) use solve::analyze_reachability;
-pub(super) use verify::verify_reachable_definitions;
+pub(super) use verify::{
+    verify_active_lifecycle_reachability, verify_reachable_definitions,
+    verify_reachable_static_accesses,
+};
 
 #[cfg(test)]
 mod analysis_tests;

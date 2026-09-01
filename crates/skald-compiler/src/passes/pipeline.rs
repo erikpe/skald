@@ -6,8 +6,8 @@ use crate::mir::{MirProgram, MirVerificationErrors};
 
 use super::{
     reachability::{
-        analyze_reachability, verify_reachable_definitions, MirDependencyExtractionError,
-        MirReachabilityAnalysis,
+        analyze_reachability, verify_active_lifecycle_reachability, verify_reachable_definitions,
+        verify_reachable_static_accesses, MirDependencyExtractionError, MirReachabilityAnalysis,
     },
     static_lifecycle,
 };
@@ -160,6 +160,8 @@ pub fn verify_final_mir(
     static_lifecycle::verify_synthesized_mir(&program)?;
     let reachability = analyze_reachability(&program).map_err(reachability_verification_errors)?;
     verify_reachable_definitions(&program, &reachability)?;
+    verify_active_lifecycle_reachability(&program, &reachability)?;
+    verify_reachable_static_accesses(&program, &reachability)?;
     Ok(VerifiedFinalMirProgram {
         program,
         reachability: Box::new(reachability),

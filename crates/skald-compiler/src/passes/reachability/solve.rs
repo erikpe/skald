@@ -15,7 +15,7 @@ use super::{
     MirReachabilityAnalysis, MirReachabilityCounts, MirReachabilityExplanation,
     MirReachabilityRoot, MirReachabilityRootTarget, MirReachableFunctionValueCandidates,
     MirReachableFunctionValueTarget, MirReachableOutgoingDependencies, MirRetainedDefinition,
-    MirRuntimeEntity,
+    MirRuntimeEntity, MirStaticAccess,
 };
 
 pub(crate) fn analyze_reachability(
@@ -31,6 +31,7 @@ struct ClosureSolver<'mir> {
     dependencies_by_source: BTreeMap<MirExecutionNode, Vec<MirDependencyEdge>>,
     formations_by_source: BTreeMap<MirExecutionNode, Vec<MirCallableAddressFormation>>,
     indirect_calls_by_source: BTreeMap<MirExecutionNode, Vec<MirIndirectCallSite>>,
+    static_accesses_by_source: BTreeMap<MirExecutionNode, Vec<MirStaticAccess>>,
     roots: Vec<MirReachabilityRoot>,
     reachable: BTreeSet<MirExecutionNode>,
     pending: VecDeque<MirExecutionNode>,
@@ -69,11 +70,19 @@ impl<'mir> ClosureSolver<'mir> {
                 .or_insert_with(Vec::new)
                 .push(*site);
         }
+        let mut static_accesses_by_source = BTreeMap::new();
+        for access in extraction.static_accesses() {
+            static_accesses_by_source
+                .entry(access.source())
+                .or_insert_with(Vec::new)
+                .push(*access);
+        }
         Self {
             program,
             dependencies_by_source,
             formations_by_source,
             indirect_calls_by_source,
+            static_accesses_by_source,
             roots: roots.roots,
             reachable: BTreeSet::new(),
             pending: VecDeque::new(),
@@ -280,6 +289,16 @@ impl<'mir> ClosureSolver<'mir> {
                     .map(|dependencies| MirReachableOutgoingDependencies::new(*node, dependencies))
             })
             .collect();
+        let static_accesses = reachable_nodes
+            .iter()
+            .flat_map(|node| {
+                self.static_accesses_by_source
+                    .get(node)
+                    .into_iter()
+                    .flatten()
+                    .copied()
+            })
+            .collect::<Vec<_>>();
 
         let mut function_values = self
             .candidates
@@ -335,6 +354,7 @@ impl<'mir> ClosureSolver<'mir> {
             reachable_callables: reachable_callables.len(),
             retained_definitions: retained_definitions.len(),
             dependencies: dependency_count,
+            static_accesses: static_accesses.len(),
             runtime_entities: runtime_entities.len(),
             virtual_families: virtual_families.len(),
             interface_requirements: interface_requirements.len(),
@@ -350,6 +370,7 @@ impl<'mir> ClosureSolver<'mir> {
             reachable_callables,
             retained_definitions,
             outgoing,
+            static_accesses,
             function_values,
             runtime_entities,
             virtual_families,

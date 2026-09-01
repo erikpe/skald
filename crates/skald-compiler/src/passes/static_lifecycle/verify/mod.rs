@@ -1,5 +1,6 @@
 //! Verification boundary for planned static-lifecycle MIR.
 
+mod activation;
 mod authority;
 mod final_coordinator;
 mod lifecycle;
@@ -7,7 +8,7 @@ mod realization;
 
 use crate::mir::{
     verify_mir, verify_preliminary_mir, MirProgram, MirProgramLifecycle, MirStaticInitializerBody,
-    MirVerificationError, MirVerificationErrors,
+    MirVerificationError, MirVerificationErrors, StaticActivationAuthority,
 };
 
 use super::plan::PlannedMirProgram;
@@ -20,6 +21,7 @@ use super::plan::PlannedMirProgram;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VerifiedPlannedMirProgram {
     program: PlannedMirProgram,
+    semantic_activation: StaticActivationAuthority,
 }
 
 impl VerifiedPlannedMirProgram {
@@ -27,8 +29,17 @@ impl VerifiedPlannedMirProgram {
         &self.program
     }
 
-    pub(super) fn into_program(self) -> PlannedMirProgram {
-        self.program
+    pub(super) fn into_parts(self) -> (PlannedMirProgram, StaticActivationAuthority) {
+        let Self {
+            program,
+            semantic_activation,
+        } = self;
+        (program, semantic_activation)
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn semantic_activation_for_test(&self) -> &StaticActivationAuthority {
+        &self.semantic_activation
     }
 }
 
@@ -47,10 +58,15 @@ pub fn verify_planned_mir(
     verify_preliminary_mir(program.preliminary())?;
 
     let mut errors = Vec::new();
+    let semantic_activation = activation::verify(&program, &mut errors);
     lifecycle::verify(&program, &mut errors);
     authority::verify(&program, &mut errors);
     if errors.is_empty() {
-        Ok(VerifiedPlannedMirProgram { program })
+        Ok(VerifiedPlannedMirProgram {
+            program,
+            semantic_activation: semantic_activation
+                .expect("successful activation verification must issue authority"),
+        })
     } else {
         Err(MirVerificationErrors::new(errors))
     }
@@ -66,6 +82,16 @@ pub fn verify_synthesized_mir(program: &MirProgram) -> Result<(), MirVerificatio
         .err()
         .map_or_else(Vec::new, |errors| errors.iter().cloned().collect());
     let Some(coordinator) = &program.static_lifecycle else {
+        if program
+            .classes
+            .iter()
+            .any(|class| !class.static_fields.is_empty())
+        {
+            program_error(
+                &mut errors,
+                "final MIR with static declarations has no lifecycle coordinator or activation authority",
+            );
+        }
         return if errors.is_empty() {
             Ok(())
         } else {

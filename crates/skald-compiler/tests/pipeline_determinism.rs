@@ -962,7 +962,7 @@ fn module_phase_dump(variant: usize) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
-    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+    let mir = lower_final_hir(&hir);
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::without_runtime_trace(&mir),
@@ -2006,7 +2006,7 @@ fn static_field_module_phase_dump(variant: usize) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
-    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+    let mir = lower_final_hir(&hir);
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::without_runtime_trace(&mir),
@@ -2552,7 +2552,7 @@ fn complete_phase_dump(text: &str) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
-    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+    let mir = lower_final_hir(&hir);
     let assembly = emit_assembly(
         Target::X86_64SysV,
         BackendInput::without_runtime_trace(&mir),

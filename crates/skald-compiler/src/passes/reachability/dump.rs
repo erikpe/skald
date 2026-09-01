@@ -13,12 +13,13 @@ pub(crate) fn dump_reachability(analysis: &MirReachabilityAnalysis) -> String {
     let mut output = String::from("MirReachabilityAnalysis\n");
     let _ = writeln!(
         output,
-        "  Summary roots={} nodes={} callables={} retained={} dependencies={} runtime={} virtual-families={} interface-requirements={} function-signatures={} function-targets={}",
+        "  Summary roots={} nodes={} callables={} retained={} dependencies={} static-accesses={} runtime={} virtual-families={} interface-requirements={} function-signatures={} function-targets={}",
         counts.roots,
         counts.reachable_nodes,
         counts.reachable_callables,
         counts.retained_definitions,
         counts.dependencies,
+        counts.static_accesses,
         counts.runtime_entities,
         counts.virtual_families,
         counts.interface_requirements,
@@ -69,6 +70,18 @@ pub(crate) fn dump_reachability(analysis: &MirReachabilityAnalysis) -> String {
         for dependency in analysis.outgoing_dependencies(*node) {
             output.push_str("      Target ");
             write_dependency(&mut output, dependency);
+            output.push('\n');
+        }
+        for access in analysis.static_accesses_from(*node) {
+            let _ = write!(
+                output,
+                "      StaticAccess {} {:?} {:?} {:?}",
+                access.target(),
+                access.kind(),
+                access.region(),
+                access.origin(),
+            );
+            write_span(&mut output, access.span());
             output.push('\n');
         }
     }
