@@ -194,10 +194,11 @@ effect analysis consumes that inventory without owning a MIR body scanner; its
 former place, instruction, and control-flow walkers were removed after exact
 direct-effect, plan, diagnostic, dump, and realization parity passed. Invalid
 field and lifecycle-destination identities use structured extraction failures.
-The independent lifecycle extractor split remains deferred under the existing
-indexed discovery because moving its class, optional/shared, and array owners
-was not cohesive with this semantic extraction change. Production activation
-and declaration-wide eager behavior are unchanged.
+The independent lifecycle extractor split was deferred under the then-indexed
+discovery because moving its class, optional/shared, and array owners was not
+cohesive with this semantic extraction change. That behavior-preserving split
+has since been completed behind the reachability lifecycle facade. Production
+activation and declaration-wide eager behavior were unchanged by this task.
 
 ### RSR2 — Compute and inspect the shadow activation closure
 
@@ -581,7 +582,8 @@ generic, imported-unused, profile, repeat, and process-determinism matrices pass
 The obsolete static-effect execution-node aliases and eager-baseline fixture
 terminology were removed. The module audit reconfirmed the already-recorded
 oversized lifecycle extractor and duplicated function-value closure solver as
-bounded follow-ups rather than closure blockers. Grammar and runtime ABI 9 are
+bounded follow-ups rather than closure blockers; both have since been resolved
+behind private reachability components. Grammar and runtime ABI 9 are
 unchanged; explicit eager/module/lazy initialization, retention annotations,
 post-optimization activation replanning, and static identity compaction remain
 excluded. Full, extended, MSRV, documentation, determinism, diff, and isolated-

@@ -12,33 +12,6 @@ Each future entry should state the concrete problem and evidence, why it was
 outside the roadmap, the likely owner, priority and impact, a bounded first
 step, and relevant dependencies.
 
-## Lifecycle dependency extraction has one oversized implementation owner
-
-**Evidence.** `passes/reachability/lifecycle.rs` is roughly 1,100 lines and
-owns four independently understandable concerns: class copy/finalization,
-recursive optional cleanup, shared-owner finalizer expansion, and array
-default/copy/assignment/destruction expansion. The boundaries already have
-typed helper methods, but all implementation details and imports remain in one
-file.
-
-**Why outside the roadmap.** The closing audit found no duplicate semantic
-walker and all lifecycle-family tests exercise the shared owner. Splitting the
-file while activation was uncovering dependency omissions would add broad
-movement without changing or strengthening the contract.
-
-**Likely owner.** The `passes::reachability` lifecycle submodule.
-
-**Priority and impact.** Medium maintainability impact, low semantic urgency.
-Smaller cohesive owners would make future lifecycle variants and reviews less
-error-prone without changing analysis results.
-
-**Bounded first step.** Turn `lifecycle.rs` into a concise facade and extract
-class, optional/shared, and array dependency implementations into private
-siblings, preserving the current methods, exhaustive matches, error types, and
-focused test suite byte-for-byte.
-
-**Dependencies.** None; this is a behavior-preserving internal refactor.
-
 ## Runtime-trace metadata identities can reflect pruned source bodies
 
 **Evidence.** A profile-equivalence fixture with one dead function produces

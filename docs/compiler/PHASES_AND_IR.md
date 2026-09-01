@@ -920,6 +920,13 @@ roots, witnesses, errors, and result models. Shared optional and owner
 lifecycle resolvers also drive exact reverse-shutdown root expansion, so
 dependency and root policy do not maintain separate cleanup walks.
 
+The lifecycle dependency facade owns the common dependency vocabulary, static
+cleanup dispatch, and class-before-array extraction order. Private cohesive
+owners implement class copy and finalization, recursive optional/shared-owner
+expansion, and array default/copy/assignment/destruction respectively. The
+facade remains the only path used by body extraction, static activation, and
+reverse-shutdown roots.
+
 Static-effect analysis adapts the shared static-access records, targets, and
 lifecycle edges into its private summaries. It retains ownership of propagated
 witnesses, authority, diagnostics, dumps, and solved effects, but owns no MIR

@@ -140,6 +140,10 @@ failures, witnesses, sparse definition validity, and deterministic dumps.
 The shared exact-function-type coupling tests independently pin candidate-first
 and site-first discovery, repeated reached-node idempotence, exact-signature
 isolation, canonical formation evidence, and canonical indirect-edge order.
+The unchanged lifecycle-family matrix crosses the private class,
+optional/shared-owner, and array expansion modules through their common facade;
+tests should continue asserting public extraction facts rather than private
+file placement.
 Static-lifecycle analysis tests require its direct effects to be an exact
 projection of that shared access inventory. Pipeline and driver tests pin
 the explicit `dead-pure-definition-elimination` then
