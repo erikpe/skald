@@ -109,6 +109,53 @@ fn composes_before_and_after_the_canary() {
 }
 
 #[test]
+fn exact_and_repeated_schedules_preserve_static_activation_authority() {
+    let complete = lower_source_to_final_mir(
+        "fn active_value() -> i64 { return 1; }
+         fn inactive_value() -> i64 { return 2; }
+         class State {
+           static active: i64 = active_value();
+           static inactive: i64 = inactive_value();
+           init() {}
+         }
+         fn main() -> i64 { var unused: i64 = 3; return State.active; }",
+    );
+    let expected = complete
+        .static_lifecycle
+        .as_ref()
+        .unwrap()
+        .lifecycle()
+        .proof()
+        .activation()
+        .clone();
+    assert_eq!(expected.len(), 1);
+
+    let dead = dead_pure_definition_elimination::IDENTITY;
+    for identities in [
+        Vec::new(),
+        vec![dead],
+        vec![IDENTITY],
+        vec![dead, IDENTITY],
+        vec![IDENTITY, IDENTITY],
+        vec![IDENTITY, dead, IDENTITY],
+    ] {
+        let output = run_mir_pipeline_measured(complete.clone(), &schedule(&identities))
+            .result
+            .unwrap();
+        assert_eq!(
+            output
+                .static_lifecycle
+                .as_ref()
+                .unwrap()
+                .lifecycle()
+                .proof()
+                .activation(),
+            &expected
+        );
+    }
+}
+
+#[test]
 fn supported_profiles_preserve_complete_mir_unless_reachability_is_enabled() {
     let source = concat!(
         "class Dormant {\n",

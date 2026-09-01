@@ -13,10 +13,7 @@ mod plan;
 mod synthesize;
 mod verify;
 
-pub use crate::mir::{
-    StaticAccessKind, StaticArrayLifecycleOperation, StaticClassLifecycleOperation,
-    StaticEffectNode, StaticEffectPhase,
-};
+pub use crate::mir::{StaticAccessKind, StaticEffectPhase};
 pub use crate::mir::{
     StaticActivationAuthority, StaticLifecycleAuthority, StaticLifecycleEffectFact,
     StaticLifecycleRootAuthority,

@@ -8,8 +8,8 @@ use crate::passes::graph::strongly_connected_components;
 use super::{
     extract::{ExtractedGraph, NodeDraft},
     model::{
-        edge_key, evidence_key, StaticAccessEvidence, StaticAccessKind, StaticEffectAnalysis,
-        StaticEffectNode, StaticEffectPhase, StaticEffectSummary,
+        edge_key, evidence_key, MirExecutionNode, StaticAccessEvidence, StaticAccessKind,
+        StaticEffectAnalysis, StaticEffectPhase, StaticEffectSummary,
     },
 };
 
@@ -72,8 +72,8 @@ pub(crate) fn solve(graph: ExtractedGraph) -> StaticEffectAnalysis {
 }
 
 fn propagated_component_fields(
-    nodes: &[StaticEffectNode],
-    drafts: &BTreeMap<StaticEffectNode, NodeDraft>,
+    nodes: &[MirExecutionNode],
+    drafts: &BTreeMap<MirExecutionNode, NodeDraft>,
     adjacency: &[Vec<usize>],
     components: &[usize],
     component_count: usize,
@@ -125,9 +125,9 @@ fn propagated_component_fields(
 }
 
 fn witnesses_for(
-    root: StaticEffectNode,
+    root: MirExecutionNode,
     field: StaticFieldId,
-    drafts: &BTreeMap<StaticEffectNode, NodeDraft>,
+    drafts: &BTreeMap<MirExecutionNode, NodeDraft>,
 ) -> Vec<StaticAccessEvidence> {
     let mut queue = VecDeque::from([(root, None, Vec::new())]);
     let mut visited = BTreeSet::new();

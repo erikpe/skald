@@ -2,7 +2,7 @@
 
 use crate::{
     identity::StaticFieldId,
-    mir::{PreliminaryMirProgram, StaticEffectNode},
+    mir::{MirExecutionNode, PreliminaryMirProgram},
     test_support::lower_generic_source_to_preliminary_mir,
 };
 
@@ -72,7 +72,7 @@ fn generated_initializer_effects_remain_specialization_local_and_transitive() {
             .find(|initializer| initializer.field == transitive)
             .expect("explicit generated static must retain its initializer body");
         let summary = analysis
-            .summary(StaticEffectNode::Callable(initializer.callable()))
+            .summary(MirExecutionNode::Callable(initializer.callable()))
             .expect("generated static initializer must receive an effect summary");
         let effect = summary
             .effects

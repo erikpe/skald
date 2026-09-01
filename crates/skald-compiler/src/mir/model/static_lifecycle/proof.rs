@@ -2,9 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::identity::StaticFieldId;
-
-use super::StaticEffectNode;
+use crate::{identity::StaticFieldId, mir::MirExecutionNode};
 
 /// Exact static fields whose lifecycle work belongs to the executable program.
 ///
@@ -138,18 +136,18 @@ impl StaticLifecycleEffectFact {
 /// The exact normalized effects authorized for one lifecycle root.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticLifecycleRootAuthority {
-    root: StaticEffectNode,
+    root: MirExecutionNode,
     effects: Vec<StaticLifecycleEffectFact>,
 }
 
 impl StaticLifecycleRootAuthority {
-    pub(crate) fn new(root: StaticEffectNode, mut effects: Vec<StaticLifecycleEffectFact>) -> Self {
+    pub(crate) fn new(root: MirExecutionNode, mut effects: Vec<StaticLifecycleEffectFact>) -> Self {
         effects.sort_unstable();
         effects.dedup();
         Self { root, effects }
     }
 
-    pub const fn root(&self) -> StaticEffectNode {
+    pub const fn root(&self) -> MirExecutionNode {
         self.root
     }
 
@@ -158,7 +156,7 @@ impl StaticLifecycleRootAuthority {
     }
 
     #[cfg(test)]
-    pub(crate) fn set_root_for_test(&mut self, root: StaticEffectNode) {
+    pub(crate) fn set_root_for_test(&mut self, root: MirExecutionNode) {
         self.root = root;
     }
 
@@ -179,7 +177,7 @@ pub struct StaticLifecycleAuthority {
 
 impl StaticLifecycleAuthority {
     pub(crate) fn new(roots: Vec<StaticLifecycleRootAuthority>) -> Self {
-        let mut by_root = BTreeMap::<StaticEffectNode, BTreeSet<StaticLifecycleEffectFact>>::new();
+        let mut by_root = BTreeMap::<MirExecutionNode, BTreeSet<StaticLifecycleEffectFact>>::new();
         for root in roots {
             by_root.entry(root.root).or_default().extend(root.effects);
         }
@@ -197,7 +195,7 @@ impl StaticLifecycleAuthority {
         self.roots.iter()
     }
 
-    pub fn root(&self, root: StaticEffectNode) -> Option<&StaticLifecycleRootAuthority> {
+    pub fn root(&self, root: MirExecutionNode) -> Option<&StaticLifecycleRootAuthority> {
         self.roots
             .binary_search_by_key(&root, StaticLifecycleRootAuthority::root)
             .ok()

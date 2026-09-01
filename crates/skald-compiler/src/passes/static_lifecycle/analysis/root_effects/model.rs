@@ -5,8 +5,8 @@ use std::collections::BTreeSet;
 use crate::{
     identity::StaticFieldId,
     mir::{
-        MirProgram, MirStaticFieldInitialization, MirStaticLifecycleDefinition,
-        PreliminaryMirProgram, StaticEffectNode, StaticLifecycleAuthority,
+        MirExecutionNode, MirProgram, MirStaticFieldInitialization, MirStaticLifecycleDefinition,
+        PreliminaryMirProgram, StaticLifecycleAuthority,
     },
 };
 
@@ -22,7 +22,7 @@ pub(super) enum LifecycleRootKind {
 pub(super) struct LifecycleRootUse {
     pub(super) owner: StaticFieldId,
     pub(super) kind: LifecycleRootKind,
-    pub(super) node: StaticEffectNode,
+    pub(super) node: MirExecutionNode,
 }
 
 #[cfg(test)]
@@ -49,7 +49,7 @@ pub(super) fn lifecycle_root_uses_for_fields(
             roots.push(LifecycleRootUse {
                 owner: field.field,
                 kind: LifecycleRootKind::Initialization,
-                node: StaticEffectNode::callable(initializer.into()),
+                node: MirExecutionNode::callable(initializer.into()),
             });
         }
         roots.extend(
@@ -77,7 +77,7 @@ pub(super) fn lifecycle_root_uses_for_definitions(
             roots.push(LifecycleRootUse {
                 owner: definition.field,
                 kind: LifecycleRootKind::Initialization,
-                node: StaticEffectNode::callable(initializer.into()),
+                node: MirExecutionNode::callable(initializer.into()),
             });
         }
         roots.extend(
@@ -143,17 +143,17 @@ fn dependency_pairs_for_roots(
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum StaticLifecycleRootEffectError {
-    MissingRoot(StaticEffectNode),
+    MissingRoot(MirExecutionNode),
     ForeignEdgeSource {
-        node: StaticEffectNode,
-        source: StaticEffectNode,
+        node: MirExecutionNode,
+        source: MirExecutionNode,
     },
     ForeignEdgeTarget {
-        source: StaticEffectNode,
-        target: StaticEffectNode,
+        source: MirExecutionNode,
+        target: MirExecutionNode,
     },
     ForeignStaticField {
-        node: StaticEffectNode,
+        node: MirExecutionNode,
         field: StaticFieldId,
     },
 }

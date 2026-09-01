@@ -1,7 +1,7 @@
 //! Static-effect analysis evidence and deterministic comparison helpers.
 
 use crate::identity::{CallableId, FunctionTypeId};
-pub(crate) use crate::mir::{StaticAccessKind, StaticEffectNode, StaticEffectPhase};
+pub(crate) use crate::mir::{MirExecutionNode, StaticAccessKind, StaticEffectPhase};
 
 pub(crate) use crate::passes::reachability::mir_span_key as span_key;
 use crate::{identity::StaticFieldId, source::Span};
@@ -50,8 +50,8 @@ pub struct StaticFunctionValueCandidates {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticEffectEdge {
-    pub source: StaticEffectNode,
-    pub target: StaticEffectNode,
+    pub source: MirExecutionNode,
+    pub target: MirExecutionNode,
     pub kind: StaticEffectEdgeKind,
     pub phase: StaticEffectPhase,
     pub span: Span,
@@ -73,7 +73,7 @@ pub struct StaticAccessEvidence {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticEffectSummary {
-    pub node: StaticEffectNode,
+    pub node: MirExecutionNode,
     pub direct_effects: Vec<StaticAccessEvidence>,
     pub possible_targets: Vec<StaticEffectEdge>,
     pub effects: Vec<StaticAccessEvidence>,
@@ -119,7 +119,7 @@ impl StaticEffectAnalysis {
         self.summaries.iter()
     }
 
-    pub fn summary(&self, node: StaticEffectNode) -> Option<&StaticEffectSummary> {
+    pub fn summary(&self, node: MirExecutionNode) -> Option<&StaticEffectSummary> {
         self.summaries
             .binary_search_by_key(&node, |summary| summary.node)
             .ok()
@@ -152,7 +152,7 @@ pub(crate) fn evidence_key(
 pub(crate) fn edge_key(
     edge: &StaticEffectEdge,
 ) -> (
-    StaticEffectNode,
+    MirExecutionNode,
     StaticEffectEdgeKind,
     (usize, usize, usize),
 ) {

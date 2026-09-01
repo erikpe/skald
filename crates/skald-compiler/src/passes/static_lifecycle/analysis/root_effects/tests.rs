@@ -5,9 +5,9 @@ use std::collections::BTreeSet;
 use crate::{
     identity::{ClassId, StaticFieldId},
     mir::{
-        lower_preliminary_hir, PreliminaryMirProgram, StaticAccessKind,
-        StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectNode,
-        StaticEffectPhase, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+        lower_preliminary_hir, MirArrayLifecycleOperation, MirClassLifecycleOperation,
+        MirExecutionNode, PreliminaryMirProgram, StaticAccessKind, StaticEffectPhase,
+        StaticLifecycleAuthority, StaticLifecycleEffectFact,
     },
     test_support::type_check_source,
 };
@@ -61,7 +61,7 @@ fn normalizes_direct_transitive_and_post_publication_effects_by_root() {
         .unwrap();
     let analysis = analyze_program(&program);
     let effects = &analysis
-        .root(StaticEffectNode::callable(initializer.callable()))
+        .root(MirExecutionNode::callable(initializer.callable()))
         .unwrap()
         .effects();
 
@@ -115,22 +115,22 @@ fn inventories_initializer_free_optional_shared_and_array_destruction_roots() {
         .map(|summary| summary.root())
         .collect::<BTreeSet<_>>();
 
-    assert!(roots.contains(&StaticEffectNode::class(
+    assert!(roots.contains(&MirExecutionNode::class(
         ClassId::new(1),
-        StaticClassLifecycleOperation::CompleteFinalizer,
+        MirClassLifecycleOperation::CompleteFinalizer,
     )));
-    assert!(roots.contains(&StaticEffectNode::class(
+    assert!(roots.contains(&MirExecutionNode::class(
         ClassId::new(2),
-        StaticClassLifecycleOperation::CompleteFinalizer,
+        MirClassLifecycleOperation::CompleteFinalizer,
     )));
-    assert!(roots.contains(&StaticEffectNode::class(
+    assert!(roots.contains(&MirExecutionNode::class(
         ClassId::new(3),
-        StaticClassLifecycleOperation::CompleteFinalizer,
+        MirClassLifecycleOperation::CompleteFinalizer,
     )));
     assert!(roots.iter().any(|root| matches!(
         root,
-        StaticEffectNode::ArrayLifecycle {
-            operation: StaticArrayLifecycleOperation::Destruction,
+        MirExecutionNode::ArrayLifecycle {
+            operation: MirArrayLifecycleOperation::Destruction,
             ..
         }
     )));
@@ -161,7 +161,7 @@ fn closed_world_indirect_targets_contribute_normalized_initializer_effects() {
     let initializer = program.static_initializers().nth(2).unwrap();
     let analysis = analyze_program(&program);
     let effects = &analysis
-        .root(StaticEffectNode::callable(initializer.callable()))
+        .root(MirExecutionNode::callable(initializer.callable()))
         .unwrap()
         .effects();
 
@@ -202,7 +202,7 @@ fn closed_world_virtual_and_interface_targets_contribute_root_effects() {
 
     for initializer in program.static_initializers().skip(2) {
         let effects = &analysis
-            .root(StaticEffectNode::callable(initializer.callable()))
+            .root(MirExecutionNode::callable(initializer.callable()))
             .unwrap()
             .effects();
         for target in [field(&program, 0), field(&program, 1)] {
@@ -242,7 +242,7 @@ fn preserves_access_kinds_in_normalized_facts() {
     );
     let analysis = analyze_program(&program);
     let effects = &analysis
-        .root(StaticEffectNode::callable(
+        .root(MirExecutionNode::callable(
             program.static_initializers().nth(2).unwrap().callable(),
         ))
         .unwrap()
@@ -303,7 +303,7 @@ fn rejects_missing_roots_foreign_edges_and_foreign_static_fields() {
          fn main() -> i64 { return 0; }",
     );
     let result_initializer = program.static_initializers().nth(1).unwrap();
-    let root = StaticEffectNode::callable(result_initializer.callable());
+    let root = MirExecutionNode::callable(result_initializer.callable());
 
     let mut missing_root = extract::extract(&program);
     missing_root.nodes.remove(&root);
@@ -320,10 +320,8 @@ fn rejects_missing_roots_foreign_edges_and_foreign_static_fields() {
         .edges
         .first_mut()
         .unwrap();
-    edge.source = StaticEffectNode::class(
-        ClassId::new(0),
-        StaticClassLifecycleOperation::CopyConstructor,
-    );
+    edge.source =
+        MirExecutionNode::class(ClassId::new(0), MirClassLifecycleOperation::CopyConstructor);
     assert!(matches!(
         analyze(&program, &foreign_source),
         Err(StaticLifecycleRootEffectError::ForeignEdgeSource { .. })

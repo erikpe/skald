@@ -138,7 +138,7 @@ verifier tests pin roots, exhaustive dependency families, typed static-place
 accesses and lifecycle-owned destinations, structured malformed-identity
 failures, witnesses, sparse definition validity, and deterministic dumps.
 Static-lifecycle analysis tests require its direct effects to be an exact
-adapter of that shared access inventory. Pipeline and driver tests pin
+projection of that shared access inventory. Pipeline and driver tests pin
 the explicit `dead-pure-definition-elimination` then
 `whole-world-reachability` default order, `none` parity, selective disabling,
 measurements, retained-definition counts, backend visits, and assembly
@@ -1166,8 +1166,9 @@ stdout, stderr, and status; passing sandboxes are removed after each run.
 The reachability-gated static-lifecycle suite includes imported declarations
 whose explicit initializer and destructor are otherwise unused. It records
 preliminary, planned, final, assembly, and native observations under default,
-optimization-none, and reachability-disabled schedules: the field stays
-declared and checked but contributes no active lifecycle or emitted artifact.
+optimization-none, reachability-disabled, and dead-pure-definition-elimination-
+disabled schedules: the field stays declared and checked but contributes no
+active lifecycle or emitted artifact.
 
 Shared dependency tests own exhaustive direct static accesses and possible
 targets. Activation-analysis tests own the coupled entry/execution/field fixed

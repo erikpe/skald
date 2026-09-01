@@ -8,3 +8,6 @@ compiler_args = ["--mir-optimization", "none"]
 
 [variant.reachability-disabled]
 compiler_args = ["--disable-mir-pass", "whole-world-reachability"]
+
+[variant.dead-pure-disabled]
+compiler_args = ["--disable-mir-pass", "dead-pure-definition-elimination"]

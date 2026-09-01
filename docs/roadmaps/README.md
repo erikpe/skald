@@ -6,22 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
-changes runtime lifecycle from declaration-wide eager activation to one exact
-entry-rooted active-field closure while keeping declarations and preliminary
-initializer checking whole-world. RSR0 established the private activation
-vocabulary and pinned the prior eager behavior; RSR1 centralized direct static-
-place extraction in the shared dependency inventory; RSR2 added the exact
-coupled activation closure, private queries and dump, deterministic evidence,
-and mandatory shadow execution while preserving the eager plan; RSR3 added
-subset-capable lifecycle products, RSR4 established final monotone safety,
-RSR5 switched production planning and synthesis to the exact active set, and
-RSR6 aligned backend storage planning and artifact retention with that set.
-RSR7 published typed activation metrics, a verified request-local witness dump,
-and migration/debugging guidance. RSR8 is next. It depends
-on the completed static-lifecycle certificate, selectable final-MIR pipeline,
-dense MIR rewriting, and target-independent reachability foundations.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -47,9 +32,9 @@ The other four original unresolved constraints have no implementation roadmap.
 
 The
 [reachability-gated static lifecycle discoveries](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md)
-retains out-of-scope findings from the active semantic migration, including a
+retains out-of-scope findings from the completed semantic migration, including a
 future shared owner for the duplicated function-value closure mechanics. It
-does not expand the frozen contract or roadmap.
+does not expand the implemented contract.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -61,18 +46,13 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
-The frozen
-[reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
-changes class-owned statics from import-wide eager activation to one exact,
-mandatory, field-grained activation closure rooted at the selected entry.
-Active fields initialize eagerly before entry and shut down in exact reverse
-order; declarations and preliminary initializer checking
-remain whole-world. The design adds no eager/module-initialization syntax. Its
-decisions are promoted into the living
+The completed reachability-gated static lifecycle design and delivery record
+are preserved in the [archive](../archive/README.md). Their exact mandatory
+entry-rooted active-field closure is authoritative in the living
 [language](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction)
 and
 [compiler](../compiler/PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction)
-contracts, and implementation is scheduled by the active roadmap above.
+contracts.
 
 The completed selectable final-MIR optimization pipeline design and delivery
 record are preserved in the [archive](../archive/README.md). Their typed static

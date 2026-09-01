@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::mir::{
-    MirVerificationError, StaticEffectNode, StaticLifecycleAuthority, StaticLifecycleEffectFact,
+    MirExecutionNode, MirVerificationError, StaticLifecycleAuthority, StaticLifecycleEffectFact,
 };
 
 use super::{
@@ -91,7 +91,7 @@ fn verify_root_coverage_and_subset(
 
 fn unauthorized_fact(
     errors: &mut Vec<MirVerificationError>,
-    root: StaticEffectNode,
+    root: MirExecutionNode,
     fact: StaticLifecycleEffectFact,
 ) {
     program_error(

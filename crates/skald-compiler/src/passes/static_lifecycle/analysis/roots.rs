@@ -1,8 +1,8 @@
 //! Shared lifecycle-root analysis semantics used by planning and verification.
 
 use crate::mir::{
-    MirProgram, MirSharedTarget, MirType, PreliminaryMirSharedLifecycleTarget, StaticAccessKind,
-    StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectNode,
+    MirArrayLifecycleOperation, MirClassLifecycleOperation, MirExecutionNode, MirProgram,
+    MirSharedTarget, MirType, PreliminaryMirSharedLifecycleTarget, StaticAccessKind,
     StaticEffectPhase,
 };
 
@@ -35,16 +35,16 @@ pub(crate) fn is_lifecycle_destination_or_published_self_parts(
                 && access == StaticAccessKind::Initialize))
 }
 
-pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<StaticEffectNode> {
+pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<MirExecutionNode> {
     match ty {
-        MirType::Class(class) => vec![StaticEffectNode::class(
+        MirType::Class(class) => vec![MirExecutionNode::class(
             class,
-            StaticClassLifecycleOperation::CompleteFinalizer,
+            MirClassLifecycleOperation::CompleteFinalizer,
         )],
         MirType::Shared(target) => shared_destruction_roots(program, target),
-        MirType::Array(array) => vec![StaticEffectNode::array(
+        MirType::Array(array) => vec![MirExecutionNode::array(
             array,
-            StaticArrayLifecycleOperation::Destruction,
+            MirArrayLifecycleOperation::Destruction,
         )],
         MirType::I64
         | MirType::U64
@@ -55,18 +55,18 @@ pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<Static
         MirType::Optional(optional) => match program.optional_type(optional) {
             Some(metadata) => match metadata.storage {
                 crate::mir::MirOptionalStorage::InlineClass(class) => {
-                    vec![StaticEffectNode::class(
+                    vec![MirExecutionNode::class(
                         class,
-                        StaticClassLifecycleOperation::CompleteFinalizer,
+                        MirClassLifecycleOperation::CompleteFinalizer,
                     )]
                 }
                 crate::mir::MirOptionalStorage::SharedOwner(target) => {
                     shared_destruction_roots(program, target)
                 }
                 crate::mir::MirOptionalStorage::InlineArray(array) => {
-                    vec![StaticEffectNode::array(
+                    vec![MirExecutionNode::array(
                         array,
-                        StaticArrayLifecycleOperation::Destruction,
+                        MirArrayLifecycleOperation::Destruction,
                     )]
                 }
                 crate::mir::MirOptionalStorage::Scalar
@@ -81,18 +81,18 @@ pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<Static
 fn shared_destruction_roots(
     program: &MirProgram,
     target: MirSharedTarget,
-) -> Vec<StaticEffectNode> {
+) -> Vec<MirExecutionNode> {
     program
         .shared_lifecycle_targets(target)
         .into_iter()
         .filter_map(|target| match target {
-            PreliminaryMirSharedLifecycleTarget::Class(class) => Some(StaticEffectNode::class(
+            PreliminaryMirSharedLifecycleTarget::Class(class) => Some(MirExecutionNode::class(
                 class,
-                StaticClassLifecycleOperation::CompleteFinalizer,
+                MirClassLifecycleOperation::CompleteFinalizer,
             )),
-            PreliminaryMirSharedLifecycleTarget::Array(array) => Some(StaticEffectNode::array(
+            PreliminaryMirSharedLifecycleTarget::Array(array) => Some(MirExecutionNode::array(
                 array,
-                StaticArrayLifecycleOperation::Destruction,
+                MirArrayLifecycleOperation::Destruction,
             )),
             PreliminaryMirSharedLifecycleTarget::OptionalBox(_) => None,
         })

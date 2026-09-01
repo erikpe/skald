@@ -2,7 +2,7 @@
 
 use crate::{
     identity::{ClassId, StaticFieldId},
-    mir::{lower_preliminary_hir, StaticEffectNode},
+    mir::{lower_preliminary_hir, MirExecutionNode},
     test_support::type_check_source,
 };
 
@@ -124,7 +124,7 @@ fn rejects_missing_and_extra_subset_roots_and_schema_entries() {
     let inactive_initializer = full.static_fields().nth(1).unwrap().initializer.unwrap();
     let extra_root = full
         .authority()
-        .root(StaticEffectNode::callable(inactive_initializer.into()))
+        .root(MirExecutionNode::callable(inactive_initializer.into()))
         .unwrap()
         .clone();
     let mut extra = sparse_plan(&[0, 2]);

@@ -2,7 +2,7 @@
 
 use crate::{
     identity::CallableId,
-    mir::{PreliminaryMirProgram, StaticEffectNode},
+    mir::{MirExecutionNode, PreliminaryMirProgram},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
     typeck::type_check,
@@ -71,8 +71,8 @@ fn function(program: &PreliminaryMirProgram, name: &str) -> CallableId {
 #[test]
 fn punctuation_and_explicit_protocol_calls_feed_identical_effect_and_target_owners() {
     let preliminary = operator_program();
-    let punctuation = StaticEffectNode::Callable(function(&preliminary, "punctuation"));
-    let explicit = StaticEffectNode::Callable(function(&preliminary, "explicit"));
+    let punctuation = MirExecutionNode::Callable(function(&preliminary, "punctuation"));
+    let explicit = MirExecutionNode::Callable(function(&preliminary, "explicit"));
     let analysis = infer_static_effects(&preliminary);
     let punctuation_summary = analysis.summary(punctuation).unwrap();
     let explicit_summary = analysis.summary(explicit).unwrap();

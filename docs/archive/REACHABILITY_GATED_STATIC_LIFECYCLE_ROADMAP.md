@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 through RSR7 are complete and RSR8 is next.
+Status: complete. RSR0 through RSR8 were delivered on 2026-09-01.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -19,7 +19,7 @@ The semantic change is deliberately late in the sequence. Shared extraction,
 shadow analysis, subset-capable proof, and independent final safety checks land
 first. Each task should make small cohesive maintainability improvements that
 reduce future optimization cost; larger findings belong in the
-[discoveries record](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).
+[discoveries record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).
 
 ## Dependencies
 
@@ -95,7 +95,7 @@ reduce future optimization cost; larger findings belong in the
 - [x] RSR5 — Switch lifecycle planning and synthesis to reachable activation
 - [x] RSR6 — Align backend planning and artifact retention
 - [x] RSR7 — Publish activation observation and migration diagnostics
-- [ ] RSR8 — Harden the language transition and close the roadmap
+- [x] RSR8 — Harden the language transition and close the roadmap
 
 ## PR-sized implementation sequence
 
@@ -535,27 +535,27 @@ and the source-to-native investigation path.
 **Purpose:** Audit real code, complete cross-phase regression coverage, remove
 rollout scaffolding, and leave only current behavior in living documentation.
 
-- [ ] Audit the standard library, samples, and golden corpus for static
+- [x] Audit the standard library, samples, and golden corpus for static
       initializers used solely for registration or side effects; convert only
       intentional supported behavior to ordinary reachable operations.
-- [ ] Complete stored-family, access-kind, call/dispatch, function-value,
+- [x] Complete stored-family, access-kind, call/dispatch, function-value,
       lifecycle, ownership, panic, diagnostic, generic-specialization,
       determinism, and imported-unused large-table matrices.
-- [ ] Compare `none`, `default`, reachability-disabled, pass-exclusion, repeated
+- [x] Compare `none`, `default`, reachability-disabled, pass-exclusion, repeated
       schedules, and independent processes for identical active sets and native
       static observations while allowing intended code-size differences.
-- [ ] Audit module size and ownership after the change; resolve small cohesive
+- [x] Audit module size and ownership after the change; resolve small cohesive
       duplication, assertions, or facade leakage and record larger findings in
       the discoveries document with evidence and a bounded first step.
-- [ ] Remove shadow/compatibility terminology, temporary adapters, roadmap
+- [x] Remove shadow/compatibility terminology, temporary adapters, roadmap
       codes, and stale declaration-wide eager wording from living code, tests,
       dumps, diagnostics, and documentation.
-- [ ] Confirm grammar and runtime ABI remain unchanged and that eager statics,
+- [x] Confirm grammar and runtime ABI remain unchanged and that eager statics,
       module initialization, lazy initialization, retention annotations,
       post-optimization replanning, and identity compaction remain excluded.
-- [ ] Run the full artifact-free repository, extended, MSRV, documentation,
+- [x] Run the full artifact-free repository, extended, MSRV, documentation,
       golden determinism, and diff gates.
-- [ ] Mark all roadmap work complete, archive the frozen design and roadmap,
+- [x] Mark all roadmap work complete, archive the frozen design and roadmap,
       repair links/indexes, and keep only actionable discoveries active.
 
 **Tests:** Complete compiler and binary suites; all golden variants including
@@ -571,6 +571,21 @@ repository's documented complete gate.
 backend behavior, tests, and active indexes all describe one hardened
 reachability-gated static lifecycle, with no required work left in this
 roadmap.
+
+Completed on 2026-09-01. The standard library, samples, and golden sources had
+no supported side-effect-only static initializer requiring conversion: their
+production statics are ordinary reachable data dependencies, while dormant
+declarations are intentional contract fixtures. The complete stored-value,
+access, dispatch, function-value, lifecycle, ownership, failure, diagnostic,
+generic, imported-unused, profile, repeat, and process-determinism matrices pass.
+The obsolete static-effect execution-node aliases and eager-baseline fixture
+terminology were removed. The module audit reconfirmed the already-recorded
+oversized lifecycle extractor and duplicated function-value closure solver as
+bounded follow-ups rather than closure blockers. Grammar and runtime ABI 9 are
+unchanged; explicit eager/module/lazy initialization, retention annotations,
+post-optimization activation replanning, and static identity compaction remain
+excluded. Full, extended, MSRV, documentation, determinism, diff, and isolated-
+target artifact-free gates passed during closure.
 
 ## Ordering and dependencies
 

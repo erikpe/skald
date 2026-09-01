@@ -4,7 +4,12 @@ schema = 1
 name = "profile_equivalence"
 mode = "run"
 source = "equivalence.ska"
-variants = ["default", "optimization-none", "reachability-disabled"]
+variants = [
+  "default",
+  "optimization-none",
+  "reachability-disabled",
+  "dead-pure-disabled",
+]
 [[test.run]]
 name = "startup_entry_shutdown_and_ownership"
 expect = { exit = 35, stdout = { inline = "10\n20\n30\n" } }
@@ -13,7 +18,12 @@ expect = { exit = 35, stdout = { inline = "10\n20\n30\n" } }
 name = "panic_trace_equivalence"
 mode = "run"
 source = "panic_trace.ska"
-variants = ["default", "optimization-none", "reachability-disabled"]
+variants = [
+  "default",
+  "optimization-none",
+  "reachability-disabled",
+  "dead-pure-disabled",
+]
 [[test.run]]
 name = "recursive_failure"
 expect = { exit = "failure", stderr = { inline = """panic: reachable failure

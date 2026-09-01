@@ -22,8 +22,8 @@ use crate::{
 
 #[cfg(test)]
 use crate::mir::{
-    StaticAccessKind, StaticArrayLifecycleOperation, StaticClassLifecycleOperation,
-    StaticEffectNode, StaticEffectPhase,
+    MirArrayLifecycleOperation, MirClassLifecycleOperation, MirExecutionNode, StaticAccessKind,
+    StaticEffectPhase,
 };
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 //! Static-effect coverage for calls selected by structural brackets.
 
 use crate::{
-    mir::StaticEffectNode,
+    mir::MirExecutionNode,
     test_support::{lower_hir_to_final_mir, type_check_source},
 };
 
@@ -40,7 +40,7 @@ fn structural_static_receivers_and_selected_methods_contribute_ordinary_effects(
 
     let analysis = infer_static_effects(&preliminary);
     let summary = analysis
-        .summary(StaticEffectNode::Callable(initializer.callable()))
+        .summary(MirExecutionNode::Callable(initializer.callable()))
         .expect("structural result initializer has an effect summary");
     assert!(summary
         .direct_effects

@@ -1,10 +1,10 @@
 # Reachability-Gated Static Lifecycle Design Proposal
 
-Status: frozen design proposal. RSL1 through RSL12 were confirmed together on
-2026-08-31. The contract is promoted into the living language and compiler
-documentation, but it does not describe current compiler behavior until the
-[implementation roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
-reaches its semantic cutover.
+Status: frozen implemented design. RSL1 through RSL12 were confirmed together
+on 2026-08-31 and delivered by the completed
+[implementation roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md) on
+2026-09-01. The living language and compiler documentation own the current
+contract.
 
 The current [static-field language contract](../language/STATIC_FIELDS.md)
 activates every declared static field in the loaded closed program before the
@@ -838,7 +838,7 @@ The direction is promoted into the authoritative
 [reporting](../compiler/REPORTING.md#frozen-static-activation-observation),
 [debugging](../development/DEBUGGING.md), and
 [testing](../development/TESTING.md#static-field-coverage) documentation.
-Implementation is divided into reviewable slices by the
-[active roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md), with
-out-of-scope findings kept in its separate
-[discoveries record](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).
+Implementation history is preserved in the
+[completed roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md), with
+out-of-scope findings kept in its active
+[discoveries record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).

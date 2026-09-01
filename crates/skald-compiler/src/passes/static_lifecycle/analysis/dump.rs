@@ -4,7 +4,7 @@ use std::fmt::Write;
 
 use crate::dump_format::write_span;
 
-use super::model::{StaticEffectAnalysis, StaticEffectNode};
+use super::model::{MirExecutionNode, StaticEffectAnalysis};
 
 pub fn dump_static_effects(analysis: &StaticEffectAnalysis) -> String {
     let mut output = String::from("StaticEffectAnalysis\n");
@@ -74,15 +74,15 @@ pub fn dump_static_effects(analysis: &StaticEffectAnalysis) -> String {
     output
 }
 
-pub(crate) fn write_node(output: &mut String, node: StaticEffectNode) {
+pub(crate) fn write_node(output: &mut String, node: MirExecutionNode) {
     match node {
-        StaticEffectNode::Callable(callable) => {
+        MirExecutionNode::Callable(callable) => {
             let _ = write!(output, "callable {callable}");
         }
-        StaticEffectNode::ClassLifecycle { class, operation } => {
+        MirExecutionNode::ClassLifecycle { class, operation } => {
             let _ = write!(output, "class {class} {operation:?}");
         }
-        StaticEffectNode::ArrayLifecycle { array, operation } => {
+        MirExecutionNode::ArrayLifecycle { array, operation } => {
             let _ = write!(output, "array {array} {operation:?}");
         }
     }

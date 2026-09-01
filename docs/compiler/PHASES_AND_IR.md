@@ -485,9 +485,9 @@ carry the exact active subset, and central final verification rejects reachable
 accesses outside that certified subset. The source-visible contract is owned by
 [Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
 the complete decisions by the
-[frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
+[frozen design record](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
 and delivery by the
-[active roadmap](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md).
+[completed roadmap](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md).
 
 The accepted phase boundary inserts one mandatory target-independent static-
 activation analysis after preliminary MIR is structurally verified and before
@@ -880,10 +880,11 @@ or destruction requirements.
 
 MIR now owns one neutral `MirExecutionNode` identity for callables, class copy
 construction, class copy assignment, complete class finalization, and array
-default/copy/assignment/destruction. The existing `StaticEffectNode` and
-static lifecycle operation names are compatibility aliases for that same type,
-so correctness analysis and future reachability analysis cannot acquire
-independently drifting lifecycle-node taxonomies.
+default/copy/assignment/destruction. Static-lifecycle correctness analysis and
+whole-world reachability consume that identity and its neutral
+`MirClassLifecycleOperation` and `MirArrayLifecycleOperation` taxonomies
+directly, so the two analyses cannot acquire independently drifting lifecycle-
+node vocabularies.
 
 The crate-private `passes::reachability` facade defines typed dependency
 targets and edge kinds, whole-program root targets and reasons, runtime-entity

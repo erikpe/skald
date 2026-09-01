@@ -16,7 +16,11 @@ and dense callable-local identity constraints are resolved by their completed
 [static-lifecycle certificate](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 and
 [MIR identity rewriting](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
-roadmaps. The next enabling layer is also resolved by the completed
+roadmaps. The completed
+[reachability-gated static lifecycle roadmap](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
+now derives one exact mandatory active-field set before planning, so unused
+loaded declarations no longer create runtime lifecycle roots. The next
+enabling layer is also resolved by the completed
 [selectable final-MIR optimization pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 and its frozen
 [design record](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_DESIGN_PROPOSAL.md).
@@ -108,10 +112,12 @@ should not be the first optimizer change.
 
 ### Implemented state
 
-Static-lifecycle planning still selects diagnostics and deterministic lifecycle
-order from the unoptimized whole program. It now issues compact baseline
-authority over normalized lifecycle-root facts instead of retaining exact
-cross-phase graph shape. Planned verification consumes draft
+Static-lifecycle planning selects diagnostics and deterministic lifecycle order
+from the exact active-field closure computed over verified, definition-complete
+preliminary MIR. Inactive declarations remain checked, but do not enter the
+lifecycle graph. Planning issues compact activation and baseline authority over
+normalized lifecycle-root facts instead of retaining exact cross-phase graph
+shape. Planned verification consumes draft
 `PlannedMirProgram`, independently proves exact authority issuance, and returns
 an opaque `VerifiedPlannedMirProgram`; synthesis accepts only that sealed
 product.
@@ -134,8 +140,9 @@ authority.
 `passes::verify_final_mir` is the central invalidation target and constructs a
 read-only `VerifiedFinalMirProgram`. `BackendInput` accepts only this sealed
 product, so no backend path can consume unchecked MIR or repeat
-target-independent verification. The measured pipeline reports one honest final
-verification execution and currently registers no production transformation.
+target-independent verification. The measured pipeline reports honest
+verification executions around the selected dead-pure-definition-elimination
+and whole-world-reachability transformations.
 
 Future passes are classified by their lifecycle effect behavior. A pass proven
 to preserve static accesses, reachability, lifecycle operations, and possible
@@ -153,6 +160,10 @@ The rationale and implementation history are preserved in the
 [frozen design proposal](../archive/STATIC_LIFECYCLE_CERTIFICATE_DESIGN_PROPOSAL.md)
 and
 [completed roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md).
+The later activation-set contract and delivery history are preserved in the
+[reachability-gated design](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
+and
+[completed roadmap](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md).
 
 ### Optimization possibilities enabled
 

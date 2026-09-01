@@ -19,7 +19,7 @@ fn lower(text: &str) -> PreliminaryMirProgram {
 
 fn effect_fields(
     analysis: &StaticEffectAnalysis,
-    node: StaticEffectNode,
+    node: MirExecutionNode,
 ) -> Vec<crate::identity::StaticFieldId> {
     analysis
         .summary(node)
@@ -31,7 +31,7 @@ fn effect_fields(
 }
 
 #[test]
-fn direct_effects_are_an_exact_adapter_of_shared_static_accesses() {
+fn direct_effects_are_an_exact_projection_of_shared_static_accesses() {
     let preliminary = lower(
         "class Item {
            value: i64;
@@ -129,7 +129,7 @@ fn propagates_direct_deep_and_recursive_effects_with_minimum_witnesses() {
         .collect::<Vec<_>>();
     let analysis = infer_static_effects(&preliminary);
 
-    let outer = StaticEffectNode::Callable(FunctionId::new(2).into());
+    let outer = MirExecutionNode::Callable(FunctionId::new(2).into());
     let outer_effect = analysis
         .summary(outer)
         .unwrap()
@@ -143,7 +143,7 @@ fn propagates_direct_deep_and_recursive_effects_with_minimum_witnesses() {
         StaticEffectEdgeKind::DirectCall
     );
 
-    let result_initializer = StaticEffectNode::Callable(
+    let result_initializer = MirExecutionNode::Callable(
         preliminary
             .static_initializers()
             .find(|initializer| initializer.field == fields[1])
@@ -184,7 +184,7 @@ fn scans_unreachable_branches_conservatively() {
 
     assert!(effect_fields(
         &analysis,
-        StaticEffectNode::Callable(FunctionId::new(0).into())
+        MirExecutionNode::Callable(FunctionId::new(0).into())
     )
     .contains(&hidden));
 }
@@ -217,12 +217,12 @@ fn expands_virtual_and_interface_dispatch_to_all_linked_implementations() {
     let analysis = infer_static_effects(&preliminary);
 
     for function in [FunctionId::new(0), FunctionId::new(1)] {
-        let effects = effect_fields(&analysis, StaticEffectNode::Callable(function.into()));
+        let effects = effect_fields(&analysis, MirExecutionNode::Callable(function.into()));
         assert!(effects.contains(&fields[0]), "{effects:?}");
         assert!(effects.contains(&fields[1]), "{effects:?}");
     }
     let virtual_summary = analysis
-        .summary(StaticEffectNode::Callable(FunctionId::new(0).into()))
+        .summary(MirExecutionNode::Callable(FunctionId::new(0).into()))
         .unwrap();
     assert!(virtual_summary
         .effects
@@ -230,7 +230,7 @@ fn expands_virtual_and_interface_dispatch_to_all_linked_implementations() {
         .flat_map(|effect| &effect.witness)
         .any(|edge| edge.kind == StaticEffectEdgeKind::VirtualDispatch));
     let interface_summary = analysis
-        .summary(StaticEffectNode::Callable(FunctionId::new(1).into()))
+        .summary(MirExecutionNode::Callable(FunctionId::new(1).into()))
         .unwrap();
     assert!(interface_summary
         .effects
@@ -254,7 +254,7 @@ fn propagates_closed_generic_interface_dispatch_effects() {
     let field = preliminary.static_fields().next().unwrap().field;
     let analysis = infer_static_effects(&preliminary);
     let summary = analysis
-        .summary(StaticEffectNode::Callable(FunctionId::new(0).into()))
+        .summary(MirExecutionNode::Callable(FunctionId::new(0).into()))
         .unwrap();
 
     assert!(summary.effects.iter().any(|effect| effect.field == field
@@ -302,17 +302,17 @@ fn models_constructor_copy_temporary_optional_and_array_lifecycle_effects() {
 
     assert!(effect_fields(
         &analysis,
-        StaticEffectNode::class(item, StaticClassLifecycleOperation::CopyConstructor)
+        MirExecutionNode::class(item, MirClassLifecycleOperation::CopyConstructor)
     )
     .contains(&fields[1]));
     assert!(effect_fields(
         &analysis,
-        StaticEffectNode::class(item, StaticClassLifecycleOperation::CompleteFinalizer)
+        MirExecutionNode::class(item, MirClassLifecycleOperation::CompleteFinalizer)
     )
     .contains(&fields[2]));
     assert!(effect_fields(
         &analysis,
-        StaticEffectNode::class(item, StaticClassLifecycleOperation::CopyAssignment)
+        MirExecutionNode::class(item, MirClassLifecycleOperation::CopyAssignment)
     )
     .contains(&fields[1]));
     for function in [
@@ -321,15 +321,15 @@ fn models_constructor_copy_temporary_optional_and_array_lifecycle_effects() {
         FunctionId::new(2),
         FunctionId::new(3),
     ] {
-        let effects = effect_fields(&analysis, StaticEffectNode::Callable(function.into()));
+        let effects = effect_fields(&analysis, MirExecutionNode::Callable(function.into()));
         assert!(effects.contains(&fields[0]), "{function}: {effects:?}");
         assert!(effects.contains(&fields[2]), "{function}: {effects:?}");
     }
     assert!(analysis.summaries().any(|summary| {
         matches!(
             summary.node,
-            StaticEffectNode::ArrayLifecycle {
-                operation: StaticArrayLifecycleOperation::Destruction,
+            MirExecutionNode::ArrayLifecycle {
+                operation: MirArrayLifecycleOperation::Destruction,
                 ..
             }
         ) && summary
@@ -343,7 +343,7 @@ fn models_constructor_copy_temporary_optional_and_array_lifecycle_effects() {
         .find(|initializer| initializer.field == fields[4])
         .unwrap();
     let cleanup_effect = analysis
-        .summary(StaticEffectNode::Callable(copied_initializer.callable()))
+        .summary(MirExecutionNode::Callable(copied_initializer.callable()))
         .unwrap()
         .effects
         .iter()
@@ -381,7 +381,7 @@ fn shared_release_includes_every_compatible_dynamic_finalizer() {
     let analysis = infer_static_effects(&preliminary);
     let effects = effect_fields(
         &analysis,
-        StaticEffectNode::Callable(FunctionId::new(0).into()),
+        MirExecutionNode::Callable(FunctionId::new(0).into()),
     );
 
     assert!(effects.contains(&fields[0]), "{effects:?}");
@@ -411,7 +411,7 @@ fn witness_selection_and_dump_are_stable() {
     let analysis = infer_static_effects(&preliminary);
     let value = preliminary.static_fields().next().unwrap().field;
     let choose = analysis
-        .summary(StaticEffectNode::Callable(FunctionId::new(2).into()))
+        .summary(MirExecutionNode::Callable(FunctionId::new(2).into()))
         .unwrap()
         .effects
         .iter()
@@ -419,7 +419,7 @@ fn witness_selection_and_dump_are_stable() {
         .unwrap();
     assert_eq!(
         choose.witness[0].target,
-        StaticEffectNode::Callable(FunctionId::new(0).into())
+        MirExecutionNode::Callable(FunctionId::new(0).into())
     );
 }
 
@@ -446,7 +446,7 @@ fn string_language_item_initialization_is_in_the_effect_inventory() {
     let initializer = preliminary.static_initializers().next().unwrap();
     let analysis = infer_static_effects(&preliminary);
     let summary = analysis
-        .summary(StaticEffectNode::Callable(initializer.callable()))
+        .summary(MirExecutionNode::Callable(initializer.callable()))
         .unwrap();
 
     assert!(summary.direct_effects.iter().any(|effect| {

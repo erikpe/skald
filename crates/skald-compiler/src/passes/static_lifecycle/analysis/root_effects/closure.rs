@@ -3,7 +3,7 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use crate::mir::{
-    MirProgram, MirStaticLifecycleDefinition, PreliminaryMirProgram, StaticEffectNode,
+    MirExecutionNode, MirProgram, MirStaticLifecycleDefinition, PreliminaryMirProgram,
     StaticLifecycleAuthority, StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
 };
 
@@ -76,7 +76,7 @@ fn analyze_roots(
     graph: &ExtractedGraph,
     declared_fields: BTreeSet<crate::identity::StaticFieldId>,
     active_fields: BTreeSet<crate::identity::StaticFieldId>,
-    roots: BTreeSet<StaticEffectNode>,
+    roots: BTreeSet<MirExecutionNode>,
 ) -> Result<StaticLifecycleAuthority, StaticLifecycleRootEffectError> {
     let summaries = roots
         .into_iter()
@@ -90,7 +90,7 @@ fn analyze_roots(
 }
 
 fn effects_for(
-    root: StaticEffectNode,
+    root: MirExecutionNode,
     graph: &ExtractedGraph,
     declared_fields: &BTreeSet<crate::identity::StaticFieldId>,
     active_fields: &BTreeSet<crate::identity::StaticFieldId>,

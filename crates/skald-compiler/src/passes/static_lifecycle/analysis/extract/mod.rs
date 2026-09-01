@@ -13,8 +13,9 @@ use crate::{
 };
 
 use super::model::{
-    edge_key, evidence_key, StaticAccessEvidence, StaticEffectEdge, StaticEffectEdgeKind,
-    StaticEffectNode, StaticEffectPhase, StaticFunctionValueCandidates, StaticFunctionValueTarget,
+    edge_key, evidence_key, MirExecutionNode, StaticAccessEvidence, StaticEffectEdge,
+    StaticEffectEdgeKind, StaticEffectPhase, StaticFunctionValueCandidates,
+    StaticFunctionValueTarget,
 };
 
 #[derive(Default)]
@@ -25,7 +26,7 @@ pub(crate) struct NodeDraft {
 
 pub(crate) struct ExtractedGraph {
     pub(crate) function_value_candidates: Vec<StaticFunctionValueCandidates>,
-    pub(crate) nodes: BTreeMap<StaticEffectNode, NodeDraft>,
+    pub(crate) nodes: BTreeMap<MirExecutionNode, NodeDraft>,
 }
 
 pub(crate) fn extract(program: &PreliminaryMirProgram) -> ExtractedGraph {
@@ -57,7 +58,7 @@ pub(crate) fn extract_from_dependencies(dependencies: &MirDependencyExtraction) 
 
 struct Extractor {
     function_value_candidates: Vec<StaticFunctionValueCandidates>,
-    nodes: BTreeMap<StaticEffectNode, NodeDraft>,
+    nodes: BTreeMap<MirExecutionNode, NodeDraft>,
 }
 
 impl Extractor {
@@ -108,7 +109,7 @@ impl Extractor {
             for target in dependencies.all_indirect_targets(site.function_type()) {
                 self.add_edge(
                     site.source(),
-                    StaticEffectNode::callable(target),
+                    MirExecutionNode::callable(target),
                     StaticEffectEdgeKind::IndirectCall,
                     static_phase(site.region()),
                     site.span(),
@@ -136,8 +137,8 @@ impl Extractor {
 
     fn add_edge(
         &mut self,
-        source: StaticEffectNode,
-        target: StaticEffectNode,
+        source: MirExecutionNode,
+        target: MirExecutionNode,
         kind: StaticEffectEdgeKind,
         phase: StaticEffectPhase,
         span: Span,

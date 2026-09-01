@@ -8,7 +8,6 @@ use crate::{
     mir::{
         MirArrayLifecycleOperation, MirCallTarget, MirClassLifecycleOperation, MirExecutionNode,
         MirFunctionLinkage, MirInstruction, MirPlaceBase, MirRvalueKind, StaticAccessKind,
-        StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectNode,
         StaticLifecycleRootAuthority,
     },
     test_support::{lower_generic_source_to_final_mir, lower_generic_source_to_preliminary_mir},
@@ -68,28 +67,6 @@ fn execution_node_taxonomy_has_canonical_semantic_order() {
             ..
         }
     ));
-}
-
-#[test]
-fn static_lifecycle_identity_names_are_compatible_aliases() {
-    let class = ClassId::new(3);
-    let neutral = MirExecutionNode::class(class, MirClassLifecycleOperation::CompleteFinalizer);
-    let certificate_name =
-        StaticEffectNode::class(class, StaticClassLifecycleOperation::CompleteFinalizer);
-    let authority = StaticLifecycleRootAuthority::new(certificate_name, Vec::new());
-
-    assert_eq!(neutral, certificate_name);
-    assert_eq!(authority.root(), neutral);
-    assert_eq!(
-        MirExecutionNode::array(
-            reachability_identity_fixture().array,
-            MirArrayLifecycleOperation::Copy,
-        ),
-        StaticEffectNode::array(
-            reachability_identity_fixture().array,
-            StaticArrayLifecycleOperation::Copy,
-        )
-    );
 }
 
 #[test]

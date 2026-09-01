@@ -98,6 +98,7 @@ Archived plans:
 - [Dense callable-local MIR identity rewriting](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 - [Selectable final-MIR optimization pipeline](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 - [Target-independent whole-world reachability](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+- [Reachability-gated static lifecycle](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -160,6 +161,11 @@ Resolved whole-world reachability inputs:
 
 - [Target-independent whole-world reachability design proposal](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 - [Target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+
+Resolved reachability-gated static lifecycle inputs:
+
+- [Reachability-gated static lifecycle design proposal](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
+- [Reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
 

@@ -3,10 +3,10 @@
 use crate::{
     identity::{ClassId, StaticFieldId},
     mir::{
-        lower_preliminary_hir, MirPlannedLifecycle, MirStaticFieldInitialization,
-        MirStaticLifecycleDefinition, MirStaticLifecycleProof, MirType, StaticAccessKind,
-        StaticActivationAuthority, StaticClassLifecycleOperation, StaticEffectNode,
-        StaticEffectPhase, StaticLifecyclePlan,
+        lower_preliminary_hir, MirClassLifecycleOperation, MirExecutionNode, MirPlannedLifecycle,
+        MirStaticFieldInitialization, MirStaticLifecycleDefinition, MirStaticLifecycleProof,
+        MirType, StaticAccessKind, StaticActivationAuthority, StaticEffectPhase,
+        StaticLifecyclePlan,
     },
     test_support::type_check_source,
 };
@@ -225,9 +225,9 @@ fn rejects_foreign_authority_identities() {
         .proof_mut_for_test()
         .authority_mut_for_test()
         .roots_mut_for_test()[0]
-        .set_root_for_test(StaticEffectNode::class(
+        .set_root_for_test(MirExecutionNode::class(
             ClassId::new(99),
-            StaticClassLifecycleOperation::CompleteFinalizer,
+            MirClassLifecycleOperation::CompleteFinalizer,
         ));
     assert!(errors(&foreign_root).contains("foreign lifecycle root"));
 

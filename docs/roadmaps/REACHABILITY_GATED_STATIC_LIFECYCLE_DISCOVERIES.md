@@ -1,12 +1,12 @@
 # Reachability-Gated Static Lifecycle Discoveries
 
-Status: active companion record for the in-progress
-[reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md).
+Status: active follow-up record for the completed
+[reachability-gated static lifecycle roadmap](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md).
 
 This document records maintainability improvements, missing abstraction
 boundaries, precision opportunities, and broader language or optimization work
 found while implementing the frozen
-[design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md) when those
+[design](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md) when those
 findings are not required by the currently reviewed roadmap task.
 
 Each future entry must state:
@@ -34,8 +34,8 @@ prevent these two consumers from evolving the coupling mechanics differently.
 **Why deferred.** Extracting a reusable solver component requires a narrow
 callback or event API that can preserve each consumer's distinct edge,
 witness, runtime-entity, and error ownership. Designing that boundary while
-landing the first shadow activation solver would enlarge this roadmap task and
-risk obscuring the semantic closure being validated.
+landing the first activation solver would have enlarged the roadmap task and
+risked obscuring the semantic closure being validated.
 
 **Likely owner.** `passes::reachability`, as the neutral owner of callable-
 address formations, indirect-call sites, exact function types, and possible-

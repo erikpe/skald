@@ -186,9 +186,10 @@ const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
 const STATIC_FIELD_MODULE_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_MODULE_DETERMINISM_OUTPUT";
 const STATIC_FIELD_MODULE_TEST_NAME: &str =
     "static_field_module_products_are_deterministic_across_processes";
-const EAGER_UNUSED_STATIC_HELPER_OUTPUT: &str = "SKALD_EAGER_UNUSED_STATIC_DETERMINISM_OUTPUT";
-const EAGER_UNUSED_STATIC_TEST_NAME: &str =
-    "eager_unused_static_products_are_deterministic_across_processes";
+const IMPORTED_UNUSED_STATIC_HELPER_OUTPUT: &str =
+    "SKALD_IMPORTED_UNUSED_STATIC_DETERMINISM_OUTPUT";
+const IMPORTED_UNUSED_STATIC_TEST_NAME: &str =
+    "imported_unused_static_products_are_deterministic_across_processes";
 const MIR_CHECKPOINT_HELPER_OUTPUT: &str = "SKALD_MIR_CHECKPOINT_DETERMINISM_OUTPUT";
 const MIR_CHECKPOINT_TEST_NAME: &str =
     "mir_pipeline_checkpoints_are_deterministic_across_processes";
@@ -353,12 +354,12 @@ fn static_field_module_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn eager_unused_static_products_are_deterministic_across_processes() {
+fn imported_unused_static_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
-        "eager-unused-static-products",
-        EAGER_UNUSED_STATIC_HELPER_OUTPUT,
-        EAGER_UNUSED_STATIC_TEST_NAME,
-        eager_unused_static_phase_dump,
+        "imported-unused-static-products",
+        IMPORTED_UNUSED_STATIC_HELPER_OUTPUT,
+        IMPORTED_UNUSED_STATIC_TEST_NAME,
+        imported_unused_static_phase_dump,
     );
 }
 
@@ -2030,21 +2031,21 @@ fn static_field_module_phase_dump(variant: usize) -> String {
     )
 }
 
-fn eager_unused_static_phase_dump() -> String {
-    let fixture = ModuleFixture::new("eager-unused-static-products", 0);
+fn imported_unused_static_phase_dump() -> String {
+    let fixture = ModuleFixture::new("imported-unused-static-products", 0);
     let application = fixture.path.join("application");
     let standard_library = fixture.path.join("standard-library");
     let mut sources = vec![
         (
             application.join("app.ska"),
             include_str!(
-                "../../../tests/golden/static_fields/cases/eager_unused_import/modules/app.ska"
+                "../../../tests/golden/static_fields/cases/imported_unused_static/modules/app.ska"
             ),
         ),
         (
             application.join("dormant.ska"),
             include_str!(
-                "../../../tests/golden/static_fields/cases/eager_unused_import/modules/dormant.ska"
+                "../../../tests/golden/static_fields/cases/imported_unused_static/modules/dormant.ska"
             ),
         ),
     ];

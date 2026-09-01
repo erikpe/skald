@@ -351,7 +351,7 @@ fn provider_discovery_order_does_not_change_queries_witnesses_or_dump() {
 }
 
 #[test]
-fn imported_unused_decimal_table_is_inactive_in_shadow_analysis() {
+fn imported_unused_decimal_table_is_inactive_in_activation_analysis() {
     let source = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/golden/control_flow/loop_lifecycle_matrix.ska"

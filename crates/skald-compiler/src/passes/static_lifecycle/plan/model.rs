@@ -4,9 +4,9 @@ use crate::diagnostics::{Diagnostic, Diagnostics};
 use crate::{
     identity::{StaticFieldId, StaticInitializerId},
     mir::{
-        MirPlannedLifecycle, PreliminaryMirProgram, PreliminaryMirStaticField,
+        MirExecutionNode, MirPlannedLifecycle, PreliminaryMirProgram, PreliminaryMirStaticField,
         PreliminaryMirStaticInitializer, StaticAccessKind, StaticActivationAuthority,
-        StaticEffectNode, StaticEffectPhase, StaticLifecycleAuthority,
+        StaticEffectPhase, StaticLifecycleAuthority,
     },
     source::Span,
 };
@@ -29,7 +29,7 @@ pub struct StaticLifetimeEvidence {
     pub root: StaticFieldId,
     pub root_span: Span,
     pub phase: StaticLifetimePhase,
-    pub root_effect: StaticEffectNode,
+    pub root_effect: MirExecutionNode,
     pub target: StaticFieldId,
     pub target_span: Span,
     pub access: StaticAccessKind,

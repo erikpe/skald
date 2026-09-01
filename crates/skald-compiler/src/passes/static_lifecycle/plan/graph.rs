@@ -4,7 +4,7 @@ use std::{cmp::Ordering, collections::BTreeMap};
 
 use crate::{
     identity::StaticFieldId,
-    mir::{PreliminaryMirProgram, StaticEffectNode},
+    mir::{MirExecutionNode, PreliminaryMirProgram},
     passes::graph::strongly_connected_components,
 };
 
@@ -30,7 +30,7 @@ struct LifetimeRoot {
     field: StaticFieldId,
     span: crate::source::Span,
     phase: StaticLifetimePhase,
-    effect: StaticEffectNode,
+    effect: MirExecutionNode,
 }
 
 impl LifetimeGraph {
@@ -58,7 +58,7 @@ impl LifetimeGraph {
                 .copied()
                 .expect("active authority must name a declared static field");
             if let Some(initializer) = field.initializer {
-                let root = StaticEffectNode::callable(initializer.into());
+                let root = MirExecutionNode::callable(initializer.into());
                 let summary = effects
                     .summary(root)
                     .expect("verified static initializer must have an effect summary");

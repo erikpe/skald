@@ -2,8 +2,8 @@
 
 use crate::{
     mir::{
-        dump_mir, lower_preliminary_hir, MirStaticFieldInitialization, PreliminaryMirProgram,
-        StaticClassLifecycleOperation, StaticEffectNode,
+        dump_mir, lower_preliminary_hir, MirClassLifecycleOperation, MirExecutionNode,
+        MirStaticFieldInitialization, PreliminaryMirProgram,
     },
     test_support::type_check_source,
 };
@@ -149,12 +149,12 @@ fn issues_exact_authority_for_explicit_zero_default_and_destructible_statics() {
     );
     assert!(planned
         .authority()
-        .root(StaticEffectNode::callable(explicit.into()))
+        .root(MirExecutionNode::callable(explicit.into()))
         .is_some());
     assert!(planned.authority().roots().any(|root| matches!(
         root.root(),
-        StaticEffectNode::ClassLifecycle {
-            operation: StaticClassLifecycleOperation::CompleteFinalizer,
+        MirExecutionNode::ClassLifecycle {
+            operation: MirClassLifecycleOperation::CompleteFinalizer,
             ..
         }
     )));

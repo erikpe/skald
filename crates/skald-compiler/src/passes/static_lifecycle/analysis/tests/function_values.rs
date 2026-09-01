@@ -2,7 +2,7 @@
 
 use crate::{
     identity::{CallableId, FunctionId},
-    mir::{PreliminaryMirProgram, StaticEffectNode},
+    mir::{MirExecutionNode, PreliminaryMirProgram},
     test_support::lower_generic_source_to_preliminary_mir,
 };
 
@@ -65,7 +65,7 @@ fn expands_each_indirect_call_to_every_exact_signature_target() {
         ]
     );
     let invoke = analysis
-        .summary(StaticEffectNode::Callable(function(&preliminary, "invoke")))
+        .summary(MirExecutionNode::Callable(function(&preliminary, "invoke")))
         .unwrap();
     assert_eq!(
         invoke
@@ -77,19 +77,19 @@ fn expands_each_indirect_call_to_every_exact_signature_target() {
         candidates
             .targets
             .iter()
-            .map(|target| StaticEffectNode::Callable(target.callable))
+            .map(|target| MirExecutionNode::Callable(target.callable))
             .collect::<Vec<_>>()
     );
     assert_eq!(
         effect_fields(
             &analysis,
-            StaticEffectNode::Callable(function(&preliminary, "invoke"))
+            MirExecutionNode::Callable(function(&preliminary, "invoke"))
         ),
         fields[..2]
     );
 
     let retain_only = analysis
-        .summary(StaticEffectNode::Callable(function(
+        .summary(MirExecutionNode::Callable(function(
             &preliminary,
             "retain_only",
         )))
@@ -204,7 +204,7 @@ fn same_signature_generic_targets_keep_independent_effect_nodes() {
         .targets
         .iter()
         .map(|target| {
-            let effects = effect_fields(&analysis, StaticEffectNode::Callable(target.callable));
+            let effects = effect_fields(&analysis, MirExecutionNode::Callable(target.callable));
             assert_eq!(effects.len(), 1);
             effects[0]
         })
@@ -214,7 +214,7 @@ fn same_signature_generic_targets_keep_independent_effect_nodes() {
 
     let invoke = function(&preliminary, "invoke");
     let edges = &analysis
-        .summary(StaticEffectNode::Callable(invoke))
+        .summary(MirExecutionNode::Callable(invoke))
         .unwrap()
         .possible_targets;
     assert_eq!(

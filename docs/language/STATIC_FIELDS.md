@@ -381,10 +381,10 @@ anchors remain unchanged.
 
 ## Frozen reachability-gated activation direction
 
-Status: **implemented contract**. The delivery history remains in the active
-[implementation roadmap](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md),
+Status: **implemented contract**. The delivery history is preserved in the
+[completed implementation roadmap](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md),
 and the complete rationale and exact decisions are preserved in
-the [frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md).
+the [frozen design record](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md).
 
 The accepted contract separates declaration from runtime activation. Loading,
 importing, resolving, specializing, type-checking, or lowering a static field
