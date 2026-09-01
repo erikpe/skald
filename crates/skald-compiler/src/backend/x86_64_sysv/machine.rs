@@ -424,6 +424,7 @@ pub(super) struct AssemblyTraceLocation {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct AssemblyStaticSlot {
+    pub field: crate::identity::StaticFieldId,
     pub symbol: String,
     pub size: usize,
     pub alignment_power: u8,

@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, RUNTIME_ABI_MARKER_SYMBOL},
-    identity::CallableId,
+    identity::{CallableId, StaticFieldId},
     mir::{BlockId, MirCallableSignature, MirDefinitionRef, MirInstruction, MirProgram},
     source::Span,
 };
@@ -42,6 +42,7 @@ const ENTRY_RESULT_FRAME_SIZE: u32 = 16;
 
 pub(super) fn lower(
     program: &MirProgram,
+    active_static_fields: &[StaticFieldId],
     data_layout: &DataLayout,
     dispatch: &DispatchMetadata,
     activations: &runtime_trace::Activations,
@@ -74,10 +75,12 @@ pub(super) fn lower(
         data_layout,
         dispatch,
     )?);
-    if let Some(initializer) = static_lifecycle::lower_program_initializer(program) {
+    if let Some(initializer) = static_lifecycle::lower_program_initializer(program, observer) {
         functions.push(initializer);
     }
-    if let Some(finalizer) = static_lifecycle::lower_program_finalizer(program, data_layout)? {
+    if let Some(finalizer) =
+        static_lifecycle::lower_program_finalizer(program, data_layout, observer)?
+    {
         functions.push(finalizer);
     }
     let entry = program
@@ -86,9 +89,16 @@ pub(super) fn lower(
         .expect("verified entry declaration must exist");
     functions.push(entry_wrapper(program, entry.id.into()));
     let panic_messages = terminator::PanicMessagePool::build(&functions);
+    let static_slots = super::static_fields::plan(
+        program,
+        active_static_fields,
+        &functions,
+        data_layout,
+        observer,
+    )?;
     Ok(AssemblyProgram {
         functions,
-        static_slots: super::static_fields::plan(program, data_layout)?,
+        static_slots,
         dispatch_tables: dispatch.assembly_tables(program),
         literal_backings: literal_pool.into_backings(),
         panic_messages: panic_messages.into_assembly(),

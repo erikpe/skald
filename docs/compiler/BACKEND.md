@@ -29,9 +29,12 @@ copies them as neutral scalars, materializes exact callable symbols, and loads
 stabilized callees into `r11` only after hidden results, arguments, and trace
 attribution have been prepared.
 
-Verified eager static lifecycle MIR is current backend input. The x86-64
-target emits one aligned, writable, target-private `.bss` slot per canonical
-declaration and addresses it with identity-derived RIP-relative relocations.
+Verified reachability-gated static lifecycle MIR is current backend input. The
+x86-64 target emits one aligned, writable, target-private `.bss` slot per
+certified active field and addresses it with identity-derived RIP-relative
+relocations. Complete-emission mode additionally plans a private fallback slot
+when a physically retained unreachable body still names an inactive field;
+the production artifact closure removes that body and slot together.
 It lowers explicit initializer bodies through ordinary frame planning,
 instruction selection, calls, allocation, ownership, arrays, and cleanup, then
 invokes them from one private program initializer in the verified activation
@@ -48,9 +51,11 @@ Backends consume an explicit `BackendInput`: an opaque, read-only
 typed runtime-trace policy. Only `passes::run_mir_pipeline` and
 `passes::verify_final_mir` construct that sealed product after ordinary and
 static-lifecycle realization verification and target-independent reachability
-analysis. The product owns the reachability facts derived from its exact MIR,
-although backend lowering does not consume them yet. The backend cannot accept
-raw `MirProgram` and does not repeat target-independent verification. This
+analysis. The product owns the reachability facts and certified active-static
+domain derived from its exact MIR. `BackendInput` projects only narrow borrowed
+queries needed by target planning; it exposes neither analysis products nor
+mutable certificate state. The backend cannot accept raw `MirProgram` and does
+not repeat target-independent verification. This
 boundary does not expose AST, resolved IR, HIR, or type-checker state to a
 backend. The public backend facade provides:
 
@@ -789,10 +794,11 @@ rounding; generated helpers add none, and omitted tracing leaves frame layout
 unchanged.
 
 Primitive, inline-optional (including optional-array), optional shared-owner,
-and inline-array static roots do not
-receive frame homes. A private target-data plan maps each declaration identity
-to one aligned, writable, zero-filled local object using the ordinary target
-type layout. Instruction selection materializes its address with RIP-relative
+and inline-array static roots do not receive frame homes. A private target-data
+plan maps each certified active identity to one aligned, writable, zero-filled
+local object using the ordinary target type layout. It adds an inactive private
+fallback only when an emitted machine function contains that slot's explicit
+address reference. Instruction selection materializes its address with RIP-relative
 `lea` and applies the existing optional state, checked payload, and one-word
 optional-owner and array descriptor operations, after which the same scalar,
 aggregate, ownership, backing-anchor, projection, and alias-address machinery
@@ -1092,26 +1098,30 @@ closure.
 
 ## Frozen reachability-gated static lifecycle boundary
 
-Status: **active coordinator input implemented; active-slot planning remains
-roadmap work**. Current backend input contains lifecycle work only for the
-certified active statics. The source semantics are defined by
+Status: **implemented**. Current backend input contains lifecycle work and
+certified storage authority only for active statics. The source semantics are defined by
 [Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
 and phase ownership is defined by
 [Phases and IR](PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction).
 
 The backend accepts only verified final MIR and does not infer, narrow, or
-replan static activation. Its private program initializer and finalizer are
-generated solely from the certified active coordinator
-regions, so no inactive initializer or eventual-value destruction may execute.
-Target planning should use the verified active-static query for storage and
-metadata where safe.
+replan static activation. `BackendInput` exposes one immutable, canonically
+ordered active-field query from the final lifecycle certificate. The private
+program initializer and finalizer visit solely the certified coordinator
+regions, so no inactive initializer or eventual-value destruction can execute.
+Target-private observers distinguish declared, active, initializer/finalizer,
+fallback-planned, retained, and emitted field visits without feeding any fact
+back into source semantics.
 
-The current implementation may conservatively plan an addressable private slot for
-an inactive declaration when a physically retained unreachable body still
-mentions it. Such a slot has no source-visible lifetime, initializer, or
-destructor. The existing target-generated symbol walk must remove it and all
-initializer, helper, literal, trace, and metadata artifacts reachable only from
-inactive work in ordinary emitted output.
+Storage planning starts from the certified active domain. After instruction
+selection it also recognizes explicit static-symbol addresses in physically
+retained machine functions and conservatively plans the corresponding inactive
+private fallback slots. Such a slot has no source-visible lifetime,
+initializer, or destructor. The existing exported-symbol walk removes it with
+its unreachable body and removes initializer, helper, literal, trace, and
+metadata artifacts reachable only from inactive work in ordinary emitted
+output. Complete-emission tests may retain the fallback pair for inspecting an
+otherwise unreachable body.
 
 This contract changes no public runtime service, ABI version, host wrapper,
 entry/result protocol, object layout, field layout, calling convention,

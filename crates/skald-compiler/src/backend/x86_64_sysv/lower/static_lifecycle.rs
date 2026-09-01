@@ -9,6 +9,7 @@ use crate::{
 use super::super::{
     layout::DataLayout,
     machine::{AssemblyFunction, Instruction, Label, Operand, Register},
+    planning::{PlanningObserver, StaticPlanningPhase},
     symbol,
 };
 use super::call;
@@ -24,7 +25,10 @@ pub(super) fn has_program_initializer(program: &MirProgram) -> bool {
 /// bodies in the verified activation order. Lifecycle transitions need no
 /// target state: zero-default work is already represented by `.bss`, while
 /// explicit bodies publish directly into their private value slots.
-pub(super) fn lower_program_initializer(program: &MirProgram) -> Option<AssemblyFunction> {
+pub(super) fn lower_program_initializer(
+    program: &MirProgram,
+    observer: &mut impl PlanningObserver,
+) -> Option<AssemblyFunction> {
     let coordinator = program.static_lifecycle.as_ref()?;
     if coordinator.initializers().is_empty() {
         return None;
@@ -37,15 +41,15 @@ pub(super) fn lower_program_initializer(program: &MirProgram) -> Option<Assembly
             destination: Register::Rbp.into(),
         },
     ];
-    instructions.extend(coordinator.activation().iter().filter_map(|region| {
-        let MirStaticActivationWork::Explicit(initializer) = region.work else {
-            return None;
-        };
-        Some(call::direct_instruction(
-            symbol::callable(program, CallableId::StaticInitializer(initializer)),
-            call::TraceAttribution::SourceBodyFromOmittedHelper,
-        ))
-    }));
+    for region in coordinator.activation() {
+        observer.visits_static_field(StaticPlanningPhase::Initializer, region.field);
+        if let MirStaticActivationWork::Explicit(initializer) = region.work {
+            instructions.push(call::direct_instruction(
+                symbol::callable(program, CallableId::StaticInitializer(initializer)),
+                call::TraceAttribution::SourceBodyFromOmittedHelper,
+            ));
+        }
+    }
     instructions.extend([Instruction::Leave, Instruction::Return]);
 
     Some(AssemblyFunction {
@@ -69,6 +73,7 @@ pub(super) fn has_program_finalizer(program: &MirProgram) -> bool {
 pub(super) fn lower_program_finalizer(
     program: &MirProgram,
     data_layout: &DataLayout,
+    observer: &mut impl PlanningObserver,
 ) -> Result<Option<AssemblyFunction>, BackendError> {
     let Some(coordinator) = program.static_lifecycle.as_ref() else {
         return Ok(None);
@@ -85,6 +90,7 @@ pub(super) fn lower_program_finalizer(
         },
     ];
     for region in coordinator.shutdown() {
+        observer.visits_static_field(StaticPlanningPhase::Finalizer, region.field);
         lower_cleanup(
             program,
             data_layout,

@@ -15,9 +15,10 @@ vocabulary and pinned the prior eager behavior; RSR1 centralized direct static-
 place extraction in the shared dependency inventory; RSR2 added the exact
 coupled activation closure, private queries and dump, deterministic evidence,
 and mandatory shadow execution while preserving the eager plan; RSR3 added
-subset-capable lifecycle products, RSR4 established final monotone safety, and
-RSR5 switched production planning and synthesis to the exact active set. RSR6
-is next. It depends
+subset-capable lifecycle products, RSR4 established final monotone safety,
+RSR5 switched production planning and synthesis to the exact active set, and
+RSR6 aligned backend storage planning and artifact retention with that set.
+RSR7 is next. It depends
 on the completed static-lifecycle certificate, selectable final-MIR pipeline,
 dense MIR rewriting, and target-independent reachability foundations.
 

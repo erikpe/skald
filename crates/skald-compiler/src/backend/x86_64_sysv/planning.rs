@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, BackendInput, BackendRequiredRuntimeEntity, Target},
-    identity::CallableId,
+    identity::{CallableId, StaticFieldId},
 };
 
 /// Callable-oriented backend work whose input domain must be physically
@@ -16,8 +16,25 @@ pub(super) enum DefinitionPlanningPhase {
     InstructionSelection,
 }
 
+/// Static-storage and lifecycle work observed at the backend boundary.
+///
+/// These stages are target diagnostics for tests and measurements only. They
+/// never participate in semantic activation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum StaticPlanningPhase {
+    Declared,
+    Active,
+    Initializer,
+    Finalizer,
+    ConservativeFallback,
+    Retained,
+    Emitted,
+}
+
 pub(super) trait PlanningObserver {
     fn visits_definition(&mut self, _phase: DefinitionPlanningPhase, _callable: CallableId) {}
+
+    fn visits_static_field(&mut self, _phase: StaticPlanningPhase, _field: StaticFieldId) {}
 }
 
 pub(super) struct Unobserved;

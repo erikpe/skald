@@ -93,6 +93,7 @@ mod shifts;
 mod static_fields;
 mod static_inheritance;
 mod static_initialization;
+mod static_planning;
 mod static_shutdown;
 mod strings;
 mod termination;

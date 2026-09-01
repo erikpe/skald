@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 through RSR5 are complete and RSR6 is next.
+Status: in progress; RSR0 through RSR6 are complete and RSR7 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -93,7 +93,7 @@ reduce future optimization cost; larger findings belong in the
 - [x] RSR3 — Generalize lifecycle proof and schema for an active subset
 - [x] RSR4 — Verify final access against exact activation authority
 - [x] RSR5 — Switch lifecycle planning and synthesis to reachable activation
-- [ ] RSR6 — Align backend planning and artifact retention
+- [x] RSR6 — Align backend planning and artifact retention
 - [ ] RSR7 — Publish activation observation and migration diagnostics
 - [ ] RSR8 — Harden the language transition and close the roadmap
 
@@ -428,23 +428,23 @@ the reachability-gated behavior as current.
 **Purpose:** Make target lowering consume the certified active domain and prove
 that inactive lifecycle work does not survive as ordinary emitted artifacts.
 
-- [ ] Expose one backend-facing active-static query from verified final MIR;
+- [x] Expose one backend-facing active-static query from verified final MIR;
       do not expose planning reports, mutable sets, or preliminary bodies.
-- [ ] Restrict program initializer/finalizer emission and all lifecycle helper
+- [x] Restrict program initializer/finalizer emission and all lifecycle helper
       visits to active coordinator regions.
-- [ ] Drive static-slot and target metadata planning from active storage where
+- [x] Drive static-slot and target metadata planning from active storage where
       safe; retain a conservative private slot only when a physically retained
       unreachable body still requires an addressable symbol.
-- [ ] Require the existing target-private generated-symbol closure to remove
+- [x] Require the existing target-private generated-symbol closure to remove
       unreferenced inactive slots, initializer bodies, lifecycle helpers,
       literals, trace metadata, and transitive machine artifacts.
-- [ ] Keep static symbols private and preserve layout, relocations, host entry,
+- [x] Keep static symbols private and preserve layout, relocations, host entry,
       calling conventions, result preservation, runtime ABI version, and the
       final target-specific artifact walk.
-- [ ] Add backend visit counters or focused test observers that distinguish
+- [x] Add backend visit counters or focused test observers that distinguish
       declared, active, conservatively planned, retained, and emitted static
       entities without entering source semantics.
-- [ ] Prove the imported-but-unused decimal parser case omits
+- [x] Prove the imported-but-unused decimal parser case omits
       `_EiselPowers._words` activation, allocation, cleanup, and table-only
       artifacts while an actual floating parse retains them.
 
@@ -460,6 +460,22 @@ tests; affected golden groups; `make compiler-test`; `make golden-test`;
 **Exit criteria:** Backend work and emitted artifacts agree with the certified
 active lifecycle, conservative private fallback cannot create observable
 lifetime effects, and target/runtime contracts are unchanged.
+
+Completed on 2026-09-01. `BackendInput` now projects one immutable active-field
+slice from the verified final lifecycle certificate. The x86-64 target plans
+slots for that exact domain, plus only inactive fields whose symbols are
+actually referenced by physically retained machine functions. Complete
+emission preserves such a dead-body fallback for inspection; the existing
+exported-symbol closure removes the unreachable body and slot together in
+production. Initializer and finalizer lowering visit only certified coordinator
+regions, and private observer phases distinguish declared, active, lifecycle,
+fallback, retained, and emitted fields without influencing semantics. Focused
+empty, sparse, full, fallback, artifact-retention, assembler, and native tests
+cover the boundary. The standard-library decimal case proves that merely
+importing `Str` omits `_EiselPowers._words` storage, initializer allocation,
+shutdown reference, and dependent artifacts, while an actual floating parse
+retains them. Static symbols, layouts, relocations, entry/result behavior, the
+runtime ABI, and final target artifact walking are unchanged.
 
 ### RSR7 — Publish activation observation and migration diagnostics
 

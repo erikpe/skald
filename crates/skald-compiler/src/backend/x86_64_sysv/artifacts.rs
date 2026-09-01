@@ -124,7 +124,7 @@ fn insert_artifact<'a>(
     );
 }
 
-fn instruction_symbol(instruction: &Instruction) -> Option<&str> {
+pub(super) fn instruction_symbol(instruction: &Instruction) -> Option<&str> {
     match instruction {
         Instruction::LoadSymbolAddress { symbol, .. }
         | Instruction::LoadRuntimeTraceLocationAddress { symbol, .. }
@@ -195,6 +195,7 @@ mod tests {
         AssemblyProgram {
             functions,
             static_slots: vec![AssemblyStaticSlot {
+                field: crate::identity::StaticFieldId::new(crate::identity::ClassId::new(0), 0),
                 symbol: "slot".to_owned(),
                 size: 8,
                 alignment_power: 3,

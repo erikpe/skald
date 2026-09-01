@@ -40,6 +40,7 @@ fn emit_assembly_observed(
     let activations = runtime_trace::Activations::plan(program, &metadata, observer)?;
     let mut assembly = lower::lower(
         program,
+        input.active_static_fields(),
         &data_layout,
         &dispatch,
         &activations,
@@ -49,6 +50,12 @@ fn emit_assembly_observed(
     assembly.runtime_trace = metadata.finish();
     if input.reachable_artifacts_only() {
         artifacts::retain_reachable(&mut assembly);
+    }
+    for slot in &assembly.static_slots {
+        observer.visits_static_field(planning::StaticPlanningPhase::Retained, slot.field);
+    }
+    for slot in &assembly.static_slots {
+        observer.visits_static_field(planning::StaticPlanningPhase::Emitted, slot.field);
     }
     Ok(emit::emit(&assembly))
 }

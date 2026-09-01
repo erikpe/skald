@@ -28,6 +28,17 @@ pub(crate) enum BackendRequiredRuntimeEntity {
 }
 
 impl<'input> BackendInput<'input> {
+    /// Returns the exact certified static-storage domain in canonical identity
+    /// order without exposing lifecycle reports or mutable certificate state.
+    pub(crate) fn active_static_fields(self) -> &'input [StaticFieldId] {
+        self.program()
+            .static_lifecycle
+            .as_ref()
+            .map_or(&[], |coordinator| {
+                coordinator.lifecycle().proof().activation().fields()
+            })
+    }
+
     /// Iterates required target-independent runtime entities in canonical
     /// identity order without exposing the analysis product to a backend.
     pub(crate) fn required_runtime_entities(

@@ -136,7 +136,7 @@ fn optional_static_layout_reuses_inline_layout_without_changing_instances() {
     let source = concat!(
         "class Item { byte: u8; value: i64; init() { self.byte = 0u8; self.value = 0; } }\n",
         "class State { static number: i64?; static item: Item?; init() {} }\n",
-        "fn main() -> i64 { return 0; }\n",
+        "fn main() -> i64 { if (State.number is some || State.item is some) { return 1; } return 0; }\n",
     );
     let program = lower_source_to_final_mir(source);
     let layout = DataLayout::compute(&program).unwrap();
