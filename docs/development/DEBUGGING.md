@@ -183,16 +183,15 @@ may reach MIR or the backend. Explicit ranges should appear as ordinary closed
 and general `ForIn` control flow.
 
 For implemented direct `for (item in lower .. upper)`, follow the
-`ForIn`/`RangeSource` syntax node to its exact resolved construction,
-initializer, ordering, successor, iterable, and
-primitive-intrinsic or class-witness identities. Typed HIR must contain
-ordinary class construction plus its verified, non-forgeable
-`CanonicalRangeSyntax` origin. Explicit constructors have an `Explicit`
-origin; explicit stored ranges and direct class ranges retain ordinary
-construction, interface calls, and optional-result flow. An eligible direct
-primitive source prints a `PrimitiveRange` `HirForIn` plan; a `Protocol` plan
-identifies every ordinary boundary. MIR and assembly never look up a range by name or contain a
-range-specific runtime operation: the fused plan is visible only as
+`ForIn`/`RangeSource` syntax node to its exact structural resolved range
+source, initializer, ordering, successor, iterable, endpoint provenance, and
+primitive-intrinsic or class-witness identities. Ordinary resolved and HIR
+constructions have no range-origin metadata. Explicit stored ranges and direct
+class ranges retain ordinary construction, interface calls, and
+optional-result flow. An eligible direct primitive source prints a
+`PrimitiveRange` `HirForIn` plan followed by `RangeLoopEvidence`; a `Protocol`
+plan identifies every ordinary boundary. MIR and assembly never look up a
+range by name or contain a range-specific runtime operation: the fused plan is visible only as
 `range-current`/`range-end` scalar storage, comparison, increment, and cyclic
 control flow.
 

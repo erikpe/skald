@@ -7,7 +7,7 @@ impl CallableResolver<'_, '_> {
     pub(super) fn resolve_range_source(
         &mut self,
         range: &syntax::ForRangeSource,
-    ) -> Option<ResolvedExpression> {
+    ) -> Option<ResolvedForInSource> {
         // Keep source order explicit even though resolution performs no evaluation.
         let lower = self.resolve_expression(&range.lower);
         let upper = self.resolve_expression(&range.upper);
@@ -81,15 +81,16 @@ impl CallableResolver<'_, '_> {
             return None;
         }
         if self.environment.range_requests.is_some() {
-            return Some(ResolvedExpression::Construct(ResolvedConstructExpr {
-                class: range_class,
-                callee_span: range.operator_span,
-                mode: ResolvedConstructionMode::Initialize {
-                    arguments: vec![lower, upper],
-                },
-                origin: ResolvedConstructionOrigin::Explicit,
-                span: range.span,
-            }));
+            return Some(ResolvedForInSource::Iterable(
+                ResolvedExpression::Construct(ResolvedConstructExpr {
+                    class: range_class,
+                    callee_span: range.operator_span,
+                    mode: ResolvedConstructionMode::Initialize {
+                        arguments: vec![lower, upper],
+                    },
+                    span: range.span,
+                }),
+            ));
         }
         let class = self
             .environment
@@ -125,38 +126,33 @@ impl CallableResolver<'_, '_> {
             .map(ResolvedRangeProtocolRealization::PrimitiveIntrinsic)
             .unwrap_or(ResolvedRangeProtocolRealization::ClassWitness);
 
-        Some(ResolvedExpression::Construct(ResolvedConstructExpr {
-            class: range_class,
-            callee_span: range.operator_span,
-            mode: ResolvedConstructionMode::Initialize {
-                arguments: vec![lower, upper],
-            },
-            origin: ResolvedConstructionOrigin::CanonicalRangeSyntax(
-                ResolvedCanonicalRangeOrigin {
-                    operator_span: range.operator_span,
-                    endpoint_type: lower_type,
-                    endpoint_provenance: specialized_selection.map_or(
-                        [ResolvedRangeEndpointProvenance::SpecializationIndependent; 2],
-                        |selection| selection.endpoint_provenance,
-                    ),
-                    range_template: environment.language_item.range_template,
-                    range_class,
-                    initializer,
-                    ordering: ResolvedRangeProtocolEvidence {
-                        interface: ordering_interface,
-                        requirement: ordering_requirement,
-                        realization,
-                    },
-                    successor: ResolvedRangeProtocolEvidence {
-                        interface: successor_interface,
-                        requirement: successor_requirement,
-                        realization,
-                    },
-                    iterable,
+        Some(ResolvedForInSource::Range(Box::new(
+            ResolvedRangeForSource {
+                lower,
+                upper,
+                operator_span: range.operator_span,
+                span: range.span,
+                endpoint_type: lower_type,
+                endpoint_provenance: specialized_selection.map_or(
+                    [ResolvedRangeEndpointProvenance::SpecializationIndependent; 2],
+                    |selection| selection.endpoint_provenance,
+                ),
+                range_template: environment.language_item.range_template,
+                range_class,
+                initializer,
+                ordering: ResolvedRangeProtocolEvidence {
+                    interface: ordering_interface,
+                    requirement: ordering_requirement,
+                    realization,
                 },
-            ),
-            span: range.span,
-        }))
+                successor: ResolvedRangeProtocolEvidence {
+                    interface: successor_interface,
+                    requirement: successor_requirement,
+                    realization,
+                },
+                iterable,
+            },
+        )))
     }
 }
 

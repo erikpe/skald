@@ -1,6 +1,6 @@
 # Direct For-Range Syntax Roadmap
 
-Status: in progress; FRS0 is complete and FRS1 is next.
+Status: in progress; FRS0 and FRS1 are complete, and FRS2 is next.
 
 This roadmap restricts concise `lower .. upper` syntax to the direct source of
 a `for-in` statement. Reusable range values remain ordinary explicit
@@ -79,7 +79,7 @@ unrelated expression consumers.
 ## Progress
 
 - [x] FRS0 — Enforce the direct-source syntax boundary
-- [ ] FRS1 — Make range-loop provenance structural
+- [x] FRS1 — Make range-loop provenance structural
 - [ ] FRS2 — Complete conformance, determinism, and performance closure
 
 ## PR-sized implementation sequence
@@ -158,42 +158,42 @@ resolved `for-in` source evidence, then remove the span registries and ordinary
 construction metadata that were necessary only when `..` could flow through
 general expressions.
 
-- [ ] Introduce a dedicated resolved `for-in` source distinction for an
+- [x] Introduce a dedicated resolved `for-in` source distinction for an
   ordinary iterable expression versus a canonical range-loop source. The range
   source owns the ordered endpoints, exact canonical construction selection,
   protocol evidence, endpoint provenance, and source spans required by either
   execution plan.
-- [ ] Make semantic specialization request discovery inspect structurally
+- [x] Make semantic specialization request discovery inspect structurally
   identified range-loop sources in callable and class bodies. Remove the
   global `range_expression_spans` collection, span-containment filtering, and
   resolved-program range-span registry while retaining fixed-point discovery
   for endpoint types exposed by newly materialized specializations.
-- [ ] Move definition-site specialization-dependence analysis from the general
+- [x] Move definition-site specialization-dependence analysis from the general
   expression visitor into direct range-source analysis. Continue to reject
   fusion whenever either endpoint is specialization-dependent, including
   transitive local and bound-selected producers.
-- [ ] Remove `ResolvedConstructionOrigin` from ordinary construction. Validate
+- [x] Remove `ResolvedConstructionOrigin` from ordinary construction. Validate
   exact canonical identities at creation of the resolved range-loop source,
   and update resolved dumps and mutation tests to expose and challenge that
   structural evidence instead of a forgeable expression-adjacent tag.
-- [ ] Select typed execution directly from the resolved source: eligible
+- [x] Select typed execution directly from the resolved source: eligible
   integer sources create `HirPrimitiveRangeIterationPlan`; class and other
   ineligible direct sources construct the canonical range as an ordinary
   receiver and create the existing protocol plan; ordinary iterable sources,
   including explicit `Range<T>`, remain unchanged.
-- [ ] Remove `HirConstructionOrigin`, `HirCanonicalRangeOrigin`, general
+- [x] Remove `HirConstructionOrigin`, `HirCanonicalRangeOrigin`, general
   range-construction-origin validation, the `TYP052` provenance diagnostic,
   grouping-recursive eligibility recognition, and range-origin dump output.
   Retain only the minimal exact range-loop evidence needed by the primitive
   HIR plan and its verifier assertions.
-- [ ] Keep endpoint evaluation, temporary securing, class construction,
+- [x] Keep endpoint evaluation, temporary securing, class construction,
   protocol receiver lifetime, advance-before-body order, exits, cleanup, and
   static effects identical on both fused and ordinary paths.
-- [ ] Preserve target-independent artifact reachability: fused-only programs
+- [x] Preserve target-independent artifact reachability: fused-only programs
   may prune unused canonical range artifacts, while class direct ranges and
   explicit range construction retain every ordinary method and metadata edge
   they execute.
-- [ ] Update the compiler range contract, compiler overview, phase/IR text,
+- [x] Update the compiler range contract, compiler overview, phase/IR text,
   testing matrix, and debugging workflow to the dedicated-source pipeline and
   origin-free ordinary construction representation.
 

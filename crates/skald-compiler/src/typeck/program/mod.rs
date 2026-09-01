@@ -77,7 +77,7 @@ pub const UNSUPPORTED_OPERATOR_APPLICATION: &str = "TYP047";
 pub const AMBIGUOUS_OPERATOR_APPLICATION: &str = "TYP048";
 pub const INCOMPATIBLE_OPERATOR_RHS: &str = "TYP049";
 pub const INVALID_OPERATOR_SELECTION: &str = "TYP050";
-pub const INVALID_RANGE_CONSTRUCTION_ORIGIN: &str = "TYP052";
+pub const INVALID_RESOLVED_RANGE_SOURCE: &str = "TYP053";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

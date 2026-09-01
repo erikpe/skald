@@ -261,11 +261,12 @@ and ordinary `Range<T>` class, while three static integer realizations use
 existing operations. Explicit ranges run through generic construction,
 general iteration, lifecycle, and native code without primitive object
 conformance, new lower IR, runtime service, or ABI change. Direct `for-in`
-`..` sources retain non-forgeable canonical provenance through the current
-ordinary class-construction adapter; general expressions have no range form.
-Exact integer syntax loops select a structured fusion plan and erase to
-existing scalar MIR. Exact MIR and assembly shape plus the recorded matched
-benchmark establish handwritten-`while` parity.
+`..` sources retain exact canonical evidence on a dedicated resolved loop
+source; general expressions and ordinary constructions have no range-origin
+form. Type checking selects either an ordinary constructed protocol receiver
+or a structured integer fusion plan, which erases to existing scalar MIR.
+Exact MIR and assembly shape plus the recorded matched benchmark establish
+handwritten-`while` parity.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

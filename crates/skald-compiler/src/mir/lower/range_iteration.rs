@@ -80,12 +80,12 @@ impl BodyLowerer<'_> {
         let current_value = self.assign(
             MirRvalueKind::Load(MirPlace::base(current)),
             mir_scalar,
-            plan.origin.operator_span,
+            plan.evidence.operator_span,
         );
         let end_value = self.assign(
             MirRvalueKind::Load(MirPlace::base(end)),
             mir_scalar,
-            plan.origin.operator_span,
+            plan.evidence.operator_span,
         );
         let condition = self.assign(
             MirRvalueKind::PrimitiveComparison {
@@ -97,7 +97,7 @@ impl BodyLowerer<'_> {
                 right: end_value,
             },
             MirType::Bool,
-            plan.origin.operator_span,
+            plan.evidence.operator_span,
         );
         self.terminate(MirTerminator::Branch {
             condition,
@@ -140,12 +140,12 @@ impl BodyLowerer<'_> {
         let current_value = self.assign(
             MirRvalueKind::Load(MirPlace::base(current)),
             mir_scalar,
-            plan.origin.operator_span,
+            plan.evidence.operator_span,
         );
         let one = self.assign(
             range_one(plan.integer),
             mir_scalar,
-            plan.origin.operator_span,
+            plan.evidence.operator_span,
         );
         let incremented = self.assign(
             MirRvalueKind::Binary {
@@ -154,14 +154,14 @@ impl BodyLowerer<'_> {
                 right: one,
             },
             mir_scalar,
-            plan.origin.operator_span,
+            plan.evidence.operator_span,
         );
         self.emit(MirInstruction::Store(MirStore {
             destination: MirPlace::base(current),
             value: incremented,
             authorization: None,
             final_authorization: None,
-            span: plan.origin.operator_span,
+            span: plan.evidence.operator_span,
         }));
 
         self.lower_block(&statement.body);

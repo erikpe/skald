@@ -24,12 +24,27 @@ impl CallableResolver<'_, '_> {
             .map(|annotation| self.resolve_type(&annotation.type_syntax));
         let annotation_valid = annotation.as_ref().is_none_or(Option::is_some);
         let annotation = annotation.flatten();
-        let iterable = match &statement.source {
-            syntax::ForInSource::Iterable(iterable) => self.resolve_expression(iterable),
-            syntax::ForInSource::Range(range) => self.resolve_range_source(range),
-        }?;
+        let (source, source_type) = match &statement.source {
+            syntax::ForInSource::Iterable(iterable) => {
+                let iterable = self.resolve_expression(iterable)?;
+                let source_type = self.resolved_expression_type(&iterable);
+                (ResolvedForInSource::Iterable(iterable), source_type)
+            }
+            syntax::ForInSource::Range(range) => {
+                let source = self.resolve_range_source(range)?;
+                let source_type = match &source {
+                    ResolvedForInSource::Iterable(iterable) => {
+                        self.resolved_expression_type(iterable)
+                    }
+                    ResolvedForInSource::Range(range) => {
+                        Some(ResolvedTypeKind::Class(range.range_class))
+                    }
+                };
+                (source, source_type)
+            }
+        };
         let selection = self.select_iterable(
-            &iterable,
+            source_type,
             annotation.as_ref().map(|annotation| annotation.kind),
             statement,
         )?;
@@ -79,7 +94,7 @@ impl CallableResolver<'_, '_> {
         Some(ResolvedForIn {
             loop_id,
             binding: local,
-            iterable,
+            source,
             selection,
             body,
             for_span: statement.for_span,
@@ -95,7 +110,7 @@ impl CallableResolver<'_, '_> {
 
     fn select_iterable(
         &mut self,
-        iterable: &ResolvedExpression,
+        static_type: Option<ResolvedTypeKind>,
         annotation: Option<ResolvedTypeKind>,
         statement: &syntax::ForInStatement,
     ) -> Option<ResolvedIterableSelection> {
@@ -135,7 +150,6 @@ impl CallableResolver<'_, '_> {
                     None
                 });
         }
-        let static_type = self.resolved_expression_type(iterable);
         let mut candidates = static_type
             .into_iter()
             .flat_map(|ty| self.iterable_candidates(ty, environment))

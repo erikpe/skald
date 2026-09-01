@@ -3,7 +3,7 @@ use crate::{
     mir::{dump_mir, lower_hir, verify_mir},
     resolve::{dump_resolved, resolve_module_graph, ResolvedCopyOperation},
     test_support::load_module_sources_with_standard_library,
-    typeck::{type_check, COPY_OPERATION_UNAVAILABLE, INVALID_RANGE_CONSTRUCTION_ORIGIN},
+    typeck::{type_check, COPY_OPERATION_UNAVAILABLE, INVALID_RESOLVED_RANGE_SOURCE},
 };
 
 fn resolve_range_source(source: &str) -> crate::resolve::ResolveOutput {
@@ -36,7 +36,7 @@ fn immediate_integer_ranges_select_the_fused_structured_plan() {
         3,
         "{dump}"
     );
-    assert_eq!(dump.matches("CanonicalRangeSyntax").count(), 3, "{dump}");
+    assert_eq!(dump.matches("RangeLoopEvidence").count(), 3, "{dump}");
     assert!(!dump.contains("Protocol interface="), "{dump}");
 }
 
@@ -75,7 +75,7 @@ fn explicit_range_values_and_direct_range_sources_share_ordinary_semantics() {
         "}\n",
     ));
     let dump = dump_hir(&hir);
-    assert_eq!(dump.matches("CanonicalRangeSyntax").count(), 1, "{dump}");
+    assert_eq!(dump.matches("RangeLoopEvidence").count(), 1, "{dump}");
     assert!(dump.contains("ForIn"), "{dump}");
     let mir = lower_hir(&hir);
     verify_mir(&mir).expect("concise range consumers must lower through ordinary verified MIR");
@@ -86,7 +86,7 @@ fn explicit_range_values_and_direct_range_sources_share_ordinary_semantics() {
 
 #[test]
 fn concise_class_ranges_retain_ordinary_witness_and_lifecycle_plans() {
-    let hir = check_range_source(concat!(
+    let source = concat!(
         "from std::ops import OpLess;\n",
         "from std::range import Successor;\n",
         "class Value implements OpLess<Value>, Successor<Value> {\n",
@@ -96,9 +96,24 @@ fn concise_class_ranges_retain_ordinary_witness_and_lifecycle_plans() {
         "  fn successor() -> Value { return Value(self.value + 1); }\n",
         "}\n",
         "fn main() -> i64 { for (value in Value(1) .. Value(4)) {} return 0; }\n",
-    ));
+    );
+    let resolved = resolve_range_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let resolved_dump = dump_resolved(&resolved.program);
+    assert!(
+        resolved_dump.contains("realization class-witness"),
+        "{resolved_dump}"
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.expect("class range must produce HIR");
     let dump = dump_hir(&hir);
-    assert!(dump.contains("realization=class-witness"), "{dump}");
+    assert!(dump.contains("Protocol interface="), "{dump}");
+    assert!(!dump.contains("RangeLoopEvidence"), "{dump}");
     let mir = lower_hir(&hir);
     verify_mir(&mir).expect("class range must lower through ordinary witness iteration");
     assert!(dump_mir(&mir).contains("call interface"));
@@ -146,15 +161,15 @@ fn fusion_excludes_every_non_immediate_or_nonprimitive_iteration_boundary() {
     );
     assert_eq!(dump.matches("Protocol interface=").count(), 7, "{dump}");
     assert_eq!(
-        dump.matches("CanonicalRangeSyntax").count(),
-        4,
-        "direct primitive, class, and generic syntax ranges must retain provenance: {dump}"
+        dump.matches("RangeLoopEvidence").count(),
+        2,
+        "only fused direct primitive ranges retain typed range-loop evidence: {dump}"
     );
 }
 
 #[test]
 fn specialized_generic_ranges_fuse_only_independently_concrete_endpoints() {
-    let hir = check_range_source(concat!(
+    let source = concat!(
         "from std::ops import OpAdd;\n",
         "class Source implements OpAdd<Source, u64> {\n",
         "  raw: u64; init(value: u64) { self.raw = value; }\n",
@@ -173,7 +188,28 @@ fn specialized_generic_ranges_fuse_only_independently_concrete_endpoints() {
         "}\n",
         "fn retain(ref scanner: Scanner<Source>) -> unit {}\n",
         "fn main() -> i64 { return 0; }\n",
-    ));
+    );
+    let resolved = resolve_range_source(source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let resolved_dump = dump_resolved(&resolved.program);
+    assert!(
+        resolved_dump
+            .contains("provenance lower=specialization-dependent upper=specialization-dependent"),
+        "{resolved_dump}"
+    );
+    assert!(
+        resolved_dump.contains("provenance lower=independent upper=independent"),
+        "{resolved_dump}"
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked
+        .hir
+        .expect("specialized range plans must produce HIR");
     verify_mir(&lower_hir(&hir))
         .expect("mixed specialized range plans must lower through verified MIR");
     let dump = dump_hir(&hir);
@@ -183,21 +219,13 @@ fn specialized_generic_ranges_fuse_only_independently_concrete_endpoints() {
         "{dump}"
     );
     assert_eq!(dump.matches("Protocol interface=").count(), 2, "{dump}");
-    assert!(
-        dump.contains("provenance=(specialization-dependent, specialization-dependent)"),
-        "{dump}"
-    );
-    assert!(
-        dump.contains("provenance=(independent, independent)"),
-        "{dump}"
-    );
+    assert_eq!(dump.matches("RangeLoopEvidence").count(), 1, "{dump}");
 }
 
 #[test]
-fn canonical_range_origin_rejects_missing_forged_and_inconsistent_evidence() {
+fn structural_range_sources_reject_inconsistent_canonical_evidence() {
     use crate::resolve::{
-        ResolvedConstructionOrigin, ResolvedExpression, ResolvedRangeProtocolRealization,
-        ResolvedStatement, ResolvedTypeKind,
+        ResolvedForInSource, ResolvedRangeProtocolRealization, ResolvedStatement, ResolvedTypeKind,
     };
 
     let resolved = resolve_range_source(concat!(
@@ -224,70 +252,65 @@ fn canonical_range_origin_rejects_missing_forged_and_inconsistent_evidence() {
             checked
                 .diagnostics
                 .iter()
-                .any(|diagnostic| diagnostic.code == INVALID_RANGE_CONSTRUCTION_ORIGIN),
+                .any(|diagnostic| diagnostic.code == INVALID_RESOLVED_RANGE_SOURCE),
             "{:?}",
             checked.diagnostics,
         );
     };
 
-    fn construction_at(
+    fn range_source_at(
         program: &mut crate::resolve::ResolvedProgram,
         entry: crate::identity::FunctionId,
-        statement: usize,
-    ) -> &mut crate::resolve::ResolvedConstructExpr {
+    ) -> &mut crate::resolve::ResolvedRangeForSource {
         let definition = program.definitions.get_mut_for_test(entry).unwrap();
-        let expression = match &mut definition.body.statements[statement] {
-            ResolvedStatement::ForIn(loop_) => &mut loop_.iterable,
-            ResolvedStatement::Local(local) => &mut local.initializer,
-            _ => panic!("expected range-producing statement"),
+        let ResolvedStatement::ForIn(loop_) = &mut definition.body.statements[0] else {
+            panic!("expected range loop");
         };
-        let ResolvedExpression::Construct(construction) = expression else {
-            panic!("expected construction");
+        let ResolvedForInSource::Range(source) = &mut loop_.source else {
+            panic!("expected structural range source");
         };
-        construction
+        source
     }
 
-    let missing = move |program: &mut crate::resolve::ResolvedProgram| {
-        construction_at(program, entry, 0).origin = ResolvedConstructionOrigin::Explicit;
+    let wrong_template = move |program: &mut crate::resolve::ResolvedProgram| {
+        let source = range_source_at(program, entry);
+        source.range_template =
+            crate::identity::ClassTemplateId::new(source.range_template.index() + 1);
     };
-    assert_rejected(&missing);
+    assert_rejected(&wrong_template);
 
     let wrong_endpoint = move |program: &mut crate::resolve::ResolvedProgram| {
-        let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) =
-            &mut construction_at(program, entry, 0).origin
-        else {
-            unreachable!()
-        };
-        origin.endpoint_type = ResolvedTypeKind::U8;
+        range_source_at(program, entry).endpoint_type = ResolvedTypeKind::U8;
     };
     assert_rejected(&wrong_endpoint);
 
     let wrong_realization = move |program: &mut crate::resolve::ResolvedProgram| {
-        let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) =
-            &mut construction_at(program, entry, 0).origin
-        else {
-            unreachable!()
-        };
-        origin.successor.realization = ResolvedRangeProtocolRealization::ClassWitness;
+        range_source_at(program, entry).successor.realization =
+            ResolvedRangeProtocolRealization::ClassWitness;
     };
     assert_rejected(&wrong_realization);
 
     let forged_provenance = move |program: &mut crate::resolve::ResolvedProgram| {
-        let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) =
-            &mut construction_at(program, entry, 0).origin
-        else {
-            unreachable!()
-        };
-        origin.endpoint_provenance[0] =
+        range_source_at(program, entry).endpoint_provenance[0] =
             crate::resolve::ResolvedRangeEndpointProvenance::SpecializationDependent;
     };
     assert_rejected(&forged_provenance);
 
-    let forged = move |program: &mut crate::resolve::ResolvedProgram| {
-        let origin = construction_at(program, entry, 0).origin.clone();
-        construction_at(program, entry, 1).origin = origin;
+    let mismatched_iteration = move |program: &mut crate::resolve::ResolvedProgram| {
+        let definition = program.definitions.get_mut_for_test(entry).unwrap();
+        let ResolvedStatement::ForIn(loop_) = &mut definition.body.statements[0] else {
+            panic!("expected range loop");
+        };
+        let ResolvedForInSource::Range(source) = &loop_.source else {
+            panic!("expected structural range source");
+        };
+        loop_.selection.interface = source.ordering.interface;
     };
-    assert_rejected(&forged);
+    assert_rejected(&mismatched_iteration);
+
+    let explicit_dump = dump_resolved(&resolved.program);
+    assert_eq!(explicit_dump.matches("RangeSource template").count(), 1);
+    assert_eq!(explicit_dump.matches("Construct ").count(), 1);
 }
 
 #[test]
@@ -322,15 +345,15 @@ fn primitive_range_plan_rejects_shape_operation_and_realization_mutations() {
             assert!(rejected.is_err(), "{name} must be rejected before MIR");
         };
     assert_rejected("wrong endpoint type", |candidate| {
-        candidate.origin.endpoint_type = Type::U8;
+        candidate.item.value.ty = Type::U8;
     });
     assert_rejected("wrong primitive realization", |candidate| {
-        candidate.origin.successor.realization =
+        candidate.evidence.successor.realization =
             HirRangeProtocolRealization::PrimitiveIntrinsic(Type::U8);
     });
-    assert_rejected("specialization-dependent endpoint", |candidate| {
-        candidate.origin.endpoint_provenance[0] =
-            crate::resolve::ResolvedRangeEndpointProvenance::SpecializationDependent;
+    assert_rejected("mismatched initializer class", |candidate| {
+        candidate.evidence.range_class =
+            crate::identity::ClassId::new(candidate.evidence.range_class.index() + 1);
     });
     assert_rejected("wrong comparison", |candidate| {
         candidate.comparison.predicate = HirComparisonPredicate::LessEqual;

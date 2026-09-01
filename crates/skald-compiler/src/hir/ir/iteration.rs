@@ -9,10 +9,10 @@ use crate::{
 };
 
 use super::{
-    HirAccess, HirArrayCopyElement, HirBinaryOperation, HirBlock, HirCanonicalRangeOrigin,
-    HirControlEffects, HirExpression, HirIntegerType, HirObjectView, HirOptionalCopyPlan,
-    HirOptionalDestructionPlan, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan,
-    HirPrimitiveComparison, HirSelectedCopyOperation, HirSharedTarget, HirViewTarget, Type,
+    HirAccess, HirArrayCopyElement, HirBinaryOperation, HirBlock, HirControlEffects, HirExpression,
+    HirIntegerType, HirObjectView, HirOptionalCopyPlan, HirOptionalDestructionPlan,
+    HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan, HirPrimitiveComparison,
+    HirSelectedCopyOperation, HirSharedTarget, HirViewTarget, Type,
 };
 
 /// One completely selected and typed `for-in` statement.
@@ -156,7 +156,7 @@ pub struct HirProtocolIterationPlan {
 /// ordinary `Range<T>` value or its general-iteration protocol traffic.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirPrimitiveRangeIterationPlan {
-    pub origin: HirCanonicalRangeOrigin,
+    pub evidence: HirPrimitiveRangeEvidence,
     pub lower: HirExpression,
     pub upper: HirExpression,
     pub integer: HirIntegerType,
@@ -165,16 +165,34 @@ pub struct HirPrimitiveRangeIterationPlan {
     pub item: HirIterationItemPlan,
 }
 
+/// Minimal exact identities retained by a fused direct integer range loop.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirPrimitiveRangeEvidence {
+    pub operator_span: Span,
+    pub range_template: crate::identity::ClassTemplateId,
+    pub range_class: ClassId,
+    pub initializer: crate::identity::InitializerId,
+    pub ordering: HirRangeProtocolEvidence,
+    pub successor: HirRangeProtocolEvidence,
+    pub iterable: InterfaceId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirRangeProtocolEvidence {
+    pub interface: InterfaceId,
+    pub requirement: InterfaceRequirementId,
+    pub realization: HirRangeProtocolRealization,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirRangeProtocolRealization {
+    PrimitiveIntrinsic(Type),
+}
+
 impl HirPrimitiveRangeIterationPlan {
     fn assert_valid(&self) {
         let ty = self.integer.operand_type();
-        assert_eq!(self.origin.endpoint_type, ty);
-        assert!(self.origin.endpoint_provenance.iter().all(|provenance| {
-            matches!(
-                provenance,
-                crate::resolve::ResolvedRangeEndpointProvenance::SpecializationIndependent
-            )
-        }));
+        assert_eq!(self.evidence.initializer.class(), self.evidence.range_class);
         assert_eq!(self.lower.ty, ty);
         assert_eq!(self.upper.ty, ty);
         assert_eq!(
@@ -186,11 +204,11 @@ impl HirPrimitiveRangeIterationPlan {
         );
         assert_eq!(self.increment, range_increment(self.integer));
         assert_eq!(
-            self.origin.ordering.realization,
+            self.evidence.ordering.realization,
             super::HirRangeProtocolRealization::PrimitiveIntrinsic(ty)
         );
         assert_eq!(
-            self.origin.successor.realization,
+            self.evidence.successor.realization,
             super::HirRangeProtocolRealization::PrimitiveIntrinsic(ty)
         );
     }

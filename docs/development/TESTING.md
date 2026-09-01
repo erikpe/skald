@@ -39,11 +39,12 @@ pin longest-match `..` beside decimal and member punctuation. Syntax tests own
 the dedicated direct `for-in` source node, rejection in every general
 expression context, endpoint grouping, spans, recovery, traversal, and nesting
 budget. Module and resolution tests own dependency evidence only from valid
-direct sources, generic specialization requests, exact endpoint matching, canonical
-initializer/protocol identities, primitive versus class realizations, and
-stable dumps. Type-check and HIR tests own exact construction-origin
-correspondence, explicit-versus-syntax distinction, ordinary-versus-fused
-execution-plan selection, excluded boundaries, and mutation rejection. MIR
+direct sources, structural generic specialization requests, exact endpoint
+matching, canonical initializer/protocol identities, primitive versus class
+realizations, and stable dumps. Type-check and HIR tests own exact structural
+range-source correspondence, origin-free ordinary construction,
+explicit-versus-syntax distinction, ordinary-versus-fused execution-plan
+selection, excluded boundaries, and mutation rejection. MIR
 tests own the scalar fused shape, endpoint and item epochs,
 advance-before-body order, control targets, cleanup, and absence of
 protocol/optional traffic. Existing construction, iteration, lifecycle, and
@@ -510,8 +511,8 @@ source-loop recognition.
 The implemented [generic-range contracts](../language/RANGES.md) have an
 ordered coverage layer. Colocated syntax, resolution, primitive-registry,
 type, and HIR tests own punctuation/recovery, canonical declaration
-validation, identity and dump determinism, exact realization, construction
-provenance, fusion eligibility, and excluded boundaries. MIR and x86-64 tests
+validation, identity and dump determinism, exact realization, structural
+source evidence, fusion eligibility, and excluded boundaries. MIR and x86-64 tests
 own the call-free, optional-free scalar shape, malicious mutations, and matched
 handwritten-`while` instruction profile. Backend coverage also proves that
 published fused-only programs omit the unreferenced canonical range class,

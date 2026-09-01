@@ -11,7 +11,7 @@ use crate::{
         HirIterationValueDestruction, HirOptionalDestructionPlan, HirOptionalPresenceTestPlan,
         HirOptionalUnwrapPlan, HirStatement, HirViewTarget, Type,
     },
-    resolve::ResolvedForIn,
+    resolve::{ResolvedExpression, ResolvedForIn, ResolvedForInSource},
 };
 
 use super::{
@@ -24,9 +24,25 @@ impl CallableChecker<'_, '_> {
         if self.is_primitive_range_iteration_candidate(statement) {
             return self.check_primitive_range_for_in_statement(statement);
         }
+        let synthesized_range;
+        let (iterable, source_valid) = match &statement.source {
+            ResolvedForInSource::Iterable(iterable) => (iterable, true),
+            ResolvedForInSource::Range(range) => {
+                let valid = self.validate_range_source(range).is_some()
+                    && self
+                        .validate_range_selection(range, &statement.selection)
+                        .is_some();
+                synthesized_range = ResolvedExpression::Construct(
+                    super::range_source::resolved_range_construction(range),
+                );
+                (&synthesized_range, valid)
+            }
+        };
         let item_type = lower_type_kind(statement.selection.item);
         let state_type = lower_type_kind(statement.selection.state);
-        let mut receiver = self.check_iteration_receiver(statement);
+        let mut receiver = source_valid
+            .then(|| self.check_iteration_receiver(iterable, statement))
+            .flatten();
         let state_value = self.check_iteration_state(state_type, statement);
         let item_value = self.check_iteration_item(item_type, statement);
         let result = self.check_iteration_result(item_type, statement);
@@ -53,7 +69,7 @@ impl CallableChecker<'_, '_> {
                     )
                     .with_primary_label(span, "this write would invalidate the retained payload view")
                     .with_secondary_label(
-                        statement.iterable.span(),
+                        statement.source.span(),
                         "the optional payload is retained for the whole loop",
                     )
                     .with_note("copy or move the iterable into an independent local before iterating if the original optional must be replaced"),
@@ -113,7 +129,7 @@ impl CallableChecker<'_, '_> {
                         binding_span: statement.binding_span,
                         annotation_span: statement.annotation_span,
                         in_span: statement.in_span,
-                        iterable_span: statement.iterable.span(),
+                        iterable_span: statement.source.span(),
                         span: statement.span,
                     },
                 )))
@@ -124,10 +140,11 @@ impl CallableChecker<'_, '_> {
 
     fn check_iteration_receiver(
         &mut self,
+        iterable_expression: &ResolvedExpression,
         statement: &ResolvedForIn,
     ) -> Option<HirIterationReceiver> {
         let target = HirViewTarget::Interface(statement.selection.interface);
-        let (iterable, carrier) = if let Some(cast) = iteration_cast(&statement.iterable) {
+        let (iterable, carrier) = if let Some(cast) = iteration_cast(iterable_expression) {
             let mut checked = self.check_object_cast(cast)?;
             let iterable = view_target_type(checked.view.target);
             anchor_checked_iteration_source(&mut checked.view);
@@ -138,7 +155,7 @@ impl CallableChecker<'_, '_> {
                 HirIterationReceiverCarrier::Checked(Box::new(checked)),
             )
         } else {
-            let (iterable, view) = self.check_iteration_view(&statement.iterable, target)?;
+            let (iterable, view) = self.check_iteration_view(iterable_expression, target)?;
             (iterable, HirIterationReceiverCarrier::View(view))
         };
         Some(HirIterationReceiver {

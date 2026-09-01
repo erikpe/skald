@@ -3,8 +3,8 @@
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
     identity::{
-        BindingId, CallableId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId,
-        LocalId, LoopId, StaticFieldId,
+        BindingId, CallableId, ClassId, ClassTemplateId, FieldId, FunctionId, InitializerId,
+        InterfaceId, InterfaceRequirementId, LocalId, LoopId, StaticFieldId,
     },
     source::Span,
 };
@@ -244,7 +244,7 @@ pub struct ResolvedWhile {
 pub struct ResolvedForIn {
     pub loop_id: LoopId,
     pub binding: LocalId,
-    pub iterable: ResolvedExpression,
+    pub source: ResolvedForInSource,
     pub selection: ResolvedIterableSelection,
     pub body: ResolvedBlock,
     pub for_span: Span,
@@ -252,6 +252,66 @@ pub struct ResolvedForIn {
     pub annotation_span: Option<Span>,
     pub in_span: Span,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedForInSource {
+    Iterable(ResolvedExpression),
+    Range(Box<ResolvedRangeForSource>),
+}
+
+impl ResolvedForInSource {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Iterable(expression) => expression.span(),
+            Self::Range(range) => range.span,
+        }
+    }
+}
+
+/// Exact canonical evidence owned by one direct concise range loop.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedRangeForSource {
+    pub lower: ResolvedExpression,
+    pub upper: ResolvedExpression,
+    pub operator_span: Span,
+    pub span: Span,
+    pub endpoint_type: super::ResolvedTypeKind,
+    pub endpoint_provenance: [ResolvedRangeEndpointProvenance; 2],
+    pub range_template: ClassTemplateId,
+    pub range_class: ClassId,
+    pub initializer: InitializerId,
+    pub ordering: ResolvedRangeProtocolEvidence,
+    pub successor: ResolvedRangeProtocolEvidence,
+    pub iterable: InterfaceId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedRangeEndpointProvenance {
+    SpecializationIndependent,
+    SpecializationDependent,
+}
+
+impl ResolvedRangeEndpointProvenance {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::SpecializationIndependent => "independent",
+            Self::SpecializationDependent => "specialization-dependent",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedRangeProtocolEvidence {
+    pub interface: InterfaceId,
+    pub requirement: InterfaceRequirementId,
+    pub realization: ResolvedRangeProtocolRealization,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedRangeProtocolRealization {
+    ClassWitness,
+    PrimitiveIntrinsic(super::ResolvedPrimitiveType),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

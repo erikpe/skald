@@ -1444,7 +1444,7 @@ fn range_module_phase_dump(variant: usize) -> String {
     );
     let resolved_dump = dump_resolved(&resolved.program);
     assert!(
-        resolved_dump.contains("RangeConstruction template"),
+        resolved_dump.contains("RangeSource template"),
         "{resolved_dump}"
     );
     assert!(resolved_dump.contains("AddOneU64"), "{resolved_dump}");
@@ -1456,7 +1456,7 @@ fn range_module_phase_dump(variant: usize) -> String {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
     let hir_dump = dump_hir(&hir);
-    assert!(hir_dump.contains("CanonicalRangeSyntax"));
+    assert!(hir_dump.contains("RangeLoopEvidence"));
     assert!(hir_dump.contains("PrimitiveRange endpoint=u64"));
     assert!(hir_dump.contains("Protocol interface="));
     let preliminary = lower_preliminary_hir(&hir);

@@ -173,6 +173,31 @@ fn ordinary_range_execution_retains_canonical_artifacts() {
     assert_eq!(run_native_assembly(&output).code(), Some(6));
 }
 
+#[test]
+fn direct_class_range_execution_retains_canonical_artifacts() {
+    let source = concat!(
+        "from std::ops import OpLess;\n",
+        "from std::range import Successor;\n",
+        "class Value implements OpLess<Value>, Successor<Value> {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n",
+        "  fn successor() -> Value { return Value(self.value + 1); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var sum: i64 = 0;\n",
+        "  for (item in Value(1) .. Value(4)) { sum = sum + item.value; }\n",
+        "  return sum;\n",
+        "}\n",
+    );
+    let output = standard_library_assembly(source);
+
+    assert!(output.contains("Range_x3c_"), "{output}");
+    assert!(output.contains("method.iter_next"), "{output}");
+    assert_system_assembler_accepts(&output);
+    assert_eq!(run_native_assembly(&output).code(), Some(6));
+}
+
 fn named_source_function_assembly<'a>(assembly: &'a str, name: &str) -> &'a str {
     let prefix = format!(".Lska.fn.app.{name}.f");
     let symbol = assembly

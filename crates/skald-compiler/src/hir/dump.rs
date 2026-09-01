@@ -1155,24 +1155,22 @@ impl<'types> HirDumper<'types> {
             plan.increment,
         ));
         self.raw_line(&format!(
-            "CanonicalRangeSyntax template={} class={} initializer={} provenance=({}, {}) iterable={}",
-            plan.origin.range_template,
-            plan.origin.range_class,
-            plan.origin.initializer,
-            plan.origin.endpoint_provenance[0].name(),
-            plan.origin.endpoint_provenance[1].name(),
-            plan.origin.iterable,
+            "RangeLoopEvidence template={} class={} initializer={} iterable={}",
+            plan.evidence.range_template,
+            plan.evidence.range_class,
+            plan.evidence.initializer,
+            plan.evidence.iterable,
         ));
         self.indented(|dumper| {
             dumper.range_protocol_evidence(
                 "Ordering",
-                plan.origin.ordering,
-                plan.origin.operator_span,
+                plan.evidence.ordering,
+                plan.evidence.operator_span,
             );
             dumper.range_protocol_evidence(
                 "Successor",
-                plan.origin.successor,
-                plan.origin.operator_span,
+                plan.evidence.successor,
+                plan.evidence.operator_span,
             );
             dumper.line("Lower", plan.lower.span);
             dumper.indented(|dumper| dumper.expression(&plan.lower));
@@ -2038,27 +2036,6 @@ impl<'types> HirDumper<'types> {
     }
 
     fn construction(&mut self, construction: &HirConstruction) {
-        if let crate::hir::HirConstructionOrigin::CanonicalRangeSyntax(origin) =
-            &construction.origin
-        {
-            self.line(
-                &format!(
-                    "CanonicalRangeSyntax template={} class={} initializer={} endpoint={} provenance=({}, {}) iterable={}",
-                    origin.range_template,
-                    origin.range_class,
-                    origin.initializer,
-                    origin.endpoint_type.name(),
-                    origin.endpoint_provenance[0].name(),
-                    origin.endpoint_provenance[1].name(),
-                    origin.iterable,
-                ),
-                origin.operator_span,
-            );
-            self.indented(|dumper| {
-                dumper.range_protocol_evidence("Ordering", origin.ordering, origin.operator_span);
-                dumper.range_protocol_evidence("Successor", origin.successor, origin.operator_span);
-            });
-        }
         match &construction.mode {
             HirConstructionMode::Initialize {
                 initializer,
@@ -2093,12 +2070,8 @@ impl<'types> HirDumper<'types> {
         evidence: crate::hir::HirRangeProtocolEvidence,
         span: Span,
     ) {
-        let realization = match evidence.realization {
-            crate::hir::HirRangeProtocolRealization::ClassWitness => "class-witness".to_owned(),
-            crate::hir::HirRangeProtocolRealization::PrimitiveIntrinsic(ty) => {
-                format!("primitive-{}", ty.name())
-            }
-        };
+        let crate::hir::HirRangeProtocolRealization::PrimitiveIntrinsic(ty) = evidence.realization;
+        let realization = format!("primitive-{}", ty.name());
         self.line(
             &format!(
                 "{name} interface={} requirement={} realization={realization}",

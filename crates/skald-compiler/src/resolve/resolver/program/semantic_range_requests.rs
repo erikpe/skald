@@ -19,7 +19,6 @@ pub(super) struct SemanticRangeCompletionInput<'program, 'ast> {
     pub(super) interfaces: &'program ResolvedInterfaceDeclarationTable,
     pub(super) has_module_context: bool,
     pub(super) literal_ids: &'program HashMap<Span, LiteralDataId>,
-    pub(super) range_source_spans: &'program [Span],
     pub(super) iterable: Option<&'program ResolvedIterableLanguageItem>,
     pub(super) operators: Option<&'program ResolvedOperatorLanguageItem>,
     pub(super) range: Option<&'program ResolvedRangeLanguageItem>,
@@ -74,7 +73,6 @@ pub(super) fn complete_semantic_range_specializations(
                 hierarchy: &semantic_hierarchy,
                 has_module_context: input.has_module_context,
                 literal_ids: input.literal_ids,
-                range_source_spans: input.range_source_spans,
                 iterable: input.iterable,
                 operators: input.operators,
                 range: input.range,
@@ -91,21 +89,7 @@ pub(super) fn complete_semantic_range_specializations(
             type_interner,
             diagnostics,
         );
-        let has_undiscovered_range = input.range_source_spans.iter().any(|span| {
-            !discovery
-                .class_specializations
-                .iter()
-                .any(|specialization| {
-                    specialization
-                        .provenance
-                        .origins
-                        .iter()
-                        .any(|origin| origin.span == *span)
-                })
-        });
-        if discovery.class_specializations.iter().len() == previous_class_count
-            || !has_undiscovered_range
-        {
+        if discovery.class_specializations.iter().len() == previous_class_count {
             return discovery;
         }
         semantic_lookups = input.discovery.lookups_with_specializations(
@@ -126,7 +110,6 @@ pub(super) struct SemanticRangeDiscoveryInput<'program, 'ast> {
     pub(super) hierarchy: &'program ResolvedClassHierarchy,
     pub(super) has_module_context: bool,
     pub(super) literal_ids: &'program HashMap<Span, LiteralDataId>,
-    pub(super) range_source_spans: &'program [Span],
     pub(super) iterable: Option<&'program ResolvedIterableLanguageItem>,
     pub(super) operators: Option<&'program ResolvedOperatorLanguageItem>,
     pub(super) range: Option<&'program ResolvedRangeLanguageItem>,
@@ -173,7 +156,7 @@ pub(super) fn discover_semantic_range_requests(
             else {
                 continue;
             };
-            if !contains_range(function.span, input.range_source_spans) {
+            if !block_contains_range(&function.body) {
                 continue;
             }
             let declaration = input
@@ -203,7 +186,7 @@ pub(super) fn discover_semantic_range_requests(
                 else {
                     return false;
                 };
-                contains_range(class.span, input.range_source_spans)
+                class_contains_range(class)
             })
             .cloned()
             .collect::<Vec<_>>();
@@ -230,10 +213,43 @@ pub(super) fn discover_semantic_range_requests(
     collector.into_requests()
 }
 
-fn contains_range(container: Span, ranges: &[Span]) -> bool {
-    ranges.iter().any(|range| {
-        range.source_id() == container.source_id()
-            && container.range().start() <= range.range().start()
-            && range.range().end() <= container.range().end()
+fn class_contains_range(class: &syntax::ClassDecl) -> bool {
+    class.members.iter().any(|member| match member {
+        syntax::ClassMember::Initializer(member) => block_contains_range(&member.body),
+        syntax::ClassMember::CopyConstructor(member) => block_contains_range(&member.body),
+        syntax::ClassMember::CopyAssignment(member) => block_contains_range(&member.body),
+        syntax::ClassMember::Destructor(member) => block_contains_range(&member.body),
+        syntax::ClassMember::Method(member) => block_contains_range(&member.body),
+        syntax::ClassMember::Field(_) | syntax::ClassMember::StaticField(_) => false,
+    })
+}
+
+fn block_contains_range(block: &syntax::Block) -> bool {
+    block.statements.iter().any(|statement| match statement {
+        syntax::Statement::ForIn(statement) => {
+            matches!(statement.source, syntax::ForInSource::Range(_))
+                || block_contains_range(&statement.body)
+        }
+        syntax::Statement::Conditional(statement) => {
+            block_contains_range(&statement.if_arm.body)
+                || statement
+                    .elif_arms
+                    .iter()
+                    .any(|arm| block_contains_range(&arm.body))
+                || statement
+                    .else_block
+                    .as_ref()
+                    .is_some_and(block_contains_range)
+        }
+        syntax::Statement::While(statement) => block_contains_range(&statement.body),
+        syntax::Statement::Block(block) => block_contains_range(block),
+        syntax::Statement::BaseInitialization(_)
+        | syntax::Statement::Local(_)
+        | syntax::Statement::Return(_)
+        | syntax::Statement::Break(_)
+        | syntax::Statement::Continue(_)
+        | syntax::Statement::Expression(_)
+        | syntax::Statement::FieldAssignment(_)
+        | syntax::Statement::ObjectAssignment(_) => false,
     })
 }

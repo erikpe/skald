@@ -2,9 +2,8 @@
 
 use crate::{
     identity::{
-        BindingId, ClassId, FieldId, FunctionId, InitializerId, InterfaceId,
-        InterfaceRequirementId, LiteralDataId, MethodId, OptionalBoxTypeId, OptionalTypeId,
-        StaticFieldId,
+        BindingId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId,
+        LiteralDataId, MethodId, OptionalBoxTypeId, OptionalTypeId, StaticFieldId,
     },
     literal::NumericLiteralKind,
     source::Span,
@@ -387,14 +386,7 @@ pub struct ResolvedConstructExpr {
     pub class: ClassId,
     pub callee_span: Span,
     pub mode: ResolvedConstructionMode,
-    pub origin: ResolvedConstructionOrigin,
     pub span: Span,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ResolvedConstructionOrigin {
-    Explicit,
-    CanonicalRangeSyntax(ResolvedCanonicalRangeOrigin),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -486,47 +478,6 @@ pub struct ResolvedLogicalExpr {
     pub operator_span: Span,
     pub right: Box<ResolvedExpression>,
     pub span: Span,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedCanonicalRangeOrigin {
-    pub operator_span: Span,
-    pub endpoint_type: super::ResolvedTypeKind,
-    pub endpoint_provenance: [ResolvedRangeEndpointProvenance; 2],
-    pub range_template: crate::identity::ClassTemplateId,
-    pub range_class: ClassId,
-    pub initializer: InitializerId,
-    pub ordering: ResolvedRangeProtocolEvidence,
-    pub successor: ResolvedRangeProtocolEvidence,
-    pub iterable: InterfaceId,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ResolvedRangeEndpointProvenance {
-    SpecializationIndependent,
-    SpecializationDependent,
-}
-
-impl ResolvedRangeEndpointProvenance {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::SpecializationIndependent => "independent",
-            Self::SpecializationDependent => "specialization-dependent",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ResolvedRangeProtocolEvidence {
-    pub interface: InterfaceId,
-    pub requirement: InterfaceRequirementId,
-    pub realization: ResolvedRangeProtocolRealization,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ResolvedRangeProtocolRealization {
-    ClassWitness,
-    PrimitiveIntrinsic(ResolvedPrimitiveType),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

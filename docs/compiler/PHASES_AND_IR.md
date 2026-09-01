@@ -69,8 +69,9 @@ their owning orchestration boundaries.
 `HirForIn` carries one exhaustive execution plan. `Protocol` retains the
 selected iterable receiver, state, optional result, item lifecycle, and call
 plans. `PrimitiveRange` is selected only for an immediately consumed canonical
-`u8`, `u64`, or `i64` syntax origin and retains ordered endpoints, exact
-comparison/increment operations, and the item epoch. Preliminary-MIR lowering
+`u8`, `u64`, or `i64` structural range source and retains ordered endpoints,
+minimal exact loop evidence, comparison/increment operations, and the item
+epoch. Preliminary-MIR lowering
 erases the latter to current/end scalar storage, one less-than branch, one
 same-typed increment before source body entry, ordinary jumps, and explicit
 cleanup. No range aggregate, optional, protocol call, range MIR operation, or

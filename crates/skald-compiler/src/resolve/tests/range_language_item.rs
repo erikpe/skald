@@ -111,11 +111,8 @@ fn concise_integer_range_activates_canonical_module_and_retains_resolved_evidenc
     let ResolvedStatement::ForIn(loop_) = &main.body.statements[0] else {
         panic!("expected resolved for-in");
     };
-    let ResolvedExpression::Construct(construction) = &loop_.iterable else {
+    let ResolvedForInSource::Range(range) = &loop_.source else {
         panic!("expected resolved range evidence");
-    };
-    let ResolvedConstructionOrigin::CanonicalRangeSyntax(range) = &construction.origin else {
-        panic!("expected canonical range construction origin");
     };
     assert_eq!(range.endpoint_type, ResolvedTypeKind::U64);
     assert_eq!(
@@ -138,7 +135,7 @@ fn concise_integer_range_activates_canonical_module_and_retains_resolved_evidenc
     ));
 
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("RangeSource template"), "{dump}");
     assert!(dump.contains("realization primitive-u64"), "{dump}");
     assert_eq!(dump, dump_resolved(&output.program));
 }
@@ -187,11 +184,8 @@ fn concise_class_range_selects_nominal_ordering_and_successor_witnesses() {
     let ResolvedStatement::ForIn(loop_) = &main.body.statements[0] else {
         panic!("expected for-in");
     };
-    let ResolvedExpression::Construct(construction) = &loop_.iterable else {
+    let ResolvedForInSource::Range(range) = &loop_.source else {
         panic!("expected concise range");
-    };
-    let ResolvedConstructionOrigin::CanonicalRangeSyntax(range) = &construction.origin else {
-        panic!("expected canonical range construction origin");
     };
     assert!(matches!(range.endpoint_type, ResolvedTypeKind::Class(_)));
     assert_eq!(
@@ -222,7 +216,7 @@ fn generic_template_range_requests_close_for_each_concrete_endpoint_type() {
         dump.contains("Selection range endpoint template0:type0"),
         "{dump}"
     );
-    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("RangeSource template"), "{dump}");
 }
 
 #[test]
@@ -255,7 +249,7 @@ fn concise_range_requests_follow_imported_function_result_types() {
     let output = resolve_module_graph(&graph);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("RangeSource template"), "{dump}");
     assert!(dump.contains("endpoint u64"), "{dump}");
 }
 
@@ -282,7 +276,7 @@ fn concise_range_requests_follow_method_result_types() {
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("RangeSource template"), "{dump}");
     assert!(dump.contains("realization class-witness"), "{dump}");
     let checked = crate::typeck::type_check(&output.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
@@ -313,7 +307,7 @@ fn concise_range_requests_follow_overloaded_operator_result_types() {
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("RangeConstruction template"), "{dump}");
+    assert!(dump.contains("RangeSource template"), "{dump}");
     assert!(dump.contains("realization class-witness"), "{dump}");
     let checked = crate::typeck::type_check(&output.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);

@@ -383,7 +383,6 @@ impl CallableResolver<'_, '_> {
                             copy_span: *copy_span,
                             source: Box::new(source),
                         },
-                        origin: ResolvedConstructionOrigin::Explicit,
                         span: call.span,
                     }))
                 }
@@ -432,7 +431,6 @@ impl CallableResolver<'_, '_> {
                     class,
                     callee_span: call.callee.span(),
                     mode: ResolvedConstructionMode::Initialize { arguments },
-                    origin: ResolvedConstructionOrigin::Explicit,
                     span: call.span,
                 })
             }

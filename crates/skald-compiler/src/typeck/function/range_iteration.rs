@@ -1,4 +1,4 @@
-//! Eligibility and typed planning for immediate primitive range iteration.
+//! Eligibility and typed planning for direct primitive range iteration.
 
 use crate::{
     hir::{
@@ -8,21 +8,17 @@ use crate::{
         HirPrimitiveComparison, HirPrimitiveRangeIterationPlan, HirStatement,
     },
     resolve::{
-        ResolvedConstructionOrigin, ResolvedExpression, ResolvedForIn, ResolvedPrimitiveType,
+        ResolvedForIn, ResolvedForInSource, ResolvedPrimitiveType, ResolvedRangeForSource,
         ResolvedRangeProtocolRealization, ResolvedTypeKind,
     },
 };
 
-use super::{CallableChecker, CheckedStatement};
+use super::{range_source::resolved_range_construction, CallableChecker, CheckedStatement};
 
 impl CallableChecker<'_, '_> {
     pub(super) fn is_primitive_range_iteration_candidate(&self, statement: &ResolvedForIn) -> bool {
-        primitive_range_construction(&statement.iterable).is_some_and(|construction| {
-            let ResolvedConstructionOrigin::CanonicalRangeSyntax(origin) = &construction.origin
-            else {
-                return false;
-            };
-            origin.endpoint_provenance.iter().all(|provenance| {
+        primitive_range_source(&statement.source).is_some_and(|source| {
+            source.endpoint_provenance.iter().all(|provenance| {
                 matches!(
                     provenance,
                     crate::resolve::ResolvedRangeEndpointProvenance::SpecializationIndependent
@@ -58,7 +54,7 @@ impl CallableChecker<'_, '_> {
                     binding_span: statement.binding_span,
                     annotation_span: statement.annotation_span,
                     in_span: statement.in_span,
-                    iterable_span: statement.iterable.span(),
+                    iterable_span: statement.source.span(),
                     span: statement.span,
                 },
             )))
@@ -70,28 +66,22 @@ impl CallableChecker<'_, '_> {
         &mut self,
         statement: &ResolvedForIn,
     ) -> Option<HirPrimitiveRangeIterationPlan> {
-        let construction = primitive_range_construction(&statement.iterable)?;
-        let checked = self.check_construction_arguments(construction)?;
-        let origin = checked.canonical_range_origin()?.clone();
-        let integer = integer_type(origin.endpoint_type)?;
+        let source = primitive_range_source(&statement.source)?;
+        let evidence = self.validate_primitive_range_source(source)?;
+        let integer = integer_type(source.endpoint_type)?;
+        self.validate_range_selection(source, &statement.selection)?;
 
-        if origin.iterable != statement.selection.interface
-            || statement.selection.item != origin_type(&origin)
-            || statement.selection.state != origin_type(&origin)
-        {
-            self.report_invalid_range_origin(
-                origin.operator_span,
-                "range loop selection does not match its canonical construction provenance",
-            );
+        let construction = resolved_range_construction(source);
+        let checked = self.check_construction_arguments(&construction)?;
+        if checked.initializer() != Some(source.initializer) {
             return None;
         }
-
         let HirConstructionMode::Initialize { arguments, .. } = checked.mode else {
-            unreachable!("canonical range syntax always uses initializer construction")
+            unreachable!("direct range sources always use initializer construction")
         };
         let mut arguments = arguments.into_iter();
-        let lower = primitive_value_argument(arguments.next(), origin.operator_span, self)?;
-        let upper = primitive_value_argument(arguments.next(), origin.operator_span, self)?;
+        let lower = primitive_value_argument(arguments.next())?;
+        let upper = primitive_value_argument(arguments.next())?;
         debug_assert!(arguments.next().is_none());
 
         let ty = integer.operand_type();
@@ -105,7 +95,7 @@ impl CallableChecker<'_, '_> {
             },
         };
         Some(HirPrimitiveRangeIterationPlan {
-            origin,
+            evidence,
             lower,
             upper,
             integer,
@@ -123,68 +113,39 @@ impl CallableChecker<'_, '_> {
     }
 }
 
-fn primitive_range_construction(
-    expression: &ResolvedExpression,
-) -> Option<&crate::resolve::ResolvedConstructExpr> {
-    match expression {
-        ResolvedExpression::Grouped(grouped) => primitive_range_construction(&grouped.expression),
-        ResolvedExpression::Construct(construction) => match &construction.origin {
-            ResolvedConstructionOrigin::CanonicalRangeSyntax(origin)
-                if primitive_origin_type(origin).is_some() =>
-            {
-                Some(construction)
-            }
-            _ => None,
-        },
-        _ => None,
-    }
+fn primitive_range_source(source: &ResolvedForInSource) -> Option<&ResolvedRangeForSource> {
+    let ResolvedForInSource::Range(source) = source else {
+        return None;
+    };
+    primitive_source_type(source).is_some().then_some(source)
 }
 
-fn primitive_origin_type(
-    origin: &crate::resolve::ResolvedCanonicalRangeOrigin,
-) -> Option<ResolvedPrimitiveType> {
-    let primitive = match origin.endpoint_type {
+fn primitive_source_type(source: &ResolvedRangeForSource) -> Option<ResolvedPrimitiveType> {
+    let primitive = match source.endpoint_type {
         ResolvedTypeKind::I64 => ResolvedPrimitiveType::I64,
         ResolvedTypeKind::U64 => ResolvedPrimitiveType::U64,
         ResolvedTypeKind::U8 => ResolvedPrimitiveType::U8,
         _ => return None,
     };
     let expected = ResolvedRangeProtocolRealization::PrimitiveIntrinsic(primitive);
-    (origin.ordering.realization == expected && origin.successor.realization == expected)
+    (source.ordering.realization == expected && source.successor.realization == expected)
         .then_some(primitive)
 }
 
-fn integer_type(ty: crate::hir::Type) -> Option<HirIntegerType> {
+fn integer_type(ty: ResolvedTypeKind) -> Option<HirIntegerType> {
     match ty {
-        crate::hir::Type::I64 => Some(HirIntegerType::I64),
-        crate::hir::Type::U64 => Some(HirIntegerType::U64),
-        crate::hir::Type::U8 => Some(HirIntegerType::U8),
+        ResolvedTypeKind::I64 => Some(HirIntegerType::I64),
+        ResolvedTypeKind::U64 => Some(HirIntegerType::U64),
+        ResolvedTypeKind::U8 => Some(HirIntegerType::U8),
         _ => None,
-    }
-}
-
-fn origin_type(origin: &crate::hir::HirCanonicalRangeOrigin) -> ResolvedTypeKind {
-    match origin.endpoint_type {
-        crate::hir::Type::I64 => ResolvedTypeKind::I64,
-        crate::hir::Type::U64 => ResolvedTypeKind::U64,
-        crate::hir::Type::U8 => ResolvedTypeKind::U8,
-        _ => unreachable!("primitive range plan requires an integer endpoint"),
     }
 }
 
 fn primitive_value_argument(
     argument: Option<HirCallArgument>,
-    span: crate::source::Span,
-    checker: &mut CallableChecker<'_, '_>,
 ) -> Option<crate::hir::HirExpression> {
     match argument {
         Some(HirCallArgument::Value(value)) => Some(value),
-        _ => {
-            checker.report_invalid_range_origin(
-                span,
-                "primitive range endpoints must lower as ordinary scalar values",
-            );
-            None
-        }
+        _ => None,
     }
 }

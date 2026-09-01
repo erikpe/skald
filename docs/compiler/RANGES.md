@@ -5,8 +5,8 @@ and handwritten-`while` performance acceptance.
 Resolution validates the canonical declaration bundle, closes exact integer
 bounds to existing operations, and compiles explicit `Range<T>` values through
 ordinary construction and general iteration. `..` has source AST,
-compiler-dependency, exact resolved and HIR construction evidence,
-diagnostics, ordinary lifecycle and native execution. Immediate `u8`, `u64`,
+compiler-dependency, exact structural resolved-source evidence, diagnostics,
+ordinary lifecycle and native execution. Immediate `u8`, `u64`,
 and `i64` syntax loops use the scalar fusion described below; deterministic
 shape and recorded timings establish handwritten-`while` parity. This document
 owns those identities and target/ABI constraints for the
@@ -140,16 +140,18 @@ ordinary callable signatures, class declarations, interface claims, and the
 ordinary hierarchy are available. The probe reuses ordinary expression,
 method, and operator selection with isolated diagnostics, function-reference
 state, and compound-type interning; it records exact `Range<T>` keys at each
-direct-source `..` span and repeats when newly materialized specializations
-expose further range sources. Specialized declarations and real bodies are
-then materialized and resolved once from the completed request set. Thus method
-and overloaded operator results can select `T` without a second source-level
-type system.
+structurally visited direct range source and repeats while newly materialized
+specializations add requests. It filters callable and class work by traversing
+their statement trees; there is no global range-span registry or
+span-containment test. Specialized declarations and real bodies are then
+materialized and resolved once from the completed request set. Thus method and
+overloaded operator results can select `T` without a second source-level type
+system.
 
 Resolution evaluates neither endpoint. It resolves both in source order,
 requires one exact static type `T`, requests and validates canonical
 `Range<T>`, closes its bounds, and selects its canonical `init(T, T)`. The
-resolved loop-source construction retains:
+resolved `ResolvedForInSource::Range` retains:
 
 - lower, upper, operator, and complete spans;
 - exact endpoint and result types;
@@ -163,51 +165,32 @@ promotion, common-base inference, structural lookup, constructor search on
 `T`, or overload protocol search. Candidate, bound, diagnostic, request, and
 dump order remains deterministic.
 
-After successful resolution, type checking verifies the complete canonical
-identity correspondence. The current resolved adapter stores that evidence on
-the construction consumed by the same `ResolvedForIn`; it cannot flow into a
-local, argument, result, or other expression consumer. Invalid or forged
-provenance is rejected before HIR is created.
+The range evidence belongs to the loop source, never to an expression or
+ordinary construction. Type checking revalidates its complete canonical
+identity correspondence, including definition-site endpoint provenance,
+before selecting an execution plan. Invalid structural evidence is rejected
+before HIR is created.
 
 ## Typed HIR representation
 
-Range syntax erases to the existing exact class-construction HIR rather than a
-dedicated `HirRangeConstruction`. The construction retains all ordinary
-destination, argument, evaluation, ownership, initializer, result, effect,
-and cleanup plans.
+Type checking consumes the resolved source distinction directly. An eligible
+integer source creates `HirPrimitiveRangeIterationPlan` from the two endpoint
+expressions. A class or otherwise ineligible direct source synthesizes the
+canonical initializer construction as the ordinary protocol receiver, then
+reuses exact construction, argument, ownership, lifecycle, and general
+iteration planning.
 
-One compiler-owned, non-forgeable construction origin records:
+Ordinary `ResolvedConstructExpr` and `HirConstruction` are origin-free.
+Explicit `Range<T>(lower, upper)` therefore remains an ordinary expression by
+construction rather than by a source tag, and cannot acquire fusion
+eligibility through shape recognition. Grouping either endpoint is ordinary
+endpoint syntax; grouping the complete range is rejected before resolution.
 
-```text
-HirConstructionOrigin::CanonicalRangeSyntax {
-    operator_span,
-    range_template,
-    range_class,
-    initializer,
-    endpoint_type,
-    endpoint_provenance: [lower, upper],
-    ordering,
-    successor,
-}
-```
-
-Exact identity fields, not names or source spelling, authorize the origin.
-Type checking validates correspondence between the origin, construction
-arguments, selected closed class, initializer, bounds, endpoint type, and
-result. Ordinary explicit `Range<T>(lower, upper)` has the normal construction
-origin and is not upgraded by shape recognition.
-
-Every canonical range-syntax construction is consumed by its owning
-`HirForIn`. The loop selects a structured primitive-range plan for an eligible
-integer source; class and otherwise ineligible direct sources use the ordinary
-construction and protocol plan. Grouping either endpoint is ordinary endpoint
-syntax. Grouping the complete range is rejected before resolution. Explicit
-`Range<T>` values use the ordinary construction origin and protocol plan.
-
-This representation maximizes construction reuse and keeps one explicit
-optimization provenance. A dedicated range HIR expression should not be added
-unless future evidence demonstrates an ownership or evaluation plan that the
-ordinary construction cannot represent.
+The fused plan retains only the exact loop evidence required before MIR:
+operator span, canonical range template, closed class and initializer,
+ordering and successor applications, and iterable application. Endpoint type
+is carried by the scalar plan itself. Definition-site provenance is consumed
+when eligibility is decided and does not decorate ordinary HIR construction.
 
 ## Evaluation and ordinary lowering
 
@@ -235,15 +218,15 @@ observable on this ordinary path.
 
 The initial fused plan is eligible only when:
 
-- `HirForIn` immediately consumes a construction whose origin is exactly
-  `CanonicalRangeSyntax`;
+- `ResolvedForInSource::Range` is the direct source of that exact loop;
 - both endpoints carry specialization-independent semantic provenance;
 - the endpoint, item, and state type is exactly `u8`, `u64`, or `i64`;
 - ordering and successor are the compiler-provided canonical primitive
   realizations;
 - the iterable application is the exact canonical `Range<T>` claim of
   `Iterable<T, T>`; and
-- the construction belongs to the direct range source of that exact loop.
+- its exact canonical class, initializer, bounds, and iterable evidence all
+  validate against the resolved program.
 
 Generic-template analysis records endpoint provenance before substitution. A
 closed endpoint is specialization-dependent when its type or value producer
@@ -259,9 +242,9 @@ post-substitution type or source spelling.
 Ordinary explicit `Range<T>(lower, upper)` is deliberately ineligible in the
 initial profile. Skipping an ordinary constructor would require a separately
 frozen side-effect-free semantic boundary or a general proof-producing
-optimization. Stored syntax-produced ranges, classes, generic parameters,
-interface views, inherited claims, and lookalikes likewise use the ordinary
-path.
+optimization. Classes, generic parameters, interface views, inherited claims,
+and lookalikes likewise use the ordinary path; concise syntax cannot produce a
+stored value.
 
 The selected structured HIR plan retains the loop and item identities,
 ordered endpoint expressions, exact scalar type, primitive comparison and
@@ -291,11 +274,12 @@ agnostic.
 
 ## Verification and deterministic evidence
 
-Resolved and HIR verification must reject wrong canonical identities,
-endpoint/result types, initializer mappings, bound realizations, forged range
-origins, explicit constructions mislabeled as syntax, and fusion across an
-observable boundary. Fused-plan construction additionally rejects either
-endpoint being marked specialization-dependent.
+Resolved-source and HIR validation must reject wrong canonical identities,
+endpoint/result types, initializer mappings, bound realizations, inconsistent
+endpoint provenance, and fusion across an observable boundary. Ordinary
+constructions contain no field that could be mislabeled as concise syntax.
+Fused-plan construction additionally requires both endpoints to have been
+classified specialization-independent.
 
 Preliminary and final MIR verification sees only ordinary operations. Focused
 mutation tests must reject wrong scalar types, missing endpoint initialization,
@@ -306,8 +290,9 @@ traffic in a fused-plan fixture, and unbalanced storage.
 Determinism tests compare tokens, AST, module graph, resolved program, HIR,
 preliminary MIR, planned MIR, final MIR, assembly, diagnostics, metadata, and
 artifacts across reordered source discovery, provider roots, equivalent
-imports, and processes. Dumps expose the canonical range origin and selected
-ordinary or fused execution plan before MIR erasure; MIR dumps require no
+imports, and processes. Resolved dumps expose structural `RangeSource`
+evidence; HIR dumps expose `RangeLoopEvidence` only for the fused plan and
+ordinary construction for protocol execution. MIR dumps require no
 range-specific vocabulary.
 
 ## Performance acceptance
