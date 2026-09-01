@@ -112,6 +112,36 @@ fn sparse_backend_planning_visits_only_physically_retained_definitions() {
 }
 
 #[test]
+fn equal_retained_closures_emit_identical_runtime_trace_metadata() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "trace-retention.ska",
+        concat!(
+            "fn dead() -> i64 { return 9; }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+    );
+    let full = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::with_runtime_trace(&fixture.mir, &fixture.sources)
+            .with_reachable_artifacts_only(),
+    )
+    .unwrap();
+    let sparse = retain_reachable_definitions(&fixture.mir);
+    let retained = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::with_runtime_trace(&sparse, &fixture.sources).with_reachable_artifacts_only(),
+    )
+    .unwrap();
+
+    assert_eq!(full, retained);
+    assert!(!full.contains("main::dead"));
+    assert!(full.contains(".Lska.trace.bytes.0"));
+    assert!(full.contains(".Lska.trace.bytes.1"));
+    assert!(!full.contains(".Lska.trace.bytes.2"));
+    assert_system_assembler_accepts(&full);
+}
+
+#[test]
 fn sparse_complete_and_artifact_retained_emission_never_resurrect_absent_bodies() {
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "sparse-emission.ska",

@@ -23,6 +23,57 @@ use super::super::{
 
 use super::names;
 
+/// Rebuilds the byte-string pool after machine-artifact retention.
+///
+/// Context and location symbols are already semantic identities, and retaining
+/// a subset preserves their canonical order. Byte strings instead use dense
+/// target-local indices, so their pool must be interned again from the retained
+/// contexts to remove dead-source gaps and discovery-order influence.
+pub(in crate::backend::x86_64_sysv) fn canonicalize_retained(
+    metadata: &mut AssemblyRuntimeTraceMetadata,
+) {
+    let previous_strings = std::mem::take(&mut metadata.strings)
+        .into_iter()
+        .map(|string| (string.symbol, string.bytes))
+        .collect::<BTreeMap<_, _>>();
+    let mut symbols_by_bytes = BTreeMap::new();
+    let mut strings = Vec::new();
+
+    for context in &mut metadata.contexts {
+        let name = previous_strings
+            .get(&context.name_symbol)
+            .expect("retained trace context must reference a retained name string")
+            .clone();
+        let path = previous_strings
+            .get(&context.path_symbol)
+            .expect("retained trace context must reference a retained path string")
+            .clone();
+        context.name_symbol = intern_retained_string(&name, &mut symbols_by_bytes, &mut strings);
+        context.path_symbol = intern_retained_string(&path, &mut symbols_by_bytes, &mut strings);
+    }
+
+    metadata.strings = strings;
+}
+
+fn intern_retained_string(
+    bytes: &[u8],
+    symbols_by_bytes: &mut BTreeMap<Vec<u8>, String>,
+    strings: &mut Vec<AssemblyTraceByteString>,
+) -> String {
+    if let Some(symbol) = symbols_by_bytes.get(bytes) {
+        return symbol.clone();
+    }
+
+    let symbol = symbol::trace_byte_string(strings.len());
+    let bytes = bytes.to_vec();
+    symbols_by_bytes.insert(bytes.clone(), symbol.clone());
+    strings.push(AssemblyTraceByteString {
+        symbol: symbol.clone(),
+        bytes,
+    });
+    symbol
+}
+
 pub(in crate::backend::x86_64_sysv) enum Metadata<'input> {
     Omitted,
     Enabled(EnabledMetadata<'input>),

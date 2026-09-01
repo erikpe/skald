@@ -7,7 +7,7 @@ mod names;
 
 pub(super) use activation::Activations;
 pub(super) use instrumentation::{emit_pop, emit_push, LocationReplacement};
-pub(super) use metadata::Metadata;
+pub(super) use metadata::{canonicalize_retained, Metadata};
 
 #[cfg(test)]
 pub(super) use metadata::escape_path_bytes;

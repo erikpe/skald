@@ -574,7 +574,12 @@ paths. Positional sources outside a configured root use their configured
 relative display spelling when available and otherwise may remain absolute.
 Locations hold a context pointer plus `u64` line and column. Bytes and records
 are interned and ordered by semantic identity and location rather than address
-or hash traversal. No record is emitted for an unused location.
+or hash traversal. After target artifact closure, the metadata owner rebuilds
+the retained byte-string pool from retained contexts and assigns fresh dense
+labels in that canonical order. Equal retained machine closures therefore emit
+byte-identical trace metadata even when their pre-retention MIR contains
+different dead source bodies. Context and location symbols remain semantic and
+are not renumbered. No record is emitted for an unused location.
 
 Eligible frames and update sites are fixed by the
 [phase boundary](PHASES_AND_IR.md#runtime-trace-phase-boundary). The
@@ -1138,7 +1143,9 @@ dispatch entries, literal metadata, panic messages, and runtime-trace records
 form its edges. Unreachable functions and data are omitted together, while an
 ordinary reference retains its complete transitive implementation. This
 target-level boundary sees only explicit machine symbols and has no knowledge
-of source sugar or language-item identities.
+of source sugar or language-item identities. Once the retained symbol set is
+fixed, runtime-trace metadata planning rebuilds its target-local string labels;
+it does not influence which artifacts are reachable.
 
 Direct backend consumers may instead request complete emission. That mode is
 used for phase-owner diagnostics and tests which need to inspect lowering of

@@ -12,34 +12,6 @@ Each future entry should state the concrete problem and evidence, why it was
 outside the roadmap, the likely owner, priority and impact, a bounded first
 step, and relevant dependencies.
 
-## Runtime-trace metadata identities can reflect pruned source bodies
-
-**Evidence.** A profile-equivalence fixture with one dead function produces
-equivalent retained machine artifacts and native behavior, but the numeric
-labels of retained runtime-trace string records can differ between `none` and
-the default profile. Complete trace metadata is interned before the
-target-private artifact walk removes records belonging only to dead bodies.
-
-**Why outside the roadmap.** Artifact bytes remain deterministic within each
-profile, the final symbol closure is correct, and stdout, stderr, status, and
-stack traces are equivalent. Cross-profile assembly identity was not part of
-the language or optimization-off contract.
-
-**Likely owner.** x86-64 runtime-trace metadata planning together with the
-machine-artifact retention boundary.
-
-**Priority and impact.** Low correctness priority, medium debugging and diff
-quality. Canonical retained-only numbering would make profile comparisons
-smaller and may marginally reduce pre-emission metadata work.
-
-**Bounded first step.** After artifact closure is known, rebuild or remap only
-retained trace strings, contexts, and locations into canonical semantic order;
-then assert byte-identical retained trace metadata where the executable
-closure itself is identical.
-
-**Dependencies.** Keep target-independent semantic retention and
-target-private generated-artifact retention as separate authorities.
-
 ## Static-effect inference still exposes an infallible legacy facade
 
 **Evidence.** Shared dependency extraction now returns

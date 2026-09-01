@@ -8,7 +8,10 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use super::machine::{AssemblyProgram, Instruction};
+use super::{
+    machine::{AssemblyProgram, Instruction},
+    runtime_trace,
+};
 
 pub(super) fn retain_reachable(program: &mut AssemblyProgram) {
     let graph = dependency_graph(program);
@@ -56,6 +59,7 @@ pub(super) fn retain_reachable(program: &mut AssemblyProgram) {
         .runtime_trace
         .locations
         .retain(|location| reachable.contains(&location.symbol));
+    runtime_trace::canonicalize_retained(&mut program.runtime_trace);
 }
 
 fn dependency_graph(program: &AssemblyProgram) -> BTreeMap<String, Vec<String>> {
@@ -191,6 +195,81 @@ mod tests {
         assert_eq!(program.runtime_trace.locations.len(), 1);
     }
 
+    #[test]
+    fn rebuilds_retained_trace_strings_from_retained_context_order() {
+        let load_location = |symbol: &str| Instruction::LoadRuntimeTraceLocationAddress {
+            symbol: symbol.to_owned(),
+            destination: Register::Rax,
+        };
+        let mut program = fixture_program(vec![
+            function("main", true, vec![load_location("live_location")]),
+            function("dead", false, vec![load_location("dead_location")]),
+        ]);
+        program.runtime_trace = AssemblyRuntimeTraceMetadata {
+            strings: vec![
+                trace_string_bytes(".Lska.trace.bytes.0", b"main::dead"),
+                trace_string_bytes(".Lska.trace.bytes.1", b"app.ska"),
+                trace_string_bytes(".Lska.trace.bytes.2", b"main::main"),
+            ],
+            contexts: vec![
+                AssemblyTraceContext {
+                    symbol: "dead_context".to_owned(),
+                    name_symbol: ".Lska.trace.bytes.0".to_owned(),
+                    name_length: 10,
+                    path_symbol: ".Lska.trace.bytes.1".to_owned(),
+                    path_length: 7,
+                },
+                AssemblyTraceContext {
+                    symbol: "live_context".to_owned(),
+                    name_symbol: ".Lska.trace.bytes.2".to_owned(),
+                    name_length: 10,
+                    path_symbol: ".Lska.trace.bytes.1".to_owned(),
+                    path_length: 7,
+                },
+            ],
+            locations: vec![
+                AssemblyTraceLocation {
+                    symbol: "dead_location".to_owned(),
+                    context_symbol: "dead_context".to_owned(),
+                    line: 1,
+                    column: 1,
+                },
+                AssemblyTraceLocation {
+                    symbol: "live_location".to_owned(),
+                    context_symbol: "live_context".to_owned(),
+                    line: 2,
+                    column: 1,
+                },
+            ],
+        };
+
+        retain_reachable(&mut program);
+
+        assert_eq!(
+            program
+                .runtime_trace
+                .strings
+                .iter()
+                .map(|string| (string.symbol.as_str(), string.bytes.as_slice()))
+                .collect::<Vec<_>>(),
+            [
+                (".Lska.trace.bytes.0", b"main::main".as_slice()),
+                (".Lska.trace.bytes.1", b"app.ska".as_slice()),
+            ]
+        );
+        assert_eq!(program.runtime_trace.contexts.len(), 1);
+        assert_eq!(
+            (
+                program.runtime_trace.contexts[0].symbol.as_str(),
+                program.runtime_trace.contexts[0].name_symbol.as_str(),
+                program.runtime_trace.contexts[0].path_symbol.as_str(),
+            ),
+            ("live_context", ".Lska.trace.bytes.0", ".Lska.trace.bytes.1")
+        );
+        assert_eq!(program.runtime_trace.locations.len(), 1);
+        assert_eq!(program.runtime_trace.locations[0].symbol, "live_location");
+    }
+
     fn fixture_program(functions: Vec<AssemblyFunction>) -> AssemblyProgram {
         AssemblyProgram {
             functions,
@@ -254,9 +333,13 @@ mod tests {
     }
 
     fn trace_string(symbol: &str) -> AssemblyTraceByteString {
+        trace_string_bytes(symbol, symbol.as_bytes())
+    }
+
+    fn trace_string_bytes(symbol: &str, bytes: &[u8]) -> AssemblyTraceByteString {
         AssemblyTraceByteString {
             symbol: symbol.to_owned(),
-            bytes: symbol.as_bytes().to_vec(),
+            bytes: bytes.to_vec(),
         }
     }
 
