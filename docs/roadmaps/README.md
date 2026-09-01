@@ -36,7 +36,13 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No additional implementation roadmap is currently planned.
+The [direct for-range syntax roadmap](DIRECT_FOR_RANGE_SYNTAX_ROADMAP.md) is
+planned; FRS0 is next. It restricts concise `lower .. upper` syntax to the
+direct source of a `for-in` statement, keeps reusable values explicit through
+`Range<T>`, and removes the general-expression span and construction-origin
+machinery that the narrower contract makes unnecessary. It depends only on the
+implemented generic-range and general-iteration foundations; no active roadmap
+blocks it.
 
 ## Design proposals
 
