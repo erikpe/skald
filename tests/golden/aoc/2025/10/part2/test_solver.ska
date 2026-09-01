@@ -102,10 +102,8 @@ fn make_rat(num: i64, den: i64) -> Rat {
 fn decode_levels(ref text: Str) -> i64[] {
     var parts: Vec<Str> = text[1:-1].split(",");
     var levels: i64[] = i64[](parts.len());
-    var index: u64 = 0u;
-    while (index < parts.len()) {
+    for (index in 0u .. parts.len()) {
         levels[(i64) index] = parts[(i64) index].to_i64()!;
-        index = index + 1u;
     }
     return levels;
 }
@@ -113,10 +111,8 @@ fn decode_levels(ref text: Str) -> i64[] {
 fn decode_button(ref text: Str, width: u64) -> i64[] {
     var button: i64[] = i64[](width);
     var parts: Vec<Str> = text[1:-1].split(",");
-    var index: u64 = 0u;
-    while (index < parts.len()) {
-        button[parts[(i64) index].to_i64()!] = 1;
-        index = index + 1u;
+    for (part in parts) {
+        button[part.to_i64()!] = 1;
     }
     return button;
 }
@@ -126,49 +122,40 @@ fn parse_machine(ref line: Str) -> Machine {
     var targets: i64[] = decode_levels(parts[-1]);
     var button_count: u64 = parts.len() - 2u;
     var buttons: i64[][] = i64[][](button_count);
-    var part_index: u64 = 1u;
-    while (part_index + 1u < parts.len()) {
+    for (part_index in 1u .. parts.len() - 1u) {
         buttons[(i64) part_index - 1] = decode_button(parts[(i64) part_index], targets.len());
-        part_index = part_index + 1u;
     }
     return Machine(targets, buttons);
 }
 
 fn compute_upper_bounds(ref machine: Machine) -> i64[] {
     var upper_bounds: i64[] = i64[](machine.buttons.len());
-    var button_index: u64 = 0u;
-    while (button_index < machine.buttons.len()) {
+    for (button_index in 0u .. machine.buttons.len()) {
         var bound: i64 = -1;
-        var target_index: u64 = 0u;
-        while (target_index < machine.targets.len()) {
+        for (target_index in 0u .. machine.targets.len()) {
             if (machine.buttons[(i64) button_index][(i64) target_index] != 0) {
                 var candidate: i64 = machine.targets[(i64) target_index];
                 if (bound < 0 || candidate < bound) {
                     bound = candidate;
                 }
             }
-            target_index = target_index + 1u;
         }
         if (bound < 0) {
             bound = 0;
         }
         upper_bounds[(i64) button_index] = bound;
-        button_index = button_index + 1u;
     }
     return upper_bounds;
 }
 
 fn sort_buttons(mut ref machine: Machine, mut ref upper_bounds: i64[]) -> unit {
-    var left: i64 = 0;
     var button_count: i64 = (i64) machine.buttons.len();
-    while (left < button_count) {
+    for (left in 0 .. button_count) {
         var best: i64 = left;
-        var right: i64 = left + 1;
-        while (right < button_count) {
+        for (right in left + 1 .. button_count) {
             if (upper_bounds[right] > upper_bounds[best]) {
                 best = right;
             }
-            right = right + 1;
         }
 
         if (best != left) {
@@ -176,34 +163,27 @@ fn sort_buttons(mut ref machine: Machine, mut ref upper_bounds: i64[]) -> unit {
             upper_bounds[left] = upper_bounds[best];
             upper_bounds[best] = bound;
 
-            var target: i64 = 0;
-            while (target < (i64) machine.targets.len()) {
+            for (target in 0 .. (i64) machine.targets.len()) {
                 var bit: i64 = machine.buttons[left][target];
                 machine.buttons[left][target] = machine.buttons[best][target];
                 machine.buttons[best][target] = bit;
-                target = target + 1;
             }
         }
-        left = left + 1;
     }
 }
 
 fn build_matrix(ref machine: Machine) -> Rat[][] {
     var matrix: Rat[][] = Rat[][](machine.targets.len());
-    var row_index: u64 = 0u;
-    while (row_index < machine.targets.len()) {
+    for (row_index in 0u .. machine.targets.len()) {
         var row: Rat[] = Rat[](machine.buttons.len() + 1u);
-        var col_index: u64 = 0u;
-        while (col_index < machine.buttons.len()) {
+        for (col_index in 0u .. machine.buttons.len()) {
             row[(i64) col_index] = make_rat(
                 machine.buttons[(i64) col_index][(i64) row_index],
                 1
             );
-            col_index = col_index + 1u;
         }
         row[(i64) machine.buttons.len()] = make_rat(machine.targets[(i64) row_index], 1);
         matrix[(i64) row_index] = row;
-        row_index = row_index + 1u;
     }
     return matrix;
 }
@@ -225,39 +205,31 @@ fn rref(mut ref matrix: Rat[][], num_buttons: i64) -> i64[] {
         }
 
         if (found_row != pivot_row) {
-            var swap_col: i64 = 0;
-            while (swap_col <= num_buttons) {
+            for (swap_col in 0 .. num_buttons + 1) {
                 var value: Rat = matrix[pivot_row][swap_col];
                 matrix[pivot_row][swap_col] = matrix[found_row][swap_col];
                 matrix[found_row][swap_col] = value;
-                swap_col = swap_col + 1;
             }
         }
 
         var pivot: Rat = matrix[pivot_row][col];
-        var normalize_col: i64 = col;
-        while (normalize_col <= num_buttons) {
+        for (normalize_col in col .. num_buttons + 1) {
             var normalized: Rat = matrix[pivot_row][normalize_col].div(pivot);
             matrix[pivot_row][normalize_col] = normalized;
-            normalize_col = normalize_col + 1;
         }
 
-        var eliminate_row: i64 = 0;
-        while (eliminate_row < (i64) matrix.len()) {
+        for (eliminate_row in 0 .. (i64) matrix.len()) {
             if (eliminate_row != pivot_row) {
                 var factor: Rat = matrix[eliminate_row][col];
                 if (!factor.is_zero()) {
-                    var update_col: i64 = col;
-                    while (update_col <= num_buttons) {
+                    for (update_col in col .. num_buttons + 1) {
                         var updated: Rat = matrix[eliminate_row][update_col].sub(
                             factor.mul(matrix[pivot_row][update_col])
                         );
                         matrix[eliminate_row][update_col] = updated;
-                        update_col = update_col + 1;
                     }
                 }
             }
-            eliminate_row = eliminate_row + 1;
         }
 
         pivot_columns[pivot_count] = col;
@@ -270,43 +242,35 @@ fn rref(mut ref matrix: Rat[][], num_buttons: i64) -> i64[] {
 }
 
 fn row_has_coefficient(ref row: Rat[], num_buttons: i64) -> bool {
-    var col: i64 = 0;
-    while (col < num_buttons) {
+    for (col in 0 .. num_buttons) {
         if (!row[col].is_zero()) {
             return true;
         }
-        col = col + 1;
     }
     return false;
 }
 
 fn validate_consistent(ref matrix: Rat[][], num_buttons: i64) -> unit {
-    var row: i64 = 0;
-    while (row < (i64) matrix.len()) {
+    for (row in 0 .. (i64) matrix.len()) {
         if (!row_has_coefficient(matrix[row], num_buttons) && !matrix[row][num_buttons].is_zero()) {
             panic("machine has no integer solution");
         }
-        row = row + 1;
     }
 }
 
 fn collect_free_columns(num_buttons: i64, ref pivot_columns: i64[]) -> i64[] {
     var is_pivot: bool[] = bool[]((u64) num_buttons);
-    var index: u64 = 0u;
-    while (index < pivot_columns.len()) {
+    for (index in 0u .. pivot_columns.len()) {
         is_pivot[pivot_columns[(i64) index]] = true;
-        index = index + 1u;
     }
 
     var free_columns: i64[] = i64[]((u64) (num_buttons - (i64) pivot_columns.len()));
     var free_index: i64 = 0;
-    var col: i64 = 0;
-    while (col < num_buttons) {
+    for (col in 0 .. num_buttons) {
         if (!is_pivot[col]) {
             free_columns[free_index] = col;
             free_index = free_index + 1;
         }
-        col = col + 1;
     }
     return free_columns;
 }
@@ -320,23 +284,19 @@ fn evaluate_cost(
     free_cost: i64
 ) -> i64 {
     var total: i64 = free_cost;
-    var pivot_index: i64 = 0;
-    while (pivot_index < (i64) pivot_columns.len()) {
+    for (pivot_index in 0 .. (i64) pivot_columns.len()) {
         var value: Rat = matrix[pivot_index][num_buttons];
-        var free_index: i64 = 0;
-        while (free_index < (i64) free_columns.len()) {
+        for (free_index in 0 .. (i64) free_columns.len()) {
             var coefficient: Rat = matrix[pivot_index][free_columns[free_index]];
             if (!coefficient.is_zero()) {
                 value = value.sub(coefficient.scale(free_values[free_index]));
             }
-            free_index = free_index + 1;
         }
 
         if (value.is_negative() || !value.is_integer()) {
             return -1;
         }
         total = total + value.num;
-        pivot_index = pivot_index + 1;
     }
     return total;
 }
@@ -369,8 +329,7 @@ fn search_best_cost(
     }
 
     var upper_bound: i64 = upper_bounds[free_columns[depth]];
-    var current: i64 = 0;
-    while (current <= upper_bound) {
+    for (current in 0 .. upper_bound + 1) {
         var next_cost: i64 = free_cost + current;
         if (best < 0 || next_cost < best) {
             free_values[depth] = current;
@@ -386,7 +345,6 @@ fn search_best_cost(
                 best
             );
         }
-        current = current + 1;
     }
     return best;
 }
@@ -426,10 +384,8 @@ fn solve_machine(ref line: Str) -> i64 {
 fn main() -> i64 {
     var lines: Vec<Str> = read_stdin().splitlines();
     var total: i64 = 0;
-    var index: u64 = 0u;
-    while (index < lines.len()) {
-        total = total + solve_machine(lines[(i64) index]);
-        index = index + 1u;
+    for (line in lines) {
+        total = total + solve_machine(line);
     }
 
     write_stdout("RESULT:");
