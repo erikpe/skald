@@ -1,10 +1,13 @@
 MSRV := $(shell sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
 GOLDEN_RUNNER := target/debug/skald-golden
 GOLDEN_COMPILER := target/debug/skac
+GOLDEN_RELEASE_RUNNER := target/release/skald-golden
+GOLDEN_RELEASE_COMPILER := target/release/skac
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
 	compiler-test cli-test docs-test golden-runner-test golden-tools \
-	golden-expectations-test golden-test golden-filter golden-exact \
+	golden-release-tools golden-expectations-test golden-test \
+	golden-release-test golden-filter golden-exact \
 	golden-determinism-test runtime-test runtime-trace-benchmark test \
 	generic-vec-benchmark range-loop-benchmark msrv-check robustness-long check check-long
 
@@ -35,6 +38,7 @@ help:
 	@echo "  make runtime-test     Build and run C runtime tests"
 	@echo ""
 	@echo "Extended validation:"
+	@echo "  make golden-release-test Run all goldens with release-built tools"
 	@echo "  make golden-determinism-test Run all goldens in full determinism mode"
 	@echo "  make runtime-trace-benchmark Compare enabled and omitted panic trace overhead"
 	@echo "  make generic-vec-benchmark Measure representative generic Vec growth"
@@ -89,8 +93,15 @@ golden-expectations-test:
 golden-tools:
 	cargo build --locked -p skac -p skald-golden
 
+golden-release-tools:
+	cargo clippy --locked --release -p skac -p skald-golden -- -D warnings
+	cargo build --locked --release -p skac -p skald-golden
+
 golden-test: golden-tools
 	$(GOLDEN_RUNNER) --compiler $(GOLDEN_COMPILER) --determinism off
+
+golden-release-test: golden-release-tools
+	$(GOLDEN_RELEASE_RUNNER) --compiler $(GOLDEN_RELEASE_COMPILER) --determinism off
 
 golden-filter: golden-tools
 	@test -n "$(GOLDEN_FILTER)" || { echo "set GOLDEN_FILTER to a golden glob" >&2; exit 1; }
@@ -130,4 +141,4 @@ robustness-long:
 check: static-check test
 
 # Complete ordinary and extended validation gate.
-check-long: check golden-determinism-test runtime-trace-benchmark msrv-check robustness-long generic-vec-benchmark range-loop-benchmark
+check-long: check golden-determinism-test golden-release-test runtime-trace-benchmark msrv-check robustness-long generic-vec-benchmark range-loop-benchmark

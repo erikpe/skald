@@ -109,6 +109,7 @@ pub(super) fn program_error(errors: &mut Vec<MirVerificationError>, message: imp
 }
 
 pub(super) fn debug_assert_exact_synthesized_realization(program: &MirProgram) {
+    let _ = program;
     #[cfg(debug_assertions)]
     {
         let coordinator = program

@@ -209,6 +209,7 @@ Common commands from the repository root are:
 
 ```text
 make golden-test
+make golden-release-test
 make golden-filter GOLDEN_FILTER='syntax/**'
 make golden-exact GOLDEN_ID='primitive_strings/values::values::default::bytes_slices_and_concatenation'
 make golden-determinism-test

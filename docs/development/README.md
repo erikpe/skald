@@ -62,6 +62,9 @@ to invoke a compiler or validation responsibility.
 in the default determinism-off mode. Use `make golden-filter` or
 `make golden-exact` for common focused runs and
 `make golden-determinism-test` for the complete repeated-process audit. The
+extended `make golden-release-test` target builds both tools with Cargo's
+release profile and runs the complete suite once; it is part of `make
+check-long`. The
 [`scripts/golden.sh`](../../scripts/README.md) convenience wrapper exposes the
 runner's full filtering and reporting surface while preserving those Makefile
 validation entry points.

@@ -265,6 +265,7 @@ cargo test --locked -p skald-compiler --test public_api
 make golden-runner-test
 make cli-test
 make golden-test
+make golden-release-test
 make runtime-test
 make compiler-test
 ```
@@ -279,6 +280,7 @@ dependency scheduler. The ordinary and common focused interfaces are:
 
 ```text
 make golden-test
+make golden-release-test
 make golden-filter GOLDEN_FILTER='operators/**'
 make golden-exact GOLDEN_ID='calls/functions::direct_call::default::return_value'
 make golden-determinism-test
@@ -922,7 +924,9 @@ diagnostic products. The ordinary golden target invokes each compiler and
 native process once. `make golden-determinism-test` invokes `skac` twice for
 every successful assembly and compile failure, comparing assembly or
 diagnostic bytes, and executes every native case twice before evaluating the
-checked-in expectations.
+checked-in expectations. `make golden-release-test` instead runs every leaf
+once with release-built `skac` and `skald-golden`, covering profile-sensitive
+compiler behavior without duplicating the full determinism audit.
 External stdout and stderr files are exact byte expectations unless their spec
 selects a reviewed partial matcher; an omitted stream expectation requires
 empty output. `argv_file` records become byte-preserving Unix arguments and are

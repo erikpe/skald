@@ -374,7 +374,8 @@ impl<'semantic, 'interner, 'diagnostics>
             self.class_entries[index].closed_range_selections[selection_index] = range;
         }
         let valid = self.specialization_failures == failures_before;
-        debug_assert_eq!(self.active.pop(), Some(work_key));
+        let completed = self.active.pop();
+        debug_assert_eq!(completed, Some(work_key));
         if valid {
             self.class_entries[index].state = GenericSpecializationState::Complete(class);
             self.class_entries[index]
@@ -454,7 +455,8 @@ impl<'semantic, 'interner, 'diagnostics>
         self.interface_entries[index].closed_requirements = closed_requirements;
         self.interface_entries[index].closed_interface_bounds = closed_interface_bounds;
         let valid = self.specialization_failures == failures_before;
-        debug_assert_eq!(self.active.pop(), Some(work_key));
+        let completed = self.active.pop();
+        debug_assert_eq!(completed, Some(work_key));
         if valid {
             self.interface_entries[index].state =
                 GenericInterfaceSpecializationState::Complete(interface);
