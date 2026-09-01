@@ -137,6 +137,9 @@ Whole-world reachability coverage is split by owner. Colocated analysis and
 verifier tests pin roots, exhaustive dependency families, typed static-place
 accesses and lifecycle-owned destinations, structured malformed-identity
 failures, witnesses, sparse definition validity, and deterministic dumps.
+The shared exact-function-type coupling tests independently pin candidate-first
+and site-first discovery, repeated reached-node idempotence, exact-signature
+isolation, canonical formation evidence, and canonical indirect-edge order.
 Static-lifecycle analysis tests require its direct effects to be an exact
 projection of that shared access inventory. Pipeline and driver tests pin
 the explicit `dead-pure-definition-elimination` then
@@ -1172,8 +1175,9 @@ active lifecycle or emitted artifact.
 
 Shared dependency tests own exhaustive direct static accesses and possible
 targets. Activation-analysis tests own the coupled entry/execution/field fixed
-point, exact triggers, witnesses, canonical target counts, and cross-process
-determinism. Static-activation inspection tests own the verified checkpoint
+point around the shared function-value worklist, exact triggers, witnesses,
+canonical target counts, and cross-process determinism. Static-activation
+inspection tests own the verified checkpoint
 label and exact focused dump, including activation and reverse-shutdown order.
 Driver reporting tests own aggregate metric order, detail gating, quiet parity,
 report-writer failure, and separation from source diagnostics. Planned/final

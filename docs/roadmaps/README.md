@@ -30,12 +30,6 @@ follow-ups stay in the active
 [discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
 The other four original unresolved constraints have no implementation roadmap.
 
-The
-[reachability-gated static lifecycle discoveries](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md)
-retains out-of-scope findings from the completed semantic migration, including a
-future shared owner for the duplicated function-value closure mechanics. It
-does not expand the implemented contract.
-
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).

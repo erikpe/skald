@@ -839,6 +839,6 @@ The direction is promoted into the authoritative
 [debugging](../development/DEBUGGING.md), and
 [testing](../development/TESTING.md#static-field-coverage) documentation.
 Implementation history is preserved in the
-[completed roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md), with
-out-of-scope findings kept in its active
-[discoveries record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).
+[completed roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md), with the
+implemented follow-up preserved in its
+[resolved discoveries record](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).

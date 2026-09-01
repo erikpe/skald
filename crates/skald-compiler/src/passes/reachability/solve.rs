@@ -2,20 +2,16 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use crate::{
-    identity::{CallableId, FunctionTypeId},
-    mir::{MirExecutionNode, MirProgram},
-};
+use crate::mir::{MirExecutionNode, MirProgram};
 
 use super::{
     analysis::MirReachabilityAnalysisParts, extract_final_dependencies, mir_dependency_edge_key,
-    mir_execution_node_key, roots::collect_reachability_roots, MirCallableAddressFormation,
-    MirDependencyEdge, MirDependencyEdgeKey, MirDependencyEdgeKind, MirDependencyExtraction,
-    MirDependencyExtractionError, MirDependencyTarget, MirIndirectCallSite,
-    MirReachabilityAnalysis, MirReachabilityCounts, MirReachabilityExplanation,
-    MirReachabilityRoot, MirReachabilityRootTarget, MirReachableFunctionValueCandidates,
-    MirReachableFunctionValueTarget, MirReachableOutgoingDependencies, MirRetainedDefinition,
-    MirRuntimeEntity, MirStaticAccess,
+    mir_execution_node_key, roots::collect_reachability_roots, MirDependencyEdge,
+    MirDependencyEdgeKey, MirDependencyExtraction, MirDependencyExtractionError,
+    MirDependencyTarget, MirFunctionValueCoupling, MirReachabilityAnalysis, MirReachabilityCounts,
+    MirReachabilityExplanation, MirReachabilityRoot, MirReachabilityRootTarget,
+    MirReachableFunctionValueCandidates, MirReachableFunctionValueTarget,
+    MirReachableOutgoingDependencies, MirRetainedDefinition, MirRuntimeEntity, MirStaticAccess,
 };
 
 pub(crate) fn analyze_reachability(
@@ -29,15 +25,12 @@ pub(crate) fn analyze_reachability(
 struct ClosureSolver<'mir> {
     program: &'mir MirProgram,
     dependencies_by_source: BTreeMap<MirExecutionNode, Vec<MirDependencyEdge>>,
-    formations_by_source: BTreeMap<MirExecutionNode, Vec<MirCallableAddressFormation>>,
-    indirect_calls_by_source: BTreeMap<MirExecutionNode, Vec<MirIndirectCallSite>>,
+    function_values: MirFunctionValueCoupling,
     static_accesses_by_source: BTreeMap<MirExecutionNode, Vec<MirStaticAccess>>,
     roots: Vec<MirReachabilityRoot>,
     reachable: BTreeSet<MirExecutionNode>,
     pending: VecDeque<MirExecutionNode>,
     runtime_entities: BTreeSet<MirRuntimeEntity>,
-    candidates: BTreeMap<FunctionTypeId, BTreeMap<CallableId, MirCallableAddressFormation>>,
-    active_indirect_calls: BTreeMap<FunctionTypeId, Vec<MirIndirectCallSite>>,
     dependencies: Vec<MirDependencyEdge>,
     dependency_keys: BTreeSet<MirDependencyEdgeKey>,
     explanations: BTreeMap<MirExecutionNode, MirReachabilityExplanation>,
@@ -56,20 +49,7 @@ impl<'mir> ClosureSolver<'mir> {
                 .or_insert_with(Vec::new)
                 .push(*dependency.edge());
         }
-        let mut formations_by_source = BTreeMap::new();
-        for formation in extraction.callable_addresses() {
-            formations_by_source
-                .entry(formation.source())
-                .or_insert_with(Vec::new)
-                .push(*formation);
-        }
-        let mut indirect_calls_by_source = BTreeMap::new();
-        for site in extraction.indirect_calls() {
-            indirect_calls_by_source
-                .entry(site.source())
-                .or_insert_with(Vec::new)
-                .push(*site);
-        }
+        let function_values = MirFunctionValueCoupling::new(&extraction);
         let mut static_accesses_by_source = BTreeMap::new();
         for access in extraction.static_accesses() {
             static_accesses_by_source
@@ -80,15 +60,12 @@ impl<'mir> ClosureSolver<'mir> {
         Self {
             program,
             dependencies_by_source,
-            formations_by_source,
-            indirect_calls_by_source,
+            function_values,
             static_accesses_by_source,
             roots: roots.roots,
             reachable: BTreeSet::new(),
             pending: VecDeque::new(),
             runtime_entities: roots.runtime_entities.into_iter().collect(),
-            candidates: BTreeMap::new(),
-            active_indirect_calls: BTreeMap::new(),
             dependencies: Vec::new(),
             dependency_keys: BTreeSet::new(),
             explanations: BTreeMap::new(),
@@ -99,8 +76,7 @@ impl<'mir> ClosureSolver<'mir> {
         self.seed_roots();
         while let Some(source) = self.pending.pop_front() {
             self.process_dependencies(source)?;
-            self.process_formations(source)?;
-            self.process_indirect_calls(source)?;
+            self.process_function_values(source)?;
         }
         Ok(self.finish())
     }
@@ -139,83 +115,14 @@ impl<'mir> ClosureSolver<'mir> {
         Ok(())
     }
 
-    fn process_formations(
+    fn process_function_values(
         &mut self,
         source: MirExecutionNode,
     ) -> Result<(), MirDependencyExtractionError> {
-        let formations = self
-            .formations_by_source
-            .get(&source)
-            .cloned()
-            .unwrap_or_default();
-        for formation in formations {
-            let targets = self
-                .candidates
-                .entry(formation.function_type())
-                .or_default();
-            let is_new = match targets.entry(formation.target()) {
-                std::collections::btree_map::Entry::Vacant(entry) => {
-                    entry.insert(formation);
-                    true
-                }
-                std::collections::btree_map::Entry::Occupied(mut entry) => {
-                    if formation_key(formation) < formation_key(*entry.get()) {
-                        entry.insert(formation);
-                    }
-                    false
-                }
-            };
-            if is_new {
-                let active_sites = self
-                    .active_indirect_calls
-                    .get(&formation.function_type())
-                    .cloned()
-                    .unwrap_or_default();
-                for site in active_sites {
-                    self.follow_indirect(site, formation.target())?;
-                }
-            }
+        for dependency in self.function_values.reach(source) {
+            self.follow(dependency)?;
         }
         Ok(())
-    }
-
-    fn process_indirect_calls(
-        &mut self,
-        source: MirExecutionNode,
-    ) -> Result<(), MirDependencyExtractionError> {
-        let sites = self
-            .indirect_calls_by_source
-            .get(&source)
-            .cloned()
-            .unwrap_or_default();
-        for site in sites {
-            self.active_indirect_calls
-                .entry(site.function_type())
-                .or_default()
-                .push(site);
-            let targets = self
-                .candidates
-                .get(&site.function_type())
-                .map(|candidates| candidates.keys().copied().collect::<Vec<_>>())
-                .unwrap_or_default();
-            for target in targets {
-                self.follow_indirect(site, target)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn follow_indirect(
-        &mut self,
-        site: MirIndirectCallSite,
-        target: CallableId,
-    ) -> Result<(), MirDependencyExtractionError> {
-        self.follow(MirDependencyEdge::new(
-            site.source(),
-            MirDependencyTarget::Execution(MirExecutionNode::callable(target)),
-            MirDependencyEdgeKind::IndirectCall,
-            site.span(),
-        ))
     }
 
     fn follow(
@@ -301,11 +208,11 @@ impl<'mir> ClosureSolver<'mir> {
             .collect::<Vec<_>>();
 
         let mut function_values = self
-            .candidates
-            .into_iter()
+            .function_values
+            .into_candidates()
             .map(|(function_type, candidates)| {
                 let mut targets = candidates
-                    .into_values()
+                    .into_iter()
                     .map(MirReachableFunctionValueTarget::from_formation)
                     .collect::<Vec<_>>();
                 targets.sort_by_key(|target| {
@@ -379,13 +286,4 @@ impl<'mir> ClosureSolver<'mir> {
             counts,
         })
     }
-}
-
-type MirFormationKey = ((u8, usize, usize, usize), (usize, usize, usize));
-
-fn formation_key(formation: MirCallableAddressFormation) -> MirFormationKey {
-    (
-        mir_execution_node_key(formation.source()),
-        super::mir_span_key(formation.span()),
-    )
 }

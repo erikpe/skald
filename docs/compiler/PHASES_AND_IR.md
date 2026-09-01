@@ -911,9 +911,14 @@ same structured extraction failure channel as invalid dependency targets.
 
 Callable-address formations retain their containing execution node, exact
 function type, target, and span so later closure can scope candidates without
-rescanning MIR. Shared optional and owner lifecycle resolvers also drive exact
-reverse-shutdown root expansion, so dependency and root policy do not maintain
-separate cleanup walks.
+rescanning MIR. A private shared function-value coupling worklist accepts
+reached execution-node events, maintains the exact-function-type candidate and
+indirect-site fixed point independently of discovery order, and returns newly
+selected indirect execution edges in canonical order. Final reachability and
+semantic static activation consume those common edges while retaining separate
+roots, witnesses, errors, and result models. Shared optional and owner
+lifecycle resolvers also drive exact reverse-shutdown root expansion, so
+dependency and root policy do not maintain separate cleanup walks.
 
 Static-effect analysis adapts the shared static-access records, targets, and
 lifecycle edges into its private summaries. It retains ownership of propagated

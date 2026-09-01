@@ -166,6 +166,7 @@ Resolved reachability-gated static lifecycle inputs:
 
 - [Reachability-gated static lifecycle design proposal](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
 - [Reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
+- [Reachability-gated static lifecycle follow-up discoveries](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md)
 
 Supporting records for the documentation overhaul:
 

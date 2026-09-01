@@ -15,6 +15,7 @@ mod definitions;
 mod dump;
 mod error;
 mod extract;
+mod function_values;
 mod lifecycle;
 mod model;
 mod roots;
@@ -36,6 +37,7 @@ pub(crate) use extract::{
     extract_final_dependencies, extract_final_dependency_parts, extract_preliminary_dependencies,
     MirDependencyExtraction,
 };
+pub(crate) use function_values::MirFunctionValueCoupling;
 pub(crate) use lifecycle::{resolve_static_field_destruction_dependencies, MirLifecycleDependency};
 pub(crate) use model::{
     mir_dependency_edge_key, mir_dependency_edge_kind_key, mir_reachability_root_reason_key,

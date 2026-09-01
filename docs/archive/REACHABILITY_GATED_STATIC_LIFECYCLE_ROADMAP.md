@@ -18,8 +18,8 @@ exact-reverse normal-return shutdown.
 The semantic change is deliberately late in the sequence. Shared extraction,
 shadow analysis, subset-capable proof, and independent final safety checks land
 first. Each task should make small cohesive maintainability improvements that
-reduce future optimization cost; larger findings belong in the
-[discoveries record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).
+reduce future optimization cost; larger findings were recorded in the now
+[resolved discoveries record](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md).
 
 ## Dependencies
 
