@@ -69,6 +69,8 @@ pub(super) fn complete_semantic_range_specializations(
                 functions: input.functions,
                 classes: &semantic_classes,
                 class_work: input.class_work,
+                template_semantics: input.template_semantics,
+                class_specializations: &discovery.class_specializations,
                 interfaces: input.interfaces,
                 hierarchy: &semantic_hierarchy,
                 has_module_context: input.has_module_context,
@@ -106,6 +108,8 @@ pub(super) struct SemanticRangeDiscoveryInput<'program, 'ast> {
     pub(super) functions: &'program ResolvedFunctionDeclarationTable,
     pub(super) classes: &'program ResolvedClassDeclarationTable,
     pub(super) class_work: &'program [ClassWorkItem],
+    pub(super) template_semantics: &'program ResolvedClassTemplateSemanticTable,
+    pub(super) class_specializations: &'program GenericSpecializationTable,
     pub(super) interfaces: &'program ResolvedInterfaceDeclarationTable,
     pub(super) hierarchy: &'program ResolvedClassHierarchy,
     pub(super) has_module_context: bool,
@@ -202,6 +206,59 @@ pub(super) fn discover_semantic_range_requests(
         let _ = resolve_class_bodies(
             unit.ast,
             &class_work,
+            input.classes,
+            environment,
+            type_interner,
+            &mut address_taken,
+            &mut diagnostics,
+        );
+    }
+
+    for specialization in input.class_specializations.iter() {
+        let GenericSpecializationState::Complete(class_id) = specialization.state else {
+            continue;
+        };
+        let Some((unit, source, ast_index)) =
+            specialization::template_source(input.units, specialization.key.template)
+        else {
+            continue;
+        };
+        if !class_contains_range(source) {
+            continue;
+        }
+        let Some(declaration) = input.classes.get(class_id) else {
+            continue;
+        };
+        let semantics = input
+            .template_semantics
+            .get(specialization.key.template)
+            .expect("specialization keys reference template semantics");
+        let work = specialization::generated_work_item(declaration, source, unit.module, ast_index);
+        let environment = BodyResolutionEnvironment::new(
+            input.lookups.for_unit(unit, input.modules),
+            declarations,
+            input.has_module_context,
+            BodyLanguageItemEnvironment::new(
+                StringLiteralResolutionEnvironment::new(None, input.literal_ids),
+                input.iterable.map(|item| {
+                    IterationResolutionEnvironment::new(item, input.interface_specializations)
+                }),
+                input.operators.map(|item| {
+                    OperatorResolutionEnvironment::new(item, input.interface_specializations)
+                }),
+                input.range.map(|item| {
+                    RangeResolutionEnvironment::new(item, input.interface_specializations)
+                }),
+            ),
+        )
+        .with_specialization(BodySpecializationEnvironment::new(
+            semantics,
+            specialization,
+        ))
+        .with_range_request_collector(&collector);
+        let _ = resolve_class_bodies(
+            unit.ast,
+            std::slice::from_ref(&work),
             input.classes,
             environment,
             type_interner,

@@ -74,7 +74,7 @@ pub(super) fn resolve_template_body(
                 (
                     name.clone(),
                     TemplateBinding {
-                        ty: ty.clone(),
+                        ty: Some(ty.clone()),
                         depends_on_parameter: ty.depends_on_parameter(),
                     },
                 )
@@ -118,7 +118,7 @@ struct TemplateBodyResolver<'semantic, 'lookup, 'diagnostics> {
 
 #[derive(Clone)]
 struct TemplateBinding {
-    ty: ResolvedTemplateType,
+    ty: Option<ResolvedTemplateType>,
     depends_on_parameter: bool,
 }
 
@@ -905,20 +905,35 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 self.visit_expression(&range.upper);
                 let lower = self.type_of_expression(&range.lower);
                 let upper = self.type_of_expression(&range.upper);
-                if let (Some(lower), Some(upper)) = (lower, upper) {
-                    if lower.semantically_eq(&upper) {
-                        self.selections.push(ResolvedTemplateSelection::Range {
-                            endpoint: lower,
-                            endpoint_provenance: [
-                                self.range_endpoint_provenance(&range.lower),
-                                self.range_endpoint_provenance(&range.upper),
-                            ],
-                            span: range.operator_span,
-                        });
-                    }
+                let endpoint = match (lower, upper) {
+                    (Some(lower), Some(upper)) if lower.semantically_eq(&upper) => Some(lower),
+                    (Some(_), Some(_)) => return,
+                    _ => None,
+                };
+                if endpoint.as_ref().is_some_and(|endpoint| {
+                    annotation
+                        .as_ref()
+                        .is_some_and(|annotation| !endpoint.semantically_eq(annotation))
+                }) {
+                    return;
                 }
-                // Direct range syntax has a concrete canonical class result;
-                // only parameter-bound iterable selection is frozen here.
+                let endpoint_provenance = [
+                    self.range_endpoint_provenance(&range.lower),
+                    self.range_endpoint_provenance(&range.upper),
+                ];
+                self.selections.push(ResolvedTemplateSelection::Range {
+                    endpoint: endpoint.clone(),
+                    endpoint_provenance,
+                    span: range.operator_span,
+                });
+                let item = endpoint.or_else(|| annotation.clone());
+                let depends_on_parameter = endpoint_provenance.iter().any(|provenance| {
+                    matches!(
+                        provenance,
+                        ResolvedRangeEndpointProvenance::SpecializationDependent
+                    )
+                });
+                self.visit_iteration_body(statement, item, depends_on_parameter);
                 return;
             }
         };
@@ -929,8 +944,13 @@ impl TemplateBodyResolver<'_, '_, '_> {
             .and_then(ResolvedTemplateType::parameter)
         else {
             // A nondependent iterable is selected after this template closes
-            // to an ordinary body. Only parameter-bound selection must be
-            // frozen at definition site.
+            // to an ordinary body. Its item type can remain deferred here,
+            // but the body still owns generic type uses and selections.
+            self.visit_iteration_body(
+                statement,
+                annotation,
+                self.expression_depends_on_parameter(iterable),
+            );
             return;
         };
         let Some(language_item) = self.iterable_language_item else {
@@ -1034,10 +1054,19 @@ impl TemplateBodyResolver<'_, '_, '_> {
             iter_next: language_item.iter_next_requirement,
             span: statement.for_span,
         });
-        self.scopes.push(HashMap::new());
         let depends_on_parameter =
             item.depends_on_parameter() || self.expression_depends_on_parameter(iterable);
-        self.declare_binding(
+        self.visit_iteration_body(statement, Some(item), depends_on_parameter);
+    }
+
+    fn visit_iteration_body(
+        &mut self,
+        statement: &syntax::ForInStatement,
+        item: Option<ResolvedTemplateType>,
+        depends_on_parameter: bool,
+    ) {
+        self.scopes.push(HashMap::new());
+        self.declare_binding_with_type(
             &statement.binding,
             item,
             depends_on_parameter,
@@ -1055,6 +1084,16 @@ impl TemplateBodyResolver<'_, '_, '_> {
         &mut self,
         name: &syntax::Name,
         ty: ResolvedTemplateType,
+        depends_on_parameter: bool,
+        binding_kind: &'static str,
+    ) -> bool {
+        self.declare_binding_with_type(name, Some(ty), depends_on_parameter, binding_kind)
+    }
+
+    fn declare_binding_with_type(
+        &mut self,
+        name: &syntax::Name,
+        ty: Option<ResolvedTemplateType>,
         depends_on_parameter: bool,
         binding_kind: &'static str,
     ) -> bool {
@@ -1103,7 +1142,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             }),
             syntax::Expression::Identifier(identifier) if !identifier.name.is_qualified() => self
                 .lookup_binding(identifier.name.text.as_str())
-                .map(|binding| binding.ty.clone()),
+                .and_then(|binding| binding.ty.clone()),
             syntax::Expression::Grouped(grouped) => self.type_of_expression(&grouped.expression),
             syntax::Expression::MemberAccess(access)
                 if matches!(access.receiver.as_ref(), syntax::Expression::SelfValue(_)) =>

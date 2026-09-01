@@ -392,8 +392,10 @@ fn canonical_standard_library_cycle_obeys_default_replacement_and_disabled_selec
     ] {
         assert!(artifact.report.diagnostics.is_empty());
         // Vec is reachable through Str and ordinarily imports canonical
-        // Iterable, so the complete provider graph includes std::iter.
-        assert_eq!(artifact.report.sources.len(), 12);
+        // Iterable. Str's bounded scans also reach canonical Range and its
+        // operator protocol, so the complete graph includes std::iter,
+        // std::range, and std::ops.
+        assert_eq!(artifact.report.sources.len(), 14);
         assert!(artifact.assembly.contains("call ska_rt_panic"));
     }
 
@@ -470,8 +472,10 @@ fn canonical_io_obeys_default_replacement_and_disabled_selection() {
     ] {
         assert!(artifact.report.diagnostics.is_empty());
         // Vec is reachable through Str and ordinarily imports canonical
-        // Iterable, so the complete provider graph includes std::iter.
-        assert_eq!(artifact.report.sources.len(), 13);
+        // Iterable. Str's bounded scans also reach canonical Range and its
+        // operator protocol, so the complete graph includes std::iter,
+        // std::range, and std::ops.
+        assert_eq!(artifact.report.sources.len(), 15);
         for runtime_symbol in [
             "ska_rt_io_standard_handle",
             "ska_rt_io_open",
@@ -528,9 +532,9 @@ fn installed_process_arguments_reach_verified_assembly_as_ordinary_library_sourc
     let artifact = compile_request_to_assembly(&request).unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
-    // Process arguments reach Vec through Str and therefore also reach the
-    // canonical Iterable declaration imported by Vec.
-    assert_eq!(artifact.report.sources.len(), 14);
+    // Process arguments reach Vec through Str, while their bounded scans also
+    // reach canonical Range and its operator protocol.
+    assert_eq!(artifact.report.sources.len(), 16);
     assert!(artifact.assembly.contains(".Lska.fn.std.process.args."));
     assert!(artifact
         .assembly

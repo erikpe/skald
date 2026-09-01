@@ -473,6 +473,52 @@ fn specialized_generic_claim_is_selected_as_an_ordinary_exact_application() {
 }
 
 #[test]
+fn nondependent_iteration_in_a_generic_body_retains_generic_type_uses() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "class Counter implements Iterable<i64, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "}\n",
+        "class Scanner<T> {\n",
+        "  init() {}\n",
+        "  fn scan(values: Counter) -> unit {\n",
+        "    for (item in values) {\n",
+        "      var observed: i64 = item;\n",
+        "      var retained: T? = none;\n",
+        "    }\n",
+        "  }\n",
+        "}\n",
+        "fn use(ref scanner: Scanner<u8>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let loop_ = output
+        .program
+        .class_definitions
+        .iter()
+        .find_map(|definition| match definition.methods.as_slice() {
+            [method]
+                if matches!(
+                    method.body.statements.first(),
+                    Some(ResolvedStatement::ForIn(_))
+                ) =>
+            {
+                let ResolvedStatement::ForIn(loop_) = &method.body.statements[0] else {
+                    unreachable!()
+                };
+                Some(loop_)
+            }
+            _ => None,
+        })
+        .expect("the Scanner specialization has an iteration body");
+    assert_eq!(loop_.body.statements.len(), 2);
+}
+
+#[test]
 fn nested_specialization_preserves_definition_site_bound_selection() {
     let source = concat!(
         "from std::iter import Iterable;\n",

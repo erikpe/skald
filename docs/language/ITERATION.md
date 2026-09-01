@@ -96,7 +96,9 @@ For a callable body owned by a generic class, selection through a
 type-parameter bound is fixed at definition-site checking. Specialization
 substitutes the already selected requirement and closed interface identities;
 it does not repeat overload-like selection against additional claims of the
-concrete argument.
+concrete argument. A source that is not selected through a type-parameter
+bound is selected after closure, but template analysis still traverses its
+loop body and retains every generic type use and dependent operation there.
 
 This selection boundary is implemented for direct and inherited exact-class
 claims, specialized generic-class claims, exact interface views, and generic

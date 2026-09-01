@@ -220,6 +220,68 @@ fn generic_template_range_requests_close_for_each_concrete_endpoint_type() {
 }
 
 #[test]
+fn specialized_generic_bodies_discover_deferred_and_nested_range_requests() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "from std::range import Range;\n",
+        "class Scanner<T> {\n",
+        "  init() {}\n",
+        "  fn scan(ref limits: u64[]) -> unit {\n",
+        "    for (outer in 0u .. limits.len()) {\n",
+        "      for (inner in 0u8 .. 2u8) { var retained: T? = none; }\n",
+        "    }\n",
+        "    for (explicit in Range<u64>(0u, limits.len())) {\n",
+        "      var retained: T? = none;\n",
+        "    }\n",
+        "  }\n",
+        "}\n",
+        "fn use(ref scanner: Scanner<i64>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Selection range endpoint deferred"), "{dump}");
+    assert_eq!(dump.matches("RangeSource template").count(), 2, "{dump}");
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+}
+
+#[test]
+fn deferred_generic_ranges_select_distinct_keys_for_the_same_source_span() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "from std::ops import OpLess;\n",
+        "from std::range import Successor;\n",
+        "class Holder<T> {\n",
+        "  value: T;\n",
+        "  init(value: T) { self.value = value; }\n",
+        "  fn get() -> T { return self.value; }\n",
+        "}\n",
+        "class Scanner<T> where T: OpLess<T>, T: Successor<T> {\n",
+        "  init() {}\n",
+        "  fn scan(ref holder: Holder<T>) -> unit {\n",
+        "    for (item: T in holder.get() .. holder.get()) {}\n",
+        "  }\n",
+        "}\n",
+        "fn use_wide(ref scanner: Scanner<u64>) -> unit {}\n",
+        "fn use_byte(ref scanner: Scanner<u8>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains(
+            "Selection range endpoint deferred provenance lower=specialization-dependent upper=specialization-dependent"
+        ),
+        "{dump}"
+    );
+    assert!(dump.contains("endpoint u64"), "{dump}");
+    assert!(dump.contains("endpoint u8"), "{dump}");
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+}
+
+#[test]
 fn concise_range_requests_follow_endpoint_function_result_types() {
     let (_graph, output) = resolve_range_syntax(concat!(
         "fn lower() -> u8 { return 1u8; }\n",

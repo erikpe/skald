@@ -633,7 +633,7 @@ pub(crate) enum ResolvedTemplateSelection {
         span: Span,
     },
     Range {
-        endpoint: ResolvedTemplateType,
+        endpoint: Option<ResolvedTemplateType>,
         endpoint_provenance: [ResolvedRangeEndpointProvenance; 2],
         span: Span,
     },

@@ -121,7 +121,7 @@ pub(in crate::resolve::resolver::program) fn generated_class_work(
         .collect()
 }
 
-fn generated_work_item(
+pub(in crate::resolve::resolver::program) fn generated_work_item(
     declaration: &ResolvedClassDeclaration,
     source: &syntax::ClassDecl,
     module: ModuleId,

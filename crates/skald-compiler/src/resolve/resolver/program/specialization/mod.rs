@@ -11,7 +11,7 @@ mod names;
 mod requests;
 mod validation;
 
-pub(super) use bodies::generated_class_work;
+pub(super) use bodies::{generated_class_work, generated_work_item};
 pub(super) use bound_members::close_bound_member_selections;
 pub(super) use declarations::{specialize_declarations, SpecializationDeclarationInput};
 pub(super) use interface_declarations::{
@@ -68,7 +68,7 @@ pub(super) fn specialize_bodies(
     bodies::specialize_bodies(input, type_interner, address_taken_callables, diagnostics)
 }
 
-fn template_source<'unit, 'ast>(
+pub(super) fn template_source<'unit, 'ast>(
     units: &'unit [resolver::ModuleUnit<'ast>],
     template: ClassTemplateId,
 ) -> Option<(

@@ -616,7 +616,10 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                 } => dumper.line(
                                     &format!(
                                         "Selection range endpoint {} provenance lower={} upper={}",
-                                        render_template_type(endpoint),
+                                        endpoint.as_ref().map_or_else(
+                                            || "deferred".to_owned(),
+                                            render_template_type,
+                                        ),
                                         endpoint_provenance[0].name(),
                                         endpoint_provenance[1].name(),
                                     ),

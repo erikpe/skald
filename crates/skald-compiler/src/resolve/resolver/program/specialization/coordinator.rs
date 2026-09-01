@@ -353,6 +353,9 @@ impl<'semantic, 'interner, 'diagnostics>
             let Some(range_template) = self.range_template else {
                 continue;
             };
+            let Some(endpoint) = endpoint else {
+                continue;
+            };
             let Some(endpoint) = self.close_template_type(endpoint, environment) else {
                 continue;
             };

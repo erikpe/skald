@@ -142,15 +142,22 @@ method, and operator selection with isolated diagnostics, function-reference
 state, and compound-type interning. At each direct range source it resolves the
 two endpoint types, records the exact `Range<T>` key, and waits for that key to
 close successfully before binding the loop item as `T` and probing the body.
+Generic-template analysis records the endpoint term when it is structurally
+known and otherwise retains a deferred range selection with its source span
+and parameter-dependency provenance. Each closed generic body participates in
+the semantic probe, so ordinary method and operator results can supply the
+deferred exact key. Final specialized-body resolution selects that key
+semantically rather than relying on one source span to identify every closed
+application.
 Key-based probing lets nested sources reuse a completed specialization before
 their own application spans have entered its provenance, while newly requested
 keys repeat the probe to a fixpoint. The probe produces no resolved loop or
 synthetic range construction. It filters callable and class work by traversing
 their statement trees; there is no global range-span registry or
-span-containment test. Specialized declarations and real bodies are then
-materialized and resolved once from the completed request set. Thus method and
-overloaded operator results can select `T` without a second source-level type
-system, and a failed outer range does not publish dependent body requests.
+span-containment test. Specialized declarations and final real bodies are then
+resolved once from the completed request set. Thus method and overloaded
+operator results can select `T` without a second source-level type system, and
+a failed outer range does not publish dependent body requests.
 
 Resolution evaluates neither endpoint. It resolves both in source order,
 requires one exact static type `T`, requests and validates canonical

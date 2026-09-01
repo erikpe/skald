@@ -205,7 +205,7 @@ enum SpecializedBoundMember {
 
 #[derive(Clone, Copy)]
 struct SpecializedRangeSelection {
-    class: ClassId,
+    class: Option<ClassId>,
     endpoint_provenance: [ResolvedRangeEndpointProvenance; 2],
 }
 
@@ -270,7 +270,7 @@ impl<'program> BodySpecializationEnvironment<'program> {
                     return None;
                 }
                 Some(SpecializedRangeSelection {
-                    class: (*closed)?,
+                    class: *closed,
                     endpoint_provenance: *endpoint_provenance,
                 })
             })

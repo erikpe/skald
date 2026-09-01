@@ -82,11 +82,18 @@ impl CallableResolver<'_, '_> {
             .specialization
             .and_then(|specialization| specialization.range_selection(range.operator_span));
         let range_class = specialized_selection
-            .map(|selection| selection.class)
+            .and_then(|selection| selection.class)
             .or_else(|| {
-                self.environment
-                    .lookup
-                    .specialized_class(range.operator_span)
+                if self.environment.specialization.is_some() {
+                    self.environment.lookup.specialized_class_for_key(
+                        environment.language_item.range_template,
+                        &[lower_type],
+                    )
+                } else {
+                    self.environment
+                        .lookup
+                        .specialized_class(range.operator_span)
+                }
             });
         let Some(range_class) = range_class else {
             if self
