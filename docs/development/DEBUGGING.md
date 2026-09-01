@@ -20,6 +20,7 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Typed HIR | `hir::dump_hir` | type checker and semantic operation selection |
 | Preliminary MIR | `mir::dump_preliminary_mir` | unplanned static initializer bodies and publication boundaries |
 | Static effects | `passes::static_lifecycle::dump_static_effects` | closed-world static access summaries and call/lifecycle witnesses |
+| Static activation | driver `StaticActivationInspector::activation_dump` | exact preliminary execution/field closure, triggers, witnesses, target counts, and lifecycle order |
 | Planned MIR | `passes::static_lifecycle::dump_planned_mir` | static activation/destruction regions and selected lifecycle certificates |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
 | Whole-world reachability | checkpoint `reachability_dump` | roots, execution dependencies, retained targets, and witnesses for verified final MIR |
@@ -31,13 +32,29 @@ for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
 Their text is a deterministic
 debugging and regression format, not a stable interchange format.
 
-The planned-MIR inspection path includes the focused activation result computed
-after preliminary MIR verification. It shows declared,
-active, and inactive fields; canonical first triggers and witnesses; coupled
-execution/static edges; conservative target counts; and the resulting
-activation and reverse-shutdown order. Compare preliminary static-access
-evidence with the exact active lifecycle certificate and planned order when
-debugging a missing or unexpected activation.
+The request-local static-activation inspector exposes the focused result after
+preliminary MIR and planned-MIR verification. Its `activation_dump` shows
+declared, active, and inactive fields; canonical first triggers and witnesses;
+coupled execution/static edges; conservative target counts; and the resulting
+activation and reverse-shutdown order. The ordinary compile paths construct no
+checkpoint or dump. Use an observed-inspected driver adapter with a
+`NoopObserver` when only activation inspection is needed.
+
+For a missing or unexpected field lifetime, take the shortest path through the
+products:
+
+1. Find the exact source field and access span in preliminary MIR and the
+   activation dump's field entry.
+2. Follow that entry's canonical trigger and `Via` witness back to the selected
+   entry, checking conservative call or lifecycle targets along the way.
+3. Confirm the same `StaticFieldId` appears in the planned activation
+   certificate and coordinator activation order; shutdown must be its exact
+   reverse position.
+4. At the final-MIR checkpoint, use `reachability_dump` to confirm the active
+   storage and coordinator obligations remain execution-reachable.
+5. Inspect backend static-planning observations or assembly for the private
+   slot, then use a native golden/runtime trace for startup, use, and shutdown
+   behavior.
 
 Use `skac -v` for phase progress, `skac -vv` for timings and phase-owned
 statistics, and `skac -vvv` for discovery/final module parse records. The
@@ -54,6 +71,11 @@ execution by canonical logical module path. The CLI additionally observes host
 linking, atomic artifact publication, artifact notices, and a separate driver
 total. Reports do not replace deterministic dumps or structured source
 diagnostics.
+
+Use the corresponding `*_observed_inspected` adapter with a
+`StaticActivationInspector` for the detailed activation checkpoint. This is
+separate from report detail: neither `-vv` nor `trace` embeds witnesses in
+events, and the compiler has no CLI activation-dump destination.
 
 Use `--mir-optimization none` to inspect the complete reference final MIR, or
 `--disable-mir-pass whole-world-reachability` to keep the default canary while

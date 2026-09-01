@@ -430,8 +430,10 @@ execution requires no lazy access guards, initialized-state byte,
 synchronization, or atomic protocol. This direction adds no source syntax,
 eager-static modifier, module initializer, registration hook, force-retention
 annotation, or runtime lazy initialization. Until such a separate feature is
-designed, intentional global side effects must be reached through ordinary
-code.
+designed, intentional global side effects must be performed by an ordinary
+reachable function called from the entry closure (or by an active field that
+is itself reached through an ordinary static access). An inactive explicit
+initializer is not warned about merely for being inactive.
 
 ## Failure and diagnostics
 

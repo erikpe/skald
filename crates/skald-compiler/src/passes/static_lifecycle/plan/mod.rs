@@ -6,6 +6,7 @@ mod dump;
 mod graph;
 mod model;
 mod schema;
+mod statistics;
 
 pub use diagnostics::{STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY};
 pub use dump::{dump_planned_mir, dump_static_lifetime_plan};
@@ -14,6 +15,7 @@ pub use model::{
     StaticLifecyclePlanningReport, StaticLifetimeDependency, StaticLifetimeEvidence,
     StaticLifetimePhase,
 };
+pub use statistics::StaticActivationStatistics;
 
 use crate::{
     diagnostics::Diagnostics,

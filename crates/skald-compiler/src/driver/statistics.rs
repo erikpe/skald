@@ -141,25 +141,58 @@ pub(super) fn lifecycle_planning_metrics(
     result: &Result<PlannedMirProgram, StaticLifecyclePlanningFailure>,
 ) -> Vec<ReportMetric> {
     match result {
-        Ok(planned) => vec![
-            ReportMetric::count(
-                "effect summaries",
-                count(planned.planning_report().analysis().summaries().len()),
-            ),
-            ReportMetric::count("dependencies", count(planned.dependencies().len())),
-            ReportMetric::count(
-                "activation fields",
-                count(planned.lifecycle().activation().len()),
-            ),
-            ReportMetric::count(
-                "shutdown fields",
-                count(planned.lifecycle().shutdown().len()),
-            ),
-            ReportMetric::count(
-                "static initializers",
-                count(planned.static_initializers().len()),
-            ),
-        ],
+        Ok(planned) => {
+            let activation = planned.activation_statistics();
+            vec![
+                ReportMetric::count(
+                    "effect summaries",
+                    count(planned.planning_report().analysis().summaries().len()),
+                ),
+                ReportMetric::count("dependencies", count(planned.dependencies().len())),
+                ReportMetric::count(
+                    "declared static fields",
+                    count(activation.declared_fields()),
+                ),
+                ReportMetric::count("active static fields", count(activation.active_fields())),
+                ReportMetric::count(
+                    "inactive static fields",
+                    count(activation.inactive_fields()),
+                ),
+                ReportMetric::count(
+                    "active explicit static fields",
+                    count(activation.active_explicit_fields()),
+                ),
+                ReportMetric::count(
+                    "active zero-default static fields",
+                    count(activation.active_zero_default_fields()),
+                ),
+                ReportMetric::count(
+                    "inactive explicit static fields",
+                    count(activation.inactive_explicit_fields()),
+                ),
+                ReportMetric::count(
+                    "activation execution nodes",
+                    count(activation.reachable_execution_nodes()),
+                ),
+                ReportMetric::count("activation edges", count(activation.activation_edges())),
+                ReportMetric::count(
+                    "conservative activation targets",
+                    count(activation.conservative_targets()),
+                ),
+                ReportMetric::count(
+                    "activation fields",
+                    count(planned.lifecycle().activation().len()),
+                ),
+                ReportMetric::count(
+                    "shutdown fields",
+                    count(planned.lifecycle().shutdown().len()),
+                ),
+                ReportMetric::count(
+                    "static initializers",
+                    count(planned.static_initializers().len()),
+                ),
+            ]
+        }
         Err(failure) => {
             let mut diagnostics = 0usize;
             let mut warnings = 0usize;

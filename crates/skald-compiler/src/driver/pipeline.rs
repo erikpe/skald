@@ -14,6 +14,7 @@ use crate::{
     passes::{
         static_lifecycle::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
+            StaticActivationInspection, StaticActivationInspector,
         },
         MirPassSchedule, MirPipelineError,
     },
@@ -53,6 +54,12 @@ pub enum CompilationError {
     Backend(BackendError),
 }
 
+#[derive(Clone, Copy)]
+struct BackendSelection {
+    target: Target,
+    runtime_trace: RuntimeTracePolicy,
+}
+
 /// Loads and compiles one request's complete reachable module program.
 ///
 /// Filesystem source acquisition remains in module loading. Artifact
@@ -72,6 +79,28 @@ pub fn compile_request_to_assembly(
 pub fn compile_request_to_assembly_observed(
     request: &CompilationRequest,
     observer: &mut dyn ReportObserver,
+) -> Result<AssemblyArtifact, CompilationError> {
+    compile_request_to_assembly_instrumented(request, observer, None)
+}
+
+/// Loads and compiles a request with typed reporting and one opt-in borrowed
+/// checkpoint for the verified static-activation decision.
+///
+/// The inspector is invocation-local and separate from request identity,
+/// report events, diagnostics, and artifacts. It is called exactly once after
+/// planned-MIR verification succeeds.
+pub fn compile_request_to_assembly_observed_inspected(
+    request: &CompilationRequest,
+    observer: &mut dyn ReportObserver,
+    activation_inspector: &mut dyn StaticActivationInspector,
+) -> Result<AssemblyArtifact, CompilationError> {
+    compile_request_to_assembly_instrumented(request, observer, Some(activation_inspector))
+}
+
+fn compile_request_to_assembly_instrumented(
+    request: &CompilationRequest,
+    observer: &mut dyn ReportObserver,
+    activation_inspector: Option<&mut dyn StaticActivationInspector>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let mir_schedule = request
         .mir_optimization()
@@ -123,6 +152,7 @@ pub fn compile_request_to_assembly_observed(
                 request.runtime_trace(),
                 &mir_schedule,
                 observer,
+                activation_inspector,
             )
         },
         result_outcome,
@@ -149,6 +179,34 @@ pub fn compile_source_to_assembly_observed(
     text: impl Into<String>,
     target: Target,
     observer: &mut dyn ReportObserver,
+) -> Result<AssemblyArtifact, CompilationError> {
+    compile_source_to_assembly_instrumented(path, text, target, observer, None)
+}
+
+/// Compiles one in-memory source with typed reporting and one opt-in borrowed
+/// checkpoint for the verified static-activation decision.
+pub fn compile_source_to_assembly_observed_inspected(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+    target: Target,
+    observer: &mut dyn ReportObserver,
+    activation_inspector: &mut dyn StaticActivationInspector,
+) -> Result<AssemblyArtifact, CompilationError> {
+    compile_source_to_assembly_instrumented(
+        path,
+        text,
+        target,
+        observer,
+        Some(activation_inspector),
+    )
+}
+
+fn compile_source_to_assembly_instrumented(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+    target: Target,
+    observer: &mut dyn ReportObserver,
+    activation_inspector: Option<&mut dyn StaticActivationInspector>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let path = path.as_ref();
     let mir_schedule = MirOptimizationOptions::default()
@@ -207,10 +265,13 @@ pub fn compile_source_to_assembly_observed(
                 sources,
                 diagnostics,
                 resolved.program,
-                target,
-                RuntimeTracePolicy::Enabled,
+                BackendSelection {
+                    target,
+                    runtime_trace: RuntimeTracePolicy::Enabled,
+                },
                 &mir_schedule,
                 observer,
+                activation_inspector,
             )
         },
         result_outcome,
@@ -223,6 +284,7 @@ fn compile_module_graph_to_assembly(
     runtime_trace: RuntimeTracePolicy,
     mir_schedule: &MirPassSchedule,
     observer: &mut dyn ReportObserver,
+    activation_inspector: Option<&mut dyn StaticActivationInspector>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let resolved = observe_phase_with_metrics(
         observer,
@@ -236,10 +298,13 @@ fn compile_module_graph_to_assembly(
         sources,
         resolved.diagnostics,
         resolved.program,
-        target,
-        runtime_trace,
+        BackendSelection {
+            target,
+            runtime_trace,
+        },
         mir_schedule,
         observer,
+        activation_inspector,
     )
 }
 
@@ -247,10 +312,10 @@ fn finish_compilation(
     sources: SourceDatabase,
     mut diagnostics: Diagnostics,
     resolved: ResolvedProgram,
-    target: Target,
-    runtime_trace: RuntimeTracePolicy,
+    backend: BackendSelection,
     mir_schedule: &MirPassSchedule,
     observer: &mut dyn ReportObserver,
+    activation_inspector: Option<&mut dyn StaticActivationInspector>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
@@ -306,6 +371,9 @@ fn finish_compilation(
         |result, _| statistics::verification_metrics(result),
     )
     .map_err(CompilationError::MirVerification)?;
+    if let Some(inspector) = activation_inspector {
+        inspector.inspect(StaticActivationInspection::new(&verified_planned));
+    }
     let mir = observe_phase_with_metrics(
         observer,
         ReportPhase::StaticLifecycleSynthesis,
@@ -321,12 +389,12 @@ fn finish_compilation(
         observer,
         ReportPhase::BackendEmission,
         || {
-            let input = match runtime_trace {
+            let input = match backend.runtime_trace {
                 RuntimeTracePolicy::Enabled => BackendInput::with_runtime_trace(&mir, &sources),
                 RuntimeTracePolicy::Omitted => BackendInput::without_runtime_trace(&mir),
             }
             .with_reachable_artifacts_only();
-            emit_assembly(target, input)
+            emit_assembly(backend.target, input)
         },
         result_outcome,
         |result, _| statistics::backend_metrics(result),

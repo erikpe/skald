@@ -1,4 +1,10 @@
-use std::{fs, panic::AssertUnwindSafe, path::PathBuf, thread};
+use std::{
+    fs,
+    io::{self, Write},
+    panic::AssertUnwindSafe,
+    path::PathBuf,
+    thread,
+};
 
 use crate::{
     backend::{emit_assembly, BackendInput},
@@ -7,10 +13,13 @@ use crate::{
         MirClassDeclaration, MirClassDeclarationTable, MirCopyCapability, MirDestructionPlan,
         MirFieldDeclaration, MirType,
     },
-    passes::{run_mir_pipeline, verify_final_mir, VerifiedFinalMirProgram},
+    passes::{
+        run_mir_pipeline, static_lifecycle::StaticActivationInspectionLabel, verify_final_mir,
+        VerifiedFinalMirProgram,
+    },
     reporting::{
         MetricValue, RecordingObserver, ReportDetail, ReportEvent, ReportMetric, ReportModuleStage,
-        ReportOutcome, ReportPhase, ReportScope,
+        ReportOutcome, ReportPhase, ReportScope, TextObserver,
     },
     test_support::lower_source_to_final_mir,
 };
@@ -82,11 +91,22 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
         EntrySelector::Module("app".parse().unwrap()),
     );
     let mut observer = RecordingObserver::new(ReportDetail::Trace);
+    let mut inspection_labels = Vec::new();
+    let mut inspector =
+        |inspection: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
+            inspection_labels.push(inspection.label());
+        };
 
-    let artifact = compile_request_to_assembly_observed(&request, &mut observer).unwrap();
+    let artifact =
+        compile_request_to_assembly_observed_inspected(&request, &mut observer, &mut inspector)
+            .unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains("mov rax, 42"));
+    assert_eq!(
+        inspection_labels,
+        [StaticActivationInspectionLabel::VerifiedPlanning]
+    );
     assert_observation(
         observer.events(),
         &completed(&REQUEST_SUCCESS_PHASES),
@@ -220,6 +240,15 @@ fn details_publish_deterministic_phase_owned_metrics() {
         &[
             ReportMetric::count("effect summaries", 1),
             ReportMetric::count("dependencies", 0),
+            ReportMetric::count("declared static fields", 0),
+            ReportMetric::count("active static fields", 0),
+            ReportMetric::count("inactive static fields", 0),
+            ReportMetric::count("active explicit static fields", 0),
+            ReportMetric::count("active zero-default static fields", 0),
+            ReportMetric::count("inactive explicit static fields", 0),
+            ReportMetric::count("activation execution nodes", 1),
+            ReportMetric::count("activation edges", 0),
+            ReportMetric::count("conservative activation targets", 0),
             ReportMetric::count("activation fields", 0),
             ReportMetric::count("shutdown fields", 0),
             ReportMetric::count("static initializers", 0),
@@ -294,6 +323,141 @@ fn details_publish_deterministic_phase_owned_metrics() {
             ReportMetric::count("assembly lines", artifact.assembly.lines().count() as u64,),
         ]
     );
+}
+
+#[test]
+fn activation_metrics_and_inspection_keep_distinct_observation_boundaries() {
+    let source = "
+class State {
+    static explicit: i64 = 41;
+    static zero: i64;
+    static unused: i64 = 7;
+    init() {}
+}
+fn main() -> i64 {
+    State.zero = 1;
+    return State.explicit + State.zero;
+}
+";
+    let quiet =
+        compile_source_to_assembly("activation-observation.ska", source, Target::X86_64SysV)
+            .unwrap();
+    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let mut inspections = Vec::new();
+    let mut inspector =
+        |inspection: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
+            inspections.push((
+                inspection.label(),
+                inspection.planned().activation_statistics(),
+                inspection.activation_dump(),
+            ));
+        };
+
+    let inspected = compile_source_to_assembly_observed_inspected(
+        "activation-observation.ska",
+        source,
+        Target::X86_64SysV,
+        &mut observer,
+        &mut inspector,
+    )
+    .unwrap();
+
+    assert_eq!(inspected.assembly, quiet.assembly);
+    assert!(inspected.report.diagnostics.is_empty());
+    assert_eq!(inspections.len(), 1);
+    let (label, statistics, dump) = &inspections[0];
+    assert_eq!(*label, StaticActivationInspectionLabel::VerifiedPlanning);
+    assert_eq!(statistics.declared_fields(), 3);
+    assert_eq!(statistics.active_fields(), 2);
+    assert_eq!(statistics.inactive_fields(), 1);
+    assert_eq!(statistics.active_explicit_fields(), 1);
+    assert_eq!(statistics.active_zero_default_fields(), 1);
+    assert_eq!(statistics.inactive_explicit_fields(), 1);
+    assert!(dump.contains("State.unused"));
+    assert!(dump.contains("  ActivationOrder\n"));
+    assert!(dump.contains("  ShutdownOrder\n"));
+
+    let metrics = phase_metrics(observer.events(), ReportPhase::StaticLifecyclePlanning);
+    assert_eq!(count_metric(metrics, "declared static fields"), Some(3));
+    assert_eq!(count_metric(metrics, "active static fields"), Some(2));
+    assert_eq!(count_metric(metrics, "inactive static fields"), Some(1));
+    assert_eq!(
+        count_metric(metrics, "active explicit static fields"),
+        Some(1)
+    );
+    assert_eq!(
+        count_metric(metrics, "active zero-default static fields"),
+        Some(1)
+    );
+    assert_eq!(
+        count_metric(metrics, "inactive explicit static fields"),
+        Some(1)
+    );
+    assert!(count_metric(metrics, "activation execution nodes").is_some());
+    assert!(count_metric(metrics, "activation edges").is_some());
+    assert!(count_metric(metrics, "conservative activation targets").is_some());
+    assert!(observer.events().iter().all(|event| match event {
+        ReportEvent::PhaseFinished { metrics, .. } => metrics
+            .iter()
+            .all(|metric| !metric.name().contains("witness")),
+        _ => true,
+    }));
+}
+
+#[test]
+fn report_writer_failure_does_not_block_activation_inspection_or_compilation() {
+    let mut observer = TextObserver::new(FailingReportWriter, ReportDetail::Details);
+    let mut labels = Vec::new();
+    let mut inspector =
+        |inspection: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
+            labels.push(inspection.label());
+        };
+
+    let artifact = compile_source_to_assembly_observed_inspected(
+        "report-failure-inspection.ska",
+        "fn main() -> i64 { return 42; }",
+        Target::X86_64SysV,
+        &mut observer,
+        &mut inspector,
+    )
+    .unwrap();
+
+    assert!(artifact.assembly.contains("mov rax, 42"));
+    assert_eq!(labels, [StaticActivationInspectionLabel::VerifiedPlanning]);
+    assert_eq!(observer.error().unwrap().kind(), io::ErrorKind::BrokenPipe);
+}
+
+#[test]
+fn inactive_initializer_errors_remain_source_diagnostics_without_inspection() {
+    let invalid = "
+class State { static unused: i64 = true; init() {} }
+fn main() -> i64 { return 0; }
+";
+    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let mut inspections = 0;
+    let mut inspector = |_: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
+        inspections += 1;
+    };
+
+    let result = compile_source_to_assembly_observed_inspected(
+        "inactive-error.ska",
+        invalid,
+        Target::X86_64SysV,
+        &mut observer,
+        &mut inspector,
+    );
+
+    let Err(CompilationError::Diagnostics(report)) = result else {
+        panic!("inactive initializer must retain its ordinary source error");
+    };
+    assert_eq!(inspections, 0);
+    assert!(report.diagnostics.has_errors());
+    assert!(observer.events().iter().all(|event| !matches!(
+        event,
+        ReportEvent::PhaseStarted {
+            phase: ReportPhase::StaticLifecyclePlanning,
+        }
+    )));
 }
 
 #[test]
@@ -618,6 +782,30 @@ fn phase_metrics(events: &[ReportEvent], phase: ReportPhase) -> &[ReportMetric] 
 
 fn metric_names(metrics: &[ReportMetric]) -> Vec<&'static str> {
     metrics.iter().map(ReportMetric::name).collect()
+}
+
+fn count_metric(metrics: &[ReportMetric], name: &str) -> Option<u64> {
+    metrics.iter().find_map(|metric| {
+        (metric.name() == name).then(|| match metric.value() {
+            MetricValue::Count(value) => value,
+            MetricValue::Bytes(_) => panic!("`{name}` must be a count metric"),
+        })
+    })
+}
+
+struct FailingReportWriter;
+
+impl Write for FailingReportWriter {
+    fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
+        Err(io::Error::new(
+            io::ErrorKind::BrokenPipe,
+            "report sink closed",
+        ))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 fn assert_observation(

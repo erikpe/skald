@@ -8,7 +8,7 @@ use crate::{
         lower_preliminary_hir, verify_preliminary_mir, PreliminaryMirProgram, StaticAccessKind,
         StaticEffectPhase,
     },
-    passes::static_lifecycle::plan_static_lifetimes,
+    passes::static_lifecycle::{plan_static_lifetimes, verify_planned_mir},
     resolve::resolve_module_graph,
     test_support::{
         load_module_sources, load_module_sources_with_standard_library,
@@ -26,6 +26,7 @@ use super::{
     analyze_static_activation, dump_static_activation, static_activation_edge_key,
     static_activation_node_key, StaticActivationNode, StaticActivationTrigger,
 };
+use crate::passes::static_lifecycle::StaticActivationInspection;
 
 const DETERMINISM_CHILD: &str = "SKALD_STATIC_ACTIVATION_DETERMINISM_CHILD";
 const FINGERPRINT_BEGIN: &str = "-- static activation fingerprint begin --";
@@ -382,12 +383,15 @@ fn imported_unused_decimal_table_is_inactive_in_shadow_analysis() {
 }
 
 #[test]
-fn activation_dump_is_deterministic_across_processes() {
+fn activation_inspection_dump_is_deterministic_across_processes() {
     if std::env::var_os(DETERMINISM_CHILD).is_some() {
         let program = lower(determinism_source());
-        let analysis = analyze_static_activation(&program).unwrap();
+        let verified = verify_planned_mir(plan_static_lifetimes(program).unwrap()).unwrap();
         println!("{FINGERPRINT_BEGIN}");
-        println!("{}", dump_static_activation(&program, &analysis));
+        println!(
+            "{}",
+            StaticActivationInspection::new(&verified).activation_dump()
+        );
         println!("{FINGERPRINT_END}");
         return;
     }
@@ -466,7 +470,7 @@ fn fingerprint_from_child() -> String {
     let output = Command::new(std::env::current_exe().expect("unit-test executable path"))
         .args([
             "--exact",
-            "passes::static_lifecycle::activation::tests::activation_dump_is_deterministic_across_processes",
+            "passes::static_lifecycle::activation::tests::activation_inspection_dump_is_deterministic_across_processes",
             "--nocapture",
         ])
         .env(DETERMINISM_CHILD, "1")

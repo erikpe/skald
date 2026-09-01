@@ -1163,22 +1163,23 @@ replacement, and reverse destruction. Cross-process phase tests and the golden
 runner's full audit compare deterministic diagnostics, products, assembly,
 stdout, stderr, and status; passing sandboxes are removed after each run.
 
-The current eager baseline also includes an imported module whose explicit
-static initializer and destructor are otherwise unused. Its cross-process test
-records preliminary, planned, final, and assembly products; its native golden
-pins initializer-before-entry and destructor-after-entry output under the
-default, optimization-none, and reachability-disabled schedules. This fixture
-must remain eager until the documented semantic cutover deliberately changes
-its expectation.
+The reachability-gated static-lifecycle suite includes imported declarations
+whose explicit initializer and destructor are otherwise unused. It records
+preliminary, planned, final, assembly, and native observations under default,
+optimization-none, and reachability-disabled schedules: the field stays
+declared and checked but contributes no active lifecycle or emitted artifact.
 
-The frozen reachability-gated direction extends this ownership without moving
-ordinary source checking. Shared dependency tests now own exhaustive direct
-static accesses and possible targets; activation-analysis tests will own the
-coupled entry/execution/field fixed point, exact triggers, witnesses, and
-deterministic dump; planned/final verifier tests will own exact active
-authority, sparse coordinator coverage, and reachable-inactive-access
-rejection. Golden and backend tests will compare imported-unused versus used
-statics, active-only `STA001`/`STA002`, startup and exact-reverse shutdown,
-profile parity, emitted slots/helpers/artifacts, and representative decimal-
-parsing table retention. Inactive initializer bodies must remain covered by
-the ordinary syntax-through-preliminary-MIR error suites.
+Shared dependency tests own exhaustive direct static accesses and possible
+targets. Activation-analysis tests own the coupled entry/execution/field fixed
+point, exact triggers, witnesses, canonical target counts, and cross-process
+determinism. Static-activation inspection tests own the verified checkpoint
+label and exact focused dump, including activation and reverse-shutdown order.
+Driver reporting tests own aggregate metric order, detail gating, quiet parity,
+report-writer failure, and separation from source diagnostics. Planned/final
+verifier tests own exact active authority, sparse coordinator coverage, and
+reachable-inactive-access rejection. Golden and backend tests compare
+imported-unused versus used statics, active-only `STA001`/`STA002`, startup and
+exact-reverse shutdown, profile parity, emitted slots/helpers/artifacts, and
+representative decimal-parsing table retention. Inactive initializer bodies
+remain covered by ordinary syntax-through-preliminary-MIR error suites; an
+inactive explicit initializer does not receive a warning.

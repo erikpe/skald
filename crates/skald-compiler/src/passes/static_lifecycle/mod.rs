@@ -8,6 +8,7 @@ mod analysis;
 // compact exact field set crosses phase boundaries in the lifecycle proof.
 #[allow(dead_code)]
 mod activation;
+mod inspection;
 mod plan;
 mod synthesize;
 mod verify;
@@ -25,11 +26,14 @@ pub use analysis::{
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectSummary, StaticFunctionValueCandidates,
     StaticFunctionValueTarget,
 };
+pub use inspection::{
+    StaticActivationInspection, StaticActivationInspectionLabel, StaticActivationInspector,
+};
 pub use plan::{
     dump_planned_mir, dump_static_lifetime_plan, plan_static_lifetimes, PlannedMirProgram,
-    StaticLifecyclePlan, StaticLifecyclePlanningFailure, StaticLifecyclePlanningReport,
-    StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
-    STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
+    StaticActivationStatistics, StaticLifecyclePlan, StaticLifecyclePlanningFailure,
+    StaticLifecyclePlanningReport, StaticLifetimeDependency, StaticLifetimeEvidence,
+    StaticLifetimePhase, STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
 };
 pub use synthesize::synthesize_static_lifecycle;
 pub use verify::{verify_planned_mir, verify_synthesized_mir, VerifiedPlannedMirProgram};

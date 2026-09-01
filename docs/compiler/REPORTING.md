@@ -261,7 +261,7 @@ The implemented metrics appear in this deterministic owner order:
 | Type checking | produced HIR modules and function/class definitions, then diagnostics, warnings, errors; failed checking has only diagnostic metrics because it produces no HIR |
 | Preliminary MIR lowering | definitions, blocks, instructions |
 | MIR verification boundaries | verification executions; failed verification also includes verification errors |
-| Static-lifecycle planning | effect summaries, dependencies, activation fields, shutdown fields, static initializers |
+| Static-lifecycle planning | effect summaries, dependencies; declared, active, inactive, active-explicit, active-zero-default, and inactive-explicit static fields; activation execution nodes, edges, and conservative targets; activation fields, shutdown fields, and retained preliminary static initializers |
 | Static-lifecycle synthesis | final MIR definitions, blocks, instructions, followed by lifecycle definitions and activation/shutdown regions when present |
 | MIR pass pipeline | verification executions, pass executions; when passes run, processed and changed callables, structural rewrite counts, and pass-owned counters grouped in first-owner/first-counter order; then successful final MIR definitions, blocks, instructions |
 | Backend emission | assembly bytes, assembly lines |
@@ -393,17 +393,22 @@ analysis event, timing, cache statistic, or preservation record.
 
 ## Frozen static activation observation
 
-Status: **frozen direction, not yet implemented**. Exact activation is a
-mandatory semantic phase rather than a pass occurrence. Its owner will expose
-deterministic already-known integer counts for declared, active, inactive,
-explicit, zero-default, and inactive-explicit statics plus activation edges and
-conservative targets. The driver will adapt those values to the existing phase
-finish event and detail filtering; activation analysis itself will not observe,
-log, time, render, or write.
+Status: **implemented**. Exact activation is a mandatory semantic phase rather
+than a pass occurrence. Its immutable planning product exposes deterministic,
+already-known integer counts for declared, active, inactive, active-explicit,
+active-zero-default, and inactive-explicit statics plus activation execution
+nodes, edges, and conservative targets. The driver adapts those values to the
+existing static-lifecycle-planning finish event only at `details` or `trace`;
+activation analysis itself does not observe, log, time, render, or write.
 
 Canonical triggers, witness paths, active/inactive field inventories, and
 activation/reverse-shutdown order belong to a focused deterministic activation
-dump available through request-local inspection. They do not become report
+dump available through the request-local `StaticActivationInspector` supplied
+to `compile_request_to_assembly_observed_inspected` or
+`compile_source_to_assembly_observed_inspected`. The inspector receives one
+borrowed `verified-static-activation` checkpoint after planned-MIR
+verification. Merely enabling the inspector does not render the dump; the
+callback must request `activation_dump`. These details do not become report
 event text, MIR checkpoint bytes, source diagnostics, request identity,
 certificate identity, generated artifacts, or quiet-default work. There is no
 per-inactive-static warning: ordinary pay-for-use library declarations are not

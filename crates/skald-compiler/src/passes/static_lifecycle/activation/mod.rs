@@ -16,7 +16,6 @@ use crate::{
     passes::reachability::{extract_preliminary_dependencies, MirDependencyExtraction},
 };
 
-#[cfg(test)]
 pub(super) use dump::dump_static_activation;
 pub(super) use error::StaticActivationAnalysisError;
 

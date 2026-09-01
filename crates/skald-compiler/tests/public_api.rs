@@ -7,10 +7,11 @@ use skald_compiler::{
     diagnostics::{render_diagnostics, Diagnostics},
     driver::{
         compile_request_to_assembly, compile_request_to_assembly_observed,
-        compile_source_to_assembly, compile_source_to_assembly_observed, run_cli, ArtifactKind,
-        ArtifactOptions, AssemblyArtifact, CompilationEnvironment, CompilationError,
-        CompilationRequest, EntrySelector, MirOptimizationOptions, MirOptimizationProfile,
-        StandardLibrarySelection, Toolchain,
+        compile_source_to_assembly, compile_source_to_assembly_observed,
+        compile_source_to_assembly_observed_inspected, run_cli, ArtifactKind, ArtifactOptions,
+        AssemblyArtifact, CompilationEnvironment, CompilationError, CompilationRequest,
+        EntrySelector, MirOptimizationOptions, MirOptimizationProfile, StandardLibrarySelection,
+        Toolchain,
     },
     external::{ExternalLink, ExternalLinkTable},
     hir::{
@@ -53,7 +54,8 @@ use skald_compiler::{
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
-            PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan,
+            PlannedMirProgram, StaticActivationInspection, StaticActivationInspectionLabel,
+            StaticActivationStatistics, StaticEffectAnalysis, StaticLifecyclePlan,
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
         MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
@@ -246,8 +248,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let _planned_dump = dump_planned_mir(planned);
     let authority: &StaticLifecycleAuthority = planned.authority();
     let activation: &StaticActivationAuthority = planned.activation_authority();
+    let activation_statistics: StaticActivationStatistics = planned.activation_statistics();
     assert_eq!(activation.len(), 0);
     assert!(activation.is_empty());
+    assert_eq!(activation_statistics.active_fields(), 0);
     for root in authority.roots() {
         let root: &StaticLifecycleRootAuthority = root;
         assert_eq!(authority.root(root.root()), Some(root));
@@ -493,6 +497,26 @@ fn intentional_reporting_paths_compose() {
             ..
         })
     ));
+
+    let mut inspection_labels = Vec::new();
+    let mut inspector = |inspection: StaticActivationInspection<'_>| {
+        inspection_labels.push(inspection.label());
+        let _planned = inspection.planned();
+        let _dump = inspection.activation_dump();
+    };
+    let mut quiet = NoopObserver;
+    compile_source_to_assembly_observed_inspected(
+        "inspected-api.ska",
+        "fn main() -> i64 { return 0; }",
+        Target::X86_64SysV,
+        &mut quiet,
+        &mut inspector,
+    )
+    .unwrap();
+    assert_eq!(
+        inspection_labels,
+        [StaticActivationInspectionLabel::VerifiedPlanning]
+    );
 
     let _artifact = ReportEvent::ArtifactPublished {
         kind: ReportArtifactKind::Assembly,

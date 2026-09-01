@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 through RSR6 are complete and RSR7 is next.
+Status: in progress; RSR0 through RSR7 are complete and RSR8 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -94,7 +94,7 @@ reduce future optimization cost; larger findings belong in the
 - [x] RSR4 — Verify final access against exact activation authority
 - [x] RSR5 — Switch lifecycle planning and synthesis to reachable activation
 - [x] RSR6 — Align backend planning and artifact retention
-- [ ] RSR7 — Publish activation observation and migration diagnostics
+- [x] RSR7 — Publish activation observation and migration diagnostics
 - [ ] RSR8 — Harden the language transition and close the roadmap
 
 ## PR-sized implementation sequence
@@ -482,24 +482,24 @@ runtime ABI, and final target artifact walking are unchanged.
 **Purpose:** Make the semantic decision explainable and measurable without
 mixing analysis logging, deterministic dumps, reports, or source diagnostics.
 
-- [ ] Promote the activation dump to the request-local inspection boundary with
+- [x] Promote the activation dump to the request-local inspection boundary with
       active/inactive counts, exact triggers, edges, conservative targets,
       witnesses, activation order, and derived shutdown order.
-- [ ] Add typed already-known report metrics for declared, active, inactive,
+- [x] Add typed already-known report metrics for declared, active, inactive,
       explicit, zero-default, and inactive-explicit counts plus activation
       graph/target totals at their owning phase.
-- [ ] Keep analysis and passes observer-free; let the driver/pipeline adapt
+- [x] Keep analysis and passes observer-free; let the driver/pipeline adapt
       immutable facts to existing structured events and detail filtering.
-- [ ] Preserve quiet default behavior and keep detailed activation dumps out of
+- [x] Preserve quiet default behavior and keep detailed activation dumps out of
       report event text, MIR checkpoint bytes, source diagnostics, request
       identity, and generated artifacts.
-- [ ] Add no permanent warning for an inactive explicit initializer. Document
+- [x] Add no permanent warning for an inactive explicit initializer. Document
       the migration rule that intentional side effects require ordinary
       reachable code until a separate eager/module-init design exists.
-- [ ] Update debugging and testing guidance with the shortest route from a
+- [x] Update debugging and testing guidance with the shortest route from a
       source field to its activation witness, certificate, coordinator, final
       reachability, backend slot, and native observation.
-- [ ] Keep event and dump ordering deterministic under independent processes
+- [x] Keep event and dump ordering deterministic under independent processes
       and any future compiler-internal parallelism.
 
 **Tests:** Typed metric ownership/order/detail gating; quiet-default parity;
@@ -513,6 +513,22 @@ API tests; `make compiler-test`; focused binary tests; `make fmt-check`;
 
 **Exit criteria:** A developer can deterministically explain every active field
 and measure the transition without new logging, warnings, or default output.
+
+Completed on 2026-09-01. Verified planned MIR now has one borrowed
+`verified-static-activation` inspection checkpoint exposed only through the
+driver's opt-in observed-inspected adapters. Its focused renderer publishes
+canonical field inventories, triggers, coupled edges, conservative targets,
+witnesses, activation order, and exact-reverse shutdown order only when the
+callback requests the dump. The immutable planning product separately exposes
+allocation-free aggregate statistics; the driver adds their typed counts to
+the existing planning finish event at details/trace level. Ordinary compile
+paths, request identity, MIR checkpoints, diagnostics, artifacts, and CLI
+output remain unchanged. Focused tests cover exact dump text, public paths,
+metric ownership/order/gating, request and singleton adapters, report-writer
+failure, inactive-initializer diagnostics, quiet assembly parity, repeated
+rendering, and independent-process determinism. Living language, reporting,
+driver, debugging, and testing guidance records the no-warning migration rule
+and the source-to-native investigation path.
 
 ### RSR8 — Harden the language transition and close the roadmap
 

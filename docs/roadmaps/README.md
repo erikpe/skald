@@ -18,7 +18,8 @@ and mandatory shadow execution while preserving the eager plan; RSR3 added
 subset-capable lifecycle products, RSR4 established final monotone safety,
 RSR5 switched production planning and synthesis to the exact active set, and
 RSR6 aligned backend storage planning and artifact retention with that set.
-RSR7 is next. It depends
+RSR7 published typed activation metrics, a verified request-local witness dump,
+and migration/debugging guidance. RSR8 is next. It depends
 on the completed static-lifecycle certificate, selectable final-MIR pipeline,
 dense MIR rewriting, and target-independent reachability foundations.
 

@@ -182,6 +182,16 @@ Verified checkpoint inspection is implemented by the pass facade's
 inspector and performs no checkpoint work. General driver/CLI dump destination
 and retention policy remain intentionally deferred.
 
+Verified static-activation inspection uses the same request-local separation
+without becoming a selectable MIR checkpoint. Tools opt into
+`compile_request_to_assembly_observed_inspected` or
+`compile_source_to_assembly_observed_inspected` and receive exactly one
+borrowed `StaticActivationInspection` after planned-MIR verification. Its
+label and allocation-free statistics may be queried without formatting; its
+focused dump is built only by an explicit `activation_dump` call. The ordinary
+compile adapters pass no inspector, while `CompilationRequest`, report detail,
+diagnostics, generated artifacts, and CLI options remain unchanged.
+
 ## Whole-world reachability selection
 
 The confirmed
