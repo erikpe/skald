@@ -27,7 +27,7 @@ const DEPENDENCY_SOURCE: &str = "fn read_base() -> i64 { return State.base; }
        static base: i64 = 1;
        init() {}
      }
-     fn main() -> i64 { return 0; }";
+     fn main() -> i64 { return State.result; }";
 
 fn plan(source: &str) -> PlannedMirProgram {
     let checked = type_check_source(source);
@@ -43,7 +43,7 @@ fn errors(program: &PlannedMirProgram) -> String {
 mod subsets;
 
 #[test]
-fn planned_verification_independently_seals_exact_shadow_activation() {
+fn planning_and_verification_share_exact_activation_authority() {
     let planned = plan(
         "class State {
            static used: i64 = 1;
@@ -53,13 +53,13 @@ fn planned_verification_independently_seals_exact_shadow_activation() {
          fn main() -> i64 { return State.used; }",
     );
 
-    assert_eq!(planned.activation_authority().len(), 2);
+    assert_eq!(planned.activation_authority().len(), 1);
     let verified = verify_planned_mir(planned).unwrap();
-    assert_eq!(verified.semantic_activation_for_test().len(), 1);
+    assert_eq!(verified.program().activation_authority().len(), 1);
 }
 
 #[test]
-fn planned_verification_rejects_untrusted_shadow_activation_claims() {
+fn planned_verification_rejects_untrusted_activation_report_claims() {
     let mut planned = plan(
         "class State {
            static used: i64 = 1;
@@ -78,16 +78,40 @@ fn planned_verification_rejects_untrusted_shadow_activation_claims() {
     let second = errors(&planned);
     assert_eq!(first, second);
     assert!(first.contains(
-        "planning report shadow activation disagrees with independent preliminary-MIR activation"
+        "planning report activation disagrees with independent preliminary-MIR activation"
     ));
     assert!(first.contains("missing"));
+}
+
+#[test]
+fn planned_verification_rejects_an_inexact_activation_certificate() {
+    let mut planned = plan(
+        "class State {
+           static used: i64 = 1;
+           static unused: i64 = 2;
+           init() {}
+         }
+         fn main() -> i64 { return State.used; }",
+    );
+    planned
+        .lifecycle_mut_for_test()
+        .proof_mut_for_test()
+        .activation_mut_for_test()
+        .fields_mut_for_test()
+        .clear();
+
+    let message = errors(&planned);
+    assert!(message.contains(
+        "static activation certificate disagrees with independent preliminary-MIR activation"
+    ));
+    assert!(message.contains("missing"));
 }
 
 #[test]
 fn accepts_a_complete_hand_built_phase_product() {
     let checked = type_check_source(
         "class State { static value: i64 = 1; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     );
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
     let field = *preliminary.static_fields().next().unwrap();
@@ -380,7 +404,7 @@ fn planned_transition_views_derive_explicit_and_zero_default_spans() {
            static zero: i64;
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.explicit + State.zero; }",
     );
     let transitions = super::super::plan::derived::transitions(&planned);
 
@@ -426,7 +450,7 @@ fn verification_and_lifecycle_dump_are_deterministic() {
 fn lifecycle_dump_has_an_exact_stable_schema() {
     let planned = plan(
         "class State { static value: i64 = 1; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     );
     let definition = planned.lifecycle_mir().definitions()[0];
     let field = definition.field;

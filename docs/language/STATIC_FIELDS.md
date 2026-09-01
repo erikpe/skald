@@ -1,9 +1,9 @@
 # Static Fields
 
-Status: **declaration-wide eager static initialization and reverse normal-
-return shutdown implemented; reachability-gated activation direction frozen**.
-This document is authoritative for the current source-visible mutable and
-final static-field profile and for the next accepted lifetime contract. The
+Status: **reachability-gated eager static initialization and reverse normal-
+return shutdown implemented**.
+This document is authoritative for the current source-visible mutable, final,
+and reachability-gated static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
 the current compiler.
@@ -30,11 +30,12 @@ their calls, temporaries, ownership
 operations, cleanup, and publication boundary available to whole-program
 static-effect inference. That analysis conservatively summarizes direct
 and deep static uses across calls, dynamic dispatch, copy operations,
-destructors, shared releases, optionals, and arrays. Static-lifetime planning
-then includes eventual-value destruction of every owning-capable field,
-rejects self-dependencies and cycles, and selects one deterministic activation
-order with exact-reverse shutdown. The x86-64 backend executes both halves of
-that verified plan around the selected entry function.
+destructors, shared releases, optionals, and arrays. Entry-rooted activation
+then selects the exact fields that acquire a runtime lifetime. Static-lifetime
+planning includes eventual-value destruction for active owning-capable fields,
+rejects active self-dependencies and cycles, and selects one deterministic
+activation order with exact-reverse shutdown. The x86-64 backend executes both
+halves of that verified plan around the selected entry function.
 
 ## Declaration syntax
 
@@ -322,9 +323,10 @@ when its operand or buffer happens to come from a static place.
 
 ## Initialization and lifetime
 
-Every supported static field in the reachable program is live before the
-selected Skald entry function begins. After producing preliminary lifecycle
-MIR, the compiler constructs and verifies explicit lifecycle definitions,
+Every active static field is live before the selected Skald entry function
+begins. After producing and verifying definition-complete preliminary
+lifecycle MIR, the compiler computes the exact entry-rooted activation closure,
+then constructs and verifies lifecycle definitions,
 compact baseline authority, and one complete activation order. Reverse
 shutdown, lifecycle positions, dependencies, and planned transitions are
 derived views. A planning-only report retains deterministic transitive
@@ -337,8 +339,8 @@ destruction regions, and independently verifies those canonical structured
 regions and final MIR against the compact proof. No parallel executable
 transition vectors are stored.
 
-The x86-64 backend emits one private initializer body for every explicit
-declaration and one private program initializer that invokes those bodies in
+The x86-64 backend emits executable initializer work only for active explicit
+declarations and one private program initializer that invokes those bodies in
 the verified activation order. The exported host `main` wrapper calls the
 runtime ABI marker, then the program initializer, then the selected Skald entry
 function. When entry returns normally, the wrapper preserves its `i64` result,
@@ -360,8 +362,8 @@ could be installed by ordinary replacement. Callable recursion alone is not a
 field-lifetime cycle.
 
 A static slot is program-owned rather than registered in any lexical scope.
-On normal entry return, the program finalizer visits every field in exact
-reverse activation order. Primitive and primitive-optional slots need no value
+On normal entry return, the program finalizer visits every active field in
+exact reverse activation order. Primitive and primitive-optional slots need no value
 work. Exact objects use complete-object destruction, present optional objects
 destroy their current payload, shared owners perform ordinary strong release,
 and arrays release their current backing and destroy elements in reverse index
@@ -379,10 +381,9 @@ anchors remain unchanged.
 
 ## Frozen reachability-gated activation direction
 
-Status: **frozen direction, not yet implemented**. Until the active
-[implementation roadmap](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
-reaches its semantic cutover, the declaration-wide eager behavior above
-remains current. The complete rationale and exact decisions are preserved in
+Status: **implemented contract**. The delivery history remains in the active
+[implementation roadmap](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md),
+and the complete rationale and exact decisions are preserved in
 the [frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md).
 
 The accepted contract separates declaration from runtime activation. Loading,
@@ -455,10 +456,11 @@ and `TYP042` rejects either an initializer-free declaration whose type lacks a
 complete all-zero live value or an explicit declaration whose type cannot
 store a value. Explicit expressions otherwise use ordinary type, overload,
 privacy, copy-capability, and ownership diagnostics. `STA001` and `STA002`
-report static lifetime self-dependencies and cycles with declaration, access,
-and transitive call/lifecycle evidence. Every valid explicit initializer and
-every initializer-free declaration accepted by zero-default validation reaches
-verified MIR, deterministic x86-64 startup, and native execution.
+report active static lifetime self-dependencies and cycles with declaration,
+access, and transitive call/lifecycle evidence. Every valid explicit
+initializer and every initializer-free declaration accepted by zero-default
+validation reaches verified preliminary MIR. Only an active declaration
+contributes startup or shutdown work to final MIR and native execution.
 
 ## Runtime, ABI, and representation boundary
 

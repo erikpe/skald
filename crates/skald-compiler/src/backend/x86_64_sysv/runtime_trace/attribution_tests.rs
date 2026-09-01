@@ -431,7 +431,7 @@ fn runtime_trace_attribution_native_standard_library_and_static_lifecycle_visibi
         concat!(
             "fn fail() -> i64 { var zero: i64 = 0; return 1 / zero; }\n",
             "class State { static value: i64 = fail(); init() {} }\n",
-            "fn main() -> i64 { return 0; }\n",
+            "fn main() -> i64 { return State.value; }\n",
         ),
     );
     let fail = function(&static_initialization, "fail");
@@ -459,10 +459,11 @@ fn runtime_trace_attribution_native_standard_library_and_static_lifecycle_visibi
         concat!(
             "class Item {\n",
             "  init() {}\n",
+            "  fn keep() -> i64 { return 0; }\n",
             "  destroy { var zero: i64 = 0; var failure: i64 = 1 / zero; }\n",
             "}\n",
             "class State { static item: Item = Item(); init() {} }\n",
-            "fn main() -> i64 { return 0; }\n",
+            "fn main() -> i64 { return State.item.keep(); }\n",
         ),
     );
     let destructor = callable_by_trace_name(&static_shutdown, "main::Item.destroy");

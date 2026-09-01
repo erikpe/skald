@@ -1897,7 +1897,11 @@ fn static_initializer_lifecycle_phase_dump() -> String {
         "  init() {}\n",
         "}\n",
         "fn combine(left: i64, right: i64) -> i64 { return left + right; }\n",
-        "fn main() -> i64 { return 0; }\n",
+        "fn main() -> i64 {\n",
+        "  State.count = 42; State.item = Item(42);\n",
+        "  State.owner = new Item(1); State.owner_copy = State.owner;\n",
+        "  State.values = i64[]{1, 2}; return 0;\n",
+        "}\n",
     ))
 }
 
@@ -1910,7 +1914,7 @@ fn static_lifetime_cycle_diagnostic_dump() -> String {
         "  static right: i64 = read_left();\n",
         "  init() {}\n",
         "}\n",
-        "fn main() -> i64 { return 0; }\n",
+        "fn main() -> i64 { return State.left; }\n",
     );
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("static-lifetime-diagnostics.ska", text);
@@ -2090,9 +2094,11 @@ fn eager_unused_static_phase_dump() -> String {
     )
     .unwrap();
 
-    for product in [&preliminary_dump, &planned_dump, &final_dump, &assembly] {
-        assert!(product.contains("marker"), "missing eager static marker");
-    }
+    assert!(preliminary_dump.contains("marker"));
+    assert!(planned_dump.contains("marker"));
+    assert!(final_dump.contains("\"marker\""));
+    assert!(!final_dump.contains("Dormant.marker"));
+    assert!(!assembly.contains("marker"));
 
     normalize_fixture_paths(
         &fixture.path,

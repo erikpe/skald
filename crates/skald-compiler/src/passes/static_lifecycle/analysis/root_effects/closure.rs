@@ -31,7 +31,7 @@ pub(crate) fn analyze(
         .into_iter()
         .map(|root| root.node)
         .collect::<BTreeSet<_>>();
-    analyze_roots(graph, declared_fields, roots)
+    analyze_roots(graph, declared_fields.clone(), declared_fields, roots)
 }
 
 pub(crate) fn analyze_for_fields(
@@ -48,7 +48,7 @@ pub(crate) fn analyze_for_fields(
         .into_iter()
         .map(|root| root.node)
         .collect::<BTreeSet<_>>();
-    analyze_roots(graph, declared_fields, roots)
+    analyze_roots(graph, declared_fields, active_fields, roots)
 }
 
 pub(crate) fn analyze_final(
@@ -61,22 +61,27 @@ pub(crate) fn analyze_final(
         .iter()
         .flat_map(|class| class.static_fields.iter().map(|field| field.id))
         .collect::<BTreeSet<_>>();
+    let active_fields = definitions
+        .iter()
+        .map(|definition| definition.field)
+        .collect::<BTreeSet<_>>();
     let roots = lifecycle_root_uses_for_definitions(program, definitions)
         .into_iter()
         .map(|root| root.node)
         .collect::<BTreeSet<_>>();
-    analyze_roots(graph, declared_fields, roots)
+    analyze_roots(graph, declared_fields, active_fields, roots)
 }
 
 fn analyze_roots(
     graph: &ExtractedGraph,
     declared_fields: BTreeSet<crate::identity::StaticFieldId>,
+    active_fields: BTreeSet<crate::identity::StaticFieldId>,
     roots: BTreeSet<StaticEffectNode>,
 ) -> Result<StaticLifecycleAuthority, StaticLifecycleRootEffectError> {
     let summaries = roots
         .into_iter()
         .map(|root| {
-            effects_for(root, graph, &declared_fields).map(|effects| {
+            effects_for(root, graph, &declared_fields, &active_fields).map(|effects| {
                 StaticLifecycleRootAuthority::new(root, effects.into_iter().collect())
             })
         })
@@ -88,6 +93,7 @@ fn effects_for(
     root: StaticEffectNode,
     graph: &ExtractedGraph,
     declared_fields: &BTreeSet<crate::identity::StaticFieldId>,
+    active_fields: &BTreeSet<crate::identity::StaticFieldId>,
 ) -> Result<BTreeSet<StaticLifecycleEffectFact>, StaticLifecycleRootEffectError> {
     if !graph.nodes.contains_key(&root) {
         return Err(StaticLifecycleRootEffectError::MissingRoot(root));
@@ -115,12 +121,14 @@ fn effects_for(
                     field: direct.field,
                 });
             }
-            effects.insert(StaticLifecycleEffectFact::new(
-                direct.field,
-                direct.access,
-                root_phase.unwrap_or(direct.phase),
-                direct.lifecycle_owned,
-            ));
+            if active_fields.contains(&direct.field) {
+                effects.insert(StaticLifecycleEffectFact::new(
+                    direct.field,
+                    direct.access,
+                    root_phase.unwrap_or(direct.phase),
+                    direct.lifecycle_owned,
+                ));
+            }
         }
         for edge in &draft.edges {
             if edge.source != node {

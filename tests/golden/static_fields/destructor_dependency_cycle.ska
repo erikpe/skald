@@ -29,5 +29,6 @@ class State {
 }
 
 fn main() -> i64 {
+    State.left = none;
     return 0;
 }

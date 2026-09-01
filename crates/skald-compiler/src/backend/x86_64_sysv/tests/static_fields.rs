@@ -408,7 +408,7 @@ fn final_static_class_values_follow_reverse_shutdown_order() {
         "  destroy { test_record_i64(self.value); } }\n",
         "class State { final static first: Item = Item(42);\n",
         "  final static second: Item = Item(7); init() {} }\n",
-        "fn main() -> i64 { return State.first.value; }\n",
+        "fn main() -> i64 { return State.first.value + State.second.value - 7; }\n",
     );
     let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
     assembly.push_str(record_seven_then_42_shutdown_stub());

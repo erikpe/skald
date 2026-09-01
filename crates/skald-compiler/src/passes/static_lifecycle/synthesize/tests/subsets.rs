@@ -7,26 +7,26 @@ use crate::{
 
 use super::{errors, synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir};
 
-const SUBSET_SOURCE: &str = "class State {
+const SUBSET_DECLARATIONS: &str = "class State {
       static first: i64 = 1;
       static inactive: i64 = 2;
       static last: i64 = 3;
       init() {}
-    }
-    fn main() -> i64 { return 0; }";
+    }";
 
 fn sparse_synthesized(active_indices: &[usize]) -> crate::mir::MirProgram {
-    let checked = type_check_source(SUBSET_SOURCE);
+    let names = ["first", "inactive", "last"];
+    let accesses = active_indices
+        .iter()
+        .map(|index| format!("State.{0} = State.{0};", names[*index]))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let source = format!("{SUBSET_DECLARATIONS} fn main() -> i64 {{ {accesses} return 0; }}");
+    let checked = type_check_source(&source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
-    let fields = preliminary
-        .static_fields()
-        .map(|field| field.field)
-        .collect::<Vec<_>>();
-    let active = active_indices.iter().map(|index| fields[*index]).collect();
-    let planned =
-        super::super::super::plan::plan_static_lifetimes_for_fields_for_test(preliminary, active)
-            .expect("test active set must have an acyclic lifecycle");
+    let planned = super::super::super::plan_static_lifetimes(preliminary)
+        .expect("test active set must have an acyclic lifecycle");
     synthesize_static_lifecycle(verify_planned_mir(planned).unwrap())
 }
 

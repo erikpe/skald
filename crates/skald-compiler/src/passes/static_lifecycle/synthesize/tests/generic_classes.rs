@@ -29,8 +29,8 @@ fn specializes_replacement_cleanup_publication_and_reverse_shutdown() {
         .as_ref()
         .expect("generic owning statics require a final coordinator");
 
-    assert_eq!(coordinator.activation().len(), 4);
-    assert_eq!(coordinator.initializers().len(), 2);
+    assert_eq!(coordinator.activation().len(), 2);
+    assert!(coordinator.initializers().is_empty());
     assert!(coordinator
         .shutdown()
         .iter()
@@ -51,7 +51,7 @@ fn specializes_replacement_cleanup_publication_and_reverse_shutdown() {
         .iter()
         .filter(|region| matches!(region.cleanup, MirStaticValueCleanup::OptionalShared(_)))
         .count();
-    assert_eq!((optional_class, optional_shared), (2, 2));
+    assert_eq!((optional_class, optional_shared), (1, 1));
 }
 
 #[test]
@@ -59,12 +59,7 @@ fn final_mir_dump_names_closed_static_owners_without_losing_identities() {
     let program = lower_generic_source_to_final_mir(SOURCE);
     let dump = dump_mir(&program);
 
-    for name in [
-        "Cache<Item>.current",
-        "Cache<Item>.explicit",
-        "Cache<shared Item>.current",
-        "Cache<shared Item>.explicit",
-    ] {
+    for name in ["Cache<Item>.current", "Cache<shared Item>.current"] {
         assert!(dump.contains(&format!("\"{name}\"")), "{dump}");
     }
     for class in program

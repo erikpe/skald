@@ -25,5 +25,5 @@ class State {
 }
 
 fn main() -> i64 {
-    return 0;
+    return State.result;
 }

@@ -39,7 +39,7 @@ const CALLABLE_SOURCE: &str = concat!(
     "  static fn make() -> i64 { return 1; }\n",
     "}\n",
     "fn helper() -> i64 { return Widget.make(); }\n",
-    "fn main() -> i64 { return helper(); }\n",
+    "fn main() -> i64 { return helper() + Widget.cache - 7; }\n",
 );
 
 fn callable_fixture(path: impl AsRef<Path>) -> FinalMirWithSources {

@@ -24,7 +24,16 @@ const STORAGE_MATRIX: &str = concat!(
     "  static values: i64[] = i64[]{2, 3};\n",
     "  init() {}\n",
     "}\n",
-    "fn main() -> i64 { return 0; }\n",
+    "fn main() -> i64 {\n",
+    "  State.zero = 0;\n",
+    "  State.number = 1;\n",
+    "  State.item = Item();\n",
+    "  State.maybe_item = none;\n",
+    "  State.owner = new Item();\n",
+    "  State.maybe_owner = none;\n",
+    "  State.values = i64[]{};\n",
+    "  return 0;\n",
+    "}\n",
 );
 
 fn planned(source: &str) -> super::super::PlannedMirProgram {
@@ -149,7 +158,7 @@ fn publication_precedes_preserved_full_expression_cleanup() {
     let program = synthesized(
         "class Item { init() {} copy(ref other: Item) {} destroy {} }
          class State { static item: Item = (Item()); init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.item = Item(); return 0; }",
     );
     let coordinator = program.static_lifecycle.as_ref().unwrap();
     let body = &coordinator.initializers()[0];
@@ -249,7 +258,7 @@ fn rejects_missing_reordered_and_wrong_cleanup_regions() {
 fn rejects_publication_bypass_and_initializer_destination_escape() {
     let source = "class Item { init() {} copy(ref other: Item) {} destroy {} }
                   class State { static item: Item = (Item()); init() {} }
-                  fn main() -> i64 { return 0; }";
+                  fn main() -> i64 { State.item = Item(); return 0; }";
     let valid = synthesized(source);
 
     let mut bypass = valid.clone();
@@ -273,7 +282,7 @@ fn rejects_publication_bypass_and_initializer_destination_escape() {
            static item: Item = forward(Item());
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.item = Item(); return 0; }",
     );
     let body = escaped
         .static_lifecycle
@@ -319,7 +328,7 @@ fn ordinary_ownership_verification_covers_moved_initializer_bodies() {
     let mut program = synthesized(
         "class Item { init() {} destroy {} }
          class State { static owner: shared Item = new Item(); init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.owner = new Item(); return 0; }",
     );
     let body = &mut program
         .static_lifecycle
@@ -350,7 +359,7 @@ fn ordinary_ownership_verification_covers_moved_initializer_bodies() {
 fn backend_boundary_accepts_synthesized_static_startup() {
     let program = synthesized(
         "class State { static value: i64 = 1; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     );
     let assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
     assert!(assembly.contains(".Lska.static.initialize:"));

@@ -31,5 +31,7 @@ class State {
 }
 
 fn main() -> i64 {
+    var observed: i64 = State.dependent.value + State.independent.value
+        + State.items[0].value + State.seed;
     return 0;
 }

@@ -47,9 +47,9 @@ pub struct StaticLifetimeDependency {
     pub evidence: StaticLifetimeEvidence,
 }
 
-/// Source-rich effect and shadow-activation evidence retained for deterministic
-/// inspection of lifecycle planning, but deliberately excluded from compact
-/// backend-consumable certificate identity.
+/// Source-rich effect and activation evidence retained for deterministic
+/// inspection of lifecycle planning. The exact field set is also carried by
+/// the compact backend-consumable certificate.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticLifecyclePlanningReport {
     analysis: StaticEffectAnalysis,

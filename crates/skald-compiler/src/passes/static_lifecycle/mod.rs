@@ -4,9 +4,8 @@
 //! preserves the supported cross-phase API.
 
 mod analysis;
-// Keep the complete query and dump surface private while production computes
-// it in shadow mode; later lifecycle products will carry its exact authority
-// across phase boundaries.
+// Activation witnesses remain an internal planning/reporting detail; the
+// compact exact field set crosses phase boundaries in the lifecycle proof.
 #[allow(dead_code)]
 mod activation;
 mod plan;
@@ -26,8 +25,6 @@ pub use analysis::{
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectSummary, StaticFunctionValueCandidates,
     StaticFunctionValueTarget,
 };
-#[cfg(test)]
-pub(crate) use plan::plan_static_lifetimes_for_fields_for_test;
 pub use plan::{
     dump_planned_mir, dump_static_lifetime_plan, plan_static_lifetimes, PlannedMirProgram,
     StaticLifecyclePlan, StaticLifecyclePlanningFailure, StaticLifecyclePlanningReport,

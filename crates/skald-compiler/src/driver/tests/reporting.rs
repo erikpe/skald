@@ -415,7 +415,7 @@ fn lifecycle_planning_diagnostics_stop_before_planned_mir_verification() {
             "  static right: i64 = read_left();\n",
             "  init() {}\n",
             "}\n",
-            "fn main() -> i64 { return 0; }\n",
+            "fn main() -> i64 { return State.left; }\n",
         ),
         Target::X86_64SysV,
         &mut observer,

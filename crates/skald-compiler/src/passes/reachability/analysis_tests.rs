@@ -240,7 +240,7 @@ fn static_activation_and_reverse_shutdown_are_explicit_typed_roots() {
            static item: Item = Item();
            init() {}
          }
-         fn main() -> i64 { return State.zero; }",
+         fn main() -> i64 { State.item = Item(); return State.zero; }",
     );
 
     let activation_roots = analysis
@@ -281,7 +281,7 @@ fn lifecycle_cycles_terminate_and_keep_the_complete_cycle() {
            static value: Loop = Loop();
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.value = Loop(); return 0; }",
     );
 
     assert!(analysis

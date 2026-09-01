@@ -74,7 +74,7 @@ source = "trace_static_shutdown.ska"
 name = "failure"
 expect = { exit = "failure", stderr = { inline = """panic: static shutdown failure
 stacktrace:
-  at trace_static_shutdown::Resource.destroy (tests/golden/runtime/trace_static_shutdown.ska:7:9)
+  at trace_static_shutdown::Resource.destroy (tests/golden/runtime/trace_static_shutdown.ska:11:9)
 """ } }
 
 [[test]]

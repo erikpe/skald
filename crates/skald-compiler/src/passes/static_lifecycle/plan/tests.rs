@@ -25,24 +25,9 @@ fn plan(text: &str) -> PlannedMirProgram {
     })
 }
 
-fn plan_subset(text: &str, active_indices: &[usize]) -> PlannedMirProgram {
-    let preliminary = lower(text);
-    let fields = preliminary
-        .static_fields()
-        .map(|field| field.field)
-        .collect::<Vec<_>>();
-    let active = active_indices.iter().map(|index| fields[*index]).collect();
-    plan_static_lifetimes_for_fields_for_test(preliminary, active).unwrap_or_else(|failure| {
-        panic!(
-            "unexpected subset lifetime diagnostics: {:?}",
-            failure.diagnostics().collect::<Vec<_>>()
-        )
-    })
-}
-
 #[test]
 fn sparse_planning_orders_only_active_dependencies() {
-    let planned = plan_subset(
+    let planned = plan(
         "fn read_base() -> i64 { return State.base; }
          class State {
            static result: i64 = read_base();
@@ -50,8 +35,7 @@ fn sparse_planning_orders_only_active_dependencies() {
            static base: i64 = 1;
            init() {}
          }
-         fn main() -> i64 { return 0; }",
-        &[0, 2],
+         fn main() -> i64 { return State.result; }",
     );
     let fields = planned
         .static_fields()
@@ -78,7 +62,7 @@ fn orders_initialization_dependencies_and_independent_fields_deterministically()
            static last: i64 = 1;
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.dependent + State.independent; }",
     );
     let fields = planned
         .static_fields()
@@ -116,7 +100,7 @@ fn includes_destruction_of_initializer_free_replaceable_owning_fields() {
            init() {}
            destroy { var observed: i64 = State.flag; }
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.item = none; return State.flag; }",
     );
     let fields = planned
         .static_fields()
@@ -144,7 +128,10 @@ fn issues_exact_authority_for_explicit_zero_default_and_destructible_statics() {
            init() {}
            destroy { var observed: i64 = State.zero; }
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 {
+           State.item = none;
+           return State.explicit + State.zero;
+         }",
     );
     let definitions = planned.lifecycle_mir().definitions();
     let explicit = match definitions[0].initialization {
@@ -198,7 +185,7 @@ fn permits_post_publication_cleanup_to_access_the_newly_live_field() {
            init() {}
            destroy { var observed: i64 = State.value; }
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     );
 
     assert!(planned.dependencies().is_empty());
@@ -213,7 +200,7 @@ fn rejects_pre_publication_self_dependencies_with_a_call_witness() {
            static value: i64 = read_value();
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     ))
     .unwrap_err();
     let diagnostic = failure.diagnostics().next().unwrap();
@@ -240,7 +227,7 @@ fn rejects_destruction_self_dependencies_for_initializer_free_arrays() {
            init() {}
            destroy { var count: u64 = State.items.len(); }
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.items = Item[]{}; return 0; }",
     ))
     .unwrap_err();
     let diagnostic = failure.diagnostics().next().unwrap();
@@ -265,7 +252,7 @@ fn rejects_mixed_initialization_and_destruction_cycles() {
            init() {}
            destroy { var observed: u64 = State.count; }
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.count = State.count; return 0; }",
     ))
     .unwrap_err();
     let phases = failure
@@ -300,7 +287,7 @@ fn callable_recursion_remains_separate_from_static_lifetime_cycles() {
            static base: i64 = 1;
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
 
     assert!(planned.planning_report().analysis().recursive_components() >= 1);
@@ -322,7 +309,7 @@ fn overlapping_cycles_select_one_stable_canonical_representative() {
            static c: i64 = read_a();
            init() {}
          }
-         fn main() -> i64 { return 0; }";
+         fn main() -> i64 { return State.a; }";
     let first = plan_static_lifetimes(lower(source)).unwrap_err();
     let first_dump = format!("{:?}", first.diagnostics().collect::<Vec<_>>());
     let diagnostic = first.diagnostics().next().unwrap();
@@ -350,7 +337,7 @@ fn exact_plan_dump_retains_effects_dependencies_witnesses_and_reverse_order() {
            static base: i64 = 1;
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     let dump = dump_static_lifetime_plan(&planned);
     let fields = planned
@@ -386,7 +373,7 @@ fn planning_report_is_inspectable_but_synthesis_retains_only_compact_proof() {
            static result: i64 = invoke(read);
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     let report = planned.planning_report();
     assert!(report.analysis().function_value_candidates().len() > 0);

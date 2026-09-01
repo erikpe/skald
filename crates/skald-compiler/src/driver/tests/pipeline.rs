@@ -795,7 +795,7 @@ fn emits_final_static_fields_through_verified_lifecycle_and_backend_paths() {
             "  final static version: u64 = 1u;\n",
             "  init() {}\n",
             "}\n",
-            "fn main() -> i64 { return 0; }\n",
+            "fn main() -> i64 { var version: u64 = Values.version; return 0; }\n",
         ),
         Target::X86_64SysV,
     )
@@ -1201,7 +1201,7 @@ fn static_lifetime_cycles_are_reported_as_source_diagnostics_before_synthesis() 
             "  static right: i64 = read_left();\n",
             "  init() {}\n",
             "}\n",
-            "fn main() -> i64 { return 0; }\n",
+            "fn main() -> i64 { return State.left; }\n",
         ),
         Target::X86_64SysV,
     )

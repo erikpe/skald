@@ -1,4 +1,4 @@
-//! Stable focused rendering of the shadow activation decision.
+//! Stable focused rendering of the semantic activation decision.
 
 use std::fmt::Write;
 

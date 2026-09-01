@@ -244,10 +244,10 @@ fn private_initializer_dynamic_strings_reclaim_their_last_backing_owner() {
         "report:\n",
         "    mov rax, 1\n",
         "    mov rcx, qword ptr [rip + .Lstring_allocations]\n",
-        // The three conversion tables and Str's empty backing remain live
-        // until program shutdown; the two dynamic string allocations have
-        // already been reclaimed here.
-        "    cmp rcx, 6\n",
+        // Only the two dynamic string allocations are reached, and both have
+        // already been reclaimed here. Unused conversion tables and the empty
+        // backing stay inactive.
+        "    cmp rcx, 2\n",
         "    jne .Lstring_report_done\n",
         "    cmp qword ptr [rip + .Lstring_frees], 2\n",
         "    jne .Lstring_report_done\n",
@@ -298,9 +298,9 @@ fn default_strings_share_one_static_empty_backing() {
         ".type report, @function\n",
         "report:\n",
         "    mov rax, 1\n",
-        // The three conversion tables and one empty string backing are the
-        // only allocations before ordinary static shutdown.
-        "    cmp qword ptr [rip + .Ldefault_string_allocations], 4\n",
+        // The reached empty string backing is the only allocation before
+        // ordinary static shutdown; unused conversion tables stay inactive.
+        "    cmp qword ptr [rip + .Ldefault_string_allocations], 1\n",
         "    jne .Ldefault_string_report_done\n",
         "    cmp qword ptr [rip + .Ldefault_string_frees], 0\n",
         "    jne .Ldefault_string_report_done\n",

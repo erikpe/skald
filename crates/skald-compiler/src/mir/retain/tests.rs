@@ -229,7 +229,7 @@ fn unchanged_and_repeated_retention_are_exact_and_idempotent() {
 fn rejects_an_unreachable_static_initializer_before_consuming_any_container() {
     let program = lower_generic_source_to_final_mir(
         "class State { static value: i64 = 7; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     );
     let before = program.clone();
     let initializer = program.static_lifecycle.as_ref().unwrap().initializers()[0].id;

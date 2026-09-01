@@ -73,14 +73,14 @@ fn unoptimized_final_mir_realizes_baseline_authority_exactly() {
     for source in [
         "fn read() -> i64 { return State.base; }
          class State { static base: i64 = 1; static result: i64 = read(); init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
         "class State { static observed: i64; static item: Item?; init() {} }
          class Item { init() {} destroy { var value: i64 = State.observed; } }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.item = none; return State.observed; }",
         "fn left(flag: bool) -> i64 { if (flag) { return State.base; } return right(true); }
          fn right(flag: bool) -> i64 { if (flag) { return left(true); } return 0; }
          class State { static base: i64 = 1; static result: i64 = left(false); init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     ] {
         let program = synthesized(source);
         let baseline = program
@@ -98,7 +98,7 @@ fn unoptimized_final_mir_realizes_baseline_authority_exactly() {
 fn rejects_missing_baseline_for_a_required_final_root() {
     let mut program = synthesized(
         "class State { static value: i64 = 1; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     );
     program
         .static_lifecycle
@@ -125,7 +125,7 @@ fn accepts_removed_unreachable_access_and_dead_effectful_call() {
            static result: i64 = initialize();
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     let maybe_write = function(&unreachable, "maybe_write");
     let definition = unreachable
@@ -164,7 +164,7 @@ fn accepts_removed_unreachable_access_and_dead_effectful_call() {
            static result: i64 = initialize();
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     let write = function(&dead_call, "write");
     let initialize = function(&dead_call, "initialize");
@@ -184,7 +184,7 @@ fn accepts_inlining_shaped_replacement_with_the_same_root_fact() {
     let mut program = synthesized(
         "fn read() -> i64 { return State.base; }
          class State { static base: i64 = 1; static result: i64 = read(); init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     let base = program
         .classes
@@ -254,7 +254,7 @@ fn accepts_virtual_interface_and_indirect_target_narrowing() {
          }
          fn read_virtual(ref value: Base) -> i64 { return value.read(); }
          fn read_interface(ref value: View) -> i64 { return value.read(); }
-         fn main() -> i64 { return 0; }";
+         fn main() -> i64 { return State.virtual_result + State.interface_result; }";
 
     let mut virtual_program = synthesized(dynamic_source);
     for family in virtual_program.virtual_families.entries_mut_for_test() {
@@ -301,7 +301,7 @@ fn accepts_virtual_interface_and_indirect_target_narrowing() {
            static result: i64 = invoke(read_left);
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result + State.right; }",
     );
     let left = CallableId::Function(function(&indirect, "read_left"));
     let right = CallableId::Function(function(&indirect, "read_right"));
@@ -359,7 +359,9 @@ fn optimization_sequence_reseals_after_removal_narrowing_and_inlining() {
            init() { super(); }
            override fn read() -> i64 { return State.child; }
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 {
+           return State.initialized + State.inlined + State.narrowed;
+         }",
     );
 
     let maybe_write = function(&program, "maybe_write");
@@ -434,7 +436,7 @@ fn rejects_new_target_and_access_kind_facts() {
            static result: i64 = read();
            init() {}
          }
-         fn main() -> i64 { return 0; }";
+         fn main() -> i64 { return State.result + State.other; }";
     let mut new_target = synthesized(source);
     let other = new_target
         .classes
@@ -513,7 +515,7 @@ fn rejects_new_target_and_access_kind_facts() {
 fn rejects_static_access_moved_across_publication() {
     let mut program = synthesized(
         "class State { static base: i64 = 1; static result: i64 = State.base; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     let coordinator = program.static_lifecycle.as_mut().unwrap();
     let body = coordinator
@@ -572,7 +574,7 @@ fn rejects_realized_dependency_that_violates_a_corrupted_frozen_order() {
     let mut program = synthesized(
         "fn read_base() -> i64 { return State.base; }
          class State { static result: i64 = read_base(); static base: i64 = 1; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     {
         let coordinator = program.static_lifecycle.as_mut().unwrap();
@@ -599,7 +601,7 @@ fn rejects_missing_surviving_indirect_target() {
         "fn read() -> i64 { return State.value; }
          fn invoke(callback: fn() -> i64) -> i64 { return callback(); }
          class State { static value: i64 = 1; static result: i64 = invoke(read); init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result; }",
     );
     let foreign = CallableId::Function(FunctionId::new(usize::MAX));
     let assignment = program

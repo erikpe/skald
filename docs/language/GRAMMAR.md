@@ -398,10 +398,10 @@ Type checking lowers all supported stored static types—including primitives,
 exact classes, optionals, shared owners, strings, and inline arrays—through
 typed HIR and verified lifecycle MIR.
 
-The frozen reachability-gated lifetime direction changes no production above.
-It adds no eager, lazy, module-initializer, registration, or retention syntax;
-the semantic distinction between a declared and active static remains owned by
-[Static Fields](STATIC_FIELDS.md#frozen-reachability-gated-activation-direction).
+The implemented reachability-gated lifetime contract changes no production
+above. It adds no eager, lazy, module-initializer, registration, or retention
+syntax; the semantic distinction between a declared and active static remains
+owned by [Static Fields](STATIC_FIELDS.md#frozen-reachability-gated-activation-direction).
 
 ### Private-cell field declarations
 

@@ -3,6 +3,10 @@ from std::error import panic;
 class Resource {
     init() {}
 
+    fn keep() -> i64 {
+        return 0;
+    }
+
     destroy {
         panic("static shutdown failure");
     }
@@ -14,5 +18,5 @@ class State {
 }
 
 fn main() -> i64 {
-    return 0;
+    return State.resource.keep();
 }

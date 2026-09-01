@@ -51,8 +51,8 @@ a dependency cycle, with declaration, static-use, and transitive
 call/lifecycle evidence. A valid plan retains deterministic activation and
 exact-reverse shutdown order in a separately verified lifecycle-MIR
 proof; malformed proof metadata is a MIR verification failure.
-Every accepted initializer executes once in the verified dependency order
-before entry, while initializer-free fields activate without Skald value work.
+Every active initializer executes once in the verified dependency order before
+entry, while active initializer-free fields activate without Skald value work.
 Primitive, object, optional, shared-owner, and inline-array declarations lower
 through typed static places to verified lifecycle MIR and deterministic x86-64
 startup. On normal entry return, the generated finalizer destroys current
@@ -63,15 +63,15 @@ Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional
 unwrap, array bounds, allocation, and ownership-count failure.
 
-The frozen
-[reachability-gated activation direction](STATIC_FIELDS.md#frozen-reachability-gated-activation-direction)
-changes only the lifecycle-diagnostic domain. `STA001` and `STA002` will apply
+The implemented
+[reachability-gated activation contract](STATIC_FIELDS.md#frozen-reachability-gated-activation-direction)
+changes only the lifecycle-diagnostic domain. `STA001` and `STA002` apply
 to the exact active static graph, so a wholly inactive self-dependency or cycle
 will not be rejected. Making any member activation-reachable brings its
 transitive active component and the existing source-rich evidence back into
 those diagnostics. Syntax, resolution, typing, privacy, stored-value,
 ownership, and preliminary-MIR failures remain mandatory for inactive
-declarations. This is frozen direction, not current compiler behavior.
+declarations.
 
 ## Current runtime failures
 

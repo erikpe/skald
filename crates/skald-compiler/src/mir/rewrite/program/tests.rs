@@ -28,7 +28,10 @@ const COMPLETE_EXECUTABLE_SURFACE: &str = concat!(
     "  fn read() -> i64 { return self.value; }\n",
     "  static fn twice(value: i64) -> i64 { return value + value; }\n",
     "}\n",
-    "fn main() -> i64 { var item: Item = Item(3); return item.read(); }\n",
+    "fn main() -> i64 {\n",
+    "  var item: Item = Item(3);\n",
+    "  return item.read() + Item.first + Item.second - 9;\n",
+    "}\n",
 );
 
 const REWRITE_DETERMINISM_CHILD: &str = "SKALD_REWRITE_DETERMINISM_CHILD";

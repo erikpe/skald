@@ -17,7 +17,7 @@ fn lowers_exact_reverse_shutdown_and_preserves_the_entry_result() {
         "  static first: Item = Item(1); static primitive: i64 = 2;\n",
         "  static last: Item = Item(3); init() {}\n",
         "}\n",
-        "fn main() -> i64 { return 42; }\n",
+        "fn main() -> i64 { return State.first.value + State.last.value + 38; }\n",
     );
     let assembly = compile(source);
     let finalizer = function_assembly(&assembly, ".Lska.static.finalize");

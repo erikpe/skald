@@ -478,14 +478,11 @@ diagnostic behavior.
 
 ### Frozen reachability-gated static lifecycle direction
 
-Status: **frozen direction, independently sealed shadow activation and final
-safety boundary implemented; semantic cutover not yet implemented**. The
-compiler now computes and independently re-solves the exact activation closure
-at the accepted preliminary-MIR boundary. Its proof, planner, synthesis, dumps,
-and verifiers can represent any exact active subset, and central final
-verification rejects reachable accesses outside the certified subset. The
-production entry point still certifies every declared static and therefore
-preserves current eager runtime behavior. The source-visible contract is owned by
+Status: **semantic cutover implemented**. The compiler computes and
+independently re-solves the exact activation closure at the accepted
+preliminary-MIR boundary. Its proof, planner, synthesis, dumps, and verifiers
+carry the exact active subset, and central final verification rejects reachable
+accesses outside that certified subset. The source-visible contract is owned by
 [Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
 the complete decisions by the
 [frozen design record](../roadmaps/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
@@ -514,11 +511,11 @@ shared-owner, and array target rules are part of the frozen semantic analysis.
 One immutable analysis product owns the canonically sorted active set,
 activation edges, conservative targets, counts, and canonical first triggers
 and witnesses. Planning reports and dumps may retain explanations, but proof
-identity remains compact. Planned-MIR verification re-extracts preliminary MIR,
-re-solves activation without trusting the planning report, solved summaries, or
-witness paths, and seals the resulting exact field set separately in the
-verified phase product. Until semantic cutover, lifecycle planning deliberately
-continues to issue its production certificate for the all-declared set.
+identity remains compact. Planned-MIR verification re-extracts preliminary MIR
+and re-solves activation without trusting the planning report, solved
+summaries, witness paths, or planner-issued compact set. It requires the report
+and lifecycle certificate to equal the independently recomputed field set
+before issuing the verified phase product.
 
 Planned and final lifecycle MIR contain definitions, order, initializer bodies,
 activation regions, destruction regions, and root authority for exactly the
@@ -578,21 +575,17 @@ per-cause conservative target counts, and a focused deterministic dump. It
 consumes the same extracted execution dependencies, direct static accesses,
 scoped callable-address formations, indirect-call sites, entry policy, and
 static cleanup target resolver as target-independent reachability. Static-
-lifecycle planning extracts those facts once and computes the shadow result.
-Planned verification separately extracts and solves them again, rejects a
-mismatching report claim, and binds its independently issued semantic
-`StaticActivationAuthority` into `VerifiedPlannedMirProgram`. Planning still
-deliberately issues a distinct production `StaticActivationAuthority` for the
-all-declared compatibility set. The compact final proof stores that authority
-beside only the lifecycle roots required by it. Definitions, dependency order,
+lifecycle planning extracts those facts once and computes the semantic result.
+Planned verification separately extracts and solves them again and rejects a
+mismatching report or compact certificate. The compact final proof stores that
+exact authority beside only the lifecycle roots required by it. Definitions,
+dependency order,
 derived shutdown/transitions, moved initializer bodies, and coordinator regions
 must exactly cover the authority; declarations and preliminary initializer
 bodies remain complete and keep stable IDs. Internal empty and sparse fixtures
 exercise this boundary. Source-rich triggers, witnesses, edges, target counts,
 and summary counts remain untrusted planning-report data; they are not
-certificate authority, public observation state, or a selector of diagnostics
-or production MIR yet. The independently sealed exact set is ready for the
-production lifecycle planner to consume at semantic cutover.
+certificate authority or public observation state.
 
 ### Dense callable-local MIR identity rewriting
 

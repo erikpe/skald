@@ -7,14 +7,10 @@ use super::{
     program_error,
 };
 
-/// Re-solves activation from verified preliminary MIR and binds the exact
-/// field set into the verified phase product. The planning report is compared
-/// only as an untrusted claimed result; its witnesses and summaries do not
-/// participate in authority issuance.
-pub(super) fn verify(
-    program: &PlannedMirProgram,
-    errors: &mut Vec<MirVerificationError>,
-) -> Option<StaticActivationAuthority> {
+/// Re-solves activation from verified preliminary MIR and checks both the
+/// compact certificate and the source-rich report against that exact result.
+/// Report witnesses and summaries never participate in authority issuance.
+pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificationError>) {
     let recomputed = match analyze_static_activation(program.preliminary()) {
         Ok(analysis) => analysis,
         Err(error) => {
@@ -22,7 +18,7 @@ pub(super) fn verify(
                 errors,
                 format!("cannot independently recompute static activation: {error}"),
             );
-            return None;
+            return;
         }
     };
     let expected = StaticActivationAuthority::new(
@@ -42,26 +38,42 @@ pub(super) fn verify(
             .collect(),
     );
 
-    if expected != reported {
-        let missing = expected
-            .fields()
-            .iter()
-            .copied()
-            .filter(|field| !reported.contains(*field))
-            .collect::<Vec<_>>();
-        let extra = reported
-            .fields()
-            .iter()
-            .copied()
-            .filter(|field| !expected.contains(*field))
-            .collect::<Vec<_>>();
-        program_error(
+    if &expected != program.activation_authority() {
+        report_difference(
             errors,
-            format!(
-                "planning report shadow activation disagrees with independent preliminary-MIR activation; missing {missing:?}; extra {extra:?}"
-            ),
+            "static activation certificate",
+            &expected,
+            program.activation_authority(),
         );
     }
 
-    Some(expected)
+    if expected != reported {
+        report_difference(errors, "planning report activation", &expected, &reported);
+    }
+}
+
+fn report_difference(
+    errors: &mut Vec<MirVerificationError>,
+    subject: &str,
+    expected: &StaticActivationAuthority,
+    actual: &StaticActivationAuthority,
+) {
+    let missing = expected
+        .fields()
+        .iter()
+        .copied()
+        .filter(|field| !actual.contains(*field))
+        .collect::<Vec<_>>();
+    let extra = actual
+        .fields()
+        .iter()
+        .copied()
+        .filter(|field| !expected.contains(*field))
+        .collect::<Vec<_>>();
+    program_error(
+        errors,
+        format!(
+            "{subject} disagrees with independent preliminary-MIR activation; missing {missing:?}; extra {extra:?}"
+        ),
+    );
 }

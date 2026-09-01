@@ -1047,7 +1047,7 @@ fn atomic_rewrite_visits_functions_members_and_static_initializers() {
            fn value() -> i64 { return 1 + 1; }
          }
          fn helper() -> i64 { return 1 + 1; }
-         fn main() -> i64 { return helper(); }",
+         fn main() -> i64 { return helper() + State.base - 2; }",
     );
 
     let measured = run_mir_pipeline_measured(mir, &test_schedule(&[REWRITE_ALL]));
@@ -1082,7 +1082,7 @@ fn lifecycle_effect_change_rechecks_immutable_baseline_authority() {
            static result: i64 = read();
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.result + State.other; }",
     );
     let read = mir
         .declarations

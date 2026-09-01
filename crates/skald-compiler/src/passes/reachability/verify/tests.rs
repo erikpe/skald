@@ -5,8 +5,7 @@ use crate::{
     mir::{verify_mir, verify_preliminary_mir, MirProgram},
     passes::{
         static_lifecycle::{
-            plan_static_lifetimes_for_fields_for_test, synthesize_static_lifecycle,
-            verify_planned_mir,
+            plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
         },
         verify_final_mir, VerifiedFinalMirProgram,
     },
@@ -58,13 +57,9 @@ fn static_field(program: &MirProgram, class_name: &str, name: &str) -> StaticFie
         .id
 }
 
-fn sparse_static_program(source: &str, active_names: &[&str]) -> MirProgram {
+fn sparse_static_program(source: &str) -> MirProgram {
     let preliminary = lower_generic_source_to_preliminary_mir(source);
-    let active = active_names
-        .iter()
-        .map(|name| static_field(preliminary.program(), "State", name))
-        .collect();
-    let planned = plan_static_lifetimes_for_fields_for_test(preliminary, active)
+    let planned = plan_static_lifetimes(preliminary)
         .expect("test program must have an acyclic sparse lifecycle plan");
     synthesize_static_lifecycle(verify_planned_mir(planned).unwrap())
 }
@@ -130,7 +125,7 @@ fn assert_verified(program: MirProgram) -> VerifiedFinalMirProgram {
 
 #[test]
 fn inactive_static_access_is_allowed_only_in_unreachable_retained_code() {
-    let program = sparse_static_program(SPARSE_ACCESS_SOURCE, &["live"]);
+    let program = sparse_static_program(SPARSE_ACCESS_SOURCE);
     let dead = function(&program, "dead");
     let verified = verify_final_mir(program).expect("unreachable access is not executable");
 
@@ -146,11 +141,11 @@ fn inactive_static_access_is_allowed_only_in_unreachable_retained_code() {
 
 #[test]
 fn reachable_inactive_static_access_has_exact_deterministic_failure() {
-    let source = SPARSE_ACCESS_SOURCE.replace(
-        "fn main() -> i64 { return State.live; }",
-        "fn main() -> i64 { return State.inactive; }",
-    );
-    let program = sparse_static_program(&source, &["live"]);
+    let mut program = sparse_static_program(SPARSE_ACCESS_SOURCE);
+    program.entry_function = match function(&program, "dead") {
+        CallableId::Function(function) => function,
+        _ => unreachable!(),
+    };
     let entry = program.entry_function;
     let inactive = static_field(&program, "State", "inactive");
     let first = verify_final_mir(program.clone()).unwrap_err();
@@ -168,18 +163,22 @@ fn reachable_inactive_static_access_has_exact_deterministic_failure() {
 
 #[test]
 fn structural_false_branch_does_not_hide_reachable_inactive_access() {
-    let program = sparse_static_program(
+    let mut program = sparse_static_program(
         "class State {
            static live: i64 = 1;
            static inactive: i64 = 2;
            init() {}
          }
-         fn main() -> i64 {
+         fn branch() -> i64 {
            if (false) { return State.inactive; }
-           return State.live;
-         }",
-        &["live"],
+           return 0;
+         }
+         fn main() -> i64 { return State.live; }",
     );
+    program.entry_function = match function(&program, "branch") {
+        CallableId::Function(function) => function,
+        _ => unreachable!(),
+    };
 
     assert!(verify_final_mir(program)
         .unwrap_err()
@@ -189,7 +188,7 @@ fn structural_false_branch_does_not_hide_reachable_inactive_access() {
 
 #[test]
 fn changed_entry_rebuilds_reachability_and_rejects_new_inactive_access() {
-    let mut program = sparse_static_program(SPARSE_ACCESS_SOURCE, &["live"]);
+    let mut program = sparse_static_program(SPARSE_ACCESS_SOURCE);
     verify_final_mir(program.clone()).expect("original entry accesses only active storage");
     program.entry_function = match function(&program, "dead") {
         CallableId::Function(function) => function,
@@ -204,11 +203,15 @@ fn changed_entry_rebuilds_reachability_and_rejects_new_inactive_access() {
 
 #[test]
 fn active_lifecycle_remains_reachable_after_ordinary_access_disappears() {
-    let program = sparse_static_program(
+    let mut program = sparse_static_program(
         "class State { static live: i64 = 1; init() {} }
-         fn main() -> i64 { return 0; }",
-        &["live"],
+         fn inert() -> i64 { return 0; }
+         fn main() -> i64 { return State.live; }",
     );
+    program.entry_function = match function(&program, "inert") {
+        CallableId::Function(function) => function,
+        _ => unreachable!(),
+    };
     let live = static_field(&program, "State", "live");
     let verified = verify_final_mir(program).expect("activation is monotone across final MIR");
 
@@ -565,7 +568,7 @@ fn optional_shared_array_and_static_roots_retain_their_transitive_bodies() {
 
     let static_program = lower_generic_source_to_final_mir(
         "class State { static value: i64 = 7; init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     );
     let initializer = static_program
         .static_lifecycle
@@ -588,7 +591,7 @@ fn optional_shared_array_and_static_roots_retain_their_transitive_bodies() {
     let static_shutdown = lower_generic_source_to_final_mir(
         "class Item { init() {} destroy {} }
          class State { static item: Item = Item(); init() {} }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { State.item = Item(); return 0; }",
     );
     let destructor = static_shutdown
         .class(class(&static_shutdown, "Item"))

@@ -8,31 +8,32 @@ use crate::{
 
 use super::{errors, verify_planned_mir, PlannedMirProgram};
 
-const SUBSET_SOURCE: &str = "class State {
+const SUBSET_DECLARATIONS: &str = "class State {
        static first: i64 = 1;
        static inactive: i64 = 2;
        static last: i64 = 3;
        init() {}
-     }
-     fn main() -> i64 { return 0; }";
+     }";
 
-fn sparse_plan(source: &str, active_indices: &[usize]) -> PlannedMirProgram {
-    let checked = type_check_source(source);
+fn sparse_plan(active_indices: &[usize]) -> PlannedMirProgram {
+    let names = ["first", "inactive", "last"];
+    let accesses = active_indices
+        .iter()
+        .map(|index| format!("State.{0} = State.{0};", names[*index]))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let source = format!("{SUBSET_DECLARATIONS} fn main() -> i64 {{ {accesses} return 0; }}");
+    let checked = type_check_source(&source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
-    let fields = preliminary
-        .static_fields()
-        .map(|field| field.field)
-        .collect::<Vec<_>>();
-    let active = active_indices.iter().map(|index| fields[*index]).collect();
-    super::super::super::plan::plan_static_lifetimes_for_fields_for_test(preliminary, active)
+    super::super::super::plan_static_lifetimes(preliminary)
         .expect("test active set must have an acyclic lifecycle")
 }
 
 #[test]
 fn accepts_empty_one_sparse_and_complete_active_authority() {
     for active in [&[][..], &[0][..], &[0, 2][..], &[0, 1, 2][..]] {
-        let planned = sparse_plan(SUBSET_SOURCE, active);
+        let planned = sparse_plan(active);
         assert_eq!(planned.activation_authority().len(), active.len());
         assert_eq!(planned.lifecycle_mir().definitions().len(), active.len());
         assert_eq!(planned.lifecycle().activation().len(), active.len());
@@ -45,7 +46,7 @@ fn accepts_empty_one_sparse_and_complete_active_authority() {
 
 #[test]
 fn sparse_products_keep_stable_declarations_and_deterministic_derived_views() {
-    let planned = sparse_plan(SUBSET_SOURCE, &[2, 0]);
+    let planned = sparse_plan(&[2, 0]);
     let declared = planned
         .static_fields()
         .map(|field| field.field)
@@ -80,7 +81,7 @@ fn sparse_products_keep_stable_declarations_and_deterministic_derived_views() {
 
 #[test]
 fn rejects_malformed_active_field_authority() {
-    let mut duplicate = sparse_plan(SUBSET_SOURCE, &[0, 2]);
+    let mut duplicate = sparse_plan(&[0, 2]);
     let fields = duplicate
         .lifecycle_mut_for_test()
         .proof_mut_for_test()
@@ -89,7 +90,7 @@ fn rejects_malformed_active_field_authority() {
     fields.insert(1, fields[0]);
     assert!(errors(&duplicate).contains("duplicate field"));
 
-    let mut reordered = sparse_plan(SUBSET_SOURCE, &[0, 2]);
+    let mut reordered = sparse_plan(&[0, 2]);
     reordered
         .lifecycle_mut_for_test()
         .proof_mut_for_test()
@@ -98,7 +99,7 @@ fn rejects_malformed_active_field_authority() {
         .reverse();
     assert!(errors(&reordered).contains("not in canonical field order"));
 
-    let mut foreign = sparse_plan(SUBSET_SOURCE, &[0]);
+    let mut foreign = sparse_plan(&[0]);
     foreign
         .lifecycle_mut_for_test()
         .proof_mut_for_test()
@@ -109,7 +110,7 @@ fn rejects_malformed_active_field_authority() {
 
 #[test]
 fn rejects_missing_and_extra_subset_roots_and_schema_entries() {
-    let mut missing_root = sparse_plan(SUBSET_SOURCE, &[0, 2]);
+    let mut missing_root = sparse_plan(&[0, 2]);
     missing_root
         .lifecycle_mut_for_test()
         .proof_mut_for_test()
@@ -118,7 +119,7 @@ fn rejects_missing_and_extra_subset_roots_and_schema_entries() {
         .pop();
     assert!(errors(&missing_root).contains("omits lifecycle root"));
 
-    let full = sparse_plan(SUBSET_SOURCE, &[0, 1, 2]);
+    let full = sparse_plan(&[0, 1, 2]);
     let inactive_field = full.static_fields().nth(1).unwrap().field;
     let inactive_initializer = full.static_fields().nth(1).unwrap().initializer.unwrap();
     let extra_root = full
@@ -126,7 +127,7 @@ fn rejects_missing_and_extra_subset_roots_and_schema_entries() {
         .root(StaticEffectNode::callable(inactive_initializer.into()))
         .unwrap()
         .clone();
-    let mut extra = sparse_plan(SUBSET_SOURCE, &[0, 2]);
+    let mut extra = sparse_plan(&[0, 2]);
     assert!(!extra.activation_authority().contains(inactive_field));
     let roots = extra
         .lifecycle_mut_for_test()
@@ -137,14 +138,14 @@ fn rejects_missing_and_extra_subset_roots_and_schema_entries() {
     roots.sort_by_key(|root| root.root());
     assert!(errors(&extra).contains("extra lifecycle root"));
 
-    let mut missing_definition = sparse_plan(SUBSET_SOURCE, &[0, 2]);
+    let mut missing_definition = sparse_plan(&[0, 2]);
     missing_definition
         .lifecycle_mut_for_test()
         .definitions_mut_for_test()
         .pop();
     assert!(errors(&missing_definition).contains("active authority"));
 
-    let mut missing_activation = sparse_plan(SUBSET_SOURCE, &[0, 2]);
+    let mut missing_activation = sparse_plan(&[0, 2]);
     missing_activation
         .lifecycle_mut_for_test()
         .plan_mut_for_test()

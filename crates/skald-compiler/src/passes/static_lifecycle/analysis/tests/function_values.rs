@@ -135,7 +135,7 @@ fn indirect_effects_participate_in_self_and_cycle_diagnostics() {
            static value: i64 = invoke(read);
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.value; }",
     ))
     .unwrap_err();
     let self_diagnostic = self_failure.diagnostics().next().unwrap();
@@ -158,7 +158,7 @@ fn indirect_effects_participate_in_self_and_cycle_diagnostics() {
            static right: i64 = invoke_i64(read_left);
            init() {}
          }
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { return State.left; }",
     ))
     .unwrap_err();
     let cycle_diagnostic = cycle_failure.diagnostics().next().unwrap();

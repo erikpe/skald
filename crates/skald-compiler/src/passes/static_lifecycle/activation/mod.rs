@@ -3,9 +3,8 @@
 //! This module owns only field-activation policy and its deterministic result
 //! vocabulary. Neutral execution identities, dependency kinds, lifecycle
 //! expansion, and possible-target selection remain owned by
-//! `passes::reachability`. Extraction and fixed-point solving are added in
-//! later implementation slices; declaring this module does not change eager
-//! static-lifecycle behavior.
+//! `passes::reachability`. The fixed point computed here is the semantic input
+//! to exact lifecycle planning.
 
 mod dump;
 mod error;

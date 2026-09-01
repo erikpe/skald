@@ -1,6 +1,6 @@
 # Reachability-Gated Static Lifecycle Roadmap
 
-Status: in progress; RSR0 through RSR4 are complete and RSR5 is next.
+Status: in progress; RSR0 through RSR5 are complete and RSR6 is next.
 
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
@@ -92,7 +92,7 @@ reduce future optimization cost; larger findings belong in the
 - [x] RSR2 — Compute and inspect the shadow activation closure
 - [x] RSR3 — Generalize lifecycle proof and schema for an active subset
 - [x] RSR4 — Verify final access against exact activation authority
-- [ ] RSR5 — Switch lifecycle planning and synthesis to reachable activation
+- [x] RSR5 — Switch lifecycle planning and synthesis to reachable activation
 - [ ] RSR6 — Align backend planning and artifact retention
 - [ ] RSR7 — Publish activation observation and migration diagnostics
 - [ ] RSR8 — Harden the language transition and close the roadmap
@@ -372,24 +372,24 @@ continue to enforce the other active-lifecycle obligations.
 analysis, subset products, and final safety checks are all independently
 established.
 
-- [ ] Replace all-declared production planning input with the verified exact
+- [x] Replace all-declared production planning input with the verified exact
       activation authority from the mandatory preliminary-MIR boundary.
-- [ ] Build the dependency graph, planning report, definitions, authority, and
+- [x] Build the dependency graph, planning report, definitions, authority, and
       activation order for exactly active fields; derive exact-reverse shutdown
       from that order.
-- [ ] Restrict `STA001` and `STA002` to active graph components while retaining
+- [x] Restrict `STA001` and `STA002` to active graph components while retaining
       all ordinary source and preliminary-MIR errors in inactive declarations
       and initializer bodies.
-- [ ] Move only active explicit initializer bodies into final MIR and synthesize
+- [x] Move only active explicit initializer bodies into final MIR and synthesize
       only active zero-default transitions and active destruction regions.
-- [ ] Preserve pre-publication self-access rules, post-publication cleanup,
+- [x] Preserve pre-publication self-access rules, post-publication cleanup,
       stored-value ownership, replacement, panic, allocation, and non-unwinding
       shutdown behavior for active fields.
-- [ ] Ensure `none`, `default`, pass exclusions, repeated schedules, and every
+- [x] Ensure `none`, `default`, pass exclusions, repeated schedules, and every
       backend target receive the same active authority and runtime lifecycle.
-- [ ] Remove compatibility-only all-declared adapters and shadow-only plumbing
+- [x] Remove compatibility-only all-declared adapters and shadow-only plumbing
       once the verified production path owns the result.
-- [ ] Update language status, static-field/error contracts, compiler phases,
+- [x] Update language status, static-field/error contracts, compiler phases,
       and all text that still calls declaration-wide eager activation current.
 
 **Tests:** Direct read/write/borrow activation; unused explicit and zero-default
@@ -406,6 +406,22 @@ focused compile-failure and native goldens; `make compiler-test`;
 **Exit criteria:** Reachability-gated activation is the documented and executed
 language contract, inactive lifecycle work is absent from final MIR, and all
 optimization policies preserve the same observable static behavior.
+
+Completed on 2026-09-01. Production planning now derives its compact active
+authority directly from the entry-rooted preliminary-MIR fixed point, builds
+effects, dependency diagnostics, definitions, order, and exact-reverse
+shutdown only for that domain, and moves only active initializer bodies into
+the final coordinator. Independent planned verification requires both the
+untrusted report and compact certificate to equal a fresh activation solution;
+the former parallel semantic-authority field and manual subset-planning adapter
+are gone. Lifecycle baseline effects are restricted to active targets, which
+keeps unreachable conservative function-value candidates from reintroducing
+inactive fields while final reachability still rejects any genuinely reachable
+inactive access. Focused unit, driver, backend, determinism, profile, and golden
+fixtures now distinguish inactive accepted cycles and omitted effects from the
+same components after ordinary access activates them. Living language,
+compiler, backend, driver, debugging, and roadmap status documents describe
+the reachability-gated behavior as current.
 
 ### RSR6 — Align backend planning and artifact retention
 

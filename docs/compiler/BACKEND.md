@@ -1092,28 +1092,28 @@ closure.
 
 ## Frozen reachability-gated static lifecycle boundary
 
-Status: **frozen direction, not yet implemented**. Current backend input still
-contains lifecycle work for every declared static. The future source semantics
-are defined by
+Status: **active coordinator input implemented; active-slot planning remains
+roadmap work**. Current backend input contains lifecycle work only for the
+certified active statics. The source semantics are defined by
 [Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
 and phase ownership is defined by
 [Phases and IR](PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction).
 
-The backend will continue to accept only verified final MIR and will not infer,
-narrow, or replan static activation. Its private program initializer and
-finalizer will be generated solely from the certified active coordinator
+The backend accepts only verified final MIR and does not infer, narrow, or
+replan static activation. Its private program initializer and finalizer are
+generated solely from the certified active coordinator
 regions, so no inactive initializer or eventual-value destruction may execute.
 Target planning should use the verified active-static query for storage and
 metadata where safe.
 
-A first implementation may conservatively plan an addressable private slot for
+The current implementation may conservatively plan an addressable private slot for
 an inactive declaration when a physically retained unreachable body still
 mentions it. Such a slot has no source-visible lifetime, initializer, or
 destructor. The existing target-generated symbol walk must remove it and all
 initializer, helper, literal, trace, and metadata artifacts reachable only from
 inactive work in ordinary emitted output.
 
-This direction changes no public runtime service, ABI version, host wrapper,
+This contract changes no public runtime service, ABI version, host wrapper,
 entry/result protocol, object layout, field layout, calling convention,
 relocation rule, or public symbol. Whole-world compilation makes active storage
 known before target lowering, while single-threaded execution requires no

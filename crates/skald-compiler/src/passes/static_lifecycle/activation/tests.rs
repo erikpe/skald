@@ -8,9 +8,7 @@ use crate::{
         lower_preliminary_hir, verify_preliminary_mir, PreliminaryMirProgram, StaticAccessKind,
         StaticEffectPhase,
     },
-    passes::static_lifecycle::{
-        plan_static_lifetimes, STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
-    },
+    passes::static_lifecycle::plan_static_lifetimes,
     resolve::resolve_module_graph,
     test_support::{
         load_module_sources, load_module_sources_with_standard_library,
@@ -153,18 +151,14 @@ fn focused_source_fixtures_cover_future_activation_inputs() {
 }
 
 #[test]
-fn current_eager_planner_still_rejects_unused_self_dependencies_and_cycles() {
-    for (source, code) in [
-        (SELF_DEPENDENCY_SOURCE, STATIC_LIFECYCLE_SELF_DEPENDENCY),
-        (CYCLE_SOURCE, STATIC_LIFECYCLE_DEPENDENCY_CYCLE),
-    ] {
+fn inactive_self_dependencies_and_cycles_do_not_enter_lifecycle_planning() {
+    for source in [SELF_DEPENDENCY_SOURCE, CYCLE_SOURCE] {
         let checked = type_check_source(source);
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
         let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
-        let failure = plan_static_lifetimes(preliminary).unwrap_err();
-        assert!(failure
-            .diagnostics()
-            .any(|diagnostic| diagnostic.code == code));
+        let planned = plan_static_lifetimes(preliminary).unwrap();
+        assert!(planned.activation_authority().is_empty());
+        assert!(planned.lifecycle().activation().is_empty());
     }
 }
 

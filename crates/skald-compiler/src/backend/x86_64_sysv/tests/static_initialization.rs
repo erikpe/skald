@@ -24,7 +24,13 @@ fn lowers_the_complete_initialized_static_storage_matrix() {
         "  static values: i64[] = i64[]{10, 11};\n",
         "  init() {}\n",
         "}\n",
-        "fn main() -> i64 { return 0; }\n",
+        "fn main() -> i64 {\n",
+        "  State.signed = 1; State.unsigned = 2u; State.byte = 3u8;\n",
+        "  State.ratio = 4.0; State.ready = true; State.item = Item(5);\n",
+        "  State.maybe_number = 6; State.maybe_item = Item(7);\n",
+        "  State.owner = new Item(8); State.maybe_owner = new Item(9);\n",
+        "  State.values = i64[]{10, 11}; return 0;\n",
+        "}\n",
     );
     let program = lower_source_to_final_mir(source);
     let layout = DataLayout::compute(&program).unwrap();
@@ -110,7 +116,7 @@ fn initializer_side_effects_and_post_publication_cleanup_finish_in_order() {
         "class State {\n",
         "  static item: Item = (Item(1)); static next: i64 = test_step(2); init() {}\n",
         "}\n",
-        "fn main() -> i64 { return State.next + 40; }\n",
+        "fn main() -> i64 { return State.next + State.item.value + 39; }\n",
     );
     let mut assembly = compile(source);
     assembly.push_str(ordered_step_stub());

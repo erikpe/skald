@@ -11,10 +11,13 @@ The
 changes runtime lifecycle from declaration-wide eager activation to one exact
 entry-rooted active-field closure while keeping declarations and preliminary
 initializer checking whole-world. RSR0 established the private activation
-vocabulary and pinned current eager behavior; RSR1 centralized direct static-
+vocabulary and pinned the prior eager behavior; RSR1 centralized direct static-
 place extraction in the shared dependency inventory; RSR2 added the exact
 coupled activation closure, private queries and dump, deterministic evidence,
-and mandatory shadow execution while preserving the eager plan; RSR3 is next. It depends
+and mandatory shadow execution while preserving the eager plan; RSR3 added
+subset-capable lifecycle products, RSR4 established final monotone safety, and
+RSR5 switched production planning and synthesis to the exact active set. RSR6
+is next. It depends
 on the completed static-lifecycle certificate, selectable final-MIR pipeline,
 dense MIR rewriting, and target-independent reachability foundations.
 
@@ -60,8 +63,8 @@ The frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
 changes class-owned statics from import-wide eager activation to one exact,
 mandatory, field-grained activation closure rooted at the selected entry.
-Active fields will still initialize eagerly before entry and shut down in
-exact reverse order; declarations and preliminary initializer checking would
+Active fields initialize eagerly before entry and shut down in exact reverse
+order; declarations and preliminary initializer checking
 remain whole-world. The design adds no eager/module-initialization syntax. Its
 decisions are promoted into the living
 [language](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction)
