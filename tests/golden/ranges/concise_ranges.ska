@@ -91,9 +91,8 @@ fn main() -> i64 {
     std::io::println_i64(first(4, 2));
 
     var nested_total: u64 = 0u;
-    var nested_stored: Range<u64> = Range<u64>(1u, 3u);
     for (outer in 0u .. 2u) {
-        for (inner in nested_stored) {
+        for (inner in 1u .. 3u) {
             nested_total = nested_total + outer + inner;
         }
     }

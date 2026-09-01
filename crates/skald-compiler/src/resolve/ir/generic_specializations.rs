@@ -168,6 +168,25 @@ impl GenericSpecializationTable {
             })
     }
 
+    /// Finds a completed class by semantic key without requiring a source-site
+    /// origin. Semantic request discovery uses this while registering new
+    /// origins; final source resolution remains application-specific.
+    pub(crate) fn class_for_key(
+        &self,
+        template: ClassTemplateId,
+        arguments: &[ResolvedTypeKind],
+    ) -> Option<ClassId> {
+        self.entries
+            .iter()
+            .find(|entry| entry.key.template == template && entry.key.arguments == arguments)
+            .and_then(|entry| match entry.state {
+                GenericSpecializationState::Complete(class) => Some(class),
+                GenericSpecializationState::Requested
+                | GenericSpecializationState::InProgress(_)
+                | GenericSpecializationState::Failed { .. } => None,
+            })
+    }
+
     pub(crate) fn at_application(
         &self,
         module: ModuleId,

@@ -314,6 +314,91 @@ fn concise_range_requests_follow_overloaded_operator_result_types() {
 }
 
 #[test]
+fn nested_concise_ranges_reuse_one_completed_semantic_specialization() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "fn main() -> i64 {\n",
+        "  var total: i64 = 0;\n",
+        "  for (outer in 0 .. 2) {\n",
+        "    for (inner in 1 .. 3) { total = total + outer + inner; }\n",
+        "  }\n",
+        "  return total;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let range_template = output
+        .program
+        .range_language_item
+        .as_ref()
+        .unwrap()
+        .range_template;
+    let specialization = output
+        .program
+        .generic_specializations
+        .iter()
+        .find(|specialization| {
+            specialization.key.template == range_template
+                && specialization.key.arguments.as_slice() == [ResolvedTypeKind::I64]
+        })
+        .expect("nested ranges reuse Range<i64>");
+    assert_eq!(specialization.provenance.origins.len(), 2);
+
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump.matches("RangeSource template").count(), 2, "{dump}");
+}
+
+#[test]
+fn deeply_nested_concise_ranges_discover_new_endpoint_types_to_a_fixpoint() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "fn main() -> i64 {\n",
+        "  for (signed in 0 .. 1) {\n",
+        "    for (wide in 0u .. 1u) {\n",
+        "      for (byte in 0u8 .. 1u8) {}\n",
+        "    }\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump.matches("RangeSource template").count(), 3, "{dump}");
+    assert!(dump.contains("endpoint i64"), "{dump}");
+    assert!(dump.contains("endpoint u64"), "{dump}");
+    assert!(dump.contains("endpoint u8"), "{dump}");
+}
+
+#[test]
+fn failed_outer_range_does_not_request_ranges_from_its_unresolved_body() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "fn main() -> i64 {\n",
+        "  for (outer in 0.0 .. 1.0) {\n",
+        "    for (inner in false .. true) {}\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(
+        !output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == UNSUPPORTED_RANGE_APPLICATION),
+        "{:?}",
+        output.diagnostics
+    );
+}
+
+#[test]
 fn semantic_range_request_probe_does_not_publish_body_diagnostics() {
     let (_graph, output) = resolve_range_syntax(concat!(
         "class Factory { init() {} }\n",

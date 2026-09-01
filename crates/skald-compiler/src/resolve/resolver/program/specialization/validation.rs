@@ -374,16 +374,9 @@ pub(super) fn effective_nominal_conformance(
     class: ClassId,
     interface: InterfaceId,
 ) -> bool {
-    std::iter::once(class)
-        .chain(program.hierarchy.base_chain(class).into_iter().flatten())
-        .any(|candidate| {
-            program.class(candidate).is_some_and(|declaration| {
-                declaration
-                    .implemented_interfaces
-                    .iter()
-                    .any(|claim| claim.interface.ordinary() == Some(interface))
-            })
-        })
+    program
+        .hierarchy
+        .has_effective_nominal_conformance(&program.classes, class, interface)
 }
 
 pub(super) fn exact_bound_is_satisfied(

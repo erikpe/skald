@@ -139,14 +139,18 @@ the source scanner. Concise ranges use a separate semantic probe after
 ordinary callable signatures, class declarations, interface claims, and the
 ordinary hierarchy are available. The probe reuses ordinary expression,
 method, and operator selection with isolated diagnostics, function-reference
-state, and compound-type interning; it records exact `Range<T>` keys at each
-structurally visited direct range source and repeats while newly materialized
-specializations add requests. It filters callable and class work by traversing
+state, and compound-type interning. At each direct range source it resolves the
+two endpoint types, records the exact `Range<T>` key, and waits for that key to
+close successfully before binding the loop item as `T` and probing the body.
+Key-based probing lets nested sources reuse a completed specialization before
+their own application spans have entered its provenance, while newly requested
+keys repeat the probe to a fixpoint. The probe produces no resolved loop or
+synthetic range construction. It filters callable and class work by traversing
 their statement trees; there is no global range-span registry or
 span-containment test. Specialized declarations and real bodies are then
 materialized and resolved once from the completed request set. Thus method and
 overloaded operator results can select `T` without a second source-level type
-system.
+system, and a failed outer range does not publish dependent body requests.
 
 Resolution evaluates neither endpoint. It resolves both in source order,
 requires one exact static type `T`, requests and validates canonical

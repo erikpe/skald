@@ -13,6 +13,13 @@ impl CallableResolver<'_, '_> {
         &mut self,
         statement: &syntax::ForInStatement,
     ) -> Option<ResolvedForIn> {
+        if self.environment.range_requests.is_some() {
+            if let syntax::ForInSource::Range(range) = &statement.source {
+                self.probe_range_for_in(statement, range);
+                return None;
+            }
+        }
+
         let loop_id = LoopId::new(self.callable, self.next_loop_index);
         self.next_loop_index += 1;
 
@@ -52,13 +59,62 @@ impl CallableResolver<'_, '_> {
             return None;
         }
 
+        let (local, body) = self.resolve_iteration_body(statement, loop_id, selection.item);
+
+        Some(ResolvedForIn {
+            loop_id,
+            binding: local,
+            source,
+            selection,
+            body,
+            for_span: statement.for_span,
+            binding_span: statement.binding.span,
+            annotation_span: statement
+                .annotation
+                .as_ref()
+                .map(|annotation| annotation.span),
+            in_span: statement.in_span,
+            span: statement.span,
+        })
+    }
+
+    fn probe_range_for_in(
+        &mut self,
+        statement: &syntax::ForInStatement,
+        range: &syntax::ForRangeSource,
+    ) {
+        let loop_id = LoopId::new(self.callable, self.next_loop_index);
+        self.next_loop_index += 1;
+
+        let annotation = statement
+            .annotation
+            .as_ref()
+            .map(|annotation| self.resolve_type(&annotation.type_syntax));
+        let annotation_valid = annotation.as_ref().is_none_or(Option::is_some);
+        let annotation = annotation.flatten();
+        let Some(item) = self.probe_range_source(range) else {
+            return;
+        };
+        if !annotation_valid || annotation.is_some_and(|annotation| annotation.kind != item) {
+            return;
+        }
+
+        let _ = self.resolve_iteration_body(statement, loop_id, item);
+    }
+
+    fn resolve_iteration_body(
+        &mut self,
+        statement: &syntax::ForInStatement,
+        loop_id: LoopId,
+        item: ResolvedTypeKind,
+    ) -> (LocalId, ResolvedBlock) {
         let local = LocalId::new(self.callable, self.locals.len());
         self.scopes.push(HashMap::new());
         let declared = self.declare_binding(
             &statement.binding.text,
             BindingSymbol {
                 id: BindingId::Local(local),
-                ty: selection.item,
+                ty: item,
                 name_span: statement.binding.span,
             },
             "iteration binding",
@@ -69,7 +125,7 @@ impl CallableResolver<'_, '_> {
             name: statement.binding.text.to_string(),
             name_span: statement.binding.span,
             type_syntax: ResolvedType {
-                kind: selection.item,
+                kind: item,
                 span: statement
                     .annotation
                     .as_ref()
@@ -90,22 +146,7 @@ impl CallableResolver<'_, '_> {
         self.scopes
             .pop()
             .expect("an iteration body owns one lexical scope");
-
-        Some(ResolvedForIn {
-            loop_id,
-            binding: local,
-            source,
-            selection,
-            body,
-            for_span: statement.for_span,
-            binding_span: statement.binding.span,
-            annotation_span: statement
-                .annotation
-                .as_ref()
-                .map(|annotation| annotation.span),
-            in_span: statement.in_span,
-            span: statement.span,
-        })
+        (local, body)
     }
 
     fn select_iterable(

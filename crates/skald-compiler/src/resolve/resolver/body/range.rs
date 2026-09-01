@@ -4,39 +4,78 @@ use super::*;
 use crate::identity::{InterfaceId, InterfaceRequirementId, InterfaceTemplateRequirementId};
 
 impl CallableResolver<'_, '_> {
+    pub(super) fn probe_range_source(
+        &mut self,
+        range: &syntax::ForRangeSource,
+    ) -> Option<ResolvedTypeKind> {
+        let (_, _, endpoint_type) = self.resolve_range_endpoints(range)?;
+        self.environment
+            .range_requests
+            .expect("range probing requires a request collector")
+            .record(SemanticRangeRequest {
+                module: self.environment.lookup.current(),
+                endpoint: endpoint_type,
+                span: range.operator_span,
+            });
+
+        let environment = self.environment.language_items.range?;
+        let range_class = self.environment.lookup.specialized_class_for_key(
+            environment.language_item.range_template,
+            &[endpoint_type],
+        )?;
+        let specialization = self
+            .environment
+            .lookup
+            .class_specialization(range_class)
+            .expect("a completed range key retains its specialization");
+        let ordering =
+            specialization.closed_interface_bounds[environment.language_item.range_ordering_bound]?;
+        let successor = specialization.closed_interface_bounds
+            [environment.language_item.range_successor_bound]?;
+        if !self.range_endpoint_satisfies_bounds(endpoint_type, ordering, successor) {
+            return None;
+        }
+        Some(endpoint_type)
+    }
+
+    fn range_endpoint_satisfies_bounds(
+        &self,
+        endpoint: ResolvedTypeKind,
+        ordering: InterfaceId,
+        successor: InterfaceId,
+    ) -> bool {
+        match endpoint {
+            ResolvedTypeKind::I64 | ResolvedTypeKind::U64 | ResolvedTypeKind::U8 => true,
+            ResolvedTypeKind::Class(class) => {
+                self.environment
+                    .hierarchy
+                    .has_effective_nominal_conformance(self.environment.classes, class, ordering)
+                    && self
+                        .environment
+                        .hierarchy
+                        .has_effective_nominal_conformance(
+                            self.environment.classes,
+                            class,
+                            successor,
+                        )
+            }
+            ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool
+            | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Function(_)
+            | ResolvedTypeKind::Interface(_)
+            | ResolvedTypeKind::Shared(_)
+            | ResolvedTypeKind::Optional(_)
+            | ResolvedTypeKind::Array(_) => false,
+        }
+    }
+
     pub(super) fn resolve_range_source(
         &mut self,
         range: &syntax::ForRangeSource,
     ) -> Option<ResolvedForInSource> {
-        // Keep source order explicit even though resolution performs no evaluation.
-        let lower = self.resolve_expression(&range.lower);
-        let upper = self.resolve_expression(&range.upper);
-        let (Some(lower), Some(upper)) = (lower, upper) else {
-            return None;
-        };
-        let lower_type = self.resolved_expression_type(&lower)?;
-        let upper_type = self.resolved_expression_type(&upper)?;
-        if lower_type != upper_type {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    RANGE_ENDPOINT_TYPE_MISMATCH,
-                    "range endpoints must have exactly the same static type",
-                )
-                .with_primary_label(range.operator_span, "exact endpoint types differ here")
-                .with_secondary_label(range.lower.span(), "lower endpoint")
-                .with_secondary_label(range.upper.span(), "upper endpoint"),
-            );
-            return None;
-        }
-
-        if let Some(requests) = self.environment.range_requests {
-            requests.record(SemanticRangeRequest {
-                module: self.environment.lookup.current(),
-                endpoint: lower_type,
-                span: range.operator_span,
-            });
-        }
-
+        let (lower, upper, lower_type) = self.resolve_range_endpoints(range)?;
         let environment = self.environment.language_items.range?;
         let specialized_selection = self
             .environment
@@ -80,18 +119,6 @@ impl CallableResolver<'_, '_> {
         {
             return None;
         }
-        if self.environment.range_requests.is_some() {
-            return Some(ResolvedForInSource::Iterable(
-                ResolvedExpression::Construct(ResolvedConstructExpr {
-                    class: range_class,
-                    callee_span: range.operator_span,
-                    mode: ResolvedConstructionMode::Initialize {
-                        arguments: vec![lower, upper],
-                    },
-                    span: range.span,
-                }),
-            ));
-        }
         let class = self
             .environment
             .classes
@@ -108,6 +135,13 @@ impl CallableResolver<'_, '_> {
         let successor_interface = specialization.closed_interface_bounds
             [environment.language_item.range_successor_bound]
             .expect("complete range specialization closes successor");
+        if !self.range_endpoint_satisfies_bounds(
+            lower_type,
+            ordering_interface,
+            successor_interface,
+        ) {
+            return None;
+        }
         let iterable = specialization.closed_interface_claims
             [environment.language_item.range_iterable_claim]
             .expect("complete range specialization closes Iterable");
@@ -153,6 +187,33 @@ impl CallableResolver<'_, '_> {
                 iterable,
             },
         )))
+    }
+
+    fn resolve_range_endpoints(
+        &mut self,
+        range: &syntax::ForRangeSource,
+    ) -> Option<(ResolvedExpression, ResolvedExpression, ResolvedTypeKind)> {
+        // Keep source order explicit even though resolution performs no evaluation.
+        let lower = self.resolve_expression(&range.lower);
+        let upper = self.resolve_expression(&range.upper);
+        let (Some(lower), Some(upper)) = (lower, upper) else {
+            return None;
+        };
+        let lower_type = self.resolved_expression_type(&lower)?;
+        let upper_type = self.resolved_expression_type(&upper)?;
+        if lower_type != upper_type {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    RANGE_ENDPOINT_TYPE_MISMATCH,
+                    "range endpoints must have exactly the same static type",
+                )
+                .with_primary_label(range.operator_span, "exact endpoint types differ here")
+                .with_secondary_label(range.lower.span(), "lower endpoint")
+                .with_secondary_label(range.upper.span(), "upper endpoint"),
+            );
+            return None;
+        }
+        Some((lower, upper, lower_type))
     }
 }
 

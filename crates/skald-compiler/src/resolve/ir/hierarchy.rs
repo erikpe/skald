@@ -4,8 +4,10 @@ use std::collections::BTreeMap;
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{ClassId, FieldId, MethodId, StaticFieldId},
+    identity::{ClassId, FieldId, InterfaceId, MethodId, StaticFieldId},
 };
+
+use super::ResolvedClassDeclarationTable;
 
 /// A selected ordinary class member together with its declaring-class identity.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -78,6 +80,24 @@ impl ResolvedClassHierarchy {
     pub fn inherited_member(&self, class: ClassId, name: &str) -> Option<ResolvedClassMember> {
         let chain = self.base_chain(class)?;
         self.member_in_chain(chain, name)
+    }
+
+    pub(crate) fn has_effective_nominal_conformance(
+        &self,
+        classes: &ResolvedClassDeclarationTable,
+        class: ClassId,
+        interface: InterfaceId,
+    ) -> bool {
+        std::iter::once(class)
+            .chain(self.base_chain(class).into_iter().flatten())
+            .any(|candidate| {
+                classes.get(candidate).is_some_and(|declaration| {
+                    declaration
+                        .implemented_interfaces
+                        .iter()
+                        .any(|claim| claim.interface.ordinary() == Some(interface))
+                })
+            })
     }
 
     fn member_in_chain(

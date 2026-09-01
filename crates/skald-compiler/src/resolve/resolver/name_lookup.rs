@@ -215,6 +215,14 @@ impl<'program> ModuleLookup<'program> {
             .class_at_application(self.current, span)
     }
 
+    pub(super) fn specialized_class_for_key(
+        self,
+        template: crate::identity::ClassTemplateId,
+        arguments: &[ResolvedTypeKind],
+    ) -> Option<ClassId> {
+        self.specializations?.class_for_key(template, arguments)
+    }
+
     pub(super) fn specialized_interface(self, span: Span) -> Option<InterfaceId> {
         self.interface_specializations?
             .interface_at_application(self.current, span)
