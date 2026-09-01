@@ -271,13 +271,11 @@ fn _log10_pow5(exponent: i64) -> u64 {
 
 fn _multiple_of_power5(value: u64, exponent: u64) -> bool {
     var remaining: u64 = value;
-    var power: u64 = exponent;
-    while (power > 0u) {
+    for (_power in 0u .. exponent) {
         if (remaining % 5u != 0u) {
             return false;
         }
         remaining = remaining / 5u;
-        power = power - 1u;
     }
     return true;
 }
@@ -328,12 +326,10 @@ fn _render_plain(
         result->[(i64) output] = '0';
         result->[(i64) (output + 1u)] = '.';
         output = output + 2u;
-        var zero: u64 = 0u;
-        while (zero < leading_zeroes) {
-            result->[(i64) output] = '0';
-            output = output + 1u;
-            zero = zero + 1u;
+        for (zero in 0u .. leading_zeroes) {
+            result->[(i64) (output + zero)] = '0';
         }
+        output = output + leading_zeroes;
         _write_digits(*result, output, significand, digit_count);
         return result;
     }
@@ -347,12 +343,10 @@ fn _render_plain(
         var output: u64 = _write_sign(*result, negative);
         _write_digits(*result, output, significand, digit_count);
         output = output + digit_count;
-        var zero: u64 = 0u;
-        while (zero < trailing_zeroes) {
-            result->[(i64) output] = '0';
-            output = output + 1u;
-            zero = zero + 1u;
+        for (zero in 0u .. trailing_zeroes) {
+            result->[(i64) (output + zero)] = '0';
         }
+        output = output + trailing_zeroes;
         result->[(i64) output] = '.';
         result->[(i64) (output + 1u)] = '0';
         return result;
@@ -448,14 +442,12 @@ fn _write_digits(
 ) -> unit {
     var divisor: u64 = _power10(digit_count - 1u);
     var remaining: u64 = value;
-    var index: u64 = 0u;
-    while (divisor > 0u) {
+    for (index in 0u .. digit_count) {
         destination[(i64) (start + index)] = (
             (u8) (remaining / divisor + (u64) '0')
         );
         remaining = remaining % divisor;
         divisor = divisor / 10u;
-        index = index + 1u;
     }
 }
 
@@ -468,17 +460,15 @@ fn _write_digits_with_point(
 ) -> unit {
     var divisor: u64 = _power10(digit_count - 1u);
     var remaining: u64 = value;
-    var digit: u64 = 0u;
     var output: u64 = start;
-    while (divisor > 0u) {
+    for (digit in 0u .. digit_count) {
         destination[(i64) output] = (
             (u8) (remaining / divisor + (u64) '0')
         );
         remaining = remaining % divisor;
         divisor = divisor / 10u;
-        digit = digit + 1u;
         output = output + 1u;
-        if (digit == point_after) {
+        if (digit + 1u == point_after) {
             destination[(i64) output] = '.';
             output = output + 1u;
         }
@@ -497,10 +487,8 @@ fn _decimal_digit_count(value: u64) -> u64 {
 
 fn _power10(exponent: u64) -> u64 {
     var result: u64 = 1u;
-    var remaining: u64 = exponent;
-    while (remaining > 0u) {
+    for (_power in 0u .. exponent) {
         result = result * 10u;
-        remaining = remaining - 1u;
     }
     return result;
 }

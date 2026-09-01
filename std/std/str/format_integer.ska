@@ -41,13 +41,11 @@ fn _format_decimal_magnitude(
     var text_length: u64 = sign_length + digit_count;
     var storage: shared u8[] = new u8[](text_length);
     var remaining: u64 = magnitude;
-    var index: i64 = (i64) text_length - 1;
 
-    while (digit_count > 0u) {
+    for (digit_index in 0u .. digit_count) {
+        var index: i64 = (i64) (text_length - digit_index - 1u);
         storage->[index] = (u8) (remaining % 10u + (u64) '0');
         remaining = remaining / 10u;
-        digit_count = digit_count - 1u;
-        index = index - 1;
     }
 
     if (negative) {

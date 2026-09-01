@@ -103,8 +103,7 @@ fn _parse_decimal_magnitude(
     var limit_quotient: u64 = limit / 10u;
     var limit_remainder: u64 = limit % 10u;
     var value: u64 = 0u;
-    var index: u64 = digit_start;
-    while (index < length) {
+    for (index in digit_start .. length) {
         var byte_value: u8 = storage[start + (i64) index];
         if (byte_value < '0' || byte_value > '9') {
             return none;
@@ -119,7 +118,6 @@ fn _parse_decimal_magnitude(
         }
 
         value = value * 10u + digit;
-        index = index + 1u;
     }
     return value;
 }

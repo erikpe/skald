@@ -111,15 +111,13 @@ public class Str implements Equatable, Hashable {
         var cursor: i64 = 0;
 
         while (cursor <= length - delimiter_length) {
-            var delimiter_cursor: i64 = 0;
             var matches: bool = true;
-            while (delimiter_cursor < delimiter_length) {
+            for (delimiter_cursor in 0 .. delimiter_length) {
                 if (self._storage->[self._start + cursor + delimiter_cursor]
                     != delimiter._storage->[delimiter._start + delimiter_cursor]) {
                     matches = false;
                     break;
                 }
-                delimiter_cursor = delimiter_cursor + 1;
             }
             if (matches) {
                 parts.push(self[start:cursor]);
@@ -140,10 +138,8 @@ public class Str implements Equatable, Hashable {
             return Str();
         }
         var total_length: u64 = 0u;
-        var index: u64 = 0u;
-        while (index < value_count) {
+        for (index in 0u .. value_count) {
             total_length = total_length + values[(i64) index]._length;
-            index = index + 1u;
         }
         total_length = total_length + (value_count - 1u) * self._length;
 
@@ -153,8 +149,7 @@ public class Str implements Equatable, Hashable {
 
         var result: shared u8[] = new u8[](total_length);
         var offset: i64 = 0;
-        index = 0u;
-        while (index < value_count) {
+        for (index in 0u .. value_count) {
             if (index > 0u) {
                 result->[offset:offset + separator_length] = self._storage->[separator_start:separator_end];
                 offset = offset + separator_length;
@@ -164,7 +159,6 @@ public class Str implements Equatable, Hashable {
             var value_length: i64 = (i64) value._length;
             result->[offset:offset + value_length] = value._storage->[value_start:value_start + value_length];
             offset = offset + value_length;
-            index = index + 1u;
         }
         return Str(result, 0, total_length);
     }
@@ -185,14 +179,11 @@ public class Str implements Equatable, Hashable {
         }
         var self_storage: shared u8[] = self._storage;
         var other_storage: shared u8[] = other._storage;
-        var self_index: i64 = self._start;
-        var self_stop: i64 = self_index + (i64) self._length;
         var other_index: i64 = other._start;
-        while (self_index < self_stop) {
+        for (self_index in self._start .. self._start + (i64) self._length) {
             if (self_storage->[self_index] != other_storage->[other_index]) {
                 return false;
             }
-            self_index = self_index + 1;
             other_index = other_index + 1;
         }
         return true;
@@ -209,13 +200,11 @@ public class Str implements Equatable, Hashable {
             return Str._EMPTY_HASH_CODE;
         }
         var hash: u64 = 0xcbf29ce484222325u;
-        var index: i64 = self._start;
-        var stop: i64 = index + (i64) self._length;
+        var stop: i64 = self._start + (i64) self._length;
         var self_storage: shared u8[] = self._storage;
         // Fold exact bytes with FNV-1a, then domain-separate and avalanche.
-        while (index < stop) {
+        for (index in self._start .. stop) {
             hash = (hash ^ (u64) self_storage->[index]) * 0x100000001b3u;
-            index = index + 1;
         }
         hash = mix_u64(hash ^ 0x7374725f68617368u);
         self._hash_code = hash;

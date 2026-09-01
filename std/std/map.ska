@@ -45,14 +45,12 @@ public class Map<K, V> where K: Equatable, K: Hashable
     }
 
     mut fn clear() -> unit {
-        var index: u64 = 0u;
-        while (index < self._states.len()) {
+        for (index in 0u .. self._states.len()) {
             if (self._states[(i64) index] == 1u8) {
                 self._keys[(i64) index] = none;
                 self._values[(i64) index] = none;
             }
             self._states[(i64) index] = 0u8;
-            index = index + 1u;
         }
         self._length = 0u;
         self._used = 0u;
@@ -172,14 +170,12 @@ public class Map<K, V> where K: Equatable, K: Hashable
         self._length = 0u;
         self._used = 0u;
 
-        var index: u64 = 0u;
-        while (index < old_states.len()) {
+        for (index in 0u .. old_states.len()) {
             if (old_states[(i64) index] == 1u8) {
                 var key: K = old_keys[(i64) index]!;
                 var value: V = old_values[(i64) index]!;
                 self._insert_new(key, value, old_hashes[(i64) index]);
             }
-            index = index + 1u;
         }
     }
 

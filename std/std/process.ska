@@ -6,25 +6,21 @@ public fn args() -> Str[] {
     var length: i64 = (i64) encoded.len();
 
     var argument_count: u64 = 0u;
-    var cursor: i64 = 0;
-    while (cursor < length) {
+    for (cursor in 0 .. length) {
         if (encoded[cursor] == '\0') {
             argument_count = argument_count + 1u;
         }
-        cursor = cursor + 1;
     }
 
     var arguments: Str[] = Str[](argument_count);
     var argument_index: i64 = 0;
     var argument_start: i64 = 0;
-    cursor = 0;
-    while (cursor < length) {
+    for (cursor in 0 .. length) {
         if (encoded[cursor] == '\0') {
             arguments[argument_index] = encoded[argument_start:cursor];
             argument_index = argument_index + 1;
             argument_start = cursor + 1;
         }
-        cursor = cursor + 1;
     }
 
     return arguments;

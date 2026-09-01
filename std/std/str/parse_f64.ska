@@ -125,8 +125,8 @@ fn _parse_decimal_f64(
         }
         var cap_quotient: u64 = exponent_cap / 10u;
         var cap_remainder: u64 = exponent_cap % 10u;
-        while (index < length) {
-            var exponent_byte: u8 = storage[start + (i64) index];
+        for (exponent_index in index .. length) {
+            var exponent_byte: u8 = storage[start + (i64) exponent_index];
             if (exponent_byte < '0' || exponent_byte > '9') {
                 return none;
             }
@@ -145,7 +145,6 @@ fn _parse_decimal_f64(
                     exponent_magnitude = exponent_magnitude * 10u + exponent_digit;
                 }
             }
-            index = index + 1u;
         }
     }
 
@@ -792,9 +791,8 @@ fn _try_small_decimal_f64(
     if (remaining < 0) {
         remaining = -remaining;
     }
-    while (remaining > 0) {
+    for (_power in 0 .. remaining) {
         power = power * 10.0;
-        remaining = remaining - 1;
     }
 
     var value: f64 = (f64) adjusted_significand;
@@ -823,12 +821,12 @@ fn _parse_decimal_f64_exact(
     var saw_nonzero: bool = false;
     var sticky: bool = false;
     var kept_digits: u64 = 0u;
-    var index: u64 = 0u;
+    var digit_start: u64 = 0u;
     if (negative) {
-        index = 1u;
+        digit_start = 1u;
     }
 
-    while (index < length) {
+    for (index in digit_start .. length) {
         var byte_value: u8 = storage[start + (i64) index];
         if (byte_value == 'e' || byte_value == 'E') {
             break;
@@ -854,7 +852,6 @@ fn _parse_decimal_f64_exact(
                 }
             }
         }
-        index = index + 1u;
     }
 
     var significand_exponent: i64 = decimal_exponent - ((i64) kept_digits - 1);
@@ -911,23 +908,19 @@ fn _round_decimal_f64(
     }
 
     if (decimal_exponent >= 0) {
-        var power: i64 = decimal_exponent;
-        while (power > 0) {
+        for (_power in 0 .. decimal_exponent) {
             if (!numerator.multiply_add(5u, 0u)) {
                 return none;
             }
-            power = power - 1;
         }
         if (!numerator.shift_left((u64) decimal_exponent)) {
             return none;
         }
     } else {
-        var power: i64 = -decimal_exponent;
-        while (power > 0) {
+        for (_power in 0 .. -decimal_exponent) {
             if (!denominator.multiply_add(5u, 0u)) {
                 return none;
             }
-            power = power - 1;
         }
         if (!denominator.shift_left((u64) (-decimal_exponent))) {
             return none;
@@ -1111,12 +1104,10 @@ public class BigUnsigned {
         }
 
         var carry: u64 = addend;
-        var index: u64 = 0u;
-        while (index < self._length) {
+        for (index in 0u .. self._length) {
             var product: u64 = self._limbs[(i64) index] * multiplier + carry;
             self._limbs[(i64) index] = product & 0xffffffffu;
             carry = product >> 32u;
-            index = index + 1u;
         }
 
         while (carry != 0u) {
@@ -1166,23 +1157,19 @@ public class BigUnsigned {
             source = source - 1u;
             self._limbs[(i64) (source + word_shift)] = self._limbs[(i64) source];
         }
-        var clear: u64 = 0u;
-        while (clear < word_shift) {
+        for (clear in 0u .. word_shift) {
             self._limbs[(i64) clear] = 0u;
-            clear = clear + 1u;
         }
         self._length = self._length + word_shift;
 
         if (bit_shift != 0u) {
             var carry: u64 = 0u;
-            var index: u64 = word_shift;
-            while (index < self._length) {
+            for (index in word_shift .. self._length) {
                 var value: u64 = self._limbs[(i64) index];
                 self._limbs[(i64) index] = (
                     ((value << bit_shift) & 0xffffffffu) | carry
                 );
                 carry = value >> (32u - bit_shift);
-                index = index + 1u;
             }
             if (carry != 0u) {
                 self._limbs[(i64) self._length] = carry;
@@ -1263,8 +1250,7 @@ public class BigUnsigned {
             shifted_length = (shifted_bits - 1u) / 32u + 1u;
         }
         var borrow: u64 = 0u;
-        var index: u64 = 0u;
-        while (index < shifted_length) {
+        for (index in 0u .. shifted_length) {
             var subtrahend: u64 = other._shifted_limb(index, shift) + borrow;
             var current: u64 = self._limbs[(i64) index];
             if (current >= subtrahend) {
@@ -1274,8 +1260,8 @@ public class BigUnsigned {
                 self._limbs[(i64) index] = 0x100000000u + current - subtrahend;
                 borrow = 1u;
             }
-            index = index + 1u;
         }
+        var index: u64 = shifted_length;
         while (borrow != 0u && index < self._length) {
             var current: u64 = self._limbs[(i64) index];
             if (current != 0u) {
