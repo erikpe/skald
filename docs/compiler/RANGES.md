@@ -348,7 +348,7 @@ Coverage ownership is:
 - module/resolution for canonical identities, dependencies, bound closure,
   exact endpoint typing, diagnostics, and dumps;
 - specialization for class-witness and primitive-successor realization;
-- type/HIR for ordinary construction, non-forgeable origin, immediate-use
+- type/HIR for ordinary construction, structural direct-source evidence, immediate-use
   eligibility, evaluation, capabilities, and execution-plan selection;
 - MIR/verifier for ordinary and fused CFG, state/item epochs, update order,
   exits, cleanup, and malicious mutations;

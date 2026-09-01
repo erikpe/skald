@@ -6,11 +6,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [direct for-range syntax roadmap](DIRECT_FOR_RANGE_SYNTAX_ROADMAP.md) is in
-progress; FRS0 and FRS1 are complete, and FRS2 is next. It restricts concise
-`lower .. upper` syntax to the direct source of a `for-in` statement, keeps
-reusable values explicit through `Range<T>`, and removes the
-general-expression provenance machinery made unnecessary by that boundary.
+No implementation roadmap is currently in progress. The completed direct
+for-range syntax roadmap is preserved in the
+[archive](../archive/DIRECT_FOR_RANGE_SYNTAX_ROADMAP.md).
 
 ## Pending discoveries
 

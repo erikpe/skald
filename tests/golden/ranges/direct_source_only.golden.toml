@@ -1,0 +1,33 @@
+schema = 2
+
+[[test]]
+name = "direct_source_only"
+mode = "compile-fail"
+source = "direct_source_only.ska"
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[PAR017]: concise range syntax is allowed only as the direct `for-in` source
+ --> tests/golden/ranges/direct_source_only.ska:6:36
+   |
+6 |     var values: Range<u64> = start .. end;
+   |                                    ^^ construct a `Range` value explicitly here
+
+error[PAR017]: concise range syntax is allowed only as the direct `for-in` source
+ --> tests/golden/ranges/direct_source_only.ska:10:19
+    |
+10 |     consume(start .. end);
+    |                   ^^ construct a `Range` value explicitly here
+
+error[PAR017]: concise range syntax is allowed only as the direct `for-in` source
+ --> tests/golden/ranges/direct_source_only.ska:14:18
+    |
+14 |     return start .. end;
+    |                  ^^ construct a `Range` value explicitly here
+
+error[PAR017]: concise range syntax is allowed only as the direct `for-in` source
+ --> tests/golden/ranges/direct_source_only.ska:18:26
+    |
+18 |     for (value in (start .. end)) {}
+    |                          ^^ construct a `Range` value explicitly here
+"""

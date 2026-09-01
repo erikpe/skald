@@ -262,11 +262,13 @@ existing operations. Explicit ranges run through generic construction,
 general iteration, lifecycle, and native code without primitive object
 conformance, new lower IR, runtime service, or ABI change. Direct `for-in`
 `..` sources retain exact canonical evidence on a dedicated resolved loop
-source; general expressions and ordinary constructions have no range-origin
-form. Type checking selects either an ordinary constructed protocol receiver
+source; general expressions and ordinary constructions carry no concise-range
+classification. Type checking selects either an ordinary constructed protocol receiver
 or a structured integer fusion plan, which erases to existing scalar MIR.
 Exact MIR and assembly shape plus the recorded matched benchmark establish
-handwritten-`while` parity.
+handwritten-`while` parity. The
+[range conformance matrix](RANGES_TEST_MATRIX.md) maps the complete direct and
+explicit contract to executable evidence.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

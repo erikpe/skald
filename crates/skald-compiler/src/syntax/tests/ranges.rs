@@ -65,6 +65,12 @@ fn grouped_endpoints_and_parenthesized_iterables_are_valid_but_grouped_ranges_ar
         "{:?}",
         grouped_range.diagnostics,
     );
+    assert_eq!(
+        grouped_range.diagnostics.len(),
+        1,
+        "{:?}",
+        grouped_range.diagnostics
+    );
     assert!(grouped_range.ast.declarations.iter().any(|declaration| {
         matches!(declaration, TopLevelDeclaration::Function(function) if function.name.text == "recovered")
     }));
@@ -92,7 +98,7 @@ fn range_syntax_is_rejected_in_every_general_expression_context() {
         assert_eq!(diagnostic.labels[0].style, LabelStyle::Primary);
         assert_eq!(
             diagnostic.labels[0].message,
-            "use an explicit `Range<T>(lower, upper)` value here"
+            "construct a `Range` value explicitly here"
         );
     }
 }

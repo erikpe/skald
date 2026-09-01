@@ -1,0 +1,21 @@
+from std::range import Range;
+
+fn consume(ref value: Range<u64>) -> unit {}
+
+fn stored(start: u64, end: u64) -> unit {
+    var values: Range<u64> = start .. end;
+}
+
+fn argument(start: u64, end: u64) -> unit {
+    consume(start .. end);
+}
+
+fn result(start: u64, end: u64) -> Range<u64> {
+    return start .. end;
+}
+
+fn grouped(start: u64, end: u64) -> unit {
+    for (value in (start .. end)) {}
+}
+
+fn main() -> i64 { return 0; }

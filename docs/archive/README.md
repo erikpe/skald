@@ -84,6 +84,7 @@ Archived plans:
 - [General iteration](GENERAL_ITERATION_ROADMAP.md)
 - [Interface-based operator overloading](OPERATOR_OVERLOADING_ROADMAP.md)
 - [Generic ranges and tight range loops](GENERIC_RANGES_ROADMAP.md)
+- [Direct for-range syntax](DIRECT_FOR_RANGE_SYNTAX_ROADMAP.md)
 - [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
 - [Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
 - [Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md)

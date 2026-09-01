@@ -170,7 +170,7 @@ impl Parser<'_> {
             INVALID_RANGE_SYNTAX,
             "concise range syntax is allowed only as the direct `for-in` source",
             operator.span,
-            "use an explicit `Range<T>(lower, upper)` value here",
+            "construct a `Range` value explicitly here",
         );
         self.consume_range_tail();
     }

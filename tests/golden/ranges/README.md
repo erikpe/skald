@@ -18,10 +18,12 @@ Run this group with `scripts/golden.sh --filter 'ranges/**'`.
 | `explicit_classes` | class ordering/successor effects, lifecycle, advance-before-body, and loop exits |
 | `concise_ranges` | fused primitive syntax, explicit stored/argument/result ranges, direct class syntax, grouped endpoints, ordered endpoint effects, equal/descending/maximum bounds, return, nesting, and mixed fused/unfused execution |
 | `concise_range_failure` | fused body failure and runtime-trace attribution |
+| `direct_source_only` | exact diagnostics for stored, argument, result, and grouped-complete concise ranges |
 | `failures` | malformed or unsupported canonical bounds, types, capabilities, and syntax diagnostics |
 
 Compiler-owned HIR/MIR mutation, shape, provider-reordering, pipeline-
 determinism, backend, runtime-symbol, ABI, and robustness tests complement
 these source-to-native observations. The performance corpus is deliberately
 separate under `tests/benchmarks/range_loop` because wall time is not a golden
-or correctness gate.
+or correctness gate. The complete cross-layer mapping is maintained in the
+[range conformance matrix](../../../docs/compiler/RANGES_TEST_MATRIX.md).

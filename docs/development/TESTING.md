@@ -509,7 +509,8 @@ must survive the pass boundary and x86-64 lowering without canonical-layout or
 source-loop recognition.
 
 The implemented [generic-range contracts](../language/RANGES.md) have an
-ordered coverage layer. Colocated syntax, resolution, primitive-registry,
+ordered coverage layer, indexed by the authoritative
+[range conformance matrix](../compiler/RANGES_TEST_MATRIX.md). Colocated syntax, resolution, primitive-registry,
 type, and HIR tests own punctuation/recovery, canonical declaration
 validation, identity and dump determinism, exact realization, structural
 source evidence, fusion eligibility, and excluded boundaries. MIR and x86-64 tests

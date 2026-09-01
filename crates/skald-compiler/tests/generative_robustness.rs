@@ -13,7 +13,7 @@ use skald_compiler::{
     lexer::lex,
     resolve::resolve,
     source::SourceDatabase,
-    syntax::{parse, EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
+    syntax::{parse, EXCESSIVE_NESTING, INVALID_RANGE_SYNTAX, MAX_SYNTAX_NESTING},
     typeck::type_check,
 };
 
@@ -245,6 +245,41 @@ fn bounded_deep_operator_and_generic_sources_compile_deterministically() {
         assert_eq!(
             first.assembly, second.assembly,
             "generated operator case {depth} was nondeterministic"
+        );
+    }
+}
+
+#[test]
+fn bounded_deep_direct_range_sources_respect_the_for_header_boundary() {
+    for depth in 1..=16 {
+        let lower = format!("{}1u{}", "(".repeat(depth), ")".repeat(depth));
+        let upper = format!("{}4u{}", "(".repeat(depth), ")".repeat(depth));
+        let source = format!(
+            "fn main() -> i64 {{ var total: u64 = 0u; \
+             for (item in {lower} .. {upper}) {{ total = total + item; }} \
+             return (i64) total; }}"
+        );
+        let name = format!("generated-direct-range-{depth}.ska");
+        let first = compile_source_to_assembly(&name, &source, Target::X86_64SysV)
+            .unwrap_or_else(|error| panic!("deep direct range {depth} failed: {error:?}"));
+        let second = compile_source_to_assembly(&name, &source, Target::X86_64SysV)
+            .unwrap_or_else(|error| panic!("repeated deep direct range {depth} failed: {error:?}"));
+        assert_eq!(
+            first.assembly, second.assembly,
+            "deep direct range {depth} was nondeterministic"
+        );
+
+        let grouped_source = format!(
+            "fn main() -> i64 {{ for (item in {}1u .. 4u{}) {{}} return 0; }}",
+            "(".repeat(depth),
+            ")".repeat(depth),
+        );
+        let diagnostics =
+            run_frontend_case(&format!("generated-grouped-range-{depth}"), &grouped_source);
+        assert_eq!(
+            diagnostics,
+            vec![INVALID_RANGE_SYNTAX],
+            "grouped complete range at depth {depth} must stop at syntax"
         );
     }
 }

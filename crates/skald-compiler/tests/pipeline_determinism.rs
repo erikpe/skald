@@ -28,7 +28,7 @@ use skald_compiler::{
     },
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
-    syntax::{dump_ast, parse},
+    syntax::{dump_ast, parse, INVALID_RANGE_SYNTAX},
     typeck::type_check,
 };
 
@@ -156,6 +156,9 @@ const GENERIC_OPERATOR_TEST_NAME: &str =
     "generic_operator_phase_products_are_deterministic_across_processes";
 const RANGE_HELPER_OUTPUT: &str = "SKALD_RANGE_DETERMINISM_OUTPUT";
 const RANGE_TEST_NAME: &str = "range_phase_products_are_deterministic_across_processes";
+const RANGE_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_RANGE_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const RANGE_DIAGNOSTIC_TEST_NAME: &str =
+    "range_syntax_diagnostics_are_deterministic_across_processes";
 const GENERIC_INTERFACE_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_GENERIC_INTERFACE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME: &str =
@@ -760,6 +763,16 @@ fn range_phase_products_are_deterministic_across_processes() {
         RANGE_HELPER_OUTPUT,
         RANGE_TEST_NAME,
         PERMUTATION_HELPER_VARIANT,
+    );
+}
+
+#[test]
+fn range_syntax_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "range-syntax-diagnostics",
+        RANGE_DIAGNOSTIC_HELPER_OUTPUT,
+        RANGE_DIAGNOSTIC_TEST_NAME,
+        range_syntax_diagnostic_dump,
     );
 }
 
@@ -1370,41 +1383,38 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
 }
 
 fn range_module_phase_dump(variant: usize) -> String {
+    const APP_SOURCE: &str = "import model;\n\
+         from std::range import Range;\n\
+         fn main() -> i64 {\n\
+           var primitive: model::Advance<u64> = model::Advance<u64>();\n\
+           var objects: model::Advance<model::Value> = model::Advance<model::Value>();\n\
+           var total: i64 = (i64) primitive.next(16u) + (i64) objects.next(model::Value(24u)).get();\n\
+           for (value in Range<u64>(2u, 5u)) { total = total + (i64) value; }\n\
+           for (value in Range<model::Value>(model::Value(6u), model::Value(8u))) { total = total + (i64) value.get(); }\n\
+           for (value in 8u .. 10u) { total = total + (i64) value; }\n\
+           for (value in model::Value(10u) .. model::Value(12u)) { total = total + (i64) value.get(); }\n\
+           return total;\n\
+         }\n";
+    const MODEL_SOURCE: &str = "from std::ops import OpLess;\n\
+         from std::range import Successor;\n\
+         public class Value implements OpLess<Value>, Successor<Value> {\n\
+           private value: u64;\n\
+           init(value: u64) { self.value = value; }\n\
+           fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n\
+           fn successor() -> Value { return Value(self.value + 1u); }\n\
+           fn get() -> u64 { return self.value; }\n\
+         }\n\
+         public class Advance<T> where T: Successor<T> {\n\
+           init() {}\n\
+           fn next(value: T) -> T { return value.successor(); }\n\
+         }\n";
+
     let fixture = ModuleFixture::new("range-products", variant);
     let application = fixture.path.join("application");
     let standard_library = fixture.path.join("standard-library");
     let mut sources = vec![
-        (
-            application.join("app.ska"),
-            "import model;\n\
-             from std::range import Range;\n\
-             fn main() -> i64 {\n\
-               var primitive: model::Advance<u64> = model::Advance<u64>();\n\
-               var objects: model::Advance<model::Value> = model::Advance<model::Value>();\n\
-               var total: i64 = (i64) primitive.next(16u) + (i64) objects.next(model::Value(24u)).get();\n\
-               for (value in Range<u64>(2u, 5u)) { total = total + (i64) value; }\n\
-               for (value in Range<model::Value>(model::Value(6u), model::Value(8u))) { total = total + (i64) value.get(); }\n\
-               for (value in 8u .. 10u) { total = total + (i64) value; }\n\
-               for (value in model::Value(10u) .. model::Value(12u)) { total = total + (i64) value.get(); }\n\
-               return total;\n\
-             }\n",
-        ),
-        (
-            application.join("model.ska"),
-            "from std::ops import OpLess;\n\
-             from std::range import Successor;\n\
-             public class Value implements OpLess<Value>, Successor<Value> {\n\
-               private value: u64;\n\
-               init(value: u64) { self.value = value; }\n\
-               fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n\
-               fn successor() -> Value { return Value(self.value + 1u); }\n\
-               fn get() -> u64 { return self.value; }\n\
-             }\n\
-             public class Advance<T> where T: Successor<T> {\n\
-               init() {}\n\
-               fn next(value: T) -> T { return value.successor(); }\n\
-             }\n",
-        ),
+        (application.join("app.ska"), APP_SOURCE),
+        (application.join("model.ska"), MODEL_SOURCE),
     ];
     sources.extend(
         canonical_standard_library_sources(&[])
@@ -1478,7 +1488,8 @@ fn range_module_phase_dump(variant: usize) -> String {
     normalize_fixture_paths(
         &fixture.path,
         format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
+            "{}GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
+            range_frontend_phase_dump(APP_SOURCE, MODEL_SOURCE),
             dump_module_graph(&graph),
             resolved_dump,
             hir_dump,
@@ -1487,6 +1498,56 @@ fn range_module_phase_dump(variant: usize) -> String {
             dump_mir(&final_mir),
             assembly,
         ),
+    )
+}
+
+fn range_frontend_phase_dump(app_source: &str, model_source: &str) -> String {
+    let mut sources = SourceDatabase::new();
+    let source_ids = [
+        sources.add("app.ska", app_source),
+        sources.add("model.ska", model_source),
+    ];
+    let mut output = String::new();
+    for (label, source_id) in ["APP", "MODEL"].into_iter().zip(source_ids) {
+        let source = sources.get(source_id).unwrap();
+        let lexed = lex(source);
+        assert!(lexed.diagnostics.is_empty());
+        let parsed = parse(source, &lexed.tokens);
+        assert!(parsed.diagnostics.is_empty());
+        output.push_str(&format!(
+            "{label} TOKENS\n{}{label} AST\n{}",
+            dump_tokens(source, &lexed.tokens),
+            dump_ast(&parsed.ast),
+        ));
+    }
+    output
+}
+
+fn range_syntax_diagnostic_dump() -> String {
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add(
+        "range-direct-source-only.ska",
+        include_str!("../../../tests/golden/ranges/direct_source_only.ska"),
+    );
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert_eq!(parsed.diagnostics.len(), 4, "{:?}", parsed.diagnostics);
+    assert!(
+        parsed
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == INVALID_RANGE_SYNTAX),
+        "{:?}",
+        parsed.diagnostics
+    );
+
+    format!(
+        "TOKENS\n{}AST\n{}DIAGNOSTICS\n{}",
+        dump_tokens(source, &lexed.tokens),
+        dump_ast(&parsed.ast),
+        render_diagnostics(&sources, &parsed.diagnostics),
     )
 }
 

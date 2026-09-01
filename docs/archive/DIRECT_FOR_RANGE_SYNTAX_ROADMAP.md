@@ -1,6 +1,6 @@
 # Direct For-Range Syntax Roadmap
 
-Status: in progress; FRS0 and FRS1 are complete, and FRS2 is next.
+Status: complete; implemented and archived after FRS2 closure.
 
 This roadmap restricts concise `lower .. upper` syntax to the direct source of
 a `for-in` statement. Reusable range values remain ordinary explicit
@@ -31,8 +31,8 @@ unrelated expression consumers.
 - `var range = lower .. upper;`, `consume(lower .. upper);`,
   `return lower .. upper;`, and `for (item in (lower .. upper)) {}` are syntax
   errors. Their diagnostics point at `..`, state that concise range syntax is
-  allowed only as the direct `for-in` source, and suggest explicit
-  `Range<T>(lower, upper)` when a value is required.
+  allowed only as the direct `for-in` source, and suggest explicit `Range`
+  construction without guessing the required type argument.
 - Parentheses around either endpoint remain ordinary endpoint syntax, while
   parentheses around the complete concise range do not make it direct.
   Parenthesized ordinary iterable expressions remain valid.
@@ -80,7 +80,7 @@ unrelated expression consumers.
 
 - [x] FRS0 — Enforce the direct-source syntax boundary
 - [x] FRS1 — Make range-loop provenance structural
-- [ ] FRS2 — Complete conformance, determinism, and performance closure
+- [x] FRS2 — Complete conformance, determinism, and performance closure
 
 ## PR-sized implementation sequence
 
@@ -228,33 +228,33 @@ the complete pipeline, confirm that tight-loop quality did not regress, and
 promote the roadmap only after living documentation and repository-wide
 evidence agree.
 
-- [ ] Complete one explicit conformance matrix covering every accepted direct
+- [x] Complete one explicit conformance matrix covering every accepted direct
   primitive/class form, explicit/stored/argument/result `Range<T>` replacement,
   grouped endpoint distinction, rejected expression context, malformed source,
   loop exit, lifecycle, effect, and runtime-failure case.
-- [ ] Update range goldens so concise syntax demonstrates direct consumption
+- [x] Update range goldens so concise syntax demonstrates direct consumption
   only. Add focused compile-failure cases for all four contract examples and
   ensure each diagnostic suggests explicit construction without requiring a
   generic argument the compiler cannot reliably infer in the message.
-- [ ] Refresh bounded range mutation seeds and deep-source cases around the new
+- [x] Refresh bounded range mutation seeds and deep-source cases around the new
   `for-in` grammar and recovery boundary; remove seeds that encode obsolete
   first-class range values.
-- [ ] Extend independent-process determinism coverage across tokens, AST,
+- [x] Extend independent-process determinism coverage across tokens, AST,
   module graph, resolved program, HIR, preliminary/final MIR, diagnostics,
   assembly, and published artifacts for direct primitive, direct class, and
   explicit range sources.
-- [ ] Re-run target-independent operation counts and x86-64 shape comparisons
+- [x] Re-run target-independent operation counts and x86-64 shape comparisons
   for all three fused integer types against the matched handwritten `while`
   loops. Run and record the existing range-loop benchmark only if deterministic
   shape changed or timing evidence falls outside the documented acceptance
   band; wall time remains outside correctness gates.
-- [ ] Confirm no runtime symbol, ABI, canonical standard-library declaration,
+- [x] Confirm no runtime symbol, ABI, canonical standard-library declaration,
   or lower-MIR vocabulary changed and that invalid out-of-context `..` never
   reaches resolution, type checking, or artifact publication.
-- [ ] Audit for stale range-expression terms, origin plumbing, dead adapters,
+- [x] Audit for stale range-expression terms, origin plumbing, dead adapters,
   obsolete tests, and duplicate documentation. Make small cohesive removals
   directly; record larger unrelated findings in an indexed discoveries file.
-- [ ] Promote all remaining living range, iteration, grammar, module,
+- [x] Promote all remaining living range, iteration, grammar, module,
   compiler, testing, debugging, benchmark, and fixture documentation to the
   implemented direct-source contract. Run closure gates, mark this roadmap
   complete, archive it, and repair roadmap indexes and incoming links.

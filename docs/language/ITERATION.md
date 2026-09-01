@@ -187,7 +187,7 @@ optional-result, item-epoch, exit, and cleanup rules described above.
 
 Allocation-free state is a semantic possibility, not a promise that every
 dispatch is devirtualized or every loop is inlined. The frozen
-[generic-range contract](RANGES.md) defines one later, syntax-origin primitive
+[generic-range contract](RANGES.md) defines one direct-source primitive
 fast path that must remain observationally equivalent to canonical ordinary
 range iteration. Broader devirtualization and vectorization remain later
 optimizations.
@@ -203,10 +203,11 @@ or mutable receivers, borrowed items, adapters, patterns, or general
 optimization guarantees.
 
 These are extension points rather than competing loop protocols. The range
-contract uses this exact `Iterable<T, T>` interface and will make `..`
-construct its canonical ordinary range before `for-in` selection. Its narrow
-immediate integer fusion preserves the same item values, advance-before-body
-order, exits, and cleanup. Generator work may choose a state that owns a
+contract uses this exact `Iterable<T, T>` interface. A direct `lower .. upper`
+source carries canonical range evidence into `for-in` selection, while an
+ineligible class source is lowered through ordinary `Range<T>` construction.
+Its narrow immediate integer fusion preserves the same item values,
+advance-before-body order, exits, and cleanup. Generator work may choose a state that owns a
 resumable frame. Neither extension changes general iterable selection.
 
 The rationale and rejected alternatives are retained in the

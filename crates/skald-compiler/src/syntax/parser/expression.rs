@@ -775,7 +775,14 @@ impl Parser<'_> {
 
         if let Some(left_paren) = self.consume(TokenKind::LeftParen) {
             let expression =
-                self.with_syntax_nesting(left_paren.span, |parser| parser.parse_expression())?;
+                self.with_syntax_nesting(left_paren.span, |parser| parser.parse_expression());
+            let Some(expression) = expression else {
+                // A failed nested expression may already have consumed its
+                // complete malformed tail. Consume this group's delimiter so
+                // an enclosing construct can resume at its own boundary.
+                let _ = self.consume(TokenKind::RightParen);
+                return None;
+            };
             let right_paren = self.expect(TokenKind::RightParen, "`)` after the expression");
             let end_span = right_paren
                 .map(|token| token.span)

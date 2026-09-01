@@ -186,7 +186,7 @@ For implemented direct `for (item in lower .. upper)`, follow the
 `ForIn`/`RangeSource` syntax node to its exact structural resolved range
 source, initializer, ordering, successor, iterable, endpoint provenance, and
 primitive-intrinsic or class-witness identities. Ordinary resolved and HIR
-constructions have no range-origin metadata. Explicit stored ranges and direct
+constructions carry no concise-range classification. Explicit stored ranges and direct
 class ranges retain ordinary construction, interface calls, and
 optional-result flow. An eligible direct primitive source prints a
 `PrimitiveRange` `HirForIn` plan followed by `RangeLoopEvidence`; a `Protocol`
