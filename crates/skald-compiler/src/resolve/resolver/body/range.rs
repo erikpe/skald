@@ -1,12 +1,12 @@
-//! Canonical construction evidence for concise range expressions.
+//! Canonical construction evidence for direct concise range sources.
 
 use super::*;
 use crate::identity::{InterfaceId, InterfaceRequirementId, InterfaceTemplateRequirementId};
 
 impl CallableResolver<'_, '_> {
-    pub(super) fn resolve_range_expression(
+    pub(super) fn resolve_range_source(
         &mut self,
-        range: &syntax::RangeExpr,
+        range: &syntax::ForRangeSource,
     ) -> Option<ResolvedExpression> {
         // Keep source order explicit even though resolution performs no evaluation.
         let lower = self.resolve_expression(&range.lower);

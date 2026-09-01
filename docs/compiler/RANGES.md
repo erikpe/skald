@@ -8,12 +8,13 @@ ordinary construction and general iteration. `..` has source AST,
 compiler-dependency, exact resolved and HIR construction evidence,
 diagnostics, ordinary lifecycle and native execution. Immediate `u8`, `u64`,
 and `i64` syntax loops use the scalar fusion described below; deterministic
-shape and recorded timings establish handwritten-`while` parity. This document owns those
-identities and target/ABI constraints for the
+shape and recorded timings establish handwritten-`while` parity. This document
+owns those identities and target/ABI constraints for the
 [generic-range language contract](../language/RANGES.md).
 
-The implemented grammar and pipeline include range expressions, the narrow
-fusion profile below, and its completed structural and benchmark evidence.
+The implemented grammar accepts concise ranges only as direct `for-in`
+sources. The pipeline includes the narrow fusion profile below and its
+completed structural and benchmark evidence.
 
 ## Canonical module and identities
 
@@ -37,11 +38,13 @@ order. Same-named foreign declarations are ordinary unrelated source.
 Later phases consume exact identities rather than rediscovering `std::range`,
 `Successor`, `Range`, `successor`, or `init` by spelling.
 
-Successfully parsed `..` supplies typed `CompilerDependencyKind` evidence for
-`std::range` at the operator span without creating an import binding. Explicit
-imports and direct canonical-module compilation remain equivalent validation
-triggers. Provider collision, missing-module, and dependency-cycle errors
-precede canonical declaration validation.
+Successfully parsed direct `..` sources supply typed
+`CompilerDependencyKind::RangeForSource` evidence for `std::range` at the
+operator span without creating an import binding. Invalid out-of-context
+punctuation supplies no dependency evidence. Explicit imports and direct
+canonical-module compilation remain equivalent validation triggers. Provider
+collision, missing-module, and dependency-cycle errors precede canonical
+declaration validation.
 
 The installed class body remains ordinary source and must pass generic
 specialization, conformance, lifecycle, HIR, MIR, static-effect, backend, and
@@ -119,15 +122,17 @@ Status: implemented through resolved IR, typed HIR, and both ordinary and
 fused loop execution plans.
 
 Lexing adds a longest-match `..` token before `.` while preserving numeric
-literal and member-access tokenization. Parsing adds a source-shaped,
-lowest-precedence, non-associative range expression containing both operands,
-the operator span, and the complete span. Recovery consumes a malformed
-right endpoint or remaining invalid chain once so later statements resume at
-their normal boundary.
+literal and member-access tokenization. Parsing represents the direct source
+as `ForInSource::Range`, containing both endpoint expressions, the operator
+span, and the complete span. General `Expression` has no range variant.
+Out-of-context punctuation, a grouped complete range, missing endpoints, and
+chains receive one `PAR017` diagnostic with bounded recovery into the normal
+statement or `for`-header boundary.
 
 Generic template source scanning, logical-depth accounting, AST traversal,
-dumps, and every expression consumer must visit both endpoints without adding
-a recursive parser path that weakens the existing syntax budget.
+and dumps visit the endpoints from the `for-in` source owner. General
+expression consumers require no range case and retain their existing syntax
+budget.
 
 Specialization request discovery keeps explicit generic type applications in
 the source scanner. Concise ranges use a separate semantic probe after
@@ -135,15 +140,16 @@ ordinary callable signatures, class declarations, interface claims, and the
 ordinary hierarchy are available. The probe reuses ordinary expression,
 method, and operator selection with isolated diagnostics, function-reference
 state, and compound-type interning; it records exact `Range<T>` keys at each
-`..` span and repeats only while an inner request exposes a new enclosing
-endpoint type. Specialized declarations and real bodies are then materialized
-and resolved once from the completed request set. Thus method and overloaded
-operator results can select `T` without a second source-level type system.
+direct-source `..` span and repeats when newly materialized specializations
+expose further range sources. Specialized declarations and real bodies are
+then materialized and resolved once from the completed request set. Thus method
+and overloaded operator results can select `T` without a second source-level
+type system.
 
 Resolution evaluates neither endpoint. It resolves both in source order,
 requires one exact static type `T`, requests and validates canonical
 `Range<T>`, closes its bounds, and selects its canonical `init(T, T)`. The
-resolved expression retains:
+resolved loop-source construction retains:
 
 - lower, upper, operator, and complete spans;
 - exact endpoint and result types;
@@ -158,9 +164,10 @@ promotion, common-base inference, structural lookup, constructor search on
 dump order remains deterministic.
 
 After successful resolution, type checking verifies the complete canonical
-identity correspondence and lowers the result as ordinary class
-construction. Invalid or forged provenance is rejected before HIR is
-created.
+identity correspondence. The current resolved adapter stores that evidence on
+the construction consumed by the same `ResolvedForIn`; it cannot flow into a
+local, argument, result, or other expression consumer. Invalid or forged
+provenance is rejected before HIR is created.
 
 ## Typed HIR representation
 
@@ -190,14 +197,12 @@ arguments, selected closed class, initializer, bounds, endpoint type, and
 result. Ordinary explicit `Range<T>(lower, upper)` has the normal construction
 origin and is not upgraded by shape recognition.
 
-Non-loop consumers lower the canonical range-syntax construction through the
-ordinary class path. `HirForIn` selects a structured primitive-range plan only
-for an immediately consumed eligible expression; all other consumers and
-loops use the ordinary protocol plan.
-Grouping that remains part of the same immediate expression may preserve the
-origin; storage, copying, arguments, results, aliases, optionals, owners,
-interface views, calls, or other independently observable boundaries erase
-fusion eligibility while preserving the ordinary exact range value.
+Every canonical range-syntax construction is consumed by its owning
+`HirForIn`. The loop selects a structured primitive-range plan for an eligible
+integer source; class and otherwise ineligible direct sources use the ordinary
+construction and protocol plan. Grouping either endpoint is ordinary endpoint
+syntax. Grouping the complete range is rejected before resolution. Explicit
+`Range<T>` values use the ordinary construction origin and protocol plan.
 
 This representation maximizes construction reuse and keeps one explicit
 optimization provenance. A dedicated range HIR expression should not be added
@@ -238,8 +243,7 @@ The initial fused plan is eligible only when:
   realizations;
 - the iterable application is the exact canonical `Range<T>` claim of
   `Iterable<T, T>`; and
-- no storage, copy, argument, result, alias, optional, owner, view, call, or
-  other observable boundary intervenes.
+- the construction belongs to the direct range source of that exact loop.
 
 Generic-template analysis records endpoint provenance before substitution. A
 closed endpoint is specialization-dependent when its type or value producer
@@ -354,7 +358,8 @@ transitive artifacts they use. The retention pass does not recognize ranges.
 
 Coverage ownership is:
 
-- lexer/parser for punctuation, precedence, recovery, nesting, and spans;
+- lexer/parser for punctuation, the direct-source boundary, recovery, nesting,
+  and spans;
 - module/resolution for canonical identities, dependencies, bound closure,
   exact endpoint typing, diagnostics, and dumps;
 - specialization for class-witness and primitive-successor realization;

@@ -392,9 +392,10 @@ does not change source acceptance or definite-return diagnostics.
 
 The general `for (item in expression)` statement and nominal state-based
 iteration protocol are implemented under their separate
-[contract](ITERATION.md). The frozen [generic-range contract](RANGES.md) plans
-ordinary `Range<T>` values and `..` expressions as consumers of that same loop
-form; they are not yet accepted. `do while`, an unconditional `loop` form,
+[contract](ITERATION.md). The implemented [generic-range contract](RANGES.md)
+adds direct `for (item in lower .. upper)` sources and ordinary explicit
+`Range<T>` iterable values. Concise `..` syntax is not accepted in any other
+expression position. `do while`, an unconditional `loop` form,
 loop expressions, value-carrying `break`, loop `else`, and labels remain
 unfrozen.
 

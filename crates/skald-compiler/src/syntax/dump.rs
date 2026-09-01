@@ -574,8 +574,22 @@ impl AstDumper {
                         });
                     }
                     dumper.line("InDelimiter", statement.in_span);
-                    dumper.heading("Iterable");
-                    dumper.indented(|dumper| dumper.expression(&statement.iterable));
+                    match &statement.source {
+                        ForInSource::Iterable(iterable) => {
+                            dumper.heading("Iterable");
+                            dumper.indented(|dumper| dumper.expression(iterable));
+                        }
+                        ForInSource::Range(range) => {
+                            dumper.line("RangeSource", range.span);
+                            dumper.indented(|dumper| {
+                                dumper.heading("Lower");
+                                dumper.indented(|dumper| dumper.expression(&range.lower));
+                                dumper.line("DotDot", range.operator_span);
+                                dumper.heading("Upper");
+                                dumper.indented(|dumper| dumper.expression(&range.upper));
+                            });
+                        }
+                    }
                     dumper.line("RightParen", statement.right_paren_span);
                     dumper.block(&statement.body);
                 });
@@ -724,16 +738,6 @@ impl AstDumper {
                 self.indented(|dumper| {
                     dumper.expression(&logical.left);
                     dumper.expression(&logical.right);
-                });
-            }
-            Expression::Range(range) => {
-                self.line("Range", range.span);
-                self.indented(|dumper| {
-                    dumper.heading("Lower");
-                    dumper.indented(|dumper| dumper.expression(&range.lower));
-                    dumper.line("DotDot", range.operator_span);
-                    dumper.heading("Upper");
-                    dumper.indented(|dumper| dumper.expression(&range.upper));
                 });
             }
             Expression::TypeTest(test) => {

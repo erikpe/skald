@@ -13,7 +13,7 @@ use super::super::{ModulePath, ModuleProvenance};
 pub enum CompilerDependencyKind {
     StringLiteral,
     GeneralIteration,
-    RangeExpression,
+    RangeForSource,
 }
 
 /// Evidence for one compiler-owned dependency kind on a canonical edge.

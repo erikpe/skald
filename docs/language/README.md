@@ -154,9 +154,10 @@ makes a result source-observable.
 - [Generic ranges](RANGES.md) defines the implemented canonical
   `Successor<Output>` protocol, integer evidence, ordinary explicit
   `Range<T> implements Iterable<T, T>` values, half-open exact-typed `..`
-  expressions, construction provenance, and the implemented initial tight
-  integer-loop profile. Explicit, stored, and class ranges retain ordinary
-  iteration; directly consumed integer syntax ranges use scalar fusion.
+  sources directly in `for-in`, canonical source provenance, and the
+  implemented initial tight integer-loop profile. Explicit, stored, and class
+  ranges retain ordinary iteration; direct integer syntax ranges use scalar
+  fusion.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, operator availability, and the
   complete implemented primitive operator profile and complete explicit

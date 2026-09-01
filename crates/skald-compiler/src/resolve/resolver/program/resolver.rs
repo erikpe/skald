@@ -213,7 +213,7 @@ fn collect_range_requirement_spans(graph: &ModuleGraph) -> Vec<Span> {
                 .filter(move |edge| edge.target() == target)
                 .flat_map(|edge| {
                     edge.import_spans().iter().copied().chain(
-                        edge.compiler_dependency_spans(CompilerDependencyKind::RangeExpression)
+                        edge.compiler_dependency_spans(CompilerDependencyKind::RangeForSource)
                             .iter()
                             .copied(),
                     )
@@ -232,7 +232,7 @@ fn collect_range_requirement_spans(graph: &ModuleGraph) -> Vec<Span> {
     spans
 }
 
-fn collect_range_expression_spans(graph: &ModuleGraph) -> Vec<Span> {
+fn collect_range_source_spans(graph: &ModuleGraph) -> Vec<Span> {
     let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
     let Some(target) = graph
         .find(&path)
@@ -249,7 +249,7 @@ fn collect_range_expression_spans(graph: &ModuleGraph) -> Vec<Span> {
                 .iter()
                 .filter(move |edge| edge.target() == target)
                 .flat_map(|edge| {
-                    edge.compiler_dependency_spans(CompilerDependencyKind::RangeExpression)
+                    edge.compiler_dependency_spans(CompilerDependencyKind::RangeForSource)
                         .iter()
                         .copied()
                 })
@@ -377,7 +377,7 @@ pub(super) struct ProgramResolver<'ast> {
     iterable_requirement_spans: Vec<Span>,
     operator_requirement_spans: Vec<Span>,
     range_requirement_spans: Vec<Span>,
-    range_expression_spans: Vec<Span>,
+    range_source_spans: Vec<Span>,
     diagnostics: Diagnostics,
 }
 
@@ -394,7 +394,7 @@ impl<'ast> ProgramResolver<'ast> {
             iterable_requirement_spans: Vec::new(),
             operator_requirement_spans: Vec::new(),
             range_requirement_spans: Vec::new(),
-            range_expression_spans: Vec::new(),
+            range_source_spans: Vec::new(),
             diagnostics: Diagnostics::new(),
         }
     }
@@ -404,7 +404,7 @@ impl<'ast> ProgramResolver<'ast> {
         let iterable_requirement_spans = collect_iterable_requirement_spans(graph);
         let operator_requirement_spans = collect_operator_requirement_spans(graph);
         let range_requirement_spans = collect_range_requirement_spans(graph);
-        let range_expression_spans = collect_range_expression_spans(graph);
+        let range_source_spans = collect_range_source_spans(graph);
         Self {
             units: graph
                 .modules()
@@ -420,7 +420,7 @@ impl<'ast> ProgramResolver<'ast> {
             iterable_requirement_spans,
             operator_requirement_spans,
             range_requirement_spans,
-            range_expression_spans,
+            range_source_spans,
             diagnostics: Diagnostics::new(),
         }
     }
@@ -708,7 +708,7 @@ impl<'ast> ProgramResolver<'ast> {
                 interfaces: &interfaces,
                 has_module_context: self.has_module_context,
                 literal_ids: &self.literal_ids,
-                range_expression_spans: &self.range_expression_spans,
+                range_source_spans: &self.range_source_spans,
                 iterable: iterable_language_item.as_ref(),
                 operators: operator_language_item.as_ref(),
                 range: range_language_item.as_ref(),
@@ -1005,7 +1005,7 @@ impl<'ast> ProgramResolver<'ast> {
                 iterable_language_item,
                 operator_language_item,
                 range_language_item,
-                range_expression_spans: self.range_expression_spans,
+                range_source_spans: self.range_source_spans,
                 string_language_item,
                 literal_data: ResolvedLiteralDataTable::new(self.literal_data),
                 declarations: function_declarations,

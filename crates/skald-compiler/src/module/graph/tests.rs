@@ -646,6 +646,73 @@ fn for_in_adds_typed_std_iter_evidence_and_reuses_an_explicit_edge() {
 }
 
 #[test]
+fn direct_range_sources_alone_add_typed_std_range_evidence() {
+    let workspace = directory("graph-range-dependency");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        concat!(
+            "class Values {\n",
+            "  fn scan() -> unit { for (first in 1u .. 3u) {} }\n",
+            "}\n",
+            "fn main() -> i64 { for (second in 4u .. 6u) {} return 0; }\n",
+        ),
+    );
+    source(
+        &root,
+        "std/iter.ska",
+        "public interface Iterable<Item, State> {}\n",
+    );
+    source(&root, "std/range.ska", "public class Range {}\n");
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+    let app = graph.find(&"app".parse().unwrap()).unwrap();
+    let range = app
+        .imports()
+        .iter()
+        .find(|edge| {
+            graph
+                .module(edge.target())
+                .expect("import edge target belongs to graph")
+                .provenance()
+                .module_path()
+                == &"std::range".parse().unwrap()
+        })
+        .expect("direct range source should load std::range");
+    let spans = range.compiler_dependency_spans(CompilerDependencyKind::RangeForSource);
+    assert_eq!(spans.len(), 2);
+    let source = graph.sources().get(app.ast().span.source_id()).unwrap();
+    assert!(spans
+        .iter()
+        .all(|span| source.slice(span.range()) == Some("..")));
+}
+
+#[test]
+fn rejected_value_range_does_not_mask_its_syntax_error_with_a_module_error() {
+    let workspace = directory("graph-rejected-value-range");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        "fn main() -> i64 { var value: u64 = 1u .. 3u; return 0; }\n",
+    );
+
+    let failure = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap_err();
+    assert_eq!(codes(&failure), [crate::syntax::INVALID_RANGE_SYNTAX]);
+}
+
+#[test]
 fn modules_without_literals_do_not_require_std_str() {
     let workspace = directory("graph-no-string-dependency");
     let root = workspace.join("modules");
@@ -773,7 +840,7 @@ fn compiler_dependency_kinds_own_exact_canonical_module_paths() {
         "std::iter".parse().unwrap()
     );
     assert_eq!(
-        super::load::compiler_dependency_path(CompilerDependencyKind::RangeExpression),
+        super::load::compiler_dependency_path(CompilerDependencyKind::RangeForSource),
         "std::range".parse().unwrap()
     );
 }

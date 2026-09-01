@@ -611,15 +611,19 @@ The parser accepts and retains:
 
 ```text
 for-in-statement = "for" "(" identifier [":" storage-type]
-                   "in" expression ")" block
+                   "in" for-in-source ")" block
+for-in-source    = logical-or-expression
+                   [".." logical-or-expression]
 ```
 
 The parentheses and body block are mandatory. `for-in` is a statement and the
 binding is visible only in the body. `for` is reserved; `in` is
 contextual only at the delimiter position in a `for` header and remains an
 ordinary identifier elsewhere, including as the binding itself. Syntax
-retains the binding, optional annotation, iterable, body, header delimiters,
-and complete spans. Resolution selects one exact nominal application, creates
+retains the binding, optional annotation, ordinary iterable or direct range
+source, body, header delimiters, and complete spans. `..` is non-associative
+and is not part of `expression`; parentheses around the complete range are
+therefore invalid. Resolution selects one exact nominal application, creates
 the exact-typed item binding, and resolves the body. Structured HIR, execution,
 and cleanup are owned by
 [General Iteration](ITERATION.md).
@@ -627,9 +631,7 @@ and cleanup are owned by
 ## Expressions
 
 ```text
-expression                = range-expression
-range-expression          = logical-or-expression
-                            [".." logical-or-expression]
+expression                = logical-or-expression
 view-target               = named-type
 
 logical-or-expression     = logical-and-expression
@@ -842,9 +844,7 @@ Primitive operators and class or generic-bound protocol operators share the
 following implemented grammar:
 
 ```text
-expression                = range-expression
-range-expression          = logical-or-expression
-                            [".." logical-or-expression]
+expression                = logical-or-expression
 
 logical-or-expression     = logical-and-expression
                             {"||" logical-and-expression}
@@ -1085,10 +1085,11 @@ payload.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-cast semantics.
 
-The [generic-range contract](RANGES.md) defines the lowest-precedence,
-non-associative `lower .. upper` expression. The lexer chooses `..` before
-member-access `.`, including without whitespace after integer and floating
-literals. Parsing, canonical range resolution, ordinary typed construction,
-general iteration, lifecycle, and native execution are implemented.
-Directly consumed exact `u8`, `u64`, and `i64` ranges additionally use the
-implemented scalar loop-fusion profile.
+The [generic-range contract](RANGES.md) defines non-associative
+`lower .. upper` only as the direct `for-in` source. The lexer chooses `..`
+before member-access `.`, including without whitespace after integer and
+floating literals. Parsing, canonical range resolution, ordinary typed
+construction for unfused sources, general iteration, lifecycle, and native
+execution are implemented. Exact `u8`, `u64`, and `i64` direct sources use the
+implemented scalar loop-fusion profile. Reusable values use explicit
+`Range<T>(lower, upper)` construction.

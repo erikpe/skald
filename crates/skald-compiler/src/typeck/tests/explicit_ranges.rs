@@ -17,7 +17,7 @@ fn immediate_integer_ranges_select_the_fused_structured_plan() {
     let resolved = resolve_range_source(concat!(
         "fn main() -> i64 {\n",
         "  for (byte in 1u8 .. 3u8) {}\n",
-        "  for (wide in (1u .. 3u)) {}\n",
+        "  for (wide in (1u) .. (3u)) {}\n",
         "  for (signed in -2 .. 1) {}\n",
         "  return 0;\n",
         "}\n",
@@ -53,29 +53,29 @@ fn check_range_source(source: &str) -> crate::hir::HirProgram {
 }
 
 #[test]
-fn concise_ranges_reuse_ordinary_construction_in_value_consumers() {
+fn explicit_range_values_and_direct_range_sources_share_ordinary_semantics() {
     let hir = check_range_source(concat!(
         "from std::range import Range;\n",
         "class Holder {\n",
         "  values: Range<u64>;\n",
-        "  init(start: u64, end: u64) { self.values = start .. end; }\n",
+        "  init(start: u64, end: u64) { self.values = Range<u64>(start, end); }\n",
         "}\n",
-        "fn produce(start: u64, end: u64) -> Range<u64> { return start .. end; }\n",
+        "fn produce(start: u64, end: u64) -> Range<u64> { return Range<u64>(start, end); }\n",
         "fn consume(values: Range<u64>) -> u64 {\n",
         "  var total: u64 = 0u; for (value in values) { total = total + value; } return total;\n",
         "}\n",
         "fn main() -> i64 {\n",
-        "  var stored: Range<u64> = 1u .. 4u;\n",
+        "  var stored: Range<u64> = Range<u64>(1u, 4u);\n",
         "  var holder: Holder = Holder(2u, 5u);\n",
-        "  var direct: u64 = consume(3u .. 6u);\n",
+        "  var direct: u64 = consume(Range<u64>(3u, 6u));\n",
         "  var produced: u64 = consume(produce(4u, 7u));\n",
         "  var field: u64 = consume(holder.values);\n",
-        "  for (value in (5u .. 8u)) {}\n",
+        "  for (value in (5u) .. (8u)) {}\n",
         "  return 0;\n",
         "}\n",
     ));
     let dump = dump_hir(&hir);
-    assert_eq!(dump.matches("CanonicalRangeSyntax").count(), 5, "{dump}");
+    assert_eq!(dump.matches("CanonicalRangeSyntax").count(), 1, "{dump}");
     assert!(dump.contains("ForIn"), "{dump}");
     let mir = lower_hir(&hir);
     verify_mir(&mir).expect("concise range consumers must lower through ordinary verified MIR");
@@ -131,7 +131,7 @@ fn fusion_excludes_every_non_immediate_or_nonprimitive_iteration_boundary() {
         "fn main() -> i64 {\n",
         "  for (item in 0u .. 2u) {}\n",
         "  for (item in Range<u64>(0u, 2u)) {}\n",
-        "  var stored: Range<u64> = 0u .. 2u; for (item in stored) {}\n",
+        "  var stored: Range<u64> = Range<u64>(0u, 2u); for (item in stored) {}\n",
         "  for (item in Value(0) .. Value(2)) {}\n",
         "  var counter: Counter = Counter(); for (item in counter) {}\n",
         "  var derived: Derived = Derived(); for (item in derived) {}\n",
@@ -147,8 +147,8 @@ fn fusion_excludes_every_non_immediate_or_nonprimitive_iteration_boundary() {
     assert_eq!(dump.matches("Protocol interface=").count(), 7, "{dump}");
     assert_eq!(
         dump.matches("CanonicalRangeSyntax").count(),
-        5,
-        "direct, stored, class, and both generic syntax ranges must retain provenance: {dump}"
+        4,
+        "direct primitive, class, and generic syntax ranges must retain provenance: {dump}"
     );
 }
 
@@ -203,7 +203,7 @@ fn canonical_range_origin_rejects_missing_forged_and_inconsistent_evidence() {
     let resolved = resolve_range_source(concat!(
         "from std::range import Range;\n",
         "fn main() -> i64 {\n",
-        "  var concise: Range<u64> = 1u .. 3u;\n",
+        "  for (concise in 1u .. 3u) {}\n",
         "  var explicit: Range<u64> = Range<u64>(1u, 3u);\n",
         "  return 0;\n",
         "}\n",
@@ -236,10 +236,12 @@ fn canonical_range_origin_rejects_missing_forged_and_inconsistent_evidence() {
         statement: usize,
     ) -> &mut crate::resolve::ResolvedConstructExpr {
         let definition = program.definitions.get_mut_for_test(entry).unwrap();
-        let ResolvedStatement::Local(local) = &mut definition.body.statements[statement] else {
-            panic!("expected local declaration");
+        let expression = match &mut definition.body.statements[statement] {
+            ResolvedStatement::ForIn(loop_) => &mut loop_.iterable,
+            ResolvedStatement::Local(local) => &mut local.initializer,
+            _ => panic!("expected range-producing statement"),
         };
-        let ResolvedExpression::Construct(construction) = &mut local.initializer else {
+        let ResolvedExpression::Construct(construction) = expression else {
             panic!("expected construction");
         };
         construction

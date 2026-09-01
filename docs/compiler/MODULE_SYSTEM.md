@@ -148,8 +148,10 @@ source name binding. String literals use this boundary for `std::str`; the
 general-iteration kind is implemented for the canonical `std::iter` protocol and
 is populated by parsed `for-in` keyword spans. Both use ordinary provider
 lookup, missing/ambiguity diagnostics, parsing, identities, and dependency
-cycles. Successfully parsed range expressions add the range-expression kind
-for canonical `std::range` at the `..` span, likewise without a source binding.
+cycles. Successfully parsed direct `for-in` range sources add the
+`RangeForSource` kind for canonical `std::range` at the `..` span, likewise
+without a source binding. Out-of-context or malformed `..` syntax does not
+activate a compiler dependency.
 The owning feature resolves each canonical declaration bundle once to semantic
 identities; lowering and backends do not repeatedly compare source path
 strings.

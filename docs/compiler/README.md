@@ -255,16 +255,17 @@ exact resolved iteration evidence, definition-site generic-bound selection,
 item/loop scopes, structured HIR, lifecycle planning, ordinary-MIR lowering,
 verification, and native execution are implemented.
 
-The frozen [generic-range compiler contract](RANGES.md) builds on that
+The implemented [generic-range compiler contract](RANGES.md) builds on that
 implemented boundary. Canonical `std::range` validates its successor protocol
 and ordinary `Range<T>` class, while three static integer realizations use
 existing operations. Explicit ranges run through generic construction,
 general iteration, lifecycle, and native code without primitive object
-conformance, new lower IR, runtime service, or ABI change. Lowest-precedence
-`..` resolution and ordinary class-construction HIR retain non-forgeable syntax
-provenance. Immediately consumed exact integer syntax loops select a structured
-fusion plan and erase to existing scalar MIR. Exact MIR and assembly shape plus
-the recorded matched benchmark establish handwritten-`while` parity.
+conformance, new lower IR, runtime service, or ABI change. Direct `for-in`
+`..` sources retain non-forgeable canonical provenance through the current
+ordinary class-construction adapter; general expressions have no range form.
+Exact integer syntax loops select a structured fusion plan and erase to
+existing scalar MIR. Exact MIR and assembly shape plus the recorded matched
+benchmark establish handwritten-`while` parity.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

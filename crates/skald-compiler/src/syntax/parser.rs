@@ -36,7 +36,7 @@ pub const INVALID_VISIBILITY: &str = "PAR013";
 pub const INVALID_COMPARISON: &str = "PAR014";
 pub const INVALID_OPTIONAL_BOX_INITIALIZER: &str = "PAR015";
 pub const INVALID_GENERIC_SYNTAX: &str = "PAR016";
-pub const INVALID_RANGE_EXPRESSION: &str = "PAR017";
+pub const INVALID_RANGE_SYNTAX: &str = "PAR017";
 
 /// Maximum recursive grammar depth.
 ///

@@ -36,9 +36,10 @@ narrowest new owner test rather than repeating a scenario at every layer.
 
 Concise-range coverage follows the same phase ownership. Lexer tests
 pin longest-match `..` beside decimal and member punctuation. Syntax tests own
-the non-associative lowest-precedence node, spans, recovery, traversal, and
-nesting budget. Module and resolution tests own compiler dependency evidence,
-generic specialization requests, exact endpoint matching, canonical
+the dedicated direct `for-in` source node, rejection in every general
+expression context, endpoint grouping, spans, recovery, traversal, and nesting
+budget. Module and resolution tests own dependency evidence only from valid
+direct sources, generic specialization requests, exact endpoint matching, canonical
 initializer/protocol identities, primitive versus class realizations, and
 stable dumps. Type-check and HIR tests own exact construction-origin
 correspondence, explicit-versus-syntax distinction, ordinary-versus-fused
@@ -516,8 +517,8 @@ handwritten-`while` instruction profile. Backend coverage also proves that
 published fused-only programs omit the unreferenced canonical range class,
 while explicit range construction retains and executes its ordinary methods
 and metadata. `tests/golden/ranges` owns the
-source-to-native primitive/class, explicit/syntax, ordinary/fused, boundary,
-nested, exit, lifecycle, effect, diagnostic, and failure matrix. Pipeline and
+source-to-native primitive/class, explicit/direct-syntax, ordinary/fused,
+boundary, nested, exit, lifecycle, effect, diagnostic, and failure matrix. Pipeline and
 golden determinism permute source/provider order and independent processes;
 runtime tests own the unchanged ABI and exact symbol set. The separate
 [performance procedure](RANGE_LOOP_PERFORMANCE.md) records matched medians

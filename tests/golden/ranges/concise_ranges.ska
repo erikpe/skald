@@ -39,7 +39,7 @@ fn traced_upper() -> u64 {
 }
 
 fn make_range(start: u64, end: u64) -> Range<u64> {
-    return start .. end;
+    return Range<u64>(start, end);
 }
 
 fn sum(ref values: Range<u64>) -> u64 {
@@ -62,13 +62,13 @@ fn main() -> i64 {
         std::io::println_u64(value);
     }
 
-    var stored: Range<u64> = 5u .. 8u;
+    var stored: Range<u64> = Range<u64>(5u, 8u);
     std::io::println_u64(sum(stored));
-    std::io::println_u64(sum(8u .. 11u));
+    std::io::println_u64(sum(Range<u64>(8u, 11u)));
     std::io::println_u64(sum(make_range(11u, 14u)));
 
     var exited: u64 = 0u;
-    for (value in (0u .. 6u)) {
+    for (value in (0u) .. (6u)) {
         if (value == 1u) {
             continue;
         }
@@ -91,7 +91,7 @@ fn main() -> i64 {
     std::io::println_i64(first(4, 2));
 
     var nested_total: u64 = 0u;
-    var nested_stored: Range<u64> = 1u .. 3u;
+    var nested_stored: Range<u64> = Range<u64>(1u, 3u);
     for (outer in 0u .. 2u) {
         for (inner in nested_stored) {
             nested_total = nested_total + outer + inner;

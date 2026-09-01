@@ -453,7 +453,6 @@ fn is_receiver_place(expression: &Expression) -> bool {
         | Expression::Unary(_)
         | Expression::Binary(_)
         | Expression::Logical(_)
-        | Expression::Range(_)
         | Expression::TypeTest(_)
         | Expression::PresenceTest(_)
         | Expression::PrimitiveCast(_)

@@ -53,7 +53,7 @@ fn assert_rejected(label: &str, program: &MirProgram) {
 fn fused_integer_matrix_contains_only_scalar_loop_machinery() {
     let program = lowered(concat!(
         "fn bytes() -> unit { for (item in 1u8 .. 3u8) {} }\n",
-        "fn unsigned() -> unit { for (item in (1u .. 3u)) {} }\n",
+        "fn unsigned() -> unit { for (item in (1u) .. (3u)) {} }\n",
         "fn signed() -> unit { for (item in -2 .. 1) {} }\n",
         "fn main() -> i64 { return 0; }\n",
     ));

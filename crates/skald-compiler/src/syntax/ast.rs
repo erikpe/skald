@@ -710,9 +710,32 @@ pub struct ForInStatement {
     pub binding: Name,
     pub annotation: Option<ForInTypeAnnotation>,
     pub in_span: Span,
-    pub iterable: Expression,
+    pub source: ForInSource,
     pub right_paren_span: Span,
     pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ForInSource {
+    Iterable(Expression),
+    Range(Box<ForRangeSource>),
+}
+
+impl ForInSource {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Iterable(expression) => expression.span(),
+            Self::Range(range) => range.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ForRangeSource {
+    pub lower: Expression,
+    pub operator_span: Span,
+    pub upper: Expression,
     pub span: Span,
 }
 
@@ -737,7 +760,6 @@ pub enum Expression {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Logical(LogicalExpr),
-    Range(RangeExpr),
     TypeTest(Box<TypeTestExpr>),
     PresenceTest(PresenceTestExpr),
     Unwrap(UnwrapExpr),
@@ -768,7 +790,6 @@ impl Expression {
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::Logical(expression) => expression.span,
-            Self::Range(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::PresenceTest(expression) => expression.span,
             Self::Unwrap(expression) => expression.span,
@@ -1108,14 +1129,6 @@ pub struct LogicalExpr {
     pub operator: LogicalOperator,
     pub operator_span: Span,
     pub right: Box<Expression>,
-    pub span: Span,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RangeExpr {
-    pub lower: Box<Expression>,
-    pub operator_span: Span,
-    pub upper: Box<Expression>,
     pub span: Span,
 }
 

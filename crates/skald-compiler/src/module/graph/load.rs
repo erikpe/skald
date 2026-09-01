@@ -4,12 +4,13 @@ use crate::{
     diagnostics::Diagnostics,
     driver::EntrySelector,
     identity::ModuleId,
-    lexer::{lex, TokenKind},
+    lexer::lex,
     source::{SourceDatabase, SourceId, Span, TextRange},
     syntax::{parse, CompilationUnit, ImportDeclaration},
 };
 
 use super::{
+    compiler_dependencies,
     diagnostic::{
         append_pending_diagnostics, entry_failure, self_import_diagnostic, PendingLoadError,
     },
@@ -200,19 +201,6 @@ fn parse_source(
         return (None, diagnostics);
     }
     let parsed = parse(source, &lexed.tokens);
-    let mut compiler_dependency_ranges = BTreeMap::<CompilerDependencyKind, Vec<TextRange>>::new();
-    for token in &lexed.tokens {
-        let kind = match token.kind {
-            TokenKind::StringLiteral => CompilerDependencyKind::StringLiteral,
-            TokenKind::For => CompilerDependencyKind::GeneralIteration,
-            TokenKind::DotDot => CompilerDependencyKind::RangeExpression,
-            _ => continue,
-        };
-        compiler_dependency_ranges
-            .entry(kind)
-            .or_default()
-            .push(token.span.range());
-    }
     diagnostics.append(parsed.diagnostics);
     measurements.record_parse(
         module_path,
@@ -223,6 +211,7 @@ fn parse_source(
     if diagnostics.has_errors() {
         (None, diagnostics)
     } else {
+        let compiler_dependency_ranges = compiler_dependencies::collect(&parsed.ast, &lexed.tokens);
         (
             Some(ParsedModule {
                 ast: parsed.ast,
@@ -306,7 +295,7 @@ pub(super) fn compiler_dependency_path(kind: CompilerDependencyKind) -> ModulePa
     let path = match kind {
         CompilerDependencyKind::StringLiteral => "std::str",
         CompilerDependencyKind::GeneralIteration => "std::iter",
-        CompilerDependencyKind::RangeExpression => "std::range",
+        CompilerDependencyKind::RangeForSource => "std::range",
     };
     ModulePath::try_from(path).expect("compiler dependency path must be valid")
 }

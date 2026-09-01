@@ -1,6 +1,6 @@
 # Direct For-Range Syntax Roadmap
 
-Status: planned; FRS0 is next.
+Status: in progress; FRS0 is complete and FRS1 is next.
 
 This roadmap restricts concise `lower .. upper` syntax to the direct source of
 a `for-in` statement. Reusable range values remain ordinary explicit
@@ -78,7 +78,7 @@ unrelated expression consumers.
 
 ## Progress
 
-- [ ] FRS0 — Enforce the direct-source syntax boundary
+- [x] FRS0 — Enforce the direct-source syntax boundary
 - [ ] FRS1 — Make range-loop provenance structural
 - [ ] FRS2 — Complete conformance, determinism, and performance closure
 
@@ -90,38 +90,38 @@ unrelated expression consumers.
 keeping the existing resolved and typed range machinery as a temporary
 buildable adapter for the following cleanup.
 
-- [ ] Replace the general `Expression::Range`/`RangeExpr` AST form and
+- [x] Replace the general `Expression::Range`/`RangeExpr` AST form and
   lowest-precedence expression parser tier with a source-shaped
   `ForInSource::{Iterable, Range}` representation. The range source retains
   lower, operator, upper, and complete spans.
-- [ ] Parse the shared-prefix `for-in` source once, selecting the range variant
+- [x] Parse the shared-prefix `for-in` source once, selecting the range variant
   only when an ungrouped `..` immediately follows the lower
   `logical-or-expression`; preserve the existing ordinary iterable source and
   item-annotation behavior.
-- [ ] Reuse or revise `PAR017` as one stable direct-range diagnostic family for
+- [x] Reuse or revise `PAR017` as one stable direct-range diagnostic family for
   forbidden expression contexts, missing lower or upper endpoints, and
   chained operators. Recover once at calls, returns, initializers, grouped
   expressions, `for` headers, and following statement boundaries.
-- [ ] Pin the exact acceptance distinction between grouped endpoints,
+- [x] Pin the exact acceptance distinction between grouped endpoints,
   parenthesized ordinary iterables, and the rejected grouped complete range.
-- [ ] Remove range handling from general expression spans, dumps, logical-depth
+- [x] Remove range handling from general expression spans, dumps, logical-depth
   accounting, template expression typing, request scanners, and exhaustive
   expression visitors. Visit the two endpoints from the dedicated `for-in`
   source owner instead.
-- [ ] Derive `std::range` compiler-dependency evidence from successfully parsed
+- [x] Derive `std::range` compiler-dependency evidence from successfully parsed
   direct range sources rather than every `DotDot` token. Rename the dependency
   vocabulary from range expression to direct range source and preserve stable
   source-order graph output and canonical provider/cycle diagnostics.
-- [ ] Adapt body resolution, generic-template analysis, semantic range-request
+- [x] Adapt body resolution, generic-template analysis, semantic range-request
   collection, and current fusion selection to consume the new syntax node
   while temporarily producing the existing canonical construction origin.
   Keep this bridge local and explicitly internal so it does not become a new
   public representation contract.
-- [ ] Migrate every in-repository value-producing `..` use to an explicit,
+- [x] Migrate every in-repository value-producing `..` use to an explicit,
   imported `Range<T>(lower, upper)`. Keep direct primitive and class loop
   sources concise, and remove the formerly fusion-transparent whole-range
   grouping cases.
-- [ ] Update `GRAMMAR.md`, `RANGES.md`, functions/control-flow, the language
+- [x] Update `GRAMMAR.md`, `RANGES.md`, functions/control-flow, the language
   overview and status matrix, module-system documentation, range golden
   guidance, and user-facing examples in the same change that rejects the old
   forms. Preserve the archived design proposal and completed roadmap as

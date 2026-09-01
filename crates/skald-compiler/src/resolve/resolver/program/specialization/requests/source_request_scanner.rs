@@ -166,7 +166,13 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
                 if let Some(annotation) = &statement.annotation {
                     self.visit_type(&annotation.type_syntax);
                 }
-                self.visit_expression(&statement.iterable);
+                match &statement.source {
+                    syntax::ForInSource::Iterable(iterable) => self.visit_expression(iterable),
+                    syntax::ForInSource::Range(range) => {
+                        self.visit_expression(&range.lower);
+                        self.visit_expression(&range.upper);
+                    }
+                }
                 self.visit_block(&statement.body);
             }
             syntax::Statement::Block(block) => self.visit_block(block),
@@ -205,10 +211,6 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
             syntax::Expression::Logical(expression) => {
                 self.visit_expression(&expression.left);
                 self.visit_expression(&expression.right);
-            }
-            syntax::Expression::Range(expression) => {
-                self.visit_expression(&expression.lower);
-                self.visit_expression(&expression.upper);
             }
             syntax::Expression::TypeTest(expression) => {
                 self.visit_expression(&expression.source);

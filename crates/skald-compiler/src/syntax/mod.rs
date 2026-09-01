@@ -17,9 +17,9 @@ pub use ast::{
     ByteLiteralExpr, CallArguments, CallExpr, ClassDecl, ClassMember, CompilationUnit,
     ConditionalArm, ConditionalStatement, ContinueStatement, CopyAssignmentDecl,
     CopyConstructorDecl, DestructorDecl, Expression, ExpressionStatement, ExternalFunctionDecl,
-    FieldAssignmentStatement, FieldDecl, ForInStatement, ForInTypeAnnotation, FunctionDecl,
-    FunctionTypeParameterMode, FunctionTypeParameterSyntax, FunctionTypeSyntax,
-    GenericArgumentList, GenericParameterList, GenericRequirementSyntax,
+    FieldAssignmentStatement, FieldDecl, ForInSource, ForInStatement, ForInTypeAnnotation,
+    ForRangeSource, FunctionDecl, FunctionTypeParameterMode, FunctionTypeParameterSyntax,
+    FunctionTypeSyntax, GenericArgumentList, GenericParameterList, GenericRequirementSyntax,
     GenericStaticSelectionExpr, GenericTypeApplicationExpr, GenericWhereClause, GroupedExpr,
     IdentifierExpr, ImportDeclaration, InitializerDecl, InterfaceDecl, InterfaceRequirementDecl,
     IntrinsicFunctionDecl, LocalDecl, LogicalExpr, LogicalOperator, MemberAccessExpr,
@@ -28,17 +28,16 @@ pub use ast::{
     NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode,
     OptionalBoxAllocationExpr, OptionalBoxInitializer, OptionalTypeSpelling, Parameter,
     ParameterBindingMode, PresenceTestExpr, PresenceTestKind, PresentExpr, PrimitiveCastExpr,
-    PrimitiveType, RangeExpr, ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr,
-    Statement, StaticFieldDecl, StaticFieldInitializer, StringLiteralExpr, TopLevelDeclaration,
-    TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility,
-    WhileStatement,
+    PrimitiveType, ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr, Statement,
+    StaticFieldDecl, StaticFieldInitializer, StringLiteralExpr, TopLevelDeclaration, TypeKind,
+    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
 };
 pub use dump::dump_ast;
 pub use parser::{
     parse, ParseOutput, EXCESSIVE_NESTING, EXPECTED_DECLARATION, EXPECTED_EXPRESSION,
     EXPECTED_STATEMENT, EXPECTED_TOKEN, INVALID_CLASS_HEADER, INVALID_CLASS_MEMBER,
     INVALID_COMPARISON, INVALID_GENERIC_SYNTAX, INVALID_IMPORT, INVALID_OPTIONAL_BOX_INITIALIZER,
-    INVALID_OPTIONAL_TYPE, INVALID_RANGE_EXPRESSION, INVALID_TYPE_TEST, INVALID_VISIBILITY,
+    INVALID_OPTIONAL_TYPE, INVALID_RANGE_SYNTAX, INVALID_TYPE_TEST, INVALID_VISIBILITY,
     MAX_LOGICAL_EXPRESSION_DEPTH, MAX_SYNTAX_NESTING, MISPLACED_IMPORT,
 };
 

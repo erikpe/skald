@@ -98,7 +98,7 @@ fn concise_integer_range_activates_canonical_module_and_retains_resolved_evidenc
     assert!(range_edge.import_spans().is_empty());
     assert_eq!(
         range_edge
-            .compiler_dependency_spans(crate::module::CompilerDependencyKind::RangeExpression)
+            .compiler_dependency_spans(crate::module::CompilerDependencyKind::RangeForSource)
             .len(),
         1
     );
@@ -211,7 +211,7 @@ fn generic_template_range_requests_close_for_each_concrete_endpoint_type() {
         "from std::range import Successor;\n",
         "class Scanner<T> where T: OpLess<T>, T: Successor<T> {\n",
         "  init() {}\n",
-        "  fn scan(start: T, end: T) -> unit { for (item in start .. end) {} }\n",
+        "  fn scan(start: T, end: T) -> unit { for (item: T in start .. end) {} }\n",
         "}\n",
         "fn use(scanner: Scanner<u64>) -> unit {}\n",
         "fn main() -> i64 { return 0; }\n",
@@ -317,28 +317,6 @@ fn concise_range_requests_follow_overloaded_operator_result_types() {
     assert!(dump.contains("realization class-witness"), "{dump}");
     let checked = crate::typeck::type_check(&output.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-}
-
-#[test]
-fn nested_concise_range_requests_are_discovered_inner_to_outer() {
-    let (_graph, output) = resolve_range_syntax(concat!(
-        "fn main() -> i64 {\n",
-        "  var nested: Range<Range<u64>> = (1u .. 2u) .. (3u .. 4u);\n",
-        "  return 0;\n",
-        "}\n",
-    ));
-    assert!(
-        output
-            .diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT),
-        "{:?}",
-        output.diagnostics
-    );
-    assert!(!output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == UNSUPPORTED_RANGE_APPLICATION));
 }
 
 #[test]

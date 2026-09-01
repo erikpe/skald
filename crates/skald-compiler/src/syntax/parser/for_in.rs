@@ -9,16 +9,16 @@ impl Parser<'_> {
         let binding = self.parse_for_in_binding();
         let (annotation, annotation_valid) = self.parse_for_in_annotation();
         let in_token = self.parse_for_in_delimiter();
-        let iterable = self.parse_for_in_iterable();
+        let source = self.parse_for_in_source();
         let right_paren = self.expect(TokenKind::RightParen, "`)` after the iterable expression");
         let body = self.parse_block();
 
-        match (left_paren, binding, in_token, iterable, right_paren, body) {
+        match (left_paren, binding, in_token, source, right_paren, body) {
             (
                 Some(left_paren),
                 Some(binding),
                 Some(in_token),
-                Some(iterable),
+                Some(source),
                 Some(right_paren),
                 Some(body),
             ) if annotation_valid => Some(ForInStatement {
@@ -27,7 +27,7 @@ impl Parser<'_> {
                 binding,
                 annotation,
                 in_span: in_token.span,
-                iterable,
+                source,
                 right_paren_span: right_paren.span,
                 span: self.cover(for_token.span, body.span),
                 body,
@@ -92,7 +92,7 @@ impl Parser<'_> {
         None
     }
 
-    fn parse_for_in_iterable(&mut self) -> Option<Expression> {
+    fn parse_for_in_source(&mut self) -> Option<ForInSource> {
         if self.at_any(&[
             TokenKind::RightParen,
             TokenKind::LeftBrace,
@@ -107,6 +107,82 @@ impl Parser<'_> {
             );
             return None;
         }
-        self.parse_expression()
+        if self.at(TokenKind::DotDot) {
+            self.reject_missing_for_range_lower();
+            return None;
+        }
+
+        let lower = self.parse_for_range_endpoint()?;
+        let Some(operator) = self.consume(TokenKind::DotDot) else {
+            return Some(ForInSource::Iterable(lower));
+        };
+        if !self.starts_expression() || self.at(TokenKind::DotDot) {
+            self.report(
+                INVALID_RANGE_SYNTAX,
+                "direct range sources require an upper endpoint",
+                operator.span,
+                "expected an expression after `..`",
+            );
+            self.consume_range_tail();
+            return None;
+        }
+        let upper = self.parse_for_range_endpoint()?;
+        if self.at(TokenKind::DotDot) {
+            self.reject_for_range_chain();
+            return None;
+        }
+        Some(ForInSource::Range(Box::new(ForRangeSource {
+            span: self.cover(lower.span(), upper.span()),
+            lower,
+            operator_span: operator.span,
+            upper,
+        })))
+    }
+
+    #[cold]
+    fn reject_missing_for_range_lower(&mut self) {
+        let operator = self.advance();
+        self.report(
+            INVALID_RANGE_SYNTAX,
+            "direct range sources require a lower endpoint",
+            operator.span,
+            "expected an expression before `..`",
+        );
+        self.consume_range_tail();
+    }
+
+    #[cold]
+    fn reject_for_range_chain(&mut self) {
+        let operator = self.advance();
+        self.report(
+            INVALID_RANGE_SYNTAX,
+            "direct range operators cannot be chained",
+            operator.span,
+            "use one half-open range as the direct `for-in` source",
+        );
+        self.consume_range_tail();
+    }
+
+    #[cold]
+    pub(super) fn reject_range_outside_for_source(&mut self) {
+        let operator = self.advance();
+        self.report(
+            INVALID_RANGE_SYNTAX,
+            "concise range syntax is allowed only as the direct `for-in` source",
+            operator.span,
+            "use an explicit `Range<T>(lower, upper)` value here",
+        );
+        self.consume_range_tail();
+    }
+
+    fn consume_range_tail(&mut self) {
+        if self.starts_expression() && !self.at(TokenKind::DotDot) {
+            let _ = self.parse_for_range_endpoint();
+        }
+        while self.consume(TokenKind::DotDot).is_some() {
+            if self.starts_expression() && !self.at(TokenKind::DotDot) {
+                let _ = self.parse_for_range_endpoint();
+            }
+        }
     }
 }

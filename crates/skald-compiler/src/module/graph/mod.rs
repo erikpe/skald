@@ -1,5 +1,6 @@
 //! Entry selection and deterministic reachable parsed-module loading.
 
+mod compiler_dependencies;
 mod diagnostic;
 mod dump;
 mod entry;

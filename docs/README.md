@@ -44,8 +44,9 @@ Use the authority closest to the behavior:
 - the implemented nominal `Iterable<Item, State>` protocol, `for-in` selection,
   termination, and source-visible loop lifetimes belong in
   [general iteration](language/ITERATION.md);
-- the frozen canonical `Successor<Output>` and `Range<T>` contract, half-open
-  `..` expression, exact class opt-in, and tight primitive range-loop profile
+- the implemented canonical `Successor<Output>` and `Range<T>` contract,
+  half-open direct `for-in` `..` source, exact class opt-in, and tight primitive
+  range-loop profile
   belong in [generic ranges](language/RANGES.md);
 - exact classes, inline containment, receivers, ordinary initializer
   overloading, explicit copy construction, and object places belong in

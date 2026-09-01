@@ -19,7 +19,7 @@ pub(super) struct SemanticRangeCompletionInput<'program, 'ast> {
     pub(super) interfaces: &'program ResolvedInterfaceDeclarationTable,
     pub(super) has_module_context: bool,
     pub(super) literal_ids: &'program HashMap<Span, LiteralDataId>,
-    pub(super) range_expression_spans: &'program [Span],
+    pub(super) range_source_spans: &'program [Span],
     pub(super) iterable: Option<&'program ResolvedIterableLanguageItem>,
     pub(super) operators: Option<&'program ResolvedOperatorLanguageItem>,
     pub(super) range: Option<&'program ResolvedRangeLanguageItem>,
@@ -74,7 +74,7 @@ pub(super) fn complete_semantic_range_specializations(
                 hierarchy: &semantic_hierarchy,
                 has_module_context: input.has_module_context,
                 literal_ids: input.literal_ids,
-                range_expression_spans: input.range_expression_spans,
+                range_source_spans: input.range_source_spans,
                 iterable: input.iterable,
                 operators: input.operators,
                 range: input.range,
@@ -91,7 +91,7 @@ pub(super) fn complete_semantic_range_specializations(
             type_interner,
             diagnostics,
         );
-        let has_undiscovered_range = input.range_expression_spans.iter().any(|span| {
+        let has_undiscovered_range = input.range_source_spans.iter().any(|span| {
             !discovery
                 .class_specializations
                 .iter()
@@ -126,7 +126,7 @@ pub(super) struct SemanticRangeDiscoveryInput<'program, 'ast> {
     pub(super) hierarchy: &'program ResolvedClassHierarchy,
     pub(super) has_module_context: bool,
     pub(super) literal_ids: &'program HashMap<Span, LiteralDataId>,
-    pub(super) range_expression_spans: &'program [Span],
+    pub(super) range_source_spans: &'program [Span],
     pub(super) iterable: Option<&'program ResolvedIterableLanguageItem>,
     pub(super) operators: Option<&'program ResolvedOperatorLanguageItem>,
     pub(super) range: Option<&'program ResolvedRangeLanguageItem>,
@@ -173,7 +173,7 @@ pub(super) fn discover_semantic_range_requests(
             else {
                 continue;
             };
-            if !contains_range(function.span, input.range_expression_spans) {
+            if !contains_range(function.span, input.range_source_spans) {
                 continue;
             }
             let declaration = input
@@ -203,7 +203,7 @@ pub(super) fn discover_semantic_range_requests(
                 else {
                     return false;
                 };
-                contains_range(class.span, input.range_expression_spans)
+                contains_range(class.span, input.range_source_spans)
             })
             .cloned()
             .collect::<Vec<_>>();

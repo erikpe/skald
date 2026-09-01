@@ -19,7 +19,7 @@ fn parses_inferred_annotated_and_nested_for_in_with_complete_stable_spans() {
     assert_eq!(source_slice(source, outer.left_paren_span), "(");
     assert_eq!(source_slice(source, outer.binding.span), "item");
     assert_eq!(source_slice(source, outer.in_span), "in");
-    assert_eq!(source_slice(source, outer.iterable.span()), "values");
+    assert_eq!(source_slice(source, outer.source.span()), "values");
     assert_eq!(source_slice(source, outer.right_paren_span), ")");
     assert_eq!(source_slice(source, outer.span), &source[31..83]);
 
@@ -33,7 +33,7 @@ fn parses_inferred_annotated_and_nested_for_in_with_complete_stable_spans() {
     };
     assert!(inner.annotation.is_none());
     assert_eq!(source_slice(source, inner.binding.span), "inner");
-    assert_eq!(source_slice(source, inner.iterable.span()), "item");
+    assert_eq!(source_slice(source, inner.source.span()), "item");
     assert_eq!(source_slice(source, inner.span), &source[59..81]);
 
     let dump = dump_ast(&output.ast);
@@ -81,8 +81,8 @@ fn in_remains_an_identifier_outside_the_for_header_delimiter() {
     };
     assert_eq!(statement.binding.text, "in");
     assert!(matches!(
-        &statement.iterable,
-        Expression::Identifier(identifier) if identifier.name.text == "in"
+        &statement.source,
+        ForInSource::Iterable(Expression::Identifier(identifier)) if identifier.name.text == "in"
     ));
 }
 

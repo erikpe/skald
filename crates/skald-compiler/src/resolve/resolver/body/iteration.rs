@@ -24,7 +24,10 @@ impl CallableResolver<'_, '_> {
             .map(|annotation| self.resolve_type(&annotation.type_syntax));
         let annotation_valid = annotation.as_ref().is_none_or(Option::is_some);
         let annotation = annotation.flatten();
-        let iterable = self.resolve_expression(&statement.iterable)?;
+        let iterable = match &statement.source {
+            syntax::ForInSource::Iterable(iterable) => self.resolve_expression(iterable),
+            syntax::ForInSource::Range(range) => self.resolve_range_source(range),
+        }?;
         let selection = self.select_iterable(
             &iterable,
             annotation.as_ref().map(|annotation| annotation.kind),
@@ -175,7 +178,7 @@ impl CallableResolver<'_, '_> {
                         "the iterable type provides no eligible `std::iter::Iterable` application",
                     )
                     .with_primary_label(
-                        statement.iterable.span(),
+                        statement.source.span(),
                         "no nominal iteration claim is reachable from this static type",
                     ),
                 );
@@ -190,7 +193,7 @@ impl CallableResolver<'_, '_> {
                     statement
                         .annotation
                         .as_ref()
-                        .map_or(statement.iterable.span(), |annotation| {
+                        .map_or(statement.source.span(), |annotation| {
                             annotation.type_syntax.span
                         }),
                     "iteration protocol selection is ambiguous",

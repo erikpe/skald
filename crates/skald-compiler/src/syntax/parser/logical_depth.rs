@@ -37,10 +37,6 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
                 pending.push((&expression.left, logical_depth));
                 pending.push((&expression.right, logical_depth));
             }
-            Expression::Range(expression) => {
-                pending.push((&expression.lower, depth));
-                pending.push((&expression.upper, depth));
-            }
             Expression::TypeTest(expression) => {
                 pending.push((&expression.source, depth));
             }

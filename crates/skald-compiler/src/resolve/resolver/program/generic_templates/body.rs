@@ -312,24 +312,6 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 self.visit_expression(&expression.left);
                 self.visit_expression(&expression.right);
             }
-            syntax::Expression::Range(expression) => {
-                self.visit_expression(&expression.lower);
-                self.visit_expression(&expression.upper);
-                let lower = self.type_of_expression(&expression.lower);
-                let upper = self.type_of_expression(&expression.upper);
-                if let (Some(lower), Some(upper)) = (lower, upper) {
-                    if lower.semantically_eq(&upper) {
-                        self.selections.push(ResolvedTemplateSelection::Range {
-                            endpoint: lower,
-                            endpoint_provenance: [
-                                self.range_endpoint_provenance(&expression.lower),
-                                self.range_endpoint_provenance(&expression.upper),
-                            ],
-                            span: expression.operator_span,
-                        });
-                    }
-                }
-            }
             syntax::Expression::TypeTest(expression) => {
                 self.visit_expression(&expression.source);
                 if let Some(target) = self.resolve_named_type_use(
@@ -908,7 +890,6 @@ impl TemplateBodyResolver<'_, '_, '_> {
     }
 
     fn visit_iteration(&mut self, statement: &syntax::ForInStatement) {
-        self.visit_expression(&statement.iterable);
         let annotation = statement.annotation.as_ref().and_then(|annotation| {
             self.resolve_type_use(
                 &annotation.type_syntax,
@@ -917,8 +898,33 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 },
             )
         });
+        let iterable = match &statement.source {
+            syntax::ForInSource::Iterable(iterable) => iterable,
+            syntax::ForInSource::Range(range) => {
+                self.visit_expression(&range.lower);
+                self.visit_expression(&range.upper);
+                let lower = self.type_of_expression(&range.lower);
+                let upper = self.type_of_expression(&range.upper);
+                if let (Some(lower), Some(upper)) = (lower, upper) {
+                    if lower.semantically_eq(&upper) {
+                        self.selections.push(ResolvedTemplateSelection::Range {
+                            endpoint: lower,
+                            endpoint_provenance: [
+                                self.range_endpoint_provenance(&range.lower),
+                                self.range_endpoint_provenance(&range.upper),
+                            ],
+                            span: range.operator_span,
+                        });
+                    }
+                }
+                // Direct range syntax has a concrete canonical class result;
+                // only parameter-bound iterable selection is frozen here.
+                return;
+            }
+        };
+        self.visit_expression(iterable);
         let Some(parameter) = self
-            .type_of_expression(&statement.iterable)
+            .type_of_expression(iterable)
             .as_ref()
             .and_then(ResolvedTemplateType::parameter)
         else {
@@ -990,7 +996,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                         "the generic iterable type has no canonical `Iterable` bound",
                     )
                     .with_primary_label(
-                        statement.iterable.span(),
+                        statement.source.span(),
                         "declare an exact `std::iter::Iterable<Item, State>` bound",
                     ),
                 );
@@ -1005,7 +1011,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     statement
                         .annotation
                         .as_ref()
-                        .map_or(statement.iterable.span(), |annotation| {
+                        .map_or(statement.source.span(), |annotation| {
                             annotation.type_syntax.span
                         }),
                     "generic iteration selection is ambiguous",
@@ -1029,8 +1035,8 @@ impl TemplateBodyResolver<'_, '_, '_> {
             span: statement.for_span,
         });
         self.scopes.push(HashMap::new());
-        let depends_on_parameter = item.depends_on_parameter()
-            || self.expression_depends_on_parameter(&statement.iterable);
+        let depends_on_parameter =
+            item.depends_on_parameter() || self.expression_depends_on_parameter(iterable);
         self.declare_binding(
             &statement.binding,
             item,

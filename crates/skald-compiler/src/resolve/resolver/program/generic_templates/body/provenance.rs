@@ -48,10 +48,6 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 self.expression_depends_on_parameter(&logical.left)
                     || self.expression_depends_on_parameter(&logical.right)
             }
-            syntax::Expression::Range(range) => {
-                self.expression_depends_on_parameter(&range.lower)
-                    || self.expression_depends_on_parameter(&range.upper)
-            }
             syntax::Expression::TypeTest(test) => {
                 self.expression_depends_on_parameter(&test.source)
                     || self.type_use_depends_on_parameter(test.target.span)

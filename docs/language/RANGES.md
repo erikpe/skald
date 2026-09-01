@@ -1,6 +1,6 @@
-# Generic Ranges and Concise Range Expressions
+# Generic Ranges and Concise Range Loops
 
-Status: frozen language contract; explicit and concise generic ranges
+Status: implemented language contract; explicit and concise generic ranges
 implemented through immediate primitive-loop fusion. The canonical
 `Successor<Output>` protocol, ordinary `Range<T>` class, class
 opt-in, static integer realizations, explicit half-open iteration, `..`
@@ -12,7 +12,7 @@ and the [implemented grammar](GRAMMAR.md) remains authoritative for accepted
 source syntax.
 
 This document owns the source-visible contract for explicit `Range<T>` values
-and concise `lower .. upper` expressions. Compiler identities, primitive
+and concise `lower .. upper` loop sources. Compiler identities, primitive
 realization, HIR provenance, loop fusion, verification, and performance
 acceptance are owned by the
 [range compiler contract](../compiler/RANGES.md).
@@ -176,38 +176,58 @@ copies, state assignment, yielded-item copying, effects, allocation, and
 destruction retain ordinary class behavior. The initial tight-loop guarantee
 does not apply to class ranges.
 
-## Concise `..` expression
+## Concise `..` loop source
 
-Status: implemented through ordinary construction, iteration, and native
-execution.
+Status: implemented through direct `for-in` syntax, ordinary construction for
+class and otherwise unfused ranges, scalar fusion for eligible integers, and
+native execution.
 
-The frozen syntax adds one lowest-precedence, non-associative expression tier:
+Concise range syntax belongs only to the direct source of a `for-in`
+statement:
 
 ```text
-expression               = range-expression
-range-expression         = logical-or-expression
-                           [".." logical-or-expression]
+for-in-source = logical-or-expression
+                [".." logical-or-expression]
+expression    = logical-or-expression
 ```
 
-`..` is a general expression, not a special `for` header:
+The concise and explicit forms are:
 
 ```ska
 from std::range import Range;
 
-var values: Range<u64> = 17u .. 23u;
-for (i in values) {
+for (i in 17u .. 23u) {
+}
+
+for (i in Range<u64>(17u, 23u)) {
 }
 ```
 
 The lexer uses longest match before member-access `.` and does not require
-whitespace. One ungrouped expression may contain at most one `..`; `a .. b ..
-c` is invalid rather than associative.
+whitespace. One direct source may contain at most one `..`; `a .. b .. c` is
+invalid rather than associative.
+
+`..` is not an expression and cannot produce a reusable value. These forms are
+invalid:
+
+```ska
+var values = start .. end;
+consume(start .. end);
+return start .. end;
+for (item in (start .. end)) {
+}
+```
+
+Use an explicitly imported `Range<T>(start, end)` in storage, arguments,
+results, or other value positions. Parentheses around either endpoint remain
+valid, as does a parenthesized ordinary iterable; parentheses around the
+complete concise range do not make it a direct source.
 
 For `lower .. upper`, both operands are evaluated in the enclosing scope and
-must have the same exact static type `T`. The expression selects the canonical
-`Range<T>.init(T, T)` and has exact owning type `std::range::Range<T>`.
-Selection requires a valid canonical specialization, including exact
-`OpLess<T>` and `Successor<T>` satisfaction.
+must have the same exact static type `T`. The loop source selects the canonical
+`Range<T>.init(T, T)` and iterates its exact `Iterable<T, T>` claim. Selection
+requires a valid canonical specialization, including exact `OpLess<T>` and
+`Successor<T>` satisfaction.
 
 There is no expected-type filtering, numeric promotion, narrowing,
 common-base inference, optional unwrap, shared dereference, user conversion,
@@ -215,24 +235,25 @@ constructor search on `T`, or overloadable `OpRange`. Mixed endpoints such as
 `17u .. 23` require an explicit correction to the same type. This narrow
 inference does not add general generic-argument inference.
 
-Successfully parsed range syntax acquires `std::range` as a compiler
-dependency without creating a source import binding. An explicit import is
-still required to name `Range` or `Successor` directly.
+Successfully parsed direct range syntax acquires `std::range` as a compiler
+dependency without creating a source import binding. Out-of-context or
+malformed syntax does not activate the module. An explicit import is still
+required to name `Range` or `Successor` directly.
 
-The resolved construction retains exact endpoint, range-template,
+The resolved loop source retains exact endpoint, range-template,
 specialization, initializer, `OpLess<T>`, `Successor<T>`, iterable-claim, and
 primitive-intrinsic or class-witness identities. Typed HIR erases the syntax
 to ordinary exact-class construction while retaining compiler-owned canonical
-syntax provenance for later immediate-loop optimization. Explicit
-`Range<T>(...)` construction and lookalike classes never acquire that
-provenance.
+source provenance for immediate-loop optimization. Explicit `Range<T>(...)`
+construction and lookalike classes never acquire that provenance.
 
 ## Evaluation, iteration, and cleanup
 
 The lower endpoint evaluates and is secured exactly once before the upper
 endpoint evaluates exactly once. Both complete before range initialization or
 loop execution. Produced class values, scalar temporaries, owners, checked
-views, and failures retain ordinary expression and construction rules.
+views, and failures retain ordinary endpoint-expression and construction
+rules.
 
 Ordinary range iteration follows the complete
 [general-iteration contract](ITERATION.md). The range receiver remains live
@@ -280,8 +301,9 @@ repository correctness gate.
 
 ## Diagnostics and deliberate exclusions
 
-Diagnostics distinguish malformed canonical declarations, unavailable module
-providers, missing or chained endpoints, mismatched exact endpoint types,
+Diagnostics distinguish concise syntax outside a direct `for-in` source,
+malformed canonical declarations, unavailable module providers, missing or
+chained endpoints, mismatched exact endpoint types,
 missing ordering or successor applications, unsupported primitive evidence,
 and ordinary construction, storage, copy, assignment, result, destruction, or
 iteration failures. They retain the `..` span, endpoint spans and types, and

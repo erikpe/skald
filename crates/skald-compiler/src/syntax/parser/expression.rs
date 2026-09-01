@@ -5,12 +5,26 @@ use super::*;
 
 impl Parser<'_> {
     pub(super) fn parse_expression(&mut self) -> Option<Expression> {
+        self.parse_expression_with_for_range_boundary(false)
+    }
+
+    pub(super) fn parse_for_range_endpoint(&mut self) -> Option<Expression> {
+        self.parse_expression_with_for_range_boundary(true)
+    }
+
+    fn parse_expression_with_for_range_boundary(
+        &mut self,
+        allow_trailing_dot_dot: bool,
+    ) -> Option<Expression> {
         let outermost = self.expression_parse_depth == 0;
         self.expression_parse_depth += 1;
-        let expression = self
+        let mut expression = self
             .parse_shift()
             .and_then(|source| self.parse_expression_tail(source));
-        let expression = self.finish_range_expression(expression);
+        if !allow_trailing_dot_dot && self.at(TokenKind::DotDot) {
+            self.reject_range_outside_for_source();
+            expression = None;
+        }
         self.expression_parse_depth -= 1;
 
         if outermost
@@ -27,82 +41,6 @@ impl Parser<'_> {
             return None;
         }
         expression
-    }
-
-    fn finish_range_expression(&mut self, expression: Option<Expression>) -> Option<Expression> {
-        match expression {
-            Some(lower) if self.at(TokenKind::DotDot) => self.parse_range_tail(lower),
-            expression => expression,
-        }
-    }
-
-    #[cold]
-    fn parse_range_missing_lower(&mut self) -> Option<Expression> {
-        let operator = self.advance();
-        self.report(
-            INVALID_RANGE_EXPRESSION,
-            "range expressions require a lower endpoint",
-            operator.span,
-            "expected an expression before `..`",
-        );
-        if self.starts_expression() {
-            let _ = self
-                .parse_shift()
-                .and_then(|source| self.parse_expression_tail(source));
-        }
-        None
-    }
-
-    fn parse_range_tail(&mut self, lower: Expression) -> Option<Expression> {
-        let operator = self.advance();
-        if !self.starts_expression() {
-            self.report(
-                INVALID_RANGE_EXPRESSION,
-                "range expressions require an upper endpoint",
-                operator.span,
-                "expected an expression after `..`",
-            );
-            return None;
-        }
-        let upper = self
-            .parse_shift()
-            .and_then(|source| self.parse_expression_tail(source))?;
-        let span = self.cover(lower.span(), upper.span());
-        let range = Expression::Range(RangeExpr {
-            lower: Box::new(lower),
-            operator_span: operator.span,
-            upper: Box::new(upper),
-            span,
-        });
-        if !self.at(TokenKind::DotDot) {
-            return Some(range);
-        }
-        self.reject_range_chain();
-        None
-    }
-
-    #[cold]
-    fn reject_range_chain(&mut self) {
-        let chained = self.advance();
-        self.report(
-            INVALID_RANGE_EXPRESSION,
-            "range operators cannot be chained",
-            chained.span,
-            "group separate range expressions explicitly",
-        );
-        if self.starts_expression() {
-            let _ = self
-                .parse_shift()
-                .and_then(|source| self.parse_expression_tail(source));
-        }
-        while self.at(TokenKind::DotDot) {
-            self.advance();
-            if self.starts_expression() {
-                let _ = self
-                    .parse_shift()
-                    .and_then(|source| self.parse_expression_tail(source));
-            }
-        }
     }
 
     fn parse_expression_tail(&mut self, source: Expression) -> Option<Expression> {
@@ -754,7 +692,8 @@ impl Parser<'_> {
 
     fn parse_primary(&mut self) -> Option<Expression> {
         if self.at(TokenKind::DotDot) {
-            return self.parse_range_missing_lower();
+            self.reject_range_outside_for_source();
+            return None;
         }
         if self.starts_array_construction(false) {
             return self.parse_array_construction(false);

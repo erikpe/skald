@@ -843,7 +843,6 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     _ => None,
                 }
             }
-            syntax::Expression::Range(range) => self.resolve_range_expression(range),
             syntax::Expression::TypeTest(test) => {
                 let source = self.resolve_expression(&test.source);
                 let target = self.resolve_view_target(&test.target);

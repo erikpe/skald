@@ -45,9 +45,9 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
 fn exercise_range_syntax_mutations() {
     const SEEDS: &[&str] = &[
         "fn main() -> i64 { for (item in 0u .. 8u) { if (item == 4u) { continue; } } return 0; }",
-        "fn main() -> i64 { var values: Range<u64> = (1u .. 4u); for (item in values) {} return 0; }",
+        "fn main() -> i64 { for (item in (1u) .. (4u)) {} return 0; }",
         "fn main() -> i64 { for (outer in 0u8 .. 4u8) { for (inner in -2 .. 2) {} } return 0; }",
-        "fn main() -> i64 { var broken: u64 = (1u ..) .. (.. 3u); return 0; }",
+        "fn main() -> i64 { for (broken in (1u ..) .. (.. 3u)) {} return 0; }",
     ];
     const INSERTIONS: &[&str] = &["..", ".", "(", ")", "in", "for", "{", "}", ";", "u"];
 

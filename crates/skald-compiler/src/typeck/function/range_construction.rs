@@ -53,7 +53,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirConstructionOrigin> {
         if self
             .program
-            .range_expression_spans
+            .range_source_spans
             .contains(&construction.callee_span)
         {
             self.report_invalid_range_origin(
@@ -109,7 +109,7 @@ impl CallableChecker<'_, '_> {
             || construction.callee_span != origin.operator_span
             || !self
                 .program
-                .range_expression_spans
+                .range_source_spans
                 .contains(&origin.operator_span)
             || initializer != origin.initializer
             || origin.range_template != language_item.range_template
