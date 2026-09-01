@@ -75,8 +75,11 @@ root discovery. After lexing and parsing, it uses the same program resolver,
 type checker, MIR pipeline, and backend completion path as request
 compilation. A source-phase error stops later phases. HIR lowering, MIR
 verification, and backend failures remain distinct structured categories.
-After structural preliminary-MIR verification, static effect inference and
-lifetime planning run before final MIR conversion. Planned verification
+Structural preliminary-MIR verification consumes the raw product and returns
+an opaque read-only `VerifiedPreliminaryMirProgram`. Static-effect inference
+and lifetime planning accept only that seal and run before final MIR
+conversion; malformed preliminary identities therefore cannot reach their
+otherwise infallible adapters. Planned verification
 consumes the draft product, checks its canonical lifecycle definitions,
 activation order, compact authority, dynamic targets, and derived dependency
 edges, and returns the only sealed planned product accepted by synthesis.

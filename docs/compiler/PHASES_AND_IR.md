@@ -33,8 +33,9 @@ The target-independent compiler path is:
 | Resolution | `resolve::resolve`, `resolve::resolve_module_graph` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
-| Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects with witnesses for every callable and implicit lifecycle operation |
-| Static lifecycle planning | `passes::static_lifecycle::plan_static_lifetimes` | `PlannedMirProgram` with a planning-only analysis report plus compact authority and deterministic activation/reverse-shutdown order |
+| Preliminary MIR verification | `mir::verify_preliminary_mir` | opaque, read-only `VerifiedPreliminaryMirProgram` required by static-lifecycle analysis |
+| Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects from sealed `VerifiedPreliminaryMirProgram`, with witnesses for every callable and implicit lifecycle operation |
+| Static lifecycle planning | `passes::static_lifecycle::plan_static_lifetimes` | consumes sealed preliminary MIR and returns `PlannedMirProgram` with a planning-only analysis report plus compact authority and deterministic activation/reverse-shutdown order |
 | Planned MIR verification | `passes::static_lifecycle::verify_planned_mir` | opaque `VerifiedPlannedMirProgram` after exact authority issuance verification |
 | Static lifecycle synthesis | `passes::static_lifecycle::synthesize_static_lifecycle` | final `MirProgram` with program-owned activation, publication, and reverse-destruction regions |
 | Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
@@ -225,7 +226,10 @@ set of compatible class or array lifecycle implementations.
 The structural preliminary verifier checks the ordinary program and every
 initializer body's identities, types, selected targets, ownership metadata,
 control flow, exact destination, and publication boundary without assuming a
-global activation order.
+global activation order. Success consumes raw `PreliminaryMirProgram` and
+returns the opaque, read-only `VerifiedPreliminaryMirProgram` seal. Static
+effect inference and lifecycle planning require this seal, so their internal
+dependency adapter may remain infallible without accepting malformed raw MIR.
 
 `passes::static_lifecycle::infer_static_effects` then scans every instruction,
 terminator, static-rooted place, direct or dynamic call, selected initializer

@@ -4,7 +4,7 @@
 //! verifier context and ordered error sink; responsibility-specific checks can
 //! move behind this boundary without changing callers.
 
-use std::fmt;
+use std::{fmt, ops::Deref};
 
 use crate::identity::CallableId;
 
@@ -122,8 +122,64 @@ pub fn verify_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
     }
 }
 
-pub fn verify_preliminary_mir(
+pub(crate) fn check_preliminary_mir(
     program: &PreliminaryMirProgram,
 ) -> Result<(), MirVerificationErrors> {
     preliminary::verify(program)
+}
+
+/// Read-only preliminary MIR whose complete structure and identities have
+/// passed preliminary-MIR verification.
+///
+/// Static lifecycle analysis accepts this seal instead of relying on callers
+/// to uphold an undocumented verification precondition.
+///
+/// External code cannot forge the seal:
+///
+/// ```compile_fail
+/// use skald_compiler::mir::{PreliminaryMirProgram, VerifiedPreliminaryMirProgram};
+///
+/// fn forge(program: PreliminaryMirProgram) -> VerifiedPreliminaryMirProgram {
+///     VerifiedPreliminaryMirProgram { program }
+/// }
+/// ```
+#[derive(Clone, Eq, PartialEq)]
+pub struct VerifiedPreliminaryMirProgram {
+    program: PreliminaryMirProgram,
+}
+
+impl VerifiedPreliminaryMirProgram {
+    pub const fn program(&self) -> &PreliminaryMirProgram {
+        &self.program
+    }
+
+    pub(crate) fn into_program(self) -> PreliminaryMirProgram {
+        self.program
+    }
+}
+
+impl fmt::Debug for VerifiedPreliminaryMirProgram {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("VerifiedPreliminaryMirProgram")
+            .field("program", &self.program)
+            .finish()
+    }
+}
+
+impl Deref for VerifiedPreliminaryMirProgram {
+    type Target = PreliminaryMirProgram;
+
+    fn deref(&self) -> &Self::Target {
+        self.program()
+    }
+}
+
+/// Verifies preliminary MIR and returns the opaque product required by static
+/// lifecycle analysis and planning.
+pub fn verify_preliminary_mir(
+    program: PreliminaryMirProgram,
+) -> Result<VerifiedPreliminaryMirProgram, MirVerificationErrors> {
+    check_preliminary_mir(&program)?;
+    Ok(VerifiedPreliminaryMirProgram { program })
 }

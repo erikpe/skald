@@ -7,7 +7,7 @@ mod lifecycle;
 mod realization;
 
 use crate::mir::{
-    verify_mir, verify_preliminary_mir, MirProgram, MirProgramLifecycle, MirStaticInitializerBody,
+    check_preliminary_mir, verify_mir, MirProgram, MirProgramLifecycle, MirStaticInitializerBody,
     MirVerificationError, MirVerificationErrors,
 };
 
@@ -45,7 +45,7 @@ pub(super) struct LifecycleMirView<'mir> {
 pub fn verify_planned_mir(
     program: PlannedMirProgram,
 ) -> Result<VerifiedPlannedMirProgram, MirVerificationErrors> {
-    verify_preliminary_mir(program.preliminary())?;
+    check_preliminary_mir(program.preliminary())?;
 
     let mut errors = Vec::new();
     activation::verify(&program, &mut errors);

@@ -7,20 +7,21 @@ use crate::{
     mir::{
         lower_preliminary_hir, MirArrayLifecycleOperation, MirClassLifecycleOperation,
         MirExecutionNode, PreliminaryMirProgram, StaticAccessKind, StaticEffectPhase,
-        StaticLifecycleAuthority, StaticLifecycleEffectFact,
+        StaticLifecycleAuthority, StaticLifecycleEffectFact, VerifiedPreliminaryMirProgram,
     },
     test_support::type_check_source,
 };
 
 use super::{super::extract, analyze, model::StaticLifecycleRootEffectError};
 
-fn lower(text: &str) -> PreliminaryMirProgram {
+fn lower(text: &str) -> VerifiedPreliminaryMirProgram {
     let checked = type_check_source(text);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    lower_preliminary_hir(&checked.hir.unwrap())
+    crate::mir::verify_preliminary_mir(lower_preliminary_hir(&checked.hir.unwrap()))
+        .expect("root-effect fixture must produce verified preliminary MIR")
 }
 
-fn analyze_program(program: &PreliminaryMirProgram) -> StaticLifecycleAuthority {
+fn analyze_program(program: &VerifiedPreliminaryMirProgram) -> StaticLifecycleAuthority {
     let graph = extract::extract(program);
     analyze(program, &graph).expect("valid preliminary MIR must have valid lifecycle roots")
 }

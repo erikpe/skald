@@ -93,7 +93,7 @@ fn generic_operator_realizations_use_only_existing_verified_mir() {
     assert!(!hir_dump.contains("OperatorSelection"), "{hir_dump}");
 
     let preliminary = lower_preliminary_hir(&hir);
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
     let preliminary_dump = dump_preliminary_mir(&preliminary);
     assert!(preliminary_dump.contains("add.u64"), "{preliminary_dump}");
     assert!(
@@ -119,7 +119,7 @@ fn preliminary_operator_call_corruption_is_rejected_by_interface_verification() 
     };
     target.requirement = InterfaceRequirementId::new(InterfaceId::new(99), 0);
 
-    let errors = verify_preliminary_mir(&preliminary).unwrap_err();
+    let errors = check_preliminary_mir(&preliminary).unwrap_err();
     assert!(
         errors.iter().any(|error| {
             error

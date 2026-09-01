@@ -20,7 +20,7 @@ The primary result is whole-program compiler infrastructure rather than a
 large optimization suite. Each task should remove small adjacent duplication,
 unclear ownership, or panic-prone handling when that cleanup is cohesive with
 the task. Larger findings belong in the
-[reachability discoveries record](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
+[reachability discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
 instead of expanding reviewed scope.
 
 ## Dependencies
@@ -695,7 +695,7 @@ to make an earlier test pass.
 ## Discoveries and deferred work
 
 The dedicated
-[discoveries record](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
+[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
 owns findings that are useful but not necessary for WRR0 through WRR8. Likely
 examples include declaration/metadata compaction, rapid-type analysis,
 call-site points-to precision, reachability preservation proofs, broader

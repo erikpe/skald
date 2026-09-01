@@ -244,6 +244,8 @@ fn lower_source_to_final_mir_with_sources_using(
 /// Runs lifecycle planning and synthesis for already type-checked test HIR.
 pub(crate) fn lower_hir_to_final_mir(hir: &crate::hir::HirProgram) -> MirProgram {
     let preliminary = lower_preliminary_hir(hir);
+    let preliminary = crate::mir::verify_preliminary_mir(preliminary)
+        .expect("test source must produce verified preliminary MIR");
     let planned = crate::passes::static_lifecycle::plan_static_lifetimes(preliminary)
         .unwrap_or_else(|failure| {
             panic!(

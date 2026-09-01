@@ -22,8 +22,10 @@ fn field(program: &PreliminaryMirProgram, owner: &str, name: &str) -> StaticFiel
 }
 
 fn plan(source: &str) -> PlannedMirProgram {
-    plan_static_lifetimes(lower_generic_source_to_preliminary_mir(source))
-        .expect("generic static lifetimes must plan successfully")
+    let preliminary =
+        crate::mir::verify_preliminary_mir(lower_generic_source_to_preliminary_mir(source))
+            .expect("generic planning fixture must produce verified preliminary MIR");
+    plan_static_lifetimes(preliminary).expect("generic static lifetimes must plan successfully")
 }
 
 #[test]
@@ -177,7 +179,7 @@ fn generic_plan_dumps_are_deterministic_readable_and_identity_preserving() {
 
 #[test]
 fn diagnoses_specialized_self_dependencies_with_the_closed_owner_name() {
-    let failure = plan_static_lifetimes(lower_generic_source_to_preliminary_mir(
+    let preliminary = crate::mir::verify_preliminary_mir(lower_generic_source_to_preliminary_mir(
         "class Loop<T> {
            static value: i64 = Loop<T>.read();
            init() {}
@@ -185,7 +187,9 @@ fn diagnoses_specialized_self_dependencies_with_the_closed_owner_name() {
          }
          fn main() -> i64 { return Loop<i64>.value; }",
     ))
-    .expect_err("a generated static initializer must not read itself before publication");
+    .expect("generic self-dependency fixture must produce verified preliminary MIR");
+    let failure = plan_static_lifetimes(preliminary)
+        .expect_err("a generated static initializer must not read itself before publication");
     let diagnostic = failure.diagnostics().next().unwrap();
 
     assert_eq!(diagnostic.code, STATIC_LIFECYCLE_SELF_DEPENDENCY);
@@ -194,7 +198,7 @@ fn diagnoses_specialized_self_dependencies_with_the_closed_owner_name() {
 
 #[test]
 fn diagnoses_cycles_across_closed_generic_owners() {
-    let failure = plan_static_lifetimes(lower_generic_source_to_preliminary_mir(
+    let preliminary = crate::mir::verify_preliminary_mir(lower_generic_source_to_preliminary_mir(
         "class Left<T> {
            static value: i64 = Right<T>.value;
            init() {}
@@ -205,7 +209,9 @@ fn diagnoses_cycles_across_closed_generic_owners() {
          }
          fn main() -> i64 { return Left<i64>.value; }",
     ))
-    .expect_err("cross-owner generic static dependencies must be rejected");
+    .expect("generic cycle fixture must produce verified preliminary MIR");
+    let failure = plan_static_lifetimes(preliminary)
+        .expect_err("cross-owner generic static dependencies must be rejected");
     let diagnostic = failure.diagnostics().next().unwrap();
 
     assert_eq!(diagnostic.code, STATIC_LIFECYCLE_DEPENDENCY_CYCLE);

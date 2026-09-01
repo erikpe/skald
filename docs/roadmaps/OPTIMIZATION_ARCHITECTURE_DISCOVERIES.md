@@ -4,8 +4,8 @@ Status: four architectural constraints remain without implementation plans.
 The reachability constraint is resolved by the completed
 [target-independent whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
 [implementation roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
-and active follow-up
-[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
+and resolved follow-up
+[discoveries record](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
 Its dependency vocabulary, shared target/lifecycle extraction, roots, closure,
 queries, seal binding, sparse verification, stable-identity retention, backend
 consumption, selectable pass, and default activation are implemented.

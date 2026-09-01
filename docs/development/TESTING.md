@@ -160,6 +160,10 @@ retained string first interned by a removed context. Retained-domain backend
 tests compare complete and sparse MIR inputs with equal machine closures and
 require byte-identical assembly, including dense trace labels and references.
 
+Compile-fail API tests keep the preliminary-MIR verification seal opaque and
+prevent static-effect analysis from accepting raw preliminary MIR. Public API
+coverage also carries the seal from verification into lifecycle planning.
+
 Reusable non-Rust compiler corpus data belongs under `tests/compiler/`.
 Production crates must not depend on the top-level test tree at runtime.
 

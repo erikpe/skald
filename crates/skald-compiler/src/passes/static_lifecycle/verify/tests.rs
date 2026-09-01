@@ -33,6 +33,8 @@ fn plan(source: &str) -> PlannedMirProgram {
     let checked = type_check_source(source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = crate::mir::verify_preliminary_mir(preliminary)
+        .expect("test program must produce verified preliminary MIR");
     plan_static_lifetimes(preliminary).expect("test program must have an acyclic static plan")
 }
 
@@ -113,7 +115,9 @@ fn accepts_a_complete_hand_built_phase_product() {
         "class State { static value: i64 = 1; init() {} }
          fn main() -> i64 { return State.value; }",
     );
-    let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary =
+        crate::mir::verify_preliminary_mir(lower_preliminary_hir(&checked.hir.unwrap()))
+            .expect("hand-built phase fixture must produce verified preliminary MIR");
     let field = *preliminary.static_fields().next().unwrap();
     let initializer_id = field.initializer.unwrap();
     let (effects, authority) = infer_static_effects_with_roots(&preliminary);
@@ -131,7 +135,7 @@ fn accepts_a_complete_hand_built_phase_product() {
     );
     let activation = analyze_static_activation(&preliminary).unwrap();
     let report = StaticLifecyclePlanningReport::new(effects, activation);
-    let planned = PlannedMirProgram::new(preliminary, lifecycle, report);
+    let planned = PlannedMirProgram::new(preliminary.into_program(), lifecycle, report);
 
     verify_planned_mir(planned).unwrap();
 }

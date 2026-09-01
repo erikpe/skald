@@ -38,7 +38,7 @@ use skald_compiler::{
         MirPlaceProjection, MirPlannedLifecycle, MirPrimitiveCast, MirPrimitiveCastKind,
         MirPrimitiveComparison, MirPrimitiveType, MirProgram, MirStaticLifecycleProof, MirType,
         MirUnaryOperation, MirViewTarget, StaticActivationAuthority, StaticLifecycleAuthority,
-        StaticLifecycleEffectFact, StaticLifecycleRootAuthority,
+        StaticLifecycleEffectFact, StaticLifecycleRootAuthority, VerifiedPreliminaryMirProgram,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -234,7 +234,7 @@ fn intentional_phase_and_dump_paths_compose() {
         Type::U64
     );
     let preliminary = lower_preliminary_hir(hir);
-    verify_preliminary_mir(&preliminary).unwrap();
+    let preliminary: VerifiedPreliminaryMirProgram = verify_preliminary_mir(preliminary).unwrap();
     let _preliminary_dump = dump_preliminary_mir(&preliminary);
     assert!(!preliminary.has_static_initializers());
     let planned: PlannedMirProgram = plan_static_lifetimes(preliminary).unwrap();

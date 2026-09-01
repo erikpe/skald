@@ -20,6 +20,8 @@ fn synthesized(source: &str) -> crate::mir::MirProgram {
     let checked = type_check_source(source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = crate::mir::verify_preliminary_mir(preliminary)
+        .expect("realization fixture must produce verified preliminary MIR");
     let planned = plan_static_lifetimes(preliminary).expect("fixture must have an acyclic plan");
     let verified = super::verify_planned_mir(planned).expect("fixture plan must verify");
     synthesize_static_lifecycle(verified)

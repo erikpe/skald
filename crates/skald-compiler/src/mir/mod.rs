@@ -85,10 +85,14 @@ pub use model::{
     StaticLifecycleEffectFact, StaticLifecyclePlan, StaticLifecycleRootAuthority, StorageId,
     ValueId,
 };
+pub(crate) use verify::check_preliminary_mir;
 pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,
 };
-pub use verify::{verify_mir, verify_preliminary_mir, MirVerificationError, MirVerificationErrors};
+pub use verify::{
+    verify_mir, verify_preliminary_mir, MirVerificationError, MirVerificationErrors,
+    VerifiedPreliminaryMirProgram,
+};
 
 #[cfg(test)]
 mod tests;

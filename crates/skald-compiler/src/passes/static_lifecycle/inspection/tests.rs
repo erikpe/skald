@@ -90,6 +90,6 @@ fn inspection_does_not_change_verified_planning_product() {
 
 fn planned(source: &str) -> VerifiedPlannedMirProgram {
     let preliminary = lower_generic_source_to_preliminary_mir(source);
-    verify_preliminary_mir(&preliminary).unwrap();
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     verify_planned_mir(plan_static_lifetimes(preliminary).unwrap()).unwrap()
 }

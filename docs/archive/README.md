@@ -161,6 +161,7 @@ Resolved whole-world reachability inputs:
 
 - [Target-independent whole-world reachability design proposal](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md)
 - [Target-independent whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+- [Target-independent whole-world reachability discoveries](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
 
 Resolved reachability-gated static lifecycle inputs:
 

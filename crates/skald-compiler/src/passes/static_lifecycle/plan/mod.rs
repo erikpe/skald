@@ -19,7 +19,7 @@ pub use statistics::StaticActivationStatistics;
 
 use crate::{
     diagnostics::Diagnostics,
-    mir::{PreliminaryMirProgram, StaticActivationAuthority},
+    mir::{StaticActivationAuthority, VerifiedPreliminaryMirProgram},
     passes::reachability::extract_preliminary_dependencies,
 };
 
@@ -31,7 +31,7 @@ use super::{
 /// Infers effects once and converts them into a deterministic whole-program
 /// activation and exact-reverse shutdown plan.
 pub fn plan_static_lifetimes(
-    preliminary: PreliminaryMirProgram,
+    preliminary: VerifiedPreliminaryMirProgram,
 ) -> Result<PlannedMirProgram, StaticLifecyclePlanningFailure> {
     let dependencies = extract_preliminary_dependencies(&preliminary)
         .expect("verified preliminary MIR must have valid dependency identities");
@@ -67,7 +67,7 @@ pub fn plan_static_lifetimes(
 
     let lifecycle = graph.plan();
     Ok(schema::build_planned_program(
-        preliminary,
+        preliminary.into_program(),
         activation_authority,
         root_effects,
         effects,

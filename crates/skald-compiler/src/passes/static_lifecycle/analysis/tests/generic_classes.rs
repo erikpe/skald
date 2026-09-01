@@ -2,7 +2,7 @@
 
 use crate::{
     identity::StaticFieldId,
-    mir::{MirExecutionNode, PreliminaryMirProgram},
+    mir::{verify_preliminary_mir, MirExecutionNode, PreliminaryMirProgram},
     test_support::lower_generic_source_to_preliminary_mir,
 };
 
@@ -61,7 +61,8 @@ fn static_selection_alone_materializes_independent_slots_and_initializer_bodies(
 
 #[test]
 fn generated_initializer_effects_remain_specialization_local_and_transitive() {
-    let preliminary = lower_generic_source_to_preliminary_mir(CACHE_SOURCE);
+    let preliminary = verify_preliminary_mir(lower_generic_source_to_preliminary_mir(CACHE_SOURCE))
+        .expect("generic static-effect fixture must produce verified preliminary MIR");
     let analysis = infer_static_effects(&preliminary);
 
     for owner in ["Cache<i64>", "Cache<Str>"] {

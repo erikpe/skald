@@ -350,7 +350,7 @@ fn user_copy_assignment_keeps_ordinary_control_flow_and_subset_freedom() {
     );
     assert!(!dump.contains("DeclaringClassFinalAssignment c0:field1"));
     let preliminary = crate::mir::lower_preliminary_hir(&hir);
-    crate::mir::verify_preliminary_mir(&preliminary).unwrap();
+    crate::mir::check_preliminary_mir(&preliminary).unwrap();
     verify_mir(&lower_hir_to_final_mir(&hir)).unwrap();
 }
 
@@ -420,7 +420,7 @@ fn final_static_reads_and_shallow_nested_mutation_remain_available() {
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let hir = output.hir.unwrap();
     let preliminary = crate::mir::lower_preliminary_hir(&hir);
-    crate::mir::verify_preliminary_mir(&preliminary).unwrap();
+    crate::mir::check_preliminary_mir(&preliminary).unwrap();
     verify_mir(&lower_hir_to_final_mir(&hir)).unwrap();
 }
 

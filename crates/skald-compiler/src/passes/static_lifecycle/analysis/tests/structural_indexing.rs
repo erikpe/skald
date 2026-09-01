@@ -24,7 +24,8 @@ fn structural_static_receivers_and_selected_methods_contribute_ordinary_effects(
     let checked = type_check_source(STATIC_BRACKET_SOURCE);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.expect("valid static bracket source has HIR");
-    let preliminary = crate::mir::lower_preliminary_hir(&hir);
+    let preliminary = crate::mir::verify_preliminary_mir(crate::mir::lower_preliminary_hir(&hir))
+        .expect("structural static-effect fixture must produce verified preliminary MIR");
     let fields = preliminary
         .static_fields()
         .map(|field| field.field)

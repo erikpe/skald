@@ -25,6 +25,8 @@ fn sparse_synthesized(active_indices: &[usize]) -> crate::mir::MirProgram {
     let checked = type_check_source(&source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = crate::mir::verify_preliminary_mir(preliminary)
+        .expect("sparse synthesis fixture must produce verified preliminary MIR");
     let planned = super::super::super::plan_static_lifetimes(preliminary)
         .expect("test active set must have an acyclic lifecycle");
     synthesize_static_lifecycle(verify_planned_mir(planned).unwrap())

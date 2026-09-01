@@ -26,6 +26,8 @@ fn sparse_plan(active_indices: &[usize]) -> PlannedMirProgram {
     let checked = type_check_source(&source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = crate::mir::verify_preliminary_mir(preliminary)
+        .expect("sparse planning fixture must produce verified preliminary MIR");
     super::super::super::plan_static_lifetimes(preliminary)
         .expect("test active set must have an acyclic lifecycle")
 }

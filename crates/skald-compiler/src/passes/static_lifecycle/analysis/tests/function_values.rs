@@ -175,7 +175,7 @@ fn indirect_effects_participate_in_self_and_cycle_diagnostics() {
 
 #[test]
 fn same_signature_generic_targets_keep_independent_effect_nodes() {
-    let preliminary = lower_generic_source_to_preliminary_mir(
+    let preliminary = crate::mir::verify_preliminary_mir(lower_generic_source_to_preliminary_mir(
         "class Cell<T> {
            static value: i64 = 1;
            init() {}
@@ -191,7 +191,8 @@ fn same_signature_generic_targets_keep_independent_effect_nodes() {
            init() {}
          }
          fn main() -> i64 { return State.result; }",
-    );
+    ))
+    .expect("generic function-value fixture must produce verified preliminary MIR");
     let analysis = infer_static_effects(&preliminary);
     let candidates = only_candidates(&analysis);
     assert_eq!(candidates.targets.len(), 2);

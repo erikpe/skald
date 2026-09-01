@@ -66,7 +66,7 @@ pub fn lower_preliminary_hir(hir: &HirProgram) -> PreliminaryMirProgram {
     let preliminary = PreliminaryMirProgram::new(program, static_fields, static_initializers);
 
     #[cfg(debug_assertions)]
-    if let Err(errors) = super::verify_preliminary_mir(&preliminary) {
+    if let Err(errors) = super::check_preliminary_mir(&preliminary) {
         panic!("HIR lowering produced invalid preliminary MIR:\n{errors}");
     }
     preliminary

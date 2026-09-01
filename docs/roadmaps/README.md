@@ -25,9 +25,9 @@ default pass. The completed
 [whole-world reachability roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 adds reusable whole-program roots and dependency analysis, independently
 verified sparse definitions, target-independent semantic retention before
-backend lowering, and default activation after the canary. Its remaining
-follow-ups stay in the active
-[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
+backend lowering, and default activation after the canary. Its follow-ups are
+resolved in the archived
+[discoveries record](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
 The other four original unresolved constraints have no implementation roadmap.
 
 The completed interface-based operator-overloading, general-iteration, and

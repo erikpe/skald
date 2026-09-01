@@ -2,7 +2,7 @@
 
 use crate::{
     identity::{ClassId, FunctionId},
-    mir::{lower_preliminary_hir, PreliminaryMirProgram},
+    mir::{lower_preliminary_hir, verify_preliminary_mir, VerifiedPreliminaryMirProgram},
     passes::reachability::{extract_preliminary_dependencies, MirDependencyRegion},
     resolve::resolve_module_graph,
     test_support::{load_module_sources_with_standard_library, type_check_source},
@@ -11,10 +11,11 @@ use crate::{
 
 use super::*;
 
-fn lower(text: &str) -> PreliminaryMirProgram {
+fn lower(text: &str) -> VerifiedPreliminaryMirProgram {
     let checked = type_check_source(text);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    lower_preliminary_hir(&checked.hir.unwrap())
+    verify_preliminary_mir(lower_preliminary_hir(&checked.hir.unwrap()))
+        .expect("static-effect fixture must produce verified preliminary MIR")
 }
 
 fn effect_fields(
@@ -442,7 +443,8 @@ fn string_language_item_initialization_is_in_the_effect_inventory() {
     );
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = verify_preliminary_mir(lower_preliminary_hir(&checked.hir.unwrap()))
+        .expect("standard-library fixture must produce verified preliminary MIR");
     let initializer = preliminary.static_initializers().next().unwrap();
     let analysis = infer_static_effects(&preliminary);
     let summary = analysis

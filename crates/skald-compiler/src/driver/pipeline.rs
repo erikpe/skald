@@ -342,10 +342,10 @@ fn finish_compilation(
         |_| ReportOutcome::Completed,
         |program, _| statistics::preliminary_mir_metrics(program),
     );
-    observe_phase_with_metrics(
+    let preliminary = observe_phase_with_metrics(
         observer,
         ReportPhase::PreliminaryMirVerification,
-        || verify_preliminary_mir(&preliminary),
+        || verify_preliminary_mir(preliminary),
         result_outcome,
         |result, _| statistics::verification_metrics(result),
     )

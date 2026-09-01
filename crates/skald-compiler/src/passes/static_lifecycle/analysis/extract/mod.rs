@@ -8,7 +8,7 @@ use crate::passes::reachability::{
 };
 use crate::{
     identity::CallableId,
-    mir::{MirProgram, MirStaticInitializerBody, PreliminaryMirProgram},
+    mir::{MirProgram, MirStaticInitializerBody, VerifiedPreliminaryMirProgram},
     source::Span,
 };
 
@@ -29,7 +29,7 @@ pub(crate) struct ExtractedGraph {
     pub(crate) nodes: BTreeMap<MirExecutionNode, NodeDraft>,
 }
 
-pub(crate) fn extract(program: &PreliminaryMirProgram) -> ExtractedGraph {
+pub(crate) fn extract(program: &VerifiedPreliminaryMirProgram) -> ExtractedGraph {
     let dependencies = extract_preliminary_dependencies(program)
         .expect("verified preliminary MIR must have valid dependency identities");
     extract_from_dependencies(&dependencies)

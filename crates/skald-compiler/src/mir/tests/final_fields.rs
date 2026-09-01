@@ -235,7 +235,7 @@ fn lowers_and_verifies_exact_user_assignment_evidence_for_every_storage_family()
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
 
     let program = lower_hir(&hir);
     verify_mir(&program).unwrap();

@@ -2,7 +2,10 @@
 
 use std::collections::BTreeSet;
 
-use crate::mir::{MirVerificationError, StaticLifecycleAuthority, StaticLifecycleRootAuthority};
+use crate::{
+    mir::{MirVerificationError, StaticLifecycleAuthority, StaticLifecycleRootAuthority},
+    passes::reachability::extract_preliminary_dependencies,
+};
 
 use super::{
     super::{
@@ -13,7 +16,17 @@ use super::{
 };
 
 pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificationError>) {
-    let extracted = extract::extract(program.preliminary());
+    let dependencies = match extract_preliminary_dependencies(program.preliminary()) {
+        Ok(dependencies) => dependencies,
+        Err(error) => {
+            program_error(
+                errors,
+                format!("cannot extract verified preliminary-MIR dependencies: {error}"),
+            );
+            return;
+        }
+    };
+    let extracted = extract::extract_from_dependencies(&dependencies);
     let expected = match root_effects::analyze_for_fields(
         program.preliminary(),
         &extracted,

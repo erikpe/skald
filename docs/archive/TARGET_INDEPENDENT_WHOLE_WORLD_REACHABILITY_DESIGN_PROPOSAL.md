@@ -9,9 +9,9 @@ and
 [reporting contract](../compiler/REPORTING.md#whole-world-reachability-observation).
 The completed
 [implementation roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
-records delivery, and its active
-[discoveries record](../roadmaps/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
-keeps follow-up work outside that reviewed scope.
+records delivery, and its resolved
+[discoveries record](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md)
+preserves follow-up work kept outside that reviewed scope.
 
 This proposal moves semantic reachability ahead of target lowering and makes
 it reusable whole-program compiler infrastructure rather than logic hidden in

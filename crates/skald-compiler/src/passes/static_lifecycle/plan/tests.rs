@@ -3,17 +3,18 @@
 use crate::{
     mir::{
         dump_mir, lower_preliminary_hir, MirClassLifecycleOperation, MirExecutionNode,
-        MirStaticFieldInitialization, PreliminaryMirProgram,
+        MirStaticFieldInitialization, VerifiedPreliminaryMirProgram,
     },
     test_support::type_check_source,
 };
 
 use super::*;
 
-fn lower(text: &str) -> PreliminaryMirProgram {
+fn lower(text: &str) -> VerifiedPreliminaryMirProgram {
     let checked = type_check_source(text);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    lower_preliminary_hir(&checked.hir.unwrap())
+    crate::mir::verify_preliminary_mir(lower_preliminary_hir(&checked.hir.unwrap()))
+        .expect("static-planning fixture must produce verified preliminary MIR")
 }
 
 fn plan(text: &str) -> PlannedMirProgram {

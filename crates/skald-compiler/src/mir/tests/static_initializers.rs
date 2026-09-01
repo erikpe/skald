@@ -109,7 +109,7 @@ fn has_static_destination(instruction: &MirInstruction, field: StaticFieldId) ->
 #[test]
 fn lowers_and_verifies_the_complete_stored_value_matrix() {
     let preliminary = lower_preliminary(STORED_VALUE_MATRIX);
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
 
     let initializers = preliminary.static_initializers().collect::<Vec<_>>();
     assert_eq!(initializers.len(), 17);
@@ -228,7 +228,7 @@ fn lowers_named_static_sources_through_selected_copy_operations() {
         "}\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
     let initializers = preliminary.static_initializers().collect::<Vec<_>>();
 
     assert!(operation_names(initializers[1]).contains(&"shared-field-copy"));
@@ -283,7 +283,7 @@ fn cleanup_of_initializer_temporaries_starts_after_publication() {
         .instructions
         .iter()
         .any(|instruction| has_static_destination(instruction, initializer.field)));
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
 }
 
 #[test]
@@ -304,7 +304,7 @@ fn lowers_string_static_initialization_with_ordinary_temporary_cleanup() {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
 
     let initializer = preliminary.static_initializers().next().unwrap();
     let operations = operation_names(initializer);
@@ -339,7 +339,7 @@ fn retains_implicit_shared_release_in_transitively_called_ordinary_body() {
         "class State { static count: i64 = consume(new Item()); init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
 
     let initializer = preliminary.static_initializers().next().unwrap();
     assert!(operation_names(initializer).contains(&"call"));
@@ -362,7 +362,7 @@ fn retains_closed_world_dispatch_destruction_and_array_lifecycle_metadata() {
         "fn invoke(ref value: View) -> i64 { return value.read(); }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
 
     let dump = dump_preliminary_mir(&preliminary);
     assert!(dump.contains("VirtualFamilies"), "{dump}");
@@ -467,7 +467,7 @@ fn rejects_malformed_preliminary_products() {
 }
 
 fn assert_verification_contains(program: &PreliminaryMirProgram, expected: &str) {
-    let errors = verify_preliminary_mir(program).unwrap_err().to_string();
+    let errors = check_preliminary_mir(program).unwrap_err().to_string();
     assert!(
         errors.contains(expected),
         "expected `{expected}` in:\n{errors}"

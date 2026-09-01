@@ -296,7 +296,7 @@ reuse ordinary retain/adopt/release and zero-niche optional operations.
 Availability remains authoritative in the [status matrix](../language/STATUS.md).
 
 Class-owned static fields pass through delayed initializer resolution,
-stored-value HIR, structurally verified preliminary MIR, exhaustive
+stored-value HIR, opaque structurally verified preliminary MIR, exhaustive
 whole-program effect inference, deterministic lifetime planning, and an
 independently verified final lifecycle certificate. The x86-64 backend emits
 private slots and dependency-ordered initializer/finalizer coordinators around
@@ -304,9 +304,10 @@ entry without changing runtime ABI version 9. The authoritative boundaries are
 [Static Fields](../language/STATIC_FIELDS.md) and
 [Compiler Phases and Intermediate Representations](PHASES_AND_IR.md#pipeline-contract).
 The frozen next phase boundary computes an exact entry-rooted active-field set
-from verified preliminary MIR before planning, binds it into the lifecycle
-certificate, and requires final reachable static accesses and backend
-coordinators to agree without making activation profile- or target-dependent.
+from the `VerifiedPreliminaryMirProgram` seal before planning, binds it into the
+lifecycle certificate, and requires final reachable static accesses and
+backend coordinators to agree without making activation profile- or
+target-dependent.
 
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64

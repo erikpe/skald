@@ -16,7 +16,7 @@ pub use model::{
 };
 
 use crate::{
-    mir::{PreliminaryMirProgram, StaticLifecycleAuthority},
+    mir::{StaticLifecycleAuthority, VerifiedPreliminaryMirProgram},
     passes::reachability::MirDependencyExtraction,
 };
 
@@ -28,14 +28,14 @@ use crate::mir::{
 
 #[cfg(test)]
 pub(super) fn infer_static_effects_with_roots(
-    program: &PreliminaryMirProgram,
+    program: &VerifiedPreliminaryMirProgram,
 ) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
     let graph = extract::extract(program);
     infer_static_effects_with_roots_from_graph(program, graph)
 }
 
 pub(super) fn infer_static_effects_with_roots_for_fields_from_dependencies(
-    program: &PreliminaryMirProgram,
+    program: &VerifiedPreliminaryMirProgram,
     dependencies: &MirDependencyExtraction,
     active_fields: &[crate::identity::StaticFieldId],
 ) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
@@ -48,7 +48,7 @@ pub(super) fn infer_static_effects_with_roots_for_fields_from_dependencies(
 
 #[cfg(test)]
 fn infer_static_effects_with_roots_from_graph(
-    program: &PreliminaryMirProgram,
+    program: &VerifiedPreliminaryMirProgram,
     graph: extract::ExtractedGraph,
 ) -> (StaticEffectAnalysis, StaticLifecycleAuthority) {
     let root_effects = root_effects::analyze(program, &graph)
@@ -58,8 +58,22 @@ fn infer_static_effects_with_roots_from_graph(
 }
 
 /// Infers direct and transitive static-field effects for every executable MIR
-/// body and every compiler-generated lifecycle operation in the closed program.
-pub fn infer_static_effects(program: &PreliminaryMirProgram) -> StaticEffectAnalysis {
+/// body and every compiler-generated lifecycle operation in the verified
+/// closed program.
+///
+/// Raw preliminary MIR cannot bypass its verification boundary:
+///
+/// ```compile_fail
+/// use skald_compiler::{
+///     mir::PreliminaryMirProgram,
+///     passes::static_lifecycle::infer_static_effects,
+/// };
+///
+/// fn analyze(program: &PreliminaryMirProgram) {
+///     let _ = infer_static_effects(program);
+/// }
+/// ```
+pub fn infer_static_effects(program: &VerifiedPreliminaryMirProgram) -> StaticEffectAnalysis {
     solve::solve(extract::extract(program))
 }
 

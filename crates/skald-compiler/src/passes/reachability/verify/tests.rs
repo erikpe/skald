@@ -59,6 +59,8 @@ fn static_field(program: &MirProgram, class_name: &str, name: &str) -> StaticFie
 
 fn sparse_static_program(source: &str) -> MirProgram {
     let preliminary = lower_generic_source_to_preliminary_mir(source);
+    let preliminary = verify_preliminary_mir(preliminary)
+        .expect("test program must produce verified preliminary MIR");
     let planned = plan_static_lifetimes(preliminary)
         .expect("test program must have an acyclic sparse lifecycle plan");
     synthesize_static_lifecycle(verify_planned_mir(planned).unwrap())
@@ -250,7 +252,7 @@ fn final_structure_is_sparse_but_preliminary_producer_output_remains_complete() 
     preliminary
         .program_mut()
         .remove_executable_definition_for_test(dead);
-    let errors = verify_preliminary_mir(&preliminary).unwrap_err();
+    let errors = verify_preliminary_mir(preliminary).unwrap_err();
     assert!(errors.iter().any(|error| {
         error.callable == Some(dead) && error.message == "internal function has no definition"
     }));
@@ -302,7 +304,7 @@ fn preliminary_producer_completeness_covers_every_member_definition_kind() {
         sparse
             .program_mut()
             .remove_executable_definition_for_test(member);
-        let errors = verify_preliminary_mir(&sparse).unwrap_err();
+        let errors = verify_preliminary_mir(sparse).unwrap_err();
         assert!(
             errors.iter().any(|error| error.callable == Some(member)),
             "preliminary verification accepted missing member {member}: {errors}"

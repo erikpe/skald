@@ -40,6 +40,8 @@ fn planned(source: &str) -> super::super::PlannedMirProgram {
     let checked = type_check_source(source);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = crate::mir::verify_preliminary_mir(preliminary)
+        .expect("test source must produce verified preliminary MIR");
     plan_static_lifetimes(preliminary).expect("test source must have an acyclic lifecycle")
 }
 

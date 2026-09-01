@@ -535,7 +535,7 @@ fn preliminary_static_initializers_lower_and_dump_callable_addresses() {
     let checked = crate::test_support::type_check_source(source);
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
-    verify_preliminary_mir(&preliminary)
+    check_preliminary_mir(&preliminary)
         .expect("function-valued static initializer MIR must verify");
     let dump = dump_preliminary_mir(&preliminary);
     assert!(dump.contains("FunctionTypes"), "{dump}");

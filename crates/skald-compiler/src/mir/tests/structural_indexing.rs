@@ -58,7 +58,7 @@ fn structural_calls_reuse_owned_argument_result_and_cleanup_lowering() {
         .hir
         .expect("valid structural ownership source has HIR");
     let preliminary = crate::mir::lower_preliminary_hir(&hir);
-    crate::mir::verify_preliminary_mir(&preliminary)
+    crate::mir::check_preliminary_mir(&preliminary)
         .expect("ordinary preliminary call ownership must verify");
 
     let program = crate::test_support::lower_hir_to_final_mir(&hir);
@@ -170,7 +170,7 @@ fn structural_calls_verify_every_generic_owning_value_family() {
     );
 
     let preliminary = crate::test_support::lower_generic_source_to_preliminary_mir(source);
-    crate::mir::verify_preliminary_mir(&preliminary)
+    crate::mir::check_preliminary_mir(&preliminary)
         .expect("generic structural ownership must verify before static planning");
     let final_program = crate::test_support::lower_generic_source_to_final_mir(source);
     verify_mir(&final_program).expect("generic structural ownership must verify after planning");

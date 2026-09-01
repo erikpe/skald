@@ -101,7 +101,7 @@ fn lowers_and_verifies_every_cell_assignment_carrier_in_preliminary_and_final_mi
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
-    verify_preliminary_mir(&preliminary).unwrap();
+    check_preliminary_mir(&preliminary).unwrap();
 
     let program = lower_hir(&hir);
     verify_mir(&program).unwrap();

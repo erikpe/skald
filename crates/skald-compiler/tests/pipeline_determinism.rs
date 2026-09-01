@@ -12,7 +12,9 @@ use skald_compiler::{
     driver::EntrySelector,
     hir::{dump_hir, HirProgram},
     lexer::{dump_tokens, lex},
-    mir::{dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir},
+    mir::{
+        dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir, verify_preliminary_mir,
+    },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
@@ -1102,6 +1104,7 @@ fn generic_module_phase_dump(variant: usize) -> String {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
@@ -1204,6 +1207,7 @@ fn generic_interface_module_phase_dump(variant: usize) -> String {
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let mir = run_mir_pipeline(synthesize_static_lifecycle(
@@ -1315,6 +1319,7 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
 
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
@@ -1456,6 +1461,7 @@ fn range_module_phase_dump(variant: usize) -> String {
     assert!(hir_dump.contains("Protocol interface="));
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
@@ -1565,6 +1571,7 @@ fn iteration_module_phase_dump(variant: usize) -> String {
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
@@ -1929,6 +1936,7 @@ fn static_lifetime_cycle_diagnostic_dump() -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let diagnostics = plan_static_lifetimes(preliminary)
         .unwrap_err()
         .into_diagnostics();
@@ -2082,6 +2090,7 @@ fn imported_unused_static_phase_dump() -> String {
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
@@ -2628,6 +2637,7 @@ fn function_value_composition_phase_dump() -> String {
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
     let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let mir = run_mir_pipeline(synthesize_static_lifecycle(
@@ -2655,6 +2665,7 @@ fn function_value_composition_phase_dump() -> String {
 
 fn lower_final_hir(hir: &HirProgram) -> VerifiedFinalMirProgram {
     let preliminary = lower_preliminary_hir(hir);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
     run_mir_pipeline(mir).unwrap()
@@ -2675,6 +2686,7 @@ fn planned_lifecycle_phase_dump(text: &str) -> String {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
+    let preliminary = verify_preliminary_mir(preliminary).unwrap();
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = run_mir_pipeline(synthesize_static_lifecycle(

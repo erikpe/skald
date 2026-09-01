@@ -2,7 +2,7 @@
 
 use crate::{
     identity::CallableId,
-    mir::{MirExecutionNode, PreliminaryMirProgram},
+    mir::{MirExecutionNode, PreliminaryMirProgram, VerifiedPreliminaryMirProgram},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
     typeck::type_check,
@@ -11,7 +11,7 @@ use crate::{
 use super::super::super::plan_static_lifetimes;
 use super::super::{infer_static_effects, StaticEffectEdgeKind, StaticEffectSummary};
 
-fn operator_program() -> PreliminaryMirProgram {
+fn operator_program() -> VerifiedPreliminaryMirProgram {
     let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
         &[(
@@ -55,7 +55,8 @@ fn main() -> i64 { return 0; }
     );
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    crate::mir::lower_preliminary_hir(&checked.hir.unwrap())
+    crate::mir::verify_preliminary_mir(crate::mir::lower_preliminary_hir(&checked.hir.unwrap()))
+        .expect("operator fixture must produce verified preliminary MIR")
 }
 
 fn function(program: &PreliminaryMirProgram, name: &str) -> CallableId {

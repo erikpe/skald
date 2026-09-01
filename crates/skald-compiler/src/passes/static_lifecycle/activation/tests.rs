@@ -6,7 +6,7 @@ use crate::{
     identity::StaticFieldId,
     mir::{
         lower_preliminary_hir, verify_preliminary_mir, PreliminaryMirProgram, StaticAccessKind,
-        StaticEffectPhase,
+        StaticEffectPhase, VerifiedPreliminaryMirProgram,
     },
     passes::static_lifecycle::{plan_static_lifetimes, verify_planned_mir},
     resolve::resolve_module_graph,
@@ -133,7 +133,8 @@ fn focused_source_fixtures_cover_future_activation_inputs() {
     ] {
         let checked = type_check_source(source);
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-        let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+        let preliminary = verify_preliminary_mir(lower_preliminary_hir(&checked.hir.unwrap()))
+            .expect("inactive static fixture must produce verified preliminary MIR");
         assert!(preliminary.executable_definitions().next().is_some());
     }
 
@@ -157,6 +158,8 @@ fn inactive_self_dependencies_and_cycles_do_not_enter_lifecycle_planning() {
         let checked = type_check_source(source);
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
         let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+        let preliminary = verify_preliminary_mir(preliminary)
+            .expect("inactive static fixture must produce verified preliminary MIR");
         let planned = plan_static_lifetimes(preliminary).unwrap();
         assert!(planned.activation_authority().is_empty());
         assert!(planned.lifecycle().activation().is_empty());
@@ -399,14 +402,13 @@ fn activation_inspection_dump_is_deterministic_across_processes() {
     assert_eq!(fingerprint_from_child(), fingerprint_from_child());
 }
 
-fn lower(source: &str) -> PreliminaryMirProgram {
+fn lower(source: &str) -> VerifiedPreliminaryMirProgram {
     let program = lower_generic_source_to_preliminary_mir(source);
-    verify_preliminary_mir(&program)
-        .expect("activation fixture must produce verified preliminary MIR");
-    program
+    verify_preliminary_mir(program)
+        .expect("activation fixture must produce verified preliminary MIR")
 }
 
-fn lower_modules(sources: &[(&str, &str)]) -> PreliminaryMirProgram {
+fn lower_modules(sources: &[(&str, &str)]) -> VerifiedPreliminaryMirProgram {
     let (_workspace, graph) = load_module_sources("app", sources);
     let resolved = resolve_module_graph(&graph);
     assert!(
@@ -417,8 +419,7 @@ fn lower_modules(sources: &[(&str, &str)]) -> PreliminaryMirProgram {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let program = lower_preliminary_hir(&checked.hir.unwrap());
-    verify_preliminary_mir(&program).expect("module fixture must produce verified preliminary MIR");
-    program
+    verify_preliminary_mir(program).expect("module fixture must produce verified preliminary MIR")
 }
 
 fn find_field(program: &PreliminaryMirProgram, name: &str) -> Option<StaticFieldId> {
