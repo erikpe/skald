@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: planned; LSR0 is next.
+Status: in progress; LSR0 is complete and LSR1 is next.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
@@ -97,7 +97,7 @@ expanding reviewed scope.
 
 ## Progress
 
-- [ ] LSR0 — Implement exact primitive constant semantics
+- [x] LSR0 — Implement exact primitive constant semantics
 - [ ] LSR1 — Add block-local facts and primitive constant folding
 - [ ] LSR2 — Classify forwarding-safe value uses exhaustively
 - [ ] LSR3 — Implement primitive algebraic simplification
@@ -114,29 +114,29 @@ expanding reviewed scope.
 **Purpose:** Establish one target-independent semantic owner for the closed
 integer and boolean folding set before any production pass can change MIR.
 
-- [ ] Add a focused optimizer-private typed constant representation for
+- [x] Add a focused optimizer-private typed constant representation for
       `i64`, `u64`, `u8`, and `bool` without duplicating general `MirType` or
       exposing a public constant-evaluation API.
-- [ ] Implement explicit wrapping addition, subtraction, multiplication, and
+- [x] Implement explicit wrapping addition, subtraction, multiplication, and
       `i64` negation; width-correct integer bitwise operations and complement;
       boolean not; integer and boolean comparisons; identity casts;
       integer-bit conversions; integer-to-boolean zero testing; and canonical
       boolean-to-integer conversion.
-- [ ] Canonicalize every `u8` result explicitly and avoid ordinary Rust
+- [x] Canonicalize every `u8` result explicitly and avoid ordinary Rust
       arithmetic whose debug and release behavior differs.
-- [ ] Return a closed “unsupported” result for every operation/type family
+- [x] Return a closed “unsupported” result for every operation/type family
       outside the frozen set rather than panicking or inferring semantics.
-- [ ] Keep floating literals observable as unsupported inputs; do not convert
+- [x] Keep floating literals observable as unsupported inputs; do not convert
       through host `f64` arithmetic.
-- [ ] Use exhaustive operation matches and add a maintenance test or compile-
+- [x] Use exhaustive operation matches and add a maintenance test or compile-
       time owner so new primitive variants cannot silently become foldable.
-- [ ] Organize evaluator, typed constants, and tests behind a concise
+- [x] Organize evaluator, typed constants, and tests behind a concise
       optimization-support facade with no pass, pipeline, driver, reporting,
       or backend dependency.
-- [ ] Advance the three planned optimization-register entries from
+- [x] Advance the three planned optimization-register entries from
       **Proposed** to **In progress** when this first implementation task
       begins.
-- [ ] Update living compiler documentation only if implementation details
+- [x] Update living compiler documentation only if implementation details
       sharpen, without expanding the frozen operation set.
 
 **Tests:** Every supported operation/type pair; signed and unsigned extrema;

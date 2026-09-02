@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Discoveries
 
-Status: open follow-up record for the planned
+Status: open follow-up record for the active
 [local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md).
 No implementation discoveries have been recorded yet.
 

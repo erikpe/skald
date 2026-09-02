@@ -6,9 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress. The completed direct
-for-range syntax roadmap is preserved in the
-[archive](../archive/DIRECT_FOR_RANGE_SYNTAX_ROADMAP.md).
+The
+[local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+is in progress; exact primitive constant semantics is complete and block-local
+facts plus primitive constant folding are next. The roadmap adds exhaustive
+forwarding-safe use roles, algebraic simplification, proof-aware CFG
+reachability, conservative CFG cleanup, the repeated default schedule, and
+broad semantic/determinism hardening. It depends on the completed static-
+lifecycle certificate, dense MIR rewriting, selectable pipeline, and whole-
+world reachability foundations.
 
 ## Pending discoveries
 
@@ -54,15 +60,8 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The
-[local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
-is planned; exact primitive constant semantics is the next implementation
-task. The roadmap adds block-local constant folding, exhaustive forwarding-
-safe use roles, algebraic simplification, proof-aware CFG reachability,
-conservative CFG cleanup, the repeated default schedule, and broad semantic/
-determinism hardening. It depends on the completed static-lifecycle
-certificate, dense MIR rewriting, selectable pipeline, and whole-world
-reachability foundations.
+No implementation roadmap is currently planned behind the active local
+final-MIR simplification roadmap.
 
 ## Design proposals
 

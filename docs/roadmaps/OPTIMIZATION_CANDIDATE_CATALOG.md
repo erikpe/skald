@@ -89,11 +89,10 @@ The frozen
 owns conservative integer/boolean constant folding, primitive
 algebraic simplification with guarded value forwarding, ordinary constant
 branch folding, and unprotected unreachable-block removal. Its concrete
-[roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) is planned, so those
-entries appear below as **Proposed**. They become **In progress** when
-implementation begins and **Implemented** when delivery and living
-documentation are complete. Implemented baseline optimizations link to their
-authoritative contracts.
+[roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) is in progress, so those
+entries appear below as **In progress**. They become **Implemented** when
+delivery and living documentation are complete. Implemented baseline
+optimizations link to their authoritative contracts.
 
 ## HIR and MIR-lowering boundary
 
@@ -121,8 +120,8 @@ and before CFG cleanup, dead-pure cleanup, and whole-world retention.
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
 | FMV-12 | [Dead-pure-definition elimination](../compiler/PHASES_AND_IR.md#selectable-final-mir-optimization-pipeline) | First pass in the current default final-MIR schedule; before whole-world retention | Implemented / **Medium** | Medium MIR/code-size reduction and cleanup foundation | Intentionally limited to unused non-failing scalar definitions; loads, calls, checked operations, ownership, and semantic queries remain |
-| FMV-13 | [Primitive integer/boolean constant folding](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#primitive-constant-folding) | After an initial dead-pure cleanup; before algebraic simplification, and repeated afterward | Proposed / **Medium** | Medium runtime and code size; high enabling value for CFG cleanup | Exact wrapping/width behavior, unsupported-operation barriers, stable spans/identities, and no checked or floating families initially |
-| FMV-14 | [Primitive algebraic simplification with guarded value forwarding](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#primitive-algebraic-simplification) | After primitive constant folding; before repeated folding and dead-pure cleanup | Proposed / **Medium to large** | Medium runtime and code size | Every forwarded use must be an allowed ordinary role; operand evaluation, proof metadata, checked protocols, and floating identities are barriers |
+| FMV-13 | [Primitive integer/boolean constant folding](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#primitive-constant-folding) | After an initial dead-pure cleanup; before algebraic simplification, and repeated afterward | In progress / **Medium** | Medium runtime and code size; high enabling value for CFG cleanup | Exact wrapping/width behavior, unsupported-operation barriers, stable spans/identities, and no checked or floating families initially |
+| FMV-14 | [Primitive algebraic simplification with guarded value forwarding](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#primitive-algebraic-simplification) | After primitive constant folding; before repeated folding and dead-pure cleanup | In progress / **Medium to large** | Medium runtime and code size | Every forwarded use must be an allowed ordinary role; operand evaluation, proof metadata, checked protocols, and floating identities are barriers |
 | FMV-01 | Raw-bit primitive cast folding | After basic constant folding; before algebraic simplification | Follow-up / **Small** | Low to medium runtime and code size | Only truly bit-preserving `u64`/`f64` reinterpretations are simple; must retain raw NaN payloads and result type exactly |
 | FMV-02 | Redundant primitive cast and cast-chain elimination | After constant folding; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and MIR size | Integer width and boolean canonicalization matter; checked `f64` conversion and proof-coupled casts are barriers |
 | FMV-03 | Local common-subexpression elimination for non-failing primitive rvalues | After constant/algebraic simplification; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and code size | Restrict to exact same-block pure operations; source values must dominate; floating equivalence, spans, runtime traces, and checked operations need exclusions |
@@ -144,7 +143,7 @@ probably require proof-provenance normalization.
 
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
-| FMC-16 | [Ordinary branch folding and unprotected unreachable-block cleanup](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#conservative-cfg-cleanup) | After repeated scalar simplification; before final dead-pure cleanup and whole-world retention | Proposed / **Large** | Medium runtime/code size and high proof of CFG-rewrite architecture | Dedicated checked terminators remain unchanged; body entry, static publication, lifecycle, and proof-metadata blocks are protected roots |
+| FMC-16 | [Ordinary branch folding and unprotected unreachable-block cleanup](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#conservative-cfg-cleanup) | After repeated scalar simplification; before final dead-pure cleanup and whole-world retention | In progress / **Large** | Medium runtime/code size and high proof of CFG-rewrite architecture | Dedicated checked terminators remain unchanged; body entry, static publication, lifecycle, and proof-metadata blocks are protected roots |
 | FMC-01 | Fold constant integer division and remainder with a known nonzero divisor | After primitive constant folding; before general CFG cleanup | Follow-up / **Medium to large** | Medium runtime and code size | Must compute Skald floor-division/divisor-sign remainder including `i64::MIN / -1`, rewrite the divisor-check diamond coherently, preserve spans and evaluation, and remove only safe failure regions |
 | FMC-02 | Fold constant shifts with an in-range constant count | After primitive constant folding; before general CFG cleanup | Follow-up / **Medium to large** | Medium runtime and code size | Must preserve arithmetic/logical shift flavor and `u8` canonicalization while rewriting the exact shift-count check protocol |
 | FMC-03 | Eliminate an always-successful divisor or shift check when only the checked RHS is constant | After constant propagation; before FMC-01/FMC-02 or instruction selection | Foundation needed / **Large** | Medium to high runtime in guarded dynamic arithmetic | The operation remains dynamic, so MIR needs an accepted proof for an unchecked operation or a normalized post-proof representation; simply removing the terminator violates current verification |
