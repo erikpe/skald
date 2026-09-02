@@ -34,6 +34,13 @@ separates foundational changes from later high-effort opportunities so that a
 future implementation roadmap can settle contracts and representation
 boundaries before scheduling individual optimization passes.
 
+Implemented optimizations and concrete future pass and analysis ideas are
+maintained in the living
+[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md). This
+document owns the architectural constraints and sequencing rationale; the
+catalog owns the intentionally changeable optimization inventory, lifecycle
+status, placement, effort, value, and pitfalls.
+
 ## Scope and fixed assumptions
 
 - Every Skald program is compiled as one closed world. There is no separate or
@@ -589,6 +596,14 @@ the actual architectural constraints.
 6. Extend the implemented dead-pure-definition elimination layer with
    conservative constant folding, algebraic simplification, copy propagation,
    and CFG cleanup in final MIR.
+
+   The draft
+   [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+   now makes this layer concrete. Because Skald MIR has no copy rvalue, it
+   proposes guarded atomic value forwarding inside algebraic simplification
+   instead of an empty standalone copy pass. CFG cleanup is initially limited
+   to ordinary branch folding and deletion of unreachable blocks not protected
+   by proof or lifecycle metadata.
 
 This layer offers the best balance of moderate-to-large effort, broad coverage,
 and low semantic risk. It also creates measurements that can justify the later

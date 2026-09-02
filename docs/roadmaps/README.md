@@ -12,6 +12,16 @@ for-range syntax roadmap is preserved in the
 
 ## Pending discoveries
 
+The living
+[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) inventories
+implemented and possible later optimizations by HIR/lowering, final-MIR value,
+CFG, storage/alias/ownership, whole-world execution, static-lifecycle,
+target-LIR, and machine-artifact graph. Each entry records placement,
+lifecycle status, effort, value, prerequisites, and pitfalls. Status
+distinguishes implemented, in-progress, frozen proposed, draft-design,
+follow-up, foundation-dependent, contract-dependent, and research work. It is
+not an implementation roadmap.
+
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven current compiler constraints on modular target-independent and
 target-specific optimization, their interaction with permanent whole-world and
