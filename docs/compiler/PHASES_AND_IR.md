@@ -883,19 +883,20 @@ analyses more tractable, but neither assumption weakens verification,
 determinism, evaluation-order, checked-failure, allocation, ownership, alias,
 or destruction requirements.
 
-### Frozen local final-MIR simplification direction
+### Local final-MIR simplification
 
-The confirmed
-[local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-and its active
-[implementation roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
-define the target-independent local-simplification layer now being delivered.
+The implemented target-independent local-simplification layer follows the
+[frozen design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md);
+its delivery and validation history are preserved in the
+[completed roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md).
 Exact primitive evaluation, block-local constant facts, exhaustive value-use
 classification, and the independently selectable `primitive-constant-folding`
 and `primitive-algebraic-simplification` passes are implemented. Proof-aware
 local CFG facts and the independently selectable `conservative-cfg-cleanup`
 pass are also implemented. The exact repeated default schedule is active;
-broad semantic and determinism hardening remains roadmap work.
+broad semantic and determinism coverage exercises it under debug and release
+compiler builds, repeated independent processes, selectable exclusions, and
+the exact `none` reference profile.
 
 The local-simplification layer consists of three independently selectable
 production passes under the existing verified pipeline:
@@ -906,6 +907,14 @@ production passes under the existing verified pipeline:
   identity catalog and atomically forwards safe result uses; and
 - `conservative-cfg-cleanup` folds eligible ordinary boolean branches and
   removes unprotected unreachable blocks and their transient values.
+
+One compact measurement fixture reduces 3 executable definitions, 5 blocks,
+14 instructions, and 14 transient values to 2 definitions, 3 blocks, 3
+instructions, and 3 values. A standard-library-backed golden additionally
+exercises scalar extrema, proof-protected logical CFG, function values, static
+startup/shutdown, destruction, and a call target exposed to whole-world
+pruning. Pass-owned counters attribute the local changes; they are structural
+evidence and do not imply a timing threshold or a general workload ranking.
 
 Constant semantics have one optimizer-private typed owner. Initial
 folding includes explicit wrapping `i64`, `u64`, and `u8` add, subtract, and

@@ -1,14 +1,14 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: in progress; LSR0 through LSR6 are complete and LSR7 is next.
+Status: complete; LSR0 through LSR8 were delivered on 2026-09-02.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
 and its promoted
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-local-final-mir-simplification-direction),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-local-final-mir-simplification-selection-direction),
+[compiler phase](../compiler/PHASES_AND_IR.md#local-final-mir-simplification),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#local-final-mir-simplification-selection),
 and
-[reporting](../compiler/REPORTING.md#frozen-local-final-mir-simplification-observation-direction)
+[reporting](../compiler/REPORTING.md#local-final-mir-simplification-observation)
 contracts. It adds exact target-independent primitive evaluation, block-local
 constant facts, primitive constant folding, algebraic simplification with
 guarded atomic value forwarding, proof-aware local CFG reachability, and
@@ -19,9 +19,9 @@ The primary result is a reusable local simplification layer and its safety
 boundaries, not an open-ended optimization suite. Each task should directly
 resolve small cohesive maintainability problems encountered in its owner.
 Larger or unrelated findings belong in the
-[local-simplification discoveries record](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
+[local-simplification discoveries record](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
 and remain cataloged in the
-[optimization register](OPTIMIZATION_CANDIDATE_CATALOG.md) instead of
+[optimization register](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md) instead of
 expanding reviewed scope.
 
 ## Dependencies
@@ -104,8 +104,8 @@ expanding reviewed scope.
 - [x] LSR4 — Establish proof-aware local CFG reachability
 - [x] LSR5 — Implement conservative CFG cleanup
 - [x] LSR6 — Activate the repeated selectable default schedule
-- [ ] LSR7 — Prove semantic parity, determinism, and optimization value
-- [ ] LSR8 — Harden ownership, documentation, and roadmap closure
+- [x] LSR7 — Prove semantic parity, determinism, and optimization value
+- [x] LSR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
 
@@ -414,27 +414,27 @@ unoptimized reference.
 permitted MIR/artifact structure and provides measurable simplification across
 real programs.
 
-- [ ] Add focused golden programs covering integer/bool folding, algebraic
+- [x] Add focused golden programs covering integer/bool folding, algebraic
       forwarding, branch folding, disconnected CFG, proof-protected CFG,
       static initialization/shutdown, and whole-world definitions exposed by
       removed call sites.
-- [ ] Assert optimization-off exact MIR parity and deterministic optimized MIR
+- [x] Assert optimization-off exact MIR parity and deterministic optimized MIR
       dumps, identity compaction, measurements, reports, and assembly across
       repeated and independent-process runs.
-- [ ] Prove native stdout, stderr, exit status, panic reason/span, runtime
+- [x] Prove native stdout, stderr, exit status, panic reason/span, runtime
       trace, allocation, ownership, cleanup, destruction, optional, shared,
       array, function-value, dispatch, and static-lifecycle equivalence.
-- [ ] Cover wrapping extrema and `u8` canonicalization in debug and release
+- [x] Cover wrapping extrema and `u8` canonicalization in debug and release
       compiler builds.
-- [ ] Compare pass-enabled, individually disabled, all-disabled, and `none`
+- [x] Compare pass-enabled, individually disabled, all-disabled, and `none`
       products without relying on wall-clock timings.
-- [ ] Add representative before/after MIR, instruction, block, value, and
+- [x] Add representative before/after MIR, instruction, block, value, and
       executable-definition measurements sufficient to assess follow-up
       candidates.
-- [ ] Record checked diamonds, floating evaluation, proof normalization, load/
+- [x] Record checked diamonds, floating evaluation, proof normalization, load/
       store reasoning, or other out-of-scope opportunities in the discoveries
       record and optimization register rather than extending pass scope.
-- [ ] Update compiler test guidance and focused living documentation for the
+- [x] Update compiler test guidance and focused living documentation for the
       new golden/measurement surfaces.
 
 **Tests:** Focused and full debug goldens; release goldens; independent-process
@@ -455,28 +455,28 @@ changes explain where later optimization work is likely to pay off.
 **Purpose:** Complete the maintainability audit and leave only authoritative
 current behavior, actionable discoveries, and implemented catalog entries.
 
-- [ ] Audit evaluator, fact, use-site, CFG, pass, registry, schedule,
+- [x] Audit evaluator, fact, use-site, CFG, pass, registry, schedule,
       measurement, and test modules by responsibility; split only genuine
       mixed owners and keep facades concise.
-- [ ] Remove temporary compatibility helpers, duplicated semantic tables,
+- [x] Remove temporary compatibility helpers, duplicated semantic tables,
       stale default-schedule wording, and roadmap codes from living code,
       tests, and non-roadmap documentation.
-- [ ] Confirm every frozen exclusion still holds and that no checked, floating,
+- [x] Confirm every frozen exclusion still holds and that no checked, floating,
       storage, proof-normalization, ownership, or target-specific optimization
       entered implicitly.
-- [ ] Reconcile discoveries with the optimization register, retaining detailed
+- [x] Reconcile discoveries with the optimization register, retaining detailed
       actionable evidence in the discoveries record and concise placement/
       effort/value summaries in the catalog.
-- [ ] Advance primitive constant folding, primitive algebraic simplification,
+- [x] Advance primitive constant folding, primitive algebraic simplification,
       and conservative CFG cleanup catalog entries to **Implemented** and link
       them to the promoted living contracts.
-- [ ] Run the complete repository validation from an artifact-free snapshot or
+- [x] Run the complete repository validation from an artifact-free snapshot or
       clean checkout, plus supported MSRV and independent-process determinism
       gates.
-- [ ] Mark every task complete, set roadmap status complete, move the frozen
+- [x] Mark every task complete, set roadmap status complete, move the frozen
       proposal and completed roadmap to `docs/archive/`, update active/archive
       indexes, and repair all incoming links.
-- [ ] Archive or remove the discoveries record only if no actionable finding
+- [x] Archive or remove the discoveries record only if no actionable finding
       remains; otherwise keep and index it under `docs/roadmaps/`.
 
 **Tests:** Full repository check, extended deterministic goldens, supported
@@ -491,6 +491,26 @@ artifact-free snapshot.
 marks its passes implemented, no reviewed exclusion was silently crossed, all
 gates pass, completed records are archived, and remaining discoveries have
 clear future owners.
+
+Completed on 2026-09-02. The ownership audit confirmed separate cohesive
+owners for exact primitive evaluation, block-local facts, the algebraic rule
+catalog, value-use classification, CFG facts, each transformation, registry,
+schedule, execution measurements, and their colocated tests. Their facades are
+concise, and no compatibility helper, duplicated semantic table, or mixed
+implementation owner justified another Rust split. Exhaustive unsupported-
+family tests and the full native corpus reconfirmed that checked protocols,
+floating evaluation, storage reasoning, proof normalization, ownership
+optimization, and target-specific optimization remain outside this layer.
+
+The three delivered catalog entries are implemented and link to the living
+compiler contract. Actionable proof, checked-operation, floating, memory, and
+measurement follow-ups remain in the indexed discoveries record. The design
+and roadmap are archived, living compiler/driver/reporting/testing text owns
+current behavior, and active indexes contain no rollout wording. From a
+Cargo-artifact-free state, `make check-long` passed the complete ordinary
+gate, 456 independent-process deterministic goldens, 456 release goldens,
+Rust 1.82 MSRV, 10,000-case robustness, runtime-trace measurement, and generic
+vector/range-loop benchmarks.
 
 ## Ordering and dependencies
 

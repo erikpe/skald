@@ -1,15 +1,15 @@
 # Local Final-MIR Simplification Design Proposal
 
-Status: frozen design; LFS1 through LFS14 were confirmed together on
-2026-09-02 and promoted into the living
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-local-final-mir-simplification-direction),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-local-final-mir-simplification-selection-direction),
+Status: frozen implemented design. LFS1 through LFS14 were confirmed together
+and delivered by the completed
+[implementation roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) on
+2026-09-02. The living
+[compiler phase](../compiler/PHASES_AND_IR.md#local-final-mir-simplification),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#local-final-mir-simplification-selection),
 and
-[reporting](../compiler/REPORTING.md#frozen-local-final-mir-simplification-observation-direction)
-contracts. Delivery is planned by the
-[implementation roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md), and
-follow-up findings belong in its
-[discoveries record](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md).
+[reporting](../compiler/REPORTING.md#local-final-mir-simplification-observation)
+documentation own the current contract. Follow-up findings belong in the
+[discoveries record](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md).
 
 This proposal defines Skald's first broader layer of local target-independent
 final-MIR optimization. It adds conservative primitive constant folding,
@@ -24,7 +24,7 @@ proof-aware local CFG reachability without introducing a speculative analysis
 manager or a second optimization IR.
 
 The proposal follows the implemented foundations recorded by the
-[optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md):
+[optimization architecture discoveries](../roadmaps/OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md):
 the static-lifecycle certificate, dense callable-local MIR rewriting,
 selectable final-MIR pipeline, target-independent whole-world reachability,
 and reachability-gated static lifecycle are already in place.
@@ -858,7 +858,7 @@ into implementation scope.
 
 Potential optimization follow-ups beyond this design are inventoried in the
 living
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md). When one
+[optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md). When one
 is promoted into a confirmed design, implementation roadmap, active delivery,
 or completed implementation, its catalog status should advance while the
 authoritative detail moves to the corresponding design, roadmap, or living

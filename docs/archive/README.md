@@ -100,6 +100,7 @@ Archived plans:
 - [Selectable final-MIR optimization pipeline](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 - [Target-independent whole-world reachability](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 - [Reachability-gated static lifecycle](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
+- [Local final-MIR simplification](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -169,6 +170,11 @@ Resolved reachability-gated static lifecycle inputs:
 - [Reachability-gated static lifecycle design proposal](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
 - [Reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
 - [Reachability-gated static lifecycle follow-up discoveries](REACHABILITY_GATED_STATIC_LIFECYCLE_DISCOVERIES.md)
+
+Resolved local final-MIR simplification inputs:
+
+- [Local final-MIR simplification design proposal](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+- [Local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
 

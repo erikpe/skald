@@ -64,7 +64,7 @@ contracts.
 | **In progress** | A concrete roadmap is actively being implemented |
 | **Proposed** | A frozen design or concrete planned roadmap defines the optimization, but implementation is not complete |
 | **Draft design** | An unfrozen design proposal gives the candidate a concrete boundary that may still change |
-| **Follow-up** | Can be designed against implemented architecture or the current local-simplification design |
+| **Follow-up** | Can be designed against implemented architecture, including the local-simplification layer |
 | **Foundation needed** | Valuable, but a named analysis or representation must land first |
 | **Contract decision** | Sound implementation depends on a language or observable-runtime decision |
 | **Research** | Placement or benefit remains uncertain enough to require measurement or prototyping |
@@ -82,17 +82,21 @@ Potential value uses **low**, **medium**, **high**, or **very high** and names
 the expected dimension: runtime, code size, compile time, or architecture.
 These are hypotheses until measurements exist.
 
+The first deterministic local-suite measurements and their limits are recorded
+in the
+[local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#initial-measurements-separate-local-wins-from-whole-world-pruning).
+They establish a baseline, not a general workload ranking.
+
 ## Current baseline and design boundary
 
-The frozen
-[local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-owns conservative integer/boolean constant folding, primitive
+The implemented local final-MIR simplification layer follows its
+[frozen design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+and [completed roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md).
+It owns conservative integer/boolean constant folding, primitive
 algebraic simplification with guarded value forwarding, ordinary constant
 branch folding, and unprotected unreachable-block removal. Its concrete
-[roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) is in progress, so those
-entries appear below as **In progress**. They become **Implemented** when
-delivery and living documentation are complete. Implemented baseline
-optimizations link to their authoritative contracts.
+entries appear below as **Implemented** and link to their authoritative living
+contracts.
 
 ## HIR and MIR-lowering boundary
 
@@ -120,8 +124,8 @@ and before CFG cleanup, dead-pure cleanup, and whole-world retention.
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
 | FMV-12 | [Dead-pure-definition elimination](../compiler/PHASES_AND_IR.md#selectable-final-mir-optimization-pipeline) | First pass in the current default final-MIR schedule; before whole-world retention | Implemented / **Medium** | Medium MIR/code-size reduction and cleanup foundation | Intentionally limited to unused non-failing scalar definitions; loads, calls, checked operations, ownership, and semantic queries remain |
-| FMV-13 | [Primitive integer/boolean constant folding](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#primitive-constant-folding) | After an initial dead-pure cleanup; before algebraic simplification, and repeated afterward | In progress ([roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md#lsr1--add-block-local-facts-and-primitive-constant-folding)) / **Medium** | Medium runtime and code size; high enabling value for CFG cleanup | Exact wrapping/width behavior, unsupported-operation barriers, stable spans/identities, and no checked or floating families initially |
-| FMV-14 | [Primitive algebraic simplification with guarded value forwarding](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#primitive-algebraic-simplification) | After primitive constant folding; before repeated folding and dead-pure cleanup | In progress ([roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md#lsr3--implement-primitive-algebraic-simplification)) / **Medium to large** | Medium runtime and code size | Every forwarded use must be an allowed ordinary role; operand evaluation, proof metadata, checked protocols, and floating identities are barriers |
+| FMV-13 | [Primitive integer/boolean constant folding](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After an initial dead-pure cleanup; before algebraic simplification, and repeated afterward | Implemented / **Medium** | Medium runtime and code size; high enabling value for CFG cleanup | Exact wrapping/width behavior, unsupported-operation barriers, stable spans/identities, and no checked or floating families initially |
+| FMV-14 | [Primitive algebraic simplification with guarded value forwarding](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After primitive constant folding; before repeated folding and dead-pure cleanup | Implemented / **Medium to large** | Medium runtime and code size | Every forwarded use must be an allowed ordinary role; operand evaluation, proof metadata, checked protocols, and floating identities are barriers |
 | FMV-01 | Raw-bit primitive cast folding | After basic constant folding; before algebraic simplification | Follow-up / **Small** | Low to medium runtime and code size | Only truly bit-preserving `u64`/`f64` reinterpretations are simple; must retain raw NaN payloads and result type exactly |
 | FMV-02 | Redundant primitive cast and cast-chain elimination | After constant folding; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and MIR size | Integer width and boolean canonicalization matter; checked `f64` conversion and proof-coupled casts are barriers |
 | FMV-03 | Local common-subexpression elimination for non-failing primitive rvalues | After constant/algebraic simplification; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and code size | Restrict to exact same-block pure operations; source values must dominate; floating equivalence, spans, runtime traces, and checked operations need exclusions |
@@ -143,7 +147,7 @@ probably require proof-provenance normalization.
 
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
-| FMC-16 | [Ordinary branch folding and unprotected unreachable-block cleanup](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md#conservative-cfg-cleanup) | After repeated scalar simplification; before final dead-pure cleanup and whole-world retention | In progress ([roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md#lsr5--implement-conservative-cfg-cleanup)) / **Large** | Medium runtime/code size and high proof of CFG-rewrite architecture | Dedicated checked terminators remain unchanged; body entry, static publication, lifecycle, and proof-metadata blocks are protected roots |
+| FMC-16 | [Ordinary branch folding and unprotected unreachable-block cleanup](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After repeated scalar simplification; before final dead-pure cleanup and whole-world retention | Implemented / **Large** | Medium runtime/code size and high proof of CFG-rewrite architecture | Dedicated checked terminators remain unchanged; body entry, static publication, lifecycle, and proof-metadata blocks are protected roots |
 | FMC-01 | Fold constant integer division and remainder with a known nonzero divisor | After primitive constant folding; before general CFG cleanup | Follow-up / **Medium to large** | Medium runtime and code size | Must compute Skald floor-division/divisor-sign remainder including `i64::MIN / -1`, rewrite the divisor-check diamond coherently, preserve spans and evaluation, and remove only safe failure regions |
 | FMC-02 | Fold constant shifts with an in-range constant count | After primitive constant folding; before general CFG cleanup | Follow-up / **Medium to large** | Medium runtime and code size | Must preserve arithmetic/logical shift flavor and `u8` canonicalization while rewriting the exact shift-count check protocol |
 | FMC-03 | Eliminate an always-successful divisor or shift check when only the checked RHS is constant | After constant propagation; before FMC-01/FMC-02 or instruction selection | Foundation needed / **Large** | Medium to high runtime in guarded dynamic arithmetic | The operation remains dynamic, so MIR needs an accepted proof for an unchecked operation or a normalized post-proof representation; simply removing the terminator violates current verification |
@@ -271,8 +275,8 @@ design proposals before implementation.
 ## Suggested evaluation order
 
 This is not a roadmap. It is a default order for deciding which candidate is
-worth designing next after the current local-simplification work has produced
-measurements:
+worth designing next now that the implemented local-simplification layer has
+produced initial measurements:
 
 1. Add checked constant integer division/remainder and shift simplification,
    because their arithmetic is bounded and they directly extend the new local

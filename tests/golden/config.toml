@@ -11,3 +11,21 @@ compiler_args = ["--disable-mir-pass", "whole-world-reachability"]
 
 [variant.dead-pure-disabled]
 compiler_args = ["--disable-mir-pass", "dead-pure-definition-elimination"]
+
+[variant.constant-folding-disabled]
+compiler_args = ["--disable-mir-pass", "primitive-constant-folding"]
+
+[variant.algebraic-simplification-disabled]
+compiler_args = ["--disable-mir-pass", "primitive-algebraic-simplification"]
+
+[variant.cfg-cleanup-disabled]
+compiler_args = ["--disable-mir-pass", "conservative-cfg-cleanup"]
+
+[variant.all-mir-passes-disabled]
+compiler_args = [
+  "--disable-mir-pass", "conservative-cfg-cleanup",
+  "--disable-mir-pass", "dead-pure-definition-elimination",
+  "--disable-mir-pass", "primitive-algebraic-simplification",
+  "--disable-mir-pass", "primitive-constant-folding",
+  "--disable-mir-pass", "whole-world-reachability",
+]

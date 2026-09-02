@@ -6,15 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
-is in progress; exact primitive constant semantics, block-local facts,
-primitive constant folding, exhaustive forwarding-safe use classification,
-primitive algebraic simplification, proof-aware CFG reachability, conservative
-CFG cleanup, and the repeated selectable default schedule are complete. Broad
-semantic, determinism, and optimization-value hardening is next. The roadmap
-depends on the completed static-lifecycle certificate, dense MIR rewriting,
-selectable pipeline, and whole-world reachability foundations.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -30,9 +22,10 @@ not an implementation roadmap.
 
 The open
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
-record implementation-specific follow-ups found while delivering the planned
-local simplification roadmap. It starts empty; cataloged but out-of-scope
-optimizations do not become roadmap work merely by being mentioned there.
+record implementation-specific proof-normalization, checked-operation,
+floating-evaluation, memory-analysis, and measurement follow-ups found while
+delivering the completed local simplification layer. Cataloged follow-ups do
+not become roadmap work merely by being mentioned there.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven current compiler constraints on modular target-independent and
@@ -53,6 +46,12 @@ backend lowering, and default activation after the canary. Its follow-ups are
 resolved in the archived
 [discoveries record](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
 The other four original unresolved constraints have no implementation roadmap.
+The completed
+[local final-MIR simplification roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+then adds exact primitive folding, guarded algebraic value forwarding,
+proof-aware ordinary CFG cleanup, and the repeated default schedule. Its
+[frozen design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+and delivery record are preserved in the archive.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -60,26 +59,19 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No implementation roadmap is currently planned behind the active local
-final-MIR simplification roadmap.
+No implementation roadmap is currently planned.
 
 ## Design proposals
 
-The frozen
-[local final-MIR simplification proposal](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-defines three independently selectable passes for conservative primitive
-constant folding, primitive algebraic simplification with guarded atomic value
-forwarding, and proof-aware CFG cleanup. LFS1 through LFS14 were confirmed
-together on 2026-09-02 and promoted into the living
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-local-final-mir-simplification-direction),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-local-final-mir-simplification-selection-direction),
+The completed local final-MIR simplification design and delivery record are
+preserved in the [archive](../archive/README.md). Their independently
+selectable primitive constant folding, guarded algebraic forwarding, and
+proof-aware CFG cleanup passes are authoritative in the living
+[compiler phase](../compiler/PHASES_AND_IR.md#local-final-mir-simplification),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#local-final-mir-simplification-selection),
 and
-[reporting](../compiler/REPORTING.md#frozen-local-final-mir-simplification-observation-direction)
-contracts. The design fixes exact integer/boolean
-evaluation, block-local facts, protected lifecycle/proof roots, unreachable
-block-and-value deletion, and a repeated default schedule ending in the
-implemented whole-world reachability pass. Delivery and hardening continue in
-the linked roadmap.
+[reporting](../compiler/REPORTING.md#local-final-mir-simplification-observation)
+contracts.
 
 The completed reachability-gated static lifecycle design and delivery record
 are preserved in the [archive](../archive/README.md). Their exact mandatory

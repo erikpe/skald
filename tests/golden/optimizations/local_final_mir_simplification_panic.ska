@@ -1,0 +1,12 @@
+from std::error import panic;
+
+fn fail() -> i64 {
+    panic("local simplification failure");
+}
+
+fn main() -> i64 {
+    if (6 * 7 == 42) {
+        return fail();
+    }
+    return 0;
+}

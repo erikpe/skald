@@ -42,6 +42,21 @@ const INVALID_RETENTION_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(116);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
+const LOCAL_SIMPLIFICATION_PROFILE_SOURCE: &str = "
+fn removed_target() -> i64 { return 99; }
+fn identity(value: i64) -> i64 { return value + 0; }
+fn main() -> i64 {
+    if (1 + 1 == 2) { return identity(6 * 7); }
+    return removed_target();
+}
+";
+const ALL_PRODUCTION_PASS_NAMES: [&str; 5] = [
+    "conservative-cfg-cleanup",
+    "dead-pure-definition-elimination",
+    "primitive-algebraic-simplification",
+    "primitive-constant-folding",
+    "whole-world-reachability",
+];
 
 const fn registration(
     identity: MirPassIdentity,
@@ -172,6 +187,144 @@ fn none_pipeline_preserves_valid_mir_and_reports_only_verification() {
         measured.statistics.rewrite_changes(),
         MirRewriteChangeSummary::default()
     );
+}
+
+#[test]
+fn productive_default_profile_has_exact_reference_parity_and_structural_value() {
+    let input = lower_source_to_final_mir(LOCAL_SIMPLIFICATION_PROFILE_SOURCE);
+    let input_dump = dump_mir(&input);
+    let before = input.reporting_statistics();
+    let before_values = value_count(&input);
+
+    let none = run_mir_pipeline_measured(input.clone(), &none_schedule())
+        .result
+        .unwrap();
+    let all_disabled = run_mir_pipeline_measured(
+        input.clone(),
+        &resolve_mir_pass_schedule(MirOptimizationProfile::Default, ALL_PRODUCTION_PASS_NAMES)
+            .unwrap(),
+    )
+    .result
+    .unwrap();
+    assert_eq!(dump_mir(none.program()), input_dump);
+    assert_eq!(all_disabled, none);
+    assert_eq!(assembly(&all_disabled), assembly(&none));
+
+    let measured = run_mir_pipeline_with_occurrences(
+        input,
+        &resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap(),
+    );
+    let optimized = measured.result.as_ref().unwrap();
+    let after = optimized.program().reporting_statistics();
+    let after_values = value_count(optimized.program());
+    assert_dense_blocks_and_values(optimized.program());
+
+    assert_eq!(
+        (
+            before.definitions(),
+            before.blocks(),
+            before.instructions(),
+            before_values
+        ),
+        (3, 5, 14, 14)
+    );
+    assert_eq!(
+        (
+            after.definitions(),
+            after.blocks(),
+            after.instructions(),
+            after_values
+        ),
+        (2, 3, 3, 3)
+    );
+    assert_ne!(dump_mir(optimized.program()), input_dump);
+    assert_ne!(assembly(optimized), assembly(&none));
+    assert_eq!(measured.statistics.pass_executions(), 8);
+    assert!(
+        measurement_total(
+            &measured,
+            "primitive-constant-folding",
+            "folded binary assignments"
+        ) > 0
+    );
+    assert!(
+        measurement_total(
+            &measured,
+            "primitive-constant-folding",
+            "folded comparison assignments"
+        ) > 0
+    );
+    assert!(
+        measurement_total(
+            &measured,
+            "primitive-algebraic-simplification",
+            "forwarded value uses"
+        ) > 0
+    );
+    assert!(
+        measurement_total(
+            &measured,
+            "conservative-cfg-cleanup",
+            "folded constant branches"
+        ) > 0
+    );
+    assert!(measurement_total(&measured, "conservative-cfg-cleanup", "removed blocks") > 0);
+    assert_eq!(
+        measurement_total(&measured, "whole-world-reachability", "removed definitions"),
+        1
+    );
+
+    for disabled in ALL_PRODUCTION_PASS_NAMES {
+        let result = run_mir_pipeline_measured(
+            lower_source_to_final_mir(LOCAL_SIMPLIFICATION_PROFILE_SOURCE),
+            &resolve_mir_pass_schedule(MirOptimizationProfile::Default, [disabled]).unwrap(),
+        );
+        assert!(
+            result.result.is_ok(),
+            "profile excluding {disabled} must verify"
+        );
+    }
+}
+
+fn value_count(program: &crate::mir::MirProgram) -> u64 {
+    program
+        .executable_definitions()
+        .map(|definition| u64::try_from(definition.values().len()).unwrap())
+        .sum()
+}
+
+fn assert_dense_blocks_and_values(program: &crate::mir::MirProgram) {
+    for definition in program.executable_definitions() {
+        let callable = definition.callable();
+        assert!(definition
+            .body()
+            .blocks
+            .iter()
+            .enumerate()
+            .all(|(index, block)| block.id == BlockId::new(callable, index)));
+        assert!(definition
+            .values()
+            .iter()
+            .enumerate()
+            .all(|(index, value)| value.id == ValueId::new(callable, index)));
+    }
+}
+
+fn assembly(verified: &VerifiedFinalMirProgram) -> String {
+    emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(verified),
+    )
+    .unwrap()
+}
+
+fn measurement_total(measured: &MeasuredMirPipeline, pass: &str, measurement: &str) -> u64 {
+    measured
+        .statistics
+        .pass_measurements()
+        .filter(|(_, name, value)| *name == pass && value.name() == measurement)
+        .map(|(_, _, value)| value.value())
+        .sum()
 }
 
 #[test]
@@ -700,6 +853,30 @@ fn pipeline_determinism_fingerprint() -> String {
         run_mir_pipeline_measured_inspected(lowered_program(), &default, Some(&mut collector));
     let final_dump = dump_mir(inspected.result.as_ref().unwrap().program());
 
+    let productive = run_mir_pipeline_with_occurrences(
+        lower_source_to_final_mir(LOCAL_SIMPLIFICATION_PROFILE_SOURCE),
+        &default,
+    );
+    let productive_occurrences = productive
+        .occurrences()
+        .iter()
+        .map(|record| {
+            (
+                record.position(),
+                record.name(),
+                record.occurrence(),
+                record.outcome(),
+                record.processed_callables(),
+                record.changed_callables(),
+                record.retained_mir_entities(),
+                record.inserted_mir_entities(),
+                record.removed_mir_entities(),
+                record.verification_executions(),
+                record.measurements().to_vec(),
+            )
+        })
+        .collect::<Vec<_>>();
+
     let mut reachability_collector = CheckpointCollector::default();
     let reachability_schedule = production_schedule(&[
         whole_world_reachability::IDENTITY,
@@ -736,7 +913,7 @@ fn pipeline_determinism_fingerprint() -> String {
         "none={:?}\ndefault={:?}\ndisabled={:?}\nrepeated={:?}\n\
          metrics=({}, {}, {}, {:?})\nerror=({:?}, {:?}, {:?}, {:?}, {})\n\
          checkpoints={:?}\ncheckpoint-dumps={:?}\nreachability-checkpoints={:?}\n\
-         reachability-dumps={:?}\nfinal-mir=\n{}",
+         reachability-dumps={:?}\nproductive-occurrences={:?}\nproductive-final-mir=\n{}\nfinal-mir=\n{}",
         schedule_fingerprint(&none),
         schedule_fingerprint(&default),
         schedule_fingerprint(&disabled),
@@ -754,6 +931,8 @@ fn pipeline_determinism_fingerprint() -> String {
         collector.dumps,
         reachability_collector.labels,
         reachability_collector.reachability_dumps,
+        productive_occurrences,
+        dump_mir(productive.result.as_ref().unwrap().program()),
         final_dump,
     )
 }

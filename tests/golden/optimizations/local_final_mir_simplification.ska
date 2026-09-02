@@ -1,0 +1,69 @@
+import std::io;
+
+fn mark(value: i64) -> i64 {
+    std::io::println_i64(value);
+    return value;
+}
+
+class Resource {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        std::io::println_i64(30);
+    }
+}
+
+class State {
+    static marker: i64 = mark(10);
+    static resource: Resource = Resource(6 * 7);
+
+    init() {}
+}
+
+fn removed_target() -> i64 {
+    std::io::println_i64(-1);
+    return 99;
+}
+
+fn identity_i64(value: i64) -> i64 {
+    return value + 0;
+}
+
+fn identity_u8(value: u8) -> u8 {
+    return ~(~value);
+}
+
+fn direct(value: i64) -> i64 {
+    return value * 1;
+}
+
+fn invoke(callback: fn(i64) -> i64, value: i64) -> i64 {
+    return callback(value);
+}
+
+fn proof_protected(value: bool) -> bool {
+    return true && value;
+}
+
+fn main() -> i64 {
+    if (false) {
+        std::io::println_i64(removed_target());
+    }
+
+    var callback: fn(i64) -> i64 = direct;
+    var activation: i64 = State.marker;
+    std::io::println_i64(State.resource.value);
+    std::io::println_i64(identity_i64(7));
+    std::io::println_i64(9223372036854775807 + 1);
+    std::io::println_u64(0xffffffffffffffffu + 1u);
+    std::io::println_u8(255u8 + 1u8);
+    std::io::println_u8(identity_u8(0xa5u8));
+    std::io::println_i64(invoke(callback, 8));
+    std::io::println_bool(!false);
+    std::io::println_bool(proof_protected(true));
+    return activation - 10;
+}

@@ -358,16 +358,15 @@ construction.
 Filesystem publication and general CLI dump retention remain separate driver
 decisions.
 
-## Frozen local final-MIR simplification observation direction
+## Local final-MIR simplification observation
 
-The confirmed
-[local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-and active
-[roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
-existing occurrence, aggregate, and checkpoint model. Primitive constant
-folding, primitive algebraic simplification, and conservative CFG cleanup use
-that model under exact compiler-internal schedules and the active repeated
-default profile.
+The implemented observation surface follows the
+[frozen local-simplification design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+and [completed roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md).
+It extends the existing occurrence, aggregate, and checkpoint model. Primitive
+constant folding, primitive algebraic simplification, and conservative CFG
+cleanup use that model under exact compiler-internal schedules and the active
+repeated default profile.
 
 Primitive constant folding reports processed/changed callables and folded
 unary, binary, comparison, and cast assignments. Primitive algebraic
@@ -395,6 +394,16 @@ owns timers, occurrence records, verification counts, and aggregate
 conversion; reporting owns rendering; inspectors own optional verified MIR
 and reachability dumps. Quiet, phases-only, and details-only paths retain their
 current allocation and timing boundaries.
+
+Productive coverage pins more than zero-counter plumbing. A compact final-MIR
+fixture requires non-zero primitive-folding, algebraic,
+CFG-cleanup, and whole-world-retention counters together with exact final
+definition and block counts. Its independent-process fingerprint includes
+every occurrence number, outcome, structural count, verification count,
+pass-owned measurement, and final MIR dump while excluding elapsed durations.
+A standard-library-backed golden supplies larger before/after structural
+observations, but no correctness test imposes a wall-clock or performance
+threshold.
 
 ## Whole-world reachability observation
 

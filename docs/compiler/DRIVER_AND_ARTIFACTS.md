@@ -197,15 +197,14 @@ focused dump is built only by an explicit `activation_dump` call. The ordinary
 compile adapters pass no inspector, while `CompilationRequest`, report detail,
 diagnostics, generated artifacts, and CLI options remain unchanged.
 
-## Frozen local final-MIR simplification selection direction
+## Local final-MIR simplification selection
 
-The confirmed
-[local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-and active
-[roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
-existing registry/profile/exclusion surface without adding a request field or
-CLI category. `primitive-constant-folding` and
-`primitive-algebraic-simplification` and `conservative-cfg-cleanup` are now
+The implemented local final-MIR simplification follows the
+[frozen design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+and [completed roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md).
+It extends the existing registry/profile/exclusion surface without adding a
+request field or CLI category. `primitive-constant-folding`,
+`primitive-algebraic-simplification`, and `conservative-cfg-cleanup` are now
 registered and appear through pass discovery, exact compiler-internal
 schedules, lexical known-name diagnostics, pass-attributed failures, and the
 default profile. The local passes appear through the same
@@ -237,11 +236,12 @@ The stable registered name is `whole-world-reachability`.
 `--list-mir-passes`, the public descriptor query,
 unknown-name diagnostics, and repeatable `--disable-mir-pass` selection
 discover it through the same canonical registry metadata as every other pass.
-The supported `default` schedule contains `dead-pure-definition-elimination`
-followed by `whole-world-reachability`, while `none` remains empty.
+Within the supported `default` schedule, `whole-world-reachability` remains
+last after the local simplification and final dead-pure cleanup occurrences;
+`none` remains empty.
 
 Disabling reachability preserves complete final MIR and the prior backend
-input domain. Disabling both registered passes from `default` must match
+input domain. Disabling all five registered passes from `default` must match
 `none`. Selection never changes source loading, acceptance, diagnostics,
 static-lifecycle planning, target choice, runtime-trace policy, artifact paths,
 or publication behavior. A pass or changed-output verification failure stops

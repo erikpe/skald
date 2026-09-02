@@ -382,6 +382,50 @@ fn details_publish_deterministic_phase_owned_metrics() {
 }
 
 #[test]
+fn details_publish_productive_local_simplification_measurements() {
+    let source = "
+fn removed_target() -> i64 { return 99; }
+fn identity(value: i64) -> i64 { return value + 0; }
+fn main() -> i64 {
+    if (1 + 1 == 2) { return identity(6 * 7); }
+    return removed_target();
+}
+";
+    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let artifact = compile_source_to_assembly_observed(
+        "productive-local-simplification.ska",
+        source,
+        Target::X86_64SysV,
+        &mut observer,
+    )
+    .unwrap();
+    let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(count_metric(metrics, "definitions"), Some(2));
+    assert_eq!(count_metric(metrics, "blocks"), Some(3));
+    assert!(
+        pass_count_metric(
+            metrics,
+            "primitive-constant-folding",
+            "folded binary assignments"
+        ) > 0
+    );
+    assert!(
+        pass_count_metric(
+            metrics,
+            "primitive-algebraic-simplification",
+            "forwarded value uses"
+        ) > 0
+    );
+    assert!(pass_count_metric(metrics, "conservative-cfg-cleanup", "removed blocks") > 0);
+    assert_eq!(
+        pass_count_metric(metrics, "whole-world-reachability", "removed definitions"),
+        1
+    );
+}
+
+#[test]
 fn activation_metrics_and_inspection_keep_distinct_observation_boundaries() {
     let source = "
 class State {
@@ -847,6 +891,18 @@ fn count_metric(metrics: &[ReportMetric], name: &str) -> Option<u64> {
             MetricValue::Bytes(_) => panic!("`{name}` must be a count metric"),
         })
     })
+}
+
+fn pass_count_metric(metrics: &[ReportMetric], owner: &str, name: &str) -> u64 {
+    metrics
+        .iter()
+        .find_map(|metric| {
+            (metric.owner() == Some(owner) && metric.name() == name).then(|| match metric.value() {
+                MetricValue::Count(value) => value,
+                MetricValue::Bytes(_) => panic!("`{owner}: {name}` must be a count metric"),
+            })
+        })
+        .unwrap_or_else(|| panic!("missing `{owner}: {name}` pass metric"))
 }
 
 struct FailingReportWriter;

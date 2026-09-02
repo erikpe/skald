@@ -147,15 +147,31 @@ optional/shared-owner, and array expansion modules through their common facade;
 tests should continue asserting public extraction facts rather than private
 file placement.
 Static-lifecycle analysis tests require its direct effects to be an exact
-projection of that shared access inventory. Pipeline and driver tests pin
-the explicit `dead-pure-definition-elimination` then
-`whole-world-reachability` default order, `none` parity, selective disabling,
-measurements, retained-definition counts, backend visits, and assembly
-determinism. The `whole_world_reachability` golden group runs the same native
-fixtures under `default`, `optimization-none`, and `reachability-disabled` to
-compare startup, stdout/stderr, status, reverse shutdown, ownership,
-destruction, panic, and runtime traces. Full golden determinism repeats every
-variant in independent compiler and native processes.
+projection of that shared access inventory. Pipeline and driver tests pin the
+complete repeated default optimization schedule, exact `none` and all-disabled
+parity, per-pass disabling, dense rewritten identities, deterministic
+measurements and checkpoints, retained-definition counts, backend visits, and
+assembly determinism. The `whole_world_reachability` golden group runs the
+same native fixtures under `default`, `optimization-none`, and
+`reachability-disabled` to compare startup, stdout/stderr, status, reverse
+shutdown, ownership, destruction, panic, and runtime traces. Full golden
+determinism repeats every variant in independent compiler and native
+processes.
+
+Local final-MIR simplification has a focused `optimizations` golden group. It
+crosses default, `none`, every local pass disabled individually,
+reachability-disabled, dead-pure-disabled, and all-MIR-passes-disabled
+variants over wrapping integer and boolean folding, algebraic forwarding,
+ordinary and proof-protected CFG, exposed call targets, function values, and
+static startup, shutdown, and destruction. A companion panic fixture pins the
+reason, source span, runtime trace, stderr, and exit status. Debug and release
+goldens share the same observations, while full-corpus golden runs retain the
+broader allocation, ownership, optional, shared, array, dispatch, cleanup, and
+lifecycle equivalence matrix. Focused pipeline tests additionally pin exact
+before/after definition, block, instruction, and transient-value counts; a
+driver test pins the same pass-owned counters through structured reporting;
+the cross-process fingerprint excludes elapsed durations and includes every
+occurrence measurement and the final MIR dump.
 
 Target-artifact tests rebuild runtime-trace strings after closure and cover a
 retained string first interned by a removed context. Retained-domain backend
@@ -168,6 +184,16 @@ coverage also carries the seal from verification into lifecycle planning.
 
 Reusable non-Rust compiler corpus data belongs under `tests/compiler/`.
 Production crates must not depend on the top-level test tree at runtime.
+
+For a focused local-simplification iteration, run:
+
+```sh
+make golden-filter GOLDEN_FILTER='optimizations/**'
+scripts/golden.sh --determinism full --filter 'optimizations/**'
+```
+
+The full regression gate includes the complete debug, release, and
+independent-process golden corpus rather than only this focused group.
 
 The frozen [structured reporting contract](../compiler/REPORTING.md) assigns
 event, metric, observer, renderer, filtering, path, and writer-error invariants

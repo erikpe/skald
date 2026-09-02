@@ -2648,8 +2648,12 @@ fn complete_phase_dump(text: &str) -> String {
 }
 
 fn mir_pipeline_checkpoint_dump() -> String {
-    let text = "fn helper(value: i64) -> i64 { return value + 1; }\n\
-                fn main() -> i64 { return helper(41); }\n";
+    let text = "fn removed_target() -> i64 { return 99; }\n\
+                fn identity(value: i64) -> i64 { return value + 0; }\n\
+                fn main() -> i64 {\n\
+                    if (1 + 1 == 2) { return identity(6 * 7); }\n\
+                    return removed_target();\n\
+                }\n";
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("checkpoint-determinism.ska", text);
     let source = sources.get(source_id).unwrap();

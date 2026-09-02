@@ -597,15 +597,14 @@ the actual architectural constraints.
    conservative constant folding, algebraic simplification, copy propagation,
    and CFG cleanup in final MIR.
 
-   The frozen
-   [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-   and its planned
-   [implementation roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) make this
-   layer concrete. Because Skald MIR has no copy rvalue, the design
-   proposes guarded atomic value forwarding inside algebraic simplification
-   instead of an empty standalone copy pass. CFG cleanup is initially limited
-   to ordinary branch folding and deletion of unreachable blocks not protected
-   by proof or lifecycle metadata.
+   The completed
+   [local final-MIR simplification roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+   implements this layer from its
+   [frozen design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md).
+   Because Skald MIR has no copy rvalue, guarded atomic value forwarding lives
+   inside algebraic simplification instead of an empty standalone copy pass.
+   CFG cleanup is limited to ordinary branch folding and deletion of
+   unreachable blocks not protected by proof or lifecycle metadata.
 
 This layer offers the best balance of moderate-to-large effort, broad coverage,
 and low semantic risk. It also creates measurements that can justify the later

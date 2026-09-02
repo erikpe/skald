@@ -1,0 +1,41 @@
+schema = 2
+
+[[test]]
+name = "profile_equivalence"
+mode = "run"
+source = "local_final_mir_simplification.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "constant-folding-disabled",
+  "algebraic-simplification-disabled",
+  "cfg-cleanup-disabled",
+  "reachability-disabled",
+  "dead-pure-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "scalars_proof_lifecycle_function_values_and_reachability"
+expect = { stdout = { file = "data/local_final_mir_simplification.stdout" } }
+
+[[test]]
+name = "panic_equivalence"
+mode = "run"
+source = "local_final_mir_simplification_panic.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "constant-folding-disabled",
+  "algebraic-simplification-disabled",
+  "cfg-cleanup-disabled",
+  "reachability-disabled",
+  "dead-pure-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "reason_span_and_runtime_trace"
+expect = { exit = "failure", stderr = { inline = """panic: local simplification failure
+stacktrace:
+  at local_final_mir_simplification_panic::fail (tests/golden/optimizations/local_final_mir_simplification_panic.ska:4:5)
+  at local_final_mir_simplification_panic::main (tests/golden/optimizations/local_final_mir_simplification_panic.ska:9:16)
+""" } }
