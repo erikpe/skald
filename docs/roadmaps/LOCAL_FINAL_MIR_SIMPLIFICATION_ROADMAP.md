@@ -344,6 +344,8 @@ proof normalization or rewriting any checked protocol.
       defined inside them in the same callable transaction.
 - [x] Retain all storage declarations, path conditions, logical records,
       guards, attachments, and protected unreachable regions.
+- [x] Permit retained, unreferenced temporary declarations to have no dynamic
+      lifetime epoch after their complete unreachable region is removed.
 - [x] Return deterministic constant-branch, same-target-branch, removed-block,
       removed-value, protected-unreachable, and changed-callable measurements.
 - [x] Register private identity 4 under `conservative-cfg-cleanup`, exposing

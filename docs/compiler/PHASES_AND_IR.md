@@ -2866,6 +2866,8 @@ storage-dead storage
 Current MIR spells these operations `StorageLive` and `StorageDead`; their
 required meaning is:
 
+- an inert compiler-temporary declaration left behind after structural
+  optimization has no dynamic epoch and no storage uses;
 - initialization, use, projection, and cleanup require live storage;
 - beginning another epoch while storage is live is invalid;
 - ending an epoch while storage is dead is invalid;

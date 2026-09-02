@@ -363,6 +363,58 @@ fn default_profile_selects_cfg_cleanup_and_later_dead_pure_cleanup() {
 }
 
 #[test]
+fn unreachable_temporary_epochs_leave_valid_inert_storage_declarations() {
+    let input = lower_source_to_final_mir(concat!(
+        "class Value { init() {} fn touch() -> unit {} }\n",
+        "fn main() -> i64 {\n",
+        "  if (false) { Value().touch(); }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let entry = input.entry_function;
+    let temporary_count = input
+        .definitions
+        .get(entry)
+        .unwrap()
+        .storage
+        .iter()
+        .filter(|storage| storage.kind == MirStorageKind::Temporary)
+        .count();
+    assert!(
+        temporary_count > 0,
+        "fixture must lower a produced-receiver temporary"
+    );
+
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+    let output = measured.result.as_ref().unwrap();
+    let definition = output.definitions.get(entry).unwrap();
+
+    assert_eq!(
+        definition
+            .storage
+            .iter()
+            .filter(|storage| storage.kind == MirStorageKind::Temporary)
+            .count(),
+        temporary_count,
+        "CFG cleanup retains storage declarations"
+    );
+    assert!(definition
+        .body
+        .blocks
+        .iter()
+        .all(
+            |block| block.instructions.iter().all(|instruction| !matches!(
+                instruction,
+                MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_)
+            ))
+        ));
+    assert_eq!(
+        measured.occurrences()[0].outcome(),
+        MirPassOccurrenceOutcome::Changed
+    );
+}
+
+#[test]
 fn default_cfg_cleanup_exposes_removed_call_targets_to_final_reachability() {
     let input = lower_source_to_final_mir(concat!(
         "fn dead_path_target() -> i64 { return 9; }\n",

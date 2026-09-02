@@ -136,8 +136,10 @@ impl Verifier<'_> {
         }
     }
 
-    /// Hidden owning temporaries represent one expression evaluation site.
-    /// Reusing their static storage identity for another epoch would make
+    /// Hidden owning temporaries represent at most one expression evaluation
+    /// site. Structural optimization may retain an inert declaration after
+    /// deleting the unreachable block which contained its complete epoch.
+    /// Reusing a live declaration for multiple epochs would still make
     /// completion order and full-expression cleanup ambiguous.
     fn verify_temporary_lifetime_shape(&mut self, function: MirDefinitionRef<'_>) {
         for storage in function
@@ -163,12 +165,12 @@ impl Verifier<'_> {
                     _ => {}
                 }
             }
-            if starts != 1 || ends > 1 {
+            if starts > 1 || ends > 1 || ends > starts {
                 self.block_error(
                     function.callable(),
                     function.body().entry,
                     format!(
-                        "temporary storage {} must have one non-reused lifetime epoch, found {starts} starts and {ends} ends",
+                        "temporary storage {} must have at most one non-reused lifetime epoch, found {starts} starts and {ends} ends",
                         storage.id
                     ),
                 );

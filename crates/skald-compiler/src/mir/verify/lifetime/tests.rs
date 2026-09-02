@@ -1,6 +1,6 @@
 use crate::{
     identity::{CallableId, ClassId},
-    mir::{verify_mir, MirInstruction, StorageId},
+    mir::{verify_mir, MirInstruction, MirStorage, MirStorageKind, MirType, StorageId},
     test_support::lower_source_to_mir,
 };
 
@@ -72,6 +72,29 @@ fn accepts_repeated_epochs_for_one_static_storage_identity() {
         .splice(last_dead + 1..last_dead + 1, [live, dead]);
 
     verify_mir(&program).expect("a later epoch of the same static storage must verify");
+}
+
+#[test]
+fn accepts_an_inert_temporary_declaration_without_a_lifetime_epoch() {
+    let mut program = lower_source_to_mir(concat!(
+        "class Value { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let function = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let id = StorageId::new(function.callable(), function.storage.len());
+    function.storage.push(MirStorage {
+        id,
+        source: None,
+        name: "removed-unreachable-temporary".to_owned(),
+        kind: MirStorageKind::Temporary,
+        ty: MirType::Class(ClassId::new(0)),
+        span: function.span,
+    });
+
+    verify_mir(&program).expect("an unreferenced retained declaration has no dynamic epoch");
 }
 
 #[test]

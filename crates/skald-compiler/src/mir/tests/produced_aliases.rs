@@ -461,7 +461,7 @@ fn verifier_rejects_malformed_produced_alias_lifetimes_and_views() {
 }
 
 #[test]
-fn verifier_requires_one_lifetime_epoch_per_temporary_storage() {
+fn verifier_rejects_reused_lifetime_epochs_for_temporary_storage() {
     let mut program = simple_mutation_fixture();
     let function = program
         .definitions
@@ -491,5 +491,5 @@ fn verifier_requires_one_lifetime_epoch_per_temporary_storage() {
         .unwrap();
     instructions.insert(dead + 1, live);
 
-    assert!(verifier_errors(&program).contains("must have one non-reused lifetime epoch"));
+    assert!(verifier_errors(&program).contains("must have at most one non-reused lifetime epoch"));
 }
