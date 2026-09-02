@@ -358,6 +358,43 @@ construction.
 Filesystem publication and general CLI dump retention remain separate driver
 decisions.
 
+## Frozen local final-MIR simplification observation direction
+
+The confirmed
+[local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+and planned
+[roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
+existing occurrence, aggregate, and checkpoint model. This direction is
+frozen but not yet implemented; current report events and counters remain
+those documented above.
+
+Primitive constant folding will report processed/changed callables and folded
+unary, binary, comparison, and cast assignments. Primitive algebraic
+simplification will report constant-result rewrites, forwarded uses, removed
+assignments and value declarations, protected-use rejections, and changed
+callables. Conservative CFG cleanup will report constant and same-target
+branch folds, removed blocks and value declarations, protected unreachable
+blocks, and changed callables.
+
+These pass-owned counters explain transformation reasons. Existing commit
+statistics remain authoritative for total inserted, retained, and removed
+entities and are not reconstructed by passes. Counter owner and first-counter
+order remain deterministic across repeated occurrences. Timing remains an
+observation excluded from determinism assertions.
+
+The expanded default produces one trace occurrence per schedule entry,
+including repeated constant-folding and dead-pure occurrences with distinct
+zero-based occurrence numbers. Stable-name exclusion removes all occurrences
+of that pass. Verified checkpoint labels retain the existing
+`after-<schedule-position>-<stable-name>-<occurrence-number>` form, so repeated
+passes cannot collide.
+
+Passes continue to return data without logging or formatting. The pipeline
+owns timers, occurrence records, verification counts, and aggregate
+conversion; reporting owns rendering; inspectors own optional verified MIR
+and reachability dumps. Quiet, phases-only, and details-only paths retain their
+current allocation and timing boundaries.
+
 ## Whole-world reachability observation
 
 The confirmed

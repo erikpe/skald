@@ -22,6 +22,12 @@ distinguishes implemented, in-progress, frozen proposed, draft-design,
 follow-up, foundation-dependent, contract-dependent, and research work. It is
 not an implementation roadmap.
 
+The open
+[local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
+record implementation-specific follow-ups found while delivering the planned
+local simplification roadmap. It starts empty; cataloged but out-of-scope
+optimizations do not become roadmap work merely by being mentioned there.
+
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven current compiler constraints on modular target-independent and
 target-specific optimization, their interaction with permanent whole-world and
@@ -48,19 +54,33 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No additional implementation roadmap is currently planned.
+The
+[local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+is planned; exact primitive constant semantics is the next implementation
+task. The roadmap adds block-local constant folding, exhaustive forwarding-
+safe use roles, algebraic simplification, proof-aware CFG reachability,
+conservative CFG cleanup, the repeated default schedule, and broad semantic/
+determinism hardening. It depends on the completed static-lifecycle
+certificate, dense MIR rewriting, selectable pipeline, and whole-world
+reachability foundations.
 
 ## Design proposals
 
-The draft
+The frozen
 [local final-MIR simplification proposal](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
 defines three independently selectable passes for conservative primitive
 constant folding, primitive algebraic simplification with guarded atomic value
-forwarding, and proof-aware CFG cleanup. It proposes exact integer/boolean
+forwarding, and proof-aware CFG cleanup. LFS1 through LFS14 were confirmed
+together on 2026-09-02 and promoted into the living
+[compiler phase](../compiler/PHASES_AND_IR.md#frozen-local-final-mir-simplification-direction),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-local-final-mir-simplification-selection-direction),
+and
+[reporting](../compiler/REPORTING.md#frozen-local-final-mir-simplification-observation-direction)
+contracts. The design fixes exact integer/boolean
 evaluation, block-local facts, protected lifecycle/proof roots, unreachable
 block-and-value deletion, and a repeated default schedule ending in the
-implemented whole-world reachability pass. LFS1 through LFS14 await
-confirmation before promotion and roadmapping.
+implemented whole-world reachability pass. Delivery is planned by the linked
+roadmap.
 
 The completed reachability-gated static lifecycle design and delivery record
 are preserved in the [archive](../archive/README.md). Their exact mandatory

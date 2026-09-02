@@ -195,6 +195,36 @@ focused dump is built only by an explicit `activation_dump` call. The ordinary
 compile adapters pass no inspector, while `CompilationRequest`, report detail,
 diagnostics, generated artifacts, and CLI options remain unchanged.
 
+## Frozen local final-MIR simplification selection direction
+
+The confirmed
+[local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+and planned
+[roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
+existing registry/profile/exclusion surface without adding a request field or
+CLI category. This direction is frozen but not yet implemented; the currently
+listed passes and default schedule remain those documented above.
+
+Delivery will register the stable names `primitive-constant-folding`,
+`primitive-algebraic-simplification`, and `conservative-cfg-cleanup` alongside
+the two current passes. They will appear through the same
+`passes::available_mir_passes` query, `--list-mir-passes` output, lexical known-
+name diagnostics, and pass-attributed errors. Numeric pass identities remain
+private.
+
+The future `default` profile will contain dead-pure elimination, constant
+folding, algebraic simplification, repeated constant/dead-pure cleanup,
+conservative CFG cleanup, final dead-pure cleanup, and whole-world reachability
+in the exact order frozen by the compiler phase contract. `none` remains
+empty. `--disable-mir-pass <name>` removes every occurrence of a repeated pass,
+and disabling all five stable names must equal `none`.
+
+No arbitrary pass ordering, `-O` level, dynamic plugin, target-specific pass
+selection, or optimization-dependent static activation is added. Selection
+continues to be resolved before provider/source I/O, and malformed transformed
+MIR remains a structured compiler failure before backend emission or artifact
+publication.
+
 ## Whole-world reachability selection
 
 The confirmed

@@ -881,6 +881,94 @@ analyses more tractable, but neither assumption weakens verification,
 determinism, evaluation-order, checked-failure, allocation, ownership, alias,
 or destruction requirements.
 
+### Frozen local final-MIR simplification direction
+
+The confirmed
+[local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+and its planned
+[implementation roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+define the next target-independent optimization layer. The direction is frozen
+but not yet implemented: the current registry and default schedule remain as
+described above until the roadmap promotes each behavior into current code.
+
+Three independently selectable production passes will be added under the
+existing verified pipeline:
+
+- `primitive-constant-folding` will evaluate a closed exact family of
+  block-local integer and boolean primitive operations;
+- `primitive-algebraic-simplification` will apply a reviewed integer/boolean
+  identity catalog and atomically forward safe result uses; and
+- `conservative-cfg-cleanup` will fold eligible ordinary boolean branches and
+  remove unprotected unreachable blocks and their transient values.
+
+Constant semantics will have one optimizer-private typed owner. Initial
+folding includes explicit wrapping `i64`, `u64`, and `u8` add, subtract, and
+multiply; wrapping `i64` negation; integer bitwise operations and complement;
+boolean not; integer and boolean comparisons; identity casts; integer width
+conversions; integer-to-boolean zero testing; and canonical boolean-to-integer
+conversion. `u8` results are explicitly canonicalized. Host arithmetic whose
+debug/release behavior differs is not a valid evaluator.
+
+Floating operations and conversions, division, remainder, shifts, checked
+conversions, loads, calls, path conditions, callable addresses, type/optional
+queries, array length, ownership operations, and failure-bearing protocols are
+outside the initial evaluator. In particular, checked integer and shift
+operations cannot be folded by replacing only their success rvalue because
+verification relates them to exact predecessor diamonds.
+
+Scalar facts are instruction-ordered and reset at every block. A constant or
+constant-result algebraic rewrite preserves the assignment's result identity,
+declared type, instruction position, and source span. MIR has no copy rvalue;
+an algebraic identity that returns an existing operand instead proves exact
+type, earlier same-block definition, and every use role, then substitutes uses
+and deletes the obsolete assignment and declaration in one atomic callable
+transaction.
+
+Forwarding is permitted only through explicitly classified ordinary
+executable scalar uses. Path/logical proof metadata, dedicated checked
+terminators, proof-coupled success operations, lifecycle or ownership state,
+callable attachments, and unknown future roles are barriers. The eligibility
+query shares exhaustive immutable identity traversal with rewriting but
+remains narrower than the general substitution mapper.
+
+CFG cleanup rewrites only ordinary `Branch` terminators whose condition is a
+preceding block-local constant or whose targets are identical. It preserves
+the terminator span and never rewrites a dedicated checked or multiway
+terminator. Local block reachability starts from body entry, every callable
+lifecycle/publication attachment, and every block named by path-condition,
+logical-expression, or other proof metadata. Protected proof regions remain
+even when ordinary entry reachability no longer reaches them.
+
+An unprotected unreachable block is removed together with every transient
+value defined by its instructions. Storage declarations, path conditions,
+logical records, guards, and attachments remain. Empty-block forwarding,
+block merging, jump threading, proof-record normalization, checked-diamond
+simplification, storage propagation, alias/effect analysis, SSA, and target
+optimization remain later decisions.
+
+After delivery, the exact `default` schedule will be:
+
+```text
+dead-pure-definition-elimination
+primitive-constant-folding
+primitive-algebraic-simplification
+primitive-constant-folding
+dead-pure-definition-elimination
+conservative-cfg-cleanup
+dead-pure-definition-elimination
+whole-world-reachability
+```
+
+`none` remains empty, stable-name exclusion removes every repeated occurrence,
+and whole-world retention remains last so it can observe calls, callable-
+address formations, and other executable dependencies removed by CFG cleanup.
+Every occurrence continues to consume verified MIR, preserve an unchanged seal
+when possible, atomically commit changes, invalidate all final-MIR-derived
+facts, and immediately reverify before any later pass or backend observes the
+product. Preliminary-MIR static activation and baseline lifecycle authority
+remain immutable; final verification rechecks realization against them rather
+than replanning activation.
+
 ### Current execution-dependency vocabulary
 
 MIR now owns one neutral `MirExecutionNode` identity for callables, class copy

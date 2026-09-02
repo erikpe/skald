@@ -1,9 +1,15 @@
 # Local Final-MIR Simplification Design Proposal
 
-Status: draft design proposal; LFS1 through LFS14 are proposed together and
-await confirmation. After confirmation, this record should be frozen,
-promoted into the living compiler, driver, and reporting contracts, and split
-into a dedicated implementation roadmap and discoveries record.
+Status: frozen design; LFS1 through LFS14 were confirmed together on
+2026-09-02 and promoted into the living
+[compiler phase](../compiler/PHASES_AND_IR.md#frozen-local-final-mir-simplification-direction),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-local-final-mir-simplification-selection-direction),
+and
+[reporting](../compiler/REPORTING.md#frozen-local-final-mir-simplification-observation-direction)
+contracts. Delivery is planned by the
+[implementation roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md), and
+follow-up findings belong in its
+[discoveries record](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md).
 
 This proposal defines Skald's first broader layer of local target-independent
 final-MIR optimization. It adds conservative primitive constant folding,
@@ -226,7 +232,7 @@ Blocks or values named by non-executable proof and lifecycle metadata are
 protected. Conservatively retaining them is preferable to silently teaching
 the first CFG pass a partial proof-rewrite protocol.
 
-## Proposed pass suite
+## Frozen pass suite
 
 ### Stable registrations
 
@@ -467,7 +473,8 @@ The ordering has explicit reasons:
 - the final dead-pure occurrence removes obsolete branch-condition chains;
   and
 - whole-world reachability runs last because removed CFG regions may remove
-  the final calls or static accesses retaining a definition.
+  the final calls, callable-address formations, or other executable
+  dependencies retaining a definition.
 
 There is no generic pipeline fixed-point driver. Constant folding reaches a
 forward fixed point within each block, dead-pure elimination already reaches
@@ -489,8 +496,11 @@ candidate exists, it returns unchanged with processed-callable measurements
 and triggers no rewrite or redundant verification. If a candidate exists, it
 consumes the existing pipeline capability, rewrites through the atomic
 coordinator, and returns the structured commit result. Any change invalidates
-all seal-bound facts, including whole-world reachability and static activation;
-the runner immediately recomputes them through central verification.
+the final-MIR seal and every fact derived from that exact program, including
+whole-world reachability. The immutable preliminary-MIR static activation and
+baseline lifecycle authority are not recomputed. Central verification instead
+rechecks the transformed realization against that authority and rebuilds the
+final seal and its derived facts.
 
 No pass constructs a seal, emits a source diagnostic, repairs invalid input,
 logs, writes a dump, or catches verifier failures as “not applicable.” A
@@ -594,22 +604,22 @@ code changes.
 
 ## Decision register
 
-| Decision | Question | Proposed decision | Status |
+| Decision | Question | Frozen decision | Status |
 |---|---|---|---|
-| [LFS1](#lfs1--add-three-independent-production-passes) | What is registered? | Constant folding, algebraic simplification, and conservative CFG cleanup as separate passes | **Proposed** |
-| [LFS2](#lfs2--centralize-exact-target-independent-primitive-evaluation) | Who owns constant semantics? | One optimizer-private evaluator over typed MIR constants and operations | **Proposed** |
-| [LFS3](#lfs3--keep-scalar-facts-block-local-and-pass-local) | How broad is analysis? | Linear instruction-order facts, reset at blocks and discarded after each occurrence | **Proposed** |
-| [LFS4](#lfs4--start-with-a-closed-integer-and-boolean-folding-set) | Which operations fold? | Total wrapping integer and boolean operations/casts only; checked and floating families excluded | **Proposed** |
-| [LFS5](#lfs5--use-an-explicit-algebraic-identity-catalog) | Which identities apply? | One reviewed integer/bool table with width-specific constants and no floating identities | **Proposed** |
-| [LFS6](#lfs6--forward-values-atomically-without-adding-a-copy-rvalue) | How is `x op identity` represented? | Substitute safe uses and delete the obsolete assignment/value in one transaction | **Proposed** |
-| [LFS7](#lfs7--classify-every-use-before-forwarding) | What blocks forwarding? | Any proof, checked-protocol, lifecycle, ownership, or unknown use role | **Proposed** |
-| [LFS8](#lfs8--limit-cfg-rewriting-to-ordinary-branch-folding) | Which edges change? | Constant and same-target `Branch` become `Goto`; dedicated terminators never change | **Proposed** |
-| [LFS9](#lfs9--treat-proof-and-lifecycle-blocks-as-reachability-roots) | What CFG is retained? | Entry plus every attachment- or metadata-named block and its executable closure | **Proposed** |
-| [LFS10](#lfs10--remove-only-unprotected-unreachable-blocks-and-their-values) | What is deleted? | Blocks and block-defined transient values; retain storage and proof metadata | **Proposed** |
-| [LFS11](#lfs11--express-composition-through-an-explicit-repeated-schedule) | How do passes cooperate? | Deliberately repeat folding and dead-pure cleanup; keep whole-world reachability last | **Proposed** |
-| [LFS12](#lfs12--retain-the-existing-seal-and-invalidation-contract) | How are changes trusted? | Read verified input, atomic rewrite, immediate central reverification after every change | **Proposed** |
-| [LFS13](#lfs13--observe-reasons-without-duplicating-commit-accounting) | How is behavior measured? | Deterministic pass counters plus existing structural counts and verified checkpoints | **Proposed** |
-| [LFS14](#lfs14--make-no-language-or-target-contract-change) | What semantic assumptions change? | None; whole-world and single-threaded guarantees do not relax alias, failure, or lifecycle rules | **Proposed** |
+| [LFS1](#lfs1--add-three-independent-production-passes) | What is registered? | Constant folding, algebraic simplification, and conservative CFG cleanup as separate passes | **Confirmed** |
+| [LFS2](#lfs2--centralize-exact-target-independent-primitive-evaluation) | Who owns constant semantics? | One optimizer-private evaluator over typed MIR constants and operations | **Confirmed** |
+| [LFS3](#lfs3--keep-scalar-facts-block-local-and-pass-local) | How broad is analysis? | Linear instruction-order facts, reset at blocks and discarded after each occurrence | **Confirmed** |
+| [LFS4](#lfs4--start-with-a-closed-integer-and-boolean-folding-set) | Which operations fold? | Total wrapping integer and boolean operations/casts only; checked and floating families excluded | **Confirmed** |
+| [LFS5](#lfs5--use-an-explicit-algebraic-identity-catalog) | Which identities apply? | One reviewed integer/bool table with width-specific constants and no floating identities | **Confirmed** |
+| [LFS6](#lfs6--forward-values-atomically-without-adding-a-copy-rvalue) | How is `x op identity` represented? | Substitute safe uses and delete the obsolete assignment/value in one transaction | **Confirmed** |
+| [LFS7](#lfs7--classify-every-use-before-forwarding) | What blocks forwarding? | Any proof, checked-protocol, lifecycle, ownership, or unknown use role | **Confirmed** |
+| [LFS8](#lfs8--limit-cfg-rewriting-to-ordinary-branch-folding) | Which edges change? | Constant and same-target `Branch` become `Goto`; dedicated terminators never change | **Confirmed** |
+| [LFS9](#lfs9--treat-proof-and-lifecycle-blocks-as-reachability-roots) | What CFG is retained? | Entry plus every attachment- or metadata-named block and its executable closure | **Confirmed** |
+| [LFS10](#lfs10--remove-only-unprotected-unreachable-blocks-and-their-values) | What is deleted? | Blocks and block-defined transient values; retain storage and proof metadata | **Confirmed** |
+| [LFS11](#lfs11--express-composition-through-an-explicit-repeated-schedule) | How do passes cooperate? | Deliberately repeat folding and dead-pure cleanup; keep whole-world reachability last | **Confirmed** |
+| [LFS12](#lfs12--retain-the-existing-seal-and-invalidation-contract) | How are changes trusted? | Read verified input, atomic rewrite, immediate central reverification after every change | **Confirmed** |
+| [LFS13](#lfs13--observe-reasons-without-duplicating-commit-accounting) | How is behavior measured? | Deterministic pass counters plus existing structural counts and verified checkpoints | **Confirmed** |
+| [LFS14](#lfs14--make-no-language-or-target-contract-change) | What semantic assumptions change? | None; whole-world and single-threaded guarantees do not relax alias, failure, or lifecycle rules | **Confirmed** |
 
 ## LFS1 — Add three independent production passes
 
@@ -854,23 +864,19 @@ or completed implementation, its catalog status should advance while the
 authoritative detail moves to the corresponding design, roadmap, or living
 compiler contract.
 
-## Confirmation and promotion
+## Freeze and promotion
 
-LFS1 through LFS14 should be confirmed as one bundle. The operation set,
-forwarding eligibility, CFG roots, deletion granularity, and default schedule
-jointly define the safety and composition boundary; freezing only the pass
-names would leave the important decisions implicit.
+LFS1 through LFS14 are frozen as one bundle. The operation set, forwarding
+eligibility, CFG roots, deletion granularity, and default schedule jointly
+define the safety and composition boundary; freezing only the pass names would
+leave the important decisions implicit.
 
-After confirmation, promote the durable contracts into:
+The durable direction is promoted into the compiler phase, driver, and
+reporting contracts linked from this proposal's status. The implementation
+roadmap and discoveries record divide reviewed delivery from follow-up work.
+The optimization candidate catalog now marks the three planned passes as
+**Proposed** and should advance them to **In progress** and **Implemented** as
+delivery proceeds.
 
-- `docs/compiler/PHASES_AND_IR.md` for scalar semantics, CFG protection,
-  rewriting, verification, and the default schedule;
-- `docs/compiler/DRIVER_AND_ARTIFACTS.md` for the expanded listed/selected
-  pass set and default profile;
-- `docs/compiler/REPORTING.md` for pass measurements and repeated occurrences;
-  and
-- the optimization architecture discoveries for the completed broader local
-  simplification layer and its measured follow-up evidence.
-
-The frozen record should then move to `docs/archive/` only after the complete
+This frozen record should move to `docs/archive/` only after the complete
 implementation roadmap is delivered.
