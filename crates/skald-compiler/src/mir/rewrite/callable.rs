@@ -149,6 +149,17 @@ impl MirCallablePackage {
             span,
         } = definition;
         let callable = CallableId::StaticInitializer(id);
+        let edit = MirCallableEdit::from_dense_parts(callable, storage, values, body)?
+            .with_attachment_blocks([
+                (
+                    super::MirLocalIdentitySite::StaticPublicationInitializationExit,
+                    publication.initialization_exit,
+                ),
+                (
+                    super::MirLocalIdentitySite::StaticPublicationCleanupEntry,
+                    publication.cleanup_entry,
+                ),
+            ]);
         Ok(Self {
             attachments: MirCallableAttachments::StaticInitializer {
                 id,
@@ -157,7 +168,7 @@ impl MirCallablePackage {
                 publication,
                 span,
             },
-            edit: MirCallableEdit::from_dense_parts(callable, storage, values, body)?,
+            edit,
         })
     }
 

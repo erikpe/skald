@@ -16,6 +16,7 @@ use super::super::{
     OptionalGuardId, PathConditionId, StorageId, ValueId,
 };
 use super::error::MirRewriteError;
+use super::MirLocalIdentitySite;
 pub(in crate::mir::rewrite) use guards::collect_optional_guards;
 use guards::OptionalGuardRegistry;
 pub(crate) use logical::LogicalRecordIndex;
@@ -65,6 +66,11 @@ pub(super) struct MirCallableDenseCandidate {
 pub(crate) struct MirCallableEdit {
     callable: CallableId,
     entry: BlockId,
+    /// Callable-header block references which remain outside [`MirBody`].
+    ///
+    /// These are observations, not another mutable owner. Commit still maps
+    /// the authoritative attachments held by `MirCallablePackage`.
+    attachment_blocks: Vec<(MirLocalIdentitySite, BlockId)>,
     storage: SparseSlots<StorageId, MirStorage>,
     values: SparseSlots<ValueId, MirValue>,
     blocks: SparseSlots<BlockId, MirBasicBlock>,
@@ -100,6 +106,7 @@ impl MirCallableEdit {
         Ok(Self {
             callable,
             entry,
+            attachment_blocks: Vec::new(),
             storage,
             values,
             blocks,
@@ -116,6 +123,14 @@ impl MirCallableEdit {
 
     pub(crate) const fn entry(&self) -> BlockId {
         self.entry
+    }
+
+    pub(in crate::mir::rewrite) fn with_attachment_blocks(
+        mut self,
+        attachments: impl IntoIterator<Item = (MirLocalIdentitySite, BlockId)>,
+    ) -> Self {
+        self.attachment_blocks.extend(attachments);
+        self
     }
 
     pub(crate) fn storage(&self, identity: StorageId) -> Result<&MirStorage, MirRewriteError> {
@@ -169,6 +184,10 @@ impl MirCallableEdit {
 
     pub(crate) fn block_order(&self) -> &[BlockId] {
         self.block_order.entries()
+    }
+
+    pub(in crate::mir::rewrite) fn block_ids(&self) -> impl Iterator<Item = BlockId> + '_ {
+        self.blocks.live_ids()
     }
 
     pub(crate) fn allocate_block(
@@ -310,6 +329,7 @@ impl MirCallableEdit {
         let Self {
             callable,
             entry,
+            attachment_blocks: _,
             storage,
             values,
             blocks,

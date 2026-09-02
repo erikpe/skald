@@ -22,6 +22,7 @@
 
 mod callable;
 mod census;
+mod cfg;
 mod commit;
 mod edit;
 mod error;
@@ -32,6 +33,9 @@ mod program;
 mod value_use;
 
 pub(crate) use census::{value_use_census_for_definition, MirValueCensusEntry, MirValueUseCensus};
+pub(crate) use cfg::{
+    local_cfg_facts_for_definition, MirLocalCfgBlockFacts, MirLocalCfgFacts, MirProtectedBlockRoot,
+};
 pub(crate) use commit::{
     MirCommitMap, MirCommitMaps, MirEntityChangeCount, MirRewriteChangeSummary,
 };

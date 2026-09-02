@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: in progress; LSR0 through LSR3 are complete and LSR4 is next.
+Status: in progress; LSR0 through LSR4 are complete and LSR5 is next.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
@@ -101,7 +101,7 @@ expanding reviewed scope.
 - [x] LSR1 — Add block-local facts and primitive constant folding
 - [x] LSR2 — Classify forwarding-safe value uses exhaustively
 - [x] LSR3 — Implement primitive algebraic simplification
-- [ ] LSR4 — Establish proof-aware local CFG reachability
+- [x] LSR4 — Establish proof-aware local CFG reachability
 - [ ] LSR5 — Implement conservative CFG cleanup
 - [ ] LSR6 — Activate the repeated selectable default schedule
 - [ ] LSR7 — Prove semantic parity, determinism, and optimization value
@@ -285,25 +285,29 @@ constant and dead-pure passes under exact schedules, and remains absent from
 **Purpose:** Build the reusable immutable roots, successors, reachability, and
 block-owned value facts needed before a pass deletes any CFG structure.
 
-- [ ] Define a read-only callable-local CFG view over deterministic block order
+- [x] Define a read-only callable-local CFG view over deterministic block order
       and all current executable successor variants.
-- [ ] Collect the body entry and every callable-level lifecycle/publication
+- [x] Collect the body entry and every callable-level lifecycle/publication
       attachment block through one narrow definition-variant facade.
-- [ ] Collect every block named by path-condition, logical-expression, and
+- [x] Collect every block named by path-condition, logical-expression, and
       other non-executable local proof metadata through exhaustive identity
       observation.
-- [ ] Distinguish executable entry roots, protected metadata roots, ordinary
+- [x] Distinguish executable entry roots, protected metadata roots, ordinary
       successor closure, reachable blocks, and protected-but-entry-unreachable
       blocks in focused immutable facts.
-- [ ] Use the shared value definition census to identify every transient value
+- [x] Use the shared value definition census to identify every transient value
       defined by instructions in a selected block without duplicating a list of
       value-producing instruction variants.
-- [ ] Return structured failures for foreign, unknown, deleted, or malformed
+- [x] Return structured failures for foreign, unknown, deleted, or malformed
       roots, successors, attachments, values, and definitions.
-- [ ] Keep facts callable-local and pass-local; add no cached dominators,
+- [x] Keep facts callable-local and pass-local; add no cached dominators,
       liveness, loop forest, or global analysis manager.
-- [ ] Provide deterministic focused dumps only if structured test assertions
+- [x] Provide deterministic focused dumps only if structured test assertions
       cannot make root/reachability failures sufficiently clear.
+
+The structured root sites, ordered adjacency, closure partitions, and typed
+rewrite failures proved sufficient for focused assertions, so LSR4 adds no
+second textual CFG dump format.
 
 **Tests:** Ordinary function/member entry; static initialization and shutdown
 attachments; every path/logical block role; every terminator successor family;

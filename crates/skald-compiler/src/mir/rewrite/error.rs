@@ -51,6 +51,9 @@ pub(crate) enum MirRewriteError {
     MissingValueDefinition {
         value: super::super::ValueId,
     },
+    MissingBlockTerminator {
+        block: super::super::BlockId,
+    },
     InvalidValueDefinitionSite {
         value: super::super::ValueId,
         site: MirLocalIdentitySite,
@@ -171,6 +174,9 @@ impl fmt::Display for MirRewriteError {
             ),
             Self::MissingValueDefinition { value } => {
                 write!(formatter, "value {value} has no executable definition")
+            }
+            Self::MissingBlockTerminator { block } => {
+                write!(formatter, "block {block} has no control-flow terminator")
             }
             Self::InvalidValueDefinitionSite { value, site } => {
                 write!(formatter, "value {value} has a non-instruction definition at {site}")

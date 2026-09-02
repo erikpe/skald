@@ -1875,6 +1875,25 @@ pub(crate) use observation::{
     map_static_initializer_local_identities as observe_static_initializer_local_identities,
 };
 
+/// Observes one borrowed executable definition without exposing its concrete
+/// function, member, or static-initializer shape to analyses.
+pub(crate) fn observe_definition_local_identities<O: MirLocalIdentityObserver>(
+    definition: MirDefinitionRef<'_>,
+    observer: &mut O,
+) -> Result<(), O::Error> {
+    match definition {
+        MirDefinitionRef::Function(definition) => {
+            observe_function_local_identities(definition, observer)
+        }
+        MirDefinitionRef::Member(definition) => {
+            observe_member_local_identities(definition, observer)
+        }
+        MirDefinitionRef::StaticInitializer(definition) => {
+            observe_static_initializer_local_identities(definition, observer)
+        }
+    }
+}
+
 pub(crate) fn validate_function_local_identity_owners(
     definition: &MirFunctionDefinition,
 ) -> Result<(), MirLocalIdentityOwnershipError> {

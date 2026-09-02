@@ -15,6 +15,40 @@ use super::super::{
 };
 
 impl MirCallableEdit {
+    /// Observes all block roots outside ordinary executable successor edges.
+    ///
+    /// Path and logical metadata use the same exhaustive structural walkers
+    /// as commit. Callable-header attachments are snapshots supplied by the
+    /// package which owns their authoritative representation.
+    pub(in crate::mir::rewrite) fn observe_cfg_roots<O: MirLocalIdentityObserver>(
+        &self,
+        observer: &mut O,
+    ) -> Result<(), O::Error> {
+        observer.observe_block(MirLocalIdentitySite::BodyEntry, self.entry)?;
+        for (site, block) in &self.attachment_blocks {
+            observer.observe_block(*site, *block)?;
+        }
+        for condition in self.path_conditions.live_entries() {
+            observe_path_condition_metadata(
+                condition,
+                observer,
+                MirLocalIdentitySite::PathCondition(condition.id.index()),
+            )?;
+        }
+        for index in self.logical_expressions.order() {
+            let expression = self
+                .logical_expressions
+                .get(*index)
+                .expect("live logical order was established by the edit transaction");
+            observe_logical_expression(
+                expression,
+                observer,
+                MirLocalIdentitySite::LogicalExpression(index.index()),
+            )?;
+        }
+        Ok(())
+    }
+
     /// Replaces one block's instruction list as a single functional edit.
     ///
     /// Instruction positions are deliberately exposed only through this
