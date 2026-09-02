@@ -42,6 +42,16 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
+The draft
+[local final-MIR simplification proposal](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+defines three independently selectable passes for conservative primitive
+constant folding, primitive algebraic simplification with guarded atomic value
+forwarding, and proof-aware CFG cleanup. It proposes exact integer/boolean
+evaluation, block-local facts, protected lifecycle/proof roots, unreachable
+block-and-value deletion, and a repeated default schedule ending in the
+implemented whole-world reachability pass. LFS1 through LFS14 await
+confirmation before promotion and roadmapping.
+
 The completed reachability-gated static lifecycle design and delivery record
 are preserved in the [archive](../archive/README.md). Their exact mandatory
 entry-rooted active-field closure is authoritative in the living
