@@ -744,7 +744,8 @@ editor emits no report text. Pass-owned integer counters retain deterministic
 first-owner and first-counter order. The driver renders aggregate counts at
 details level and typed occurrence records at trace level. The `none` schedule
 retains byte-for-byte MIR, one final verification, zero pass executions, and
-no pass-finished events; the default schedule runs the canary once.
+no pass-finished events; the default schedule runs eight pass occurrences in
+the exact repeated order documented below.
 
 This direction adds no SSA form, persistent instruction identity, public
 common callable-body restructuring, dynamic pass registry, optimization-level
@@ -771,15 +772,16 @@ unique stable lowercase kebab-case name, description, implementation-declared
 identity, and transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity before schedule selection. The production
-registry contains `dead-pure-definition-elimination` and
-`whole-world-reachability`. Its validated descriptors
-are exposed in stable-name order for the public read-only query and the
-input-free `--list-mir-passes` CLI command; discovery therefore reads the same
-metadata used by schedule resolution. The `none` profile
-expands to an empty explicit ordered schedule. `default` contains the canary
-exactly once followed by whole-world reachability exactly once. Disabling both
-passes from `default`, including duplicate disabling, produces the same
-schedule as `none`.
+registry contains `dead-pure-definition-elimination`,
+`primitive-constant-folding`, `primitive-algebraic-simplification`,
+`conservative-cfg-cleanup`, and `whole-world-reachability`. Its validated
+descriptors are exposed in stable-name order for the public read-only query
+and the input-free `--list-mir-passes` CLI command; discovery therefore reads
+the same metadata used by schedule resolution. The `none` profile
+expands to an empty explicit ordered schedule. `default` contains the exact
+eight-occurrence local-simplification schedule documented below. Disabling all
+five stable pass names from `default`, including duplicate disabling, produces
+the same schedule as `none`.
 
 A resolved schedule may deliberately repeat a pass, and every occurrence is
 identified by its resolved schedule position, pass identity, and that pass's
@@ -866,8 +868,8 @@ initializer, the canary computes value uses through the exhaustive MIR
 identity traversal, deletes unused eligible assignments and their matching
 value declarations in stable waves to a fixed point, and commits the callable
 once. It performs no CFG, storage, metadata, ownership, lifecycle, folding,
-replacement, or reordering edit. The canary runs first in `default`, followed
-by whole-world reachability;
+replacement, or reordering edit. The canary runs at the first, fifth, and
+seventh positions of `default`, with whole-world reachability last;
 `none` preserves the exact verification-only path, selective disabling
 provides parity, and every changed product passes ordinary and
 lifecycle-realization verification.
@@ -892,9 +894,8 @@ Exact primitive evaluation, block-local constant facts, exhaustive value-use
 classification, and the independently selectable `primitive-constant-folding`
 and `primitive-algebraic-simplification` passes are implemented. Proof-aware
 local CFG facts and the independently selectable `conservative-cfg-cleanup`
-pass are also implemented. The expanded default schedule and broad hardening
-remain frozen roadmap work; the current default schedule remains as described
-above.
+pass are also implemented. The exact repeated default schedule is active;
+broad semantic and determinism hardening remains roadmap work.
 
 The local-simplification layer consists of three independently selectable
 production passes under the existing verified pipeline:
@@ -956,7 +957,7 @@ block merging, jump threading, proof-record normalization, checked-diamond
 simplification, storage propagation, alias/effect analysis, SSA, and target
 optimization remain later decisions.
 
-After delivery, the exact `default` schedule will be:
+The exact `default` schedule is:
 
 ```text
 dead-pure-definition-elimination

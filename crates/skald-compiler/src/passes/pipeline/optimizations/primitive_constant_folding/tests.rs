@@ -306,7 +306,7 @@ fn repeated_occurrences_are_changed_then_idempotently_unchanged() {
 }
 
 #[test]
-fn default_profile_does_not_select_constant_folding_yet() {
+fn default_profile_selects_constant_folding_and_later_cleanup() {
     let mut input = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
     let entry = input.entry_function;
     append_chain(input.definitions.get_mut_for_test(entry).unwrap(), true);
@@ -332,7 +332,7 @@ fn default_profile_does_not_select_constant_folding_yet() {
         })
         .unwrap();
 
-    assert!(matches!(returned, MirRvalueKind::Binary { .. }));
+    assert_eq!(returned, &MirRvalueKind::ConstantI64(42));
 }
 
 #[test]

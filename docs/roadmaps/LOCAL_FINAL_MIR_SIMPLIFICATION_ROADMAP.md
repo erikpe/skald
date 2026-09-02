@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: in progress; LSR0 through LSR5 are complete and LSR6 is next.
+Status: in progress; LSR0 through LSR6 are complete and LSR7 is next.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
@@ -103,7 +103,7 @@ expanding reviewed scope.
 - [x] LSR3 — Implement primitive algebraic simplification
 - [x] LSR4 — Establish proof-aware local CFG reachability
 - [x] LSR5 — Implement conservative CFG cleanup
-- [ ] LSR6 — Activate the repeated selectable default schedule
+- [x] LSR6 — Activate the repeated selectable default schedule
 - [ ] LSR7 — Prove semantic parity, determinism, and optimization value
 - [ ] LSR8 — Harden ownership, documentation, and roadmap closure
 
@@ -370,25 +370,25 @@ verification, and remains absent from `default`.
 production policy and update all public selection and observation surfaces at
 one controlled boundary.
 
-- [ ] Change `default` to the exact frozen sequence: dead-pure; primitive
+- [x] Change `default` to the exact frozen sequence: dead-pure; primitive
       constant folding; primitive algebraic simplification; primitive constant
       folding; dead-pure; conservative CFG cleanup; dead-pure; whole-world
       reachability.
-- [ ] Keep `none` empty and preserve the rule that stable-name exclusion removes
+- [x] Keep `none` empty and preserve the rule that stable-name exclusion removes
       every occurrence of a repeated pass.
-- [ ] Update registry/profile validation, exact occurrence numbers, public
+- [x] Update registry/profile validation, exact occurrence numbers, public
       pass listing, lexical known-name diagnostics, request equality, CLI
       help/tests, and all-disabled parity.
-- [ ] Prove that whole-world reachability remains last and observes calls and
+- [x] Prove that whole-world reachability remains last and observes calls and
       other executable dependencies removed by prior CFG cleanup.
-- [ ] Integrate every frozen pass-specific measurement with aggregate and trace
+- [x] Integrate every frozen pass-specific measurement with aggregate and trace
       reporting without duplicating structural commit counts.
-- [ ] Preserve disabled observation behavior, verified checkpoint labels, and
+- [x] Preserve disabled observation behavior, verified checkpoint labels, and
       immediate resealing after each changed occurrence.
-- [ ] Update living compiler phase, driver, and reporting documentation from
+- [x] Update living compiler phase, driver, and reporting documentation from
       frozen direction to exact implemented behavior where this task makes it
       current.
-- [ ] Confirm the three optimization-register entries remain **In progress**
+- [x] Confirm the three optimization-register entries remain **In progress**
       and link to the active roadmap until roadmap closure.
 
 **Tests:** Exact default schedule and occurrence numbers; lexical listing;

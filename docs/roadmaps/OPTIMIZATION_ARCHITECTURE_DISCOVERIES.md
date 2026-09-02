@@ -64,8 +64,8 @@ status, placement, effort, value, and pitfalls.
 The implemented pipeline lowers typed HIR to preliminary MIR, plans and
 synthesizes static lifecycle work, runs the selected final-MIR pass schedule,
 and then enters target legality and emission. `none` is the empty unoptimized
-schedule and `default` runs dead-pure-definition elimination followed by
-whole-world reachability. The
+schedule and `default` runs the repeated local-simplification schedule ending
+in whole-world reachability. The
 authoritative current sequence is documented in
 [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#pipeline-contract).
 

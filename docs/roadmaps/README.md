@@ -10,11 +10,11 @@ The
 [local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
 is in progress; exact primitive constant semantics, block-local facts,
 primitive constant folding, exhaustive forwarding-safe use classification,
-and primitive algebraic simplification are complete. Proof-aware CFG
-reachability is next, followed by conservative CFG cleanup, the repeated
-default schedule, and broad semantic/determinism hardening. The roadmap depends
-on the completed static-lifecycle certificate, dense MIR rewriting, selectable
-pipeline, and whole-world reachability foundations.
+primitive algebraic simplification, proof-aware CFG reachability, conservative
+CFG cleanup, and the repeated selectable default schedule are complete. Broad
+semantic, determinism, and optimization-value hardening is next. The roadmap
+depends on the completed static-lifecycle certificate, dense MIR rewriting,
+selectable pipeline, and whole-world reachability foundations.
 
 ## Pending discoveries
 
@@ -78,8 +78,8 @@ and
 contracts. The design fixes exact integer/boolean
 evaluation, block-local facts, protected lifecycle/proof roots, unreachable
 block-and-value deletion, and a repeated default schedule ending in the
-implemented whole-world reachability pass. Delivery is planned by the linked
-roadmap.
+implemented whole-world reachability pass. Delivery and hardening continue in
+the linked roadmap.
 
 The completed reachability-gated static lifecycle design and delivery record
 are preserved in the [archive](../archive/README.md). Their exact mandatory

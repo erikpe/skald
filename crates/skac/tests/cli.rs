@@ -57,8 +57,9 @@ fn real_binary_honors_the_mir_optimization_selection_matrix() {
     let source = directory.join("main.ska");
     let default_assembly = directory.join("default.s");
     let none_assembly = directory.join("none.s");
-    let disabled_assembly = directory.join("disabled.s");
-    let duplicate_disabled_assembly = directory.join("duplicate-disabled.s");
+    let all_disabled_assembly = directory.join("all-disabled.s");
+    let constant_disabled_assembly = directory.join("constant-disabled.s");
+    let duplicate_constant_disabled_assembly = directory.join("duplicate-constant-disabled.s");
     fs::write(&source, "fn main() -> i64 { return 6 * 7; }\n").unwrap();
 
     let default = Command::new(env!("CARGO_BIN_EXE_skac"))
@@ -87,44 +88,66 @@ fn real_binary_honors_the_mir_optimization_selection_matrix() {
         .arg(&none_assembly)
         .output()
         .unwrap();
-    let disabled = Command::new(env!("CARGO_BIN_EXE_skac"))
+    let all_disabled = Command::new(env!("CARGO_BIN_EXE_skac"))
         .arg(&source)
         .args([
             "--no-stdlib",
             "--emit",
             "asm",
             "--disable-mir-pass",
+            "conservative-cfg-cleanup",
+            "--disable-mir-pass",
             "dead-pure-definition-elimination",
+            "--disable-mir-pass",
+            "primitive-algebraic-simplification",
+            "--disable-mir-pass",
+            "primitive-constant-folding",
+            "--disable-mir-pass",
+            "whole-world-reachability",
             "-o",
         ])
-        .arg(&disabled_assembly)
+        .arg(&all_disabled_assembly)
         .output()
         .unwrap();
-    let duplicate_disabled = Command::new(env!("CARGO_BIN_EXE_skac"))
+    let constant_disabled = Command::new(env!("CARGO_BIN_EXE_skac"))
         .arg(&source)
         .args([
             "--no-stdlib",
             "--emit",
             "asm",
             "--disable-mir-pass",
-            "dead-pure-definition-elimination",
-            "--disable-mir-pass",
-            "dead-pure-definition-elimination",
+            "primitive-constant-folding",
             "-o",
         ])
-        .arg(&duplicate_disabled_assembly)
+        .arg(&constant_disabled_assembly)
+        .output()
+        .unwrap();
+    let duplicate_constant_disabled = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args([
+            "--no-stdlib",
+            "--emit",
+            "asm",
+            "--disable-mir-pass",
+            "primitive-constant-folding",
+            "--disable-mir-pass",
+            "primitive-constant-folding",
+            "-o",
+        ])
+        .arg(&duplicate_constant_disabled_assembly)
         .output()
         .unwrap();
 
     assert_same_process_output(&default, &none);
-    assert_same_process_output(&default, &disabled);
-    assert_same_process_output(&default, &duplicate_disabled);
-    let expected_assembly = fs::read(default_assembly).unwrap();
-    assert_eq!(fs::read(none_assembly).unwrap(), expected_assembly);
-    assert_eq!(fs::read(disabled_assembly).unwrap(), expected_assembly);
+    assert_same_process_output(&default, &all_disabled);
+    assert_same_process_output(&constant_disabled, &duplicate_constant_disabled);
+    let default_assembly = fs::read(default_assembly).unwrap();
+    let none_assembly = fs::read(none_assembly).unwrap();
+    assert_ne!(default_assembly, none_assembly);
+    assert_eq!(fs::read(all_disabled_assembly).unwrap(), none_assembly);
     assert_eq!(
-        fs::read(duplicate_disabled_assembly).unwrap(),
-        expected_assembly
+        fs::read(duplicate_constant_disabled_assembly).unwrap(),
+        fs::read(constant_disabled_assembly).unwrap()
     );
 }
 
@@ -396,7 +419,8 @@ fn assembly_output_runs_the_real_pipeline_through_the_binary() {
     assert!(output.stderr.is_empty());
     let assembly_text = fs::read_to_string(&assembly).unwrap();
     assert!(assembly_text.starts_with(".intel_syntax noprefix\n"));
-    assert!(assembly_text.contains("imul rax, rcx"));
+    assert!(assembly_text.contains("mov rax, 42"));
+    assert!(!assembly_text.contains("imul rax, rcx"));
     assert!(assembly_text.contains(".globl main"));
     assert!(assembly_text.contains("ska_rt_trace_top@tpoff"));
 }

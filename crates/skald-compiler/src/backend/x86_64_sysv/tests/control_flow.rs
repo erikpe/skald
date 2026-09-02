@@ -10,8 +10,8 @@ fn lowers_source_conditionals_to_deterministic_block_branches() {
         "}\n",
     );
 
-    let output = assembly(source);
-    assert_eq!(output, assembly(source));
+    let output = complete_assembly(source);
+    assert_eq!(output, complete_assembly(source));
     assert!(output.contains(".Lska.fn.main.main.f0.block_0:"));
     assert!(output.contains("jne .Lska.fn.main.main.f0.block_1"));
     assert!(output.contains("jmp .Lska.fn.main.main.f0.block_2"));

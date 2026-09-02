@@ -112,6 +112,30 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
         &completed(&REQUEST_SUCCESS_PHASES),
         ReportOutcome::Completed,
     );
+    assert_eq!(
+        observer
+            .events()
+            .iter()
+            .filter_map(|event| match event {
+                ReportEvent::MirPassFinished { occurrence } => Some((
+                    occurrence.position(),
+                    occurrence.name(),
+                    occurrence.occurrence(),
+                )),
+                _ => None,
+            })
+            .collect::<Vec<_>>(),
+        [
+            (0, "dead-pure-definition-elimination", 0),
+            (1, "primitive-constant-folding", 0),
+            (2, "primitive-algebraic-simplification", 0),
+            (3, "primitive-constant-folding", 1),
+            (4, "dead-pure-definition-elimination", 1),
+            (5, "conservative-cfg-cleanup", 0),
+            (6, "dead-pure-definition-elimination", 2),
+            (7, "whole-world-reachability", 0),
+        ]
+    );
     let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
     assert_eq!(
         observer
@@ -262,8 +286,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
         pipeline[..7],
         [
             ReportMetric::count("verification executions", 1),
-            ReportMetric::count("pass executions", 2),
-            ReportMetric::count("processed callables", 2),
+            ReportMetric::count("pass executions", 8),
+            ReportMetric::count("processed callables", 8),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -286,10 +310,42 @@ fn details_publish_deterministic_phase_owned_metrics() {
             0,
         )
     );
+    let folding = |name| ReportMetric::pass_count("primitive-constant-folding", name, 0);
+    assert_eq!(
+        pipeline[9..13],
+        [
+            folding("folded unary assignments"),
+            folding("folded binary assignments"),
+            folding("folded comparison assignments"),
+            folding("folded cast assignments"),
+        ]
+    );
+    let algebra = |name| ReportMetric::pass_count("primitive-algebraic-simplification", name, 0);
+    assert_eq!(
+        pipeline[13..18],
+        [
+            algebra("constant-result rewrites"),
+            algebra("forwarded value uses"),
+            algebra("removed assignment instructions"),
+            algebra("removed value declarations"),
+            algebra("rejected protected-use candidates"),
+        ]
+    );
+    let cfg = |name| ReportMetric::pass_count("conservative-cfg-cleanup", name, 0);
+    assert_eq!(
+        pipeline[18..23],
+        [
+            cfg("folded constant branches"),
+            cfg("folded same-target branches"),
+            cfg("removed blocks"),
+            cfg("removed value declarations"),
+            cfg("retained protected unreachable blocks"),
+        ]
+    );
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[9..30],
+        pipeline[23..44],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -314,8 +370,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[30], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[31], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[44], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[45], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[

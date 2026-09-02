@@ -56,40 +56,85 @@ fn production_profiles_select_the_supported_default_order() {
 
     let default =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
-    assert_eq!(default.len(), 2);
-    assert_eq!(default.as_slice()[0].position(), 0);
-    assert_eq!(default.as_slice()[0].occurrence(), 0);
     assert_eq!(
-        default.as_slice()[0].identity(),
-        dead_pure_definition_elimination::IDENTITY
+        default
+            .iter()
+            .map(|occurrence| (
+                occurrence.position(),
+                occurrence.identity(),
+                occurrence.name(),
+                occurrence.occurrence(),
+            ))
+            .collect::<Vec<_>>(),
+        [
+            (
+                0,
+                dead_pure_definition_elimination::IDENTITY,
+                "dead-pure-definition-elimination",
+                0,
+            ),
+            (
+                1,
+                primitive_constant_folding::IDENTITY,
+                "primitive-constant-folding",
+                0,
+            ),
+            (
+                2,
+                primitive_algebraic_simplification::IDENTITY,
+                "primitive-algebraic-simplification",
+                0,
+            ),
+            (
+                3,
+                primitive_constant_folding::IDENTITY,
+                "primitive-constant-folding",
+                1,
+            ),
+            (
+                4,
+                dead_pure_definition_elimination::IDENTITY,
+                "dead-pure-definition-elimination",
+                1,
+            ),
+            (
+                5,
+                conservative_cfg_cleanup::IDENTITY,
+                "conservative-cfg-cleanup",
+                0,
+            ),
+            (
+                6,
+                dead_pure_definition_elimination::IDENTITY,
+                "dead-pure-definition-elimination",
+                2,
+            ),
+            (
+                7,
+                whole_world_reachability::IDENTITY,
+                "whole-world-reachability",
+                0,
+            ),
+        ]
     );
-    assert_eq!(
-        default.as_slice()[0].name(),
-        "dead-pure-definition-elimination"
-    );
-    assert_eq!(default.as_slice()[1].position(), 1);
-    assert_eq!(default.as_slice()[1].occurrence(), 0);
-    assert_eq!(
-        default.as_slice()[1].identity(),
-        whole_world_reachability::IDENTITY
-    );
-    assert_eq!(default.as_slice()[1].name(), "whole-world-reachability");
 
     let reachability_disabled = resolve_mir_pass_schedule(
         MirOptimizationProfile::Default,
         ["whole-world-reachability"],
     )
     .unwrap();
-    assert_eq!(reachability_disabled.len(), 1);
-    assert_eq!(
-        reachability_disabled.as_slice()[0].identity(),
-        dead_pure_definition_elimination::IDENTITY
-    );
+    assert_eq!(reachability_disabled.len(), 7);
+    assert!(reachability_disabled
+        .iter()
+        .all(|occurrence| occurrence.identity() != whole_world_reachability::IDENTITY));
 
     let all_disabled = resolve_mir_pass_schedule(
         MirOptimizationProfile::Default,
         [
+            "conservative-cfg-cleanup",
             "dead-pure-definition-elimination",
+            "primitive-algebraic-simplification",
+            "primitive-constant-folding",
             "whole-world-reachability",
         ],
     )
@@ -103,6 +148,44 @@ fn production_profiles_select_the_supported_default_order() {
     assert_eq!(
         exact.as_slice()[0].name(),
         "dead-pure-definition-elimination"
+    );
+}
+
+#[test]
+fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
+    let constant_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["primitive-constant-folding"],
+    )
+    .unwrap();
+    let duplicate_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["primitive-constant-folding", "primitive-constant-folding"],
+    )
+    .unwrap();
+    assert_eq!(constant_disabled, duplicate_disabled);
+    assert!(constant_disabled
+        .iter()
+        .all(|occurrence| occurrence.identity() != primitive_constant_folding::IDENTITY));
+
+    let scalar_cleanup_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        [
+            "dead-pure-definition-elimination",
+            "primitive-constant-folding",
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        scalar_cleanup_disabled
+            .iter()
+            .map(|occurrence| occurrence.name())
+            .collect::<Vec<_>>(),
+        [
+            "primitive-algebraic-simplification",
+            "conservative-cfg-cleanup",
+            "whole-world-reachability",
+        ]
     );
 }
 
@@ -158,7 +241,7 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
 }
 
 #[test]
-fn production_exact_schedules_can_order_and_repeat_reachability_without_changing_default() {
+fn production_exact_schedules_can_order_and_repeat_reachability() {
     let dead = dead_pure_definition_elimination::IDENTITY;
     let reachability = whole_world_reachability::IDENTITY;
     let schedule =

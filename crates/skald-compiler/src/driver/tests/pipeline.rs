@@ -97,7 +97,7 @@ fn request_selection_matrix_reaches_quiet_and_observed_pipelines() {
     assert!(quiet_default.report.diagnostics.is_empty());
 
     let cases = [
-        (MirOptimizationOptions::default(), 2, 1),
+        (MirOptimizationOptions::default(), 8, 1),
         (
             MirOptimizationOptions::new(MirOptimizationProfile::None),
             0,
@@ -105,12 +105,15 @@ fn request_selection_matrix_reaches_quiet_and_observed_pipelines() {
         ),
         (
             MirOptimizationOptions::default().with_disabled_pass("whole-world-reachability"),
-            1,
+            7,
             2,
         ),
         (
             MirOptimizationOptions::default()
+                .with_disabled_pass("conservative-cfg-cleanup")
                 .with_disabled_pass("dead-pure-definition-elimination")
+                .with_disabled_pass("primitive-algebraic-simplification")
+                .with_disabled_pass("primitive-constant-folding")
                 .with_disabled_pass("whole-world-reachability"),
             0,
             2,

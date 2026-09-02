@@ -288,8 +288,8 @@ formatting; already-known phase execution counts remain local to the observed
 adapter.
 
 The `none` MIR schedule performs one verification and zero pass executions.
-The `default` schedule executes `dead-pure-definition-elimination` followed by
-`whole-world-reachability`, each once; an
+The `default` schedule executes eight pass occurrences in the exact repeated
+local-simplification order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
 changed-result commit, immediate reverification, aggregate accounting, and
@@ -307,8 +307,8 @@ Its
 [completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 records delivery. Registry, request/CLI schedule selection, the verified
 runner, and structured pass reporting are implemented. Ordinary production
-traces contain one pass-finished event for each of the two default passes;
-`none` contains none.
+traces contain one pass-finished event for each of the eight default schedule
+occurrences; `none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
 schedule order. Its stable identity consists of schedule position, typed pass
@@ -365,9 +365,9 @@ The confirmed
 and active
 [roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
 existing occurrence, aggregate, and checkpoint model. Primitive constant
-folding, primitive algebraic simplification, and conservative CFG cleanup now
-use that model under exact compiler-internal schedules; the expanded default
-remains frozen roadmap work.
+folding, primitive algebraic simplification, and conservative CFG cleanup use
+that model under exact compiler-internal schedules and the active repeated
+default profile.
 
 Primitive constant folding reports processed/changed callables and folded
 unary, binary, comparison, and cast assignments. Primitive algebraic
@@ -383,7 +383,7 @@ entities and are not reconstructed by passes. Counter owner and first-counter
 order remain deterministic across repeated occurrences. Timing remains an
 observation excluded from determinism assertions.
 
-The expanded default produces one trace occurrence per schedule entry,
+The default profile produces one trace occurrence per schedule entry,
 including repeated constant-folding and dead-pure occurrences with distinct
 zero-based occurrence numbers. Stable-name exclusion removes all occurrences
 of that pass. Verified checkpoint labels retain the existing

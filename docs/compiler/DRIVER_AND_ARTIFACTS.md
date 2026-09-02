@@ -135,12 +135,12 @@ non-breaking `with_mir_optimization` builder. Options select a typed
 names; duplicate disabling is idempotent in request identity. Existing request
 construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to the empty
-verification-only schedule, while `default` contains
-`dead-pure-definition-elimination` followed by `whole-world-reachability`,
-each exactly once. Disabling both passes from `default`, including duplicate
-disabling, resolves to the same schedule and product as `none`. `none` remains
-the reference unoptimized mode and preserves raw final MIR after its required
-central verification.
+verification-only schedule, while `default` resolves to the exact repeated
+eight-occurrence local-simplification schedule documented below. Disabling all
+five stable pass names from `default`, including duplicate disabling, resolves
+to the same schedule and product as `none`. `none` remains the reference
+unoptimized mode and preserves raw final MIR after its required central
+verification.
 
 The implemented command-line surface is:
 
@@ -156,7 +156,9 @@ removes every occurrence of the named pass from the selected profile;
 duplicate disabling is idempotent. Unknown profile or pass names are usage
 errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
-`dead-pure-definition-elimination` and `whole-world-reachability` names.
+`conservative-cfg-cleanup`, `dead-pure-definition-elimination`,
+`primitive-algebraic-simplification`, `primitive-constant-folding`, and
+`whole-world-reachability` names.
 `--list-mir-passes` succeeds without
 an input file and prints every registered stable name and description in
 lexical name order. Library tools can inspect the same canonical metadata
@@ -205,18 +207,18 @@ existing registry/profile/exclusion surface without adding a request field or
 CLI category. `primitive-constant-folding` and
 `primitive-algebraic-simplification` and `conservative-cfg-cleanup` are now
 registered and appear through pass discovery, exact compiler-internal
-schedules, lexical known-name diagnostics, and pass-attributed failures. None
-is yet part of `default`. The local passes appear through the same
+schedules, lexical known-name diagnostics, pass-attributed failures, and the
+default profile. The local passes appear through the same
 `passes::available_mir_passes` query, `--list-mir-passes` output, lexical known-
 name diagnostics, and pass-attributed errors. Numeric pass identities remain
 private.
 
-The future `default` profile will contain dead-pure elimination, constant
-folding, algebraic simplification, repeated constant/dead-pure cleanup,
-conservative CFG cleanup, final dead-pure cleanup, and whole-world reachability
-in the exact order frozen by the compiler phase contract. `none` remains
-empty. `--disable-mir-pass <name>` removes every occurrence of a repeated pass,
-and disabling all five stable names must equal `none`.
+The `default` profile contains dead-pure elimination, constant folding,
+algebraic simplification, repeated constant/dead-pure cleanup, conservative
+CFG cleanup, final dead-pure cleanup, and whole-world reachability in the exact
+order specified by the compiler phase contract. `none` remains empty.
+`--disable-mir-pass <name>` removes every occurrence of a repeated pass, and
+disabling all five stable names equals `none`.
 
 No arbitrary pass ordering, `-O` level, dynamic plugin, target-specific pass
 selection, or optimization-dependent static activation is added. Selection

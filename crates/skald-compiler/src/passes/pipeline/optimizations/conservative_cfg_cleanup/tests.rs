@@ -6,7 +6,8 @@ use crate::{
         MirType, MirValue, PathConditionId, StorageId, ValueId,
     },
     passes::{
-        resolve_exact_mir_pass_schedule, run_mir_pipeline_with_occurrences, MirPassMeasurement,
+        resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
+        run_mir_pipeline_with_occurrences, MirOptimizationProfile, MirPassMeasurement,
         MirPassOccurrenceOutcome,
     },
     test_support::lower_source_to_final_mir,
@@ -349,19 +350,59 @@ fn cleanup_composes_with_dead_pure_and_whole_world_passes() {
 }
 
 #[test]
-fn default_profile_does_not_select_cfg_cleanup_yet() {
+fn default_profile_selects_cfg_cleanup_and_later_dead_pure_cleanup() {
     let input = constant_diamond(true);
     let output = crate::passes::run_mir_pipeline(input).unwrap();
+    let definition = output.definitions.get(output.entry_function).unwrap();
+    assert_eq!(definition.body.blocks.len(), 2);
+    assert!(definition.body.blocks[0].instructions.is_empty());
     assert!(matches!(
-        output
-            .definitions
-            .get(output.entry_function)
-            .unwrap()
-            .body
-            .blocks[0]
-            .terminator,
-        Some(MirTerminator::Branch { .. })
+        definition.body.blocks[0].terminator,
+        Some(MirTerminator::Goto { .. })
     ));
+}
+
+#[test]
+fn default_cfg_cleanup_exposes_removed_call_targets_to_final_reachability() {
+    let input = lower_source_to_final_mir(concat!(
+        "fn dead_path_target() -> i64 { return 9; }\n",
+        "fn main() -> i64 { if (true) { return 1; } return dead_path_target(); }\n",
+    ));
+    let without_cfg = run_mir_pipeline_with_occurrences(
+        input.clone(),
+        &resolve_mir_pass_schedule(
+            MirOptimizationProfile::Default,
+            ["conservative-cfg-cleanup"],
+        )
+        .unwrap(),
+    )
+    .result
+    .unwrap();
+    let measured = run_mir_pipeline_with_occurrences(
+        input,
+        &resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap(),
+    );
+    let output = measured.result.as_ref().unwrap();
+
+    assert_eq!(without_cfg.executable_definitions().count(), 2);
+    assert_eq!(output.executable_definitions().count(), 1);
+    assert_eq!(
+        measured
+            .occurrences()
+            .iter()
+            .map(|record| record.name())
+            .collect::<Vec<_>>(),
+        [
+            "dead-pure-definition-elimination",
+            "primitive-constant-folding",
+            "primitive-algebraic-simplification",
+            "primitive-constant-folding",
+            "dead-pure-definition-elimination",
+            "conservative-cfg-cleanup",
+            "dead-pure-definition-elimination",
+            "whole-world-reachability",
+        ]
+    );
 }
 
 fn constant_diamond(condition: bool) -> crate::mir::MirProgram {

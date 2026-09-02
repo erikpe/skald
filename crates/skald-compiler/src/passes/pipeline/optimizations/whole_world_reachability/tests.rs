@@ -180,7 +180,10 @@ fn supported_profiles_preserve_complete_mir_unless_reachability_is_enabled() {
         complete.clone(),
         MirOptimizationProfile::Default,
         &[
+            "conservative-cfg-cleanup",
             "dead-pure-definition-elimination",
+            "primitive-algebraic-simplification",
+            "primitive-constant-folding",
             "whole-world-reachability",
         ],
     );

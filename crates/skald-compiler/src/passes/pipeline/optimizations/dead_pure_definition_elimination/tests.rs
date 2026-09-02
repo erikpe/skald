@@ -442,7 +442,7 @@ fn no_op_exact_run_preserves_the_seal_and_exact_mir() {
 }
 
 #[test]
-fn registered_canary_runs_once_in_the_default_profile() {
+fn registered_canary_participates_in_the_default_fixed_point_schedule() {
     let input = dead_tree_program();
     let expected = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
 

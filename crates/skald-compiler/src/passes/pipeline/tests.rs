@@ -202,7 +202,7 @@ fn pipeline_preserves_logical_path_and_cleanup_metadata() {
 }
 
 #[test]
-fn pipeline_preserves_valid_multi_block_mir() {
+fn default_pipeline_removes_a_valid_disconnected_block() {
     let mut mir = lowered_program();
     let function = mir
         .definitions
@@ -219,9 +219,9 @@ fn pipeline_preserves_valid_multi_block_mir() {
         }),
         span,
     });
-    let expected = mir.clone();
-
-    assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
+    let output = run_mir_pipeline(mir).unwrap();
+    let definition = output.definitions.get(output.entry_function).unwrap();
+    assert_eq!(definition.body.blocks.len(), 1);
 }
 
 #[test]
@@ -568,6 +568,35 @@ fn none_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
         collector.reachability_dumps[1]
     );
     assert_eq!(collector.definition_counts.len(), 2);
+}
+
+#[test]
+fn default_pipeline_checkpoints_identify_every_repeated_occurrence() {
+    let schedule =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    let mut collector = CheckpointCollector::default();
+
+    let measured =
+        run_mir_pipeline_measured_inspected(lowered_program(), &schedule, Some(&mut collector));
+
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        collector.labels,
+        [
+            "input",
+            "after-0-dead-pure-definition-elimination-0",
+            "after-1-primitive-constant-folding-0",
+            "after-2-primitive-algebraic-simplification-0",
+            "after-3-primitive-constant-folding-1",
+            "after-4-dead-pure-definition-elimination-1",
+            "after-5-conservative-cfg-cleanup-0",
+            "after-6-dead-pure-definition-elimination-2",
+            "after-7-whole-world-reachability-0",
+            "final",
+        ]
+    );
+    assert!(collector.dumps.windows(2).all(|pair| pair[0] == pair[1]));
+    assert_eq!(measured.statistics.verification_executions(), 1);
 }
 
 #[test]
