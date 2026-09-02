@@ -888,18 +888,19 @@ The confirmed
 and its active
 [implementation roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
 define the target-independent local-simplification layer now being delivered.
-Exact primitive evaluation, block-local constant facts, and the independently
-selectable `primitive-constant-folding` pass are implemented. The algebraic and
-CFG passes, their expanded default schedule, and broad hardening remain frozen
-roadmap work; the current default schedule remains as described above.
+Exact primitive evaluation, block-local constant facts, exhaustive value-use
+classification, and the independently selectable `primitive-constant-folding`
+and `primitive-algebraic-simplification` passes are implemented. The CFG pass,
+expanded default schedule, and broad hardening remain frozen roadmap work; the
+current default schedule remains as described above.
 
 The local-simplification layer consists of three independently selectable
 production passes under the existing verified pipeline:
 
 - `primitive-constant-folding` evaluates a closed exact family of
   block-local integer and boolean primitive operations;
-- `primitive-algebraic-simplification` will apply a reviewed integer/boolean
-  identity catalog and atomically forward safe result uses; and
+- `primitive-algebraic-simplification` applies the reviewed integer/boolean
+  identity catalog and atomically forwards safe result uses; and
 - `conservative-cfg-cleanup` will fold eligible ordinary boolean branches and
   remove unprotected unreachable blocks and their transient values.
 

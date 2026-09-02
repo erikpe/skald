@@ -8,11 +8,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
-is in progress; exact primitive constant semantics is complete and block-local
-facts plus primitive constant folding are complete. Exhaustive forwarding-safe
-use classification is also complete, and algebraic simplification is next.
-Proof-aware CFG reachability, conservative CFG cleanup, the repeated default
-schedule, and broad semantic/determinism hardening follow. The roadmap depends
+is in progress; exact primitive constant semantics, block-local facts,
+primitive constant folding, exhaustive forwarding-safe use classification,
+and primitive algebraic simplification are complete. Proof-aware CFG
+reachability is next, followed by conservative CFG cleanup, the repeated
+default schedule, and broad semantic/determinism hardening. The roadmap depends
 on the completed static-lifecycle certificate, dense MIR rewriting, selectable
 pipeline, and whole-world reachability foundations.
 

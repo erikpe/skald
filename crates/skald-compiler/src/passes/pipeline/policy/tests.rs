@@ -10,7 +10,8 @@ use super::{
 };
 use crate::passes::pipeline::execution::{MirPassCapability, MirPassFailure, MirPassOutcome};
 use crate::passes::pipeline::optimizations::{
-    dead_pure_definition_elimination, primitive_constant_folding, whole_world_reachability,
+    dead_pure_definition_elimination, primitive_algebraic_simplification,
+    primitive_constant_folding, whole_world_reachability,
 };
 
 const ALPHA: MirPassIdentity = MirPassIdentity::new(1);
@@ -108,7 +109,7 @@ fn production_profiles_select_the_supported_default_order() {
 #[test]
 fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     let passes = available_mir_passes();
-    assert_eq!(passes.len(), 3);
+    assert_eq!(passes.len(), 4);
     assert_eq!(
         passes[0].identity(),
         dead_pure_definition_elimination::IDENTITY
@@ -118,16 +119,25 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
         passes[0].description(),
         "Removes unused non-failing scalar MIR definitions."
     );
-    assert_eq!(passes[1].identity(), primitive_constant_folding::IDENTITY);
-    assert_eq!(passes[1].name(), "primitive-constant-folding");
+    assert_eq!(
+        passes[1].identity(),
+        primitive_algebraic_simplification::IDENTITY
+    );
+    assert_eq!(passes[1].name(), "primitive-algebraic-simplification");
     assert_eq!(
         passes[1].description(),
-        "Folds exact block-local primitive MIR constants."
+        "Simplifies exact primitive MIR algebraic identities."
     );
-    assert_eq!(passes[2].identity(), whole_world_reachability::IDENTITY);
-    assert_eq!(passes[2].name(), "whole-world-reachability");
+    assert_eq!(passes[2].identity(), primitive_constant_folding::IDENTITY);
+    assert_eq!(passes[2].name(), "primitive-constant-folding");
     assert_eq!(
         passes[2].description(),
+        "Folds exact block-local primitive MIR constants."
+    );
+    assert_eq!(passes[3].identity(), whole_world_reachability::IDENTITY);
+    assert_eq!(passes[3].name(), "whole-world-reachability");
+    assert_eq!(
+        passes[3].description(),
         "Removes unreachable executable MIR definitions."
     );
 

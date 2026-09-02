@@ -46,7 +46,7 @@ fn real_binary_lists_registered_mir_passes_without_an_input() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "Available final-MIR passes:\n  dead-pure-definition-elimination\n      Removes unused non-failing scalar MIR definitions.\n  primitive-constant-folding\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability\n      Removes unreachable executable MIR definitions.\n"
+        "Available final-MIR passes:\n  dead-pure-definition-elimination\n      Removes unused non-failing scalar MIR definitions.\n  primitive-algebraic-simplification\n      Simplifies exact primitive MIR algebraic identities.\n  primitive-constant-folding\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability\n      Removes unreachable executable MIR definitions.\n"
     );
     assert!(output.stderr.is_empty());
 }

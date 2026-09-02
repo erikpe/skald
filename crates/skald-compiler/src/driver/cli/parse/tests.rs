@@ -155,7 +155,7 @@ fn disabled_pass_names_are_validated_once_in_deterministic_order() {
         "main.ska",
     ]);
 
-    let expected = "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `dead-pure-definition-elimination`, `primitive-constant-folding`, `whole-world-reachability`";
+    let expected = "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `dead-pure-definition-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`";
     assert_eq!(first, expected);
     assert_eq!(second, expected);
     assert_eq!(

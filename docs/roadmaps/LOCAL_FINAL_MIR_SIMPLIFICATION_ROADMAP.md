@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: in progress; LSR0 through LSR2 are complete and LSR3 is next.
+Status: in progress; LSR0 through LSR3 are complete and LSR4 is next.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
@@ -100,7 +100,7 @@ expanding reviewed scope.
 - [x] LSR0 — Implement exact primitive constant semantics
 - [x] LSR1 — Add block-local facts and primitive constant folding
 - [x] LSR2 — Classify forwarding-safe value uses exhaustively
-- [ ] LSR3 — Implement primitive algebraic simplification
+- [x] LSR3 — Implement primitive algebraic simplification
 - [ ] LSR4 — Establish proof-aware local CFG reachability
 - [ ] LSR5 — Implement conservative CFG cleanup
 - [ ] LSR6 — Activate the repeated selectable default schedule
@@ -244,24 +244,24 @@ pass schedule, or generated program changes.
 **Purpose:** Add the frozen reviewed identity catalog and prove atomic value
 forwarding/deletion through real production pass machinery.
 
-- [ ] Encode the frozen add, subtract, multiply, bitwise, comparison, and unary
+- [x] Encode the frozen add, subtract, multiply, bitwise, comparison, and unary
       involution rules in one auditable integer/boolean catalog.
-- [ ] Construct zero, one, and all-ones constants with exact encoded width and
+- [x] Construct zero, one, and all-ones constants with exact encoded width and
       preserve canonical `u8` and `bool` results.
-- [ ] For constant-result identities, retain the assignment, result identity,
+- [x] For constant-result identities, retain the assignment, result identity,
       declared type, instruction position, and source span.
-- [ ] For operand-result identities, prove exact type equality, earlier source
+- [x] For operand-result identities, prove exact type equality, earlier source
       definition in the same block, and that every result use is forwarding-
       safe before mutation.
-- [ ] Replace uses, delete the obsolete assignment, and delete its value
+- [x] Replace uses, delete the obsolete assignment, and delete its value
       declaration in one callable transaction; add no copy rvalue.
-- [ ] Preserve all operand-producing instructions. Let the existing dead-pure
+- [x] Preserve all operand-producing instructions. Let the existing dead-pure
       pass independently decide whether newly unused producers are removable.
-- [ ] Select candidates deterministically and rebuild the use and instruction-
+- [x] Select candidates deterministically and rebuild the use and instruction-
       position facts after every structural deletion.
-- [ ] Return deterministic constant-result, forwarded-use, removed-assignment,
+- [x] Return deterministic constant-result, forwarded-use, removed-assignment,
       removed-value, changed-callable, and protected-rejection measurements.
-- [ ] Register private identity 3 under
+- [x] Register private identity 3 under
       `primitive-algebraic-simplification`, exposing listing and exact internal
       schedules while leaving `default` unchanged.
 
