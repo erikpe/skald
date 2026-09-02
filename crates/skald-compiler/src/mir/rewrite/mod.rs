@@ -29,6 +29,7 @@ mod identity;
 mod import;
 mod map;
 mod program;
+mod value_use;
 
 pub(crate) use census::{value_use_census_for_definition, MirValueCensusEntry, MirValueUseCensus};
 pub(crate) use commit::{
@@ -50,6 +51,10 @@ pub(crate) use map::{
     validate_member_local_identity_owners, validate_static_initializer_local_identity_owners,
 };
 pub(crate) use program::{rewrite_program, MirCallableRewriteResult, MirProgramRewriteResult};
+pub(crate) use value_use::{
+    value_use_sites_for_definition, MirCallValueUse, MirScalarValueUse, MirValueUseRole,
+    MirValueUseSite, MirValueUseSites,
+};
 
 #[cfg(test)]
 mod tests;

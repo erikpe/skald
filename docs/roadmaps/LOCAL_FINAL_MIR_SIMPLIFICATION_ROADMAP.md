@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: in progress; LSR0 and LSR1 are complete and LSR2 is next.
+Status: in progress; LSR0 through LSR2 are complete and LSR3 is next.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
@@ -99,7 +99,7 @@ expanding reviewed scope.
 
 - [x] LSR0 — Implement exact primitive constant semantics
 - [x] LSR1 — Add block-local facts and primitive constant folding
-- [ ] LSR2 — Classify forwarding-safe value uses exhaustively
+- [x] LSR2 — Classify forwarding-safe value uses exhaustively
 - [ ] LSR3 — Implement primitive algebraic simplification
 - [ ] LSR4 — Establish proof-aware local CFG reachability
 - [ ] LSR5 — Implement conservative CFG cleanup
@@ -204,26 +204,26 @@ facts, preserves unsupported MIR, and is not yet selected by `default`.
 algebraic result without letting the broad substitution mapper decide proof or
 protocol safety.
 
-- [ ] Extend immutable local-identity observation with a deterministic query
+- [x] Extend immutable local-identity observation with a deterministic query
       that enumerates every use site of a selected `ValueId`, not merely its
       count.
-- [ ] Define focused semantic use roles for ordinary scalar rvalues, casts,
+- [x] Define focused semantic use roles for ordinary scalar rvalues, casts,
       stores, calls/arguments, returns, branches, checked terminators,
       proof/path/logical metadata, ownership/lifecycle operations, and unknown
       future roles.
-- [ ] Mark only the frozen ordinary executable roles as forwarding-safe.
-- [ ] Reject path-condition and logical metadata, dedicated checked
+- [x] Mark only the frozen ordinary executable roles as forwarding-safe.
+- [x] Reject path-condition and logical metadata, dedicated checked
       terminators, proof-coupled success rvalues, lifecycle/ownership state,
       callable attachments, and every unknown role.
-- [ ] Preserve the existing value census as the compact count/definition API;
+- [x] Preserve the existing value census as the compact count/definition API;
       share exhaustive traversal without turning one result type into a
       catch-all analysis manager.
-- [ ] Prove exact callable ownership, same-block definition/use locality, and
+- [x] Prove exact callable ownership, same-block definition/use locality, and
       deterministic site order with structured failures for foreign, unknown,
       deleted, or malformed values.
-- [ ] Add exhaustive maintenance coverage so every new value-bearing MIR
+- [x] Add exhaustive maintenance coverage so every new value-bearing MIR
       variant must choose a role explicitly.
-- [ ] Keep the query read-only and invalid after any rewrite.
+- [x] Keep the query read-only and invalid after any rewrite.
 
 **Tests:** Every currently value-bearing instruction, rvalue, terminator, and
 metadata record; multiple ordinary uses; metadata-only uses; mixed safe and

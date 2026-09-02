@@ -48,6 +48,13 @@ pub(crate) enum MirRewriteError {
         first: MirLocalIdentitySite,
         duplicate: MirLocalIdentitySite,
     },
+    MissingValueDefinition {
+        value: super::super::ValueId,
+    },
+    InvalidValueDefinitionSite {
+        value: super::super::ValueId,
+        site: MirLocalIdentitySite,
+    },
     PathParentNotEarlier {
         condition: super::super::PathConditionId,
         parent: super::super::PathConditionId,
@@ -162,6 +169,12 @@ impl fmt::Display for MirRewriteError {
                 formatter,
                 "value {value} is defined at both {first} and {duplicate}"
             ),
+            Self::MissingValueDefinition { value } => {
+                write!(formatter, "value {value} has no executable definition")
+            }
+            Self::InvalidValueDefinitionSite { value, site } => {
+                write!(formatter, "value {value} has a non-instruction definition at {site}")
+            }
             Self::PathParentNotEarlier { condition, parent } => write!(
                 formatter,
                 "path condition {condition} requires earlier parent {parent}"

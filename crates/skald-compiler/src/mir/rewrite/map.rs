@@ -16,6 +16,11 @@ macro_rules! map_identity {
         *$identity = $mapper.map_value($site, *$identity)?;
         Ok(())
     }};
+    (value_use, $mapper:expr, $site:expr, $role:expr, $identity:expr) => {{
+        let _ = $role;
+        *$identity = $mapper.map_value($site, *$identity)?;
+        Ok(())
+    }};
     (value_definition, $mapper:expr, $site:expr, $identity:expr) => {{
         *$identity = $mapper.map_value_definition($site, *$identity)?;
         Ok(())
@@ -41,6 +46,9 @@ macro_rules! observe_identity {
     (value, $observer:expr, $site:expr, $identity:expr) => {
         $observer.observe_value($site, *$identity)
     };
+    (value_use, $observer:expr, $site:expr, $role:expr, $identity:expr) => {
+        $observer.observe_value_use($site, $role, *$identity)
+    };
     (value_definition, $observer:expr, $site:expr, $identity:expr) => {
         $observer.observe_value_definition($site, *$identity)
     };
@@ -58,12 +66,12 @@ macro_rules! observe_identity {
 /// Defines one traversal over either mutable or shared MIR.
 ///
 /// The complete structural inventory lives in this macro body. Mapping and
-/// observation differ only at the six typed identity leaves.
+/// observation differ only at the typed identity leaves.
 macro_rules! define_identity_traversal {
     ($module:ident, $behavior:ident, ($($mir_mutability:tt)*), $leaf:ident) => {
 mod $module {
 use super::super::super::*;
-use super::super::{MirLocalIdentitySite, $behavior as MirLocalIdentityMapper};
+use super::super::{MirCallValueUse, MirLocalIdentitySite, MirScalarValueUse, MirValueUseRole, $behavior as MirLocalIdentityMapper};
 
 pub(crate) fn map_function_local_identities<M: MirLocalIdentityMapper>(
     definition: &$($mir_mutability)* MirFunctionDefinition,
@@ -298,15 +306,20 @@ pub(crate) fn map_logical_expression<M: MirLocalIdentityMapper>(
     } = expression;
     map_path_condition(mapper, site, condition)?;
     map_storage(mapper, site, result)?;
-    map_value(mapper, site, left_result)?;
+    map_value_use(mapper, site, MirValueUseRole::ProofMetadata, left_result)?;
     map_block(mapper, site, split)?;
     map_block(mapper, site, selection)?;
     map_block(mapper, site, right_entry)?;
     map_block(mapper, site, right_exit)?;
-    map_value(mapper, site, right_result)?;
+    map_value_use(mapper, site, MirValueUseRole::ProofMetadata, right_result)?;
     map_block(mapper, site, short)?;
     map_block(mapper, site, join)?;
-    map_value(mapper, site, selected_result)
+    map_value_use(
+        mapper,
+        site,
+        MirValueUseRole::ProofMetadata,
+        selected_result,
+    )
 }
 
 pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
@@ -553,21 +566,67 @@ fn map_rvalue<M: MirLocalIdentityMapper>(
         MirRvalueKind::Unary {
             operation: _,
             operand,
-        }
-        | MirRvalueKind::PrimitiveCast {
+        } => map_value_use(
+            mapper,
+            site,
+            MirValueUseRole::OrdinaryScalarRvalue(MirScalarValueUse::UnaryOperand),
+            operand,
+        ),
+        MirRvalueKind::PrimitiveCast {
             operation: _,
             operand,
-        }
-        | MirRvalueKind::CheckedF64ToInteger {
+        } => map_value_use(
+            mapper,
+            site,
+            MirValueUseRole::OrdinaryPrimitiveCast,
+            operand,
+        ),
+        MirRvalueKind::CheckedF64ToInteger {
             relation: _,
             operand,
-        } => map_value(mapper, site, operand),
+        } => map_value_use(
+            mapper,
+            site,
+            MirValueUseRole::CheckedProtocol,
+            operand,
+        ),
         MirRvalueKind::Binary {
             operation: _,
             left,
             right,
+        } => {
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OrdinaryScalarRvalue(MirScalarValueUse::BinaryLeft),
+                left,
+            )?;
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OrdinaryScalarRvalue(MirScalarValueUse::BinaryRight),
+                right,
+            )
         }
-        | MirRvalueKind::IntegerDivision {
+        MirRvalueKind::PrimitiveComparison {
+            operation: _,
+            left,
+            right,
+        } => {
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OrdinaryScalarRvalue(MirScalarValueUse::ComparisonLeft),
+                left,
+            )?;
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OrdinaryScalarRvalue(MirScalarValueUse::ComparisonRight),
+                right,
+            )
+        }
+        MirRvalueKind::IntegerDivision {
             operation: _,
             dividend: left,
             divisor: right,
@@ -576,14 +635,9 @@ fn map_rvalue<M: MirLocalIdentityMapper>(
             operation: _,
             left,
             count: right,
-        }
-        | MirRvalueKind::PrimitiveComparison {
-            operation: _,
-            left,
-            right,
         } => {
-            map_value(mapper, site, left)?;
-            map_value(mapper, site, right)
+            map_value_use(mapper, site, MirValueUseRole::CheckedProtocol, left)?;
+            map_value_use(mapper, site, MirValueUseRole::CheckedProtocol, right)
         }
         MirRvalueKind::TypeTest { source, target: _ } => map_object_view(source, mapper, site),
         MirRvalueKind::OptionalPresence { source, kind: _ } => map_place(source, mapper, site),
@@ -621,7 +675,12 @@ fn map_call<M: MirLocalIdentityMapper>(
                 callee,
                 function_type: _,
             } = target;
-            map_value(mapper, site, callee)?;
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OrdinaryCall(MirCallValueUse::Target),
+                callee,
+            )?;
         }
     }
     if let Some(receiver) = receiver {
@@ -630,8 +689,8 @@ fn map_call<M: MirLocalIdentityMapper>(
             MirCallReceiver::Interface(view) => map_object_view(view, mapper, site)?,
         }
     }
-    for argument in arguments {
-        map_argument(argument, mapper, site)?;
+    for (index, argument) in arguments.into_iter().enumerate() {
+        map_argument(argument, mapper, site, ArgumentUseContext::OrdinaryCall(index))?;
     }
     if let Some(result) = result {
         map_value_definition(mapper, site, result)?;
@@ -647,14 +706,32 @@ fn map_argument<M: MirLocalIdentityMapper>(
     argument: &$($mir_mutability)* MirArgument,
     mapper: &mut M,
     site: MirLocalIdentitySite,
+    context: ArgumentUseContext,
 ) -> Result<(), M::Error> {
     match argument {
-        MirArgument::Value(value) => map_value(mapper, site, value),
+        MirArgument::Value(value) => map_value_use(mapper, site, context.role(), value),
         MirArgument::Place(place) | MirArgument::OwnedPlace(place) => {
             map_place(place, mapper, site)
         }
         MirArgument::View(view) => map_object_view(view, mapper, site),
         MirArgument::SharedOwner(owner) => map_storage(mapper, site, owner),
+    }
+}
+
+#[derive(Clone, Copy)]
+enum ArgumentUseContext {
+    OrdinaryCall(usize),
+    OwnershipOrLifecycle,
+}
+
+impl ArgumentUseContext {
+    const fn role(self) -> MirValueUseRole {
+        match self {
+            Self::OrdinaryCall(index) => {
+                MirValueUseRole::OrdinaryCall(MirCallValueUse::Argument(index))
+            }
+            Self::OwnershipOrLifecycle => MirValueUseRole::OwnershipOrLifecycle,
+        }
     }
 }
 
@@ -684,7 +761,12 @@ fn map_initialize<M: MirLocalIdentityMapper>(
     } = instruction;
     map_place(destination, mapper, site)?;
     for argument in arguments {
-        map_argument(argument, mapper, site)?;
+        map_argument(
+            argument,
+            mapper,
+            site,
+            ArgumentUseContext::OwnershipOrLifecycle,
+        )?;
     }
     Ok(())
 }
@@ -702,7 +784,7 @@ fn map_store<M: MirLocalIdentityMapper>(
         span: _,
     } = instruction;
     map_place(destination, mapper, site)?;
-    map_value(mapper, site, value)
+    map_value_use(mapper, site, MirValueUseRole::OrdinaryStore, value)
 }
 
 fn map_copy_construction<M: MirLocalIdentityMapper>(
@@ -786,7 +868,12 @@ fn map_shared_initialize<M: MirLocalIdentityMapper>(
     } = instruction;
     map_storage(mapper, site, allocation)?;
     for argument in arguments {
-        map_argument(argument, mapper, site)?;
+        map_argument(
+            argument,
+            mapper,
+            site,
+            ArgumentUseContext::OwnershipOrLifecycle,
+        )?;
     }
     Ok(())
 }
@@ -840,7 +927,12 @@ fn map_optional_source<M: MirLocalIdentityMapper>(
 ) -> Result<(), M::Error> {
     match source {
         MirOptionalSource::Absent => Ok(()),
-        MirOptionalSource::Present(value) => map_value(mapper, site, value),
+        MirOptionalSource::Present(value) => map_value_use(
+            mapper,
+            site,
+            MirValueUseRole::OwnershipOrLifecycle,
+            value,
+        ),
         MirOptionalSource::Copy(place) => map_place(place, mapper, site),
     }
 }
@@ -1092,17 +1184,19 @@ fn map_io_instruction<M: MirLocalIdentityMapper>(
     } = instruction;
     map_value_definition(mapper, site, result)?;
     match operation {
-        MirIoOperation::StandardHandle { stream } => map_value(mapper, site, stream),
+        MirIoOperation::StandardHandle { stream } => {
+            map_value_use(mapper, site, MirValueUseRole::InputOutput, stream)
+        }
         MirIoOperation::Open { path, mode } => {
             map_io_buffer(path, mapper, site)?;
-            map_value(mapper, site, mode)
+            map_value_use(mapper, site, MirValueUseRole::InputOutput, mode)
         }
         MirIoOperation::Read {
             handle,
             destination,
             offset,
         } => {
-            map_value(mapper, site, handle)?;
+            map_value_use(mapper, site, MirValueUseRole::InputOutput, handle)?;
             map_io_buffer(destination, mapper, site)?;
             map_storage(mapper, site, offset)
         }
@@ -1111,11 +1205,13 @@ fn map_io_instruction<M: MirLocalIdentityMapper>(
             source,
             offset,
         } => {
-            map_value(mapper, site, handle)?;
+            map_value_use(mapper, site, MirValueUseRole::InputOutput, handle)?;
             map_io_buffer(source, mapper, site)?;
             map_storage(mapper, site, offset)
         }
-        MirIoOperation::Close { handle } => map_value(mapper, site, handle),
+        MirIoOperation::Close { handle } => {
+            map_value_use(mapper, site, MirValueUseRole::InputOutput, handle)
+        }
     }
 }
 
@@ -1149,7 +1245,12 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             span: _,
         } => {
             map_storage(mapper, site, backing)?;
-            map_value(mapper, site, length)
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OwnershipOrLifecycle,
+                length,
+            )
         }
         MirArrayInstruction::AllocateElements {
             backing,
@@ -1178,7 +1279,12 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
         } => {
             map_storage(mapper, site, backing)?;
             map_storage(mapper, site, prefix)?;
-            map_value(mapper, site, value)
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OwnershipOrLifecycle,
+                value,
+            )
         }
         MirArrayInstruction::InitializeNext {
             backing,
@@ -1288,7 +1394,12 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
         } => {
             map_storage(mapper, site, destination)?;
             map_place(owner, mapper, site)?;
-            map_value(mapper, site, index)
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OwnershipOrLifecycle,
+                index,
+            )
         }
         MirArrayInstruction::Offset {
             destination,
@@ -1299,7 +1410,12 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
         } => {
             map_storage(mapper, site, destination)?;
             map_place(owner, mapper, site)?;
-            map_value(mapper, site, offset)
+            map_value_use(
+                mapper,
+                site,
+                MirValueUseRole::OwnershipOrLifecycle,
+                offset,
+            )
         }
         MirArrayInstruction::Boundary {
             destination,
@@ -1369,7 +1485,7 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
     match terminator {
         MirTerminator::Return { value, span: _ } => {
             if let Some(value) = value {
-                map_value(mapper, site, value)?;
+                map_value_use(mapper, site, MirValueUseRole::OrdinaryReturn, value)?;
             }
             Ok(())
         }
@@ -1385,7 +1501,7 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
             false_target,
             span: _,
         } => {
-            map_value(mapper, site, condition)?;
+            map_value_use(mapper, site, MirValueUseRole::OrdinaryBranch, condition)?;
             map_block(mapper, site, true_target)?;
             map_block(mapper, site, false_target)
         }
@@ -1688,6 +1804,15 @@ fn map_value<M: MirLocalIdentityMapper>(
     identity: &$($mir_mutability)* ValueId,
 ) -> Result<(), M::Error> {
     $leaf!(value, mapper, site, identity)
+}
+
+fn map_value_use<M: MirLocalIdentityMapper>(
+    mapper: &mut M,
+    site: MirLocalIdentitySite,
+    role: MirValueUseRole,
+    identity: &$($mir_mutability)* ValueId,
+) -> Result<(), M::Error> {
+    $leaf!(value_use, mapper, site, role, identity)
 }
 
 fn map_value_definition<M: MirLocalIdentityMapper>(

@@ -3,6 +3,7 @@ use std::{convert::Infallible, fmt};
 use crate::identity::CallableId;
 
 use super::super::{BlockId, OptionalGuardId, PathConditionId, StorageId, ValueId};
+use super::value_use::MirValueUseRole;
 
 /// A deterministic structural location in one callable-owned MIR definition.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -206,6 +207,20 @@ pub(crate) trait MirLocalIdentityObserver {
         _identity: ValueId,
     ) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    /// Observes a semantic use of a transient value.
+    ///
+    /// Analyses interested only in identity coverage inherit ordinary value
+    /// observation. Use-site analyses override this hook to retain the closed
+    /// semantic role selected by the exhaustive traversal.
+    fn observe_value_use(
+        &mut self,
+        site: MirLocalIdentitySite,
+        _role: MirValueUseRole,
+        identity: ValueId,
+    ) -> Result<(), Self::Error> {
+        self.observe_value(site, identity)
     }
 
     /// Observes a value identity at the instruction that defines it.

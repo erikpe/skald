@@ -927,12 +927,16 @@ type, earlier same-block definition, and every use role, then substitutes uses
 and deletes the obsolete assignment and declaration in one atomic callable
 transaction.
 
-Forwarding is permitted only through explicitly classified ordinary
-executable scalar uses. Path/logical proof metadata, dedicated checked
-terminators, proof-coupled success operations, lifecycle or ownership state,
-callable attachments, and unknown future roles are barriers. The eligibility
-query shares exhaustive immutable identity traversal with rewriting but
-remains narrower than the general substitution mapper.
+An implemented read-only use-site query enumerates each selected transient
+value use in deterministic structural and operand order. Forwarding is
+permitted only through explicitly classified ordinary executable scalar uses
+that follow the definition in the same block. Path/logical proof metadata,
+dedicated checked terminators, proof-coupled success operations, lifecycle or
+ownership state, callable attachments, I/O, and unknown future roles are
+barriers. The query shares exhaustive immutable identity traversal and compact
+definition/use census ownership with rewriting but remains narrower than the
+general substitution mapper. Its result is a snapshot and must be recomputed
+after any rewrite.
 
 CFG cleanup rewrites only ordinary `Branch` terminators whose condition is a
 preceding block-local constant or whose targets are identical. It preserves
