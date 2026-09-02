@@ -4,7 +4,7 @@ use super::{
     identity::MirPassIdentity,
 };
 use crate::passes::pipeline::optimizations::{
-    dead_pure_definition_elimination, whole_world_reachability,
+    dead_pure_definition_elimination, primitive_constant_folding, whole_world_reachability,
 };
 
 /// Immutable view of the compiler-owned final-MIR pass registry.
@@ -122,9 +122,10 @@ fn is_stable_pass_name(name: &str) -> bool {
     !previous_was_separator
 }
 
-static PRODUCTION_REGISTRATIONS: [MirPassRegistration; 2] = [
+static PRODUCTION_REGISTRATIONS: [MirPassRegistration; 3] = [
     dead_pure_definition_elimination::REGISTRATION,
     whole_world_reachability::REGISTRATION,
+    primitive_constant_folding::REGISTRATION,
 ];
 
 pub(super) fn production_registry() -> MirPassRegistry {

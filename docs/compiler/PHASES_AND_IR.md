@@ -874,8 +874,8 @@ lifecycle-realization verification.
 
 This boundary adds no dynamic pass ABI, target-specific pass, numerical
 optimization level, SSA, proof-provenance normalization, general alias/effect
-analysis, devirtualization, inlining,
-constant folding, CFG cleanup, register allocation, or target LIR. Permanent
+analysis, devirtualization, inlining, CFG cleanup, register allocation, or
+target LIR. Permanent
 whole-world compilation and single-threaded generated programs make later
 analyses more tractable, but neither assumption weakens verification,
 determinism, evaluation-order, checked-failure, allocation, ownership, alias,
@@ -885,23 +885,25 @@ or destruction requirements.
 
 The confirmed
 [local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-and its planned
+and its active
 [implementation roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
-define the next target-independent optimization layer. The direction is frozen
-but not yet implemented: the current registry and default schedule remain as
-described above until the roadmap promotes each behavior into current code.
+define the target-independent local-simplification layer now being delivered.
+Exact primitive evaluation, block-local constant facts, and the independently
+selectable `primitive-constant-folding` pass are implemented. The algebraic and
+CFG passes, their expanded default schedule, and broad hardening remain frozen
+roadmap work; the current default schedule remains as described above.
 
-Three independently selectable production passes will be added under the
-existing verified pipeline:
+The local-simplification layer consists of three independently selectable
+production passes under the existing verified pipeline:
 
-- `primitive-constant-folding` will evaluate a closed exact family of
+- `primitive-constant-folding` evaluates a closed exact family of
   block-local integer and boolean primitive operations;
 - `primitive-algebraic-simplification` will apply a reviewed integer/boolean
   identity catalog and atomically forward safe result uses; and
 - `conservative-cfg-cleanup` will fold eligible ordinary boolean branches and
   remove unprotected unreachable blocks and their transient values.
 
-Constant semantics will have one optimizer-private typed owner. Initial
+Constant semantics have one optimizer-private typed owner. Initial
 folding includes explicit wrapping `i64`, `u64`, and `u8` add, subtract, and
 multiply; wrapping `i64` negation; integer bitwise operations and complement;
 boolean not; integer and boolean comparisons; identity casts; integer width
@@ -916,9 +918,10 @@ outside the initial evaluator. In particular, checked integer and shift
 operations cannot be folded by replacing only their success rvalue because
 verification relates them to exact predecessor diamonds.
 
-Scalar facts are instruction-ordered and reset at every block. A constant or
-constant-result algebraic rewrite preserves the assignment's result identity,
-declared type, instruction position, and source span. MIR has no copy rvalue;
+Implemented scalar facts are instruction-ordered and reset at every block. A
+constant or constant-result algebraic rewrite preserves the assignment's
+result identity, declared type, instruction position, and source span. MIR has
+no copy rvalue;
 an algebraic identity that returns an existing operand instead proves exact
 type, earlier same-block definition, and every use role, then substitutes uses
 and deletes the obsolete assignment and declaration in one atomic callable

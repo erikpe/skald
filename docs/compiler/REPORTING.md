@@ -362,13 +362,13 @@ decisions.
 
 The confirmed
 [local final-MIR simplification design](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
-and planned
+and active
 [roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
-existing occurrence, aggregate, and checkpoint model. This direction is
-frozen but not yet implemented; current report events and counters remain
-those documented above.
+existing occurrence, aggregate, and checkpoint model. Primitive constant
+folding now uses that model under exact compiler-internal schedules; the other
+two passes and the expanded default remain frozen roadmap work.
 
-Primitive constant folding will report processed/changed callables and folded
+Primitive constant folding reports processed/changed callables and folded
 unary, binary, comparison, and cast assignments. Primitive algebraic
 simplification will report constant-result rewrites, forwarded uses, removed
 assignments and value declarations, protected-use rejections, and changed

@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: in progress; LSR0 is complete and LSR1 is next.
+Status: in progress; LSR0 and LSR1 are complete and LSR2 is next.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
@@ -98,7 +98,7 @@ expanding reviewed scope.
 ## Progress
 
 - [x] LSR0 — Implement exact primitive constant semantics
-- [ ] LSR1 — Add block-local facts and primitive constant folding
+- [x] LSR1 — Add block-local facts and primitive constant folding
 - [ ] LSR2 — Classify forwarding-safe value uses exhaustively
 - [ ] LSR3 — Implement primitive algebraic simplification
 - [ ] LSR4 — Establish proof-aware local CFG reachability
@@ -161,26 +161,26 @@ remain unchanged.
 new independently selectable scalar pass while leaving default behavior
 unchanged.
 
-- [ ] Add a borrowed linear block-local fact builder that maps only already
+- [x] Add a borrowed linear block-local fact builder that maps only already
       defined transient values to supported typed constants and resets at each
       block boundary.
-- [ ] Scan instructions in stable order and make an in-place folded result
+- [x] Scan instructions in stable order and make an in-place folded result
       immediately available to later instructions in the same block.
-- [ ] Preserve assignment result identity, declared type, instruction order,
+- [x] Preserve assignment result identity, declared type, instruction order,
       and source span while replacing only the eligible rvalue kind.
-- [ ] Inspect verified dense MIR before consuming the rewrite capability so a
+- [x] Inspect verified dense MIR before consuming the rewrite capability so a
       candidate-free occurrence returns unchanged without another
       verification execution.
-- [ ] Recompute any position-keyed facts after mutation rather than retaining
+- [x] Recompute any position-keyed facts after mutation rather than retaining
       stale instruction indices.
-- [ ] Implement pass-owned processed/changed callable counts and separate
+- [x] Implement pass-owned processed/changed callable counts and separate
       unary, binary, comparison, and cast fold measurements.
-- [ ] Register private identity 2 under the stable name
+- [x] Register private identity 2 under the stable name
       `primitive-constant-folding`, exposing it through pass listing and exact
       internal schedules while leaving `default` unchanged.
-- [ ] Keep every checked diamond, terminator, load, storage, proof record,
+- [x] Keep every checked diamond, terminator, load, storage, proof record,
       lifecycle operation, and unsupported rvalue byte-for-byte unchanged.
-- [ ] Keep module organization facade-oriented and reuse evaluator fixtures
+- [x] Keep module organization facade-oriented and reuse evaluator fixtures
       rather than rebuilding semantic tables inside pass tests.
 
 **Tests:** Straight-line constant chains; no facts across blocks; every

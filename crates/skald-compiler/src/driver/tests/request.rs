@@ -128,12 +128,13 @@ fn unknown_disabled_passes_are_one_sorted_configuration_error() {
         error.known_names(),
         [
             "dead-pure-definition-elimination",
+            "primitive-constant-folding",
             "whole-world-reachability"
         ]
     );
     assert_eq!(
         error.to_string(),
-        "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `dead-pure-definition-elimination`, `whole-world-reachability`"
+        "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `dead-pure-definition-elimination`, `primitive-constant-folding`, `whole-world-reachability`"
     );
 }
 
