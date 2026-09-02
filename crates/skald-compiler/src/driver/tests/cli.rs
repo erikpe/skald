@@ -17,7 +17,7 @@ fn help_version_and_mir_pass_listing_are_available_without_compilation() {
     assert_eq!(exit_code, 0);
     assert_eq!(
         stdout,
-        "Available final-MIR passes:\n  dead-pure-definition-elimination\n      Removes unused non-failing scalar MIR definitions.\n  primitive-algebraic-simplification\n      Simplifies exact primitive MIR algebraic identities.\n  primitive-constant-folding\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability\n      Removes unreachable executable MIR definitions.\n"
+        "Available final-MIR passes:\n  conservative-cfg-cleanup\n      Folds ordinary branches and removes unprotected unreachable MIR blocks.\n  dead-pure-definition-elimination\n      Removes unused non-failing scalar MIR definitions.\n  primitive-algebraic-simplification\n      Simplifies exact primitive MIR algebraic identities.\n  primitive-constant-folding\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability\n      Removes unreachable executable MIR definitions.\n"
     );
     assert!(stderr.is_empty());
 }
@@ -52,11 +52,11 @@ fn mir_optimization_cli_selection_is_typed_and_precedes_source_io() {
     let cases = [
         (
             vec!["skac", "missing.ska", "--disable-mir-pass", "unknown-pass"],
-            "unknown MIR pass name: `unknown-pass`; known MIR passes: `dead-pure-definition-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`",
+            "unknown MIR pass name: `unknown-pass`; known MIR passes: `conservative-cfg-cleanup`, `dead-pure-definition-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`",
         ),
         (
             vec!["skac", "--disable-mir-pass", "unknown-pass", "missing.ska"],
-            "unknown MIR pass name: `unknown-pass`; known MIR passes: `dead-pure-definition-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`",
+            "unknown MIR pass name: `unknown-pass`; known MIR passes: `conservative-cfg-cleanup`, `dead-pure-definition-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`",
         ),
         (
             vec!["skac", "missing.ska", "--mir-optimization", "fast"],

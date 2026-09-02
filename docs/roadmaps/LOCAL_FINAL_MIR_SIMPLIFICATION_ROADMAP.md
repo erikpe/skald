@@ -1,6 +1,6 @@
 # Local Final-MIR Simplification Roadmap
 
-Status: in progress; LSR0 through LSR4 are complete and LSR5 is next.
+Status: in progress; LSR0 through LSR5 are complete and LSR6 is next.
 
 This roadmap implements the frozen
 [local final-MIR simplification design](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
@@ -102,7 +102,7 @@ expanding reviewed scope.
 - [x] LSR2 — Classify forwarding-safe value uses exhaustively
 - [x] LSR3 — Implement primitive algebraic simplification
 - [x] LSR4 — Establish proof-aware local CFG reachability
-- [ ] LSR5 — Implement conservative CFG cleanup
+- [x] LSR5 — Implement conservative CFG cleanup
 - [ ] LSR6 — Activate the repeated selectable default schedule
 - [ ] LSR7 — Prove semantic parity, determinism, and optimization value
 - [ ] LSR8 — Harden ownership, documentation, and roadmap closure
@@ -330,23 +330,23 @@ yet changed.
 **Purpose:** Exercise safe structural control-flow deletion without introducing
 proof normalization or rewriting any checked protocol.
 
-- [ ] Detect ordinary `Branch` conditions that resolve to a preceding
+- [x] Detect ordinary `Branch` conditions that resolve to a preceding
       block-local boolean constant and branches whose two targets are equal.
-- [ ] Reject branch rewriting when the branch block is itself protected by
+- [x] Reject branch rewriting when the branch block is itself protected by
       proof, lifecycle, or publication metadata.
-- [ ] Replace eligible ordinary branches with `Goto` to the selected target
+- [x] Replace eligible ordinary branches with `Goto` to the selected target
       while preserving the original terminator span.
-- [ ] Leave every dedicated divisor, shift, cast, optional, shared, array,
+- [x] Leave every dedicated divisor, shift, cast, optional, shared, array,
       ownership, loop, and other checked/multiway terminator unchanged.
-- [ ] Recompute local CFG reachability after branch edits from the complete
+- [x] Recompute local CFG reachability after branch edits from the complete
       root set.
-- [ ] Remove only unprotected unreachable blocks and every transient value
+- [x] Remove only unprotected unreachable blocks and every transient value
       defined inside them in the same callable transaction.
-- [ ] Retain all storage declarations, path conditions, logical records,
+- [x] Retain all storage declarations, path conditions, logical records,
       guards, attachments, and protected unreachable regions.
-- [ ] Return deterministic constant-branch, same-target-branch, removed-block,
+- [x] Return deterministic constant-branch, same-target-branch, removed-block,
       removed-value, protected-unreachable, and changed-callable measurements.
-- [ ] Register private identity 4 under `conservative-cfg-cleanup`, exposing
+- [x] Register private identity 4 under `conservative-cfg-cleanup`, exposing
       listing and exact internal schedules while leaving `default` unchanged.
 
 **Tests:** Constant true/false and same-target branches; branch-result cleanup;

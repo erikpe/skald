@@ -203,12 +203,10 @@ and active
 [roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
 existing registry/profile/exclusion surface without adding a request field or
 CLI category. `primitive-constant-folding` and
-`primitive-algebraic-simplification` are now registered and appear through
-pass discovery, exact compiler-internal schedules, lexical known-name
-diagnostics, and pass-attributed failures. Neither is yet part of `default`.
-
-Delivery will additionally register the stable name
-`conservative-cfg-cleanup`. The local passes appear through the same
+`primitive-algebraic-simplification` and `conservative-cfg-cleanup` are now
+registered and appear through pass discovery, exact compiler-internal
+schedules, lexical known-name diagnostics, and pass-attributed failures. None
+is yet part of `default`. The local passes appear through the same
 `passes::available_mir_passes` query, `--list-mir-passes` output, lexical known-
 name diagnostics, and pass-attributed errors. Numeric pass identities remain
 private.

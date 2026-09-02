@@ -890,9 +890,11 @@ and its active
 define the target-independent local-simplification layer now being delivered.
 Exact primitive evaluation, block-local constant facts, exhaustive value-use
 classification, and the independently selectable `primitive-constant-folding`
-and `primitive-algebraic-simplification` passes are implemented. The CFG pass,
-expanded default schedule, and broad hardening remain frozen roadmap work; the
-current default schedule remains as described above.
+and `primitive-algebraic-simplification` passes are implemented. Proof-aware
+local CFG facts and the independently selectable `conservative-cfg-cleanup`
+pass are also implemented. The expanded default schedule and broad hardening
+remain frozen roadmap work; the current default schedule remains as described
+above.
 
 The local-simplification layer consists of three independently selectable
 production passes under the existing verified pipeline:
@@ -901,8 +903,8 @@ production passes under the existing verified pipeline:
   block-local integer and boolean primitive operations;
 - `primitive-algebraic-simplification` applies the reviewed integer/boolean
   identity catalog and atomically forwards safe result uses; and
-- `conservative-cfg-cleanup` will fold eligible ordinary boolean branches and
-  remove unprotected unreachable blocks and their transient values.
+- `conservative-cfg-cleanup` folds eligible ordinary boolean branches and
+  removes unprotected unreachable blocks and their transient values.
 
 Constant semantics have one optimizer-private typed owner. Initial
 folding includes explicit wrapping `i64`, `u64`, and `u8` add, subtract, and

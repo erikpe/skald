@@ -365,17 +365,17 @@ The confirmed
 and active
 [roadmap](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md) extend the
 existing occurrence, aggregate, and checkpoint model. Primitive constant
-folding and primitive algebraic simplification now use that model under exact
-compiler-internal schedules; CFG cleanup and the expanded default remain
-frozen roadmap work.
+folding, primitive algebraic simplification, and conservative CFG cleanup now
+use that model under exact compiler-internal schedules; the expanded default
+remains frozen roadmap work.
 
 Primitive constant folding reports processed/changed callables and folded
 unary, binary, comparison, and cast assignments. Primitive algebraic
 simplification reports constant-result rewrites, forwarded uses, removed
 assignments and value declarations, protected-use rejections, and changed
-callables. Conservative CFG cleanup will report constant and same-target
-branch folds, removed blocks and value declarations, protected unreachable
-blocks, and changed callables.
+callables. Conservative CFG cleanup reports constant and same-target branch
+folds, removed blocks and value declarations, protected unreachable blocks,
+and changed callables.
 
 These pass-owned counters explain transformation reasons. Existing commit
 statistics remain authoritative for total inserted, retained, and removed
