@@ -50,7 +50,8 @@ fn main() -> i64 {
     return removed_target();
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 5] = [
+const ALL_PRODUCTION_PASS_NAMES: [&str; 6] = [
+    "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "dead-pure-definition-elimination",
     "primitive-algebraic-simplification",

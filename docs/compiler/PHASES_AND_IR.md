@@ -772,7 +772,8 @@ unique stable lowercase kebab-case name, description, implementation-declared
 identity, and transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity before schedule selection. The production
-registry contains `dead-pure-definition-elimination`,
+registry contains `checked-integer-constant-folding`,
+`dead-pure-definition-elimination`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
 `conservative-cfg-cleanup`, and `whole-world-reachability`. Its validated
 descriptors are exposed in stable-name order for the public read-only query
@@ -780,8 +781,10 @@ and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
 eight-occurrence local-simplification schedule documented below. Disabling all
-five stable pass names from `default`, including duplicate disabling, produces
-the same schedule as `none`.
+pass names selected by `default`, including duplicate disabling, produces the
+same schedule as `none`. The checked-integer pass is registered and available
+to exact compiler-internal schedules, but is not selected by `default` until
+its schedule-composition milestone.
 
 A resolved schedule may deliberately repeat a pass, and every occurrence is
 identified by its resolved schedule position, pass identity, and that pass's

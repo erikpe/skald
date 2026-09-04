@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 through CIR4 are complete and CIR5 is next.
+Status: in progress; CIR0 through CIR5 are complete and CIR6 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -112,7 +112,7 @@ Candidate placement and status remain authoritative in the
 - [x] CIR2 — Add atomic successful-protocol rewriting
 - [x] CIR3 — Fold constant integer division and remainder protocols
 - [x] CIR4 — Fold constant integer shift protocols
-- [ ] CIR5 — Register selection and structured measurements
+- [x] CIR5 — Register selection and structured measurements
 - [ ] CIR6 — Activate and compose the default schedule
 - [ ] CIR7 — Prove semantic parity, determinism, and optimization value
 - [ ] CIR8 — Harden ownership, documentation, and roadmap closure
@@ -338,20 +338,20 @@ registration and reporting remain intentionally deferred to CIR5.
 **Purpose:** Expose the completed transformation through the existing modular
 pipeline without changing public optimization categories.
 
-- [ ] Register stable name `checked-integer-constant-folding` with one private
+- [x] Register stable name `checked-integer-constant-folding` with one private
       identity and a concise description in the canonical production registry.
-- [ ] Keep division, remainder, and shift as one pass because they share the
+- [x] Keep division, remainder, and shift as one pass because they share the
       checked scalar protocol boundary, while retaining separate internal
       evaluators/matchers where their semantics differ.
-- [ ] Report deterministic counts for processed and changed callables, folded
+- [x] Report deterministic counts for processed and changed callables, folded
       quotient, remainder, and shift protocols, removed protocol-load values,
       and retained statically failing candidates.
-- [ ] Keep commit statistics authoritative for total entity retention/removal;
+- [x] Keep commit statistics authoritative for total entity retention/removal;
       do not reconstruct generic rewrite totals in pass-owned metrics.
-- [ ] Update pass listing, lexical known-name diagnostics, per-pass disabling,
+- [x] Update pass listing, lexical known-name diagnostics, per-pass disabling,
       exact-schedule tests, reporting, checkpoint, and public descriptor
       expectations.
-- [ ] Prove the disabled pass performs no protocol observation or rewrite work
+- [x] Prove the disabled pass performs no protocol observation or rewrite work
       beyond ordinary registry/schedule resolution.
 
 **Tests:** Registry uniqueness and ordering; `--list-mir-passes`; public pass
@@ -362,6 +362,21 @@ allocation boundaries; `make cli-test`; and focused compiler tests.
 **Exit criteria:** Tools can discover, select, exclude, inspect, and attribute
 the checked-integer pass through the existing stable pipeline interfaces, with
 no new request field, CLI category, or dynamic pass API.
+
+**Completion evidence:** The canonical registry now exposes one private
+identity and the stable `checked-integer-constant-folding` descriptor through
+the public descriptor query, input-free CLI listing, lexical diagnostics, and
+crate-private exact schedules. The combined transform observes all executable
+callables once, commits every eligible family through one whole-program
+rewrite, and emits ordered quotient, remainder, shift, removed-load, and
+retained-static-failure measurements. Focused exact-schedule tests cover
+changed and unchanged outcomes, aggregate and occurrence measurements,
+authoritative commit totals, immediate revalidation, repeat idempotence, and
+checkpoint labels. The pass remains absent from `default`; resolving its
+exclusion therefore produces the identical default schedule and cannot invoke
+its observer or rewrite. Compiler, public API, CLI, determinism, documentation,
+Clippy, and supported Rust toolchain checks pass without adding a request field
+or public scheduling API.
 
 ### CIR6 — Activate and compose the default schedule
 

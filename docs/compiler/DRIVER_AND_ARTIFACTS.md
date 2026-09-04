@@ -156,7 +156,8 @@ removes every occurrence of the named pass from the selected profile;
 duplicate disabling is idempotent. Unknown profile or pass names are usage
 errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
-`conservative-cfg-cleanup`, `dead-pure-definition-elimination`,
+`checked-integer-constant-folding`, `conservative-cfg-cleanup`,
+`dead-pure-definition-elimination`,
 `primitive-algebraic-simplification`, `primitive-constant-folding`, and
 `whole-world-reachability` names.
 `--list-mir-passes` succeeds without
@@ -217,7 +218,9 @@ algebraic simplification, repeated constant/dead-pure cleanup, conservative
 CFG cleanup, final dead-pure cleanup, and whole-world reachability in the exact
 order specified by the compiler phase contract. `none` remains empty.
 `--disable-mir-pass <name>` removes every occurrence of a repeated pass, and
-disabling all five stable names equals `none`.
+disabling every pass selected by `default` equals `none`. The registered
+`checked-integer-constant-folding` pass is available to compiler-internal exact
+schedules but does not enter `default` until its composition milestone.
 
 No arbitrary pass ordering, `-O` level, dynamic plugin, target-specific pass
 selection, or optimization-dependent static activation is added. Selection
@@ -241,8 +244,8 @@ last after the local simplification and final dead-pure cleanup occurrences;
 `none` remains empty.
 
 Disabling reachability preserves complete final MIR and the prior backend
-input domain. Disabling all five registered passes from `default` must match
-`none`. Selection never changes source loading, acceptance, diagnostics,
+input domain. Disabling every pass selected by `default` must match `none`.
+Selection never changes source loading, acceptance, diagnostics,
 static-lifecycle planning, target choice, runtime-trace policy, artifact paths,
 or publication behavior. A pass or changed-output verification failure stops
 before backend emission and artifact publication through the existing

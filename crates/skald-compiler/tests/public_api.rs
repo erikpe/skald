@@ -99,12 +99,13 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(request.mir_optimization().profile().name(), "default");
     let passes: Vec<MirPassDescriptor> = available_mir_passes();
-    assert_eq!(passes.len(), 5);
-    assert_eq!(passes[0].name(), "conservative-cfg-cleanup");
-    assert_eq!(passes[1].name(), "dead-pure-definition-elimination");
-    assert_eq!(passes[2].name(), "primitive-algebraic-simplification");
-    assert_eq!(passes[3].name(), "primitive-constant-folding");
-    assert_eq!(passes[4].name(), "whole-world-reachability");
+    assert_eq!(passes.len(), 6);
+    assert_eq!(passes[0].name(), "checked-integer-constant-folding");
+    assert_eq!(passes[1].name(), "conservative-cfg-cleanup");
+    assert_eq!(passes[2].name(), "dead-pure-definition-elimination");
+    assert_eq!(passes[3].name(), "primitive-algebraic-simplification");
+    assert_eq!(passes[4].name(), "primitive-constant-folding");
+    assert_eq!(passes[5].name(), "whole-world-reachability");
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent

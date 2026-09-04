@@ -405,6 +405,16 @@ A standard-library-backed golden supplies larger before/after structural
 observations, but no correctness test imposes a wall-clock or performance
 threshold.
 
+The registered `checked-integer-constant-folding` pass reports folded
+quotient, remainder, and shift protocol counts, removed private protocol-load
+value counts, and retained statically failing candidate counts in that stable
+order. Generic retained, inserted, and removed MIR entity totals remain owned
+by the atomic commit statistics. An unchanged occurrence reports all
+processed executable callables and performs no changed-output verification;
+an exact-schedule rewrite reports changed callables and one immediate
+verification. The pass is discoverable before it joins the default profile,
+so ordinary driver report allocation remains unchanged during this milestone.
+
 ## Whole-world reachability observation
 
 The confirmed

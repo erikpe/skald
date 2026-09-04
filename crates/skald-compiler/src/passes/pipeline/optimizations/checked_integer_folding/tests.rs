@@ -7,6 +7,7 @@ use crate::{
     },
     passes::{
         resolve_exact_mir_pass_schedule, run_mir_pipeline_with_occurrences, verify_final_mir,
+        MirPassMeasurement, MirPassOccurrenceOutcome,
     },
     test_support::lower_source_to_final_mir,
 };
@@ -15,6 +16,7 @@ use super::*;
 use crate::passes::pipeline::optimizations::{
     primitive_constant_folding, primitive_evaluation::PrimitiveConstant,
 };
+use crate::passes::pipeline::run_mir_pipeline_measured_inspected;
 
 fn division_plan(program: &MirProgram) -> CheckedIntegerFoldPlan {
     CheckedIntegerFoldPlan::prepare(program, CheckedIntegerFoldSelection::DivisionAndRemainder)
@@ -606,4 +608,123 @@ fn combined_plan_folds_division_and_shift_through_the_same_transaction() {
     assert_eq!(checked_division_count(&result.program), 0);
     assert_eq!(checked_shift_count(&result.program), 0);
     verify_final_mir(result.program).unwrap();
+}
+
+#[test]
+fn registered_pass_reports_exact_protocol_and_commit_measurements() {
+    let input = lower_source_to_final_mir(concat!(
+        "fn quotient() -> i64 { return 8 / 2; }\n",
+        "fn remainder() -> i64 { return 7 % 3; }\n",
+        "fn shift() -> i64 { return 8 >> 2u; }\n",
+        "fn divide_by_zero() -> i64 { return 8 / 0; }\n",
+        "fn remainder_by_zero() -> i64 { return 7 % 0; }\n",
+        "fn invalid_shift() -> i64 { return 8 << 64u; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let processed_callables = u64::try_from(input.executable_definitions().count()).unwrap();
+    let schedule = resolve_exact_mir_pass_schedule(&[IDENTITY]).unwrap();
+
+    let measured = run_mir_pipeline_with_occurrences(input, &schedule);
+    let output = measured.result.as_ref().unwrap();
+    let record = &measured.occurrences()[0];
+
+    assert_eq!(record.identity(), IDENTITY);
+    assert_eq!(record.name(), NAME);
+    assert_eq!(record.outcome(), MirPassOccurrenceOutcome::Changed);
+    assert_eq!(record.processed_callables(), Some(processed_callables));
+    assert_eq!(record.changed_callables(), Some(3));
+    assert_eq!(record.inserted_mir_entities(), Some(0));
+    assert_eq!(record.removed_mir_entities(), Some(6));
+    assert_eq!(record.verification_executions(), 1);
+    let expected_measurements = [
+        MirPassMeasurement::count(FOLDED_QUOTIENTS, 1),
+        MirPassMeasurement::count(FOLDED_REMAINDERS, 1),
+        MirPassMeasurement::count(FOLDED_SHIFTS, 1),
+        MirPassMeasurement::count(REMOVED_PROTOCOL_LOAD_VALUES, 6),
+        MirPassMeasurement::count(RETAINED_STATIC_FAILURES, 3),
+    ];
+    assert_eq!(record.measurements(), expected_measurements);
+    assert_eq!(
+        measured.statistics.pass_measurements().collect::<Vec<_>>(),
+        expected_measurements
+            .into_iter()
+            .map(|measurement| (IDENTITY, NAME, measurement))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(checked_division_count(output.program()), 2);
+    assert_eq!(checked_shift_count(output.program()), 1);
+}
+
+#[test]
+fn registered_pass_is_unchanged_and_does_not_reverify_without_candidates() {
+    let input = lower_source_to_final_mir(concat!(
+        "fn divide_by_zero() -> i64 { return 8 / 0; }\n",
+        "fn invalid_shift() -> i64 { return 8 << 64u; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let expected = input.clone();
+    let processed_callables = u64::try_from(input.executable_definitions().count()).unwrap();
+    let schedule = resolve_exact_mir_pass_schedule(&[IDENTITY]).unwrap();
+
+    let measured = run_mir_pipeline_with_occurrences(input, &schedule);
+    let output = measured.result.as_ref().unwrap();
+    let record = &measured.occurrences()[0];
+
+    assert_eq!(output.program(), &expected);
+    assert_eq!(record.outcome(), MirPassOccurrenceOutcome::Unchanged);
+    assert_eq!(record.processed_callables(), Some(processed_callables));
+    assert_eq!(record.changed_callables(), Some(0));
+    assert_eq!(record.removed_mir_entities(), Some(0));
+    assert_eq!(record.verification_executions(), 0);
+    assert_eq!(
+        record.measurements(),
+        [
+            MirPassMeasurement::count(FOLDED_QUOTIENTS, 0),
+            MirPassMeasurement::count(FOLDED_REMAINDERS, 0),
+            MirPassMeasurement::count(FOLDED_SHIFTS, 0),
+            MirPassMeasurement::count(REMOVED_PROTOCOL_LOAD_VALUES, 0),
+            MirPassMeasurement::count(RETAINED_STATIC_FAILURES, 2),
+        ]
+    );
+}
+
+#[test]
+fn repeated_exact_schedule_is_idempotent_and_has_stable_checkpoints() {
+    let source = "fn main() -> i64 { return 8 / 2; }";
+    let schedule = resolve_exact_mir_pass_schedule(&[IDENTITY, IDENTITY]).unwrap();
+    let mut labels = Vec::new();
+    let mut inspector = |checkpoint: crate::passes::MirPipelineCheckpoint<'_>| {
+        labels.push(checkpoint.label().to_string());
+    };
+
+    let inspected = run_mir_pipeline_measured_inspected(
+        lower_source_to_final_mir(source),
+        &schedule,
+        Some(&mut inspector),
+    );
+
+    assert!(inspected.result.is_ok());
+    assert!(inspected.occurrences().is_empty());
+    let measured = run_mir_pipeline_with_occurrences(lower_source_to_final_mir(source), &schedule);
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        measured
+            .occurrences()
+            .iter()
+            .map(|record| record.outcome())
+            .collect::<Vec<_>>(),
+        [
+            MirPassOccurrenceOutcome::Changed,
+            MirPassOccurrenceOutcome::Unchanged,
+        ]
+    );
+    assert_eq!(
+        labels,
+        [
+            "input",
+            "after-0-checked-integer-constant-folding-0",
+            "after-1-checked-integer-constant-folding-1",
+            "final",
+        ]
+    );
 }
