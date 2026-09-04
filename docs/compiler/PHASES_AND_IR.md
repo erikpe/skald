@@ -1025,6 +1025,69 @@ tests, optional or array checks, calls, loads, ownership operations, or
 target-specific instructions. Nested checked results are not propagated
 through their retained scalar carriers by this pass.
 
+### Frozen proof-provenance normalization direction
+
+Status: **planned**. The frozen
+[proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+and its
+[implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+define a mandatory one-way boundary between proof-rich and backend-ready final
+MIR. Current production behavior remains the single-seal pipeline described
+above until that roadmap is delivered.
+
+The planned boundary keeps one `MirProgram` model but uses two private seals.
+`VerifiedProofMirProgram` names the intermediate accepted by complete path-
+sensitive verification. `VerifiedFinalMirProgram` remains the public pipeline
+and backend result name, but will guarantee that consumable proof provenance
+has been normalized away. No API named “final” will return the proof-rich
+intermediate.
+
+Complete proof verification remains first. It continues to use path
+conditions and logical-expression records for optional initialization, array
+and shared ownership, cleanup, storage lifetime, and structured short-circuit
+validation. The mandatory normalizer then:
+
+- replaces each path-condition rvalue with an ordinary base-place load from
+  the same boolean activation storage while preserving result identity, type,
+  and span;
+- reclassifies that storage from `PathCondition` to `ScalarSpill` without
+  deleting its stores, lifetime, or executable CFG;
+- removes all path-condition and logical-expression records atomically; and
+- rejects any remaining consumed-proof reference before a normalized verifier
+  recomputes reachability and creates the final seal.
+
+The normalized verifier shares ordinary structural, lifecycle, reference, and
+reachable-definition owners with proof-rich verification, but does not pretend
+to reconstruct erased path proofs. Its private authority records that complete
+proof verification preceded the exact normalizer. Later transformations still
+own semantic-equivalence correctness and receive an explicitly final-stage
+rewrite capability rather than raw mutable MIR.
+
+Every pass descriptor will state `ProofRich` or `Final`. Proof-rich passes run
+with complete reverification, normalization runs exactly once and is neither
+registered nor selectable, and final passes run with normalized
+reverification. The `none` profile will contain zero selectable passes while
+still performing one complete proof verification, mandatory normalization,
+and one normalized verification. Listing shows pass stage but does not list
+the normalizer.
+
+The first final-stage production pass will be
+`post-proof-unreachable-block-elimination`. It removes blocks unreachable from
+callable executable entries and permanent roots, plus transient values defined
+there. Body entry, static-publication endpoints, lifecycle authority, and all
+other continuing semantic attachments remain roots. Whole-world reachability
+runs after this canary so removed call sites can reduce retained definitions.
+Empty-block forwarding, block merging, jump threading, storage deletion,
+checked-protocol normalization, and loop transformations remain separate
+designs.
+
+This direction changes compiler representation and optimization-off MIR
+dumps, not the language contract. Whole-world compilation permits one complete
+boundary; single-threaded execution makes the identical activation-storage
+load free of concurrency concerns. Neither guarantee weakens sequential
+mutation, aliases, checked failure, allocation, ownership, destruction,
+static startup/shutdown, diagnostics, runtime traces, or deterministic output.
+
 ### Current execution-dependency vocabulary
 
 MIR now owns one neutral `MirExecutionNode` identity for callables, class copy

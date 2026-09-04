@@ -1,7 +1,21 @@
 # Proof-Provenance Normalization Design Proposal
 
-Status: draft design proposal; PPN1 through PPN14 await review. This proposal
-resolves the architecture question recorded as
+Status: frozen decision record; PPN1 through PPN14 were confirmed together on
+2026-09-04. The planned
+[implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) owns
+delivery, and its
+[discoveries record](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md) owns
+findings outside the reviewed scope. The decisions are promoted into the
+frozen directions in the compiler
+[phase](../compiler/PHASES_AND_IR.md#frozen-proof-provenance-normalization-direction),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-proof-provenance-normalization-orchestration),
+[backend](../compiler/BACKEND.md#frozen-proof-normalized-final-mir-boundary),
+[reporting](../compiler/REPORTING.md#frozen-proof-normalization-observation),
+and
+[testing](../development/TESTING.md#proof-provenance-normalization-coverage)
+contracts.
+
+This proposal resolves the architecture question recorded as
 [proof-coupled logical CFG remains intentionally opaque](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#proof-coupled-logical-cfg-remains-intentionally-opaque).
 
 Skald's final MIR currently carries two kinds of information in one verified
@@ -202,10 +216,9 @@ the compiler.
 
 Public pipeline callers and the backend therefore retain the
 `VerifiedFinalMirProgram` result name. Rename the proof-rich verifier to
-`verify_proof_mir`; keep `verify_final_mir` only as a verify-and-normalize
-convenience returning the backend-ready product if a public raw-MIR sealing
-entry point is still required. No API named “final” may return the
-proof-bearing intermediate product.
+the crate-private `verify_proof_mir`; redefine the public `verify_final_mir`
+as a verify-and-normalize convenience returning the backend-ready product.
+No API named “final” may return the proof-bearing intermediate product.
 
 ### Normalized executable invariant
 
@@ -369,7 +382,9 @@ normalization.” That is an intentional compiler representation-contract
 change, not an enabled optimization. With every selectable pass disabled,
 native behavior and emitted machine operations must remain equivalent; the
 backend currently lowers a path-condition read and the replacement ordinary
-load identically. Proof-rich and normalized dumps are expected to differ.
+load identically. It executes one complete proof-rich verification and one
+normalized verification. Proof-rich and normalized dumps are expected to
+differ.
 
 ## Inspection, reporting, and determinism
 
@@ -681,13 +696,10 @@ evidence and reviewed designs after this boundary is implemented and measured.
 
 ## Confirmation and promotion
 
-PPN1 through PPN14 should freeze together. The classification, conversion,
+PPN1 through PPN14 are frozen together. The classification, conversion,
 seal, verifier, pipeline, backend, and `none` decisions form one trust
-boundary; confirming only record deletion would leave the unsafe and awkward
-parts implicit.
-
-After confirmation, create a dedicated implementation roadmap and discoveries
-record. Promote the durable contracts into compiler phase, driver, backend,
-reporting, and testing documentation as their implementation slices land.
-Advance FMC-07 and the cross-cutting proof-normalization catalog entry from
-**Draft design** to **Proposed** only when this proposal is frozen.
+boundary; freezing only record deletion would leave the unsafe and awkward
+parts implicit. The roadmap and discoveries record linked from this proposal
+divide reviewed delivery from bounded follow-up work. Living documentation
+states the frozen direction separately from current behavior until the
+responsible roadmap slices make it authoritative.

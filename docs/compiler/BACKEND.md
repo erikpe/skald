@@ -1101,6 +1101,37 @@ not all have target-independent MIR identities. Earlier MIR retention reduces
 the input domain; machine-artifact retention proves the final emitted symbol
 closure.
 
+## Frozen proof-normalized final-MIR boundary
+
+Status: **planned**. The frozen
+[proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+and
+[implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+will make `VerifiedFinalMirProgram` mean normalized backend-ready MIR. Current
+backend input still uses the single proof-bearing seal until that roadmap is
+implemented.
+
+The planned backend boundary accepts no path-condition or logical-expression
+record, no path-condition rvalue, and no `PathCondition` storage declaration.
+Complete proof-rich verification must already have succeeded. The mandatory
+normalizer replaces each path read with an ordinary load from the identical
+activation storage and reclassifies that boolean home as `ScalarSpill`, so the
+x86-64 selector observes the same executable load it emits today. Proof
+records themselves never reach legality, layout, frame, instruction-selection,
+or artifact planning.
+
+Final-seal reachability facts are recomputed from the exact normalized
+program. Whole-world definition retention becomes a final-stage pass and
+continues to preserve sparse-definition completeness for every reachable
+target. Static-publication endpoints and lifecycle authority remain permanent
+backend inputs; proof consumption cannot narrow activation or shutdown.
+
+Path-condition-specific assignment lowering becomes unreachable and will be
+removed when the final invariant is active. Raw, proof-rich, or malformed
+normalized MIR cannot construct `BackendInput`. This direction changes no
+layout, ABI, calling convention, symbol, failure, runtime trace, artifact
+retention, or target error contract.
+
 ## Frozen reachability-gated static lifecycle boundary
 
 Status: **implemented**. Current backend input contains lifecycle work and

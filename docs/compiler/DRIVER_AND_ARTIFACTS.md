@@ -255,6 +255,37 @@ or publication behavior. A pass or changed-output verification failure stops
 before backend emission and artifact publication through the existing
 structured pipeline error boundary.
 
+## Frozen proof-provenance normalization orchestration
+
+Status: **planned**. The frozen
+[design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
+[roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) add one
+mandatory compiler-owned phase transition inside final-MIR optimization.
+Current request and CLI behavior remains unchanged until implementation.
+
+The driver will continue to select only profiles and stable pass exclusions.
+It will not gain a normalization option. After all selected proof-rich
+occurrences, the pipeline performs complete proof verification, consumes path
+and logical provenance exactly once, and exposes a separately sealed final
+product to final-stage passes and the backend. The `none` profile therefore
+means zero selectable passes plus mandatory verification and normalization,
+not a return to proof-bearing backend input. It performs one complete proof
+verification and one normalized verification around that transition.
+
+`--list-mir-passes` and the public descriptor query will show each selectable
+pass's `proof-rich` or `final` stage. The mandatory normalizer is not a pass
+and is never listed, disabled, or repeated. Wrong-stage internal schedules are
+rejected before execution. The default final-stage order ends with
+`post-proof-unreachable-block-elimination` followed by
+`whole-world-reachability`.
+
+Inspection will expose typed proof-rich and final borrowed checkpoints plus a
+single `after-proof-normalization` boundary. Normalization failure stops before
+final-stage passes, backend emission, and artifact publication through a
+distinct structured failure category. Profile selection, source loading,
+static activation, target choice, artifact paths, diagnostics, runtime-trace
+policy, and host-toolchain behavior remain unchanged.
+
 ## Frozen static activation orchestration
 
 Status: **implemented**. After successful preliminary-MIR verification, the

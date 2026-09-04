@@ -419,6 +419,43 @@ constant fold and precedes dead-pure and CFG cleanup, so aggregate metrics and
 trace occurrence records retain pipeline order without changing quiet,
 phases-only, or details-only timing-allocation boundaries.
 
+## Frozen proof-normalization observation
+
+Status: **planned**. The frozen
+[design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
+[roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) extend final-
+MIR observation with an explicit proof-rich-to-final boundary. Existing
+single-seal checkpoints and verification counts remain current until that
+roadmap is implemented.
+
+Normalization is a mandatory phase transition rather than a registered pass.
+It therefore produces no pass occurrence, selectable identity, exclusion, or
+pass-owned duration contract. Pipeline aggregates will report deterministic
+counts for consumed path-condition records, consumed logical-expression
+records, lowered path reads, reclassified activation storage, changed
+callables, and blocks released from proof protection.
+
+Inspection will expose a closed borrowed checkpoint view. Input and
+proof-rich after-pass checkpoints carry `VerifiedProofMirProgram`; the named
+`after-proof-normalization` checkpoint, final-stage after-pass checkpoints,
+and `final` carry `VerifiedFinalMirProgram`. Labels retain schedule position,
+stable pass name, and occurrence identity where a selectable pass exists.
+Final checkpoints alone expose final seal-bound reachability facts.
+
+A normalization failure has its own pipeline failure stage and prevents every
+final-stage occurrence, backend phase, and final checkpoint. The
+`post-proof-unreachable-block-elimination` canary remains an ordinary
+selectable final-stage pass with processed/changed callable and removed
+block/value counters. `whole-world-reachability` follows it and retains its
+existing pass-owned metrics.
+
+Quiet compilation performs no checkpoint formatting, dump rendering, trace
+record allocation, or optional count scan. Durations remain nondeterministic
+observations; normalization structure, stage order, checkpoint labels, and
+integer counts remain deterministic products. Reporting does not affect proof
+verification, normalization, pass selection, MIR, backend input, diagnostics,
+or runtime behavior.
+
 ## Whole-world reachability observation
 
 The confirmed

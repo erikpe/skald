@@ -188,6 +188,46 @@ driver test pins the same pass-owned counters through structured reporting;
 the cross-process fingerprint excludes elapsed durations and includes every
 occurrence measurement and the final MIR dump.
 
+### Proof-provenance normalization coverage
+
+Status: **planned** under the frozen
+[proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+and
+[implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
+Current test expectations continue to use the single proof-bearing final-MIR
+seal until implementation lands.
+
+Focused verifier tests will classify every proof-bearing identity site and
+separate shared structural, proof-rich, and normalized checks without
+weakening path-sensitive optional, array, shared-ownership, cleanup, or
+lifetime acceptance. Normalizer tests will cover empty and nested logical
+regions, parented conditions, methods, lifecycle members, static initializers,
+exact read-to-load conversion, activation-storage reclassification, complete
+record consumption, dense identities, deterministic counts, malformed input,
+and atomic failure.
+
+Compile-fail API tests will prevent forging either
+`VerifiedProofMirProgram` or `VerifiedFinalMirProgram`, detaching their facts,
+or sending proof-rich MIR to the backend. Pipeline tests will pin every pass's
+stage, wrong-stage rejection, one mandatory normalization under all profiles,
+typed checkpoint order, failure cutoff, fresh reachability facts, and quiet
+inspection/reporting gates.
+
+The post-proof canary must demonstrate removal of a block retained solely by
+path/logical provenance while preserving body entry, static-publication and
+shutdown endpoints, checked failures, loops, ownership work, and every other
+permanent root. Whole-world tests must show that call sites removed by that
+canary affect only the later final retention occurrence.
+
+Dedicated goldens will compare default, `none`, canary-disabled,
+reachability-disabled, and all-pass-disabled modes across short-circuit logic,
+path-sensitive optionals/arrays/shared owners, cleanup, static lifecycle,
+destruction, panic spans, and runtime traces. Debug/release and independent-
+process runs must produce deterministic proof-rich, normalized, and final MIR
+dumps, identities, measurements, reachability facts, and assembly. The
+representation-only `none` path must preserve native behavior and the machine
+operations formerly emitted for path-condition loads.
+
 Target-artifact tests rebuild runtime-trace strings after closure and cover a
 retained string first interned by a removed context. Retained-domain backend
 tests compare complete and sparse MIR inputs with equal machine closures and
