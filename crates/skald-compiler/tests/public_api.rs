@@ -61,8 +61,9 @@ use skald_compiler::{
         LocalCseBlocker, LocalCseConsumer, LocalCseExcludedFamily, LocalCseOperationFamily,
         LocalCseOutcome, MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel,
         MirPipelineError, MirPipelineFailureStage, PrimitiveCastBlocker, PrimitiveCastConsumer,
-        PrimitiveCastDisposition, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
-        ScalarSpillUnlock, VerifiedFinalMirProgram,
+        PrimitiveCastDisposition, RedundancySiteClassification, RedundancySiteExample,
+        ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth, ScalarSpillUnlock,
+        VerifiedFinalMirProgram, REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -392,6 +393,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let scalar_spills = analyze_scalar_spill_provenance(&mir);
     let _counts = scalar_spills.counts();
     let _callables = scalar_spills.callables();
+    let _examples = scalar_spills.examples();
+    let _example_type: Option<RedundancySiteExample<ScalarSpillBlocker>> = None;
+    let _classification = RedundancySiteClassification::Proven;
+    assert_eq!(REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION, 8);
     let _depth = ScalarSpillDepth::Direct;
     let _blocker = ScalarSpillBlocker::AmbiguousWrites;
     let _consumer = ScalarSpillConsumer::TotalPrimitive;

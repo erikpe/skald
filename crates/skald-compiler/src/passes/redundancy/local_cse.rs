@@ -6,7 +6,7 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{MirLocalIdentitySite, MirRewriteError, MirValueUseRole},
-        MirBinaryOperation, MirComparisonOperand, MirDefinitionRef, MirInstruction,
+        BlockId, MirBinaryOperation, MirComparisonOperand, MirDefinitionRef, MirInstruction,
         MirPrimitiveComparison, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
     },
     passes::{pipeline::PrimitiveConstant, VerifiedFinalMirProgram},
@@ -76,6 +76,7 @@ enum VirtualExpressionKey {
 struct Site {
     callable: CallableId,
     block: usize,
+    block_id: BlockId,
     instruction: usize,
     result: ValueId,
     key: ExpressionKey,
@@ -108,9 +109,11 @@ pub fn analyze_local_primitive_common_subexpressions(
         if observed.has_observations() {
             total.merge(&observed);
             let affected = u64::from(observed.counts.interesting != 0);
+            let examples = observed.examples.clone();
             callables.push(LocalCseCallableObservation::new(
                 callable,
                 observed.finish(affected),
+                examples,
             ));
         }
     }
@@ -118,7 +121,8 @@ pub fn analyze_local_primitive_common_subexpressions(
         .iter()
         .filter(|observation| observation.counts().interesting() != 0)
         .count() as u64;
-    LocalCseObservation::new(total.finish(affected_callables), callables)
+    let examples = total.examples.clone();
+    LocalCseObservation::new(total.finish(affected_callables), callables, examples)
 }
 
 fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, MirRewriteError> {
@@ -150,6 +154,7 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
             let site = Site {
                 callable: definition.callable(),
                 block: block_index,
+                block_id: block.id,
                 instruction: instruction_index,
                 result: assignment.result,
                 key,

@@ -25,6 +25,7 @@ use super::model::{
     ScalarSpillDepth, ScalarSpillProvenanceCounts, ScalarSpillProvenanceObservation,
     ScalarSpillUnlock,
 };
+use super::site::{merge_examples, RedundancySiteClassification, RedundancySiteExample};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct InstructionSite {
@@ -103,14 +104,17 @@ pub fn analyze_scalar_spill_provenance(
             .expect("verified final MIR must have coherent callable-local identities");
         if observed.inspected != 0 {
             total.merge(&observed);
+            let examples = observed.examples.clone();
             callables.push(ScalarSpillCallableObservation::new(
                 callable,
                 observed.finish(1),
+                examples,
             ));
         }
     }
     let affected_callables = callables.len() as u64;
-    ScalarSpillProvenanceObservation::new(total.finish(affected_callables), callables)
+    let examples = total.examples.clone();
+    ScalarSpillProvenanceObservation::new(total.finish(affected_callables), callables, examples)
 }
 
 fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, MirRewriteError> {
@@ -155,8 +159,9 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                         increment(&mut observed.unlocks, unlock, &mut observed.saturated);
                     }
                     add_use_barrier(&mut trace.barriers, use_site.role());
-                    if trace.barriers.is_empty() {
+                    let classification = if trace.barriers.is_empty() {
                         observed.increment_proven();
+                        RedundancySiteClassification::Proven
                     } else {
                         observed.increment_blocked();
                         increment(
@@ -164,12 +169,27 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                             *trace.barriers.first().expect("blocked site has a barrier"),
                             &mut observed.saturated,
                         );
-                        for blocker in trace.barriers {
+                        for blocker in trace.barriers.iter().copied() {
                             increment(&mut observed.barriers, blocker, &mut observed.saturated);
                         }
-                    }
+                        RedundancySiteClassification::Blocked
+                    };
+                    let example = RedundancySiteExample::new(
+                        definition.callable(),
+                        assignment.site.block,
+                        assignment.site.instruction,
+                        Some(assignment.assignment.result),
+                        classification,
+                        trace.barriers.iter().copied().collect(),
+                    );
+                    merge_examples(&mut observed.examples, &[example]);
                     observed.supporting_values.extend(trace.values);
-                    observed.supporting_instructions.extend(trace.instructions);
+                    observed.supporting_instructions.extend(
+                        trace
+                            .instructions
+                            .into_iter()
+                            .map(|site| (definition.callable(), site)),
+                    );
                 }
             }
         }
@@ -533,7 +553,8 @@ struct Accumulator {
     consumers: BTreeMap<ScalarSpillConsumer, u64>,
     unlocks: BTreeMap<ScalarSpillUnlock, u64>,
     supporting_values: BTreeSet<ValueId>,
-    supporting_instructions: BTreeSet<InstructionSite>,
+    supporting_instructions: BTreeSet<(crate::identity::CallableId, InstructionSite)>,
+    examples: Vec<RedundancySiteExample<ScalarSpillBlocker>>,
 }
 
 impl Accumulator {
@@ -573,6 +594,7 @@ impl Accumulator {
         self.supporting_values.extend(&other.supporting_values);
         self.supporting_instructions
             .extend(&other.supporting_instructions);
+        merge_examples(&mut self.examples, &other.examples);
         self.saturated |= other.saturated;
     }
     fn finish(self, affected_callables: u64) -> ScalarSpillProvenanceCounts {

@@ -6,7 +6,8 @@ use skald_compiler::{
     passes::{
         analyze_local_primitive_common_subexpressions, analyze_redundant_primitive_casts,
         analyze_scalar_spill_provenance, LocalCseObservationCounts, MirPipelineCheckpoint,
-        PrimitiveCastObservationCounts, ScalarSpillProvenanceCounts, ScalarSpillUnlock,
+        PrimitiveCastObservationCounts, RedundancySiteExample, ScalarSpillProvenanceCounts,
+        ScalarSpillUnlock,
     },
 };
 use std::{collections::BTreeMap, fmt};
@@ -30,23 +31,9 @@ pub(super) fn snapshot(
     let mut scalar_spill = spill_counts(spill.counts());
     let mut redundant_casts = cast_counts(casts.counts());
     let mut local_cse = cse_counts(cse.counts());
-    scalar_spill.examples = proven_examples(
-        spill
-            .callables()
-            .iter()
-            .map(|observation| (observation.callable(), observation.counts().proven())),
-    );
-    redundant_casts.examples = proven_examples(
-        casts
-            .callables()
-            .iter()
-            .map(|observation| (observation.callable(), observation.counts().proven())),
-    );
-    local_cse.examples = proven_examples(
-        cse.callables()
-            .iter()
-            .map(|observation| (observation.callable(), observation.counts().proven())),
-    );
+    scalar_spill.examples = site_examples(spill.examples());
+    redundant_casts.examples = site_examples(casts.examples());
+    local_cse.examples = site_examples(cse.examples());
     let overlaps = spill
         .counts()
         .unlocks()
@@ -144,14 +131,17 @@ fn callable_counts(
     for observation in spill.callables() {
         let entry = callable_entry(program, &mut callables, observation.callable());
         entry.scalar_spill = spill_counts(observation.counts());
+        entry.scalar_spill.examples = site_examples(observation.examples());
     }
     for observation in casts.callables() {
         let entry = callable_entry(program, &mut callables, observation.callable());
         entry.redundant_casts = cast_counts(observation.counts());
+        entry.redundant_casts.examples = site_examples(observation.examples());
     }
     for observation in cse.callables() {
         let entry = callable_entry(program, &mut callables, observation.callable());
         entry.local_cse = cse_counts(observation.counts());
+        entry.local_cse.examples = site_examples(observation.examples());
     }
     for entry in callables.values_mut() {
         entry.saturated = entry.scalar_spill.saturated
@@ -379,13 +369,16 @@ fn overlap_consumer(unlock: ScalarSpillUnlock) -> &'static str {
     }
 }
 
-fn proven_examples(callables: impl IntoIterator<Item = (CallableId, u64)>) -> Vec<Example> {
-    callables
-        .into_iter()
-        .filter(|(_, proven)| *proven > 0)
-        .map(|(callable, _)| Example {
-            callable: callable.to_string(),
-            classification: "proven".to_owned(),
+fn site_examples<R: Copy + fmt::Debug>(examples: &[RedundancySiteExample<R>]) -> Vec<Example> {
+    examples
+        .iter()
+        .map(|example| Example {
+            callable: example.callable().to_string(),
+            block: example.block().to_string(),
+            instruction: example.instruction(),
+            value: example.value().map(|value| value.to_string()),
+            classification: debug_name(example.classification()),
+            reasons: example.reasons().iter().copied().map(debug_name).collect(),
         })
         .collect()
 }

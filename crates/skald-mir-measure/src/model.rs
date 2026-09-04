@@ -216,7 +216,12 @@ pub(crate) struct OverlapCount {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub(crate) struct Example {
     pub(crate) callable: String,
+    pub(crate) block: String,
+    pub(crate) instruction: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) value: Option<String>,
     pub(crate) classification: String,
+    pub(crate) reasons: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]

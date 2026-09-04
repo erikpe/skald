@@ -54,6 +54,13 @@ fn verified_checked_spills_are_classified_without_mutating_mir() {
 
     assert_eq!(first, second);
     assert_eq!(verified.program(), &original);
+    assert_eq!(first.examples(), first.callables()[0].examples());
+    assert!(first.examples().iter().all(|example| {
+        example.classification() == RedundancySiteClassification::Blocked
+            && !example.reasons().is_empty()
+            && example.callable() == CallableId::Function(original.entry_function)
+            && example.value().is_some()
+    }));
     assert_eq!(counts.inspected(), 3);
     assert_eq!(counts.interesting(), 2);
     assert_eq!(counts.proven(), 0);
@@ -341,5 +348,28 @@ fn programs_without_scalar_spills_produce_an_empty_observation() {
     assert_eq!(
         analyze_scalar_spill_provenance(&verified),
         ScalarSpillProvenanceObservation::default()
+    );
+}
+
+#[test]
+fn aggregate_supporting_instruction_identities_include_their_callable_owner() {
+    let verified = verify_final_mir(lower_source_to_final_mir(
+        "fn left() -> i64 { return 42 / 2; }\n\
+         fn right() -> i64 { return 84 / 2; }\n\
+         fn main() -> i64 { return left() + right(); }",
+    ))
+    .unwrap();
+    let observation = analyze_scalar_spill_provenance(&verified);
+    let callable_total = observation
+        .callables()
+        .iter()
+        .map(|callable| callable.counts().supporting_instructions())
+        .sum::<u64>();
+
+    assert!(callable_total > 0);
+    assert_eq!(
+        observation.counts().supporting_instructions(),
+        callable_total,
+        "equal block/instruction positions in distinct callables remain distinct"
     );
 }

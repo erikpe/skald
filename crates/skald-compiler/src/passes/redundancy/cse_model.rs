@@ -2,6 +2,8 @@
 
 use crate::identity::CallableId;
 
+use super::site::RedundancySiteExample;
+
 pub type LocalCseCount<T> = super::count::RedundancyCount<T>;
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -149,6 +151,7 @@ impl LocalCseObservationCounts {
 pub struct LocalCseCallableObservation {
     callable: CallableId,
     counts: LocalCseObservationCounts,
+    examples: Vec<RedundancySiteExample<LocalCseBlocker>>,
 }
 
 impl LocalCseCallableObservation {
@@ -158,8 +161,19 @@ impl LocalCseCallableObservation {
     pub const fn counts(&self) -> &LocalCseObservationCounts {
         &self.counts
     }
-    pub(super) const fn new(callable: CallableId, counts: LocalCseObservationCounts) -> Self {
-        Self { callable, counts }
+    pub fn examples(&self) -> &[RedundancySiteExample<LocalCseBlocker>] {
+        &self.examples
+    }
+    pub(super) const fn new(
+        callable: CallableId,
+        counts: LocalCseObservationCounts,
+        examples: Vec<RedundancySiteExample<LocalCseBlocker>>,
+    ) -> Self {
+        Self {
+            callable,
+            counts,
+            examples,
+        }
     }
 }
 
@@ -167,6 +181,7 @@ impl LocalCseCallableObservation {
 pub struct LocalCseObservation {
     counts: LocalCseObservationCounts,
     callables: Vec<LocalCseCallableObservation>,
+    examples: Vec<RedundancySiteExample<LocalCseBlocker>>,
 }
 
 impl LocalCseObservation {
@@ -176,10 +191,18 @@ impl LocalCseObservation {
     pub fn callables(&self) -> &[LocalCseCallableObservation] {
         &self.callables
     }
+    pub fn examples(&self) -> &[RedundancySiteExample<LocalCseBlocker>] {
+        &self.examples
+    }
     pub(super) const fn new(
         counts: LocalCseObservationCounts,
         callables: Vec<LocalCseCallableObservation>,
+        examples: Vec<RedundancySiteExample<LocalCseBlocker>>,
     ) -> Self {
-        Self { counts, callables }
+        Self {
+            counts,
+            callables,
+            examples,
+        }
     }
 }

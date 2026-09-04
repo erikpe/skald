@@ -5,6 +5,8 @@ use crate::{
     mir::{MirPrimitiveCastKind, MirPrimitiveType},
 };
 
+use super::site::RedundancySiteExample;
+
 pub type PrimitiveCastCount<T> = super::count::RedundancyCount<T>;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -164,6 +166,7 @@ impl PrimitiveCastObservationCounts {
 pub struct PrimitiveCastCallableObservation {
     callable: CallableId,
     counts: PrimitiveCastObservationCounts,
+    examples: Vec<RedundancySiteExample<PrimitiveCastBlocker>>,
 }
 
 impl PrimitiveCastCallableObservation {
@@ -173,8 +176,19 @@ impl PrimitiveCastCallableObservation {
     pub const fn counts(&self) -> &PrimitiveCastObservationCounts {
         &self.counts
     }
-    pub(super) const fn new(callable: CallableId, counts: PrimitiveCastObservationCounts) -> Self {
-        Self { callable, counts }
+    pub fn examples(&self) -> &[RedundancySiteExample<PrimitiveCastBlocker>] {
+        &self.examples
+    }
+    pub(super) const fn new(
+        callable: CallableId,
+        counts: PrimitiveCastObservationCounts,
+        examples: Vec<RedundancySiteExample<PrimitiveCastBlocker>>,
+    ) -> Self {
+        Self {
+            callable,
+            counts,
+            examples,
+        }
     }
 }
 
@@ -182,6 +196,7 @@ impl PrimitiveCastCallableObservation {
 pub struct PrimitiveCastObservation {
     counts: PrimitiveCastObservationCounts,
     callables: Vec<PrimitiveCastCallableObservation>,
+    examples: Vec<RedundancySiteExample<PrimitiveCastBlocker>>,
 }
 
 impl PrimitiveCastObservation {
@@ -191,10 +206,18 @@ impl PrimitiveCastObservation {
     pub fn callables(&self) -> &[PrimitiveCastCallableObservation] {
         &self.callables
     }
+    pub fn examples(&self) -> &[RedundancySiteExample<PrimitiveCastBlocker>] {
+        &self.examples
+    }
     pub(super) const fn new(
         counts: PrimitiveCastObservationCounts,
         callables: Vec<PrimitiveCastCallableObservation>,
+        examples: Vec<RedundancySiteExample<PrimitiveCastBlocker>>,
     ) -> Self {
-        Self { counts, callables }
+        Self {
+            counts,
+            callables,
+            examples,
+        }
     }
 }

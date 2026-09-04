@@ -2,6 +2,8 @@
 
 use crate::identity::CallableId;
 
+use super::site::RedundancySiteExample;
+
 pub type ScalarSpillCount<T> = super::count::RedundancyCount<T>;
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -122,6 +124,7 @@ impl ScalarSpillProvenanceCounts {
 pub struct ScalarSpillCallableObservation {
     callable: CallableId,
     counts: ScalarSpillProvenanceCounts,
+    examples: Vec<RedundancySiteExample<ScalarSpillBlocker>>,
 }
 
 impl ScalarSpillCallableObservation {
@@ -131,8 +134,19 @@ impl ScalarSpillCallableObservation {
     pub const fn counts(&self) -> &ScalarSpillProvenanceCounts {
         &self.counts
     }
-    pub(super) const fn new(callable: CallableId, counts: ScalarSpillProvenanceCounts) -> Self {
-        Self { callable, counts }
+    pub fn examples(&self) -> &[RedundancySiteExample<ScalarSpillBlocker>] {
+        &self.examples
+    }
+    pub(super) const fn new(
+        callable: CallableId,
+        counts: ScalarSpillProvenanceCounts,
+        examples: Vec<RedundancySiteExample<ScalarSpillBlocker>>,
+    ) -> Self {
+        Self {
+            callable,
+            counts,
+            examples,
+        }
     }
 }
 
@@ -140,6 +154,7 @@ impl ScalarSpillCallableObservation {
 pub struct ScalarSpillProvenanceObservation {
     counts: ScalarSpillProvenanceCounts,
     callables: Vec<ScalarSpillCallableObservation>,
+    examples: Vec<RedundancySiteExample<ScalarSpillBlocker>>,
 }
 
 impl ScalarSpillProvenanceObservation {
@@ -149,10 +164,18 @@ impl ScalarSpillProvenanceObservation {
     pub fn callables(&self) -> &[ScalarSpillCallableObservation] {
         &self.callables
     }
+    pub fn examples(&self) -> &[RedundancySiteExample<ScalarSpillBlocker>] {
+        &self.examples
+    }
     pub(super) const fn new(
         counts: ScalarSpillProvenanceCounts,
         callables: Vec<ScalarSpillCallableObservation>,
+        examples: Vec<RedundancySiteExample<ScalarSpillBlocker>>,
     ) -> Self {
-        Self { counts, callables }
+        Self {
+            counts,
+            callables,
+            examples,
+        }
     }
 }

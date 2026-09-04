@@ -38,7 +38,8 @@ pub use redundancy::{
     LocalCseObservationCounts, LocalCseOperationFamily, LocalCseOutcome, PrimitiveCastBlocker,
     PrimitiveCastCallableObservation, PrimitiveCastConsumer, PrimitiveCastCount,
     PrimitiveCastDisposition, PrimitiveCastObservation, PrimitiveCastObservationCounts,
-    PrimitiveCastShape, ScalarSpillBlocker, ScalarSpillCallableObservation, ScalarSpillConsumer,
-    ScalarSpillCount, ScalarSpillDepth, ScalarSpillProvenanceCounts,
-    ScalarSpillProvenanceObservation, ScalarSpillUnlock,
+    PrimitiveCastShape, RedundancySiteClassification, RedundancySiteExample, ScalarSpillBlocker,
+    ScalarSpillCallableObservation, ScalarSpillConsumer, ScalarSpillCount, ScalarSpillDepth,
+    ScalarSpillProvenanceCounts, ScalarSpillProvenanceObservation, ScalarSpillUnlock,
+    REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
 };

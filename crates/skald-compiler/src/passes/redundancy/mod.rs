@@ -10,6 +10,7 @@ mod local_cse;
 mod model;
 mod primitive_cast;
 mod scalar_spill;
+mod site;
 
 pub use cast_model::{
     PrimitiveCastBlocker, PrimitiveCastCallableObservation, PrimitiveCastConsumer,
@@ -29,6 +30,10 @@ pub use model::{
 };
 pub use primitive_cast::analyze_redundant_primitive_casts;
 pub use scalar_spill::analyze_scalar_spill_provenance;
+pub use site::{
+    RedundancySiteClassification, RedundancySiteExample,
+    REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
+};
 
 #[cfg(test)]
 mod tests;

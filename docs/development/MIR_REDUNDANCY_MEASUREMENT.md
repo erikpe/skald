@@ -19,7 +19,13 @@ The tool keeps corpus resolution, real-driver checkpoint collection, stable
 report projection, aggregation, and rendering in separate internal owners.
 Compiler-side candidate semantics remain in the read-only
 `passes::redundancy` analyzers; the repository tool only projects their stable
-aggregate observations and does not maintain a second optimization model.
+observations and does not maintain a second optimization model. Each analyzer
+retains at most eight proven and eight blocked examples per observation. These
+owned examples identify the callable, block, instruction position, optional
+result value, classification, and ordered blocker reasons without retaining a
+MIR borrow or requiring a second traversal. Dense identities are audit aids
+within one compiler result and are not stable across unrelated rewrites or
+compiler revisions.
 
 Run the complete reviewed corpus with:
 
@@ -58,8 +64,9 @@ Every report records the corpus identity, compiler revision and dirty state,
 fixed target/runtime-trace/profile configuration, exact resolved pass schedule,
 canonical compilation and native-run context, assembly size, per-workload and
 per-checkpoint counts, callable breakdowns, directed overlap counts, category
-breadth, and saturating totals. Native stdin is represented by origin, optional
-repository-relative path, byte count, and SHA-256 rather than embedded content.
+breadth, bounded site examples, and saturating totals. Native stdin is
+represented by origin, optional repository-relative path, byte count, and
+SHA-256 rather than embedded content.
 
 Pass `--operational` to include compile duration. Operational durations are
 nondeterministic context and are excluded by default; they must never be used

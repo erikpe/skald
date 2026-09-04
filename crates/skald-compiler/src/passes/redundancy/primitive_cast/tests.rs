@@ -135,6 +135,11 @@ fn identities_and_safe_adjacent_chains_are_proven_and_deterministic() {
     let second = analyze_redundant_primitive_casts(&verified);
     assert_eq!(first, second);
     let counts = first.counts();
+    assert!(first.examples().iter().any(|example| {
+        example.classification() == RedundancySiteClassification::Proven
+            && example.reasons().is_empty()
+            && example.value().is_some()
+    }));
     assert_eq!(
         counts.inspected(),
         counts.interesting() + counts.non_candidates()

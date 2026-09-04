@@ -3208,8 +3208,12 @@ primitive or checked-integer evaluator to record a downstream folding unlock;
 the census does not rewrite MIR or recursively propagate speculative facts.
 Results contain deterministic program totals and callable-identity-ordered
 counts, including supporting values and instructions and explicitly labeled
-removal upper bounds. The analysis is opt-in and is not a registered MIR pass,
-report event, compiler request option, or backend input.
+removal upper bounds. Program and per-callable observations also retain owned,
+identity-sorted examples for at most eight proven and eight blocked sites.
+Every example identifies its callable, block, instruction, optional result
+value, classification, and complete ordered blocker reasons without retaining
+the verified MIR borrow. The analysis is opt-in and is not a registered MIR
+pass, report event, compiler request option, or backend input.
 
 ### Read-only primitive-cast redundancy census
 
@@ -3231,9 +3235,10 @@ requirement when collapsing two casts to one.
 
 Results are deterministic program and per-callable aggregates with exact
 shape, disposition, consumer, primary-blocker, full-barrier, supporting-value,
-supporting-instruction, and conservative removal-upper-bound counts. Creation
-origin is intentionally absent from a single-snapshot result: only the later
-corpus reporter may attribute initial lowering or an earlier pass when direct
+supporting-instruction, conservative removal-upper-bound counts, and the same
+bounded owned site examples used by the scalar-spill census. Creation origin
+is intentionally absent from a single-snapshot result: only the later corpus
+reporter may attribute initial lowering or an earlier pass when direct
 checkpoint comparison proves that origin. This opt-in census is not a MIR
 pass, compiler option, report event, or backend input.
 
@@ -3259,10 +3264,12 @@ operation/type combinations remain ordered blockers.
 Results contain deterministic program and callable-ordered totals, operation
 families, outcomes, consumers, blockers, replaceable-use counts, maximum
 repetitions per key, supporting identities, and conservative removal ceilings.
-A separate scalar-spill unlock count uses the existing narrow provenance
-analysis to identify immediate constant-equivalence overlap without adding it
-to direct CSE candidates. This is an opt-in analysis, not a registered pass,
-compiler option, report event, persistent fact table, or backend input.
+They retain the same bounded owned site examples as the other redundancy
+censuses. A separate scalar-spill unlock count uses the existing narrow
+provenance analysis to identify immediate constant-equivalence overlap without
+adding it to direct CSE candidates. This is an opt-in analysis, not a
+registered pass, compiler option, report event, persistent fact table, or
+backend input.
 
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests

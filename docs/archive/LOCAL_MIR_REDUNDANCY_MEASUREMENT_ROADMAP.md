@@ -15,8 +15,8 @@ as the compiler changes. This roadmap does not implement any of the three
 optimizations, assign them synthetic performance scores, or promise that a
 counted MIR opportunity becomes a native speedup.
 
-Implementation-specific findings outside this reviewed scope belong in the
-[local redundancy measurement discoveries](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md).
+Implementation-specific findings outside this reviewed scope were recorded
+separately while they remained actionable.
 Candidate status, placement, and prioritization remain authoritative in the
 [optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md).
 The frozen census, corpus, schema, and decision rules are authoritative in the
@@ -523,9 +523,10 @@ owner, while stable report projection and callable labeling moved from that
 mixed 678-line implementation into a private `projection` module. Corpus
 resolution, aggregation, rendering, revision inspection, digesting, and each
 compiler census retain separate cohesive owners behind concise facades. The
-surviving APIs expose stable aggregate evidence only; the bounded site-example
-extension remains an explicitly owned discovery rather than investigative
-scaffolding. No registered pass, ordinary compilation hook, hard-coded numeric
+surviving APIs exposed stable aggregate evidence only at roadmap closure; the
+subsequently completed bounded site-example extension replaced the temporary
+audit probe without changing census semantics. No registered pass, ordinary
+compilation hook, hard-coded numeric
 schedule position, duplicate semantic table, temporary probe, absolute path,
 or optimization mutation was retained. The complete corpus regenerated twice
 with byte-identical structural JSON after operational fields were excluded.

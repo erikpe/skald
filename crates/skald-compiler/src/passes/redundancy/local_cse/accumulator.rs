@@ -10,6 +10,7 @@ use crate::{
     },
 };
 
+use super::super::site::{merge_examples, RedundancySiteClassification, RedundancySiteExample};
 use super::{
     add_use_barriers, consumer, validation_barriers, LocalCseBlocker, LocalCseConsumer,
     LocalCseCount, LocalCseExcludedFamily, LocalCseObservationCounts, LocalCseOperationFamily,
@@ -21,6 +22,7 @@ pub(super) struct Accumulator {
     pub(super) counts: LocalCseObservationCounts,
     supporting_values: BTreeSet<ValueId>,
     supporting_instructions: BTreeSet<(CallableId, usize, usize)>,
+    pub(super) examples: Vec<RedundancySiteExample<LocalCseBlocker>>,
 }
 
 impl Accumulator {
@@ -97,7 +99,7 @@ impl Accumulator {
                     LocalCseConsumer::Other,
                     &mut self.counts.saturated,
                 );
-                return self.finish_candidate(barriers, LocalCseOutcome::Replaceable, 0);
+                return self.finish_candidate(repeated, barriers, LocalCseOutcome::Replaceable, 0);
             }
             Err(error) => return Err(error),
         };
@@ -119,11 +121,12 @@ impl Accumulator {
             add_use_barriers(&mut barriers, &uses, repeated.block);
             LocalCseOutcome::Replaceable
         };
-        self.finish_candidate(barriers, outcome, uses.uses().len() as u64)
+        self.finish_candidate(repeated, barriers, outcome, uses.uses().len() as u64)
     }
 
     fn finish_candidate(
         &mut self,
+        site: Site,
         barriers: BTreeSet<LocalCseBlocker>,
         outcome: LocalCseOutcome,
         replaceable_uses: u64,
@@ -140,7 +143,7 @@ impl Accumulator {
                 &mut self.counts.saturated,
             );
         }
-        if barriers.is_empty() {
+        let classification = if barriers.is_empty() {
             add(&mut self.counts.proven, 1, &mut self.counts.saturated);
             add(
                 &mut self.counts.replaceable_uses,
@@ -157,6 +160,7 @@ impl Accumulator {
                 1,
                 &mut self.counts.saturated,
             );
+            RedundancySiteClassification::Proven
         } else {
             add(&mut self.counts.blocked, 1, &mut self.counts.saturated);
             increment(
@@ -164,7 +168,19 @@ impl Accumulator {
                 *barriers.iter().next().unwrap(),
                 &mut self.counts.saturated,
             );
-        }
+            RedundancySiteClassification::Blocked
+        };
+        merge_examples(
+            &mut self.examples,
+            &[RedundancySiteExample::new(
+                site.callable,
+                site.block_id,
+                site.instruction,
+                Some(site.result),
+                classification,
+                barriers.into_iter().collect(),
+            )],
+        );
         Ok(())
     }
 
@@ -225,6 +241,7 @@ impl Accumulator {
             .extend(other.supporting_values.iter().copied());
         self.supporting_instructions
             .extend(other.supporting_instructions.iter().copied());
+        merge_examples(&mut self.examples, &other.examples);
         self.counts.saturated |= other.counts.saturated;
     }
 

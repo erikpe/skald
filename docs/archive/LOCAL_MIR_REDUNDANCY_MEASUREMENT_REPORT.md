@@ -112,10 +112,12 @@ and their source:
   no duplicated root inflated the totals. No classification discrepancy was
   found.
 
-The aggregate analyzer API currently retains callable examples rather than
-instruction-level examples. The bounded temporary audit probe was removed
-after inspection; the maintainability limitation remains tracked in the
-[measurement discoveries](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md#aggregate-analyzer-apis-do-not-retain-site-level-report-examples).
+At the time of this version-one study, the aggregate analyzer API retained
+callable examples rather than instruction-level examples, so a bounded
+temporary probe was used and then removed. The analyzer API now retains owned,
+bounded site examples with callable, block, instruction, value,
+classification, and reason detail. This later maintainability improvement does
+not change the archived measurements or recommendation.
 
 ## Benchmark context
 

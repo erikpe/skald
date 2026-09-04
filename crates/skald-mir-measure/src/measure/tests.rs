@@ -72,3 +72,39 @@ fn focused_real_driver_measurement_is_deterministic_and_has_semantic_checkpoints
         first.totals().snapshots()[2].scalar_spill().proven()
     );
 }
+
+#[test]
+fn report_examples_retain_owned_site_locations_and_classification() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut corpus = load_corpus(
+        &root,
+        Path::new("tests/measurements/local_mir_redundancy.toml"),
+    )
+    .unwrap();
+    corpus
+        .retain_ids(&BTreeSet::from(["focused/checked-protocols".to_owned()]))
+        .unwrap();
+
+    let report = measure_corpus(&root, &corpus, MeasurementOptions::default()).unwrap();
+    let final_snapshot = report.workloads()[0]
+        .snapshots()
+        .iter()
+        .find(|snapshot| snapshot.name() == "final")
+        .unwrap();
+    let example = final_snapshot
+        .scalar_spill
+        .examples
+        .first()
+        .expect("focused checked protocols retain scalar-spill examples");
+
+    assert!(example.callable.starts_with('f'));
+    assert!(example.block.contains(":b"));
+    assert!(example
+        .value
+        .as_deref()
+        .is_some_and(|value| value.contains(":v")));
+    assert!(matches!(
+        example.classification.as_str(),
+        "proven" | "blocked"
+    ));
+}

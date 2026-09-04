@@ -8,8 +8,8 @@ use crate::{
         rewrite::{
             value_use_sites_for_definition, MirLocalIdentitySite, MirRewriteError, MirValueUseRole,
         },
-        MirDefinitionRef, MirInstruction, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveType,
-        MirRvalueKind, MirTerminator, ValueId,
+        BlockId, MirDefinitionRef, MirInstruction, MirPrimitiveCast, MirPrimitiveCastKind,
+        MirPrimitiveType, MirRvalueKind, MirTerminator, ValueId,
     },
     passes::VerifiedFinalMirProgram,
 };
@@ -19,6 +19,7 @@ use super::cast_model::{
     PrimitiveCastCount, PrimitiveCastDisposition, PrimitiveCastObservation,
     PrimitiveCastObservationCounts, PrimitiveCastShape,
 };
+use super::site::{merge_examples, RedundancySiteClassification, RedundancySiteExample};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Composition {
@@ -34,6 +35,7 @@ enum Composition {
 struct CastSite {
     callable: CallableId,
     block: usize,
+    block_id: BlockId,
     instruction: usize,
     result: ValueId,
     operation: MirPrimitiveCast,
@@ -54,9 +56,11 @@ pub fn analyze_redundant_primitive_casts(
         if observed.has_observations() {
             total.merge(&observed);
             let affected = u64::from(observed.counts.interesting != 0);
+            let examples = observed.examples.clone();
             callables.push(PrimitiveCastCallableObservation::new(
                 callable,
                 observed.finish(affected),
+                examples,
             ));
         }
     }
@@ -64,7 +68,8 @@ pub fn analyze_redundant_primitive_casts(
         .iter()
         .filter(|observation| observation.counts().interesting() != 0)
         .count() as u64;
-    PrimitiveCastObservation::new(total.finish(affected_callables), callables)
+    let examples = total.examples.clone();
+    PrimitiveCastObservation::new(total.finish(affected_callables), callables, examples)
 }
 
 fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, MirRewriteError> {
@@ -229,6 +234,7 @@ fn cast_sites(definition: MirDefinitionRef<'_>) -> Vec<CastSite> {
                     Some(CastSite {
                         callable: definition.callable(),
                         block,
+                        block_id: body.id,
                         instruction,
                         result: assignment.result,
                         operation,
@@ -378,6 +384,7 @@ struct Accumulator {
     counts: PrimitiveCastObservationCounts,
     supporting_values: BTreeSet<ValueId>,
     supporting_instructions: BTreeSet<(CallableId, usize, usize)>,
+    examples: Vec<RedundancySiteExample<PrimitiveCastBlocker>>,
 }
 
 impl Accumulator {
@@ -451,7 +458,7 @@ impl Accumulator {
         for barrier in barriers.iter().copied() {
             self.increment_barrier(barrier);
         }
-        if barriers.is_empty() && removable {
+        let classification = if barriers.is_empty() && removable {
             add(&mut self.counts.proven, 1, &mut self.counts.saturated);
             add(
                 &mut self.counts.removable_values_upper_bound,
@@ -463,6 +470,7 @@ impl Accumulator {
                 1,
                 &mut self.counts.saturated,
             );
+            RedundancySiteClassification::Proven
         } else {
             add(&mut self.counts.blocked, 1, &mut self.counts.saturated);
             let blocker = barriers
@@ -475,7 +483,19 @@ impl Accumulator {
                 blocker,
                 &mut self.counts.saturated,
             );
-        }
+            RedundancySiteClassification::Blocked
+        };
+        merge_examples(
+            &mut self.examples,
+            &[RedundancySiteExample::new(
+                site.callable,
+                site.block_id,
+                site.instruction,
+                Some(site.result),
+                classification,
+                barriers.into_iter().collect(),
+            )],
+        );
     }
 
     fn merge(&mut self, other: &Self) {
@@ -526,6 +546,7 @@ impl Accumulator {
             .extend(other.supporting_values.iter().copied());
         self.supporting_instructions
             .extend(other.supporting_instructions.iter().copied());
+        merge_examples(&mut self.examples, &other.examples);
     }
 
     fn finish(mut self, affected_callables: u64) -> PrimitiveCastObservationCounts {

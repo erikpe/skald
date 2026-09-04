@@ -7,7 +7,7 @@ use crate::{
         MirPrimitiveCast, MirPrimitiveComparison, MirRvalueKind, MirStorage, MirStorageKind,
         MirTerminator, MirType, MirUnaryOperation, MirValue, StorageId, ValueId,
     },
-    passes::verify_final_mir,
+    passes::{verify_final_mir, RedundancySiteClassification},
     test_support::lower_source_to_final_mir,
 };
 
@@ -88,6 +88,12 @@ fn exact_repeats_count_replaceable_and_dead_results_without_mutating_mir() {
 
     assert_eq!(first, second);
     assert_eq!(verified.program(), &program);
+    assert_eq!(first.examples().len(), 2);
+    assert!(first.examples().iter().all(|example| {
+        example.classification() == RedundancySiteClassification::Proven
+            && example.reasons().is_empty()
+            && example.value().is_some()
+    }));
     assert_eq!(counts.inspected(), 4);
     assert_eq!(counts.interesting(), 2);
     assert_eq!(counts.proven(), 2);

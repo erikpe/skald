@@ -21,13 +21,6 @@ follow-up, foundation-dependent, contract-dependent, and research work. It is
 not an implementation roadmap.
 
 The open
-[local final-MIR redundancy measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md)
-records an actionable evidence-format finding from the completed measurement
-work. Ordinary census results belong in the
-[durable report](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md), not in
-the discoveries record.
-
-The open
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
 record the proof-coupled CFG barrier that remains after the completed local
 simplification layer. It is the evidence input for a future proof-provenance
