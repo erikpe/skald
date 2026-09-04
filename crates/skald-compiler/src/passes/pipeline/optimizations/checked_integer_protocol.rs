@@ -71,7 +71,7 @@ impl CheckedIntegerProtocolCheck {
         }
     }
 
-    const fn operands(self) -> [(StorageId, MirType); 2] {
+    pub(super) const fn operands(self) -> [(StorageId, MirType); 2] {
         match self {
             Self::Division(check) => [
                 (check.dividend, check.operation.operand_type()),
@@ -84,14 +84,14 @@ impl CheckedIntegerProtocolCheck {
         }
     }
 
-    const fn result(self) -> (StorageId, MirType) {
+    pub(super) const fn result(self) -> (StorageId, MirType) {
         match self {
             Self::Division(check) => (check.result, check.operation.result_type()),
             Self::Shift(check) => (check.result, check.operation.result_type()),
         }
     }
 
-    const fn failure_reason(self) -> MirTerminationReason {
+    pub(super) const fn failure_reason(self) -> MirTerminationReason {
         match self {
             Self::Division(check) => check.operation.failure_reason(),
             Self::Shift(check) => check.operation.failure_reason(),

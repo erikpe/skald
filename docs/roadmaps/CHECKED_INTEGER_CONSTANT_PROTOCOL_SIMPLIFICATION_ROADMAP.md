@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 and CIR1 are complete and CIR2 is next.
+Status: in progress; CIR0 through CIR2 are complete and CIR3 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -109,7 +109,7 @@ Candidate placement and status remain authoritative in the
 
 - [x] CIR0 — Implement exact checked-integer constant evaluation
 - [x] CIR1 — Model verified checked-protocol candidates
-- [ ] CIR2 — Add atomic successful-protocol rewriting
+- [x] CIR2 — Add atomic successful-protocol rewriting
 - [ ] CIR3 — Fold constant integer division and remainder protocols
 - [ ] CIR4 — Fold constant integer shift protocols
 - [ ] CIR5 — Register selection and structured measurements
@@ -210,22 +210,22 @@ compiler suite and repository static checks accept the query.
 **Purpose:** Make the multi-entity transformation one coherent operation that
 cannot expose an unchecked division or shift to verification.
 
-- [ ] Add a pass-private rewrite transaction shared by division/remainder and
+- [x] Add a pass-private rewrite transaction shared by division/remainder and
       shift candidates; extend the generic callable edit facade only if one
       genuinely reusable structural primitive is missing.
-- [ ] Revalidate the candidate against live sparse edit state before mutation
+- [x] Revalidate the candidate against live sparse edit state before mutation
       and return a structured rewrite error for a stale or mismatched snapshot.
-- [ ] Replace the dedicated checked terminator with a span-preserving `Goto`
+- [x] Replace the dedicated checked terminator with a span-preserving `Goto`
       to the existing success block.
-- [ ] Rewrite the checked success assignment in place to the exact constant,
+- [x] Rewrite the checked success assignment in place to the exact constant,
       preserving its result `ValueId`, declared type, instruction position, and
       checked-expression span.
-- [ ] Remove the two now-unused success operand-load instructions and matching
+- [x] Remove the two now-unused success operand-load instructions and matching
       value declarations in the same callable transaction.
-- [ ] Retain the result store, join reload, storage declarations and lifecycle,
+- [x] Retain the result store, join reload, storage declarations and lifecycle,
       and all proof/lifecycle records; do not merge blocks or delete the
       failure region in this transaction.
-- [ ] Commit once per changed callable, compact all local identities
+- [x] Commit once per changed callable, compact all local identities
       deterministically, invalidate seal-bound facts, and rely on central
       immediate final-MIR and lifecycle-realization verification.
 
@@ -238,6 +238,19 @@ complete transaction.
 **Exit criteria:** One exact candidate can become verifier-valid ordinary MIR
 without any intermediate unchecked operation, dangling identity, or partial
 checked protocol.
+
+**Completion evidence:** One pass-private transaction now revalidates every
+captured block, value, storage, instruction, edge, unique write, predecessor,
+dominance, and protected-root condition against live sparse callable state
+before changing it. The shared division/remainder and shift path replaces the
+check edge and result assignment together, removes exactly the two private
+load definitions, and lets the existing single callable commit perform dense
+remapping and resealing. Focused tests cover both protocol families, retained
+result/store/reload semantics and spans, unchanged storage, proof and static
+lifecycle metadata, deterministic dense maps, stale/foreign/deleted failures
+without partial mutation, and central-verifier rejection of either incomplete
+half of the rewrite. The full compiler suite and repository static checks
+accept the transaction without activating a new pass.
 
 ### CIR3 — Fold constant integer division and remainder protocols
 

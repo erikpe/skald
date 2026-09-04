@@ -5,6 +5,8 @@
 mod checked_integer_evaluation;
 #[allow(dead_code)]
 mod checked_integer_protocol;
+#[allow(dead_code)]
+mod checked_integer_rewrite;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 mod primitive_algebra;

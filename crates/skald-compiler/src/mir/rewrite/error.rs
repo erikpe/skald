@@ -54,6 +54,10 @@ pub(crate) enum MirRewriteError {
     MissingBlockTerminator {
         block: super::super::BlockId,
     },
+    StaleCallableSnapshot {
+        callable: CallableId,
+        subject: &'static str,
+    },
     InvalidValueDefinitionSite {
         value: super::super::ValueId,
         site: MirLocalIdentitySite,
@@ -178,6 +182,10 @@ impl fmt::Display for MirRewriteError {
             Self::MissingBlockTerminator { block } => {
                 write!(formatter, "block {block} has no control-flow terminator")
             }
+            Self::StaleCallableSnapshot { callable, subject } => write!(
+                formatter,
+                "callable {callable} no longer matches the captured {subject} snapshot"
+            ),
             Self::InvalidValueDefinitionSite { value, site } => {
                 write!(formatter, "value {value} has a non-instruction definition at {site}")
             }
