@@ -447,9 +447,11 @@ reachability facts.
 
 A normalization failure has its own pipeline failure stage and prevents every
 final-stage occurrence, backend phase, and final checkpoint. The
-`post-proof-unreachable-block-elimination` canary remains an ordinary
-selectable final-stage pass with processed/changed callable and removed
-block/value counters. `whole-world-reachability` remains an ordinary
+`post-proof-unreachable-block-elimination` canary is an ordinary selectable
+final-stage pass with processed/changed callable counts and deterministic
+removed-block, removed-value-declaration, and permanent-root-retention
+measurements. It is registered but not yet selected by the default
+profile. `whole-world-reachability` remains an ordinary
 final-stage occurrence with its existing pass-owned metrics and stage-bearing
 trace record.
 

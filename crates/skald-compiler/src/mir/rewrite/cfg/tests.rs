@@ -17,9 +17,11 @@ use crate::mir::rewrite::{
 fn ordinary_function_and_member_use_the_body_entry_as_the_executable_root() {
     let function = simple_function();
     let function_facts = local_cfg_facts_for_definition((&function).into()).unwrap();
+    let final_function_facts = final_cfg_facts_for_definition((&function).into()).unwrap();
     assert_eq!(function_facts.entry(), function.body.entry);
     assert!(function_facts.protected_roots().is_empty());
     assert_eq!(function_facts.entry_reachable(), &[function.body.entry]);
+    assert_eq!(final_function_facts, function_facts);
 
     let span = function.span;
     let class = ClassId::new(7);
@@ -47,12 +49,14 @@ fn static_publication_roots_protect_initialization_and_shutdown_regions() {
     ];
 
     let dense = local_cfg_facts_for_definition((&initializer).into()).unwrap();
+    let final_dense = final_cfg_facts_for_definition((&initializer).into()).unwrap();
     assert_eq!(dense.protected_roots(), expected_roots);
     assert_eq!(
         dense.protected_but_entry_unreachable(),
         &[BlockId::new(owner, 1), BlockId::new(owner, 2)]
     );
     assert_eq!(dense.unreachable(), &[]);
+    assert_eq!(final_dense, dense);
 
     let mut package = MirCallablePackage::from_static_initializer(initializer).unwrap();
     let sparse = package.edit_mut().local_cfg_facts().unwrap();
@@ -92,6 +96,13 @@ fn every_path_and_logical_block_role_is_a_stable_protected_root() {
             root(MirLocalIdentitySite::LogicalExpression(0), block(2)),
         ]
     );
+    assert!(matches!(
+        final_cfg_facts_for_definition((&definition).into()),
+        Err(MirRewriteError::ConsumedProofRootInFinalCfg {
+            site: MirLocalIdentitySite::PathCondition(0),
+            block,
+        }) if block == BlockId::new(owner, 1)
+    ));
 }
 
 #[test]

@@ -1062,7 +1062,8 @@ normalization transaction, the two sealed products, stage-aware policy and
 observation, final-stage reachability, and normalized-only backend input are
 implemented and covered by focused tests. Every production pipeline,
 including `none`, crosses that boundary before returning backend-ready MIR.
-The post-proof CFG canary and broader validation remain later roadmap work.
+The post-proof CFG canary is registered and selectable; default-schedule
+activation and the broader parity matrix remain later roadmap work.
 
 The verifier now owns one exhaustive classification boundary for proof
 records, callable-local identity sites, storage kinds, rvalues, instructions,
@@ -1143,12 +1144,22 @@ still performing one complete proof verification, mandatory normalization,
 and one normalized verification. Listing shows pass stage but does not list
 the normalizer.
 
-The first final-stage production pass will be
-`post-proof-unreachable-block-elimination`. It removes blocks unreachable from
-callable executable entries and permanent roots, plus transient values defined
-there. Body entry, static-publication endpoints, lifecycle authority, and all
-other continuing semantic attachments remain roots. Whole-world reachability
-runs after this canary so removed call sites can reduce retained definitions.
+The registered `post-proof-unreachable-block-elimination` final-stage pass
+removes blocks unreachable from callable executable entries and permanent
+roots, plus transient values defined there. Its normalized CFG query rejects
+consumed proof roots and includes body entry and static-publication endpoints;
+checked failures and other continuing protocols remain reachable through
+ordinary executable edges. The pass uses a final-stage edit capability which
+can only inspect normalized CFG facts and delete the exact unreachable blocks
+and their block-owned values from a still-current snapshot. It cannot mutate
+storage, instructions, terminators, proof records, or lifecycle authority.
+
+The canary reports removed blocks, removed value declarations, and permanent
+roots retained outside entry reachability. It is registered, listed, and
+available to exact compiler-internal schedules, but is intentionally absent
+from the current `default` profile until the complete activation and parity
+matrix is delivered. When scheduled before whole-world reachability, removed
+call sites can reduce retained definitions.
 Empty-block forwarding, block merging, jump threading, storage deletion,
 checked-protocol normalization, and loop transformations remain separate
 designs.

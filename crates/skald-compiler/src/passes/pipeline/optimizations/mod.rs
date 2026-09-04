@@ -6,6 +6,7 @@ mod checked_integer_protocol;
 mod checked_integer_rewrite;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
+pub(in crate::passes::pipeline) mod post_proof_unreachable_block_elimination;
 mod primitive_algebra;
 pub(in crate::passes::pipeline) mod primitive_algebraic_simplification;
 pub(in crate::passes::pipeline) mod primitive_constant_folding;

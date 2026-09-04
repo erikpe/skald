@@ -161,6 +161,7 @@ errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
 `checked-integer-constant-folding`, `conservative-cfg-cleanup`,
 `dead-pure-definition-elimination`,
+`post-proof-unreachable-block-elimination`,
 `primitive-algebraic-simplification`, `primitive-constant-folding`, and
 `whole-world-reachability` names.
 `--list-mir-passes` succeeds without
@@ -282,8 +283,10 @@ registered, selected, or repeated. Registry descriptors and
 `--list-mir-passes` show each pass's `proof-rich` or `final` stage, exact
 schedules reject proof-rich occurrences after the final boundary, and typed
 callbacks cannot accept both seals. Current local passes are proof-rich;
-`whole-world-reachability` runs in the final region. The later final-stage
-canary will be inserted before reachability.
+`post-proof-unreachable-block-elimination` and `whole-world-reachability` run
+in the final region. The post-proof canary is registered for explicit and
+compiler-internal schedules but is not yet selected by `default`; schedule
+activation remains part of the broader parity work.
 
 Inspection exposes a closed borrowed checkpoint view. Proof-rich input and
 after-pass checkpoints carry only `VerifiedProofMirProgram`; the single

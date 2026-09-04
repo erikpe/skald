@@ -196,8 +196,8 @@ and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
 Verifier classification, atomic normalization, the two sealed products,
 stage-aware policy and observation, normalized-only reachability retention,
-and backend consumption are implemented. The post-proof canary remains a
-later task.
+backend consumption, and the selectable post-proof CFG canary are implemented.
+Default-profile activation remains a later task.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
@@ -221,11 +221,13 @@ pin stage-typed checkpoint order, normalization failure cutoff, final-only
 reachability, normalization metric order, trace stage identity, quiet gating,
 and report-writer isolation.
 
-The post-proof canary must demonstrate removal of a block retained solely by
-path/logical provenance while preserving body entry, static-publication and
-shutdown endpoints, checked failures, loops, ownership work, and every other
-permanent root. Whole-world tests must show that call sites removed by that
-canary affect only the later final retention occurrence.
+Focused post-proof canary tests demonstrate removal of disconnected blocks and
+values, including a region retained solely by path/logical provenance before
+normalization. They cover deterministic dense recompaction, repeated changed-
+then-unchanged execution, functions, methods, static initializers, lifecycle
+authority, permanent CFG roots, loops, empty reachable blocks, checked-failure
+edges, stale snapshot rejection, final resealing, and subsequent whole-world
+removal of a call target whose only site was deleted.
 
 Dedicated goldens will compare default, `none`, canary-disabled,
 reachability-disabled, and all-pass-disabled modes across short-circuit logic,

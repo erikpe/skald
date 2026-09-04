@@ -1,4 +1,6 @@
-use crate::mir::rewrite::{MirProgramRewriteResult, MirRewriteChangeSummary};
+use crate::mir::rewrite::{
+    MirCallableRewriteResult, MirProgramRewriteResult, MirRewriteChangeSummary,
+};
 
 use super::{
     measurement::{MirPassMeasurement, MirPassOccurrenceRecord},
@@ -125,8 +127,15 @@ impl MirPipelineStatistics {
         &mut self,
         rewrite: &MirProgramRewriteResult,
     ) -> MirRewriteChangeSummary {
+        self.record_callable_rewrites(&rewrite.callables)
+    }
+
+    pub(super) fn record_callable_rewrites(
+        &mut self,
+        callables: &[MirCallableRewriteResult],
+    ) -> MirRewriteChangeSummary {
         let mut changes = MirRewriteChangeSummary::default();
-        for callable in &rewrite.callables {
+        for callable in callables {
             changes.accumulate(callable.changes);
             self.rewrite_changes.accumulate(callable.changes);
         }

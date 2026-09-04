@@ -1103,7 +1103,7 @@ closure.
 
 ## Frozen proof-normalized final-MIR boundary
 
-Status: **implemented through backend and reachability migration**. The frozen
+Status: **implemented through the selectable post-proof CFG canary**. The frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
@@ -1111,7 +1111,9 @@ make `VerifiedFinalMirProgram` mean normalized backend-ready MIR. Complete
 proof verification, mandatory normalization, normalized verification, and
 fresh final-seal reachability are active for every pipeline profile. Explicit
 final-stage reachability ownership and the normalized-only backend boundary are
-implemented; the later post-proof CFG canary remains roadmap work.
+implemented. The post-proof unreachable-block canary now exercises normalized
+block/value deletion and fresh resealing without changing the default profile;
+full schedule activation and parity remain roadmap work.
 
 The backend boundary accepts no path-condition or logical-expression
 record, no path-condition rvalue, and no `PathCondition` storage declaration.

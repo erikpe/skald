@@ -7,13 +7,17 @@ use crate::{
             prepare_reachable_definition_retention, MirDefinitionRetention,
             MirDefinitionRetentionSummary,
         },
-        rewrite::{rewrite_program, MirCallableEdit, MirProgramRewriteResult, MirRewriteError},
+        rewrite::{
+            rewrite_program, MirCallableEdit, MirCallableRewriteResult, MirProgramRewriteResult,
+            MirRewriteError,
+        },
     },
 };
 
 use super::super::{
     seal::UnverifiedFinalMirProgram, VerifiedFinalMirProgram, VerifiedProofMirProgram,
 };
+use super::final_cfg::MirFinalCfgEdit;
 use super::measurement::MirPassMeasurement;
 
 /// Deterministic internal failure reported by a pass outside dense commit.
@@ -240,6 +244,27 @@ impl MirFinalPassCapability {
         })
     }
 
+    /// Runs one atomic all-program rewrite through the normalized CFG-only
+    /// edit surface.
+    pub(in crate::passes::pipeline) fn rewrite_cfg(
+        self,
+        mut rewrite: impl FnMut(CallableId, &mut MirFinalCfgEdit<'_>) -> Result<(), MirRewriteError>,
+    ) -> Result<MirFinalChangedProgram, MirPassFailure> {
+        let invalidated = self.verified.invalidate_for_final_transformation();
+        let (program, authority) = invalidated.into_parts();
+        let rewrite = rewrite_program(program, |callable, edit| {
+            rewrite(callable, &mut MirFinalCfgEdit::new(edit))
+        })
+        .map_err(MirPassFailure::Rewrite)?;
+        let MirProgramRewriteResult { program, callables } = rewrite;
+        Ok(MirFinalChangedProgram {
+            rewrite: MirFinalRewriteChange {
+                unverified: UnverifiedFinalMirProgram::from_parts(program, authority),
+                callables,
+            },
+        })
+    }
+
     /// Prepares exact definition retention from reachability facts sealed to
     /// this normalized product.
     #[allow(dead_code)]
@@ -270,6 +295,47 @@ impl MirFinalPassCapability {
                 }
             }
         })
+    }
+}
+
+/// Successful normalized CFG commit awaiting pass-owned change accounting.
+pub(in crate::passes::pipeline) struct MirFinalChangedProgram {
+    rewrite: MirFinalRewriteChange,
+}
+
+impl MirFinalChangedProgram {
+    pub(in crate::passes::pipeline) fn finish(
+        self,
+        data: MirPassData,
+    ) -> Result<MirFinalPassOutcome, MirPassFailure> {
+        if data.changed_callables() > self.rewrite.callables.len() {
+            return Err(MirPassFailure::execution(format!(
+                "pass reported {} changed callables after processing only {}",
+                data.changed_callables(),
+                self.rewrite.callables.len()
+            )));
+        }
+        let data = data.with_processed_callables(self.rewrite.callables.len());
+        Ok(MirFinalPassOutcome::Changed {
+            change: MirFinalPassChange::Rewrite(self.rewrite),
+            data,
+        })
+    }
+}
+
+/// Invalidated final seal plus dense rewrite reports for one CFG transaction.
+pub(in crate::passes::pipeline) struct MirFinalRewriteChange {
+    unverified: UnverifiedFinalMirProgram,
+    callables: Vec<MirCallableRewriteResult>,
+}
+
+impl MirFinalRewriteChange {
+    pub(super) fn callables(&self) -> &[MirCallableRewriteResult] {
+        &self.callables
+    }
+
+    pub(super) fn into_unverified(self) -> UnverifiedFinalMirProgram {
+        self.unverified
     }
 }
 
@@ -322,6 +388,7 @@ impl MirFinalDefinitionRetentionOutcome {
 /// Invalidated normalized MIR from one supported final-stage owner.
 pub(in crate::passes::pipeline) enum MirFinalPassChange {
     DefinitionRetention(UnverifiedFinalMirProgram),
+    Rewrite(MirFinalRewriteChange),
 }
 
 /// Explicit ownership result from one final-stage pass occurrence.

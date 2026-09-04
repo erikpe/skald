@@ -283,8 +283,15 @@ fn run_mir_pipeline_with_transition(
             }
             MirFinalPassOutcome::Changed { change, data } => {
                 statistics.record_pass_data(occurrence, &data);
-                let MirFinalPassChange::DefinitionRetention(unverified) = change;
-                let rewrite_changes = Default::default();
+                let (unverified, rewrite_changes) = match change {
+                    MirFinalPassChange::DefinitionRetention(unverified) => {
+                        (unverified, Default::default())
+                    }
+                    MirFinalPassChange::Rewrite(rewrite) => {
+                        let changes = statistics.record_callable_rewrites(rewrite.callables());
+                        (rewrite.into_unverified(), changes)
+                    }
+                };
                 statistics.record_verification();
                 verified = match reseal_final_mir(unverified) {
                     Ok(verified) => {

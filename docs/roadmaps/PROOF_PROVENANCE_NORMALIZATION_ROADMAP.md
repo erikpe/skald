@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 through PNR5 are complete and PNR6 is next.
+Status: in progress; PNR0 through PNR6 are complete and PNR7 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -113,7 +113,7 @@ Candidate placement and status remain concise in the
 - [x] PNR3 — Make pass policy and execution stage aware
 - [x] PNR4 — Expose stage-aware inspection, failures, and reporting
 - [x] PNR5 — Migrate reachability and backend consumption
-- [ ] PNR6 — Add post-proof unreachable-block elimination
+- [x] PNR6 — Add post-proof unreachable-block elimination
 - [ ] PNR7 — Activate and validate the two-stage production schedule
 - [ ] PNR8 — Harden ownership, documentation, and roadmap closure
 
@@ -326,23 +326,23 @@ and existing complete/sparse backend behavior remains semantically identical.
 **Purpose:** Prove the architecture removes the original optimization barrier
 with one conservative, independently selectable production transformation.
 
-- [ ] Add a final-stage CFG root query containing body entry,
+- [x] Add a final-stage CFG root query containing body entry,
   static-publication endpoints, and every remaining permanent semantic
   attachment, but no consumed proof root.
-- [ ] Add a final-stage rewrite capability limited to reviewed ordinary edge,
+- [x] Add a final-stage rewrite capability limited to reviewed ordinary edge,
   block, and transient-value deletion operations.
-- [ ] Register `post-proof-unreachable-block-elimination` with one private
+- [x] Register `post-proof-unreachable-block-elimination` with one private
   numeric identity, exact description, `Final` stage, and deterministic
   measurements.
-- [ ] Compute executable reachability from all permanent entries and delete
+- [x] Compute executable reachability from all permanent entries and delete
   only unreachable blocks plus transient values defined in them.
-- [ ] Reuse the dense atomic transaction and reject dangling values,
+- [x] Reuse the dense atomic transaction and reject dangling values,
   successors, attachments, lifecycle records, or foreign identities.
-- [ ] Report processed/changed callables, removed blocks/values, and retained
+- [x] Report processed/changed callables, removed blocks/values, and retained
   permanent unreachable roots without logging or formatting in the pass.
-- [ ] Keep empty blocks, same-target/constant branch policy, storage
+- [x] Keep empty blocks, same-target/constant branch policy, storage
   declarations, stores, optional guards, and checked protocols unchanged.
-- [ ] Add listing, selection, exclusion, repetition, and unchanged-result
+- [x] Add listing, selection, exclusion, repetition, and unchanged-result
   behavior without activating the default occurrence yet.
 
 **Tests:** Formerly proof-protected dead logical regions; nested logical CFG;

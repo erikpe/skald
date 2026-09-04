@@ -1,6 +1,7 @@
 //! Verified ownership transfer and deterministic final-MIR pass execution.
 
 mod error;
+mod final_cfg;
 mod inspection;
 mod measurement;
 mod model;

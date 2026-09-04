@@ -119,6 +119,21 @@ impl MirLocalCfgFacts {
 pub(crate) fn local_cfg_facts_for_definition(
     definition: MirDefinitionRef<'_>,
 ) -> Result<MirLocalCfgFacts, MirRewriteError> {
+    cfg_facts_for_definition(definition, MirCfgRootContract::ProofRich)
+}
+
+/// Computes executable CFG facts using only roots valid after proof
+/// provenance has been consumed.
+pub(crate) fn final_cfg_facts_for_definition(
+    definition: MirDefinitionRef<'_>,
+) -> Result<MirLocalCfgFacts, MirRewriteError> {
+    cfg_facts_for_definition(definition, MirCfgRootContract::Final)
+}
+
+fn cfg_facts_for_definition(
+    definition: MirDefinitionRef<'_>,
+    root_contract: MirCfgRootContract,
+) -> Result<MirLocalCfgFacts, MirRewriteError> {
     let callable = definition.callable();
     let mut blocks = Vec::with_capacity(definition.body().blocks.len());
     for (index, block) in definition.body().blocks.iter().enumerate() {
@@ -140,7 +155,7 @@ pub(crate) fn local_cfg_facts_for_definition(
         }
     }
 
-    let mut roots = RootCollector::default();
+    let mut roots = RootCollector::new(root_contract);
     observe_definition_local_identities(definition, &mut roots)?;
     let entry = roots.entry.ok_or(MirRewriteError::InvalidReference {
         expected: callable,
@@ -165,6 +180,18 @@ pub(crate) fn local_cfg_facts_for_definition(
 impl MirCallableEdit {
     /// Computes CFG facts from the current sparse edit snapshot.
     pub(crate) fn local_cfg_facts(&self) -> Result<MirLocalCfgFacts, MirRewriteError> {
+        self.cfg_facts(MirCfgRootContract::ProofRich)
+    }
+
+    /// Computes executable CFG facts from a normalized sparse edit snapshot.
+    pub(crate) fn final_cfg_facts(&self) -> Result<MirLocalCfgFacts, MirRewriteError> {
+        self.cfg_facts(MirCfgRootContract::Final)
+    }
+
+    fn cfg_facts(
+        &self,
+        root_contract: MirCfgRootContract,
+    ) -> Result<MirLocalCfgFacts, MirRewriteError> {
         let callable = self.callable();
         let mut seen = BTreeSet::new();
         let mut blocks = Vec::with_capacity(self.block_order().len());
@@ -198,7 +225,7 @@ impl MirCallableEdit {
             }
         }
 
-        let mut roots = RootCollector::default();
+        let mut roots = RootCollector::new(root_contract);
         self.observe_cfg_roots(&mut roots)?;
         let entry = roots.entry.ok_or(MirRewriteError::InvalidReference {
             expected: callable,
@@ -319,10 +346,26 @@ fn closure(
     reachable
 }
 
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MirCfgRootContract {
+    ProofRich,
+    Final,
+}
+
 struct RootCollector {
+    contract: MirCfgRootContract,
     entry: Option<BlockId>,
     protected: Vec<MirProtectedBlockRoot>,
+}
+
+impl RootCollector {
+    const fn new(contract: MirCfgRootContract) -> Self {
+        Self {
+            contract,
+            entry: None,
+            protected: Vec::new(),
+        }
+    }
 }
 
 impl MirLocalIdentityObserver for RootCollector {
@@ -335,9 +378,17 @@ impl MirLocalIdentityObserver for RootCollector {
     ) -> Result<(), Self::Error> {
         match classify_local_identity_site(site) {
             MirIdentitySiteRole::BodyEntry => self.entry = Some(block),
-            MirIdentitySiteRole::PermanentAttachment | MirIdentitySiteRole::ConsumableProof => {
+            MirIdentitySiteRole::PermanentAttachment => {
                 self.protected.push(MirProtectedBlockRoot { site, block });
             }
+            MirIdentitySiteRole::ConsumableProof => match self.contract {
+                MirCfgRootContract::ProofRich => {
+                    self.protected.push(MirProtectedBlockRoot { site, block });
+                }
+                MirCfgRootContract::Final => {
+                    return Err(MirRewriteError::ConsumedProofRootInFinalCfg { block, site });
+                }
+            },
             MirIdentitySiteRole::Ordinary => {}
         }
         Ok(())

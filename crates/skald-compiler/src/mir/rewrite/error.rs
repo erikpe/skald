@@ -62,6 +62,10 @@ pub(crate) enum MirRewriteError {
         value: super::super::ValueId,
         site: MirLocalIdentitySite,
     },
+    ConsumedProofRootInFinalCfg {
+        block: super::super::BlockId,
+        site: MirLocalIdentitySite,
+    },
     PathParentNotEarlier {
         condition: super::super::PathConditionId,
         parent: super::super::PathConditionId,
@@ -194,6 +198,10 @@ impl fmt::Display for MirRewriteError {
             Self::InvalidValueDefinitionSite { value, site } => {
                 write!(formatter, "value {value} has a non-instruction definition at {site}")
             }
+            Self::ConsumedProofRootInFinalCfg { block, site } => write!(
+                formatter,
+                "normalized CFG root {block} at {site} retains consumed proof provenance"
+            ),
             Self::PathParentNotEarlier { condition, parent } => write!(
                 formatter,
                 "path condition {condition} requires earlier parent {parent}"
