@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 through CIR2 are complete and CIR3 is next.
+Status: in progress; CIR0 through CIR3 are complete and CIR4 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -110,7 +110,7 @@ Candidate placement and status remain authoritative in the
 - [x] CIR0 — Implement exact checked-integer constant evaluation
 - [x] CIR1 — Model verified checked-protocol candidates
 - [x] CIR2 — Add atomic successful-protocol rewriting
-- [ ] CIR3 — Fold constant integer division and remainder protocols
+- [x] CIR3 — Fold constant integer division and remainder protocols
 - [ ] CIR4 — Fold constant integer shift protocols
 - [ ] CIR5 — Register selection and structured measurements
 - [ ] CIR6 — Activate and compose the default schedule
@@ -257,18 +257,18 @@ accept the transaction without activating a new pass.
 **Purpose:** Deliver FMC-01 over all Skald integer types using the shared
 evaluation, candidate, and rewrite owners.
 
-- [ ] Implement the division/remainder transformation over deterministic
+- [x] Implement the division/remainder transformation over deterministic
       callable and block order.
-- [ ] Fold `i64`, `u64`, and `u8` quotient protocols with nonzero constant
+- [x] Fold `i64`, `u64`, and `u8` quotient protocols with nonzero constant
       divisors.
-- [ ] Fold the matching remainder protocols with exact unsigned or
+- [x] Fold the matching remainder protocols with exact unsigned or
       divisor-sign semantics.
-- [ ] Cover the defined signed-minimum quotient/remainder pair without
+- [x] Cover the defined signed-minimum quotient/remainder pair without
       producing a failure or depending on a host division instruction.
-- [ ] Leave zero-divisor protocols, one-dynamic-operand protocols, noncanonical
+- [x] Leave zero-divisor protocols, one-dynamic-operand protocols, noncanonical
       or protected protocols, and all other checked families byte-for-byte
       unchanged by this transformation.
-- [ ] Preserve operand computation and carrier-store order even when their
+- [x] Preserve operand computation and carrier-store order even when their
       values become structurally redundant.
 
 **Tests:** Focused MIR fixtures for all six operation/type combinations and
@@ -280,6 +280,19 @@ verification; and repeat-run idempotence.
 **Exit criteria:** Every eligible constant quotient and remainder protocol
 folds exactly once, while every failure-bearing or insufficiently proven case
 retains the original checked behavior.
+
+**Completion evidence:** A seal-local fold plan now discovers successful
+division and remainder candidates in deterministic callable and block order,
+groups them by callable, and applies all candidates through the shared atomic
+protocol transaction before one dense commit. Focused tests cover quotient
+and remainder for `i64`, `u64`, and `u8`, floor/divisor-sign quadrants, the
+signed-minimum pair, constants exposed by ordinary primitive folding, exact
+spans and result identities, retained operand assignments and stores, dense
+compaction, verification, and repeat planning. Zero divisors, dynamic and
+failure-bearing operands, protected or noncanonical protocols, and shift
+callables remain unchanged. The full compiler suite, workspace static checks,
+documentation validation, and supported Rust toolchain accept the internal
+transformation; registration remains intentionally deferred to CIR5.
 
 ### CIR4 — Fold constant integer shift protocols
 

@@ -21,4 +21,29 @@ nested checked-constant propagation, redundant private scalar-spill cleanup,
 proof-provenance normalization, and broader checked scalar families. Recording
 a topic here does not add it to the active roadmap.
 
-No implementation discovery has been recorded yet.
+## Nested successful protocols do not feed enclosing scalar carriers
+
+**Evidence:** CIR3 coverage for `((8 / 2) + (7 % 3)) / 2` finds and folds the
+two independent inner protocols in one callable transaction. The enclosing
+division remains checked on the next observation: each inner constant is
+stored into its result carrier, reloaded at its join, and then stored into an
+outer operand carrier, while the deliberately narrow candidate query accepts
+only an exact constant assignment as the unique carrier-store source.
+
+**Impact:** Correctness and idempotence are unaffected, but nested constant
+checked expressions can leave optimization opportunities behind even after
+their inner operations have folded. Repeating the same checked-protocol pass
+cannot expose the outer operation without an additional propagation rule.
+
+**Likely owner:** A future verified scalar-spill constant-provenance or narrow
+storage-propagation analysis shared by final-MIR simplifications, rather than
+the checked-protocol topology query itself.
+
+**Priority:** Low to medium after the initial checked-integer pass is active
+and workload measurements show nested protocols matter.
+
+**Bounded direction:** Prove constants through canonical private scalar-spill
+store/load chains with explicit write, dominance, type, alias, and lifecycle
+conditions. Keep that fact local to one verified seal and let the existing
+checked-protocol query consume it; do not recursively rewrite nested diamonds
+or broaden CIR3 into general load/store propagation.

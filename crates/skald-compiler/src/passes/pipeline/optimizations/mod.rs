@@ -4,6 +4,8 @@
 #[allow(dead_code)]
 mod checked_integer_evaluation;
 #[allow(dead_code)]
+mod checked_integer_folding;
+#[allow(dead_code)]
 mod checked_integer_protocol;
 #[allow(dead_code)]
 mod checked_integer_rewrite;
