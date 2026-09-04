@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Discoveries
 
-Status: open follow-up record for the planned
+Status: open follow-up record for the active
 [checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
 
 Use this file for concrete maintainability findings or optimization

@@ -6,7 +6,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+is in progress. Exact checked-integer constant evaluation is complete; a
+narrow verified carrier/protocol query is next, followed by atomic
+checked-diamond rewriting, division/remainder and shift folding, selectable
+registration, default activation, broad semantic evidence, and closure.
 
 ## Pending discoveries
 
@@ -29,7 +34,7 @@ not become roadmap work merely by being mentioned there.
 
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
-will record implementation-specific findings from the planned checked-protocol
+records implementation-specific findings from the active checked-protocol
 pass without widening its reviewed successful-constant boundary.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
@@ -64,15 +69,8 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The
-[checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
-is planned. Exact checked-integer constant evaluation is next, followed by a
-narrow verified carrier/protocol query, atomic checked-diamond rewriting,
-division/remainder and shift folding, selectable registration, default
-activation, broad semantic evidence, and closure. It depends on the completed
-dense MIR rewriting, selectable pipeline, and local final-MIR simplification
-foundations; general proof normalization and storage analysis are explicitly
-not prerequisites.
+No implementation roadmap is currently planned behind the active checked
+integer constant protocol simplification work.
 
 ## Design proposals
 

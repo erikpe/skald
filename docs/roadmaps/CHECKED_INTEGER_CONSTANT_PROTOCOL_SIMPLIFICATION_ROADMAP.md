@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: planned; CIR0 is next.
+Status: in progress; CIR0 is complete and CIR1 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -107,7 +107,7 @@ Candidate placement and status remain authoritative in the
 
 ## Progress
 
-- [ ] CIR0 — Implement exact checked-integer constant evaluation
+- [x] CIR0 — Implement exact checked-integer constant evaluation
 - [ ] CIR1 — Model verified checked-protocol candidates
 - [ ] CIR2 — Add atomic successful-protocol rewriting
 - [ ] CIR3 — Fold constant integer division and remainder protocols
@@ -124,21 +124,21 @@ Candidate placement and status remain authoritative in the
 **Purpose:** Establish one optimizer-private semantic owner for successful
 division, remainder, and shift results before any CFG protocol can change.
 
-- [ ] Reuse the implemented typed `PrimitiveConstant` representation without
+- [x] Reuse the implemented typed `PrimitiveConstant` representation without
       widening the ordinary total-rvalue evaluator to control-affecting
       operations.
-- [ ] Add a focused checked-integer evaluator whose outcome distinguishes an
+- [x] Add a focused checked-integer evaluator whose outcome distinguishes an
       exact successful constant, a statically failing check, and an unsupported
       type/operation pair.
-- [ ] Implement unsigned quotient and remainder for `u64` and canonical `u8`.
-- [ ] Implement `i64` floor quotient and divisor-sign remainder without host
+- [x] Implement unsigned quotient and remainder for `u64` and canonical `u8`.
+- [x] Implement `i64` floor quotient and divisor-sign remainder without host
       overflow, including every sign combination and the signed-minimum pair.
-- [ ] Implement wrapping left shift, arithmetic `i64` right shift, logical
+- [x] Implement wrapping left shift, arithmetic `i64` right shift, logical
       `u64`/`u8` right shift, exact 64/8-bit count validation, and explicit
       `u8` canonicalization.
-- [ ] Keep zero divisors and excessive counts represented as static failure
+- [x] Keep zero divisors and excessive counts represented as static failure
       outcomes rather than panics, Rust arithmetic traps, or folded values.
-- [ ] Keep evaluator inputs and outputs independent of MIR topology, target
+- [x] Keep evaluator inputs and outputs independent of MIR topology, target
       instructions, spans, reporting, and filesystem state.
 
 **Tests:** Exhaustive operation/type matrices; signed quotient/remainder sign
@@ -151,6 +151,14 @@ formatting check.
 **Exit criteria:** Every in-scope successful constant result and every
 out-of-scope or statically failing input has one deterministic, independently
 tested evaluator outcome with no dependency on checked CFG shape.
+
+**Completion evidence:** The optimizer-private evaluator reuses typed
+primitive constants and the existing byte canonicalization rule. Its focused
+matrix covers exact success, exact static failure, unsupported inputs, signed
+extrema, every byte quotient/remainder input, every valid byte shift, and
+boundary shift counts in both debug and release builds. The full compiler test
+suite and static checks accept the new semantic owner without changing the
+active optimization schedule.
 
 ### CIR1 — Model verified checked-protocol candidates
 

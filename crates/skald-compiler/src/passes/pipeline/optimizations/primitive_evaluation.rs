@@ -414,7 +414,7 @@ fn evaluate_bool_to_integer(
     }
 }
 
-const fn canonical_u8(bits: u64) -> u8 {
+pub(super) const fn canonical_u8(bits: u64) -> u8 {
     (bits & u8::MAX as u64) as u8
 }
 
