@@ -78,6 +78,11 @@ pub(crate) enum MirRewriteError {
         to: super::super::StorageId,
         to_type: MirType,
     },
+    StorageKindMismatch {
+        storage: super::super::StorageId,
+        expected: MirStorageKind,
+        actual: MirStorageKind,
+    },
     ImportSourceMatchesDestination {
         callable: CallableId,
     },
@@ -210,6 +215,14 @@ impl fmt::Display for MirRewriteError {
             } => write!(
                 formatter,
                 "cannot substitute storage {from} ({from_type}) with {to} ({to_type})"
+            ),
+            Self::StorageKindMismatch {
+                storage,
+                expected,
+                actual,
+            } => write!(
+                formatter,
+                "storage {storage} has kind {actual:?}, expected {expected:?}"
             ),
             Self::ImportSourceMatchesDestination { callable } => write!(
                 formatter,

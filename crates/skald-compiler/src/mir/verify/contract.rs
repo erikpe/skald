@@ -22,7 +22,6 @@ pub(super) enum MirVerificationContract {
     /// Producer and optimization MIR retaining path-sensitive proof records.
     ProofRich,
     /// Executable MIR after all consumable proof provenance has been removed.
-    #[cfg(test)]
     Normalized,
 }
 
@@ -128,7 +127,7 @@ impl fmt::Display for MirNormalizedInvariantViolation {
 
 /// The role of a callable-local identity traversal site in CFG retention.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::mir) enum MirIdentitySiteRole {
+pub(crate) enum MirIdentitySiteRole {
     BodyEntry,
     PermanentAttachment,
     ConsumableProof,
@@ -139,7 +138,7 @@ pub(in crate::mir) enum MirIdentitySiteRole {
 ///
 /// The exhaustive match is a compile-time maintenance point shared by current
 /// proof-aware CFG retention and the future normalizer.
-pub(in crate::mir) const fn classify_local_identity_site(
+pub(crate) const fn classify_local_identity_site(
     site: crate::mir::rewrite::MirLocalIdentitySite,
 ) -> MirIdentitySiteRole {
     use crate::mir::rewrite::MirLocalIdentitySite;

@@ -9,9 +9,11 @@ progress. Completed roadmaps and resolved discovery records move to
 The
 [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 is in progress. PNR0 established exhaustive proof-form classification and
-partitioned shared, proof-rich, and normalized-only verifier ownership without
-changing the production proof-rich pipeline. PNR1, the atomic mechanical
-normalization transaction, is next.
+partitioned shared, proof-rich, and normalized-only verifier ownership. PNR1
+implemented the atomic mechanical normalization transaction, defensive
+inventory, dense commit, normalized invariant check, and deterministic
+structural accounting. Production remains on the proof-rich single-seal
+pipeline until PNR2 establishes the two sealed products.
 
 ## Pending discoveries
 
@@ -89,7 +91,7 @@ loads, makes pass scheduling and inspection stage-aware, and ends with a
 conservative post-proof unreachable-CFG canary. PPN1 through PPN14 were
 confirmed together on 2026-09-04; the active
 [implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) has
-completed PNR0 and continues with PNR1.
+completed PNR0 and PNR1 and continues with PNR2.
 
 The completed checked integer constant protocol simplification delivery record
 is preserved in the [archive](../archive/README.md). FMC-01 and FMC-02 are

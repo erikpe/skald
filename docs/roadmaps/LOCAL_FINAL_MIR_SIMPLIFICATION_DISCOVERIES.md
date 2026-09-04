@@ -37,12 +37,13 @@ unreachable-region deletion candidates.
 
 **Priority:** Active implementation through the
 [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
-PNR0 now gives verifier and CFG retention one exhaustive proof-site
-classification and separates proof-rich from normalized-only verification.
-Checked integer protocol folding demonstrates atomic proof-aware CFG
-rewriting, while conservative CFG cleanup continues to count and retain
-proof-protected unreachable blocks until the later normalization and canary
-tasks are delivered.
+PNR0 gives verifier and CFG retention one exhaustive proof-site classification
+and separates proof-rich from normalized-only verification. PNR1 now
+implements and tests the atomic conversion which inventories proof roots,
+preserves their executable carriers, consumes their records, and reports the
+blocks released from proof protection. Conservative production CFG cleanup
+continues to count and retain those blocks until the two-seal pipeline and
+post-proof canary activate the boundary.
 
 **Proposed bounded direction:** After complete proof-rich verification,
 atomically lower path-condition reads to ordinary loads, reclassify their
@@ -50,5 +51,5 @@ activation storage, consume path-condition and logical-expression records,
 and seal a distinct executable final-MIR product. Validate the boundary with
 entry-unreachable block cleanup while deferring forwarding, merging,
 threading, and checked-protocol normalization. Proof-named blocks remain
-conservative roots until the roadmap reaches the mandatory normalization
-boundary.
+conservative production roots until the roadmap wires the implemented
+mandatory normalization transaction into the two-stage pipeline.

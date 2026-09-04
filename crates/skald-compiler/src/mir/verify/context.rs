@@ -61,7 +61,6 @@ impl<'mir> Verifier<'mir> {
         }
     }
 
-    #[cfg(test)]
     pub(super) fn new_normalized(program: &'mir MirProgram) -> Self {
         Self {
             program,

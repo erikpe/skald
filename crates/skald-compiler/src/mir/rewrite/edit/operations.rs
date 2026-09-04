@@ -3,7 +3,7 @@
 use std::convert::Infallible;
 
 use super::{super::error::MirRewriteError, MirCallableEdit};
-use crate::mir::{BlockId, MirInstruction, MirTerminator, StorageId, ValueId};
+use crate::mir::{BlockId, MirInstruction, MirStorageKind, MirTerminator, StorageId, ValueId};
 
 use super::super::{
     map::{
@@ -15,6 +15,51 @@ use super::super::{
 };
 
 impl MirCallableEdit {
+    /// Reclassifies one storage declaration after checking the analysis
+    /// snapshot which authorized the edit.
+    pub(crate) fn replace_storage_kind(
+        &mut self,
+        storage: StorageId,
+        expected: MirStorageKind,
+        replacement: MirStorageKind,
+    ) -> Result<(), MirRewriteError> {
+        let declaration = self.storage.get_mut(storage)?;
+        if declaration.kind != expected {
+            return Err(MirRewriteError::StorageKindMismatch {
+                storage,
+                expected,
+                actual: declaration.kind,
+            });
+        }
+        declaration.kind = replacement;
+        Ok(())
+    }
+
+    /// Replaces one instruction after checking the exact analyzed snapshot.
+    pub(crate) fn replace_instruction(
+        &mut self,
+        block: BlockId,
+        index: usize,
+        expected: &MirInstruction,
+        replacement: MirInstruction,
+    ) -> Result<(), MirRewriteError> {
+        let instructions = &mut self.blocks.get_mut(block)?.instructions;
+        let Some(instruction) = instructions.get_mut(index) else {
+            return Err(MirRewriteError::StaleCallableSnapshot {
+                callable: self.callable,
+                subject: "instruction position",
+            });
+        };
+        if instruction != expected {
+            return Err(MirRewriteError::StaleCallableSnapshot {
+                callable: self.callable,
+                subject: "instruction",
+            });
+        }
+        *instruction = replacement;
+        Ok(())
+    }
+
     /// Observes all block roots outside ordinary executable successor edges.
     ///
     /// Path and logical metadata use the same exhaustive structural walkers

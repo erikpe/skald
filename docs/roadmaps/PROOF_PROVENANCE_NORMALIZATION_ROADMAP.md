@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 is complete and PNR1 is next.
+Status: in progress; PNR0 and PNR1 are complete and PNR2 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -108,7 +108,7 @@ Candidate placement and status remain concise in the
 ## Progress
 
 - [x] PNR0 — Partition proof-rich and normalized verification ownership
-- [ ] PNR1 — Implement atomic proof-provenance normalization
+- [x] PNR1 — Implement atomic proof-provenance normalization
 - [ ] PNR2 — Establish the two sealed final-MIR products
 - [ ] PNR3 — Make pass policy and execution stage aware
 - [ ] PNR4 — Expose stage-aware inspection, failures, and reporting
@@ -159,23 +159,23 @@ duplicating the complete verifier.
 **Purpose:** Build and test the mechanical one-way representation conversion
 before it is allowed to create backend input.
 
-- [ ] Add a crate-private normalization transaction over a consumed
+- [x] Add a crate-private normalization transaction over a consumed
   proof-verified program.
-- [ ] Inventory exact path-condition owners, activation storage, path reads,
+- [x] Inventory exact path-condition owners, activation storage, path reads,
   logical records, and proof-protected blocks before mutation.
-- [ ] Rewrite every `MirRvalueKind::PathCondition` to
+- [x] Rewrite every `MirRvalueKind::PathCondition` to
   `MirRvalueKind::Load(MirPlace::base(activation))` while preserving the
   assignment, `ValueId`, type, and span.
-- [ ] Reclassify exactly the owned `MirStorageKind::PathCondition`
+- [x] Reclassify exactly the owned `MirStorageKind::PathCondition`
   declarations as `MirStorageKind::ScalarSpill` without deleting storage,
   stores, blocks, lifetime operations, or values.
-- [ ] Delete all logical-expression and path-condition records in the same
+- [x] Delete all logical-expression and path-condition records in the same
   atomic program operation.
-- [ ] Commit through the existing dense rewriting owner and run the exhaustive
+- [x] Commit through the existing dense rewriting owner and run the exhaustive
   zero-consumed-proof check on the committed result.
-- [ ] Return structured normalization failures without exposing partially
+- [x] Return structured normalization failures without exposing partially
   converted MIR.
-- [ ] Return deterministic counts for consumed records, rewritten reads,
+- [x] Return deterministic counts for consumed records, rewritten reads,
   reclassified storage, changed callables, and blocks released from proof
   protection.
 

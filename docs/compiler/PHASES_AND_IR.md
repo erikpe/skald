@@ -1032,10 +1032,10 @@ Status: **in progress**. The frozen
 and its
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 define a mandatory one-way boundary between proof-rich and backend-ready final
-MIR. Verifier ownership and proof-bearing-form classification are implemented;
-the normalization transaction, two-seal pipeline, and backend migration are
-not. Current production behavior therefore remains the single-seal pipeline
-described above.
+MIR. Verifier ownership, proof-bearing-form classification, and the atomic
+normalization transaction are implemented and covered by focused tests; the
+two-seal pipeline and backend migration are not. Current production behavior
+therefore remains the single-seal pipeline described above.
 
 The verifier now owns one exhaustive classification boundary for proof
 records, callable-local identity sites, storage kinds, rvalues, instructions,
@@ -1057,9 +1057,9 @@ optional-initialization, and array-ownership dataflow. Focused normalized-only
 checks reject leaked path/logical records, path storage and rvalues, and any
 future instruction or terminator classified as proof-bearing. Static lifecycle
 realization and whole-world reachability remain separate reusable final-MIR
-owners outside this callable-local verifier. The normalized contract is only
-test-invokable in this first step; it is not yet a production seal or backend
-precondition.
+owners outside this callable-local verifier. The normalized contract is now
+invoked by the crate-private normalization transaction and its focused tests;
+it is not yet a production seal or backend precondition.
 
 The planned boundary keeps one `MirProgram` model but uses two private seals.
 `VerifiedProofMirProgram` names the intermediate accepted by complete path-
@@ -1071,7 +1071,7 @@ intermediate.
 Complete proof verification remains first. It continues to use path
 conditions and logical-expression records for optional initialization, array
 and shared ownership, cleanup, storage lifetime, and structured short-circuit
-validation. The mandatory normalizer then:
+validation. The implemented crate-private normalizer:
 
 - replaces each path-condition rvalue with an ordinary base-place load from
   the same boolean activation storage while preserving result identity, type,
@@ -1079,8 +1079,18 @@ validation. The mandatory normalizer then:
 - reclassifies that storage from `PathCondition` to `ScalarSpill` without
   deleting its stores, lifetime, or executable CFG;
 - removes all path-condition and logical-expression records atomically; and
-- rejects any remaining consumed-proof reference before a normalized verifier
-  recomputes reachability and creates the final seal.
+- rejects any remaining consumed-proof reference with the normalized verifier.
+
+Before mutation, it inventories exact condition ownership, activation storage,
+path reads, logical records, and proof-protected blocks across every executable
+definition. It commits the complete program through the dense rewrite owner,
+returns no candidate program on any inventory, stale-snapshot, rewrite, or
+normalized-invariant failure, and reports deterministic counts for consumed
+records, rewritten reads, reclassified storage, changed callables, and blocks
+released from proof protection. It preserves assignment and value identities,
+types, spans, blocks, stores, lifetime operations, and all permanent roots.
+The next pipeline step will consume its raw normalized result, recompute
+reachability, and create the final seal.
 
 The normalized verifier shares ordinary structural, lifecycle, reference, and
 reachable-definition owners with proof-rich verification, but does not pretend

@@ -11,6 +11,46 @@ use super::super::{test_support::edit, BlockPlacement};
 use crate::mir::rewrite::{commit::commit, MirLocalIdentity, MirRewriteError};
 
 #[test]
+fn exact_storage_and_instruction_replacements_revalidate_their_snapshots() {
+    let mut edit = edit();
+    let owner = edit.callable();
+    let storage = StorageId::new(owner, 0);
+    edit.replace_storage_kind(
+        storage,
+        MirStorageKind::Temporary,
+        MirStorageKind::ScalarSpill,
+    )
+    .unwrap();
+    assert_eq!(
+        edit.storage(storage).unwrap().kind,
+        MirStorageKind::ScalarSpill
+    );
+    assert!(matches!(
+        edit.replace_storage_kind(
+            storage,
+            MirStorageKind::Temporary,
+            MirStorageKind::ScalarSpill,
+        ),
+        Err(MirRewriteError::StorageKindMismatch { .. })
+    ));
+
+    let block = BlockId::new(owner, 1);
+    let expected = edit.block(block).unwrap().instructions[0].clone();
+    let span = edit.block(block).unwrap().span;
+    let replacement = MirInstruction::StorageLive(MirStorageLive { storage, span });
+    edit.replace_instruction(block, 0, &expected, replacement.clone())
+        .unwrap();
+    assert_eq!(edit.block(block).unwrap().instructions[0], replacement);
+    assert!(matches!(
+        edit.replace_instruction(block, 0, &expected, expected.clone()),
+        Err(MirRewriteError::StaleCallableSnapshot {
+            subject: "instruction",
+            ..
+        })
+    ));
+}
+
+#[test]
 fn value_use_substitution_preserves_definitions_and_allows_explicit_deletion() {
     let mut edit = edit();
     let owner = edit.callable();

@@ -13,6 +13,7 @@ use super::{
 };
 
 mod execution;
+mod normalization;
 mod optimizations;
 mod policy;
 
