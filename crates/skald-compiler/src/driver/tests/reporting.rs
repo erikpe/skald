@@ -130,10 +130,11 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             (1, "primitive-constant-folding", 0),
             (2, "primitive-algebraic-simplification", 0),
             (3, "primitive-constant-folding", 1),
-            (4, "dead-pure-definition-elimination", 1),
-            (5, "conservative-cfg-cleanup", 0),
-            (6, "dead-pure-definition-elimination", 2),
-            (7, "whole-world-reachability", 0),
+            (4, "checked-integer-constant-folding", 0),
+            (5, "dead-pure-definition-elimination", 1),
+            (6, "conservative-cfg-cleanup", 0),
+            (7, "dead-pure-definition-elimination", 2),
+            (8, "whole-world-reachability", 0),
         ]
     );
     let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
@@ -286,8 +287,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
         pipeline[..7],
         [
             ReportMetric::count("verification executions", 1),
-            ReportMetric::count("pass executions", 8),
-            ReportMetric::count("processed callables", 8),
+            ReportMetric::count("pass executions", 9),
+            ReportMetric::count("processed callables", 9),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -331,9 +332,20 @@ fn details_publish_deterministic_phase_owned_metrics() {
             algebra("rejected protected-use candidates"),
         ]
     );
-    let cfg = |name| ReportMetric::pass_count("conservative-cfg-cleanup", name, 0);
+    let checked = |name| ReportMetric::pass_count("checked-integer-constant-folding", name, 0);
     assert_eq!(
         pipeline[18..23],
+        [
+            checked("folded quotient protocols"),
+            checked("folded remainder protocols"),
+            checked("folded shift protocols"),
+            checked("removed protocol-load values"),
+            checked("retained statically failing candidates"),
+        ]
+    );
+    let cfg = |name| ReportMetric::pass_count("conservative-cfg-cleanup", name, 0);
+    assert_eq!(
+        pipeline[23..28],
         [
             cfg("folded constant branches"),
             cfg("folded same-target branches"),
@@ -345,7 +357,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[23..44],
+        pipeline[28..49],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -370,8 +382,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[44], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[45], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[49], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[50], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
@@ -423,6 +435,39 @@ fn main() -> i64 {
         pass_count_metric(metrics, "whole-world-reachability", "removed definitions"),
         1
     );
+}
+
+#[test]
+fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
+    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let artifact = compile_source_to_assembly_observed(
+        "checked-integer-folding.ska",
+        "fn main() -> i64 { return (6 * 7) / (1 + 1); }",
+        Target::X86_64SysV,
+        &mut observer,
+    )
+    .unwrap();
+    let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(count_metric(metrics, "pass executions"), Some(9));
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "checked-integer-constant-folding",
+            "folded quotient protocols"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "checked-integer-constant-folding",
+            "removed protocol-load values"
+        ),
+        2
+    );
+    assert!(pass_count_metric(metrics, "conservative-cfg-cleanup", "removed blocks") > 0);
 }
 
 #[test]

@@ -93,24 +93,30 @@ fn production_profiles_select_the_supported_default_order() {
             ),
             (
                 4,
+                checked_integer_folding::IDENTITY,
+                "checked-integer-constant-folding",
+                0,
+            ),
+            (
+                5,
                 dead_pure_definition_elimination::IDENTITY,
                 "dead-pure-definition-elimination",
                 1,
             ),
             (
-                5,
+                6,
                 conservative_cfg_cleanup::IDENTITY,
                 "conservative-cfg-cleanup",
                 0,
             ),
             (
-                6,
+                7,
                 dead_pure_definition_elimination::IDENTITY,
                 "dead-pure-definition-elimination",
                 2,
             ),
             (
-                7,
+                8,
                 whole_world_reachability::IDENTITY,
                 "whole-world-reachability",
                 0,
@@ -123,7 +129,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["whole-world-reachability"],
     )
     .unwrap();
-    assert_eq!(reachability_disabled.len(), 7);
+    assert_eq!(reachability_disabled.len(), 8);
     assert!(reachability_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != whole_world_reachability::IDENTITY));
@@ -147,7 +153,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["checked-integer-constant-folding"],
     )
     .unwrap();
-    assert_eq!(checked_integer_disabled, default);
+    assert_eq!(checked_integer_disabled.len(), 8);
     assert!(checked_integer_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != checked_integer_folding::IDENTITY));
@@ -201,6 +207,7 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
             .collect::<Vec<_>>(),
         [
             "primitive-algebraic-simplification",
+            "checked-integer-constant-folding",
             "conservative-cfg-cleanup",
             "whole-world-reachability",
         ]

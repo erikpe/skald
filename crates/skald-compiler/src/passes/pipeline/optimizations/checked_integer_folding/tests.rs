@@ -6,7 +6,8 @@ use crate::{
         StorageId,
     },
     passes::{
-        resolve_exact_mir_pass_schedule, run_mir_pipeline_with_occurrences, verify_final_mir,
+        resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
+        run_mir_pipeline_with_occurrences, verify_final_mir, MirOptimizationProfile,
         MirPassMeasurement, MirPassOccurrenceOutcome,
     },
     test_support::lower_source_to_final_mir,
@@ -727,4 +728,89 @@ fn repeated_exact_schedule_is_idempotent_and_has_stable_checkpoints() {
             "final",
         ]
     );
+}
+
+#[test]
+fn default_schedule_exposes_then_folds_and_cleans_checked_protocols() {
+    let source = "fn main() -> i64 { return (6 * 7) / (1 + 1); }";
+    let input = lower_source_to_final_mir(source);
+    assert!(all_checked_integer_plan(&input).is_empty());
+
+    let default = run_mir_pipeline_with_occurrences(
+        input.clone(),
+        &resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap(),
+    );
+    let disabled = run_mir_pipeline_with_occurrences(
+        input.clone(),
+        &resolve_mir_pass_schedule(
+            MirOptimizationProfile::Default,
+            ["checked-integer-constant-folding"],
+        )
+        .unwrap(),
+    );
+    let cfg_disabled = run_mir_pipeline_with_occurrences(
+        input.clone(),
+        &resolve_mir_pass_schedule(
+            MirOptimizationProfile::Default,
+            ["conservative-cfg-cleanup"],
+        )
+        .unwrap(),
+    );
+    let none = run_mir_pipeline_with_occurrences(
+        input.clone(),
+        &resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap(),
+    );
+    let default_program = default.result.as_ref().unwrap().program();
+    let disabled_program = disabled.result.as_ref().unwrap().program();
+    let cfg_disabled_program = cfg_disabled.result.as_ref().unwrap().program();
+
+    assert_eq!(checked_division_count(default_program), 0);
+    assert_eq!(checked_division_count(disabled_program), 1);
+    assert_eq!(checked_division_count(cfg_disabled_program), 0);
+    assert_eq!(none.result.as_ref().unwrap().program(), &input);
+    assert!(none.occurrences().is_empty());
+    let default_blocks = default_program
+        .definitions
+        .get(default_program.entry_function)
+        .unwrap()
+        .body
+        .blocks
+        .len();
+    let disabled_blocks = disabled_program
+        .definitions
+        .get(disabled_program.entry_function)
+        .unwrap()
+        .body
+        .blocks
+        .len();
+    assert!(default_blocks < disabled_blocks);
+    let cfg_disabled_blocks = cfg_disabled_program
+        .definitions
+        .get(cfg_disabled_program.entry_function)
+        .unwrap()
+        .body
+        .blocks
+        .len();
+    assert!(default_blocks < cfg_disabled_blocks);
+
+    let checked_record = default
+        .occurrences()
+        .iter()
+        .find(|record| record.identity() == IDENTITY)
+        .unwrap();
+    assert_eq!(checked_record.position(), 4);
+    assert_eq!(checked_record.outcome(), MirPassOccurrenceOutcome::Changed);
+    assert_eq!(
+        checked_record.measurements()[0],
+        MirPassMeasurement::count(FOLDED_QUOTIENTS, 1)
+    );
+    assert!(default.occurrences().iter().any(|record| {
+        record.name() == "conservative-cfg-cleanup"
+            && record.outcome() == MirPassOccurrenceOutcome::Changed
+            && record.removed_mir_entities().unwrap_or(0) > 0
+    }));
+    assert!(disabled
+        .occurrences()
+        .iter()
+        .all(|record| record.identity() != IDENTITY));
 }

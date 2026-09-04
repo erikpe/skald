@@ -288,8 +288,8 @@ formatting; already-known phase execution counts remain local to the observed
 adapter.
 
 The `none` MIR schedule performs one verification and zero pass executions.
-The `default` schedule executes eight pass occurrences in the exact repeated
-local-simplification order documented by the compiler phase contract; an
+The `default` schedule executes nine pass occurrences in the exact optimization
+order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
 changed-result commit, immediate reverification, aggregate accounting, and
@@ -307,7 +307,7 @@ Its
 [completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 records delivery. Registry, request/CLI schedule selection, the verified
 runner, and structured pass reporting are implemented. Ordinary production
-traces contain one pass-finished event for each of the eight default schedule
+traces contain one pass-finished event for each of the nine default schedule
 occurrences; `none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
@@ -411,9 +411,11 @@ value counts, and retained statically failing candidate counts in that stable
 order. Generic retained, inserted, and removed MIR entity totals remain owned
 by the atomic commit statistics. An unchanged occurrence reports all
 processed executable callables and performs no changed-output verification;
-an exact-schedule rewrite reports changed callables and one immediate
-verification. The pass is discoverable before it joins the default profile,
-so ordinary driver report allocation remains unchanged during this milestone.
+an exact-schedule or default-profile rewrite reports changed callables and one
+immediate verification. Its default occurrence follows the second primitive
+constant fold and precedes dead-pure and CFG cleanup, so aggregate metrics and
+trace occurrence records retain pipeline order without changing quiet,
+phases-only, or details-only timing-allocation boundaries.
 
 ## Whole-world reachability observation
 

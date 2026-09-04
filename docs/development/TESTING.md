@@ -158,6 +158,13 @@ shutdown, ownership, destruction, panic, and runtime traces. Full golden
 determinism repeats every variant in independent compiler and native
 processes.
 
+Checked-integer pipeline tests pin the default position after the second
+primitive constant fold, constants exposed by those earlier scalar passes,
+successful protocol folding, subsequent unreachable failure-block cleanup,
+checked-pass-disabled retention, ordered metrics, checkpoint numbering, and
+verified outputs under every stable pass exclusion. Broader native and failure
+equivalence remains in the dedicated optimization golden milestone.
+
 Local final-MIR simplification has a focused `optimizations` golden group. It
 crosses default, `none`, every local pass disabled individually,
 reachability-disabled, dead-pure-disabled, and all-MIR-passes-disabled

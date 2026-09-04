@@ -356,21 +356,26 @@ fn intentional_phase_and_dump_paths_compose() {
             },
             MirPipelineCheckpointLabel::After {
                 position: 4,
+                pass_name: "checked-integer-constant-folding",
+                occurrence: 0,
+            },
+            MirPipelineCheckpointLabel::After {
+                position: 5,
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 1,
             },
             MirPipelineCheckpointLabel::After {
-                position: 5,
+                position: 6,
                 pass_name: "conservative-cfg-cleanup",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::After {
-                position: 6,
+                position: 7,
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 2,
             },
             MirPipelineCheckpointLabel::After {
-                position: 7,
+                position: 8,
                 pass_name: "whole-world-reachability",
                 occurrence: 0,
             },

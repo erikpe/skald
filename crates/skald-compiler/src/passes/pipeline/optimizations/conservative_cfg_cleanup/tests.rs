@@ -449,6 +449,7 @@ fn default_cfg_cleanup_exposes_removed_call_targets_to_final_reachability() {
             "primitive-constant-folding",
             "primitive-algebraic-simplification",
             "primitive-constant-folding",
+            "checked-integer-constant-folding",
             "dead-pure-definition-elimination",
             "conservative-cfg-cleanup",
             "dead-pure-definition-elimination",

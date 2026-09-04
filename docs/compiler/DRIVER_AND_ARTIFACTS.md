@@ -136,8 +136,8 @@ names; duplicate disabling is idempotent in request identity. Existing request
 construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to the empty
 verification-only schedule, while `default` resolves to the exact repeated
-eight-occurrence local-simplification schedule documented below. Disabling all
-five stable pass names from `default`, including duplicate disabling, resolves
+nine-occurrence optimization schedule documented below. Disabling all six
+stable pass names from `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
 unoptimized mode and preserves raw final MIR after its required central
 verification.
@@ -214,13 +214,12 @@ name diagnostics, and pass-attributed errors. Numeric pass identities remain
 private.
 
 The `default` profile contains dead-pure elimination, constant folding,
-algebraic simplification, repeated constant/dead-pure cleanup, conservative
-CFG cleanup, final dead-pure cleanup, and whole-world reachability in the exact
-order specified by the compiler phase contract. `none` remains empty.
+algebraic simplification, repeated constant folding, checked-integer folding,
+repeated dead-pure cleanup, conservative CFG cleanup, and whole-world
+reachability in the exact order specified by the compiler phase contract.
+`none` remains empty.
 `--disable-mir-pass <name>` removes every occurrence of a repeated pass, and
-disabling every pass selected by `default` equals `none`. The registered
-`checked-integer-constant-folding` pass is available to compiler-internal exact
-schedules but does not enter `default` until its composition milestone.
+disabling every pass selected by `default` equals `none`.
 
 No arbitrary pass ordering, `-O` level, dynamic plugin, target-specific pass
 selection, or optimization-dependent static activation is added. Selection

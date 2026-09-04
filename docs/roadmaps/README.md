@@ -11,8 +11,8 @@ The
 is in progress. Exact checked-integer evaluation and the narrow verified
 carrier/protocol query, atomic checked-diamond rewrite, and division/remainder
 and shift folding are complete. Selectable registration and structured
-measurements are also complete; default activation, broad semantic evidence,
-and closure follow.
+measurements are also complete, and the pass is active in the default schedule;
+broad semantic evidence and closure follow.
 
 ## Pending discoveries
 

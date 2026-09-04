@@ -744,7 +744,7 @@ editor emits no report text. Pass-owned integer counters retain deterministic
 first-owner and first-counter order. The driver renders aggregate counts at
 details level and typed occurrence records at trace level. The `none` schedule
 retains byte-for-byte MIR, one final verification, zero pass executions, and
-no pass-finished events; the default schedule runs eight pass occurrences in
+no pass-finished events; the default schedule runs nine pass occurrences in
 the exact repeated order documented below.
 
 This direction adds no SSA form, persistent instruction identity, public
@@ -780,11 +780,9 @@ descriptors are exposed in stable-name order for the public read-only query
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
-eight-occurrence local-simplification schedule documented below. Disabling all
+nine-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
-same schedule as `none`. The checked-integer pass is registered and available
-to exact compiler-internal schedules, but is not selected by `default` until
-its schedule-composition milestone.
+same schedule as `none`.
 
 A resolved schedule may deliberately repeat a pass, and every occurrence is
 identified by its resolved schedule position, pass identity, and that pass's
@@ -871,8 +869,8 @@ initializer, the canary computes value uses through the exhaustive MIR
 identity traversal, deletes unused eligible assignments and their matching
 value declarations in stable waves to a fixed point, and commits the callable
 once. It performs no CFG, storage, metadata, ownership, lifecycle, folding,
-replacement, or reordering edit. The canary runs at the first, fifth, and
-seventh positions of `default`, with whole-world reachability last;
+replacement, or reordering edit. The canary runs at the first, sixth, and
+eighth positions of `default`, with whole-world reachability last;
 `none` preserves the exact verification-only path, selective disabling
 provides parity, and every changed product passes ordinary and
 lifecycle-realization verification.
@@ -976,6 +974,7 @@ dead-pure-definition-elimination
 primitive-constant-folding
 primitive-algebraic-simplification
 primitive-constant-folding
+checked-integer-constant-folding
 dead-pure-definition-elimination
 conservative-cfg-cleanup
 dead-pure-definition-elimination
@@ -991,6 +990,16 @@ facts, and immediately reverify before any later pass or backend observes the
 product. Preliminary-MIR static activation and baseline lifecycle authority
 remain immutable; final verification rechecks realization against them rather
 than replanning activation.
+
+The checked-integer occurrence consumes constants exposed by the preceding
+primitive folds. For an eligible division, remainder, or shift protocol it
+preserves operand evaluation, replaces the checked success operation with its
+exact constant, removes the two protocol-private load values, and turns the
+dedicated check into an ordinary successor edge. The following dead-pure and
+CFG occurrences can then remove redundant scalar work and the unreachable
+failure region. Disabling `checked-integer-constant-folding` retains the
+checked protocol; disabling CFG cleanup retains its now-unreachable failure
+block. Static failures and insufficiently proven protocols remain unchanged.
 
 ### Current execution-dependency vocabulary
 

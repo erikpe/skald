@@ -240,7 +240,7 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
     );
     assert_ne!(dump_mir(optimized.program()), input_dump);
     assert_ne!(assembly(optimized), assembly(&none));
-    assert_eq!(measured.statistics.pass_executions(), 8);
+    assert_eq!(measured.statistics.pass_executions(), 9);
     assert!(
         measurement_total(
             &measured,
@@ -742,10 +742,11 @@ fn default_pipeline_checkpoints_identify_every_repeated_occurrence() {
             "after-1-primitive-constant-folding-0",
             "after-2-primitive-algebraic-simplification-0",
             "after-3-primitive-constant-folding-1",
-            "after-4-dead-pure-definition-elimination-1",
-            "after-5-conservative-cfg-cleanup-0",
-            "after-6-dead-pure-definition-elimination-2",
-            "after-7-whole-world-reachability-0",
+            "after-4-checked-integer-constant-folding-0",
+            "after-5-dead-pure-definition-elimination-1",
+            "after-6-conservative-cfg-cleanup-0",
+            "after-7-dead-pure-definition-elimination-2",
+            "after-8-whole-world-reachability-0",
             "final",
         ]
     );

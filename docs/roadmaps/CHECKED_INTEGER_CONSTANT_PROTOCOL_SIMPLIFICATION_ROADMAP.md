@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 through CIR5 are complete and CIR6 is next.
+Status: in progress; CIR0 through CIR6 are complete and CIR7 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -113,7 +113,7 @@ Candidate placement and status remain authoritative in the
 - [x] CIR3 — Fold constant integer division and remainder protocols
 - [x] CIR4 — Fold constant integer shift protocols
 - [x] CIR5 — Register selection and structured measurements
-- [ ] CIR6 — Activate and compose the default schedule
+- [x] CIR6 — Activate and compose the default schedule
 - [ ] CIR7 — Prove semantic parity, determinism, and optimization value
 - [ ] CIR8 — Harden ownership, documentation, and roadmap closure
 
@@ -383,20 +383,20 @@ or public scheduling API.
 **Purpose:** Place checked protocol folding where ordinary scalar folding can
 expose constants and existing cleanup can consume the resulting ordinary CFG.
 
-- [ ] Insert one checked-integer pass occurrence after the second primitive
+- [x] Insert one checked-integer pass occurrence after the second primitive
       constant-folding occurrence and before the following dead-pure and
       conservative CFG cleanup occurrences.
-- [ ] Keep whole-world reachability last and retain all existing relative
+- [x] Keep whole-world reachability last and retain all existing relative
       ordering among dead-pure, primitive folding, algebraic simplification,
       CFG cleanup, and whole-world retention.
-- [ ] Prove the earlier scalar passes expose direct constant carrier sources to
+- [x] Prove the earlier scalar passes expose direct constant carrier sources to
       checked folding, then conservative CFG cleanup removes the now-
       unreachable failure block.
-- [ ] Prove exact `none`, checked-pass-disabled, every existing local-pass-
+- [x] Prove exact `none`, checked-pass-disabled, every existing local-pass-
       disabled, reachability-disabled, and all-six-passes-disabled behavior.
-- [ ] Keep repeated occurrence numbering, checkpoint labels, verification
+- [x] Keep repeated occurrence numbering, checkpoint labels, verification
       counts, measurement aggregation, and deterministic schedule dumps exact.
-- [ ] Update living compiler, driver, reporting, and testing documentation in
+- [x] Update living compiler, driver, reporting, and testing documentation in
       the same change that activates the default.
 
 **Tests:** Exact default schedule; selective and all-pass exclusions; `none`
@@ -407,6 +407,21 @@ structured failure cutoffs; and deterministic report ordering.
 **Exit criteria:** The default profile folds eligible checked constants and
 cleans their failure blocks in the intended order, while every supported
 exclusion produces a verified deterministic product.
+
+**Completion evidence:** The canonical `default` profile now has nine
+occurrences, placing one checked-integer fold after the second primitive
+constant fold and before the following dead-pure and conservative CFG cleanup,
+while retaining all prior relative ordering and final whole-world retention.
+A focused composition fixture starts with no directly eligible protocol,
+proves earlier primitive folding exposes its carrier constants, then observes
+checked-protocol removal and later unreachable failure-block cleanup. Separate
+`none`, checked-disabled, and CFG-disabled runs retain their exact intended
+structures; policy, driver, and pipeline matrices cover every stable exclusion
+and all-six-disabled parity. Public checkpoint labels, occurrence numbering,
+aggregate metrics, trace event order, deterministic pipeline fingerprints, and
+living compiler/driver/reporting/testing documentation all reflect the
+nine-occurrence schedule. The complete repository gate and Rust 1.82 MSRV
+check pass.
 
 ### CIR7 — Prove semantic parity, determinism, and optimization value
 
