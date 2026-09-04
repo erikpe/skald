@@ -299,7 +299,7 @@ The completed
 selects no candidate-specific optimization; do not design FMV-15, FMV-02, or
 FMV-03 without new representative evidence.
 
-1. Implement the planned
+1. Continue the active
    [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
    covering the now-unblocked empty-block forwarding and basic-block merging
    candidates before beginning effect-analysis groundwork.

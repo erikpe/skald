@@ -8,7 +8,10 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::{
     identity::CallableId,
-    mir::{classify_local_identity_site, BlockId, MirDefinitionRef, MirIdentitySiteRole, ValueId},
+    mir::{
+        classify_local_identity_site, BlockId, MirBasicBlock, MirDefinitionRef,
+        MirIdentitySiteRole, MirTerminator, ValueId,
+    },
 };
 
 use super::{
@@ -36,12 +39,124 @@ impl MirProtectedBlockRoot {
     }
 }
 
-/// Successors and transient definitions owned by one block.
+/// One executable successor occurrence in a callable-local terminator.
+///
+/// `successor_index` is the stable position in [`MirTerminator::successors`]
+/// semantic order. Retaining the occurrence instead of only the endpoint keeps
+/// parallel edges distinct for later structural eligibility checks.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(crate) struct MirLocalCfgEdge {
+    source: BlockId,
+    target: BlockId,
+    successor_index: usize,
+}
+
+impl MirLocalCfgEdge {
+    pub(crate) const fn source(self) -> BlockId {
+        self.source
+    }
+
+    pub(crate) const fn target(self) -> BlockId {
+        self.target
+    }
+
+    pub(crate) const fn successor_index(self) -> usize {
+        self.successor_index
+    }
+}
+
+/// Closed executable terminator classification for local CFG analyses.
+///
+/// The exhaustive conversion from [`MirTerminator`] is the maintenance point
+/// which requires every future terminator form to choose a structural shape.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(crate) enum MirLocalCfgTerminatorKind {
+    Return,
+    ReturnShared,
+    ReturnOptionalShared,
+    Panic,
+    Goto,
+    Branch,
+    ShiftCountCheck,
+    IntegerDivisorCheck,
+    PrimitiveCastRangeCheck,
+    CheckedCast,
+    SharedCast,
+    OptionalUnwrap,
+    OptionalSharedUnwrap,
+    BeginOptionalView,
+    BeginOptionalBoxView,
+    CheckOptionalMutation,
+    ArrayPositionCheck,
+    ArrayOperationCheck,
+    ArrayLoop,
+    Terminate,
+}
+
+impl MirLocalCfgTerminatorKind {
+    const fn classify(terminator: &MirTerminator) -> Self {
+        match terminator {
+            MirTerminator::Return { .. } => Self::Return,
+            MirTerminator::ReturnShared { .. } => Self::ReturnShared,
+            MirTerminator::ReturnOptionalShared { .. } => Self::ReturnOptionalShared,
+            MirTerminator::Panic { .. } => Self::Panic,
+            MirTerminator::Goto { .. } => Self::Goto,
+            MirTerminator::Branch { .. } => Self::Branch,
+            MirTerminator::ShiftCountCheck { .. } => Self::ShiftCountCheck,
+            MirTerminator::IntegerDivisorCheck { .. } => Self::IntegerDivisorCheck,
+            MirTerminator::PrimitiveCastRangeCheck { .. } => Self::PrimitiveCastRangeCheck,
+            MirTerminator::CheckedCast { .. } => Self::CheckedCast,
+            MirTerminator::SharedCast { .. } => Self::SharedCast,
+            MirTerminator::OptionalUnwrap { .. } => Self::OptionalUnwrap,
+            MirTerminator::OptionalSharedUnwrap { .. } => Self::OptionalSharedUnwrap,
+            MirTerminator::BeginOptionalView { .. } => Self::BeginOptionalView,
+            MirTerminator::BeginOptionalBoxView { .. } => Self::BeginOptionalBoxView,
+            MirTerminator::CheckOptionalMutation { .. } => Self::CheckOptionalMutation,
+            MirTerminator::ArrayPositionCheck { .. } => Self::ArrayPositionCheck,
+            MirTerminator::ArrayOperationCheck { .. } => Self::ArrayOperationCheck,
+            MirTerminator::ArrayLoop { .. } => Self::ArrayLoop,
+            MirTerminator::Terminate { .. } => Self::Terminate,
+        }
+    }
+
+    const fn successor_count(self) -> usize {
+        match self {
+            Self::Return
+            | Self::ReturnShared
+            | Self::ReturnOptionalShared
+            | Self::Panic
+            | Self::Terminate => 0,
+            Self::Goto => 1,
+            Self::Branch
+            | Self::ShiftCountCheck
+            | Self::IntegerDivisorCheck
+            | Self::PrimitiveCastRangeCheck
+            | Self::CheckedCast
+            | Self::SharedCast
+            | Self::OptionalUnwrap
+            | Self::OptionalSharedUnwrap
+            | Self::CheckOptionalMutation
+            | Self::ArrayPositionCheck
+            | Self::ArrayOperationCheck
+            | Self::ArrayLoop => 2,
+            Self::BeginOptionalView | Self::BeginOptionalBoxView => 3,
+        }
+    }
+}
+
+/// Structural shape, edges, and transient definitions owned by one block.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MirLocalCfgBlockFacts {
     block: BlockId,
     successors: Vec<BlockId>,
+    successor_edges: Vec<MirLocalCfgEdge>,
+    predecessor_edges: Vec<MirLocalCfgEdge>,
     defined_values: Vec<ValueId>,
+    instruction_count: usize,
+    terminator_kind: MirLocalCfgTerminatorKind,
+    is_entry: bool,
+    is_protected_root: bool,
+    is_permanent_attachment: bool,
 }
 
 impl MirLocalCfgBlockFacts {
@@ -53,8 +168,36 @@ impl MirLocalCfgBlockFacts {
         &self.successors
     }
 
+    pub(crate) fn successor_edges(&self) -> &[MirLocalCfgEdge] {
+        &self.successor_edges
+    }
+
+    pub(crate) fn predecessor_edges(&self) -> &[MirLocalCfgEdge] {
+        &self.predecessor_edges
+    }
+
     pub(crate) fn defined_values(&self) -> &[ValueId] {
         &self.defined_values
+    }
+
+    pub(crate) const fn instruction_count(&self) -> usize {
+        self.instruction_count
+    }
+
+    pub(crate) const fn terminator_kind(&self) -> MirLocalCfgTerminatorKind {
+        self.terminator_kind
+    }
+
+    pub(crate) const fn is_entry(&self) -> bool {
+        self.is_entry
+    }
+
+    pub(crate) const fn is_protected_root(&self) -> bool {
+        self.is_protected_root
+    }
+
+    pub(crate) const fn is_permanent_attachment(&self) -> bool {
+        self.is_permanent_attachment
     }
 }
 
@@ -68,6 +211,8 @@ pub(crate) struct MirLocalCfgFacts {
     callable: CallableId,
     entry: BlockId,
     protected_roots: Vec<MirProtectedBlockRoot>,
+    permanent_roots: Vec<MirProtectedBlockRoot>,
+    edges: Vec<MirLocalCfgEdge>,
     blocks: Vec<MirLocalCfgBlockFacts>,
     entry_reachable: Vec<BlockId>,
     reachable: Vec<BlockId>,
@@ -86,6 +231,14 @@ impl MirLocalCfgFacts {
 
     pub(crate) fn protected_roots(&self) -> &[MirProtectedBlockRoot] {
         &self.protected_roots
+    }
+
+    pub(crate) fn permanent_roots(&self) -> &[MirProtectedBlockRoot] {
+        &self.permanent_roots
+    }
+
+    pub(crate) fn edges(&self) -> &[MirLocalCfgEdge] {
+        &self.edges
     }
 
     pub(crate) fn blocks(&self) -> &[MirLocalCfgBlockFacts] {
@@ -138,19 +291,14 @@ fn cfg_facts_for_definition(
     let mut blocks = Vec::with_capacity(definition.body().blocks.len());
     for (index, block) in definition.body().blocks.iter().enumerate() {
         validate_dense_declaration(callable, index, block.id)?;
-        let terminator = block
-            .terminator
-            .as_ref()
-            .ok_or(MirRewriteError::MissingBlockTerminator { block: block.id })?;
-        let successors = terminator.successors().collect::<Vec<_>>();
-        blocks.push((block.id, successors));
+        blocks.push(snapshot_block(block)?);
     }
-    for (block, successors) in &blocks {
-        for successor in successors {
+    for block in &blocks {
+        for successor in &block.successors {
             validate_dense_block_reference(
                 definition,
                 *successor,
-                MirLocalIdentitySite::Terminator(block.index()),
+                MirLocalIdentitySite::Terminator(block.block.index()),
             )?;
         }
     }
@@ -202,11 +350,7 @@ impl MirCallableEdit {
                 });
             }
             let block = self.block(*block_id)?;
-            let terminator = block
-                .terminator
-                .as_ref()
-                .ok_or(MirRewriteError::MissingBlockTerminator { block: *block_id })?;
-            blocks.push((*block_id, terminator.successors().collect::<Vec<_>>()));
+            blocks.push(snapshot_block(block)?);
         }
         for live in self.block_ids() {
             if !seen.contains(&live) {
@@ -215,12 +359,12 @@ impl MirCallableEdit {
                 });
             }
         }
-        for (block, successors) in &blocks {
-            for successor in successors {
+        for block in &blocks {
+            for successor in &block.successors {
                 validate_edit_block_reference(
                     self,
                     *successor,
-                    MirLocalIdentitySite::Terminator(block.index()),
+                    MirLocalIdentitySite::Terminator(block.block.index()),
                 )?;
             }
         }
@@ -248,18 +392,45 @@ impl MirCallableEdit {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct MirLocalCfgBlockSnapshot {
+    block: BlockId,
+    successors: Vec<BlockId>,
+    instruction_count: usize,
+    terminator_kind: MirLocalCfgTerminatorKind,
+}
+
+fn snapshot_block(block: &MirBasicBlock) -> Result<MirLocalCfgBlockSnapshot, MirRewriteError> {
+    let terminator = block
+        .terminator
+        .as_ref()
+        .ok_or(MirRewriteError::MissingBlockTerminator { block: block.id })?;
+    let terminator_kind = MirLocalCfgTerminatorKind::classify(terminator);
+    let successors = terminator.successors().collect::<Vec<_>>();
+    debug_assert_eq!(successors.len(), terminator_kind.successor_count());
+    Ok(MirLocalCfgBlockSnapshot {
+        block: block.id,
+        successors,
+        instruction_count: block.instructions.len(),
+        terminator_kind,
+    })
+}
+
 fn build_facts(
     callable: CallableId,
     entry: BlockId,
     protected_roots: Vec<MirProtectedBlockRoot>,
-    adjacency: Vec<(BlockId, Vec<BlockId>)>,
+    snapshots: Vec<MirLocalCfgBlockSnapshot>,
     census: MirValueUseCensus,
 ) -> Result<MirLocalCfgFacts, MirRewriteError> {
-    let block_order = adjacency
+    let block_order = snapshots
         .iter()
-        .map(|(block, _)| *block)
+        .map(|block| block.block)
         .collect::<Vec<_>>();
-    let adjacency_by_block = adjacency.iter().cloned().collect::<BTreeMap<_, _>>();
+    let adjacency_by_block = snapshots
+        .iter()
+        .map(|block| (block.block, block.successors.clone()))
+        .collect::<BTreeMap<_, _>>();
     let entry_closure = closure([entry], &adjacency_by_block);
     let all_closure = closure(
         std::iter::once(entry).chain(protected_roots.iter().map(|root| root.block)),
@@ -292,12 +463,62 @@ fn build_facts(
         definitions.entry(block).or_default().push(value.value());
     }
 
-    let blocks = adjacency
+    let protected_blocks = protected_roots
+        .iter()
+        .map(|root| root.block)
+        .collect::<BTreeSet<_>>();
+    let permanent_roots = protected_roots
+        .iter()
+        .copied()
+        .filter(|root| {
+            classify_local_identity_site(root.site) == MirIdentitySiteRole::PermanentAttachment
+        })
+        .collect::<Vec<_>>();
+    let permanent_blocks = permanent_roots
+        .iter()
+        .map(|root| root.block)
+        .collect::<BTreeSet<_>>();
+
+    let edges = snapshots
+        .iter()
+        .flat_map(|block| {
+            block
+                .successors
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(successor_index, target)| MirLocalCfgEdge {
+                    source: block.block,
+                    target,
+                    successor_index,
+                })
+        })
+        .collect::<Vec<_>>();
+    let mut successor_edges = BTreeMap::<BlockId, Vec<MirLocalCfgEdge>>::new();
+    let mut predecessor_edges = BTreeMap::<BlockId, Vec<MirLocalCfgEdge>>::new();
+    for edge in &edges {
+        successor_edges.entry(edge.source).or_default().push(*edge);
+        predecessor_edges
+            .entry(edge.target)
+            .or_default()
+            .push(*edge);
+    }
+
+    let blocks = snapshots
         .into_iter()
-        .map(|(block, successors)| MirLocalCfgBlockFacts {
-            block,
-            successors,
-            defined_values: definitions.remove(&block).unwrap_or_default(),
+        .map(|snapshot| MirLocalCfgBlockFacts {
+            block: snapshot.block,
+            successors: snapshot.successors,
+            successor_edges: successor_edges.remove(&snapshot.block).unwrap_or_default(),
+            predecessor_edges: predecessor_edges
+                .remove(&snapshot.block)
+                .unwrap_or_default(),
+            defined_values: definitions.remove(&snapshot.block).unwrap_or_default(),
+            instruction_count: snapshot.instruction_count,
+            terminator_kind: snapshot.terminator_kind,
+            is_entry: snapshot.block == entry,
+            is_protected_root: protected_blocks.contains(&snapshot.block),
+            is_permanent_attachment: permanent_blocks.contains(&snapshot.block),
         })
         .collect();
     let select = |members: &BTreeSet<BlockId>| {
@@ -321,6 +542,8 @@ fn build_facts(
         callable,
         entry,
         protected_roots,
+        permanent_roots,
+        edges,
         blocks,
         entry_reachable: select(&entry_closure),
         reachable: select(&all_closure),

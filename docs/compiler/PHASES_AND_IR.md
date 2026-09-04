@@ -653,6 +653,20 @@ reference form forces compiler review. Each new callable-local identity or
 reference form must update this traversal and its census coverage in the same
 change; individual passes may not maintain competing remapping inventories.
 
+The rewrite owner also provides one short-lived callable-local CFG snapshot
+for both dense definitions and sparse edit state. Its shared builder records
+each outgoing and incoming executable edge as a distinct occurrence in source
+block and semantic successor order, so parallel branch edges retain exact
+multiplicity. Per-block facts retain the existing successor targets and
+defined-value inventory while also identifying entry and protected roots,
+permanent publication attachments, instruction count, and a closed
+terminator kind. The terminator and attachment classifications are exhaustive
+maintenance points: new forms must choose their structural role before the
+compiler builds. Proof-rich snapshots retain consumable proof roots;
+normalized snapshots reject them and retain only executable entry and
+permanent semantic attachments. Facts are recomputed rather than cached after
+rewriting.
+
 Every future production transformation of valid final MIR must enter through
 the supported `mir::rewrite` facade and its atomic program coordinator. Direct
 dense-vector construction remains appropriate for initial append-oriented

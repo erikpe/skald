@@ -777,8 +777,7 @@ PCG1 through PCG14 were accepted together on 2026-09-04. The implementation
 roadmap is now the delivery authority, the candidate catalog records FMC-08
 and FMC-09 as **Proposed**, and the roadmap index exposes the planned work.
 
-Until implementation lands, living compiler, driver, reporting, backend, and
-testing documentation remain authoritative for current behavior. Each roadmap
-task promotes the behavior it implements; the completed design and roadmap
-move to the archive only after every task and artifact-free quality gate is
-complete.
+Living compiler, driver, reporting, backend, and testing documentation remain
+authoritative for current behavior throughout delivery. Each roadmap task
+promotes the behavior it implements; the completed design and roadmap move to
+the archive only after every task and artifact-free quality gate is complete.

@@ -11,6 +11,7 @@ use crate::{
 use super::*;
 use crate::mir::rewrite::{
     callable::MirCallablePackage, edit::MirCallableEdit, tests::representative_function,
+    BlockPlacement,
 };
 
 #[test]
@@ -20,7 +21,12 @@ fn ordinary_function_and_member_use_the_body_entry_as_the_executable_root() {
     let final_function_facts = final_cfg_facts_for_definition((&function).into()).unwrap();
     assert_eq!(function_facts.entry(), function.body.entry);
     assert!(function_facts.protected_roots().is_empty());
+    assert!(function_facts.permanent_roots().is_empty());
     assert_eq!(function_facts.entry_reachable(), &[function.body.entry]);
+    assert!(function_facts
+        .block(function.body.entry)
+        .unwrap()
+        .is_entry());
     assert_eq!(final_function_facts, function_facts);
 
     let span = function.span;
@@ -51,6 +57,14 @@ fn static_publication_roots_protect_initialization_and_shutdown_regions() {
     let dense = local_cfg_facts_for_definition((&initializer).into()).unwrap();
     let final_dense = final_cfg_facts_for_definition((&initializer).into()).unwrap();
     assert_eq!(dense.protected_roots(), expected_roots);
+    assert_eq!(dense.permanent_roots(), expected_roots);
+    assert!(dense.block(BlockId::new(owner, 0)).unwrap().is_entry());
+    for attachment in [BlockId::new(owner, 1), BlockId::new(owner, 2)] {
+        let facts = dense.block(attachment).unwrap();
+        assert!(facts.is_protected_root());
+        assert!(facts.is_permanent_attachment());
+        assert!(!facts.is_entry());
+    }
     assert_eq!(
         dense.protected_but_entry_unreachable(),
         &[BlockId::new(owner, 1), BlockId::new(owner, 2)]
@@ -96,6 +110,9 @@ fn every_path_and_logical_block_role_is_a_stable_protected_root() {
             root(MirLocalIdentitySite::LogicalExpression(0), block(2)),
         ]
     );
+    assert!(facts.permanent_roots().is_empty());
+    assert!(facts.block(block(1)).unwrap().is_protected_root());
+    assert!(!facts.block(block(1)).unwrap().is_permanent_attachment());
     assert!(matches!(
         final_cfg_facts_for_definition((&definition).into()),
         Err(MirRewriteError::ConsumedProofRootInFinalCfg {
@@ -144,8 +161,24 @@ fn zero_one_two_and_three_successor_families_preserve_semantic_order() {
 
     let facts = local_cfg_facts_for_definition((&definition).into()).unwrap();
     assert_eq!(
+        facts.block(block(0)).unwrap().terminator_kind(),
+        MirLocalCfgTerminatorKind::BeginOptionalView
+    );
+    assert_eq!(
+        facts.block(block(0)).unwrap().instruction_count(),
+        definition.body.blocks[0].instructions.len()
+    );
+    assert_eq!(
         facts.block(block(0)).unwrap().successors(),
         &[block(1), block(2), block(3)]
+    );
+    assert_eq!(
+        facts.block(block(0)).unwrap().successor_edges(),
+        &[
+            edge(block(0), block(1), 0),
+            edge(block(0), block(2), 1),
+            edge(block(0), block(3), 2),
+        ]
     );
     assert_eq!(
         facts.block(block(1)).unwrap().successors(),
@@ -153,6 +186,79 @@ fn zero_one_two_and_three_successor_families_preserve_semantic_order() {
     );
     assert_eq!(facts.block(block(2)).unwrap().successors(), &[block(4)]);
     assert_eq!(facts.block(block(4)).unwrap().successors(), &[]);
+    assert_eq!(
+        facts.block(block(3)).unwrap().predecessor_edges(),
+        &[edge(block(0), block(3), 2), edge(block(1), block(3), 0)]
+    );
+    assert_eq!(
+        facts.block(block(4)).unwrap().predecessor_edges(),
+        &[edge(block(1), block(4), 1), edge(block(2), block(4), 0)]
+    );
+}
+
+#[test]
+fn duplicate_successors_remain_distinct_edge_occurrences() {
+    let mut definition = representative_function();
+    let owner = definition.callable();
+    let source = BlockId::new(owner, 0);
+    let target = BlockId::new(owner, 1);
+    let span = definition.span;
+    definition.body.blocks[0].terminator = Some(MirTerminator::Branch {
+        condition: ValueId::new(owner, 0),
+        true_target: target,
+        false_target: target,
+        span,
+    });
+
+    let facts = local_cfg_facts_for_definition((&definition).into()).unwrap();
+    let expected = [edge(source, target, 0), edge(source, target, 1)];
+    assert_eq!(&facts.edges()[..2], &expected);
+    assert_eq!(
+        facts
+            .edges()
+            .iter()
+            .filter(|edge| edge.source() == source)
+            .copied()
+            .collect::<Vec<_>>(),
+        expected
+    );
+    assert_eq!(facts.block(source).unwrap().successor_edges(), &expected);
+    assert_eq!(facts.block(target).unwrap().predecessor_edges(), &expected);
+    assert_eq!(expected[1].source(), source);
+    assert_eq!(expected[1].target(), target);
+    assert_eq!(expected[1].successor_index(), 1);
+}
+
+#[test]
+fn terminator_shape_vocabulary_covers_every_successor_family() {
+    use MirLocalCfgTerminatorKind as Kind;
+
+    let shapes = [
+        (Kind::Return, 0),
+        (Kind::ReturnShared, 0),
+        (Kind::ReturnOptionalShared, 0),
+        (Kind::Panic, 0),
+        (Kind::Goto, 1),
+        (Kind::Branch, 2),
+        (Kind::ShiftCountCheck, 2),
+        (Kind::IntegerDivisorCheck, 2),
+        (Kind::PrimitiveCastRangeCheck, 2),
+        (Kind::CheckedCast, 2),
+        (Kind::SharedCast, 2),
+        (Kind::OptionalUnwrap, 2),
+        (Kind::OptionalSharedUnwrap, 2),
+        (Kind::BeginOptionalView, 3),
+        (Kind::BeginOptionalBoxView, 3),
+        (Kind::CheckOptionalMutation, 2),
+        (Kind::ArrayPositionCheck, 2),
+        (Kind::ArrayOperationCheck, 2),
+        (Kind::ArrayLoop, 2),
+        (Kind::Terminate, 0),
+    ];
+
+    for (kind, expected) in shapes {
+        assert_eq!(kind.successor_count(), expected, "{kind:?}");
+    }
 }
 
 #[test]
@@ -228,6 +334,57 @@ fn dense_and_sparse_edit_snapshots_produce_identical_facts() {
     let second = edit.local_cfg_facts().unwrap();
     assert_eq!(first, dense);
     assert_eq!(second, first);
+}
+
+#[test]
+fn sparse_predecessors_follow_explicit_block_order_then_successor_order() {
+    let mut definition = simple_function();
+    let owner = definition.callable();
+    let block = |index| BlockId::new(owner, index);
+    let span = definition.span;
+    definition
+        .body
+        .blocks
+        .extend([return_block(block(1), span), return_block(block(2), span)]);
+    let mut edit = MirCallableEdit::from_dense_parts(
+        owner,
+        definition.storage,
+        definition.values,
+        definition.body,
+    )
+    .unwrap();
+    let inserted = edit
+        .allocate_block(BlockPlacement::Before(block(1)), |id| {
+            return_block(id, span)
+        })
+        .unwrap();
+    for source in [block(0), inserted, block(1)] {
+        edit.rewrite_block_terminator(source, |_| {
+            Some(MirTerminator::Goto {
+                target: block(2),
+                span,
+            })
+        })
+        .unwrap();
+    }
+
+    let facts = edit.local_cfg_facts().unwrap();
+    assert_eq!(
+        facts
+            .blocks()
+            .iter()
+            .map(|facts| facts.block())
+            .collect::<Vec<_>>(),
+        vec![block(0), inserted, block(1), block(2)]
+    );
+    assert_eq!(
+        facts.block(block(2)).unwrap().predecessor_edges(),
+        &[
+            edge(block(0), block(2), 0),
+            edge(inserted, block(2), 0),
+            edge(block(1), block(2), 0),
+        ]
+    );
 }
 
 #[test]
@@ -387,6 +544,14 @@ fn sparse_roots_distinguish_deleted_blocks_and_census_rejects_bad_values() {
 
 fn root(site: MirLocalIdentitySite, block: BlockId) -> MirProtectedBlockRoot {
     MirProtectedBlockRoot { site, block }
+}
+
+fn edge(source: BlockId, target: BlockId, successor_index: usize) -> MirLocalCfgEdge {
+    MirLocalCfgEdge {
+        source,
+        target,
+        successor_index,
+    }
 }
 
 fn simple_function() -> MirFunctionDefinition {

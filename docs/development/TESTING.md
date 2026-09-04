@@ -135,6 +135,15 @@ over-budget syntax diagnostics.
 | Runtime tests | `tests/runtime/` | The C runtime contract independently of compiler code generation |
 | Documentation tests | `crates/skald-docs-check/` | Repository-local Markdown links, anchors, and required indexes |
 
+Colocated `mir::rewrite::cfg` tests pin the common dense/sparse CFG snapshot.
+They cover zero-, one-, two-, and three-successor terminator families, exact
+parallel-edge multiplicity, source-block and semantic-successor ordering,
+sparse explicit block order, block-owned values, entry and permanent
+publication classification, proof-rich versus normalized roots, disconnected
+regions, malformed references, and deterministic repeated queries. The closed
+terminator-kind and identity-site matches provide compile-time maintenance
+coverage when a terminator or permanent attachment form is added.
+
 Whole-world reachability coverage is split by owner. Colocated analysis and
 verifier tests pin roots, exhaustive dependency families, typed static-place
 accesses and lifecycle-owned destinations, structured malformed-identity

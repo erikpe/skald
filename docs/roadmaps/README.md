@@ -6,7 +6,13 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+is in progress. Deterministic predecessor-edge facts and exhaustive block
+classification are implemented; immutable forwarding and merging candidate
+analysis is next. The roadmap depends on the completed proof-provenance
+normalization, dense MIR rewriting, selectable pipeline, static-lifecycle, and
+whole-world reachability foundations.
 
 ## Pending discoveries
 
@@ -72,13 +78,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The
-[post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
-is planned; deterministic predecessor-edge facts are next. It implements
-independently selectable empty-block forwarding and basic-block merging over
-normalized final MIR and depends on the completed proof-provenance
-normalization, dense MIR rewriting, selectable pipeline, static-lifecycle, and
-whole-world reachability foundations.
+No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
@@ -87,9 +87,10 @@ The frozen
 covers independently selectable empty-block forwarding and basic-block
 merging on normalized final MIR. Its frozen decisions preserve permanent
 static-publication roots, narrow final-stage mutation authority, deterministic
-dense commit, normalized reverification, and fresh reachability. Its planned
-[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) begins
-with deterministic predecessor-edge facts.
+dense commit, normalized reverification, and fresh reachability. Its active
+[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) has
+completed deterministic predecessor-edge facts and proceeds with immutable
+candidate analysis.
 
 The completed proof-provenance normalization
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and

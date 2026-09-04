@@ -362,7 +362,7 @@ canary. One actionable storage-provenance limitation remains in the
 [follow-up discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
 The frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
-and its planned
+and its active
 [implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) define the
 first proposed expansion of that final-stage capability:
 independently selectable empty-block forwarding and basic-block merging with
@@ -630,8 +630,8 @@ This layer offers the best balance of moderate-to-large effort, broad coverage,
 and low semantic risk. It also creates measurements that can justify the later
 architectural investments.
 
-6. The proof-provenance normalization boundary is implemented. Next, implement
-   its frozen
+6. The proof-provenance normalization boundary is implemented. Continue its
+   frozen
    [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md),
    adding independently selectable empty-block forwarding and basic-block
    merging before whole-world reachability.

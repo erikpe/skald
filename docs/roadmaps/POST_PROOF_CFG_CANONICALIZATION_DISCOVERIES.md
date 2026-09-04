@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Discoveries
 
-Status: open for implementation-specific findings from the planned
+Status: open for implementation-specific findings from the active
 [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md).
 
 The frozen

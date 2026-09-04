@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: planned; PCR0 is next.
+Status: in progress; PCR0 is complete and PCR1 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -95,7 +95,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 
 ## Progress
 
-- [ ] PCR0 — Add deterministic predecessor-edge CFG facts
+- [x] PCR0 — Add deterministic predecessor-edge CFG facts
 - [ ] PCR1 — Define normalized canonicalization candidates
 - [ ] PCR2 — Add guarded final-CFG compound edits
 - [ ] PCR3 — Implement selectable empty-block forwarding
@@ -112,23 +112,23 @@ concise cross-domain status for FMC-08 and FMC-09.
 **Purpose:** Give deletion, forwarding, merging, and future CFG consumers one
 canonical structural view before new mutation is authorized.
 
-- [ ] Add a closed callable-local edge fact containing source, target, and a
+- [x] Add a closed callable-local edge fact containing source, target, and a
   stable successor occurrence or equivalent exhaustive edge role.
-- [ ] Extend every block fact with ordered successor and predecessor edge
+- [x] Extend every block fact with ordered successor and predecessor edge
   occurrences while retaining existing value-definition, entry, root,
   reachability, and unreachable queries.
-- [ ] Preserve duplicate successor occurrences rather than collapsing them to
+- [x] Preserve duplicate successor occurrences rather than collapsing them to
   predecessor-block sets.
-- [ ] Derive dense-definition and sparse-edit facts through one shared builder
+- [x] Derive dense-definition and sparse-edit facts through one shared builder
   in source block and successor occurrence order.
-- [ ] Expose entry and permanent-attachment classification plus the minimum
+- [x] Expose entry and permanent-attachment classification plus the minimum
   immutable instruction-count and terminator-shape facts required by candidate
   analysis.
-- [ ] Keep proof-rich and normalized root contracts explicit; normalized facts
+- [x] Keep proof-rich and normalized root contracts explicit; normalized facts
   continue rejecting consumed proof roots.
-- [ ] Add exhaustive maintenance coverage requiring every future terminator
+- [x] Add exhaustive maintenance coverage requiring every future terminator
   successor form and permanent block attachment to receive a classification.
-- [ ] Preserve current CFG consumers and diagnostics unless the edge vocabulary
+- [x] Preserve current CFG consumers and diagnostics unless the edge vocabulary
   provides a strictly clearer error.
 
 **Tests:** Focused `mir::rewrite::cfg` dense/edit parity tests; every goto,
