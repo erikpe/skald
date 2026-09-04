@@ -3211,6 +3211,32 @@ counts, including supporting values and instructions and explicitly labeled
 removal upper bounds. The analysis is opt-in and is not a registered MIR pass,
 report event, compiler request option, or backend input.
 
+### Read-only primitive-cast redundancy census
+
+`passes::analyze_redundant_primitive_casts` inspects every ordinary primitive
+cast assignment in one borrowed, verified final-MIR snapshot. It records exact
+cast kind and source/result types, callable identity, result consumer families,
+checked floating-to-integer rvalues and range checks as excluded protocol
+counts, and deterministic interesting/proven/blocked accounting. The analysis
+does not clone or rewrite MIR.
+
+The complete-domain composition table proves identity casts, lossless integer
+bit-conversion chains, and `bool`-through-integer canonical round trips. It
+does not infer from host register widths. Narrow-then-widen chains and integer
+values round-tripped through `bool` require a missing value-domain fact;
+floating numeric conversions, raw-bit reinterpretation and NaN payloads, and
+checked conversions remain explicit barriers. Replacement additionally obeys
+the existing semantic value-use boundary, block locality, and single-use
+requirement when collapsing two casts to one.
+
+Results are deterministic program and per-callable aggregates with exact
+shape, disposition, consumer, primary-blocker, full-barrier, supporting-value,
+supporting-instruction, and conservative removal-upper-bound counts. Creation
+origin is intentionally absent from a single-snapshot result: only the later
+corpus reporter may attribute initial lowering or an earlier pass when direct
+checkpoint comparison proves that origin. This opt-in census is not a MIR
+pass, compiler option, report event, or backend input.
+
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests
 compare those products and assembly both for a complete source pipeline and

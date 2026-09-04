@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: in progress; LMR0-LMR2 are complete and LMR3 is next.
+Status: in progress; LMR0-LMR3 are complete and LMR4 is next.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -122,7 +122,7 @@ The frozen census, corpus, schema, and decision rules are authoritative in the
 - [x] LMR0 — Freeze the census and corpus contract
 - [x] LMR1 — Compose verified MIR inspection through the driver
 - [x] LMR2 — Measure scalar-spill constant provenance
-- [ ] LMR3 — Measure redundant primitive casts
+- [x] LMR3 — Measure redundant primitive casts
 - [ ] LMR4 — Measure local primitive common subexpressions
 - [ ] LMR5 — Build deterministic corpus aggregation and reporting
 - [ ] LMR6 — Run the study and select the next optimization project
@@ -275,20 +275,20 @@ or ordinary compilation cost.
 **Purpose:** Separate safely removable conversion churn from casts that encode
 canonicalization, range, checked failure, or representation semantics.
 
-- [ ] Inventory primitive cast assignments by exact cast kind, source/result
+- [x] Inventory primitive cast assignments by exact cast kind, source/result
       type, checkpoint, callable, and consumer family.
-- [ ] Recognize exact identity casts and adjacent block-local chains whose
+- [x] Recognize exact identity casts and adjacent block-local chains whose
       composed conversion is proven equal for the complete source value domain.
-- [ ] Use one explicit value-domain/cast-composition table owned by the census;
+- [x] Use one explicit value-domain/cast-composition table owned by the census;
       reuse implemented primitive semantics and classify unsupported pairs
       rather than inferring from equal host widths.
-- [ ] Separate raw-bit reinterpretation, integer narrowing/widening, boolean
+- [x] Separate raw-bit reinterpretation, integer narrowing/widening, boolean
       canonicalization, integer/floating conversion, and checked
       floating-to-integer protocols.
-- [ ] Classify blockers including nonadjacent provenance, multiple uses,
+- [x] Classify blockers including nonadjacent provenance, multiple uses,
       protected use roles, control-flow boundaries, lost-range knowledge,
       checked failure, floating payload concerns, and unsupported composition.
-- [ ] Record whether repeated casts appear to originate in lowering, source
+- [x] Record whether repeated casts appear to originate in lowering, source
       code, generic specialization, or earlier final-MIR rewriting when that
       distinction follows from deterministic checkpoint evidence.
 
@@ -300,6 +300,26 @@ unchanged MIR; deterministic classification.
 **Exit criteria:** The report can distinguish definite redundant casts from
 interesting but proof-dependent conversions and identify whether the likely
 owner is lowering canonicalization or a final-MIR pass.
+
+**Completion evidence:** The public read-only
+`analyze_redundant_primitive_casts` entry point accepts only a verified
+final-MIR product and returns deterministic totals plus callable-ordered
+observations. Every ordinary cast records its exact operation/source/target
+shape, disposition, and semantic result consumers; checked floating-to-integer
+rvalues and range checks are separate excluded-protocol counts. One explicit
+complete-domain table proves identity, lossless integer composition, and the
+canonical boolean round trip while retaining narrowing/widening, boolean,
+floating, raw-bit/NaN, checked-failure, adjacency, use-count, protected-use,
+control-flow, malformed-identity, and unsupported-composition barriers.
+Supporting identities and conservative removal ceilings remain aggregate-only,
+and repeated analysis leaves MIR unchanged. Single-snapshot results make no
+unprovable source/lowering/generic origin claim; the frozen checkpoint
+comparison in LMR5 is the deterministic evidence boundary for attributing an
+input-created or earlier-pass-created pattern. Focused tests cover the full
+25-cell primitive pair matrix, safe and unsafe chains, checked diamonds,
+protected roles, cross-block replacement, exact shapes, deterministic results,
+and unchanged MIR. Public-facade and living phase/debugging documentation are
+updated without adding a pass or ordinary compilation cost.
 
 ### LMR4 — Measure local primitive common subexpressions
 

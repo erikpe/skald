@@ -32,7 +32,10 @@ pub(crate) use pipeline::{
     MeasuredMirPipeline, MirPipelineStatistics,
 };
 pub use redundancy::{
-    analyze_scalar_spill_provenance, ScalarSpillBlocker, ScalarSpillCallableObservation,
-    ScalarSpillConsumer, ScalarSpillCount, ScalarSpillDepth, ScalarSpillProvenanceCounts,
+    analyze_redundant_primitive_casts, analyze_scalar_spill_provenance, PrimitiveCastBlocker,
+    PrimitiveCastCallableObservation, PrimitiveCastConsumer, PrimitiveCastCount,
+    PrimitiveCastDisposition, PrimitiveCastObservation, PrimitiveCastObservationCounts,
+    PrimitiveCastShape, ScalarSpillBlocker, ScalarSpillCallableObservation, ScalarSpillConsumer,
+    ScalarSpillCount, ScalarSpillDepth, ScalarSpillProvenanceCounts,
     ScalarSpillProvenanceObservation, ScalarSpillUnlock,
 };

@@ -48,8 +48,8 @@ use skald_compiler::{
         ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::{
-        analyze_scalar_spill_provenance, available_mir_passes, run_mir_pipeline,
-        run_mir_pipeline_inspected,
+        analyze_redundant_primitive_casts, analyze_scalar_spill_provenance, available_mir_passes,
+        run_mir_pipeline, run_mir_pipeline_inspected,
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
@@ -58,7 +58,8 @@ use skald_compiler::{
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
         MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
-        MirPipelineFailureStage, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
+        MirPipelineFailureStage, PrimitiveCastBlocker, PrimitiveCastConsumer,
+        PrimitiveCastDisposition, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
         ScalarSpillUnlock, VerifiedFinalMirProgram,
     },
     resolve::{
@@ -393,6 +394,12 @@ fn intentional_phase_and_dump_paths_compose() {
     let _blocker = ScalarSpillBlocker::AmbiguousWrites;
     let _consumer = ScalarSpillConsumer::TotalPrimitive;
     let _unlock = ScalarSpillUnlock::PrimitiveFolding;
+    let casts = analyze_redundant_primitive_casts(&mir);
+    let _cast_counts = casts.counts();
+    let _cast_callables = casts.callables();
+    let _cast_disposition = PrimitiveCastDisposition::Identity;
+    let _cast_blocker = PrimitiveCastBlocker::MissingValueDomainFact;
+    let _cast_consumer = PrimitiveCastConsumer::PrimitiveCast;
     let target = target_by_name("x86_64-sysv").unwrap();
     let omitted = emit_assembly(target, BackendInput::without_runtime_trace(&mir)).unwrap();
     let enabled = emit_assembly(target, BackendInput::with_runtime_trace(&mir, &sources)).unwrap();
