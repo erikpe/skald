@@ -1,25 +1,12 @@
 # Checked Integer Constant Protocol Simplification Discoveries
 
-Status: open follow-up record from the completed
+Status: open; one measured low-priority follow-up remains from the completed
 [checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
 
-Use this file for concrete maintainability findings or optimization
-opportunities discovered while implementing the roadmap that do not belong in
-its reviewed FMC-01/FMC-02 scope. Each finding should record the problem,
-implementation evidence, likely owner, priority, and a bounded future
-direction.
-
-Do not duplicate the complete
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md). The
-catalog owns concise cross-domain placement, effort, value, prerequisite, and
-status summaries. This record owns implementation-specific evidence needed to
-make a later task reviewable.
-
-Expected but not pre-approved topics include direct folding of statically
-failing protocols, eliminating a successful check around a dynamic operation,
-nested checked-constant propagation, redundant private scalar-spill cleanup,
-proof-provenance normalization, and broader checked scalar families. Recording
-a topic here does not reopen the completed roadmap.
+The [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
+concise cross-domain placement, effort, value, prerequisite, and status
+summaries; this record retains only implementation-specific evidence for
+nested checked results that cross private scalar carriers.
 
 ## Nested successful protocols do not feed enclosing scalar carriers
 
@@ -36,9 +23,10 @@ checked expressions can leave optimization opportunities behind even after
 their inner operations have folded. Repeating the same checked-protocol pass
 cannot expose the outer operation without an additional propagation rule.
 
-**Likely owner:** A future verified scalar-spill constant-provenance or narrow
-storage-propagation analysis shared by final-MIR simplifications, rather than
-the checked-protocol topology query itself.
+**Likely owner:** A future seal-local scalar-spill constant-provenance analysis
+shared by final-MIR simplifications, rather than the checked-protocol topology
+query itself. The existing read-only redundancy census provides the initial
+proof vocabulary but does not authorize mutation.
 
 **Priority:** Low. The version-one
 [local-redundancy study](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md#candidate-comparison)
@@ -51,4 +39,5 @@ candidate was measured but not selected for an implementation project.
 store/load chains with explicit write, dominance, type, alias, and lifecycle
 conditions. Keep that fact local to one verified seal and let the existing
 checked-protocol query consume it; do not recursively rewrite nested diamonds
-or broaden CIR3 into general load/store propagation.
+or broaden the pass into general load/store propagation. Reconsider the work
+only when representative non-fixture evidence changes the recorded selection.

@@ -82,10 +82,6 @@ Potential value uses **low**, **medium**, **high**, or **very high** and names
 the expected dimension: runtime, code size, compile time, or architecture.
 These are hypotheses until measurements exist.
 
-The first deterministic local-suite measurements and their limits are recorded
-in the
-[local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#initial-measurements-separate-local-wins-from-whole-world-pruning).
-They establish a baseline, not a general workload ranking.
 The completed
 [local final-MIR redundancy measurement roadmap](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
 compares FMV-15, FMV-02, and FMV-03 without committing to implement any of
@@ -165,7 +161,7 @@ probably require proof-provenance normalization.
 | FMC-04 | Fold constant checked `f64`-to-integer conversions | After exact IEEE/range evaluation; before CFG cleanup | Foundation needed / **Large** | Low to medium runtime and size | Range, finiteness, truncation, target-width result, exact failure reason, and cast-range diamond must be rewritten together |
 | FMC-05 | Simplify statically decidable checked casts and type tests missed by lowering | After whole-world type/dispatch facts; before CFG cleanup | Foundation needed / **Medium to large** | Medium runtime and code size | Dynamic class sets, access views, checked carriers, failure blocks, ownership, and complete-object provenance |
 | FMC-06 | Simplify statically decidable optional presence and unwrap diamonds | After optional-state analysis; before CFG cleanup | Foundation needed / **Large** | Medium runtime and code size | Optional representation, guard counts, pinned mutation, payload lifetime, cleanup, and exact absence/overflow failure behavior |
-| FMC-07 | Delete obsolete path-condition and logical-expression proof records | In a named normalization stage after their final semantic verifier; before broad CFG passes | Foundation needed / **Large** | High architectural value; medium MIR/compile-time reduction | Must classify metadata as semantic, consumed proof, or recomputable analysis and establish a new verified post-normalization product |
+| FMC-07 | [Delete obsolete path-condition and logical-expression proof records](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#proof-coupled-logical-cfg-remains-intentionally-opaque) | In a named normalization stage after their final semantic verifier; before broad CFG passes | Foundation needed / **Large** | High architectural value; medium MIR/compile-time reduction | Must classify metadata as semantic, consumed proof, or recomputable analysis and establish a new verified post-normalization product |
 | FMC-08 | Empty-block forwarding | After FMC-07; before block merging | Foundation needed / **Medium** | Medium code size and compile time | Exact predecessor roles, storage epochs, cleanup joins, static publication endpoints, and runtime trace spans |
 | FMC-09 | Basic-block merging | After proof normalization and empty-block forwarding; before jump threading | Foundation needed / **Medium** | Medium code size and target input quality | Lifetime and ownership state, fallthrough spans, terminator semantics, and deterministic block order |
 | FMC-10 | Jump threading and branch-to-branch folding | After proof normalization and scalar propagation; before unreachable-region deletion | Foundation needed / **Large** | Medium to high runtime and code size | Path predicates, duplicated predecessors, cleanup/ownership joins, loop edges, and code-size growth |
@@ -276,7 +272,7 @@ design proposals before implementation.
 
 | Candidate | Primary consumers | Effort | Expected leverage | Main decision |
 |---|---|---|---|---|
-| Proof-provenance classification and post-proof normalization | FMC-03 through FMC-15; some inlining | **Large** | High | Which metadata remains semantic after final verification, which is consumed, and what verifier seals the normalized product? |
+| [Proof-provenance classification and post-proof normalization](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#proof-coupled-logical-cfg-remains-intentionally-opaque) | FMC-03 through FMC-15; some inlining | **Large** | High | Which metadata remains semantic after final verification, which is consumed, and what verifier seals the normalized product? |
 | Conservative whole-program effect summaries | FMV-08, FMM-03 through FMM-12, WWE-04/WWE-07, SLD-01/SLD-02 | **Large** | Very high | What regions and observable effects form the first sound summary lattice? |
 | Points-to, alias, escape, and ownership analysis | Memory, loop, specialization, allocation, retain/release candidates | **Large to extra large** | Very high | How much flow/context sensitivity is justified, and how are recursive/dynamic targets widened deterministically? |
 | Scalar SSA or normalized optimization IR | FMV-09 through FMV-11 and advanced loops | **Extra large** | High | Extend MIR with block parameters or maintain a separate optimizer-facing scalar IR? |

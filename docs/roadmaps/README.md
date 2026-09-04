@@ -29,16 +29,16 @@ the discoveries record.
 
 The open
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
-record implementation-specific proof-normalization, checked-operation,
-floating-evaluation, memory-analysis, and measurement follow-ups found while
-delivering the completed local simplification layer. Cataloged follow-ups do
-not become roadmap work merely by being mentioned there.
+record the proof-coupled CFG barrier that remains after the completed local
+simplification layer. It is the evidence input for a future proof-provenance
+classification and post-proof normalization design.
 
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
-records implementation-specific findings from the completed checked-protocol
-pass without widening its reviewed successful-constant boundary. The
-nested-carrier follow-up remains actionable.
+retain the measured nested-carrier limitation from the completed
+checked-protocol pass without widening its reviewed successful-constant
+boundary. Representative non-fixture evidence is required before that
+low-priority optimization is reconsidered.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven current compiler constraints on modular target-independent and
