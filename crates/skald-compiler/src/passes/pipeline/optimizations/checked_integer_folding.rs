@@ -24,12 +24,13 @@ use super::{
 
 /// Checked-operation families selected while preparing one fold plan.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum CheckedIntegerFoldFamily {
+pub(super) enum CheckedIntegerFoldSelection {
     DivisionAndRemainder,
     Shift,
+    All,
 }
 
-impl CheckedIntegerFoldFamily {
+impl CheckedIntegerFoldSelection {
     const fn contains(self, check: CheckedIntegerProtocolCheck) -> bool {
         matches!(
             (self, check),
@@ -37,6 +38,7 @@ impl CheckedIntegerFoldFamily {
                 Self::DivisionAndRemainder,
                 CheckedIntegerProtocolCheck::Division(_)
             ) | (Self::Shift, CheckedIntegerProtocolCheck::Shift(_))
+                | (Self::All, _)
         )
     }
 }
@@ -51,7 +53,7 @@ impl CheckedIntegerFoldPlan {
     /// Observes one operation family without retaining general MIR facts.
     pub(super) fn prepare(
         program: &MirProgram,
-        family: CheckedIntegerFoldFamily,
+        selection: CheckedIntegerFoldSelection,
     ) -> Result<Self, MirRewriteError> {
         let mut candidates = BTreeMap::<_, Vec<_>>::new();
         for definition in program.executable_definitions() {
@@ -59,7 +61,7 @@ impl CheckedIntegerFoldPlan {
                 let CheckedIntegerProtocolObservation::Candidate(candidate) = observation else {
                     continue;
                 };
-                if family.contains(candidate.check) {
+                if selection.contains(candidate.check) {
                     candidates
                         .entry(definition.callable())
                         .or_default()

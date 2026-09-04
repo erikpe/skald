@@ -23,9 +23,10 @@ a topic here does not add it to the active roadmap.
 
 ## Nested successful protocols do not feed enclosing scalar carriers
 
-**Evidence:** CIR3 coverage for `((8 / 2) + (7 % 3)) / 2` finds and folds the
-two independent inner protocols in one callable transaction. The enclosing
-division remains checked on the next observation: each inner constant is
+**Evidence:** Division/remainder coverage for `((8 / 2) + (7 % 3)) / 2` finds
+and folds the two independent inner protocols in one callable transaction;
+shift coverage observes the same boundary for `(1 << 2u) << 1u`. The enclosing
+operation remains checked on the next observation: each inner constant is
 stored into its result carrier, reloaded at its join, and then stored into an
 outer operand carrier, while the deliberately narrow candidate query accepts
 only an exact constant assignment as the unique carrier-store source.

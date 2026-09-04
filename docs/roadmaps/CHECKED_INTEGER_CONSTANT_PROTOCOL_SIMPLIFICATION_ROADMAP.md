@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 through CIR3 are complete and CIR4 is next.
+Status: in progress; CIR0 through CIR4 are complete and CIR5 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -111,7 +111,7 @@ Candidate placement and status remain authoritative in the
 - [x] CIR1 — Model verified checked-protocol candidates
 - [x] CIR2 — Add atomic successful-protocol rewriting
 - [x] CIR3 — Fold constant integer division and remainder protocols
-- [ ] CIR4 — Fold constant integer shift protocols
+- [x] CIR4 — Fold constant integer shift protocols
 - [ ] CIR5 — Register selection and structured measurements
 - [ ] CIR6 — Activate and compose the default schedule
 - [ ] CIR7 — Prove semantic parity, determinism, and optimization value
@@ -299,15 +299,15 @@ transformation; registration remains intentionally deferred to CIR5.
 **Purpose:** Deliver FMC-02 through the same checked-protocol boundary without
 duplicating division-specific machinery.
 
-- [ ] Implement left and right shift transformation for `i64`, `u64`, and
+- [x] Implement left and right shift transformation for `i64`, `u64`, and
       `u8` with an exact constant `u64` count.
-- [ ] Accept counts `0..=63` for 64-bit operands and `0..=7` for `u8`.
-- [ ] Preserve wrapping left-shift semantics, arithmetic signed right shift,
+- [x] Accept counts `0..=63` for 64-bit operands and `0..=7` for `u8`.
+- [x] Preserve wrapping left-shift semantics, arithmetic signed right shift,
       logical unsigned right shift, and canonical `u8` results.
-- [ ] Leave count-at-width, larger-count, partially constant, noncanonical,
+- [x] Leave count-at-width, larger-count, partially constant, noncanonical,
       protected, and other checked protocols byte-for-byte unchanged by this
       transformation.
-- [ ] Share protocol discovery, rewrite, outcome, and accounting vocabulary
+- [x] Share protocol discovery, rewrite, outcome, and accounting vocabulary
       with division/remainder instead of introducing a second pass framework.
 
 **Tests:** All six direction/type combinations; zero and maximum valid counts;
@@ -318,6 +318,20 @@ nested checks; spans; verification; deterministic rewriting; and idempotence.
 **Exit criteria:** Every eligible constant shift protocol folds through the
 shared transaction with exact fixed-width semantics and no statically failing
 count is optimized away.
+
+**Completion evidence:** The prepared checked-integer plan now supports
+division/remainder-only, shift-only, and combined selection while retaining
+one observer, deterministic callable/block grouping, transaction, and removed
+load accounting path. Focused tests cover both directions for `i64`, `u64`,
+and `u8`; zero and maximum valid counts; wrapping left shifts; arithmetic and
+logical right shifts; discarded high bits; byte canonicalization; exact spans;
+retained operand work; multiple, nested, and mixed-family protocols; dense
+commit; verification; determinism; and repeat idempotence. Counts at or above
+the width, `u64::MAX`, dynamic or effectful operands, noncanonical or protected
+shapes, and division-only programs remain unchanged under shift selection.
+The full compiler suite, workspace static checks, documentation validation,
+and supported Rust toolchain accept the internal combined transformation;
+registration and reporting remain intentionally deferred to CIR5.
 
 ### CIR5 — Register selection and structured measurements
 

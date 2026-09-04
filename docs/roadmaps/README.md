@@ -10,8 +10,9 @@ The
 [checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
 is in progress. Exact checked-integer evaluation and the narrow verified
 carrier/protocol query, atomic checked-diamond rewrite, and division/remainder
-folding are complete; shift folding is next, followed by selectable
-registration, default activation, broad semantic evidence, and closure.
+and shift folding are complete; selectable registration and structured
+measurements are next, followed by default activation, broad semantic evidence,
+and closure.
 
 ## Pending discoveries
 
