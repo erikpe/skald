@@ -167,9 +167,6 @@ fn run_mir_pipeline_with_transition(
                         let MirProgramRewriteResult { program, .. } = rewrite;
                         (program, rewrite_changes)
                     }
-                    MirProofPassChange::DefinitionRetention(program) => {
-                        (program, Default::default())
-                    }
                 };
                 statistics.record_verification();
                 verified = match verify_proof_mir(program) {

@@ -522,13 +522,16 @@ impl<'mir> MirDependencyExtractor<'mir> {
                 region,
                 span,
             ),
+            // Proof normalization replaces `PathCondition` with a load from
+            // the same callable-local activation storage. Neither form adds
+            // an execution dependency. The parallel static-place extractor
+            // still classifies ordinary loads whose base is a static field.
+            crate::mir::MirRvalueKind::PathCondition(_) | crate::mir::MirRvalueKind::Load(_) => {}
             crate::mir::MirRvalueKind::ConstantI64(_)
             | crate::mir::MirRvalueKind::ConstantU64(_)
             | crate::mir::MirRvalueKind::ConstantU8(_)
             | crate::mir::MirRvalueKind::ConstantF64Bits(_)
             | crate::mir::MirRvalueKind::ConstantBool(_)
-            | crate::mir::MirRvalueKind::PathCondition(_)
-            | crate::mir::MirRvalueKind::Load(_)
             | crate::mir::MirRvalueKind::Unary { .. }
             | crate::mir::MirRvalueKind::Binary { .. }
             | crate::mir::MirRvalueKind::IntegerDivision { .. }

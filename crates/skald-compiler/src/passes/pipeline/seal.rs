@@ -41,8 +41,8 @@ use crate::passes::{
 /// fn verify(program: MirProgram) { let _ = verify_proof_mir(program); }
 /// ```
 ///
-/// A seal borrowed from inspection cannot be invalidated or detached from its
-/// reachability facts:
+/// A seal borrowed from inspection cannot be invalidated. Proof-rich
+/// checkpoints also expose no final reachability facts:
 ///
 /// ```compile_fail
 /// use skald_compiler::passes::MirProofPipelineCheckpoint;
@@ -72,7 +72,6 @@ use crate::passes::{
 #[derive(Clone, Eq, PartialEq)]
 pub struct VerifiedProofMirProgram {
     program: MirProgram,
-    reachability: Box<MirReachabilityAnalysis>,
 }
 
 impl VerifiedProofMirProgram {
@@ -80,16 +79,8 @@ impl VerifiedProofMirProgram {
         &self.program
     }
 
-    pub(crate) const fn reachability(&self) -> &MirReachabilityAnalysis {
-        &self.reachability
-    }
-
     pub(super) fn invalidate_for_proof_transformation(self) -> MirProgram {
-        let Self {
-            program,
-            reachability: _,
-        } = self;
-        program
+        self.program
     }
 }
 
@@ -235,10 +226,7 @@ pub(crate) fn verify_proof_mir(
     verify_reachable_definitions(&program, &reachability)?;
     verify_active_lifecycle_reachability(&program, &reachability)?;
     verify_reachable_static_accesses(&program, &reachability)?;
-    Ok(VerifiedProofMirProgram {
-        program,
-        reachability: Box::new(reachability),
-    })
+    Ok(VerifiedProofMirProgram { program })
 }
 
 /// Performs the mandatory one-way transition and seals normalized MIR with

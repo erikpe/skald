@@ -12,12 +12,15 @@ impl MirDependencyExtractor<'_> {
         span: Span,
     ) -> Result<(), MirDependencyExtractionError> {
         match &rvalue.kind {
+            // A proof-rich path read always names callable-local activation
+            // storage. Its normalized `Load` form is handled below and still
+            // produces no static access for that local base.
+            MirRvalueKind::PathCondition(_) => Ok(()),
             MirRvalueKind::ConstantI64(_)
             | MirRvalueKind::ConstantU64(_)
             | MirRvalueKind::ConstantU8(_)
             | MirRvalueKind::ConstantF64Bits(_)
             | MirRvalueKind::ConstantBool(_)
-            | MirRvalueKind::PathCondition(_)
             | MirRvalueKind::Unary { .. }
             | MirRvalueKind::Binary { .. }
             | MirRvalueKind::IntegerDivision { .. }

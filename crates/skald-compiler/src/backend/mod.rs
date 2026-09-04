@@ -44,6 +44,16 @@ pub enum RuntimeTracePolicy {
 /// let _ = BackendInput::without_runtime_trace(&unchecked);
 /// ```
 ///
+/// Proof-rich verified MIR is likewise not a backend input:
+///
+/// ```compile_fail
+/// use skald_compiler::{backend::BackendInput, passes::VerifiedProofMirProgram};
+///
+/// fn emit(proof_rich: &VerifiedProofMirProgram) {
+///     let _ = BackendInput::without_runtime_trace(proof_rich);
+/// }
+/// ```
+///
 /// Sparse callable edit state is compiler-private and cannot be named by a
 /// backend or downstream crate:
 ///

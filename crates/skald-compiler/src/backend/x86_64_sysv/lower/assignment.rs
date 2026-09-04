@@ -93,8 +93,8 @@ impl InstructionSelector<'_, '_> {
             MirRvalueKind::ConstantBool(value) => {
                 self.select_integer_constant(u64::from(*value), ty, destination)
             }
-            MirRvalueKind::PathCondition(condition) => {
-                self.select_load(&MirPlace::base(condition.activation), ty, destination)?;
+            MirRvalueKind::PathCondition(_) => {
+                unreachable!("verified final MIR cannot contain path-condition rvalues")
             }
             MirRvalueKind::Load(place) => {
                 self.select_load(place, ty, destination)?;

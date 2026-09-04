@@ -195,8 +195,9 @@ Status: **in progress** under the frozen
 and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
 Verifier classification, atomic normalization, the two sealed products,
-stage-aware policy, and stage-aware observation are implemented. Backend
-cleanup and the post-proof canary remain later tasks.
+stage-aware policy and observation, normalized-only reachability retention,
+and backend consumption are implemented. The post-proof canary remains a
+later task.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
@@ -208,11 +209,12 @@ record consumption, dense identities, deterministic counts, malformed input,
 and atomic failure.
 
 Compile-fail API tests prevent forging either
-`VerifiedProofMirProgram` or `VerifiedFinalMirProgram`, detaching their facts,
-invoking private invalidation, or skipping normalization. Transition tests pin
-proof retention, complete proof consumption, normalized-verifier rejection,
-fresh reachability facts, clone/debug behavior, and two verification
-executions for `none`. Stage-policy tests pin every pass's stage, wrong-stage
+`VerifiedProofMirProgram` or `VerifiedFinalMirProgram`, detaching final facts,
+invoking private invalidation, skipping normalization, or constructing backend
+input from proof-rich MIR. Transition tests pin proof retention, complete proof
+consumption, dependency-inventory parity, normalized-verifier rejection,
+fresh reachability facts, clone/debug behavior, and two verification executions
+for `none`. Stage-policy tests pin every pass's stage, wrong-stage
 rejection, exact proof-rich and final schedule regions, typed callbacks, and
 the single mandatory normalization boundary. Inspection and reporting tests
 pin stage-typed checkpoint order, normalization failure cutoff, final-only

@@ -1,8 +1,10 @@
 use crate::{
+    backend::BackendInput,
     passes::{
-        resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, run_mir_pipeline_measured,
-        run_mir_pipeline_with_occurrences, MirOptimizationProfile, MirPassMeasurement,
-        MirPassOccurrenceOutcome, MirPassOccurrenceRecord,
+        reachability::analyze_reachability, resolve_exact_mir_pass_schedule,
+        resolve_mir_pass_schedule, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
+        MirOptimizationProfile, MirPassMeasurement, MirPassOccurrenceOutcome,
+        MirPassOccurrenceRecord,
     },
     test_support::{lower_source_to_final_mir, lower_source_to_mir},
 };
@@ -46,6 +48,11 @@ fn reports_exact_unchanged_and_changed_accounting() {
     );
     let verified = changed.result.as_ref().unwrap();
     assert_eq!(verified.definitions.len(), 1);
+    assert_eq!(
+        verified.reachability(),
+        &analyze_reachability(verified.program()).unwrap()
+    );
+    assert_eq!(verified.reachability().retained_definitions().len(), 1);
     assert_eq!(changed.statistics.verification_executions(), 3);
     assert_eq!(changed.statistics.processed_callables(), 4);
     assert_eq!(changed.statistics.changed_callables(), 2);
@@ -149,6 +156,12 @@ fn exact_and_repeated_schedules_preserve_static_activation_authority() {
                 .proof()
                 .activation(),
             &expected
+        );
+        let backend = BackendInput::without_runtime_trace(&output);
+        assert_eq!(backend.active_static_fields(), expected.fields());
+        assert_eq!(
+            backend.required_runtime_entities().len(),
+            output.reachability().runtime_entities().len()
         );
     }
 }

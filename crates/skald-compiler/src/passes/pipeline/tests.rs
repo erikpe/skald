@@ -134,22 +134,22 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 20] = [
         measured_unchanged_pass,
     ),
     registration(RETARGET_CALL, "retarget-call-pass", retarget_call_pass),
-    registration(
+    final_registration(
         OBSERVE_RETARGET,
         "observe-retarget-pass",
         observe_retarget_pass,
     ),
-    registration(
+    final_registration(
         RETAIN_REACHABLE,
         "retain-reachable-pass",
         retain_reachable_pass,
     ),
-    registration(
+    final_registration(
         OBSERVE_RETENTION,
         "observe-retention-pass",
         observe_retention_pass,
     ),
-    registration(
+    final_registration(
         INVALID_RETENTION_ACCOUNTING,
         "invalid-retention-accounting-pass",
         invalid_retention_accounting_pass,
@@ -210,7 +210,7 @@ fn execution_log() -> Vec<&'static str> {
 }
 
 #[test]
-fn none_pipeline_preserves_valid_mir_and_reports_only_verification() {
+fn none_pipeline_preserves_valid_mir_and_reports_the_mandatory_boundary() {
     let mir = lowered_program();
     let expected = verify_final_mir(mir.clone()).unwrap();
     let measured = run_mir_pipeline_measured(mir, &none_schedule());
@@ -518,7 +518,7 @@ fn unchanged_final_pass_retains_the_normalized_seal_without_reverification() {
 }
 
 #[test]
-fn unchanged_definition_retention_preserves_the_verified_seal() {
+fn unchanged_definition_retention_preserves_the_normalized_seal() {
     clear_test_state();
     let mir = lowered_program();
     let expected = verify_final_mir(mir.clone()).unwrap();
@@ -1188,13 +1188,13 @@ fn changed_call_targets_rebuild_facts_before_later_passes_and_checkpoints() {
         [
             "proof-rich-input",
             "after-proof-rich-0-retarget-call-pass-0",
-            "after-proof-rich-1-observe-retarget-pass-0",
             "after-proof-normalization",
+            "after-final-1-observe-retarget-pass-0",
             "final",
         ]
     );
-    assert_eq!(collector.reachable_callables[..3], [None, None, None]);
-    for callables in collector.reachable_callables[3..]
+    assert_eq!(collector.reachable_callables[..2], [None, None]);
+    for callables in collector.reachable_callables[2..]
         .iter()
         .map(|callables| callables.as_ref().unwrap())
     {
@@ -1202,8 +1202,8 @@ fn changed_call_targets_rebuild_facts_before_later_passes_and_checkpoints() {
         assert!(callables.contains(&right.into()));
     }
     assert_eq!(
-        collector.reachability_dumps[3],
-        collector.reachability_dumps[4]
+        collector.reachability_dumps[2],
+        collector.reachability_dumps[3]
     );
     assert_eq!(measured.statistics.verification_executions(), 3);
     assert_eq!(execution_log(), ["retarget-call", "observe-retarget"]);
@@ -1477,7 +1477,7 @@ fn definition_retention_failure_is_attributed_to_the_exact_occurrence() {
             "fn dead() -> i64 { return 1; }
              fn main() -> i64 { return 0; }",
         ),
-        &test_schedule(&[INVALID_RETENTION_ACCOUNTING, LATER]),
+        &test_schedule(&[INVALID_RETENTION_ACCOUNTING, FINAL_UNCHANGED]),
     );
 
     let error = measured.result.as_ref().unwrap_err();
@@ -1487,7 +1487,7 @@ fn definition_retention_failure_is_attributed_to_the_exact_occurrence() {
     assert_eq!(error.pass_occurrence(), Some(0));
     assert!(error.to_string().contains("definition retention removed 1"));
     assert_eq!(execution_log(), ["invalid-retention-accounting"]);
-    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(measured.statistics.pass_executions(), 1);
     assert_eq!(measured.occurrences().len(), 1);
     assert_eq!(
@@ -1738,8 +1738,8 @@ fn retarget_call_pass(
 }
 
 fn observe_retarget_pass(
-    capability: MirProofPassCapability,
-) -> Result<MirProofPassOutcome, MirPassFailure> {
+    capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
     log_execution("observe-retarget");
     let (_, old, target) = RETARGET_CALL_CONFIGURATION
         .with(Cell::get)
@@ -1751,8 +1751,8 @@ fn observe_retarget_pass(
 }
 
 fn retain_reachable_pass(
-    capability: MirProofPassCapability,
-) -> Result<MirProofPassOutcome, MirPassFailure> {
+    capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
     log_execution("retain-reachable");
     let retention = capability.retain_reachable_definitions()?;
     let removed = retention.summary().removed().total();
@@ -1760,8 +1760,8 @@ fn retain_reachable_pass(
 }
 
 fn observe_retention_pass(
-    capability: MirProofPassCapability,
-) -> Result<MirProofPassOutcome, MirPassFailure> {
+    capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
     log_execution("observe-retention");
     RETENTION_OBSERVATION.with(|observation| {
         observation.set(Some((
@@ -1777,8 +1777,8 @@ fn observe_retention_pass(
 }
 
 fn invalid_retention_accounting_pass(
-    capability: MirProofPassCapability,
-) -> Result<MirProofPassOutcome, MirPassFailure> {
+    capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
     log_execution("invalid-retention-accounting");
     let retention = capability.retain_reachable_definitions()?;
     retention.finish(MirPassData::changed(usize::MAX))

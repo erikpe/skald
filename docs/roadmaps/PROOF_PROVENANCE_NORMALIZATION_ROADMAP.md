@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 through PNR4 are complete and PNR5 is next.
+Status: in progress; PNR0 through PNR5 are complete and PNR6 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -112,7 +112,7 @@ Candidate placement and status remain concise in the
 - [x] PNR2 — Establish the two sealed final-MIR products
 - [x] PNR3 — Make pass policy and execution stage aware
 - [x] PNR4 — Expose stage-aware inspection, failures, and reporting
-- [ ] PNR5 — Migrate reachability and backend consumption
+- [x] PNR5 — Migrate reachability and backend consumption
 - [ ] PNR6 — Add post-proof unreachable-block elimination
 - [ ] PNR7 — Activate and validate the two-stage production schedule
 - [ ] PNR8 — Harden ownership, documentation, and roadmap closure
@@ -293,23 +293,23 @@ compilation pays no optional inspection cost.
 **Purpose:** Complete the trust boundary by ensuring only normalized sealed
 MIR reaches target-independent final retention and target lowering.
 
-- [ ] Make final-seal construction recompute dependency extraction and
+- [x] Make final-seal construction recompute dependency extraction and
   reachability from the exact normalized program.
-- [ ] Audit extraction exhaustiveness after path reads become ordinary loads;
+- [x] Audit extraction exhaustiveness after path reads become ordinary loads;
   prove the conversion adds no callable, static, runtime-entity, or lifecycle
   dependency.
-- [ ] Adapt whole-world definition retention to consume and reseal only
+- [x] Adapt whole-world definition retention to consume and reseal only
   `VerifiedFinalMirProgram`.
-- [ ] Make `BackendInput` accept only `VerifiedFinalMirProgram` and remove any
+- [x] Make `BackendInput` accept only `VerifiedFinalMirProgram` and remove any
   path-condition-specific lowering that the final invariant makes
   unreachable.
-- [ ] Keep static-lifecycle activation authority and permanent publication
+- [x] Keep static-lifecycle activation authority and permanent publication
   endpoints unchanged and visible to retained-domain/backend planning.
-- [ ] Verify sparse retained definitions and target-required entities after
+- [x] Verify sparse retained definitions and target-required entities after
   every changed final-stage pass.
-- [ ] Preserve target-private artifact retention as the final generated-symbol
+- [x] Preserve target-private artifact retention as the final generated-symbol
   safety net.
-- [ ] Update backend and reachability contracts for the implemented type
+- [x] Update backend and reachability contracts for the implemented type
   boundary while retaining target ABI and error categories.
 
 **Tests:** Complete and sparse programs; direct/indirect/dispatch/lifecycle

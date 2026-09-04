@@ -1103,15 +1103,15 @@ closure.
 
 ## Frozen proof-normalized final-MIR boundary
 
-Status: **in progress**. The frozen
+Status: **implemented through backend and reachability migration**. The frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
-now make `VerifiedFinalMirProgram` mean normalized backend-ready MIR. Complete
+make `VerifiedFinalMirProgram` mean normalized backend-ready MIR. Complete
 proof verification, mandatory normalization, normalized verification, and
 fresh final-seal reachability are active for every pipeline profile. Explicit
-final-stage reachability ownership and removal of unreachable selector support
-remain later roadmap work.
+final-stage reachability ownership and the normalized-only backend boundary are
+implemented; the later post-proof CFG canary remains roadmap work.
 
 The backend boundary accepts no path-condition or logical-expression
 record, no path-condition rvalue, and no `PathCondition` storage declaration.
@@ -1123,15 +1123,17 @@ records themselves never reach legality, layout, frame, instruction-selection,
 or artifact planning.
 
 Final-seal reachability facts are recomputed from the exact normalized
-program. Whole-world definition retention becomes a final-stage pass and
-continues to preserve sparse-definition completeness for every reachable
+program and after every changed final-stage pass. Whole-world definition
+retention consumes only that final seal and continues to preserve
+sparse-definition completeness for every reachable
 target. Static-publication endpoints and lifecycle authority remain permanent
 backend inputs; proof consumption cannot narrow activation or shutdown.
 
-Path-condition-specific assignment lowering is now unreachable through
-`BackendInput` and will be removed in the dedicated backend-migration step. Raw,
+The x86-64 selector no longer lowers path-condition reads. Its exhaustive
+shared-enum match treats such a variant as a violated internal invariant;
+ordinary load selection owns the normalized executable operation. Raw,
 proof-rich, or malformed normalized MIR cannot construct `BackendInput`. This
-direction changes no
+boundary changes no
 layout, ABI, calling convention, symbol, failure, runtime trace, artifact
 retention, or target error contract.
 

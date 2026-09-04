@@ -736,7 +736,9 @@ supported atomic whole-program transformation, and a successful change
 invalidates local identities, snapshots, and reachability facts together.
 Proof-rich changes return through complete `verify_proof_mir`; final-stage
 changes return through normalized verification and freshly computed
-reachability. Exact internal schedules exercise this same runner and must form
+reachability. Proof-rich verification computes reachability only as transient
+validation evidence; only `VerifiedFinalMirProgram` retains seal-bound facts.
+Exact internal schedules exercise this same runner and must form
 one proof-rich prefix followed by one final-stage suffix.
 
 Pipeline accounting records verification and pass executions at the point they
@@ -807,12 +809,12 @@ between the two regions, but has no selectable identity: it cannot be listed,
 disabled, registered, selected, or repeated.
 
 The transforming runner first calls complete proof-rich final-MIR
-verification, including immutable static-lifecycle realization and
-target-independent reachability. Every proof-rich occurrence receives read-only
+verification, including immutable static-lifecycle realization and transient
+target-independent reachability validation. Every proof-rich occurrence receives read-only
 access to that `VerifiedProofMirProgram` plus one pipeline-owned capability to
 consume the seal through the atomic whole-program rewrite coordinator. An
-unchanged outcome retains the same seal and facts and adds no verification
-execution. A changed outcome invalidates program and facts together, yields
+unchanged outcome retains the same seal and adds no verification execution. A
+changed outcome invalidates the proof-rich program, yields
 raw dense MIR, rewrite maps, change summaries, and explicit
 changed-callable pass data, and immediately repeats proof verification before
 any later proof-rich pass or inspection checkpoint can observe it. The runner
@@ -870,8 +872,8 @@ receives a closed borrowed `MirPipelineCheckpoint` view: `ProofRich` contains
 `after-proof-rich-<position>-<name>-<occurrence>`,
 `after-proof-normalization`, `after-final-<position>-<name>-<occurrence>`, and
 `final`, so stages and repeated passes cannot collide. Only final checkpoints
-expose their seal-bound reachability dump; proof-rich facts cannot be mistaken
-for final reachability. Changed MIR is centrally resealed before inspection.
+expose their seal-bound reachability dump; proof-rich checkpoints expose no
+final reachability facts. Changed MIR is centrally resealed before inspection.
 Input, pass, rewrite, normalization, or output-verification failure emits no
 checkpoint for an unpublished product and no product-final checkpoint. The
 ordinary path passes no inspector and therefore constructs no dump,
@@ -1050,17 +1052,17 @@ through their retained scalar carriers by this pass.
 
 ### Frozen proof-provenance normalization direction
 
-Status: **in progress**. The frozen
+Status: **implemented through backend and reachability migration**. The frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and its
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 define a mandatory one-way boundary between proof-rich and backend-ready final
 MIR. Verifier ownership, proof-bearing-form classification, the atomic
-normalization transaction, and the two sealed products are implemented and
-covered by focused tests. Every production pipeline, including `none`, now
-crosses that boundary before returning backend-ready MIR. Stage-aware pass
-policy, final-stage transformations, and stage-typed observation remain later
-roadmap work.
+normalization transaction, the two sealed products, stage-aware policy and
+observation, final-stage reachability, and normalized-only backend input are
+implemented and covered by focused tests. Every production pipeline,
+including `none`, crosses that boundary before returning backend-ready MIR.
+The post-proof CFG canary and broader validation remain later roadmap work.
 
 The verifier now owns one exhaustive classification boundary for proof
 records, callable-local identity sites, storage kinds, rvalues, instructions,
@@ -1133,10 +1135,10 @@ proof verification preceded the exact normalizer. Later transformations still
 own semantic-equivalence correctness and receive an explicitly final-stage
 rewrite capability rather than raw mutable MIR.
 
-Every pass descriptor will state `ProofRich` or `Final`. Proof-rich passes run
+Every pass descriptor states `ProofRich` or `Final`. Proof-rich passes run
 with complete reverification, normalization runs exactly once and is neither
 registered nor selectable, and final passes run with normalized
-reverification. The `none` profile will contain zero selectable passes while
+reverification. The `none` profile contains zero selectable passes while
 still performing one complete proof verification, mandatory normalization,
 and one normalized verification. Listing shows pass stage but does not list
 the normalizer.

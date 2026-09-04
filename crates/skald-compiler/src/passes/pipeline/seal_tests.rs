@@ -3,7 +3,7 @@
 use crate::{
     identity::FunctionId,
     mir::{check_normalized_mir, MirStorageKind},
-    passes::reachability::{analyze_reachability, dump_reachability},
+    passes::reachability::{analyze_reachability, dump_reachability, extract_final_dependencies},
     test_support::lower_source_to_final_mir,
 };
 
@@ -25,19 +25,40 @@ fn proof_source() -> &'static str {
 }
 
 #[test]
-fn proof_verification_preserves_provenance_and_binds_exact_facts() {
+fn proof_verification_preserves_provenance_without_publishing_final_facts() {
     let program = lower_source_to_final_mir(proof_source());
     let expected_program = program.clone();
-    let expected_reachability = analyze_reachability(&program).unwrap();
 
     let verified = verify_proof_mir(program).unwrap();
 
     assert_eq!(verified.program(), &expected_program);
-    assert_eq!(verified.reachability(), &expected_reachability);
     assert!(verified
         .program()
         .executable_definitions()
         .any(|definition| !definition.path_conditions().is_empty()));
+}
+
+#[test]
+fn normalization_preserves_the_complete_dependency_inventory() {
+    let program = lower_source_to_final_mir(
+        "fn target() -> bool { return true; }
+         fn invoke(callback: fn() -> bool) -> bool { return callback(); }
+         class State { static enabled: bool = true; init() {} }
+         fn main() -> i64 {
+           if (invoke(target) && State.enabled) { return 1; }
+           return 0;
+         }",
+    );
+    let proof_dependencies = extract_final_dependencies(&program).unwrap();
+
+    let final_program = verify_final_mir(program).unwrap();
+    let normalized_dependencies = extract_final_dependencies(final_program.program()).unwrap();
+
+    assert_eq!(normalized_dependencies, proof_dependencies);
+    assert_eq!(
+        final_program.reachability(),
+        &analyze_reachability(final_program.program()).unwrap()
+    );
 }
 
 #[test]
@@ -83,12 +104,11 @@ fn final_verification_binds_facts_derived_from_the_exact_normalized_program() {
 }
 
 #[test]
-fn cloning_each_verified_product_keeps_its_program_and_facts_coherent() {
+fn cloning_each_verified_product_preserves_its_stage_contract() {
     let proof = verify_proof_mir(lower_source_to_final_mir(proof_source())).unwrap();
     let proof_clone = proof.clone();
     assert_eq!(proof_clone, proof);
     assert_eq!(proof_clone.program(), proof.program());
-    assert_eq!(proof_clone.reachability(), proof.reachability());
 
     let final_program = verify_final_mir(lower_source_to_final_mir(proof_source())).unwrap();
     let final_clone = final_program.clone();
