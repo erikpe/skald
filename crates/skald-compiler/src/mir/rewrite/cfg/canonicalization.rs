@@ -363,6 +363,14 @@ pub(crate) struct MirBasicBlockMergeCandidate {
 }
 
 impl MirBasicBlockMergeCandidate {
+    #[cfg(test)]
+    pub(crate) const fn unchecked(predecessor: BlockId, successor: BlockId) -> Self {
+        Self {
+            predecessor,
+            successor,
+        }
+    }
+
     pub(crate) const fn predecessor(self) -> BlockId {
         self.predecessor
     }

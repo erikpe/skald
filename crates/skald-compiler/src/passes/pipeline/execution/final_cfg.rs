@@ -1,8 +1,10 @@
-//! Narrow sparse-edit surface for normalized executable CFG deletion.
+//! Narrow sparse-edit surface for normalized executable CFG rewrites.
+
+mod canonicalization;
 
 use crate::mir::rewrite::{MirCallableEdit, MirFinalCfgFacts, MirRewriteError};
 
-/// Final-stage access to reviewed unreachable-block deletion operations.
+/// Final-stage access to reviewed executable-CFG compound operations.
 ///
 /// The wrapper deliberately exposes neither raw mutable MIR nor storage,
 /// instruction, terminator, proof-record, or lifecycle mutation.
@@ -27,13 +29,7 @@ impl<'edit> MirFinalCfgEdit<'edit> {
         &mut self,
         expected: &MirFinalCfgFacts,
     ) -> Result<MirFinalCfgRemoval, MirRewriteError> {
-        let current = self.edit.final_cfg_facts()?;
-        if current != *expected {
-            return Err(MirRewriteError::StaleCallableSnapshot {
-                callable: self.edit.callable(),
-                subject: "normalized CFG facts",
-            });
-        }
+        self.require_current_facts(expected)?;
 
         let removals = expected
             .unreachable()
@@ -63,6 +59,20 @@ impl<'edit> MirFinalCfgEdit<'edit> {
             blocks: removals.len(),
             values: removed_values,
         })
+    }
+
+    fn require_current_facts(
+        &self,
+        expected: &MirFinalCfgFacts,
+    ) -> Result<MirFinalCfgFacts, MirRewriteError> {
+        let current = self.edit.final_cfg_facts()?;
+        if current != *expected {
+            return Err(MirRewriteError::StaleCallableSnapshot {
+                callable: self.edit.callable(),
+                subject: "normalized CFG facts",
+            });
+        }
+        Ok(current)
     }
 }
 

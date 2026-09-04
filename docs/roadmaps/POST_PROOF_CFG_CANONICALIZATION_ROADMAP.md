@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 and PCR1 are complete and PCR2 is next.
+Status: in progress; PCR0 through PCR2 are complete and PCR3 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -97,7 +97,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 
 - [x] PCR0 — Add deterministic predecessor-edge CFG facts
 - [x] PCR1 — Define normalized canonicalization candidates
-- [ ] PCR2 — Add guarded final-CFG compound edits
+- [x] PCR2 — Add guarded final-CFG compound edits
 - [ ] PCR3 — Implement selectable empty-block forwarding
 - [ ] PCR4 — Implement selectable basic-block merging
 - [ ] PCR5 — Freeze and prove default pass composition
@@ -189,21 +189,21 @@ repeatability, and absence of MIR mutation.
 **Purpose:** Authorize exactly the two frozen transformations without turning
 the final-stage capability into general mutable MIR access.
 
-- [ ] Add a guarded operation accepting one complete resolved forwarding plan
+- [x] Add a guarded operation accepting one complete resolved forwarding plan
   and verify its exact current snapshot before mutation.
-- [ ] Redirect every incoming successor occurrence to its resolved target while
+- [x] Redirect every incoming successor occurrence to its resolved target while
   preserving terminator kind, operands, role, and span.
-- [ ] Remove only planned instruction-free blocks and prove no entry,
+- [x] Remove only planned instruction-free blocks and prove no entry,
   attachment, executable edge, or transient value still refers to them.
-- [ ] Add a guarded operation which rechecks one merge pair, appends successor
+- [x] Add a guarded operation which rechecks one merge pair, appends successor
   instructions, transfers its exact terminator, and removes the successor.
-- [ ] Preserve all value and storage declarations and references; add only the
+- [x] Preserve all value and storage declarations and references; add only the
   minimum private editor primitive needed to move complete block contents.
-- [ ] Reject stale facts, changed shapes or roots, invalid cycles, and foreign
+- [x] Reject stale facts, changed shapes or roots, invalid cycles, and foreign
   or deleted identities with structured rewrite failures.
-- [ ] Keep raw programs, general callable edits, sparse slots, and unrestricted
+- [x] Keep raw programs, general callable edits, sparse slots, and unrestricted
   instruction or terminator replacement hidden from final passes.
-- [ ] Prove failure publishes no partial callable/program and success compacts
+- [x] Prove failure publishes no partial callable/program and success compacts
   blocks deterministically.
 
 **Tests:** Capability access boundaries; successful forwarding and merging;
@@ -215,6 +215,18 @@ verification.
 **Exit criteria:** The capability performs only the two reviewed compound
 edits, rechecks every barrier, preserves executable contents, fails atomically,
 and exposes no general mutable MIR surface.
+
+**Implementation evidence:** The private final-CFG canonicalization capability
+accepts only a complete analyzed forwarding plan or one analyzed merge
+candidate. It validates every supplied identity, requires exact current
+normalized facts, and recomputes the complete candidate analysis before any
+mutation. Forwarding reuses exhaustive successor-role rewriting; merging uses
+one private sparse-editor primitive which moves complete successor contents
+without changing value or storage declarations. Focused tests cover transitive
+and duplicate-role redirection, spans and terminators, instruction ordering,
+entry and permanent-publication barriers, stale, foreign, deleted, incomplete,
+and cyclic inputs, dense maps, normalized verification, and atomic rollback
+after an induced commit failure.
 
 ### PCR3 — Implement selectable empty-block forwarding
 

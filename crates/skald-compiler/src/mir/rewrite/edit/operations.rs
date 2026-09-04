@@ -209,6 +209,61 @@ impl MirCallableEdit {
         Ok(mapper.replacements)
     }
 
+    /// Appends one exact goto successor's instructions, transfers its
+    /// terminator, and removes the successor block.
+    ///
+    /// This structural primitive verifies only the local shape needed to move
+    /// complete block contents without partial failure. Its caller owns the
+    /// semantic proof that the edge is unique and neither endpoint is a
+    /// permanent attachment.
+    pub(crate) fn merge_goto_successor(
+        &mut self,
+        predecessor: BlockId,
+        successor: BlockId,
+    ) -> Result<usize, MirRewriteError> {
+        if predecessor == successor {
+            return Err(MirRewriteError::StaleCallableSnapshot {
+                callable: self.callable,
+                subject: "distinct goto successor",
+            });
+        }
+
+        let predecessor_block = self.blocks.get(predecessor)?;
+        if !matches!(
+            predecessor_block.terminator,
+            Some(MirTerminator::Goto { target, .. }) if target == successor
+        ) {
+            return Err(MirRewriteError::StaleCallableSnapshot {
+                callable: self.callable,
+                subject: "goto predecessor",
+            });
+        }
+        let successor_block = self.blocks.get(successor)?;
+        let successor_terminator = successor_block
+            .terminator
+            .clone()
+            .ok_or(MirRewriteError::MissingBlockTerminator { block: successor })?;
+        let successor_instructions = successor_block.instructions.clone();
+        if !self.block_order.contains(successor) {
+            return Err(MirRewriteError::MissingOrderIdentity {
+                identity: super::super::MirLocalIdentity::Block(successor),
+            });
+        }
+
+        let moved_instructions = successor_instructions.len();
+        let predecessor_block = self
+            .blocks
+            .get_mut(predecessor)
+            .expect("validated predecessor remains live during one compound edit");
+        predecessor_block
+            .instructions
+            .extend(successor_instructions);
+        predecessor_block.terminator = Some(successor_terminator);
+        self.remove_block(successor)
+            .expect("validated successor and block order remain live during one compound edit");
+        Ok(moved_instructions)
+    }
+
     pub(in crate::mir::rewrite) fn map_live_references<M: MirLocalIdentityMapper>(
         &mut self,
         mapper: &mut M,
