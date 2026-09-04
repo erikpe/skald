@@ -360,9 +360,11 @@ own the completed classification, transaction, seals, verifier split,
 stage-aware pipeline, backend migration, and conservative post-proof CFG
 canary. One actionable storage-provenance limitation remains in the
 [follow-up discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
-The draft
+The frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
-now defines the first proposed expansion of that final-stage capability:
+and its planned
+[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) define the
+first proposed expansion of that final-stage capability:
 independently selectable empty-block forwarding and basic-block merging with
 permanent-root barriers.
 
@@ -607,16 +609,11 @@ local constant folding or dead pure definition elimination. Building a large
 pass manager without a safe rewrite and verification contract would not remove
 the actual architectural constraints.
 
-### Whole-world foundation and next analysis layer
+### Whole-world foundation and first broader optimization layer
 
 4. The target-independent whole-world reachability design is implemented, with
    machine-artifact pruning retained as the final target safety net.
-5. Next, generalize callable effects and alias queries as real passes demonstrate
-   where conservative barriers cost useful transformations.
-
-### First broader optimization layer
-
-6. Extend the implemented dead-pure-definition elimination layer with
+5. Extend the implemented dead-pure-definition elimination layer with
    conservative constant folding, algebraic simplification, copy propagation,
    and CFG cleanup in final MIR.
 
@@ -633,22 +630,28 @@ This layer offers the best balance of moderate-to-large effort, broad coverage,
 and low semantic risk. It also creates measurements that can justify the later
 architectural investments.
 
+6. The proof-provenance normalization boundary is implemented. Next, implement
+   its frozen
+   [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md),
+   adding independently selectable empty-block forwarding and basic-block
+   merging before whole-world reachability.
+
+7. After the bounded CFG layer provides more evidence about remaining
+   barriers, generalize callable effects and alias queries where conservative
+   answers demonstrably block useful transformations.
+
 ### Larger performance investments
 
-7. Add a virtual-register target LIR and register allocation. This is likely
+8. Add a virtual-register target LIR and register allocation. This is likely
    the largest eventual improvement because the current backend gives every MIR
    value a stack home.
-8. Use the implemented proof-provenance normalization boundary when measuring
-   or designing broader CFG passes. The draft
-   [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
-   is the current reviewed direction for expanding its final-stage rewrite
-   capability with empty-block forwarding and basic-block merging.
 9. Introduce scalar SSA or a separate optimization IR only when global scalar
    and loop optimization benefits justify the extra maintained boundary.
 
-The last two decisions should be coordinated: extend the existing normalized
-boundary deliberately rather than independently adding overlapping
-normalization and SSA layers.
+The last two decisions should be coordinated around their data-flow boundary:
+a target LIR should own target allocation concerns, while any later scalar SSA
+layer should remain target independent and justify its additional maintained
+representation with measured optimization value.
 
 ## Expected return on effort
 

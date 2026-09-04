@@ -1,7 +1,10 @@
 # Post-Proof CFG Canonicalization Design Proposal
 
-Status: draft design proposal. PCG1 through PCG14 are proposed together and
-have not been confirmed or promoted into an implementation roadmap.
+Status: frozen decision record. PCG1 through PCG14 were confirmed together on
+2026-09-04. The
+[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) owns
+delivery, and implementation-specific follow-ups belong in the
+[discoveries record](POST_PROOF_CFG_CANONICALIZATION_DISCOVERIES.md).
 
 This proposal defines the next conservative final-MIR control-flow layer for
 Skald. It covers the optimization catalog's FMC-08 empty-block forwarding and
@@ -670,7 +673,7 @@ small, but their reusable predecessor facts, narrow final capability,
 permanent-root barriers, selection surface, observation, and semantic matrix
 need staged review.
 
-A later roadmap should likely separate:
+The implementation roadmap separates:
 
 1. deterministic predecessor-edge facts and exhaustive maintenance tests;
 2. final-CFG candidate vocabulary and guarded compound edit operations;
@@ -768,16 +771,14 @@ Do not add branch folding, jump threading, instruction duplication,
 short-circuit or checked-protocol rewrites, loops, storage deletion,
 scalar-spill propagation, SSA, or target layout under this design.
 
-## Confirmation and promotion
+## Freeze and promotion
 
-Freezing this proposal requires PCG1 through PCG14 to be accepted together.
-After confirmation:
+PCG1 through PCG14 were accepted together on 2026-09-04. The implementation
+roadmap is now the delivery authority, the candidate catalog records FMC-08
+and FMC-09 as **Proposed**, and the roadmap index exposes the planned work.
 
-- change the status to a frozen decision record with the confirmation date;
-- create a PR-sized implementation roadmap and a separate discoveries file;
-- update the roadmap index and candidate catalog from **Draft design** to
-  **Proposed**;
-- promote implemented behavior into living compiler, driver, reporting,
-  backend, and testing documentation as each roadmap task lands; and
-- archive the design and roadmap only after all tasks and artifact-free quality
-  gates are complete.
+Until implementation lands, living compiler, driver, reporting, backend, and
+testing documentation remain authoritative for current behavior. Each roadmap
+task promotes the behavior it implements; the completed design and roadmap
+move to the archive only after every task and artifact-free quality gate is
+complete.

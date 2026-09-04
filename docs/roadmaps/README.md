@@ -32,6 +32,11 @@ checked-protocol pass without widening its reviewed successful-constant
 boundary. Representative non-fixture evidence is required before that
 low-priority optimization is reconsidered.
 
+The
+[post-proof CFG canonicalization discoveries](POST_PROOF_CFG_CANONICALIZATION_DISCOVERIES.md)
+record implementation-specific findings outside the frozen forwarding and
+merging design while its roadmap is active.
+
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
 and target-specific optimization, their interaction with permanent whole-world
@@ -67,17 +72,24 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No additional implementation roadmap is currently planned.
+The
+[post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+is planned; deterministic predecessor-edge facts are next. It implements
+independently selectable empty-block forwarding and basic-block merging over
+normalized final MIR and depends on the completed proof-provenance
+normalization, dense MIR rewriting, selectable pipeline, static-lifecycle, and
+whole-world reachability foundations.
 
 ## Design proposals
 
-The draft
+The frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
 covers independently selectable empty-block forwarding and basic-block
-merging on normalized final MIR. Its proposed decisions preserve permanent
+merging on normalized final MIR. Its frozen decisions preserve permanent
 static-publication roots, narrow final-stage mutation authority, deterministic
-dense commit, normalized reverification, and fresh reachability. The design is
-not frozen and has no implementation roadmap yet.
+dense commit, normalized reverification, and fresh reachability. Its planned
+[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) begins
+with deterministic predecessor-edge facts.
 
 The completed proof-provenance normalization
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
