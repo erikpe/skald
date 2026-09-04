@@ -4,6 +4,8 @@ Status: authoritative for the opt-in repository opportunity census and its
 generated report. The frozen terminology, corpus, schema, and recommendation
 rules remain defined by the
 [measurement contract](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md).
+The durable corpus-version-one result and recommendation are recorded in the
+[measurement report](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md).
 
 The `skald-mir-measure` repository tool measures scalar-spill constant
 provenance, redundant primitive casts, and exact same-block primitive common

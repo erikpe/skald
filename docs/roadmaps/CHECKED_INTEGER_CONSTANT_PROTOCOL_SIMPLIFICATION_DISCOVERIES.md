@@ -40,8 +40,12 @@ cannot expose the outer operation without an additional propagation rule.
 storage-propagation analysis shared by final-MIR simplifications, rather than
 the checked-protocol topology query itself.
 
-**Priority:** Low to medium after the initial checked-integer pass is active
-and workload measurements show nested protocols matter.
+**Priority:** Low. The version-one
+[local-redundancy study](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md#candidate-comparison)
+confirmed 25 safe carrier substitutions, but every one belongs to the focused
+checked-protocol fixture. No standard-library, solver, control-flow,
+whole-world, or benchmark workload supplied a proven final site, so the
+candidate was measured but not selected for an implementation project.
 
 **Bounded direction:** Prove constants through canonical private scalar-spill
 store/load chains with explicit write, dominance, type, alias, and lifecycle

@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: in progress; LMR0-LMR5 are complete and LMR6 is next.
+Status: in progress; LMR0-LMR6 are complete and LMR7 is next.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -125,7 +125,7 @@ The frozen census, corpus, schema, and decision rules are authoritative in the
 - [x] LMR3 — Measure redundant primitive casts
 - [x] LMR4 — Measure local primitive common subexpressions
 - [x] LMR5 — Build deterministic corpus aggregation and reporting
-- [ ] LMR6 — Run the study and select the next optimization project
+- [x] LMR6 — Run the study and select the next optimization project
 - [ ] LMR7 — Harden the measurement boundary and close the roadmap
 
 ## PR-sized implementation sequence
@@ -433,26 +433,26 @@ selection, and independent-process structural determinism. The focused
 **Purpose:** Convert measurements into an explicit architectural decision
 rather than choosing the largest unqualified raw count.
 
-- [ ] Run the complete corpus from an artifact-free state and retain the
+- [x] Run the complete corpus from an artifact-free state and retain the
       canonical result together with compiler revision, schedule, target, and
       corpus identity.
-- [ ] Review outliers manually against MIR dumps and source so every material
+- [x] Review outliers manually against MIR dumps and source so every material
       counter represents the classified shape rather than an analyzer bug or
       duplicated compilation root.
-- [ ] Compare raw and reachable opportunities, workload breadth, removable
+- [x] Compare raw and reachable opportunities, workload breadth, removable
       structural ceiling, downstream unlocks, overlaps, blocker distributions,
       likely creation phase, implementation effort, semantic risk, and reusable
       analysis value.
-- [ ] For existing benchmark workloads, record baseline compile time, assembly
+- [x] For existing benchmark workloads, record baseline compile time, assembly
       and executable size, and native time as context without claiming an
       unimplemented delta.
-- [ ] Publish a durable measurement report with per-workload data, totals,
+- [x] Publish a durable measurement report with per-workload data, totals,
       limitations, rejected interpretations, and the evidence supporting its
       recommendation.
-- [ ] Select exactly one next action: a candidate-specific design/roadmap, a
+- [x] Select exactly one next action: a candidate-specific design/roadmap, a
       bounded lowering cleanup, a broader prerequisite investigation, more
       representative workload collection, or no optimization yet.
-- [ ] Update FMV-15, FMV-02, FMV-03 and the suggested evaluation order in the
+- [x] Update FMV-15, FMV-02, FMV-03 and the suggested evaluation order in the
       optimization candidate catalog; update related discoveries without
       duplicating the report.
 
@@ -463,6 +463,22 @@ measurement on/off paths; documentation links; no wall-clock assertions.
 **Exit criteria:** The repository contains reproducible evidence explaining
 what local redundancy remains, which boundary creates or blocks it, and why one
 specific next action is preferred—or why the current evidence supports none.
+
+**Completion evidence:** The durable
+[measurement report](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md) records the
+clean compiler revision, complete nine-occurrence schedule, fixed target and
+trace policy, corpus identity, canonical JSON byte count and SHA-256,
+byte-identical independent regeneration, checkpoint totals, all sixteen
+per-workload results, blocker and overlap interpretation, and native benchmark
+context. All 26 proven final sites were checked against final-MIR dumps and
+source: 25 direct scalar carriers belong only to the focused checked-protocol
+fixture, and one `f64` identity cast belongs to the primitive cast matrix. No
+exact local CSE site or classification error was found. None of the three
+candidates crosses the frozen breadth and material-consumer threshold, so the
+report selects exactly one next action: start no candidate-specific
+optimization and proceed to measurement-boundary hardening and roadmap
+closure. The candidate catalog and nested-checked discovery link to this
+result without copying its evidence tables.
 
 ### LMR7 — Harden the measurement boundary and close the roadmap
 

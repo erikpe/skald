@@ -10,7 +10,7 @@ problem, evidence, likely owner, priority, and a bounded future direction.
 
 Do not place the study's ordinary results here. The frozen
 [measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md) owns its
-method, the future durable measurement report owns data and interpretation,
+method, the durable measurement report owns data and interpretation,
 and the [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md)
 owns concise cross-domain status, placement, effort, value, and priority.
 Recording a finding here does not authorize implementation of FMV-15, FMV-02,
@@ -30,7 +30,10 @@ implementation-private accumulators see exact sites while scanning, then
 discard those identities when producing the stable observation. LMR5 retains
 deterministic proven-callable examples and all aggregate blocker/consumer
 detail, which is enough to locate MIR for manual audit but less precise than a
-direct site example.
+direct site example. The
+[version-one study](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md#manual-audit)
+therefore required a bounded temporary probe to audit all 26 proven final
+sites; the probe was removed after comparison.
 
 **Likely owner:** The shared `passes::redundancy` observation vocabulary and
 the three analyzer accumulators, followed by the `skald-mir-measure` report

@@ -14,8 +14,10 @@ defines whole-world compilation identity, verified input/pre-reachability/final
 snapshots, census accounting and overlaps, the version-one corpus, canonical
 report schema, and evidence threshold. Composable verified-MIR inspection
 through the driver, all three candidate-family censuses, and deterministic
-corpus aggregation/reporting are implemented; running and auditing the study
-to select the next optimization project is next.
+corpus aggregation/reporting are implemented. The complete
+[version-one study](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md) found no
+candidate that crosses the frozen recommendation threshold; measurement
+boundary hardening and roadmap closure are next.
 
 ## Pending discoveries
 
@@ -32,7 +34,9 @@ not an implementation roadmap.
 The open
 [local final-MIR redundancy measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md)
 records out-of-scope findings from the active measurement work. Ordinary
-census results belong in its durable report, not in the discoveries record.
+census results belong in the
+[durable report](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md), not in the
+discoveries record.
 
 The open
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
