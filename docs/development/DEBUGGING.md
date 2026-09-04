@@ -88,9 +88,10 @@ events, and the compiler has no CLI activation-dump destination.
 
 Use `--mir-optimization none` to inspect the complete normalized reference
 final MIR. Disable `post-proof-unreachable-block-elimination` to retain
-proof-only dead CFG after normalization, or disable
-`whole-world-reachability` to keep the default canary while retaining every
-executable definition. The request-local MIR pipeline
+proof-only dead CFG after normalization. Disable
+`post-proof-empty-block-forwarding` to preserve empty goto chains while still
+running the unreachable canary, or disable `whole-world-reachability` to keep
+the post-proof CFG passes while retaining every executable definition. The request-local MIR pipeline
 inspector can compare `proof-rich-input`, stage-qualified after-pass,
 `after-proof-normalization`, and `final` verified products. Match the closed
 checkpoint view before selecting a seal; final checkpoints provide the

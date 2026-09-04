@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 through PCR2 are complete and PCR3 is next.
+Status: in progress; PCR0 through PCR3 are complete and PCR4 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -98,7 +98,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 - [x] PCR0 — Add deterministic predecessor-edge CFG facts
 - [x] PCR1 — Define normalized canonicalization candidates
 - [x] PCR2 — Add guarded final-CFG compound edits
-- [ ] PCR3 — Implement selectable empty-block forwarding
+- [x] PCR3 — Implement selectable empty-block forwarding
 - [ ] PCR4 — Implement selectable basic-block merging
 - [ ] PCR5 — Freeze and prove default pass composition
 - [ ] PCR6 — Complete inspection and reporting ownership
@@ -233,22 +233,22 @@ after an induced commit failure.
 **Purpose:** Deliver FMC-08 and exercise controlled edge redirection over
 normalized final MIR.
 
-- [ ] Add a cohesive module with a stable identity, exact
+- [x] Add a cohesive module with a stable identity, exact
   `post-proof-empty-block-forwarding` name, `Final` stage, and frozen
   description.
-- [ ] Scan borrowed verified definitions first and preserve the seal when no
+- [x] Scan borrowed verified definitions first and preserve the seal when no
   candidate exists.
-- [ ] Apply each callable's complete resolved plan through the guarded
+- [x] Apply each callable's complete resolved plan through the guarded
   capability and one atomic program transaction.
-- [ ] Resolve every eligible chain in one occurrence and prove independent
+- [x] Resolve every eligible chain in one occurrence and prove independent
   idempotence when block merging is absent.
-- [ ] Report processed/changed callables, removed forwarding blocks, redirected
+- [x] Report processed/changed callables, removed forwarding blocks, redirected
   occurrences, retained cycles, and permanent-root barriers.
-- [ ] Register and list the pass, add it after post-proof unreachable deletion
+- [x] Register and list the pass, add it after post-proof unreachable deletion
   in default, and support stable-name disabling.
-- [ ] Confirm changed output is normalized-reverified with fresh reachability
+- [x] Confirm changed output is normalized-reverified with fresh reachability
   while unchanged output retains its seal.
-- [ ] Update current pipeline and driver documentation without claiming block
+- [x] Update current pipeline and driver documentation without claiming block
   merging is implemented.
 
 **Tests:** Productive/no-op cases; transitive chains; ordinary and protocol
@@ -259,6 +259,21 @@ and disabled schedules; checkpoints; idempotence; failure attribution.
 **Exit criteria:** The pass removes exactly eligible forwarding blocks in one
 occurrence, never changes a permanent-root terminator, reports deterministic
 reasons, reseals every change, and is independently selectable in default.
+
+**Implementation evidence:** The registered
+`post-proof-empty-block-forwarding` final-stage pass snapshots every executable
+callable through borrowed normalized facts, resolves complete plans before
+invalidating the seal, and applies them through one atomic guarded CFG rewrite.
+Changed products are normalized-reverified with fresh reachability; global
+no-op execution retains the seal. The pass reports removed blocks, redirected
+successor occurrences, cycle retention, and permanent-attachment barriers and
+runs between post-proof unreachable deletion and whole-world reachability.
+Focused tests cover transitive and duplicate edges, multiple predecessors,
+checked protocol roles and spans, functions, members, static initializers,
+entry-unreachable regions, ordinary loop latches, cycles, stable selection,
+checkpoints, metrics, and idempotence. Full-suite testing found and directly
+fixed an additional exact eligibility barrier: verifier-significant empty
+array-loop bodies remain attached rather than being forwarded.
 
 ### PCR4 — Implement selectable basic-block merging
 

@@ -80,6 +80,7 @@ pub(crate) enum MirEmptyBlockForwardingBarrierKind {
     NonGotoTerminator,
     SelfLoop,
     IncomingPermanentAttachment,
+    ArrayLoopBody,
     Cycle,
     LeadsToCycle,
 }
@@ -261,6 +262,15 @@ fn local_forwarding_shape(
             .is_permanent_attachment()
     }) {
         return Err(MirEmptyBlockForwardingBarrierKind::IncomingPermanentAttachment);
+    }
+    if block.predecessor_edges().iter().any(|edge| {
+        let predecessor = facts
+            .block(edge.source())
+            .expect("CFG edge source belongs to its snapshot");
+        predecessor.terminator_kind() == MirLocalCfgTerminatorKind::ArrayLoop
+            && edge.successor_index() == 0
+    }) {
+        return Err(MirEmptyBlockForwardingBarrierKind::ArrayLoopBody);
     }
 
     Ok(LocallyForwardableBlock {

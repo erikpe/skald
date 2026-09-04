@@ -197,6 +197,20 @@ driver test pins the same pass-owned counters through structured reporting;
 the cross-process fingerprint excludes elapsed durations and includes every
 occurrence measurement and the final MIR dump.
 
+### Post-proof empty-block forwarding coverage
+
+Focused final-stage pass tests cover productive and no-op execution,
+transitive chains, duplicate and multiple predecessor occurrences, ordinary
+branches, checked protocol edge roles and spans, function/member/static-
+initializer bodies, entry-unreachable regions, ordinary loop latches,
+self-loops and cycles, permanent static-publication attachments, and the
+array-loop body protocol barrier. They also pin stable registration and
+listing, default placement after post-proof unreachable deletion, independent
+selection, measurements, checkpoint labels, dense compaction, fresh
+reachability after changes, unchanged-seal reuse, and repeated-occurrence
+idempotence. The full compiler and native suites continue to cover semantic,
+ownership, lifecycle, panic, trace, and backend equivalence.
+
 ### Proof-provenance normalization coverage
 
 The archived

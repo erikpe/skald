@@ -1112,10 +1112,11 @@ Complete
 proof verification, mandatory normalization, normalized verification, and
 fresh final-seal reachability are active for every pipeline profile. Explicit
 final-stage reachability ownership and the normalized-only backend boundary are
-implemented. The post-proof unreachable-block pass runs immediately
-after normalization in the default profile, exercises normalized block/value
-deletion and fresh resealing, and leaves whole-world reachability last. Its
-selection and parity matrices preserve the backend contract.
+implemented. The post-proof unreachable-block pass runs immediately after
+normalization in the default profile and exercises normalized block/value
+deletion and fresh resealing. Empty-block forwarding follows through its
+narrow normalized CFG capability, while whole-world reachability remains last.
+Their selection and parity matrices preserve the backend contract.
 
 The backend boundary accepts no path-condition or logical-expression
 record, no path-condition rvalue, and no `PathCondition` storage declaration.

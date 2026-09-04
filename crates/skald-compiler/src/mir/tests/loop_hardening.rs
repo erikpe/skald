@@ -175,8 +175,31 @@ fn equivalent_split_and_renumbered_loop_cfg_survives_passes_and_backend() {
     renumber_entry_blocks(&mut mir, &[0, 4, 2, 5, 1, 3]);
     verify_mir(&mir).expect("equivalent transformed loop CFG must verify");
 
-    let expected = mir.clone();
-    assert_eq!(run_mir_pipeline(mir.clone()).unwrap().program(), &expected);
+    let original_blocks = mir
+        .definitions
+        .get(mir.entry_function)
+        .unwrap()
+        .body
+        .blocks
+        .len();
+    let canonical = run_mir_pipeline(mir.clone()).unwrap().program().clone();
+    verify_mir(&canonical).expect("canonicalized loop CFG must verify");
+    assert!(
+        canonical
+            .definitions
+            .get(canonical.entry_function)
+            .unwrap()
+            .body
+            .blocks
+            .len()
+            < original_blocks,
+        "the post-proof forwarding pass must remove the inserted latch bridge"
+    );
+    assert_eq!(
+        run_mir_pipeline(canonical.clone()).unwrap().program(),
+        &canonical,
+        "canonical loop CFG must be idempotent"
+    );
     let assembly = emit_assembly(Target::X86_64SysV, &mir)
         .expect("backend must consume verified generic CFG without loop metadata");
     assert!(assembly.contains("jmp .Lska.fn.main.main.f0.block_"));

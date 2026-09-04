@@ -63,10 +63,11 @@ fn main() -> i64 {
     return 3;
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 7] = [
+const ALL_PRODUCTION_PASS_NAMES: [&str; 8] = [
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "dead-pure-definition-elimination",
+    "post-proof-empty-block-forwarding",
     "post-proof-unreachable-block-elimination",
     "primitive-algebraic-simplification",
     "primitive-constant-folding",
@@ -289,7 +290,7 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
     );
     assert_ne!(dump_mir(optimized.program()), input_dump);
     assert_ne!(assembly(optimized), assembly(&none));
-    assert_eq!(measured.statistics.pass_executions(), 10);
+    assert_eq!(measured.statistics.pass_executions(), 11);
     assert!(
         measurement_total(
             &measured,
@@ -417,7 +418,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
         ),
         (1, 1, 1, 1, 1, 7)
     );
-    assert_eq!(default.statistics.pass_executions(), 10);
+    assert_eq!(default.statistics.pass_executions(), 11);
     assert_eq!(default.statistics.normalization_executions(), 1);
     assert_eq!(
         default_checkpoints
@@ -436,6 +437,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
             5_184_304_530_184_441_762,
             5_315_251_139_015_505_937,
             1_485_384_359_181_637_186,
+            9_839_179_550_885_574_519,
             9_839_179_550_885_574_519,
             14_420_660_371_287_870_903,
             14_420_660_371_287_870_903,
@@ -1081,7 +1083,8 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             "after-proof-rich-7-dead-pure-definition-elimination-2",
             "after-proof-normalization",
             "after-final-8-post-proof-unreachable-block-elimination-0",
-            "after-final-9-whole-world-reachability-0",
+            "after-final-9-post-proof-empty-block-forwarding-0",
+            "after-final-10-whole-world-reachability-0",
             "final",
         ]
     );
@@ -1097,6 +1100,7 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
+            MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,

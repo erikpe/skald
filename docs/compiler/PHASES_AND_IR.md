@@ -768,7 +768,7 @@ occurrence records at trace level. The `none` schedule
 runs zero selectable passes, one complete proof verification, mandatory
 normalization, and one normalized verification. Its proof-rich checkpoints
 remain byte-for-byte stable, while its returned product satisfies the
-normalized invariant. The default schedule runs ten pass occurrences in the
+normalized invariant. The default schedule runs eleven pass occurrences in the
 exact repeated order documented below.
 
 This boundary adds no SSA form, persistent instruction identity, public
@@ -800,13 +800,13 @@ mismatched implementation identity or stage before schedule selection. The produ
 registry contains `checked-integer-constant-folding`,
 `dead-pure-definition-elimination`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
-`conservative-cfg-cleanup`, `post-proof-unreachable-block-elimination`, and
-`whole-world-reachability`. Its validated
+`conservative-cfg-cleanup`, `post-proof-unreachable-block-elimination`,
+`post-proof-empty-block-forwarding`, and `whole-world-reachability`. Its validated
 descriptors, including stage, are exposed in stable-name order for the public read-only query
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
-ten-occurrence optimization schedule documented below. Disabling all
+eleven-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
 same schedule as `none`.
 
@@ -837,8 +837,9 @@ then consumes proof provenance exactly once, performs normalized verification,
 and enters the final region. Each final occurrence uses the distinct final
 capability; unchanged outcomes retain the normalized seal, while changed
 outcomes are normalized-reverified and rebound to fresh reachability before
-the next final pass. The production `post-proof-unreachable-block-elimination`
-and `whole-world-reachability` occurrences are the current final-stage passes.
+the next final pass. The production `post-proof-unreachable-block-elimination`,
+`post-proof-empty-block-forwarding`, and `whole-world-reachability`
+occurrences are the current final-stage passes.
 Input-verification, pass execution,
 structural-rewrite, and output-verification failures identify the exact pass
 name, identity, schedule position, and occurrence where applicable, then stop
@@ -1004,10 +1005,10 @@ even when ordinary entry reachability no longer reaches them.
 
 An unprotected unreachable block is removed together with every transient
 value defined by its instructions. Storage declarations, path conditions,
-logical records, guards, and attachments remain. Empty-block forwarding,
-block merging, jump threading, proof-record normalization, checked-diamond
-simplification, storage propagation, alias/effect analysis, SSA, and target
-optimization remain later decisions.
+logical records, guards, and attachments remain. Post-proof empty-block
+forwarding is implemented separately at the normalized boundary. Block
+merging, jump threading, checked-diamond simplification, storage propagation,
+alias/effect analysis, SSA, and target optimization remain later decisions.
 
 The exact `default` schedule is:
 
@@ -1022,6 +1023,7 @@ conservative-cfg-cleanup
 dead-pure-definition-elimination
 -- mandatory proof-provenance normalization --
 post-proof-unreachable-block-elimination
+post-proof-empty-block-forwarding
 whole-world-reachability
 ```
 
@@ -1177,9 +1179,19 @@ storage, instructions, terminators, proof records, or lifecycle authority.
 The canary reports removed blocks, removed value declarations, and permanent
 roots retained outside entry reachability. It is registered, listed, and
 runs immediately after normalization in the current `default` profile.
-Whole-world reachability follows it, so removed call sites can reduce retained
-definitions.
-Empty-block forwarding, block merging, jump threading, storage deletion,
+`post-proof-empty-block-forwarding` follows it and redirects all executable
+successor occurrences through complete transitive chains of instruction-free
+goto blocks. It retains body entry, permanent attachments, incoming permanent-
+attachment edges, array-loop body attachments, self-loops, cycles, and chains
+entering cycles. One guarded final-CFG transaction removes every eligible
+block while preserving each incoming terminator's kind, operand, edge role,
+and span. Changed output is normalized-reverified and rebound to fresh
+reachability; a no-op retains its existing seal. The pass reports removed
+blocks, redirected successor occurrences, retained cyclic blocks, and retained
+permanent-attachment barriers.
+
+Whole-world reachability follows forwarding, so removed call sites can reduce
+retained definitions. Block merging, jump threading, storage deletion,
 checked-protocol normalization, and loop transformations remain separate
 designs.
 

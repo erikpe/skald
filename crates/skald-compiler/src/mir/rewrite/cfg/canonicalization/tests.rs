@@ -166,6 +166,34 @@ fn forwarding_respects_permanent_endpoints_and_incoming_mutation_barriers() {
 }
 
 #[test]
+fn forwarding_retains_empty_array_loop_bodies_as_protocol_attachments() {
+    let mut program =
+        lower_source_to_mir("fn main() -> i64 { var values: i64[] = i64[](0u); return 0; }");
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let body = definition
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match block.terminator {
+            Some(MirTerminator::ArrayLoop { body_target, .. }) => Some(body_target),
+            _ => None,
+        })
+        .unwrap();
+    definition.body.blocks[body.index()].instructions.clear();
+    let facts = final_cfg_facts_for_definition((&*definition).into()).unwrap();
+
+    let analysis = analyze_empty_block_forwarding(&facts);
+    assert_barrier(
+        &analysis,
+        body,
+        MirEmptyBlockForwardingBarrierKind::ArrayLoopBody,
+    );
+}
+
+#[test]
 fn merge_candidates_use_total_edge_occurrences_including_unreachable_sources() {
     let definition = function(&[
         TerminatorShape::Goto(1),
@@ -464,10 +492,14 @@ fn assert_barrier(
     block: BlockId,
     kind: MirEmptyBlockForwardingBarrierKind,
 ) {
-    assert!(analysis
-        .barriers()
-        .iter()
-        .any(|barrier| barrier.block() == block && barrier.kind() == kind));
+    assert!(
+        analysis
+            .barriers()
+            .iter()
+            .any(|barrier| barrier.block() == block && barrier.kind() == kind),
+        "expected {block} to have {kind:?}; barriers: {:?}",
+        analysis.barriers()
+    );
 }
 
 fn merge_barrier_for(

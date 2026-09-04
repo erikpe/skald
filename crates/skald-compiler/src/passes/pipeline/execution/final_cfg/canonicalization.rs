@@ -10,8 +10,6 @@ use super::MirFinalCfgEdit;
 impl MirFinalCfgEdit<'_> {
     /// Applies one complete forwarding plan authorized by an exact normalized
     /// CFG snapshot.
-    // The selectable forwarding pass is the next production consumer.
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn apply_empty_block_forwarding(
         &mut self,
         expected: &MirFinalCfgFacts,
@@ -86,14 +84,11 @@ impl MirFinalCfgEdit<'_> {
 
 /// Deterministic changes made by one complete forwarding plan.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-// Constructed through the staged capability before its pass is registered.
-#[allow(dead_code)]
 pub(in crate::passes::pipeline) struct MirFinalCfgForwarding {
     removed_blocks: usize,
     redirected_edges: usize,
 }
 
-#[allow(dead_code)]
 impl MirFinalCfgForwarding {
     pub(in crate::passes::pipeline) const fn removed_blocks(self) -> usize {
         self.removed_blocks

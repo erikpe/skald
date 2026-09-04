@@ -140,6 +140,85 @@ fn forwarding_preserves_branch_operand_roles_and_span() {
 }
 
 #[test]
+fn forwarding_preserves_checked_protocol_role_operands_and_span() {
+    let verified = verify_final_mir(lower_source_to_final_mir(
+        "fn divide(left: i64, right: i64) -> i64 { return left / right; } fn main() -> i64 { return divide(8, 2); }",
+    ))
+    .unwrap();
+    let divide = verified
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "divide")
+        .unwrap()
+        .id;
+    let owner = CallableId::Function(divide);
+    let mut input = verified.program().clone();
+    let definition = input.definitions.get_mut_for_test(divide).unwrap();
+    let (check_index, success_target, span) = definition
+        .body
+        .blocks
+        .iter()
+        .enumerate()
+        .find_map(|(index, block)| match block.terminator {
+            Some(MirTerminator::IntegerDivisorCheck {
+                success_target,
+                span,
+                ..
+            }) => Some((index, success_target, span)),
+            _ => None,
+        })
+        .unwrap();
+    let expected_check = definition.body.blocks[check_index].terminator.clone();
+    let forwarding = block(owner, definition.body.blocks.len());
+    let Some(MirTerminator::IntegerDivisorCheck {
+        success_target: target,
+        ..
+    }) = &mut definition.body.blocks[check_index].terminator
+    else {
+        unreachable!()
+    };
+    *target = forwarding;
+    definition.body.blocks.push(MirBasicBlock {
+        id: forwarding,
+        instructions: vec![],
+        terminator: Some(MirTerminator::Goto {
+            target: success_target,
+            span,
+        }),
+        span,
+    });
+    let mut observed = None;
+
+    let rewritten = rewrite_program(input, |callable, edit| {
+        if callable == owner {
+            let facts = edit.final_cfg_facts()?;
+            let plan = analyze_empty_block_forwarding(&facts).plan().clone();
+            observed =
+                Some(MirFinalCfgEdit::new(edit).apply_empty_block_forwarding(&facts, &plan)?);
+        }
+        Ok(())
+    })
+    .unwrap();
+
+    let observed = observed.unwrap();
+    assert_eq!(observed.removed_blocks(), 1);
+    assert_eq!(observed.redirected_edges(), 1);
+    assert_eq!(
+        rewritten
+            .program
+            .definitions
+            .get(divide)
+            .unwrap()
+            .body
+            .blocks[check_index]
+            .terminator,
+        expected_check
+    );
+    assert_eq!(&rewritten.program, verified.program());
+    verify_final_mir(rewritten.program).expect("forwarded checked protocol remains valid");
+}
+
+#[test]
 fn forwarding_rejects_stale_facts_and_cycle_derived_incomplete_plans() {
     let verified = verify_final_mir(forwarding_chain_program()).unwrap();
     let owner = CallableId::Function(verified.entry_function);

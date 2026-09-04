@@ -139,7 +139,7 @@ construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to zero
 selectable passes plus mandatory proof verification, normalization, and final
 verification, while `default` resolves to the exact repeated
-ten-occurrence optimization schedule documented below. Disabling all seven
+eleven-occurrence optimization schedule documented below. Disabling all eight
 stable pass names from `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
 unoptimized mode and preserves behavior while still returning normalized
@@ -161,6 +161,7 @@ errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
 `checked-integer-constant-folding`, `conservative-cfg-cleanup`,
 `dead-pure-definition-elimination`,
+`post-proof-empty-block-forwarding`,
 `post-proof-unreachable-block-elimination`,
 `primitive-algebraic-simplification`, `primitive-constant-folding`, and
 `whole-world-reachability` names.
@@ -282,10 +283,11 @@ The mandatory normalizer is not a pass and is never listed, disabled,
 registered, selected, or repeated. Registry descriptors and
 `--list-mir-passes` show each pass's `proof-rich` or `final` stage, exact
 schedules reject proof-rich occurrences after the final boundary, and typed
-callbacks cannot accept both seals. Current local passes are proof-rich;
-`post-proof-unreachable-block-elimination` and `whole-world-reachability` run
-in the final region. The default schedule runs the post-proof canary
-immediately after mandatory normalization and keeps whole-world reachability
+callbacks cannot accept both seals. Current local scalar passes are proof-rich;
+`post-proof-unreachable-block-elimination`,
+`post-proof-empty-block-forwarding`, and `whole-world-reachability` run in the
+final region. The default schedule deletes post-proof unreachable blocks,
+forwards eligible empty goto chains, and then runs whole-world reachability
 last, so definition retention observes call sites removed with dead CFG.
 
 Inspection exposes a closed borrowed checkpoint view. Proof-rich input and

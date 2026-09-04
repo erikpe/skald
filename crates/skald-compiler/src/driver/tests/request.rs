@@ -130,6 +130,7 @@ fn unknown_disabled_passes_are_one_sorted_configuration_error() {
             "checked-integer-constant-folding",
             "conservative-cfg-cleanup",
             "dead-pure-definition-elimination",
+            "post-proof-empty-block-forwarding",
             "post-proof-unreachable-block-elimination",
             "primitive-algebraic-simplification",
             "primitive-constant-folding",
@@ -138,7 +139,7 @@ fn unknown_disabled_passes_are_one_sorted_configuration_error() {
     );
     assert_eq!(
         error.to_string(),
-        "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `checked-integer-constant-folding`, `conservative-cfg-cleanup`, `dead-pure-definition-elimination`, `post-proof-unreachable-block-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`"
+        "unknown MIR pass names: `missing-pass`, `zeta-pass`; known MIR passes: `checked-integer-constant-folding`, `conservative-cfg-cleanup`, `dead-pure-definition-elimination`, `post-proof-empty-block-forwarding`, `post-proof-unreachable-block-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`"
     );
 }
 
