@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 through CIR7 are complete and CIR8 is next.
+Status: complete; CIR0 through CIR8 were delivered on 2026-09-04.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -16,23 +16,23 @@ general storage analysis or requiring proof-provenance normalization.
 
 Implementation-specific findings that do not belong in this reviewed scope go
 in the
-[checked-integer protocol discoveries record](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md).
+[checked-integer protocol discoveries record](../roadmaps/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md).
 Candidate placement and status remain authoritative in the
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md).
+[optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md).
 
 ## Dependencies
 
 - The completed
-  [local final-MIR simplification roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+  [local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
   provides exact typed primitive constants, block-local folding, the repeated
   scalar schedule, conservative CFG cleanup, and structural measurements.
 - The completed
-  [dense MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+  [dense MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
   provides sparse callable transactions, instruction-list and terminator
   replacement, value deletion, deterministic dense commit, and immediate
   resealing.
 - The completed
-  [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+  [selectable final-MIR pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
   provides stable pass registration, exact profiles and exclusions,
   pass-attributed failures, measurements, and verified checkpoints.
 - Existing checked integer lowering and verification are authoritative for the
@@ -115,7 +115,7 @@ Candidate placement and status remain authoritative in the
 - [x] CIR5 — Register selection and structured measurements
 - [x] CIR6 — Activate and compose the default schedule
 - [x] CIR7 — Prove semantic parity, determinism, and optimization value
-- [ ] CIR8 — Harden ownership, documentation, and roadmap closure
+- [x] CIR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
 
@@ -486,32 +486,46 @@ hygiene.
 **Purpose:** Finish with cohesive semantic owners, authoritative current
 documentation, reconciled discoveries, and an artifact-free validation record.
 
-- [ ] Audit checked evaluation, protocol observation, rewriting, pass,
+- [x] Audit checked evaluation, protocol observation, rewriting, pass,
       registry, schedule, measurement, and test modules by responsibility;
       split only genuine mixed owners and keep facades concise.
-- [ ] Remove temporary compatibility helpers, duplicated arithmetic or
+- [x] Remove temporary compatibility helpers, duplicated arithmetic or
       protocol tables, stale schedule wording, and roadmap codes from living
       code, tests, and non-roadmap documentation.
-- [ ] Confirm every exclusion still holds: static failure, one-dynamic-operand
+- [x] Confirm every exclusion still holds: static failure, one-dynamic-operand
       check removal, floating/checked casts, proof normalization, general
       storage reasoning, ownership, and target-specific optimization.
-- [ ] Reconcile the roadmap discoveries with the optimization candidate
+- [x] Reconcile the roadmap discoveries with the optimization candidate
       catalog, keeping detailed actionable evidence in the discoveries record
       and concise status/placement/effort/value summaries in the catalog.
-- [ ] Advance FMC-01 and FMC-02 to **Implemented** and link them to promoted
+- [x] Advance FMC-01 and FMC-02 to **Implemented** and link them to promoted
       living compiler, driver, reporting, and testing contracts.
-- [ ] Run the complete repository validation from an artifact-free snapshot or
+- [x] Run the complete repository validation from an artifact-free snapshot or
       clean checkout, plus supported MSRV and independent-process determinism.
-- [ ] Mark every task complete, set roadmap status complete, move this roadmap
+- [x] Mark every task complete, set roadmap status complete, move this roadmap
       to `docs/archive/`, update active/archive indexes, and repair every
       incoming link.
-- [ ] Archive or remove the discoveries record only if no actionable finding
+- [x] Archive or remove the discoveries record only if no actionable finding
       remains; otherwise keep it indexed under `docs/roadmaps/`.
 
 **Tests:** Full repository check, extended deterministic and release goldens,
 supported MSRV, documentation links/indexes, diff hygiene, archive links,
 repository-status review, and a manual comparison of current registry,
 schedule, reporting, and exclusion documentation against code.
+
+**Audit evidence:** Exact evaluation, immutable protocol observation, sparse
+live-state revalidation and atomic rewriting, pass orchestration and metrics,
+registry/policy, and reporting remain distinct cohesive owners. The
+optimization module facade contains only private module declarations and the
+intentional pipeline-visible pass modules; no public API was widened. Snapshot
+observation and rewrite-time validation deliberately repeat checks against
+different representations so a stale candidate can never become trusted
+rewrite authority. No temporary compatibility layer, roadmap-coded production
+name, duplicated arithmetic evaluator, or competing protocol table remains.
+Focused tests and living contracts retain every reviewed exclusion. The one
+actionable nested-carrier limitation remains in the indexed discoveries record
+and is cataloged as narrow scalar-spill constant provenance rather than being
+expanded into this closure task.
 
 **Gates:** `make check`; `make check-long`; `make msrv-check`; `make
 docs-check`; `git diff --check`; and repository-status review from an
@@ -521,6 +535,28 @@ artifact-free snapshot.
 status and living contracts are current, no excluded semantic family entered
 implicitly, every gate passes, completed records are archived, and remaining
 discoveries have clear future owners.
+
+Completed on 2026-09-04. The ownership audit confirmed distinct cohesive
+owners for exact checked arithmetic, immutable protocol observation,
+rewrite-time live-state validation and atomic editing, pass orchestration,
+registry and schedule policy, measurements, and colocated tests. Snapshot
+observation and rewrite-time validation intentionally check different
+representations; no temporary compatibility helper, duplicate arithmetic
+authority, roadmap-coded production name, or mixed implementation owner
+remains.
+
+FMC-01 and FMC-02 are implemented and link to the living compiler, driver,
+reporting, and testing contracts. Focused exclusion tests and the full native
+corpus reconfirmed that static failure folding, one-dynamic-operand check
+removal, floating and checked casts, general storage reasoning, proof
+normalization, ownership, and target-specific optimization remain outside this
+pass. The actionable nested-carrier limitation remains in the indexed
+discoveries record and is cataloged as FMV-15.
+
+After removing Cargo and generated golden/runtime artifacts, `make check-long`
+passed the complete ordinary gate, 481 independent-process deterministic
+goldens, 481 release goldens, Rust 1.82 MSRV, 10,000-case robustness, runtime-
+trace measurement, and generic-vector and range-loop benchmark guardrails.
 
 ## Ordering and dependencies
 

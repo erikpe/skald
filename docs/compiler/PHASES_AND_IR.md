@@ -991,6 +991,8 @@ product. Preliminary-MIR static activation and baseline lifecycle authority
 remain immutable; final verification rechecks realization against them rather
 than replanning activation.
 
+### Checked-integer constant protocol simplification
+
 The checked-integer occurrence consumes constants exposed by the preceding
 primitive folds. For an eligible division, remainder, or shift protocol it
 preserves operand evaluation, replaces the checked success operation with its
@@ -1000,6 +1002,26 @@ CFG occurrences can then remove redundant scalar work and the unreachable
 failure region. Disabling `checked-integer-constant-folding` retains the
 checked protocol; disabling CFG cleanup retains its now-unreachable failure
 block. Static failures and insufficiently proven protocols remain unchanged.
+
+Eligibility is deliberately narrower than general constant propagation. Both
+operands must reach the checked terminator through distinct canonical
+`ScalarSpill` carriers, each with one exact dominating constant store. The
+observer requires the verifier-owned check, success, failure, result-store,
+join, and reload topology and rejects any block protected by logical,
+path-condition, lifecycle, or static-publication metadata. The rewrite
+revalidates the complete snapshot against live sparse edit state before one
+atomic dense commit. It preserves result identity and source spans, retains
+carrier storage and lifecycle work, and never turns a static failure into a
+compile-time diagnostic or changes failure timing.
+
+The pass implements exact Skald floor quotient and divisor-sign remainder,
+including the defined signed-minimum pair, wrapping left shift, arithmetic
+signed right shift, logical unsigned right shift, and canonical byte results.
+It does not fold a dynamic operation with only a known-safe divisor or count,
+checked floating-to-integer conversion, floating arithmetic, casts or type
+tests, optional or array checks, calls, loads, ownership operations, or
+target-specific instructions. Nested checked results are not propagated
+through their retained scalar carriers by this pass.
 
 ### Current execution-dependency vocabulary
 

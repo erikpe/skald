@@ -1,7 +1,7 @@
 # Checked Integer Constant Protocol Simplification Discoveries
 
-Status: open follow-up record for the active
-[checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
+Status: open follow-up record from the completed
+[checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
 
 Use this file for concrete maintainability findings or optimization
 opportunities discovered while implementing the roadmap that do not belong in
@@ -19,7 +19,7 @@ Expected but not pre-approved topics include direct folding of statically
 failing protocols, eliminating a successful check around a dynamic operation,
 nested checked-constant propagation, redundant private scalar-spill cleanup,
 proof-provenance normalization, and broader checked scalar families. Recording
-a topic here does not add it to the active roadmap.
+a topic here does not reopen the completed roadmap.
 
 ## Nested successful protocols do not feed enclosing scalar carriers
 

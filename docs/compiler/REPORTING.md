@@ -405,6 +405,8 @@ A standard-library-backed golden supplies larger before/after structural
 observations, but no correctness test imposes a wall-clock or performance
 threshold.
 
+### Checked-integer constant protocol simplification observation
+
 The registered `checked-integer-constant-folding` pass reports folded
 quotient, remainder, and shift protocol counts, removed private protocol-load
 value counts, and retained statically failing candidate counts in that stable

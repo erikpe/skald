@@ -126,6 +126,7 @@ and before CFG cleanup, dead-pure cleanup, and whole-world retention.
 | FMV-12 | [Dead-pure-definition elimination](../compiler/PHASES_AND_IR.md#selectable-final-mir-optimization-pipeline) | First pass in the current default final-MIR schedule; before whole-world retention | Implemented / **Medium** | Medium MIR/code-size reduction and cleanup foundation | Intentionally limited to unused non-failing scalar definitions; loads, calls, checked operations, ownership, and semantic queries remain |
 | FMV-13 | [Primitive integer/boolean constant folding](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After an initial dead-pure cleanup; before algebraic simplification, and repeated afterward | Implemented / **Medium** | Medium runtime and code size; high enabling value for CFG cleanup | Exact wrapping/width behavior, unsupported-operation barriers, stable spans/identities, and no checked or floating families initially |
 | FMV-14 | [Primitive algebraic simplification with guarded value forwarding](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After primitive constant folding; before repeated folding and dead-pure cleanup | Implemented / **Medium to large** | Medium runtime and code size | Every forwarded use must be an allowed ordinary role; operand evaluation, proof metadata, checked protocols, and floating identities are barriers |
+| FMV-15 | [Narrow scalar-spill constant provenance](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md#nested-successful-protocols-do-not-feed-enclosing-scalar-carriers) | After local constant rewrites; before checked-protocol folding and other consumers of private scalar carriers | Follow-up / **Medium** | Medium enabling value for nested checked expressions and later storage-aware simplification | Must prove canonical private storage, unique writes, dominance, exact types, alias exclusion, lifecycle safety, and seal-local invalidation without becoming unsound general load propagation |
 | FMV-01 | Raw-bit primitive cast folding | After basic constant folding; before algebraic simplification | Follow-up / **Small** | Low to medium runtime and code size | Only truly bit-preserving `u64`/`f64` reinterpretations are simple; must retain raw NaN payloads and result type exactly |
 | FMV-02 | Redundant primitive cast and cast-chain elimination | After constant folding; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and MIR size | Integer width and boolean canonicalization matter; checked `f64` conversion and proof-coupled casts are barriers |
 | FMV-03 | Local common-subexpression elimination for non-failing primitive rvalues | After constant/algebraic simplification; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and code size | Restrict to exact same-block pure operations; source values must dominate; floating equivalence, spans, runtime traces, and checked operations need exclusions |
@@ -148,8 +149,8 @@ probably require proof-provenance normalization.
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
 | FMC-16 | [Ordinary branch folding and unprotected unreachable-block cleanup](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After repeated scalar simplification; before final dead-pure cleanup and whole-world retention | Implemented / **Large** | Medium runtime/code size and high proof of CFG-rewrite architecture | Dedicated checked terminators remain unchanged; body entry, static publication, lifecycle, and proof-metadata blocks are protected roots |
-| FMC-01 | Fold constant integer division and remainder with a known nonzero divisor | After primitive constant folding; before general CFG cleanup | In progress ([roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md#cir3--fold-constant-integer-division-and-remainder-protocols)) / **Medium to large** | Medium runtime and code size | Must compute Skald floor-division/divisor-sign remainder including `i64::MIN / -1`, rewrite the divisor-check diamond coherently, preserve spans and evaluation, and remove only safe failure regions |
-| FMC-02 | Fold constant shifts with an in-range constant count | After primitive constant folding; before general CFG cleanup | In progress ([roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md#cir4--fold-constant-integer-shift-protocols)) / **Medium to large** | Medium runtime and code size | Must preserve arithmetic/logical shift flavor and `u8` canonicalization while rewriting the exact shift-count check protocol |
+| FMC-01 | [Constant integer division and remainder protocol folding](../compiler/PHASES_AND_IR.md#checked-integer-constant-protocol-simplification) | After primitive constant folding; before dead-pure and general CFG cleanup | Implemented ([driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection), [reporting](../compiler/REPORTING.md#checked-integer-constant-protocol-simplification-observation), [testing](../development/TESTING.md#checked-integer-constant-protocol-simplification-coverage), [delivery](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)) / **Medium to large** | Medium runtime and code size | Exact Skald floor-division/divisor-sign remainder includes `i64::MIN / -1`; the pass atomically rewrites only fully constant successful verified diamonds and preserves spans and operand evaluation |
+| FMC-02 | [Constant integer shift protocol folding](../compiler/PHASES_AND_IR.md#checked-integer-constant-protocol-simplification) | After primitive constant folding; before dead-pure and general CFG cleanup | Implemented ([driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection), [reporting](../compiler/REPORTING.md#checked-integer-constant-protocol-simplification-observation), [testing](../development/TESTING.md#checked-integer-constant-protocol-simplification-coverage), [delivery](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)) / **Medium to large** | Medium runtime and code size | Exact wrapping/arithmetic/logical shift flavor, count width, and `u8` canonicalization are preserved while the verified shift-count diamond is rewritten atomically |
 | FMC-03 | Eliminate an always-successful divisor or shift check when only the checked RHS is constant | After checked constant protocol folding; before instruction selection once an unchecked/proven operation representation exists | Foundation needed / **Large** | Medium to high runtime in guarded dynamic arithmetic | The operation remains dynamic, so MIR needs an accepted proof for an unchecked operation or a normalized post-proof representation; simply removing the terminator violates current verification |
 | FMC-04 | Fold constant checked `f64`-to-integer conversions | After exact IEEE/range evaluation; before CFG cleanup | Foundation needed / **Large** | Low to medium runtime and size | Range, finiteness, truncation, target-width result, exact failure reason, and cast-range diamond must be rewritten together |
 | FMC-05 | Simplify statically decidable checked casts and type tests missed by lowering | After whole-world type/dispatch facts; before CFG cleanup | Foundation needed / **Medium to large** | Medium runtime and code size | Dynamic class sets, access views, checked carriers, failure blocks, ownership, and complete-object provenance |
@@ -278,22 +279,19 @@ This is not a roadmap. It is a default order for deciding which candidate is
 worth designing next now that the implemented local-simplification layer has
 produced initial measurements:
 
-1. Implement the proposed
-   [checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md),
-   because its arithmetic is bounded and it extends local simplification while
-   exposing the first dedicated-terminator rewrite.
-2. Measure remaining local redundancy and consider redundant cast elimination
-   or local primitive common-subexpression elimination.
-3. Decide whether proof-provenance normalization is justified by blocked CFG
+1. Measure remaining local redundancy and compare narrow scalar-spill constant
+   provenance, redundant cast elimination, and local primitive common-
+   subexpression elimination.
+2. Decide whether proof-provenance normalization is justified by blocked CFG
    candidates rather than implementing isolated metadata rewrites in every
    pass.
-4. Build conservative callable effect summaries before attempting memory,
+3. Build conservative callable effect summaries before attempting memory,
    ownership, pure-call, or aggressive inlining transformations.
-5. Improve reachable-type/target precision, then devirtualize before designing
+4. Improve reachable-type/target precision, then devirtualize before designing
    general inlining.
-6. Treat the target virtual-register LIR and register allocator as a separate
+5. Treat the target virtual-register LIR and register allocator as a separate
    major performance program once target-independent simplification is stable.
-7. Introduce scalar SSA or a normalized optimization IR only after measurements
+6. Introduce scalar SSA or a normalized optimization IR only after measurements
    show that storage boundaries, rather than backend stack homes, are the next
    dominant ceiling.
 

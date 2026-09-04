@@ -101,6 +101,7 @@ Archived plans:
 - [Target-independent whole-world reachability](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 - [Reachability-gated static lifecycle](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
 - [Local final-MIR simplification](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+- [Checked integer constant protocol simplification](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -175,6 +176,10 @@ Resolved local final-MIR simplification inputs:
 
 - [Local final-MIR simplification design proposal](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
 - [Local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+
+Resolved checked integer constant protocol simplification inputs:
+
+- [Checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
 

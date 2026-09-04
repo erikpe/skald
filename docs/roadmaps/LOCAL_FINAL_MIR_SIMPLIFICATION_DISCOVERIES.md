@@ -18,8 +18,8 @@ detail needed to make a later task reviewable. When a discovery becomes a
 confirmed design or roadmap, update its catalog status and link to the new
 authority.
 
-Expected but not pre-approved topics include checked integer division,
-remainder and shift folding; always-successful checked-protocol elimination;
+Expected but not pre-approved topics include always-successful dynamic
+checked-protocol elimination;
 floating evaluation; proof-provenance normalization; empty-block forwarding;
 storage propagation; alias/effect analysis; and measurement-driven schedule
 adjustments. Recording a topic here does not add it retroactively to the
@@ -60,18 +60,18 @@ not provide.
 the current evaluator or algebraic table would conflate total scalar
 evaluation with control effects or mutable state.
 
-**Likely owner:** The active
-[checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
-owns FMC-01 and FMC-02. Later checked integer and conversion extensions own
+**Likely owner:** The completed
+[checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+delivered FMC-01 and FMC-02. Later checked integer and conversion extensions own
 FMC-03 through FMC-06; deterministic floating evaluation owns FMV-05 through
 FMV-07; memory and storage reasoning owns FMM-01 through FMM-06 in the
 optimization candidate catalog.
 
-**Priority:** FMC-01 and FMC-02 are now in progress. Priority remains medium or
+**Priority:** FMC-01 and FMC-02 are implemented. Priority remains medium or
 lower for floating and memory families pending workload measurements and their
 prerequisite designs.
 
-**Bounded direction:** The active roadmap treats a statically successful
+**Bounded direction:** The implemented pass treats a statically successful
 checked protocol as the rewrite unit, not only its success rvalue. Design
 deterministic IEEE evaluation before folding floating operations. Introduce
 explicit alias/effect facts before any general load/store propagation.

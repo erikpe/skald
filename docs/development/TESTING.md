@@ -158,6 +158,8 @@ shutdown, ownership, destruction, panic, and runtime traces. Full golden
 determinism repeats every variant in independent compiler and native
 processes.
 
+### Checked-integer constant protocol simplification coverage
+
 Checked-integer pipeline tests pin the default position after the second
 primitive constant fold, constants exposed by those earlier scalar passes,
 successful protocol folding, subsequent unreachable failure-block cleanup,

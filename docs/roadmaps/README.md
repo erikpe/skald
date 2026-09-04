@@ -6,14 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
-is in progress. Exact checked-integer evaluation and the narrow verified
-carrier/protocol query, atomic checked-diamond rewrite, and division/remainder
-and shift folding are complete. Selectable registration and structured
-measurements are also complete, and the pass is active in the default schedule;
-native semantic parity, exact structural value, and cross-process determinism
-are proven. Ownership/documentation hardening and roadmap closure follow.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -36,8 +29,9 @@ not become roadmap work merely by being mentioned there.
 
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
-records implementation-specific findings from the active checked-protocol
-pass without widening its reviewed successful-constant boundary.
+records implementation-specific findings from the completed checked-protocol
+pass without widening its reviewed successful-constant boundary. The
+nested-carrier follow-up remains actionable.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven current compiler constraints on modular target-independent and
@@ -71,10 +65,19 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No implementation roadmap is currently planned behind the active checked
-integer constant protocol simplification work.
+No implementation roadmap is currently planned.
 
 ## Design proposals
+
+The completed checked integer constant protocol simplification delivery record
+is preserved in the [archive](../archive/README.md). FMC-01 and FMC-02 are
+implemented by the independently selectable
+`checked-integer-constant-folding` pass; current behavior is authoritative in
+the living [compiler phase](../compiler/PHASES_AND_IR.md#checked-integer-constant-protocol-simplification),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection),
+[reporting](../compiler/REPORTING.md#checked-integer-constant-protocol-simplification-observation),
+and [testing](../development/TESTING.md#checked-integer-constant-protocol-simplification-coverage)
+contracts.
 
 The completed local final-MIR simplification design and delivery record are
 preserved in the [archive](../archive/README.md). Their independently
