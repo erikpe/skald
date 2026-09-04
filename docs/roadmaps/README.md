@@ -8,10 +8,10 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
-is in progress. Exact checked-integer constant evaluation is complete; a
-narrow verified carrier/protocol query is next, followed by atomic
-checked-diamond rewriting, division/remainder and shift folding, selectable
-registration, default activation, broad semantic evidence, and closure.
+is in progress. Exact checked-integer evaluation and the narrow verified
+carrier/protocol query are complete; atomic checked-diamond rewriting is next,
+followed by division/remainder and shift folding, selectable registration,
+default activation, broad semantic evidence, and closure.
 
 ## Pending discoveries
 

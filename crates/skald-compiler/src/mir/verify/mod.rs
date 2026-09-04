@@ -49,6 +49,10 @@ mod view;
 
 use context::Verifier;
 
+pub(crate) use checked_scalar::{
+    dominates as checked_scalar_dominates, predecessors as checked_scalar_predecessors,
+};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirVerificationError {
     pub callable: Option<CallableId>,

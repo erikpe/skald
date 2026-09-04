@@ -1,9 +1,10 @@
 //! Target-independent final-MIR optimization implementations.
 
-// The checked protocol analysis consumes this evaluator in the next staged
-// roadmap task. Keep it private and independently tested until that owner lands.
+// Checked-integer folding remains private until its complete pass is registered.
 #[allow(dead_code)]
 mod checked_integer_evaluation;
+#[allow(dead_code)]
+mod checked_integer_protocol;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 mod primitive_algebra;

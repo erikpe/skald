@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 is complete and CIR1 is next.
+Status: in progress; CIR0 and CIR1 are complete and CIR2 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -108,7 +108,7 @@ Candidate placement and status remain authoritative in the
 ## Progress
 
 - [x] CIR0 — Implement exact checked-integer constant evaluation
-- [ ] CIR1 — Model verified checked-protocol candidates
+- [x] CIR1 — Model verified checked-protocol candidates
 - [ ] CIR2 — Add atomic successful-protocol rewriting
 - [ ] CIR3 — Fold constant integer division and remainder protocols
 - [ ] CIR4 — Fold constant integer shift protocols
@@ -165,23 +165,23 @@ active optimization schedule.
 **Purpose:** Recover fully constant operands and exact protocol topology
 without introducing general storage propagation or duplicating mutable MIR.
 
-- [ ] Add one immutable optimizer-private protocol-candidate model with
+- [x] Add one immutable optimizer-private protocol-candidate model with
       division/remainder and shift variants and exact check, success, failure,
       and join block identities.
-- [ ] Record the dedicated terminator, operation, carrier storages, result
+- [x] Record the dedicated terminator, operation, carrier storages, result
       storage, protocol-private operand loads, checked result assignment, store,
       successor edge, and source spans required for a later atomic rewrite.
-- [ ] Add a narrow carrier-source query that accepts only exact
+- [x] Add a narrow carrier-source query that accepts only exact
       `ScalarSpill` storage with one dominating store whose source is an exact
       typed constant assignment after ordinary primitive folding.
-- [ ] Require matching operand/result types, verifier-owned success shape,
+- [x] Require matching operand/result types, verifier-owned success shape,
       unique predecessors/writes, terminal failure reason, and result reload.
-- [ ] Consult existing local CFG roots and reject protocols whose relevant
+- [x] Consult existing local CFG roots and reject protocols whose relevant
       blocks are protected by proof, logical, lifecycle, or publication
       metadata.
-- [ ] Keep query results immutable and seal-local; recompute them after every
+- [x] Keep query results immutable and seal-local; recompute them after every
       rewrite instead of caching or attaching them to MIR.
-- [ ] Return structured non-candidate reasons for static failure, dynamic
+- [x] Return structured non-candidate reasons for static failure, dynamic
       operand, noncanonical topology, protected topology, and unsupported
       operation without treating an ordinary miss as compiler failure.
 
@@ -194,6 +194,16 @@ candidate order; unchanged input MIR; and focused malformed-identity errors.
 **Exit criteria:** A borrowed verified callable deterministically identifies
 only exact, fully constant, statically successful protocols and supplies every
 identity needed by rewriting, with no general memory fact escaping the query.
+
+**Completion evidence:** The optimizer-private query records exact instruction
+sites, values, carriers, blocks, constants, and spans for both checked families
+in callable/block order. It accepts only direct constants or constants exposed
+by ordinary primitive folding, shares predecessor and dominance mechanics with
+MIR verification, classifies conservative misses without failing the pass, and
+reports malformed identities through the rewrite error vocabulary. Focused
+tests cover all operation variants, nested and dynamic operands, malformed and
+protected topology, deterministic ordering, and unchanged input MIR; the full
+compiler suite and repository static checks accept the query.
 
 ### CIR2 — Add atomic successful-protocol rewriting
 
