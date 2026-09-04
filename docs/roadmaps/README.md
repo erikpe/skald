@@ -71,6 +71,14 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
+The draft
+[post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
+covers independently selectable empty-block forwarding and basic-block
+merging on normalized final MIR. Its proposed decisions preserve permanent
+static-publication roots, narrow final-stage mutation authority, deterministic
+dense commit, normalized reverification, and fresh reachability. The design is
+not frozen and has no implementation roadmap yet.
+
 The completed proof-provenance normalization
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
 [delivery record](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) are

@@ -360,6 +360,11 @@ own the completed classification, transaction, seals, verifier split,
 stage-aware pipeline, backend migration, and conservative post-proof CFG
 canary. One actionable storage-provenance limitation remains in the
 [follow-up discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
+The draft
+[post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
+now defines the first proposed expansion of that final-stage capability:
+independently selectable empty-block forwarding and basic-block merging with
+permanent-root barriers.
 
 ### Optimization possibilities unlocked
 
@@ -634,8 +639,10 @@ architectural investments.
    the largest eventual improvement because the current backend gives every MIR
    value a stack home.
 8. Use the implemented proof-provenance normalization boundary when measuring
-   or designing broader CFG passes; expand its final-stage rewrite capability
-   only for a reviewed transformation.
+   or designing broader CFG passes. The draft
+   [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
+   is the current reviewed direction for expanding its final-stage rewrite
+   capability with empty-block forwarding and basic-block merging.
 9. Introduce scalar SSA or a separate optimization IR only when global scalar
    and loop optimization benefits justify the extra maintained boundary.
 

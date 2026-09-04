@@ -171,8 +171,8 @@ of its narrow CFG capability.
 | FMC-05 | Simplify statically decidable checked casts and type tests missed by lowering | After whole-world type/dispatch facts; before CFG cleanup | Foundation needed / **Medium to large** | Medium runtime and code size | Dynamic class sets, access views, checked carriers, failure blocks, ownership, and complete-object provenance |
 | FMC-06 | Simplify statically decidable optional presence and unwrap diamonds | After optional-state analysis; before CFG cleanup | Foundation needed / **Large** | Medium runtime and code size | Optional representation, guard counts, pinned mutation, payload lifetime, cleanup, and exact absence/overflow failure behavior |
 | FMC-07 | [Delete obsolete path-condition and logical-expression proof records](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | In a mandatory normalization stage after their final semantic verifier; before post-proof CFG passes | Implemented and mandatory under every profile ([delivery](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)) / **Large** | High architectural value; medium MIR/compile-time reduction | The implemented boundary uses a one-way proof-rich-to-final seal transition, exact carrier-load lowering, and a distinct normalized verifier |
-| FMC-08 | Empty-block forwarding | After FMC-07; before block merging | Follow-up / **Medium** | Medium code size and compile time | Exact predecessor roles, storage epochs, cleanup joins, static publication endpoints, runtime trace spans, and expansion of the final-stage CFG capability |
-| FMC-09 | Basic-block merging | After proof normalization and empty-block forwarding; before jump threading | Follow-up / **Medium** | Medium code size and target input quality | Lifetime and ownership state, fallthrough spans, terminator semantics, deterministic block order, and expansion of the final-stage CFG capability |
+| FMC-08 | [Empty-block forwarding](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md#empty-block-forwarding) | After post-proof unreachable deletion; before block merging | Draft design / **Medium** | Medium code size and compile time | The draft requires exact predecessor occurrences, transitive cycle-safe resolution, permanent-attachment barriers, preserved incoming terminator roles/spans, and a narrow final-stage CFG capability |
+| FMC-09 | [Basic-block merging](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md#basic-block-merging) | After proof normalization and empty-block forwarding; before whole-world reachability | Draft design / **Medium** | Medium code size and target input quality | The draft requires one total incoming goto edge, block-local value preservation, exact instruction/terminator order, permanent-attachment barriers, deterministic convergence, and a narrow final-stage CFG capability |
 | FMC-10 | Jump threading and branch-to-branch folding | After proof normalization and scalar propagation; before unreachable-region deletion | Foundation needed / **Large** | Medium to high runtime and code size | Path predicates, duplicated predecessors, cleanup/ownership joins, loop edges, and code-size growth |
 | FMC-11 | Short-circuit logical CFG simplification | After logical proof records are consumed; before general CFG cleanup | Follow-up / **Large** | Medium runtime and code size | Exactly-once RHS evaluation, selected-result storage, cleanup, observable failure suppression, and expansion of the final-stage CFG capability |
 | FMC-13 | Loop canonicalization and natural-loop discovery | After proof normalization and preferably scalar promotion; before loop optimizations | Follow-up / **Large** | High architectural value | Irreducible CFG, array-generated loops, cleanup edges, failure exits, ownership joins, and stable loop identity |
@@ -303,8 +303,11 @@ FMV-03 without new representative evidence.
    ownership, pure-call, or aggressive inlining transformations.
 2. Improve reachable-type/target precision, then devirtualize before designing
    general inlining.
-3. Compare the now-unblocked local CFG candidates against effect-analysis
-   groundwork before selecting the next roadmap.
+3. Review the draft
+   [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
+   covering the now-unblocked empty-block forwarding and basic-block merging
+   candidates before deciding whether to freeze their roadmap ahead of
+   effect-analysis groundwork.
 4. Treat the target virtual-register LIR and register allocator as a separate
    major performance program once target-independent simplification is stable.
 5. Introduce scalar SSA or a normalized optimization IR only after measurements
