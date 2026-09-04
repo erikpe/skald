@@ -1101,17 +1101,18 @@ not all have target-independent MIR identities. Earlier MIR retention reduces
 the input domain; machine-artifact retention proves the final emitted symbol
 closure.
 
-## Frozen proof-normalized final-MIR boundary
+## Proof-normalized final-MIR boundary
 
-Status: **implemented through the active post-proof CFG canary**. The frozen
-[proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+The archived
+[proof-provenance normalization design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and
-[implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
-make `VerifiedFinalMirProgram` mean normalized backend-ready MIR. Complete
+[completed implementation roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+record why `VerifiedFinalMirProgram` means normalized backend-ready MIR.
+Complete
 proof verification, mandatory normalization, normalized verification, and
 fresh final-seal reachability are active for every pipeline profile. Explicit
 final-stage reachability ownership and the normalized-only backend boundary are
-implemented. The post-proof unreachable-block canary now runs immediately
+implemented. The post-proof unreachable-block pass runs immediately
 after normalization in the default profile, exercises normalized block/value
 deletion and fresh resealing, and leaves whole-world reachability last. Its
 selection and parity matrices preserve the backend contract.

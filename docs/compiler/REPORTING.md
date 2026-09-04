@@ -420,13 +420,13 @@ constant fold and precedes dead-pure and CFG cleanup, so aggregate metrics and
 trace occurrence records retain pipeline order without changing quiet,
 phases-only, or details-only timing-allocation boundaries.
 
-## Frozen proof-normalization observation
+## Proof-normalization observation
 
-Status: **in progress**. The frozen
-[design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
-[roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) extend final-
-MIR observation with an explicit proof-rich-to-final boundary. The two-seal
-transition and its observation are active: aggregate counts include one
+The archived
+[design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
+[completed roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+record the explicit proof-rich-to-final observation boundary. Aggregate
+counts include one
 complete proof verification, one normalization execution, and one normalized
 final verification even for the `none` profile.
 

@@ -260,17 +260,17 @@ or publication behavior. A pass or changed-output verification failure stops
 before backend emission and artifact publication through the existing
 structured pipeline error boundary.
 
-## Frozen proof-provenance normalization orchestration
+## Proof-provenance normalization orchestration
 
-Status: **in progress**. The frozen
-[design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
-[roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) add one
-mandatory compiler-owned phase transition inside final-MIR optimization.
-The two sealed products, mandatory verify-and-normalize transition, and
-stage-aware pass policy and observation are active.
+The archived
+[design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
+[completed roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+record the mandatory compiler-owned phase transition inside final-MIR
+optimization. The two sealed products, mandatory verify-and-normalize
+transition, and stage-aware pass policy and observation are current behavior.
 
-The driver continues to select only profiles and stable pass exclusions.
-It will not gain a normalization option. After all selected proof-rich
+The driver selects only profiles and stable pass exclusions; it has no
+normalization option. After all selected proof-rich
 occurrences, the pipeline performs complete proof verification, consumes path
 and logical provenance exactly once, and exposes a separately sealed final
 product to the backend. The `none` profile therefore

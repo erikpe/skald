@@ -757,11 +757,11 @@ remain byte-for-byte stable, while its returned product satisfies the
 normalized invariant. The default schedule runs ten pass occurrences in the
 exact repeated order documented below.
 
-This direction adds no SSA form, persistent instruction identity, public
+This boundary adds no SSA form, persistent instruction identity, public
 common callable-body restructuring, dynamic pass registry, optimization-level
 CLI, broader optimization suite, alias/effect analysis, or backend
-virtual-register layer. Broader post-proof transformations remain later steps
-of the active normalization roadmap.
+virtual-register layer. Broader post-proof transformations remain separate
+candidates in the optimization catalog.
 
 ### Selectable final-MIR optimization pipeline
 
@@ -823,8 +823,9 @@ then consumes proof provenance exactly once, performs normalized verification,
 and enters the final region. Each final occurrence uses the distinct final
 capability; unchanged outcomes retain the normalized seal, while changed
 outcomes are normalized-reverified and rebound to fresh reachability before
-the next final pass. The production `whole-world-reachability` occurrence is
-the current final-stage pass. Input-verification, pass execution,
+the next final pass. The production `post-proof-unreachable-block-elimination`
+and `whole-world-reachability` occurrences are the current final-stage passes.
+Input-verification, pass execution,
 structural-rewrite, and output-verification failures identify the exact pass
 name, identity, schedule position, and occurrence where applicable, then stop
 without exposing a partial product.
@@ -901,10 +902,11 @@ eighth positions of `default`, with whole-world reachability last;
 provides parity, and every changed product passes ordinary and
 lifecycle-realization verification.
 
-This boundary adds no dynamic pass ABI, target-specific pass, numerical
-optimization level, SSA, proof-provenance normalization, general alias/effect
-analysis, devirtualization, inlining, CFG cleanup, register allocation, or
-target LIR. Permanent
+This pass framework adds no dynamic pass ABI, target-specific pass, numerical
+optimization level, SSA, general alias/effect analysis, devirtualization,
+inlining, general CFG normalization, register allocation, or target LIR.
+Mandatory proof-provenance normalization and the two conservative CFG cleanup
+passes described below are the implemented exceptions. Permanent
 whole-world compilation and single-threaded generated programs make later
 analyses more tractable, but neither assumption weakens verification,
 determinism, evaluation-order, checked-failure, allocation, ownership, alias,
@@ -1052,17 +1054,18 @@ tests, optional or array checks, calls, loads, ownership operations, or
 target-specific instructions. Nested checked results are not propagated
 through their retained scalar carriers by this pass.
 
-### Frozen proof-provenance normalization direction
+### Proof-provenance normalization boundary
 
-Status: **implemented through production-schedule activation**. The frozen
-[proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
-and its
-[implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
-define a mandatory one-way boundary between proof-rich and backend-ready final
-MIR. Verifier ownership, proof-bearing-form classification, the atomic
+The archived
+[proof-provenance normalization design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+and
+[completed implementation roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+record the delivery of a mandatory one-way boundary between proof-rich and
+backend-ready final MIR. Verifier ownership, proof-bearing-form
+classification, the atomic
 normalization transaction, the two sealed products, stage-aware policy and
 observation, final-stage reachability, and normalized-only backend input are
-implemented and covered by focused tests. Every production pipeline,
+covered by focused tests. Every production pipeline,
 including `none`, crosses that boundary before returning backend-ready MIR.
 The post-proof CFG canary is active immediately after normalization in the
 default schedule, with whole-world reachability last. The selection, parity,

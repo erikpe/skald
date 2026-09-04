@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 through PNR7 are complete and PNR8 is next.
+Status: complete; PNR0 through PNR8 are complete.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -18,32 +18,32 @@ and storage cleanup remain separate optimization candidates.
 
 Implementation-specific opportunities outside this reviewed scope belong in
 the
-[proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
+[proof-provenance normalization discoveries](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
 Candidate placement and status remain concise in the
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md).
+[optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md).
 
 ## Dependencies
 
 - The completed
-  [dense MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+  [dense MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
   provides exhaustive identity traversal, sparse transactions, and atomic
   dense commit.
 - The completed
-  [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+  [selectable final-MIR pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
   provides stable pass registration, exact schedules, private rewrite
   capabilities, verified execution, measurements, and borrowed inspection.
 - The completed
-  [static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+  [static-lifecycle certificate roadmap](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
   and
-  [reachability-gated static lifecycle roadmap](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
+  [reachability-gated static lifecycle roadmap](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)
   provide the permanent publication and lifecycle authority which must survive
   proof consumption.
 - The completed
-  [whole-world reachability roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+  [whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
   provides seal-bound facts which must be recomputed for normalized products
   and the final post-proof retention pass.
 - The completed
-  [local final-MIR simplification roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+  [local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
   provides proof-aware CFG roots and the current conservative cleanup whose
   retained-block evidence motivates this boundary.
 - Existing path-condition, logical-expression, optional, array, shared,
@@ -115,7 +115,7 @@ Candidate placement and status remain concise in the
 - [x] PNR5 — Migrate reachability and backend consumption
 - [x] PNR6 — Add post-proof unreachable-block elimination
 - [x] PNR7 — Activate and validate the two-stage production schedule
-- [ ] PNR8 — Harden ownership, documentation, and roadmap closure
+- [x] PNR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
 
@@ -396,25 +396,25 @@ selection modes.
 close the roadmap without leaving stale one-seal assumptions or hidden
 maintenance hotspots.
 
-- [ ] Audit verifier, normalizer, pipeline, rewriting, reachability, backend,
+- [x] Audit verifier, normalizer, pipeline, rewriting, reachability, backend,
   inspector, and reporting modules by responsibility; split oversized owners
   behind concise facades where doing so materially improves maintenance.
-- [ ] Search code, tests, and living docs for stale claims that
+- [x] Search code, tests, and living docs for stale claims that
   `VerifiedFinalMirProgram` contains proof records, `none` performs only one
   verification, or every pass uses the same stage.
-- [ ] Ensure exhaustive maintenance tests identify every future
+- [x] Ensure exhaustive maintenance tests identify every future
   proof-bearing MIR addition that must update classification and normalization.
-- [ ] Confirm no roadmap task code appears in living source, test names,
+- [x] Confirm no roadmap task code appears in living source, test names,
   diagnostics, dumps, metrics, or public documentation.
-- [ ] Resolve small maintainability findings directly and record larger
+- [x] Resolve small maintainability findings directly and record larger
   follow-ups with evidence, impact, likely owner, priority, and bounded
   direction in the discoveries file.
-- [ ] Promote implemented status in the candidate catalog and living compiler
+- [x] Promote implemented status in the candidate catalog and living compiler
   contracts; remove obsolete discovery wording now owned by implemented
   documentation.
-- [ ] Run the complete repository and supported-toolchain quality gates from
+- [x] Run the complete repository and supported-toolchain quality gates from
   an artifact-free snapshot.
-- [ ] Mark every task complete, archive this roadmap and frozen design, update
+- [x] Mark every task complete, archive this roadmap and frozen design, update
   both indexes and all incoming links, and leave only actionable discoveries
   under `docs/roadmaps/`.
 
@@ -426,6 +426,17 @@ linter; supported MSRV; clean-tree rerun or equivalent artifact-free snapshot.
 authoritative, every reviewed invariant is covered, actionable follow-ups are
 indexed separately, the roadmap/design are archived, and repository status is
 clean apart from intentional delivered changes.
+
+**Closure audit:** Verification remains partitioned behind the MIR verifier
+facade; normalization keeps planning, errors, and tests separate; pipeline
+policy, execution, seals, optimizations, and observation have distinct owners;
+rewriting retains one cohesive exhaustive traversal kernel behind its facade;
+reachability separates extraction, roots, solving, verification, lifecycle,
+and static access; backend target work remains below the sealed input facade;
+and driver inspection and reporting stay independent. Splitting the traversal
+kernel merely by line count would weaken its single compile-time inventory, so
+no ownership split was warranted. The one remaining storage-provenance issue
+is bounded in the indexed discoveries record.
 
 ## Ordering and dependencies
 

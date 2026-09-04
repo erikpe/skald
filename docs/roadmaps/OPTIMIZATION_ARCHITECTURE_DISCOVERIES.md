@@ -1,7 +1,7 @@
 # Optimization Architecture Discoveries
 
 Status: three architectural constraints remain without implementation plans;
-proof-provenance normalization has a frozen design and planned roadmap.
+proof-provenance normalization is implemented and archived.
 The reachability constraint is resolved by the completed
 [target-independent whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
 [implementation roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
@@ -30,11 +30,13 @@ reporting and inspection, shared value-use analysis, dead-pure-definition
 elimination, primitive constant/algebraic simplification, checked-integer
 constant protocol folding, conservative proof-aware CFG cleanup, and final
 whole-world definition retention.
-The proof/executable layering constraint now has a frozen
-[normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
-planned
-[implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md). It is not
-implemented yet.
+The proof/executable layering constraint is resolved by the completed
+[normalization design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+and
+[implementation roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
+Every profile now crosses the mandatory proof-rich-to-final boundary, and the
+default schedule removes post-proof unreachable blocks before whole-world
+definition retention.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -107,19 +109,18 @@ roadmap:
 | Static-lifecycle optimization boundary | Resolved: exact verified baseline authority now permits monotone final-MIR realization | Implemented compiler proof and sealed phase-product contract | Very high architectural unlock delivered | Completed (large) | Foundation available |
 | Dense index-coupled MIR identities | Resolved: private sparse transactions support coordinated deletion, replacement, CFG rewriting, import, and deterministic dense commit | Implemented editing and verification infrastructure | Very high architectural unlock delivered | Completed (large) | Foundation available |
 | Block-local non-SSA values | Limits global scalar propagation, value numbering, code motion, and loop optimization | Deliberate initial representation with an eventual optimization ceiling | High for advanced portable optimization | Extra large | Defer until simpler MIR passes demonstrate the need |
-| Proof provenance mixed with executable MIR | Frozen two-seal normalization direction; implementation remains pending | Awkward IR layering with a planned resolution | High for CFG and loop work | Planned (large) | Implement the proof-provenance normalization roadmap next |
+| Proof provenance mixed with executable MIR | Resolved: mandatory normalization consumes path/logical proof and seals backend-ready final MIR | Implemented two-stage verifier, pass, inspection, reachability, and backend contract | High architectural unlock delivered | Completed (large) | Foundation available |
 | Direct physical-register backend lowering | Forces every MIR value and storage through a stack home and leaves no natural register-allocation layer | Deliberate bootstrap backend and the largest target-code ceiling | Very high eventual runtime value | Extra large | Largest eventual performance project |
 | Reachability after machine lowering | Resolved: default final MIR removes unreachable executable bodies before target legality, frame planning, and instruction selection | Implemented target-independent whole-world analysis, sparse verification, retention, and selectable pass | High architectural and code-size unlock delivered | Completed (large) | Foundation available |
 | Conservative alias, effect, and ownership knowledge | Prevents memory and ownership optimizations unless each pass proves safety independently | Analysis-infrastructure gap under intentionally permissive language semantics | High, with precision improving incrementally | Large to extra large | Build a conservative shared analysis after the first MIR passes |
 
 The static-lifecycle, dense-identity rewriting, selectable-pipeline, local
-simplification, checked-integer folding, and whole-world reachability
-foundations are implemented. The pipeline provides a typed static registry,
-profiles, deterministic schedule resolution, a verified atomic multi-pass
-runner, scalar/checked simplification, conservative proof-aware CFG cleanup,
-dead-pure elimination, and semantic definition pruning. The frozen
-proof-provenance normalization roadmap is the next planned architecture work.
-A
+simplification, checked-integer folding, whole-world reachability, and
+proof-provenance normalization foundations are implemented. The pipeline
+provides a typed static registry, profiles, deterministic schedule resolution,
+a verified atomic multi-pass runner, scalar/checked simplification,
+proof-aware and post-proof CFG cleanup, dead-pure elimination, and semantic
+definition pruning. A
 virtual-register backend is likely to provide the largest eventual improvement
 in generated scalar code, but it is also the largest single investment and
 should not be the first optimizer change.
@@ -280,17 +281,15 @@ itself turn mutable storage into values. Single-threaded execution removes
 concurrent interference, making promotion easier once ordinary aliasing and
 calls have been accounted for.
 
-### Frozen resolution direction
+### Available foundation and deferred direction
 
-The
-[proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
-and active
-[roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) now own this resolution.
-The single-seal constraint is now removed: PNR2 distinguishes proof-rich and
-normalized final products and makes every production pipeline cross the
-mandatory boundary. Stage-aware pass execution and the first post-proof CFG
-canary are implemented; the canary is active after mandatory normalization in
-the default schedule, before final whole-world reachability.
+The completed
+[proof-provenance normalization design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+and
+[roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) remove the
+former single-seal constraint. Proof-rich and normalized final products are
+distinct, every production pipeline crosses the mandatory boundary, and the
+first post-proof CFG cleanup runs before final whole-world reachability.
 
 Do not convert all MIR ownership and aggregate state to SSA. First implement
 the useful transformations supported by current MIR. If measurements then show
@@ -322,44 +321,45 @@ its verifier, dumps, analyses, lowering, and test fixtures. It should be driven
 by demonstrated limitations in the initial MIR optimizer rather than treated
 as prerequisite work.
 
-## 4. Proof provenance mixed with executable MIR
+## 4. Implemented proof-provenance normalization boundary
 
-### Current constraint
+### Implemented state
 
-Final MIR contains executable operations together with proof and lowering
-provenance. Path conditions, structured logical-expression records, explicit
-checked-operation diamonds, storage epochs, ownership protocols, and static
-lifecycle metadata can name exact blocks, values, storage, and predecessor
-relationships.
+Proof-rich MIR retains path conditions and structured logical-expression
+records while the path-sensitive verifiers consume them. A mandatory one-way
+normalizer then lowers condition reads to ordinary loads, reclassifies their
+carrier storage, removes the consumed records atomically, and seals normalized
+backend-ready final MIR with freshly computed reachability facts.
 
-This enables strong producer verification, but a generic CFG transformation
-must preserve or rewrite more than executable successors. Folding one branch
-may invalidate the canonical logical-expression or checked-operation shape
-that originally justified the MIR.
+Pass descriptors and callbacks are stage typed. Proof-rich transformations
+must preserve lowering provenance and rerun complete proof verification;
+final-stage transformations consume only normalized seals and rerun normalized
+verification plus reachability. Inspection, failures, metrics, dumps, and the
+`none` profile expose the boundary explicitly without making normalization a
+selectable pass.
 
 ### Nature and impact
 
-This is awkward IR layering. Proof-carrying MIR is valuable at the boundary
-where HIR lowering establishes correctness; some of its provenance is no
-longer needed after every consuming verifier and analysis has run. Retaining
-all of it as an exact invariant throughout optimization makes otherwise local
-CFG rewrites cross-cutting.
+The former awkward layering is no longer a permanent optimization constraint.
+The default final-stage canary deletes blocks and transient values unreachable
+from executable and permanent roots after proof consumption, then whole-world
+retention can observe call sites removed with that CFG. Backend input cannot
+observe proof-rich MIR.
 
-### Resolution direction
+The boundary deliberately does not normalize checked-operation, optional,
+ownership, storage-lifetime, or lifecycle protocols. Those remain executable
+semantic state and require candidate-specific proof before broader CFG or
+storage transformations rewrite them.
 
-Classify metadata explicitly as one of:
+### Implemented resolution
 
-- semantic and required through target lowering;
-- proof provenance consumed at a named verification boundary; or
-- derived analysis that may be invalidated and recomputed.
-
-Initially, metadata-aware MIR rewriting can preserve the current verifier.
-When CFG transformations become complicated, add a named normalization stage
-after semantic MIR verification. That stage should consume removable
-provenance, retain executable ownership and failure semantics, and produce an
-optimizer-facing product with its own verifier. Analysis invalidation and
-recomputation should be pipeline responsibilities rather than implicit pass
-behavior.
+The archived
+[design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
+[implementation roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+own the completed classification, transaction, seals, verifier split,
+stage-aware pipeline, backend migration, and conservative post-proof CFG
+canary. One actionable storage-provenance limitation remains in the
+[follow-up discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
 
 ### Optimization possibilities unlocked
 
@@ -372,10 +372,9 @@ behavior.
 
 ### Effort
 
-**Planned (large).** Metadata classification and the first normalization boundary require
-careful verifier work. A complete separate optimization IR would move toward
-extra-large effort and should be coordinated with, rather than duplicated by,
-any later SSA work.
+**Completed (large).** A complete separate optimization IR would still move
+toward extra-large effort and should be coordinated with, rather than
+duplicated by, any later SSA work.
 
 ## 5. Direct physical-register backend lowering
 
@@ -634,14 +633,14 @@ architectural investments.
 7. Add a virtual-register target LIR and register allocation. This is likely
    the largest eventual improvement because the current backend gives every MIR
    value a stack home.
-8. Implement the frozen proof-provenance normalization roadmap, including its
-   two seals, mandatory exact conversion, stage-aware runner, and conservative
-   post-proof unreachable-block canary, before broader CFG passes.
+8. Use the implemented proof-provenance normalization boundary when measuring
+   or designing broader CFG passes; expand its final-stage rewrite capability
+   only for a reviewed transformation.
 9. Introduce scalar SSA or a separate optimization IR only when global scalar
    and loop optimization benefits justify the extra maintained boundary.
 
-The last two decisions should be coordinated: one normalized SSA-capable
-optimization IR is preferable to independently adding overlapping
+The last two decisions should be coordinated: extend the existing normalized
+boundary deliberately rather than independently adding overlapping
 normalization and SSA layers.
 
 ## Expected return on effort
@@ -676,9 +675,9 @@ SSA programs.
 - MIR rewriting covers callable-local reference-bearing operations and
   metadata; whole-definition retention deliberately adds a separate
   stable-identity program-level boundary.
-- The boundary between metadata-aware final MIR and a normalized optimization
-  product is frozen by the proof-provenance normalization design and should be
-  implemented before both CFG normalization and SSA work expand.
+- The boundary between metadata-aware proof-rich MIR and normalized final MIR
+  is implemented. Broader CFG normalization and any SSA work must consume its
+  stage contract rather than reintroduce a parallel proof-consumption path.
 - Whole-program roots are frozen by the target-independent reachability design
   and must remain explicit as the roadmap moves retention ahead of the backend.
 - The target LIR must retain explicit ABI, runtime-trace, failure, and ownership

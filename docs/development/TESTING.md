@@ -190,10 +190,11 @@ occurrence measurement and the final MIR dump.
 
 ### Proof-provenance normalization coverage
 
-Status: **in progress** under the frozen
-[proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+The archived
+[proof-provenance normalization design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and
-[implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
+[completed implementation roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+record the delivery history for this coverage.
 Verifier classification, atomic normalization, the two sealed products,
 stage-aware policy and observation, normalized-only reachability retention,
 backend consumption, and the post-proof CFG canary are implemented. The

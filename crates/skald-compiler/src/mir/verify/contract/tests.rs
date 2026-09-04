@@ -14,6 +14,13 @@ use super::{
 use crate::mir::verify::check_normalized_mir;
 
 #[test]
+fn only_permanent_semantic_forms_survive_normalization() {
+    assert!(MirProofDisposition::PermanentSemantic.is_permanent());
+    assert!(!MirProofDisposition::ConsumableProof.is_permanent());
+    assert!(!MirProofDisposition::ExecutableCarrierWithProof.is_permanent());
+}
+
+#[test]
 fn classification_separates_consumed_proof_from_permanent_attachments() {
     assert_eq!(
         classify_local_identity_site(MirLocalIdentitySite::PathCondition(0)),
@@ -116,11 +123,13 @@ fn normalized_contract_rejects_every_current_path_carrier_family() {
     assert!(errors.contains("path-condition record(s)"), "{errors}");
     assert!(errors.contains("logical-expression record(s)"), "{errors}");
     assert!(
-        errors.contains("retains path-condition storage"),
+        errors.contains("normalized MIR storage")
+            && errors.contains("retains executable carrier with proof provenance"),
         "{errors}"
     );
     assert!(
-        errors.contains("retains a path-condition rvalue"),
+        errors.contains("normalized MIR value")
+            && errors.contains("retains executable carrier with proof provenance"),
         "{errors}"
     );
 }

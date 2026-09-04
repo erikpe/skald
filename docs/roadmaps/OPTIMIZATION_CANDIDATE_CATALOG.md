@@ -104,6 +104,13 @@ branch folding, and unprotected unreachable-block removal. Its concrete
 entries appear below as **Implemented** and link to their authoritative living
 contracts.
 
+The implemented proof-provenance normalization boundary follows its archived
+[design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
+[completed roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
+It makes proof-rich and normalized final MIR distinct sealed products,
+consumes path/logical proof under every profile, and provides the final-stage
+CFG capability used by the first post-proof cleanup pass.
+
 ## HIR and MIR-lowering boundary
 
 HIR should not become a second general optimizer. It is the right owner only
@@ -149,26 +156,26 @@ and before CFG cleanup, dead-pure cleanup, and whole-world retention.
 
 These candidates change `BlockId` edges or exact checked shapes. They belong
 after scalar facts have exposed constant conditions and before dead-pure
-cleanup and final whole-world retention. Candidates beyond the first two will
-probably require proof-provenance normalization.
+cleanup and final whole-world retention. Broader candidates consume the
+implemented normalized final-MIR boundary and may require deliberate expansion
+of its narrow CFG capability.
 
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
 | FMC-16 | [Ordinary branch folding and unprotected unreachable-block cleanup](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After repeated scalar simplification; before final dead-pure cleanup and whole-world retention | Implemented / **Large** | Medium runtime/code size and high proof of CFG-rewrite architecture | Dedicated checked terminators remain unchanged; body entry, static publication, lifecycle, and proof-metadata blocks are protected roots |
-| FMC-17 | [Post-proof unreachable block/value elimination](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md#ppn12--validate-the-boundary-with-one-conservative-cfg-canary) | Immediately after mandatory proof normalization; before whole-world reachability | Implemented and active in `default` ([roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)) / **Medium** | Medium MIR/code-size value and high validation value for the normalized boundary | Retains body entry, static-publication endpoints, lifecycle authority, checked failure reachable from executable edges, and every other permanent semantic root; storage deletion remains excluded |
+| FMC-17 | [Post-proof unreachable block/value elimination](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | Immediately after mandatory proof normalization; before whole-world reachability | Implemented ([delivery](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)) / **Medium** | Medium MIR/code-size value and high validation value for the normalized boundary | Retains body entry, static-publication endpoints, lifecycle authority, checked failure reachable from executable edges, and every other permanent semantic root; storage deletion remains excluded |
 | FMC-01 | [Constant integer division and remainder protocol folding](../compiler/PHASES_AND_IR.md#checked-integer-constant-protocol-simplification) | After primitive constant folding; before dead-pure and general CFG cleanup | Implemented ([driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection), [reporting](../compiler/REPORTING.md#checked-integer-constant-protocol-simplification-observation), [testing](../development/TESTING.md#checked-integer-constant-protocol-simplification-coverage), [delivery](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)) / **Medium to large** | Medium runtime and code size | Exact Skald floor-division/divisor-sign remainder includes `i64::MIN / -1`; the pass atomically rewrites only fully constant successful verified diamonds and preserves spans and operand evaluation |
 | FMC-02 | [Constant integer shift protocol folding](../compiler/PHASES_AND_IR.md#checked-integer-constant-protocol-simplification) | After primitive constant folding; before dead-pure and general CFG cleanup | Implemented ([driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection), [reporting](../compiler/REPORTING.md#checked-integer-constant-protocol-simplification-observation), [testing](../development/TESTING.md#checked-integer-constant-protocol-simplification-coverage), [delivery](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)) / **Medium to large** | Medium runtime and code size | Exact wrapping/arithmetic/logical shift flavor, count width, and `u8` canonicalization are preserved while the verified shift-count diamond is rewritten atomically |
 | FMC-03 | Eliminate an always-successful divisor or shift check when only the checked RHS is constant | After checked constant protocol folding; before instruction selection once an unchecked/proven operation representation exists | Foundation needed / **Large** | Medium to high runtime in guarded dynamic arithmetic | The operation remains dynamic, so MIR needs an accepted proof for an unchecked operation or a normalized post-proof representation; simply removing the terminator violates current verification |
 | FMC-04 | Fold constant checked `f64`-to-integer conversions | After exact IEEE/range evaluation; before CFG cleanup | Foundation needed / **Large** | Low to medium runtime and size | Range, finiteness, truncation, target-width result, exact failure reason, and cast-range diamond must be rewritten together |
 | FMC-05 | Simplify statically decidable checked casts and type tests missed by lowering | After whole-world type/dispatch facts; before CFG cleanup | Foundation needed / **Medium to large** | Medium runtime and code size | Dynamic class sets, access views, checked carriers, failure blocks, ownership, and complete-object provenance |
 | FMC-06 | Simplify statically decidable optional presence and unwrap diamonds | After optional-state analysis; before CFG cleanup | Foundation needed / **Large** | Medium runtime and code size | Optional representation, guard counts, pinned mutation, payload lifetime, cleanup, and exact absence/overflow failure behavior |
-| FMC-07 | [Delete obsolete path-condition and logical-expression proof records](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) | In a mandatory normalization stage after their final semantic verifier; before post-proof CFG passes | Implemented and mandatory under every profile; final hardening is tracked by the active [roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) / **Large** | High architectural value; medium MIR/compile-time reduction | The implemented boundary uses a one-way proof-rich-to-final seal transition, exact carrier-load lowering, and a distinct normalized verifier |
-| FMC-08 | Empty-block forwarding | After FMC-07; before block merging | Foundation needed / **Medium** | Medium code size and compile time | Exact predecessor roles, storage epochs, cleanup joins, static publication endpoints, and runtime trace spans |
-| FMC-09 | Basic-block merging | After proof normalization and empty-block forwarding; before jump threading | Foundation needed / **Medium** | Medium code size and target input quality | Lifetime and ownership state, fallthrough spans, terminator semantics, and deterministic block order |
+| FMC-07 | [Delete obsolete path-condition and logical-expression proof records](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | In a mandatory normalization stage after their final semantic verifier; before post-proof CFG passes | Implemented and mandatory under every profile ([delivery](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)) / **Large** | High architectural value; medium MIR/compile-time reduction | The implemented boundary uses a one-way proof-rich-to-final seal transition, exact carrier-load lowering, and a distinct normalized verifier |
+| FMC-08 | Empty-block forwarding | After FMC-07; before block merging | Follow-up / **Medium** | Medium code size and compile time | Exact predecessor roles, storage epochs, cleanup joins, static publication endpoints, runtime trace spans, and expansion of the final-stage CFG capability |
+| FMC-09 | Basic-block merging | After proof normalization and empty-block forwarding; before jump threading | Follow-up / **Medium** | Medium code size and target input quality | Lifetime and ownership state, fallthrough spans, terminator semantics, deterministic block order, and expansion of the final-stage CFG capability |
 | FMC-10 | Jump threading and branch-to-branch folding | After proof normalization and scalar propagation; before unreachable-region deletion | Foundation needed / **Large** | Medium to high runtime and code size | Path predicates, duplicated predecessors, cleanup/ownership joins, loop edges, and code-size growth |
-| FMC-11 | Short-circuit logical CFG simplification | After logical proof records are consumed or rewritable; before general CFG cleanup | Foundation needed / **Large** | Medium runtime and code size | Exactly-once RHS evaluation, selected-result storage, path conditions, cleanup, and observable failure suppression |
-| FMC-12 | Complete unreachable proof-region deletion | After proof normalization; after branch folding and before dead-pure cleanup | Foundation needed / **Medium to large** | Medium MIR size and compile time | Must remove records, blocks, values, storage, guards, and attachments as one coherent unit |
-| FMC-13 | Loop canonicalization and natural-loop discovery | After proof normalization and preferably scalar promotion; before loop optimizations | Foundation needed / **Large** | High architectural value | Irreducible CFG, array-generated loops, cleanup edges, failure exits, ownership joins, and stable loop identity |
+| FMC-11 | Short-circuit logical CFG simplification | After logical proof records are consumed; before general CFG cleanup | Follow-up / **Large** | Medium runtime and code size | Exactly-once RHS evaluation, selected-result storage, cleanup, observable failure suppression, and expansion of the final-stage CFG capability |
+| FMC-13 | Loop canonicalization and natural-loop discovery | After proof normalization and preferably scalar promotion; before loop optimizations | Follow-up / **Large** | High architectural value | Irreducible CFG, array-generated loops, cleanup edges, failure exits, ownership joins, and stable loop identity |
 | FMC-14 | Loop-invariant scalar code motion | After FMC-13 plus effect/alias facts; before induction simplification | Foundation needed / **Large** | High runtime in numeric and array code | Hoisting may change failure timing, destructor timing, loads through aliases, runtime traces, and zero-iteration behavior |
 | FMC-15 | Induction-variable simplification and bounds-check reduction | After loop canonicalization, scalar SSA, and range analysis | Foundation needed / **Large to extra large** | High runtime for arrays and ranges | Wrapping induction, negative indices, array length mutation/aliasing, exact bounds failures, and proof of every loop exit |
 
@@ -192,6 +199,7 @@ precision, but do not themselves prove two aliases distinct or a load stable.
 | FMM-10 | Copy-to-move or copy-elision transformation | After exact source-death and ownership analysis; before cleanup simplification | Foundation needed / **Large** | High runtime for class/shared values | User copy operations may be observable, moved-from state is not a general language concept, and destructor/copy failure behavior must remain identical |
 | FMM-11 | Stack allocation or complete elimination of non-escaping shared allocations | After escape and ownership analysis | Contract decision / **Extra large** | Potentially very high runtime | Removing heap allocation also removes language-observable allocation failure and may change object identity, destruction, runtime traces, and ABI expectations |
 | FMM-12 | Runtime alias-versioned call-site specialization | After points-to/effect facts and cloning infrastructure; before inlining | Research / **Extra large** | High runtime where actual aliases are usually distinct | Requires a sound overlap check, two equivalent paths, code-size policy, cleanup duplication, and exact handling of projected/array ranges |
+| FMM-13 | [Dead normalized condition-carrier storage cleanup](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md#reclassified-path-activations-lose-their-scalar-spill-origin) | After post-proof block/value elimination; before backend frame planning | Foundation needed / **Medium to large** | Medium MIR/frame-size and compile-time value | Former path activations share `ScalarSpill` with other private carriers; safe deletion needs surviving protocol provenance plus exact load/store/lifetime and attachment analysis |
 
 ## Whole-world execution and call graph
 
@@ -273,7 +281,7 @@ design proposals before implementation.
 
 | Candidate | Primary consumers | Effort | Expected leverage | Main decision |
 |---|---|---|---|---|
-| [Proof-provenance classification and post-proof normalization](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) | FMC-03 through FMC-15; some inlining | **Large** | High | Frozen decision: consume path/logical proof after full verification, retain executable carriers, and seal a distinct normalized product |
+| [Proof-provenance classification and post-proof normalization](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | FMC-03 through FMC-15; some inlining | **Completed (large)** | High | Implemented: consume path/logical proof after full verification, retain executable carriers, and seal a distinct normalized product ([design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)) |
 | Conservative whole-program effect summaries | FMV-08, FMM-03 through FMM-12, WWE-04/WWE-07, SLD-01/SLD-02 | **Large** | Very high | What regions and observable effects form the first sound summary lattice? |
 | Points-to, alias, escape, and ownership analysis | Memory, loop, specialization, allocation, retain/release candidates | **Large to extra large** | Very high | How much flow/context sensitivity is justified, and how are recursive/dynamic targets widened deterministically? |
 | Scalar SSA or normalized optimization IR | FMV-09 through FMV-11 and advanced loops | **Extra large** | High | Extend MIR with block parameters or maintain a separate optimizer-facing scalar IR? |
@@ -291,13 +299,12 @@ The completed
 selects no candidate-specific optimization; do not design FMV-15, FMV-02, or
 FMV-03 without new representative evidence.
 
-1. Implement the planned
-   [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
-   before isolated metadata rewrites or broader CFG passes.
-2. Build conservative callable effect summaries before attempting memory,
+1. Build conservative callable effect summaries before attempting memory,
    ownership, pure-call, or aggressive inlining transformations.
-3. Improve reachable-type/target precision, then devirtualize before designing
+2. Improve reachable-type/target precision, then devirtualize before designing
    general inlining.
+3. Compare the now-unblocked local CFG candidates against effect-analysis
+   groundwork before selecting the next roadmap.
 4. Treat the target virtual-register LIR and register allocator as a separate
    major performance program once target-independent simplification is stable.
 5. Introduce scalar SSA or a normalized optimization IR only after measurements

@@ -6,19 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
-is in progress. PNR0 established exhaustive proof-form classification and
-partitioned shared, proof-rich, and normalized-only verifier ownership. PNR1
-implemented the atomic mechanical normalization transaction, defensive
-inventory, dense commit, normalized invariant check, and deterministic
-structural accounting. PNR2 established the distinct proof-rich and normalized
-seals, made public final verification perform the mandatory transition, and
-bound fresh reachability to the normalized result. PNR3 through PNR6 delivered
-stage-aware execution and observation, normalized reachability/backend input,
-and the conservative post-proof CFG canary. PNR7 activated the exact two-stage
-default schedule and completed its selection, parity, reporting, dump, and
-golden matrices. PNR8 is next.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -33,15 +21,9 @@ follow-up, foundation-dependent, contract-dependent, and research work. It is
 not an implementation roadmap.
 
 The open
-[local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
-record the proof-coupled CFG barrier that remains after the completed local
-simplification layer. Its implementation evidence now feeds the frozen
-[proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
-
-The open
 [proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
-receive implementation findings outside the frozen design and active roadmap.
-No findings are recorded yet.
+retain one low-priority scalar-spill provenance limitation that becomes
+important before a final-stage storage transformation.
 
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
@@ -51,24 +33,27 @@ boundary. Representative non-fixture evidence is required before that
 low-priority optimization is reconsidered.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
-record the seven current compiler constraints on modular target-independent and
-target-specific optimization, their interaction with permanent whole-world and
-single-threaded program semantics, expected impact and effort, and a recommended
-starting sequence. Its first two recommended changes are now implemented; the
+record the seven assessed compiler constraints on modular target-independent
+and target-specific optimization, their interaction with permanent whole-world
+and single-threaded program semantics, expected impact and effort, and a
+recommended sequence. The completed
 [completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 and the completed
 [dense callable-local MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 are preserved in the archive. The completed
 [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
-adds the enabling layer around those foundations and activates one conservative
-default pass. The completed
+adds the enabling layer around those foundations. The completed
 [whole-world reachability roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 adds reusable whole-program roots and dependency analysis, independently
 verified sparse definitions, target-independent semantic retention before
 backend lowering, and default activation after the canary. Its follow-ups are
 resolved in the archived
 [discoveries record](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DISCOVERIES.md).
-The other four original unresolved constraints have no implementation roadmap.
+The proof/executable layering constraint is resolved by the completed
+[proof-provenance normalization roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md),
+which adds the mandatory two-seal boundary and final-stage unreachable
+block/value cleanup. The other three original unresolved constraints have no
+implementation roadmap.
 The completed
 [local final-MIR simplification roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
 then adds exact primitive folding, guarded algebraic value forwarding,
@@ -82,21 +67,16 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No additional implementation roadmap is currently planned behind the active
-proof-provenance normalization work.
+No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
-The frozen
-[proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
-defines a mandatory one-way transition from fully proof-verified final MIR to
-a separately sealed executable final-MIR product. It classifies path and
-logical provenance, preserves their runtime carrier behavior as ordinary
-loads, makes pass scheduling and inspection stage-aware, and ends with a
-conservative post-proof unreachable-CFG canary. PPN1 through PPN14 were
-confirmed together on 2026-09-04; the active
-[implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) has
-completed PNR0 through PNR7 and continues with PNR8 hardening and closure.
+The completed proof-provenance normalization
+[design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
+[delivery record](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) are
+preserved in the archive. Their mandatory two-seal transition, stage-aware
+pipeline, normalized backend boundary, and conservative post-proof CFG cleanup
+are authoritative in the living compiler documentation.
 
 The completed checked integer constant protocol simplification delivery record
 is preserved in the [archive](../archive/README.md). FMC-01 and FMC-02 are

@@ -103,6 +103,7 @@ Archived plans:
 - [Local final-MIR simplification](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
 - [Checked integer constant protocol simplification](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
 - [Local final-MIR redundancy measurement](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
+- [Proof-provenance normalization](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -177,6 +178,12 @@ Resolved local final-MIR simplification inputs:
 
 - [Local final-MIR simplification design proposal](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
 - [Local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+- [Local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
+
+Resolved proof-provenance normalization inputs:
+
+- [Proof-provenance normalization design proposal](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+- [Proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 
 Resolved checked integer constant protocol simplification inputs:
 

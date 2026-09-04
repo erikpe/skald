@@ -19,7 +19,7 @@ The primary result is a reusable local simplification layer and its safety
 boundaries, not an open-ended optimization suite. Each task should directly
 resolve small cohesive maintainability problems encountered in its owner.
 Larger or unrelated findings belong in the
-[local-simplification discoveries record](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
+[local-simplification discoveries record](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
 and remain cataloged in the
 [optimization register](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md) instead of
 expanding reviewed scope.

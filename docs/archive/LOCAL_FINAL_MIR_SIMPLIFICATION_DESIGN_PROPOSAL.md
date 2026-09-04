@@ -9,7 +9,7 @@ and delivered by the completed
 and
 [reporting](../compiler/REPORTING.md#local-final-mir-simplification-observation)
 documentation own the current contract. Follow-up findings belong in the
-[discoveries record](../roadmaps/LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md).
+[discoveries record](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md).
 
 This proposal defines Skald's first broader layer of local target-independent
 final-MIR optimization. It adds conservative primitive constant folding,

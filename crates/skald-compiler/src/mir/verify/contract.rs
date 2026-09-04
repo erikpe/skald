@@ -2,7 +2,7 @@
 //!
 //! Proof-rich verification establishes every path-sensitive language
 //! invariant. Normalized verification is deliberately narrower: it checks
-//! executable structure after the future one-way normalizer has consumed the
+//! executable structure after the one-way normalizer has consumed the
 //! proof-only path and logical records. Keeping the distinction here prevents
 //! individual checks from silently choosing their own idea of the boundary.
 
@@ -59,6 +59,10 @@ pub(super) const fn classify_proof_record(record: MirProofRecordKind) -> MirProo
 }
 
 impl MirProofDisposition {
+    const fn is_permanent(self) -> bool {
+        matches!(self, Self::PermanentSemantic)
+    }
+
     const fn description(self) -> &'static str {
         match self {
             Self::PermanentSemantic => "permanent semantic",
@@ -77,11 +81,13 @@ pub(crate) enum MirNormalizedInvariantViolation {
     LogicalExpressionRecords {
         count: usize,
     },
-    PathConditionStorage {
+    ProofBearingStorage {
         storage: StorageId,
+        disposition: MirProofDisposition,
     },
-    PathConditionRvalue {
+    ProofBearingRvalue {
         result: ValueId,
+        disposition: MirProofDisposition,
     },
     UnexpectedProofInstruction {
         index: usize,
@@ -103,13 +109,21 @@ impl fmt::Display for MirNormalizedInvariantViolation {
                 formatter,
                 "normalized MIR retains {count} logical-expression record(s)"
             ),
-            Self::PathConditionStorage { storage } => write!(
+            Self::ProofBearingStorage {
+                storage,
+                disposition,
+            } => write!(
                 formatter,
-                "normalized MIR retains path-condition storage {storage}"
+                "normalized MIR storage {storage} retains {} provenance",
+                disposition.description()
             ),
-            Self::PathConditionRvalue { result } => write!(
+            Self::ProofBearingRvalue {
+                result,
+                disposition,
+            } => write!(
                 formatter,
-                "normalized MIR value {result} retains a path-condition rvalue"
+                "normalized MIR value {result} retains {} provenance",
+                disposition.description()
             ),
             Self::UnexpectedProofInstruction { index, disposition } => write!(
                 formatter,
@@ -137,7 +151,7 @@ pub(crate) enum MirIdentitySiteRole {
 /// Classifies every callable-local traversal site.
 ///
 /// The exhaustive match is a compile-time maintenance point shared by current
-/// proof-aware CFG retention and the future normalizer.
+/// proof-aware CFG retention and the normalizer.
 pub(crate) const fn classify_local_identity_site(
     site: crate::mir::rewrite::MirLocalIdentitySite,
 ) -> MirIdentitySiteRole {
@@ -321,13 +335,13 @@ impl Verifier<'_> {
         }
 
         for storage in function.storage_entries() {
-            if classify_storage_kind(storage.kind)
-                == MirProofDisposition::ExecutableCarrierWithProof
-            {
+            let disposition = classify_storage_kind(storage.kind);
+            if !disposition.is_permanent() {
                 self.normalized_function_error(
                     function,
-                    MirNormalizedInvariantViolation::PathConditionStorage {
+                    MirNormalizedInvariantViolation::ProofBearingStorage {
                         storage: storage.id,
+                        disposition,
                     },
                 );
             }
@@ -348,7 +362,7 @@ impl Verifier<'_> {
         };
         for (index, instruction) in block.instructions.iter().enumerate() {
             let disposition = classify_instruction(instruction);
-            if disposition != MirProofDisposition::PermanentSemantic {
+            if !disposition.is_permanent() {
                 self.block_error(
                     function.callable(),
                     block.id,
@@ -360,14 +374,14 @@ impl Verifier<'_> {
                 );
             }
             if let MirInstruction::Assign(assignment) = instruction {
-                if classify_rvalue_kind(&assignment.rvalue.kind)
-                    == MirProofDisposition::ExecutableCarrierWithProof
-                {
+                let disposition = classify_rvalue_kind(&assignment.rvalue.kind);
+                if !disposition.is_permanent() {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        MirNormalizedInvariantViolation::PathConditionRvalue {
+                        MirNormalizedInvariantViolation::ProofBearingRvalue {
                             result: assignment.result,
+                            disposition,
                         }
                         .to_string(),
                     );
@@ -376,7 +390,7 @@ impl Verifier<'_> {
         }
         if let Some(terminator) = &block.terminator {
             let disposition = classify_terminator(terminator);
-            if disposition != MirProofDisposition::PermanentSemantic {
+            if !disposition.is_permanent() {
                 self.block_error(
                     function.callable(),
                     block.id,

@@ -31,7 +31,6 @@ pub(crate) struct MirProofNormalizationStatistics {
     released_proof_blocks: usize,
 }
 
-#[allow(dead_code)]
 impl MirProofNormalizationStatistics {
     const fn new(
         path_condition_records: usize,
@@ -110,12 +109,13 @@ pub(super) struct ConsumedProofAuthority {
     _private: (),
 }
 
-#[allow(dead_code)]
 impl MirProofNormalizationResult {
+    #[cfg(test)]
     pub(in crate::passes::pipeline) const fn program(&self) -> &MirProgram {
         &self.program
     }
 
+    #[cfg(test)]
     pub(in crate::passes::pipeline) const fn statistics(&self) -> MirProofNormalizationStatistics {
         self.statistics
     }
@@ -133,7 +133,6 @@ impl MirProofNormalizationResult {
 
 /// Consumes a proof-verified product and atomically removes its proof-only
 /// path and logical provenance.
-#[allow(dead_code)]
 pub(in crate::passes::pipeline) fn normalize_proof_provenance(
     verified: VerifiedProofMirProgram,
 ) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {

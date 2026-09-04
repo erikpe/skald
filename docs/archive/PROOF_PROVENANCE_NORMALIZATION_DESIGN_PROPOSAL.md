@@ -1,16 +1,16 @@
 # Proof-Provenance Normalization Design Proposal
 
 Status: frozen decision record; PPN1 through PPN14 were confirmed together on
-2026-09-04. The planned
-[implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) owns
-delivery, and its
-[discoveries record](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md) owns
-findings outside the reviewed scope. The decisions are promoted into the
-frozen directions in the compiler
-[phase](../compiler/PHASES_AND_IR.md#frozen-proof-provenance-normalization-direction),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-proof-provenance-normalization-orchestration),
-[backend](../compiler/BACKEND.md#frozen-proof-normalized-final-mir-boundary),
-[reporting](../compiler/REPORTING.md#frozen-proof-normalization-observation),
+2026-09-04. The
+[completed implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+records delivery, and the active
+[discoveries record](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
+owns the remaining follow-up outside the reviewed scope. The decisions are
+promoted into the implemented compiler
+[phase](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#proof-provenance-normalization-orchestration),
+[backend](../compiler/BACKEND.md#proof-normalized-final-mir-boundary),
+[reporting](../compiler/REPORTING.md#proof-normalization-observation),
 and
 [testing](../development/TESTING.md#proof-provenance-normalization-coverage)
 contracts.
