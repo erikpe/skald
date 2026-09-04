@@ -12,7 +12,7 @@ use crate::mir::{
 /// the owner of value types and operations; this representation merely keeps
 /// the payload paired with its exact supported type while facts are built.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum PrimitiveConstant {
+pub(in crate::passes) enum PrimitiveConstant {
     I64(i64),
     U64(u64),
     U8(u8),
@@ -20,7 +20,7 @@ pub(super) enum PrimitiveConstant {
 }
 
 impl PrimitiveConstant {
-    pub(super) const fn ty(self) -> MirType {
+    pub(in crate::passes) const fn ty(self) -> MirType {
         self.primitive_type().value_type()
     }
 
@@ -48,7 +48,7 @@ impl PrimitiveConstant {
 /// Unsupported is an ordinary conservative outcome. It covers type
 /// mismatches as well as every operation family outside the frozen set.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum PrimitiveEvaluation {
+pub(in crate::passes) enum PrimitiveEvaluation {
     Constant(PrimitiveConstant),
     Unsupported,
 }
@@ -57,7 +57,7 @@ pub(super) enum PrimitiveEvaluation {
 ///
 /// The operation matches are intentionally exhaustive. Adding a MIR rvalue or
 /// primitive operation therefore requires an explicit folding decision here.
-pub(super) fn evaluate_rvalue(
+pub(in crate::passes) fn evaluate_rvalue(
     kind: &MirRvalueKind,
     mut known_constant: impl FnMut(ValueId) -> Option<PrimitiveConstant>,
 ) -> PrimitiveEvaluation {

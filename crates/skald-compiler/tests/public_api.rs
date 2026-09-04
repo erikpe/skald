@@ -48,7 +48,8 @@ use skald_compiler::{
         ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::{
-        available_mir_passes, run_mir_pipeline, run_mir_pipeline_inspected,
+        analyze_scalar_spill_provenance, available_mir_passes, run_mir_pipeline,
+        run_mir_pipeline_inspected,
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
@@ -57,7 +58,8 @@ use skald_compiler::{
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
         MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
-        MirPipelineFailureStage, VerifiedFinalMirProgram,
+        MirPipelineFailureStage, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
+        ScalarSpillUnlock, VerifiedFinalMirProgram,
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -384,6 +386,13 @@ fn intentional_phase_and_dump_paths_compose() {
     );
     let mir: VerifiedFinalMirProgram = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);
+    let scalar_spills = analyze_scalar_spill_provenance(&mir);
+    let _counts = scalar_spills.counts();
+    let _callables = scalar_spills.callables();
+    let _depth = ScalarSpillDepth::Direct;
+    let _blocker = ScalarSpillBlocker::AmbiguousWrites;
+    let _consumer = ScalarSpillConsumer::TotalPrimitive;
+    let _unlock = ScalarSpillUnlock::PrimitiveFolding;
     let target = target_by_name("x86_64-sysv").unwrap();
     let omitted = emit_assembly(target, BackendInput::without_runtime_trace(&mir)).unwrap();
     let enabled = emit_assembly(target, BackendInput::with_runtime_trace(&mir, &sources)).unwrap();

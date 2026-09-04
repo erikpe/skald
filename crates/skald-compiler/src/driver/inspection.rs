@@ -30,7 +30,7 @@ pub struct CompilationInspectors<'a> {
 }
 
 impl<'a> CompilationInspectors<'a> {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             static_activation: None,
             mir_pipeline: None,

@@ -7,6 +7,7 @@ pub mod static_lifecycle;
 
 mod graph;
 mod pipeline;
+mod redundancy;
 // Reachability is seal-bound but remains compiler-internal until its first
 // retention and backend consumers land.
 #[allow(dead_code, unused_imports)]
@@ -29,4 +30,9 @@ pub(crate) use pipeline::{
 pub(crate) use pipeline::{
     run_mir_pipeline_instrumented, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
     MeasuredMirPipeline, MirPipelineStatistics,
+};
+pub use redundancy::{
+    analyze_scalar_spill_provenance, ScalarSpillBlocker, ScalarSpillCallableObservation,
+    ScalarSpillConsumer, ScalarSpillCount, ScalarSpillDepth, ScalarSpillProvenanceCounts,
+    ScalarSpillProvenanceObservation, ScalarSpillUnlock,
 };

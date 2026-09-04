@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: in progress; LMR0-LMR1 are complete and LMR2 is next.
+Status: in progress; LMR0-LMR2 are complete and LMR3 is next.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -121,7 +121,7 @@ The frozen census, corpus, schema, and decision rules are authoritative in the
 
 - [x] LMR0 — Freeze the census and corpus contract
 - [x] LMR1 — Compose verified MIR inspection through the driver
-- [ ] LMR2 — Measure scalar-spill constant provenance
+- [x] LMR2 — Measure scalar-spill constant provenance
 - [ ] LMR3 — Measure redundant primitive casts
 - [ ] LMR4 — Measure local primitive common subexpressions
 - [ ] LMR5 — Build deterministic corpus aggregation and reporting
@@ -225,22 +225,22 @@ describe the composed boundary.
 barrier to constant-driven simplification and whether one narrow analysis would
 serve several later passes.
 
-- [ ] Add one read-only seal-local scalar-spill provenance observer over exact
+- [x] Add one read-only seal-local scalar-spill provenance observer over exact
       storage declarations, writes, loads, types, CFG predecessors, and
       dominance.
-- [ ] Count direct, one-hop, and transitive canonical constant provenance
+- [x] Count direct, one-hop, and transitive canonical constant provenance
       separately; never publish a transitive fact after ambiguity or an
       unsupported boundary.
-- [ ] Classify every rejected candidate by multiple or conditional writes,
+- [x] Classify every rejected candidate by multiple or conditional writes,
       nondominance, mismatched type, noncanonical place projection, alias
       exposure, lifecycle participation, protected metadata, malformed
       identity, or unsupported producer.
-- [ ] Attribute consumers to checked integer protocols, total primitive
+- [x] Attribute consumers to checked integer protocols, total primitive
       operations, casts, branches, stores, returns, calls, and other families.
-- [ ] Estimate downstream opportunities only by invoking the existing exact
+- [x] Estimate downstream opportunities only by invoking the existing exact
       evaluator or verified protocol observer with read-only virtual facts; do
       not rewrite MIR or duplicate arithmetic/protocol semantics.
-- [ ] Keep detailed facts internal and return deterministic aggregate and
+- [x] Keep detailed facts internal and return deterministic aggregate and
       per-callable observations suitable for the common report schema.
 
 **Tests:** Direct and nested checked constants; one-hop and transitive chains;
@@ -253,6 +253,22 @@ handling.
 why it is rejected, where it occurs in reachable code, and which existing or
 future simplifications it would expose without claiming general load/store
 propagation.
+
+**Completion evidence:** The public read-only
+`analyze_scalar_spill_provenance` entry point accepts only a
+`VerifiedFinalMirProgram` and returns deterministic program and per-callable
+counts while all instruction-position and constant facts remain internal. It
+classifies direct, one-hop, and transitive chains; exact consumer families;
+one exclusive primary blocker plus every applicable ordered barrier; distinct
+supporting values and instructions; and conservative removal upper bounds.
+One-step primitive and checked-integer unlocks reuse the implemented exact
+evaluators. Focused tests cover verified checked protocols, direct and chained
+provenance, primitive and checked unlocks, multiple writes, dominance and loop
+epochs, type and place failures, alias and protected/lifecycle roles,
+malformed declaration identity, empty programs, deterministic repetition, and
+unchanged verified MIR. Public-facade and living phase/debugging documentation
+cover the opt-in analysis without adding a pass, request option, report event,
+or ordinary compilation cost.
 
 ### LMR3 — Measure redundant primitive casts
 

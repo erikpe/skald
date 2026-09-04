@@ -12,3 +12,10 @@ pub(in crate::passes::pipeline) mod primitive_constant_folding;
 mod primitive_evaluation;
 mod primitive_facts;
 pub(in crate::passes::pipeline) mod whole_world_reachability;
+
+pub(in crate::passes) use checked_integer_evaluation::{
+    evaluate_integer_division, evaluate_shift, CheckedIntegerEvaluation,
+};
+pub(in crate::passes) use primitive_evaluation::{
+    evaluate_rvalue, PrimitiveConstant, PrimitiveEvaluation,
+};

@@ -16,6 +16,11 @@ mod execution;
 mod optimizations;
 mod policy;
 
+pub(in crate::passes) use optimizations::{
+    evaluate_integer_division, evaluate_rvalue, evaluate_shift, CheckedIntegerEvaluation,
+    PrimitiveConstant, PrimitiveEvaluation,
+};
+
 #[cfg(test)]
 pub(crate) use execution::run_mir_pipeline_measured_inspected;
 pub(crate) use execution::{

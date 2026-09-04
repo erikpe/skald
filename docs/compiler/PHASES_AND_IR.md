@@ -3185,6 +3185,32 @@ and only a borrowed verified final-MIR product. Checkpoint labels and `dump_mir`
 bytes are deterministic across independent processes. The inspection surface
 is neither a dump serializer nor a filesystem publication service.
 
+### Read-only scalar-spill provenance census
+
+`passes::analyze_scalar_spill_provenance` measures one verified final-MIR
+snapshot without cloning or mutating it. Its inspected unit is a semantic use
+of a value loaded from compiler-owned `ScalarSpill` storage. Arbitrary dynamic
+loads are non-candidates; literal-backed direct, one-hop, and transitive
+load/store chains are interesting sites.
+
+The census requires exact storage declarations, primitive types, canonical
+unprojected places, unique writes, and instruction or CFG dominance. It keeps
+malformed identities, unsupported types and producers, noncanonical places,
+protected metadata, alias exposure, lifecycle roles, ambiguous writes, and
+missing dominance as an ordered closed blocker vocabulary. One exclusive
+primary blocker follows that order while the complete sorted barrier set is
+also retained.
+
+Consumer counts distinguish checked integer protocols, total primitive
+operations, primitive casts, branches, stores, returns, calls, and other
+roles. A one-step virtual substitution may be evaluated by the existing exact
+primitive or checked-integer evaluator to record a downstream folding unlock;
+the census does not rewrite MIR or recursively propagate speculative facts.
+Results contain deterministic program totals and callable-identity-ordered
+counts, including supporting values and instructions and explicitly labeled
+removal upper bounds. The analysis is opt-in and is not a registered MIR pass,
+report event, compiler request option, or backend input.
+
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests
 compare those products and assembly both for a complete source pipeline and

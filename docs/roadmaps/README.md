@@ -13,7 +13,8 @@ is in progress. Its
 defines whole-world compilation identity, verified input/pre-reachability/final
 snapshots, census accounting and overlaps, the version-one corpus, canonical
 report schema, and evidence threshold. Composable verified-MIR inspection
-through the driver is next.
+through the driver and scalar-spill constant-provenance measurement are
+implemented; redundant primitive-cast measurement is next.
 
 ## Pending discoveries
 

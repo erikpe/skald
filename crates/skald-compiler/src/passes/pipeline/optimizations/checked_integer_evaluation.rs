@@ -13,7 +13,7 @@ use super::primitive_evaluation::{canonical_u8, PrimitiveConstant};
 /// rewriting may use only successful results, while retaining the exact reason
 /// that prevented a statically failing operation from being folded.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum CheckedIntegerEvaluation {
+pub(in crate::passes) enum CheckedIntegerEvaluation {
     Success(PrimitiveConstant),
     Failure(MirTerminationReason),
     Unsupported,
@@ -23,7 +23,7 @@ pub(super) enum CheckedIntegerEvaluation {
 ///
 /// Type mismatches are unsupported. An exact zero divisor reports the MIR
 /// operation's failure reason without executing host division.
-pub(super) fn evaluate_integer_division(
+pub(in crate::passes) fn evaluate_integer_division(
     operation: MirIntegerDivisionOperation,
     dividend: PrimitiveConstant,
     divisor: PrimitiveConstant,
@@ -62,7 +62,7 @@ pub(super) fn evaluate_integer_division(
 }
 
 /// Evaluates an exact integer shift after validating its `u64` count.
-pub(super) fn evaluate_shift(
+pub(in crate::passes) fn evaluate_shift(
     operation: MirShiftOperation,
     left: PrimitiveConstant,
     count: PrimitiveConstant,
