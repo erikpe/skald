@@ -1,5 +1,6 @@
 use crate::{
     mir::{
+        dump_mir,
         rewrite::{rewrite_program, MirProgramRewriteResult},
         MirDefinitionRef, MirInstruction, MirIntegerDivisionKind, MirPathCondition, MirRvalueKind,
         MirShiftDirection, MirStorage, MirStorageKind, MirTerminator, MirType, PathConditionId,
@@ -119,6 +120,52 @@ fn checked_shift_count(program: &MirProgram) -> usize {
             )
         })
         .count()
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct MirShape {
+    blocks: usize,
+    instructions: usize,
+    values: usize,
+    divisor_checks: usize,
+    shift_checks: usize,
+    checked_operations: usize,
+}
+
+fn mir_shape(program: &MirProgram) -> MirShape {
+    let definitions = program.executable_definitions().collect::<Vec<_>>();
+    MirShape {
+        blocks: definitions
+            .iter()
+            .map(|definition| definition.body().blocks.len())
+            .sum(),
+        instructions: definitions
+            .iter()
+            .flat_map(|definition| &definition.body().blocks)
+            .map(|block| block.instructions.len())
+            .sum(),
+        values: definitions
+            .iter()
+            .map(|definition| definition.values().len())
+            .sum(),
+        divisor_checks: checked_division_count(program),
+        shift_checks: checked_shift_count(program),
+        checked_operations: definitions
+            .iter()
+            .flat_map(|definition| &definition.body().blocks)
+            .flat_map(|block| &block.instructions)
+            .filter(|instruction| {
+                matches!(
+                    instruction,
+                    MirInstruction::Assign(assignment)
+                        if matches!(
+                            assignment.rvalue.kind,
+                            MirRvalueKind::IntegerDivision { .. } | MirRvalueKind::Shift { .. }
+                        )
+                )
+            })
+            .count(),
+    }
 }
 
 fn fold_ordinary_primitive_constants(program: MirProgram) -> MirProgram {
@@ -813,4 +860,104 @@ fn default_schedule_exposes_then_folds_and_cleans_checked_protocols() {
         .occurrences()
         .iter()
         .all(|record| record.identity() != IDENTITY));
+}
+
+#[test]
+fn default_product_has_stable_structural_win_and_backend_input() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "    var quotient: i64 = 84 / 2;\n",
+        "    var shifted: i64 = 8 << 2u;\n",
+        "    return quotient + shifted;\n",
+        "}\n",
+    );
+    let input = lower_source_to_final_mir(source);
+    let default_schedule =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    let checked_disabled_schedule = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["checked-integer-constant-folding"],
+    )
+    .unwrap();
+    let cfg_disabled_schedule = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["conservative-cfg-cleanup"],
+    )
+    .unwrap();
+    let none_schedule =
+        resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap();
+
+    let first = run_mir_pipeline_with_occurrences(input.clone(), &default_schedule);
+    let second = run_mir_pipeline_with_occurrences(input.clone(), &default_schedule);
+    let checked_disabled =
+        run_mir_pipeline_with_occurrences(input.clone(), &checked_disabled_schedule);
+    let cfg_disabled = run_mir_pipeline_with_occurrences(input.clone(), &cfg_disabled_schedule);
+    let none = run_mir_pipeline_with_occurrences(input.clone(), &none_schedule);
+    let first_program = first.result.as_ref().unwrap().program();
+    let second_program = second.result.as_ref().unwrap().program();
+    let checked_disabled_program = checked_disabled.result.as_ref().unwrap().program();
+    let cfg_disabled_program = cfg_disabled.result.as_ref().unwrap().program();
+    let none_program = none.result.as_ref().unwrap().program();
+
+    assert_eq!(
+        mir_shape(&input),
+        MirShape {
+            blocks: 7,
+            instructions: 41,
+            values: 15,
+            divisor_checks: 1,
+            shift_checks: 1,
+            checked_operations: 2,
+        }
+    );
+    assert_eq!(
+        mir_shape(first_program),
+        MirShape {
+            blocks: 5,
+            instructions: 37,
+            values: 11,
+            divisor_checks: 0,
+            shift_checks: 0,
+            checked_operations: 0,
+        }
+    );
+    assert_eq!(
+        mir_shape(cfg_disabled_program),
+        MirShape {
+            blocks: 7,
+            instructions: 37,
+            values: 11,
+            divisor_checks: 0,
+            shift_checks: 0,
+            checked_operations: 0,
+        }
+    );
+    assert_eq!(mir_shape(checked_disabled_program), mir_shape(&input));
+    assert_eq!(mir_shape(none_program), mir_shape(&input));
+    let input_dump = dump_mir(&input);
+    let default_dump = dump_mir(first_program);
+    assert_eq!(default_dump, dump_mir(second_program));
+    assert_eq!(dump_mir(none_program), input_dump);
+    assert!(input_dump.contains("integer-divisor-check"));
+    assert!(input_dump.contains("shift-count-check"));
+    assert!(dump_mir(checked_disabled_program).contains("integer-divisor-check"));
+    assert!(dump_mir(checked_disabled_program).contains("shift-count-check"));
+    assert!(!default_dump.contains("integer-divisor-check"));
+    assert!(!default_dump.contains("shift-count-check"));
+
+    let checked_record = first
+        .occurrences()
+        .iter()
+        .find(|record| record.identity() == IDENTITY)
+        .unwrap();
+    assert_eq!(
+        checked_record.measurements(),
+        [
+            MirPassMeasurement::count(FOLDED_QUOTIENTS, 1),
+            MirPassMeasurement::count(FOLDED_REMAINDERS, 0),
+            MirPassMeasurement::count(FOLDED_SHIFTS, 1),
+            MirPassMeasurement::count(REMOVED_PROTOCOL_LOAD_VALUES, 4),
+            MirPassMeasurement::count(RETAINED_STATIC_FAILURES, 0),
+        ]
+    );
 }

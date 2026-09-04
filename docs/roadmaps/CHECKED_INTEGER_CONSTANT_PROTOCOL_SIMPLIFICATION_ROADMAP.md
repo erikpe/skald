@@ -1,6 +1,6 @@
 # Checked Integer Constant Protocol Simplification Roadmap
 
-Status: in progress; CIR0 through CIR6 are complete and CIR7 is next.
+Status: in progress; CIR0 through CIR7 are complete and CIR8 is next.
 
 This roadmap implements optimization-catalog candidates FMC-01 and FMC-02 as
 one independently selectable target-independent final-MIR pass. It folds fully
@@ -114,7 +114,7 @@ Candidate placement and status remain authoritative in the
 - [x] CIR4 — Fold constant integer shift protocols
 - [x] CIR5 — Register selection and structured measurements
 - [x] CIR6 — Activate and compose the default schedule
-- [ ] CIR7 — Prove semantic parity, determinism, and optimization value
+- [x] CIR7 — Prove semantic parity, determinism, and optimization value
 - [ ] CIR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
@@ -429,25 +429,25 @@ check pass.
 observable source behavior nor permanent whole-world/single-threaded lifecycle
 semantics and produces a measurable structural win.
 
-- [ ] Add a focused checked-integer optimization golden covering successful
+- [x] Add a focused checked-integer optimization golden covering successful
       `i64`, `u64`, and `u8` division, remainder, left shift, and right shift
       under default, `none`, checked-pass-disabled, CFG-disabled, and all-pass-
       disabled variants.
-- [ ] Cover sign quadrants, zero, extrema, the signed-minimum pair, shift width
+- [x] Cover sign quadrants, zero, extrema, the signed-minimum pair, shift width
       boundaries, high-bit right shifts, and canonical byte results through
       native execution.
-- [ ] Retain zero-divisor, remainder-by-zero, and excessive-shift panic
+- [x] Retain zero-divisor, remainder-by-zero, and excessive-shift panic
       fixtures with exact status, stderr, reason, source span, runtime trace,
       operand order, and optimization-on/off equivalence.
-- [ ] Include effectful, failing, dynamic, partially constant, nested, logical,
+- [x] Include effectful, failing, dynamic, partially constant, nested, logical,
       static-initializer, ownership, and destruction contexts that must either
       preserve operand behavior or remain unoptimized.
-- [ ] Pin deterministic before/after block, instruction, value, and checked-
+- [x] Pin deterministic before/after block, instruction, value, and checked-
       terminator counts plus pass-owned reason metrics and final MIR dumps.
-- [ ] Prove the optimized backend input contains no folded integer
+- [x] Prove the optimized backend input contains no folded integer
       division/shift operation or dedicated check and that disabled/`none`
       products retain them.
-- [ ] Run focused debug, release, and independent-process deterministic
+- [x] Run focused debug, release, and independent-process deterministic
       goldens, followed by the complete ordinary and extended repository
       gates.
 
@@ -460,6 +460,26 @@ golden-release-test`; `make golden-determinism-test`; `make static-check`;
 across optimization settings, deterministic products are stable across
 processes and build modes, and structural measurements show the intended
 checks, operations, load values, and failure blocks disappearing.
+
+**Completion evidence:** A dedicated optimization golden now runs successful
+checked division, remainder, and shifts for `i64`, `u64`, and `u8` across the
+default, `none`, checked-folding-disabled, CFG-cleanup-disabled, and all-six-
+passes-disabled products. Native observations cover sign quadrants, zero,
+integer extrema, the signed-minimum pair, zero and maximum valid shift counts,
+high-bit shifts, canonical bytes, effect order, dynamic and partially constant
+operations, nesting, logical use, reachable static initialization and reverse
+shutdown, and local ownership destruction. Its companion failure matrix pins
+status, stdout order, panic reason, source span, stderr, and runtime trace for
+division and remainder by zero, excessive shifts, and an operand failure that
+precedes the divisor check. A focused MIR regression pins the representative
+structural change from 7 blocks, 41 instructions, and 15 values to 5 blocks,
+37 instructions, and 11 values; verifies exact pass-owned fold and removed-load
+metrics; compares deterministic final dumps; and proves optimized backend input
+contains neither checked operation nor dedicated check while `none` and the
+checked-disabled product retain both. Focused and full debug, release, and
+independent-process deterministic goldens pass, as do `make check`, `make
+static-check`, the Rust 1.82 MSRV check, documentation validation, and diff
+hygiene.
 
 ### CIR8 — Harden ownership, documentation, and roadmap closure
 

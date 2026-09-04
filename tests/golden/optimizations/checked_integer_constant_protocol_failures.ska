@@ -1,0 +1,23 @@
+import std::io;
+import std::process;
+from std::str import Str;
+
+fn mark(value: i64, marker: i64) -> i64 {
+    std::io::println_i64(marker);
+    return value;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    if (arguments[1].equals("division")) {
+        return mark(7, 11) / mark(0, 12);
+    }
+    if (arguments[1].equals("remainder")) {
+        return mark(7, 21) % mark(0, 22);
+    }
+    if (arguments[1].equals("shift")) {
+        return mark(1, 31) << ((u64) mark(64, 32));
+    }
+    var missing: i64? = none;
+    return mark(7, 41) / missing!;
+}

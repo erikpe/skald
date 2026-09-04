@@ -12,7 +12,8 @@ is in progress. Exact checked-integer evaluation and the narrow verified
 carrier/protocol query, atomic checked-diamond rewrite, and division/remainder
 and shift folding are complete. Selectable registration and structured
 measurements are also complete, and the pass is active in the default schedule;
-broad semantic evidence and closure follow.
+native semantic parity, exact structural value, and cross-process determinism
+are proven. Ownership/documentation hardening and roadmap closure follow.
 
 ## Pending discoveries
 

@@ -162,8 +162,14 @@ Checked-integer pipeline tests pin the default position after the second
 primitive constant fold, constants exposed by those earlier scalar passes,
 successful protocol folding, subsequent unreachable failure-block cleanup,
 checked-pass-disabled retention, ordered metrics, checkpoint numbering, and
-verified outputs under every stable pass exclusion. Broader native and failure
-equivalence remains in the dedicated optimization golden milestone.
+verified outputs under every stable pass exclusion. The dedicated optimization
+goldens run successful checked division, remainder, and shifts under default,
+`none`, checked-pass-disabled, CFG-disabled, and all-pass-disabled settings.
+They cover exact signed and fixed-width boundaries, dynamic and effectful
+operands, nested expressions, static initialization, ownership destruction,
+and byte canonicalization. Companion failure runs pin operand order, status,
+panic reason, source span, stderr, and runtime traces for zero divisors,
+remainder by zero, excessive shifts, and a failing operand.
 
 Local final-MIR simplification has a focused `optimizations` golden group. It
 crosses default, `none`, every local pass disabled individually,

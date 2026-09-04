@@ -1,0 +1,56 @@
+schema = 2
+
+[[test]]
+name = "successful_protocol_equivalence"
+mode = "run"
+source = "checked_integer_constant_protocols.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "checked-integer-folding-disabled",
+  "cfg-cleanup-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "integer_types_boundaries_effects_static_lifecycle_and_ownership"
+expect = { stdout = { file = "data/checked_integer_constant_protocols.stdout" } }
+
+[[test]]
+name = "failing_protocol_equivalence"
+mode = "run"
+source = "checked_integer_constant_protocol_failures.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "checked-integer-folding-disabled",
+  "cfg-cleanup-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "division_by_zero"
+args = ["division"]
+expect = { exit = "failure", stdout = { inline = "11\n12\n" }, stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at checked_integer_constant_protocol_failures::main (tests/golden/optimizations/checked_integer_constant_protocol_failures.ska:13:16)
+""" } }
+[[test.run]]
+name = "remainder_by_zero"
+args = ["remainder"]
+expect = { exit = "failure", stdout = { inline = "21\n22\n" }, stderr = { inline = """panic: integer remainder by zero
+stacktrace:
+  at checked_integer_constant_protocol_failures::main (tests/golden/optimizations/checked_integer_constant_protocol_failures.ska:16:16)
+""" } }
+[[test.run]]
+name = "excessive_shift"
+args = ["shift"]
+expect = { exit = "failure", stdout = { inline = "31\n32\n" }, stderr = { inline = """panic: shift count out of range
+stacktrace:
+  at checked_integer_constant_protocol_failures::main (tests/golden/optimizations/checked_integer_constant_protocol_failures.ska:19:16)
+""" } }
+[[test.run]]
+name = "failing_rhs_precedes_divisor_check"
+args = ["operand"]
+expect = { exit = "failure", stdout = { inline = "41\n" }, stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at checked_integer_constant_protocol_failures::main (tests/golden/optimizations/checked_integer_constant_protocol_failures.ska:22:26)
+""" } }

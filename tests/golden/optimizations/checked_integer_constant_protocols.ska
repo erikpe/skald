@@ -1,0 +1,83 @@
+import std::io;
+
+fn mark_u64(value: u64, marker: i64) -> u64 {
+    std::io::println_i64(marker);
+    return value;
+}
+
+fn publish(value: i64) -> i64 {
+    std::io::println_i64(700);
+    return value;
+}
+
+class Resource {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        std::io::println_i64(800 + self.value);
+    }
+}
+
+class State {
+    static quotient: i64 = publish(42 / 6);
+    static resource: Resource = Resource((i64) (64u >> 3u));
+
+    init() {}
+}
+
+fn dynamic_quotient(left: u64, right: u64) -> u64 {
+    return left / right;
+}
+
+fn partially_constant_remainder(left: u64) -> u64 {
+    return left % 3u;
+}
+
+fn main() -> i64 {
+    std::io::println_i64(State.quotient);
+    std::io::println_i64(State.resource.value);
+
+    std::io::println_i64(7 / 3);
+    std::io::println_i64(-7 / 3);
+    std::io::println_i64(7 / -3);
+    std::io::println_i64(-7 / -3);
+    std::io::println_i64(7 % 3);
+    std::io::println_i64(-7 % 3);
+    std::io::println_i64(7 % -3);
+    std::io::println_i64(-7 % -3);
+    std::io::println_i64(-9223372036854775808 / -1);
+    std::io::println_i64(-9223372036854775808 % -1);
+
+    std::io::println_u64(18446744073709551615u / 2u);
+    std::io::println_u64(18446744073709551615u % 2u);
+    std::io::println_u8(0u8 / 1u8);
+    std::io::println_u8(255u8 / 2u8);
+    std::io::println_u8(255u8 % 2u8);
+
+    std::io::println_i64(1 << 0u);
+    std::io::println_i64(1 << 63u);
+    std::io::println_i64(-8 >> 1u);
+    std::io::println_u64(1u << 63u);
+    std::io::println_u64(18446744073709551615u >> 63u);
+    std::io::println_u8(1u8 << 7u);
+    std::io::println_u8(129u8 >> 7u);
+    std::io::println_u8(129u8 << 1u);
+
+    std::io::println_u64(
+        mark_u64(20u, 101) / mark_u64(3u, 102)
+    );
+    std::io::println_u64(dynamic_quotient(20u, 3u));
+    std::io::println_u64(partially_constant_remainder(20u));
+    std::io::println_u64((100u / 5u) / (9u % 4u));
+    std::io::println_bool((8 / 2) == 4 && (1u << 7u) == 128u);
+
+    {
+        var local: Resource = Resource(81 / 9);
+        std::io::println_i64(local.value);
+    }
+    return 0;
+}
