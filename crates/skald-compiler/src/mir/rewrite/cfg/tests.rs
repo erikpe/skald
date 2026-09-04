@@ -27,7 +27,7 @@ fn ordinary_function_and_member_use_the_body_entry_as_the_executable_root() {
         .block(function.body.entry)
         .unwrap()
         .is_entry());
-    assert_eq!(final_function_facts, function_facts);
+    assert_eq!(&*final_function_facts, &function_facts);
 
     let span = function.span;
     let class = ClassId::new(7);
@@ -70,7 +70,7 @@ fn static_publication_roots_protect_initialization_and_shutdown_regions() {
         &[BlockId::new(owner, 1), BlockId::new(owner, 2)]
     );
     assert_eq!(dense.unreachable(), &[]);
-    assert_eq!(final_dense, dense);
+    assert_eq!(&*final_dense, &dense);
 
     let mut package = MirCallablePackage::from_static_initializer(initializer).unwrap();
     let sparse = package.edit_mut().local_cfg_facts().unwrap();

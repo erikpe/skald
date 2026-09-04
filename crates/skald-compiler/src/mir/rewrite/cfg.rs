@@ -1,10 +1,24 @@
-//! Immutable callable-local control-flow facts.
+//! Immutable callable-local control-flow facts and normalized candidates.
 //!
 //! This analysis deliberately owns only a short-lived snapshot. It does not
 //! cache facts across rewrites or infer higher-level dominance, liveness, or
-//! loop structure.
+//! loop structure. Post-proof forwarding and merge queries live behind this
+//! facade and require the normalized-only [`MirFinalCfgFacts`] wrapper.
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+mod canonicalization;
+
+pub(crate) use canonicalization::{
+    analyze_basic_block_merging, analyze_empty_block_forwarding, MirBasicBlockMergeAnalysis,
+    MirBasicBlockMergeBarrier, MirBasicBlockMergeBarrierKind, MirBasicBlockMergeCandidate,
+    MirBasicBlockMergeCounts, MirEmptyBlockForwardingAnalysis, MirEmptyBlockForwardingBarrier,
+    MirEmptyBlockForwardingBarrierKind, MirEmptyBlockForwardingCandidate,
+    MirEmptyBlockForwardingCounts, MirEmptyBlockForwardingPlan, MirEmptyBlockForwardingResolution,
+};
+
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    ops::Deref,
+};
 
 use crate::{
     identity::CallableId,
@@ -220,6 +234,22 @@ pub(crate) struct MirLocalCfgFacts {
     unreachable: Vec<BlockId>,
 }
 
+/// CFG facts proven to come from normalized final MIR.
+///
+/// Keeping this wrapper opaque prevents post-proof candidate analysis from
+/// accidentally accepting a proof-rich snapshot whose metadata roots still
+/// constrain executable control flow.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct MirFinalCfgFacts(MirLocalCfgFacts);
+
+impl Deref for MirFinalCfgFacts {
+    type Target = MirLocalCfgFacts;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl MirLocalCfgFacts {
     pub(crate) const fn callable(&self) -> CallableId {
         self.callable
@@ -279,8 +309,8 @@ pub(crate) fn local_cfg_facts_for_definition(
 /// provenance has been consumed.
 pub(crate) fn final_cfg_facts_for_definition(
     definition: MirDefinitionRef<'_>,
-) -> Result<MirLocalCfgFacts, MirRewriteError> {
-    cfg_facts_for_definition(definition, MirCfgRootContract::Final)
+) -> Result<MirFinalCfgFacts, MirRewriteError> {
+    cfg_facts_for_definition(definition, MirCfgRootContract::Final).map(MirFinalCfgFacts)
 }
 
 fn cfg_facts_for_definition(
@@ -332,8 +362,9 @@ impl MirCallableEdit {
     }
 
     /// Computes executable CFG facts from a normalized sparse edit snapshot.
-    pub(crate) fn final_cfg_facts(&self) -> Result<MirLocalCfgFacts, MirRewriteError> {
+    pub(crate) fn final_cfg_facts(&self) -> Result<MirFinalCfgFacts, MirRewriteError> {
         self.cfg_facts(MirCfgRootContract::Final)
+            .map(MirFinalCfgFacts)
     }
 
     fn cfg_facts(

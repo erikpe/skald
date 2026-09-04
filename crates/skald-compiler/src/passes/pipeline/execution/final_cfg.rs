@@ -1,6 +1,6 @@
 //! Narrow sparse-edit surface for normalized executable CFG deletion.
 
-use crate::mir::rewrite::{MirCallableEdit, MirLocalCfgFacts, MirRewriteError};
+use crate::mir::rewrite::{MirCallableEdit, MirFinalCfgFacts, MirRewriteError};
 
 /// Final-stage access to reviewed unreachable-block deletion operations.
 ///
@@ -17,7 +17,7 @@ impl<'edit> MirFinalCfgEdit<'edit> {
 
     /// Captures roots, adjacency, reachability, and block-owned values under
     /// the normalized CFG contract.
-    pub(in crate::passes::pipeline) fn facts(&self) -> Result<MirLocalCfgFacts, MirRewriteError> {
+    pub(in crate::passes::pipeline) fn facts(&self) -> Result<MirFinalCfgFacts, MirRewriteError> {
         self.edit.final_cfg_facts()
     }
 
@@ -25,7 +25,7 @@ impl<'edit> MirFinalCfgEdit<'edit> {
     /// an exact, still-current normalized CFG snapshot.
     pub(in crate::passes::pipeline) fn remove_unreachable_blocks(
         &mut self,
-        expected: &MirLocalCfgFacts,
+        expected: &MirFinalCfgFacts,
     ) -> Result<MirFinalCfgRemoval, MirRewriteError> {
         let current = self.edit.final_cfg_facts()?;
         if current != *expected {

@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 is complete and PCR1 is next.
+Status: in progress; PCR0 and PCR1 are complete and PCR2 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -96,7 +96,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 ## Progress
 
 - [x] PCR0 — Add deterministic predecessor-edge CFG facts
-- [ ] PCR1 — Define normalized canonicalization candidates
+- [x] PCR1 — Define normalized canonicalization candidates
 - [ ] PCR2 — Add guarded final-CFG compound edits
 - [ ] PCR3 — Implement selectable empty-block forwarding
 - [ ] PCR4 — Implement selectable basic-block merging
@@ -147,22 +147,22 @@ mutating behavior has changed.
 **Purpose:** Make the frozen eligibility proof independently reviewable and
 measurable before connecting it to structural edits.
 
-- [ ] Add immutable empty-forwarding candidate and resolved-plan vocabulary
+- [x] Add immutable empty-forwarding candidate and resolved-plan vocabulary
   scoped to normalized CFG facts.
-- [ ] Identify only non-entry, unattached, zero-instruction goto blocks whose
+- [x] Identify only non-entry, unattached, zero-instruction goto blocks whose
   target is distinct and whose incoming edge sources are not permanent-root
   mutation barriers.
-- [ ] Resolve chains deterministically to the first non-forwardable target and
+- [x] Resolve chains deterministically to the first non-forwardable target and
   retain self-loops, cycles, and chains entering cycles with explicit reasons.
-- [ ] Add immutable block-merge candidates for exact goto pairs with one total
+- [x] Add immutable block-merge candidates for exact goto pairs with one total
   incoming successor occurrence and neither endpoint permanently attached.
-- [ ] Count all live edges, including entry-unreachable regions, when proving
+- [x] Count all live edges, including entry-unreachable regions, when proving
   merge uniqueness.
-- [ ] Select the first merge candidate by current block order and define
+- [x] Select the first merge candidate by current block order and define
   deterministic rescan behavior after a future edit.
-- [ ] Return stable opportunity and barrier counts without retaining raw MIR
+- [x] Return stable opportunity and barrier counts without retaining raw MIR
   references or mutable state.
-- [ ] Keep target-converged branch folding, protocol simplification,
+- [x] Keep target-converged branch folding, protocol simplification,
   duplication, and storage reasoning outside both queries.
 
 **Tests:** Single and transitive forwarding; multiple predecessors; duplicate
@@ -175,6 +175,14 @@ deterministic repeated queries; no mutation.
 and barrier deterministically, forwarding terminates without choosing cycle
 representatives, merge selection proves one incoming edge occurrence, and
 neither query changes MIR.
+
+**Implementation evidence:** `mir::rewrite::cfg::canonicalization` owns the
+immutable forwarding and merge analyses behind the existing CFG facade.
+`MirFinalCfgFacts` is an opaque normalized-only wrapper, so proof-rich facts
+cannot authorize post-proof candidates accidentally. Focused tests cover
+transitive plans, explicit cycle barriers, permanent attachments, duplicate
+and unreachable incoming edges, valid two-block loops, deterministic rescan,
+repeatability, and absence of MIR mutation.
 
 ### PCR2 — Add guarded final-CFG compound edits
 

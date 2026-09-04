@@ -34,8 +34,14 @@ mod value_use;
 
 pub(crate) use census::{value_use_census_for_definition, MirValueCensusEntry, MirValueUseCensus};
 pub(crate) use cfg::{
-    final_cfg_facts_for_definition, local_cfg_facts_for_definition, MirLocalCfgBlockFacts,
-    MirLocalCfgEdge, MirLocalCfgFacts, MirLocalCfgTerminatorKind, MirProtectedBlockRoot,
+    analyze_basic_block_merging, analyze_empty_block_forwarding, final_cfg_facts_for_definition,
+    local_cfg_facts_for_definition, MirBasicBlockMergeAnalysis, MirBasicBlockMergeBarrier,
+    MirBasicBlockMergeBarrierKind, MirBasicBlockMergeCandidate, MirBasicBlockMergeCounts,
+    MirEmptyBlockForwardingAnalysis, MirEmptyBlockForwardingBarrier,
+    MirEmptyBlockForwardingBarrierKind, MirEmptyBlockForwardingCandidate,
+    MirEmptyBlockForwardingCounts, MirEmptyBlockForwardingPlan, MirEmptyBlockForwardingResolution,
+    MirFinalCfgFacts, MirLocalCfgBlockFacts, MirLocalCfgEdge, MirLocalCfgFacts,
+    MirLocalCfgTerminatorKind, MirProtectedBlockRoot,
 };
 pub(crate) use commit::{
     MirCommitMap, MirCommitMaps, MirEntityChangeCount, MirRewriteChangeSummary,
