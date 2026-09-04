@@ -1,6 +1,7 @@
 use std::fmt;
 
 use super::identity::MirPassIdentity;
+use super::stage::MirPassStage;
 
 /// One invalid static pass-registry fact.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,6 +22,12 @@ pub(super) enum MirPassRegistryError {
         descriptor: MirPassIdentity,
         implementation: MirPassIdentity,
     },
+    ImplementationStageMismatch {
+        identity: MirPassIdentity,
+        descriptor: MirPassStage,
+        implementation: MirPassStage,
+    },
+    ReservedNormalizationName,
 }
 
 impl fmt::Display for MirPassRegistryError {
@@ -45,6 +52,17 @@ impl fmt::Display for MirPassRegistryError {
             } => write!(
                 formatter,
                 "MIR pass descriptor {descriptor} is wired to {implementation}"
+            ),
+            Self::ImplementationStageMismatch {
+                identity,
+                descriptor,
+                implementation,
+            } => write!(
+                formatter,
+                "MIR {identity} has descriptor stage `{descriptor}` but implementation stage `{implementation}`"
+            ),
+            Self::ReservedNormalizationName => formatter.write_str(
+                "mandatory proof-provenance normalization cannot be registered as a selectable MIR pass",
             ),
         }
     }
@@ -90,6 +108,11 @@ pub(crate) enum MirPassScheduleError {
         names: Vec<String>,
         known_names: Vec<&'static str>,
     },
+    MandatoryNormalizationSelection,
+    WrongStageOrder {
+        proof_rich: MirPassIdentity,
+        position: usize,
+    },
 }
 
 impl fmt::Display for MirPassScheduleError {
@@ -112,6 +135,16 @@ impl fmt::Display for MirPassScheduleError {
                     write!(formatter, "; known MIR passes: {}", known_names.join(", "))
                 }
             }
+            Self::MandatoryNormalizationSelection => formatter.write_str(
+                "mandatory proof-provenance normalization cannot be selected, disabled, or repeated",
+            ),
+            Self::WrongStageOrder {
+                proof_rich,
+                position,
+            } => write!(
+                formatter,
+                "proof-rich MIR {proof_rich} occurs after the final-stage boundary at schedule position {position}"
+            ),
         }
     }
 }
@@ -120,7 +153,10 @@ impl std::error::Error for MirPassScheduleError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::InvalidRegistry(errors) => Some(errors),
-            Self::UnknownIdentity { .. } | Self::UnknownNames { .. } => None,
+            Self::UnknownIdentity { .. }
+            | Self::UnknownNames { .. }
+            | Self::MandatoryNormalizationSelection
+            | Self::WrongStageOrder { .. } => None,
         }
     }
 }

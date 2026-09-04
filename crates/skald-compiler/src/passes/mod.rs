@@ -20,7 +20,7 @@ pub(crate) use pipeline::verify_proof_mir;
 pub use pipeline::{
     available_mir_passes, run_mir_pipeline, run_mir_pipeline_inspected, verify_final_mir,
     MirOptimizationProfile, MirPassDescriptor, MirPassIdentity, MirPassMeasurement,
-    MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineCheckpoint,
+    MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPassStage, MirPipelineCheckpoint,
     MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage, MirPipelineInspector,
     VerifiedFinalMirProgram, VerifiedProofMirProgram,
 };

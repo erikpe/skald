@@ -11,10 +11,11 @@ use crate::mir::{
 
 use super::super::{
     execution::{
-        MirPassCapability, MirPassData, MirPassFailure, MirPassMeasurement, MirPassOutcome,
+        MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
+        MirProofPassOutcome,
     },
     policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
-    MirPassIdentity,
+    MirPassIdentity, MirPassStage,
 };
 
 pub(in crate::passes::pipeline) const IDENTITY: MirPassIdentity = MirPassIdentity::new(0);
@@ -24,8 +25,8 @@ const REMOVED_ASSIGNMENTS: &str = "removed assignment instructions";
 const REMOVED_VALUE_DECLARATIONS: &str = "removed value declarations";
 
 pub(in crate::passes::pipeline) const REGISTRATION: MirPassRegistration = MirPassRegistration::new(
-    MirPassDescriptor::new(IDENTITY, NAME, DESCRIPTION),
-    MirPassImplementation::new(IDENTITY, transform),
+    MirPassDescriptor::new(IDENTITY, MirPassStage::ProofRich, NAME, DESCRIPTION),
+    MirPassImplementation::proof_rich(IDENTITY, transform),
 );
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -45,7 +46,7 @@ impl EliminationCount {
     }
 }
 
-fn transform(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
     let mut processed_callables = 0;
     let mut has_candidate = false;
     for definition in capability.verified().executable_definitions() {

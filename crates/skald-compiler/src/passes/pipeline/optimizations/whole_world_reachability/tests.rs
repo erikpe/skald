@@ -88,15 +88,13 @@ fn reports_exact_unchanged_and_changed_accounting() {
 }
 
 #[test]
-fn composes_before_and_after_the_canary() {
+fn composes_after_proof_rich_cleanup() {
     let source = "fn dead() -> i64 { var unused: i64 = 1 + 2; return 3; }
                   fn main() -> i64 { var unused: i64 = 4 + 5; return 0; }";
-    let before = run_mir_pipeline_measured(
-        lower_source_to_final_mir(source),
-        &schedule(&[IDENTITY, dead_pure_definition_elimination::IDENTITY]),
-    )
-    .result
-    .unwrap();
+    let reachability_only =
+        run_mir_pipeline_measured(lower_source_to_final_mir(source), &schedule(&[IDENTITY]))
+            .result
+            .unwrap();
     let after = run_mir_pipeline_measured(
         lower_source_to_final_mir(source),
         &schedule(&[dead_pure_definition_elimination::IDENTITY, IDENTITY]),
@@ -104,8 +102,8 @@ fn composes_before_and_after_the_canary() {
     .result
     .unwrap();
 
-    assert_eq!(before, after);
-    assert_eq!(before.definitions.len(), 1);
+    assert_eq!(reachability_only, after);
+    assert_eq!(after.definitions.len(), 1);
 }
 
 #[test]
@@ -137,7 +135,7 @@ fn exact_and_repeated_schedules_preserve_static_activation_authority() {
         vec![IDENTITY],
         vec![dead, IDENTITY],
         vec![IDENTITY, IDENTITY],
-        vec![IDENTITY, dead, IDENTITY],
+        vec![dead, IDENTITY, IDENTITY],
     ] {
         let output = run_mir_pipeline_measured(complete.clone(), &schedule(&identities))
             .result

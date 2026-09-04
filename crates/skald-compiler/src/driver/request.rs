@@ -55,11 +55,26 @@ impl MirOptimizationOptions {
         ) {
             Ok(schedule) => Ok(schedule),
             Err(MirPassScheduleError::UnknownNames { names, known_names }) => {
-                Err(MirOptimizationConfigurationError { names, known_names })
+                Err(MirOptimizationConfigurationError {
+                    names,
+                    known_names,
+                    mandatory_normalization: false,
+                })
+            }
+            Err(MirPassScheduleError::MandatoryNormalizationSelection) => {
+                Err(MirOptimizationConfigurationError {
+                    names: vec!["proof-provenance-normalization".to_owned()],
+                    known_names: crate::passes::available_mir_passes()
+                        .into_iter()
+                        .map(|descriptor| descriptor.name())
+                        .collect(),
+                    mandatory_normalization: true,
+                })
             }
             Err(
                 error @ (MirPassScheduleError::InvalidRegistry(_)
-                | MirPassScheduleError::UnknownIdentity { .. }),
+                | MirPassScheduleError::UnknownIdentity { .. }
+                | MirPassScheduleError::WrongStageOrder { .. }),
             ) => {
                 panic!("invalid compiler-owned final-MIR pass policy: {error}")
             }
@@ -78,6 +93,7 @@ impl Default for MirOptimizationOptions {
 pub struct MirOptimizationConfigurationError {
     names: Vec<String>,
     known_names: Vec<&'static str>,
+    mandatory_normalization: bool,
 }
 
 impl MirOptimizationConfigurationError {
@@ -92,6 +108,11 @@ impl MirOptimizationConfigurationError {
 
 impl fmt::Display for MirOptimizationConfigurationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.mandatory_normalization {
+            return formatter.write_str(
+                "mandatory proof-provenance normalization cannot be selected, disabled, or repeated",
+            );
+        }
         write!(
             formatter,
             "unknown MIR pass name{}: {}",

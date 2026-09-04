@@ -88,9 +88,11 @@ canonical data.
 Static self-dependencies and cycles are ordinary source diagnostics; malformed
 preliminary or planned MIR remains a distinct verification failure. A valid
 explicit initializer is synthesized directly into structured final coordinator
-regions and passes the ordinary target-independent verifier pipeline exactly
-once after all registered passes. The pipeline returns the sealed, read-only
-final product required by backend input. These
+regions. The MIR pipeline verifies its proof-rich input and every changed
+proof-rich occurrence, normalizes proof provenance exactly once, verifies the
+normalized product, and reseals every changed final-stage occurrence with
+fresh reachability facts. It returns the sealed, read-only final product
+required by backend input. These
 regions are the sole executable lifecycle representation consumed by both
 verification and the backend. The x86-64 backend then emits private initializer
 bodies and a dependency-ordered program initializer, and the existing host
@@ -134,13 +136,14 @@ non-breaking `with_mir_optimization` builder. Options select a typed
 `MirOptimizationProfile` and a canonical lexical set of disabled stable pass
 names; duplicate disabling is idempotent in request identity. Existing request
 construction and singleton compilation helpers select `default`. The
-supported profiles are `none` and `default`: `none` resolves to the empty
-verification-only schedule, while `default` resolves to the exact repeated
+supported profiles are `none` and `default`: `none` resolves to zero
+selectable passes plus mandatory proof verification, normalization, and final
+verification, while `default` resolves to the exact repeated
 nine-occurrence optimization schedule documented below. Disabling all six
 stable pass names from `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
-unoptimized mode and preserves raw final MIR after its required central
-verification.
+unoptimized mode and preserves behavior while still returning normalized
+sealed MIR.
 
 The implemented command-line surface is:
 
@@ -161,7 +164,8 @@ sorted lexically. The current registry contains the stable
 `primitive-algebraic-simplification`, `primitive-constant-folding`, and
 `whole-world-reachability` names.
 `--list-mir-passes` succeeds without
-an input file and prints every registered stable name and description in
+an input file and prints every registered stable name, `proof-rich` or `final`
+stage, and description in
 lexical name order. Library tools can inspect the same canonical metadata
 through `passes::available_mir_passes` and `MirPassDescriptor`; neither query
 constructs a schedule or performs source or provider I/O. The CLI
@@ -222,7 +226,7 @@ The `default` profile contains dead-pure elimination, constant folding,
 algebraic simplification, repeated constant folding, checked-integer folding,
 repeated dead-pure cleanup, conservative CFG cleanup, and whole-world
 reachability in the exact order specified by the compiler phase contract.
-`none` remains empty.
+`none` remains empty of selectable occurrences.
 `--disable-mir-pass <name>` removes every occurrence of a repeated pass, and
 disabling every pass selected by `default` equals `none`.
 
@@ -261,8 +265,9 @@ Status: **in progress**. The frozen
 [design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
 [roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) add one
 mandatory compiler-owned phase transition inside final-MIR optimization.
-The two sealed products and mandatory verify-and-normalize transition are now
-active; stage-aware pass policy and observation remain later roadmap steps.
+The two sealed products, mandatory verify-and-normalize transition, and
+stage-aware pass policy are now active; stage-aware observation remains a
+later roadmap step.
 
 The driver continues to select only profiles and stable pass exclusions.
 It will not gain a normalization option. After all selected proof-rich
@@ -273,14 +278,17 @@ means zero selectable passes plus mandatory verification and normalization,
 not a return to proof-bearing backend input. It performs one complete proof
 verification and one normalized verification around that transition.
 
-The mandatory normalizer is not a pass and is never listed, disabled, or
-repeated. Today all registered occurrences run before it. PNR3 will make
-`--list-mir-passes` and the public descriptor query show each selectable
-pass's `proof-rich` or `final` stage, reject wrong-stage schedules, and place
-the final-stage canary before `whole-world-reachability`.
+The mandatory normalizer is not a pass and is never listed, disabled,
+registered, selected, or repeated. Registry descriptors and
+`--list-mir-passes` show each pass's `proof-rich` or `final` stage, exact
+schedules reject proof-rich occurrences after the final boundary, and typed
+callbacks cannot accept both seals. Current local passes are proof-rich;
+`whole-world-reachability` runs in the final region. The later final-stage
+canary will be inserted before reachability.
 
 Current inspection exposes proof-rich borrowed checkpoints through the end of
-the selectable schedule; the returned result and backend input are normalized.
+the proof-rich region; final-stage occurrences cannot cross that proof-only
+borrowed type. The returned result and backend input are normalized.
 PNR4 will add typed proof-rich and final checkpoints plus a single
 `after-proof-normalization` boundary and a distinct normalization-failure
 category. Any current normalization or final verification failure still stops

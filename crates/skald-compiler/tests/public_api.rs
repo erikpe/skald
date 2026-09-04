@@ -59,11 +59,12 @@ use skald_compiler::{
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
         LocalCseBlocker, LocalCseConsumer, LocalCseExcludedFamily, LocalCseOperationFamily,
-        LocalCseOutcome, MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel,
-        MirPipelineError, MirPipelineFailureStage, PrimitiveCastBlocker, PrimitiveCastConsumer,
-        PrimitiveCastDisposition, RedundancySiteClassification, RedundancySiteExample,
-        ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth, ScalarSpillUnlock,
-        VerifiedFinalMirProgram, REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
+        LocalCseOutcome, MirPassDescriptor, MirPassStage, MirPipelineCheckpoint,
+        MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage,
+        PrimitiveCastBlocker, PrimitiveCastConsumer, PrimitiveCastDisposition,
+        RedundancySiteClassification, RedundancySiteExample, ScalarSpillBlocker,
+        ScalarSpillConsumer, ScalarSpillDepth, ScalarSpillUnlock, VerifiedFinalMirProgram,
+        REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -107,11 +108,13 @@ fn intentional_module_and_request_paths_compose() {
     let passes: Vec<MirPassDescriptor> = available_mir_passes();
     assert_eq!(passes.len(), 6);
     assert_eq!(passes[0].name(), "checked-integer-constant-folding");
+    assert_eq!(passes[0].stage(), MirPassStage::ProofRich);
     assert_eq!(passes[1].name(), "conservative-cfg-cleanup");
     assert_eq!(passes[2].name(), "dead-pure-definition-elimination");
     assert_eq!(passes[3].name(), "primitive-algebraic-simplification");
     assert_eq!(passes[4].name(), "primitive-constant-folding");
     assert_eq!(passes[5].name(), "whole-world-reachability");
+    assert_eq!(passes[5].stage(), MirPassStage::Final);
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent
@@ -380,11 +383,6 @@ fn intentional_phase_and_dump_paths_compose() {
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 2,
             },
-            MirPipelineCheckpointLabel::After {
-                position: 8,
-                pass_name: "whole-world-reachability",
-                occurrence: 0,
-            },
             MirPipelineCheckpointLabel::Final,
         ]
     );
@@ -587,7 +585,7 @@ fn intentional_reporting_paths_compose() {
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
-    assert_eq!(mir_inspection_labels.len(), 11);
+    assert_eq!(mir_inspection_labels.len(), 10);
     assert_eq!(
         mir_inspection_labels.first(),
         Some(&MirPipelineCheckpointLabel::Input)

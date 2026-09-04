@@ -212,9 +212,10 @@ Compile-fail API tests prevent forging either
 invoking private invalidation, or skipping normalization. Transition tests pin
 proof retention, complete proof consumption, normalized-verifier rejection,
 fresh reachability facts, clone/debug behavior, and two verification
-executions for `none`. Later pipeline tests will pin every pass's stage,
-wrong-stage rejection, typed checkpoint order, failure cutoff, and quiet
-inspection/reporting gates.
+executions for `none`. Stage-policy tests pin every pass's stage, wrong-stage
+rejection, exact proof-rich and final schedule regions, typed callbacks, and
+the single mandatory normalization boundary. Later inspection and reporting
+tests will pin stage-aware checkpoint order, failure cutoff, and quiet gates.
 
 The post-proof canary must demonstrate removal of a block retained solely by
 path/logical provenance while preserving body entry, static-publication and

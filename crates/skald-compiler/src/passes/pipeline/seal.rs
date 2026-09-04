@@ -171,14 +171,40 @@ impl VerifiedFinalMirProgram {
         &self.reachability
     }
 
-    #[allow(dead_code)]
-    pub(super) fn invalidate_for_final_transformation(self) -> MirProgram {
+    pub(super) fn invalidate_for_final_transformation(self) -> UnverifiedFinalMirProgram {
         let Self {
             program,
             reachability: _,
-            _consumed_proof: _,
+            _consumed_proof,
         } = self;
-        program
+        UnverifiedFinalMirProgram {
+            program,
+            consumed_proof: _consumed_proof,
+        }
+    }
+}
+
+/// Normalized MIR whose seal-bound analyses were invalidated by a final-stage
+/// transformation. The consumed-proof authority travels with the raw program
+/// and can only be consumed by normalized resealing.
+pub(in crate::passes::pipeline) struct UnverifiedFinalMirProgram {
+    program: MirProgram,
+    consumed_proof: ConsumedProofAuthority,
+}
+
+impl UnverifiedFinalMirProgram {
+    pub(in crate::passes::pipeline) fn into_parts(self) -> (MirProgram, ConsumedProofAuthority) {
+        (self.program, self.consumed_proof)
+    }
+
+    pub(in crate::passes::pipeline) fn from_parts(
+        program: MirProgram,
+        consumed_proof: ConsumedProofAuthority,
+    ) -> Self {
+        Self {
+            program,
+            consumed_proof,
+        }
     }
 }
 
@@ -225,6 +251,16 @@ pub(super) fn finalize_proof_mir(
     seal_normalized_mir(normalized)
 }
 
+/// Re-establishes normalized structure and fresh seal-bound reachability after
+/// one changed final-stage pass. The private authority prevents raw or
+/// proof-rich MIR from entering this path.
+pub(super) fn reseal_final_mir(
+    unverified: UnverifiedFinalMirProgram,
+) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
+    let (program, authority) = unverified.into_parts();
+    verify_normalized_program(program, authority)
+}
+
 /// Public verify-and-normalize convenience. No API named final returns the
 /// proof-rich intermediate.
 pub fn verify_final_mir(
@@ -238,19 +274,23 @@ fn seal_normalized_mir(
     normalized: MirProofNormalizationResult,
 ) -> Result<(VerifiedFinalMirProgram, MirProofNormalizationStatistics), MirVerificationErrors> {
     let (program, statistics, authority) = normalized.into_sealed_parts();
+    verify_normalized_program(program, authority).map(|verified| (verified, statistics))
+}
+
+fn verify_normalized_program(
+    program: MirProgram,
+    authority: ConsumedProofAuthority,
+) -> Result<VerifiedFinalMirProgram, MirVerificationErrors> {
     static_lifecycle::verify_normalized_synthesized_mir(&program)?;
     let reachability = analyze_reachability(&program).map_err(reachability_verification_errors)?;
     verify_reachable_definitions(&program, &reachability)?;
     verify_active_lifecycle_reachability(&program, &reachability)?;
     verify_reachable_static_accesses(&program, &reachability)?;
-    Ok((
-        VerifiedFinalMirProgram {
-            program,
-            reachability: Box::new(reachability),
-            _consumed_proof: authority,
-        },
-        statistics,
-    ))
+    Ok(VerifiedFinalMirProgram {
+        program,
+        reachability: Box::new(reachability),
+        _consumed_proof: authority,
+    })
 }
 
 fn normalization_verification_errors(

@@ -55,7 +55,7 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
-fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 11] {
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 10] {
     [
         MirPipelineCheckpointLabel::Input,
         MirPipelineCheckpointLabel::After {
@@ -97,11 +97,6 @@ fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 11] {
             position: 7,
             pass_name: "dead-pure-definition-elimination",
             occurrence: 2,
-        },
-        MirPipelineCheckpointLabel::After {
-            position: 8,
-            pass_name: "whole-world-reachability",
-            occurrence: 0,
         },
         MirPipelineCheckpointLabel::Final,
     ]

@@ -26,7 +26,7 @@ pub use execution::{
     MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage, MirPipelineInspector,
 };
 pub use policy::{
-    available_mir_passes, MirOptimizationProfile, MirPassDescriptor, MirPassIdentity,
+    available_mir_passes, MirOptimizationProfile, MirPassDescriptor, MirPassIdentity, MirPassStage,
 };
 pub(crate) use policy::{
     resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, MirPassOccurrence, MirPassSchedule,

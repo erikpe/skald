@@ -727,19 +727,17 @@ allocation and explicit order keep output deterministic even if independent
 compiler work is parallelized later. The generated Skald program remains
 single threaded.
 
-Only the target-independent pass pipeline may invalidate a
-`VerifiedProofMirProgram` for a current pre-normalization transformation. Its
-private ownership bridge
-consumes the seal directly into the supported atomic whole-program rewrite
-coordinator. A successful rewrite yields raw dense MIR plus callable-scoped
-commit maps and change summaries; it cannot recreate the seal. The
-transforming coordinator verifies raw input before invoking the rewrite,
-distinguishes input-verification, structural-rewrite, and output-verification
-failures, and returns rewritten output through the crate-private
-`verify_proof_mir`. After the current selectable schedule, the runner consumes
-that seal through mandatory proof normalization and creates a
-`VerifiedFinalMirProgram`. Exact internal schedules exercise the same
-production multi-pass runner without registering a production transformation.
+Only the target-independent pass pipeline may invalidate either verified MIR
+product. A `ProofRich` pass receives a `VerifiedProofMirProgram` through a
+proof-only capability; a `Final` pass receives a `VerifiedFinalMirProgram`
+through a distinct normalized capability. Neither callback type accepts the
+other seal. Their private ownership bridges consume the seal directly into a
+supported atomic whole-program transformation, and a successful change
+invalidates local identities, snapshots, and reachability facts together.
+Proof-rich changes return through complete `verify_proof_mir`; final-stage
+changes return through normalized verification and freshly computed
+reachability. Exact internal schedules exercise this same runner and must form
+one proof-rich prefix followed by one final-stage suffix.
 
 Pipeline accounting records verification and pass executions at the point they
 occur. Structurally successful commits contribute already-known processed and
@@ -756,9 +754,8 @@ exact repeated order documented below.
 This direction adds no SSA form, persistent instruction identity, public
 common callable-body restructuring, dynamic pass registry, optimization-level
 CLI, broader optimization suite, alias/effect analysis, or backend
-virtual-register layer. Stage-aware scheduling and
-post-proof transformations remain later steps of the active normalization
-roadmap.
+virtual-register layer. Broader post-proof transformations remain later steps
+of the active normalization roadmap.
 
 ### Selectable final-MIR optimization pipeline
 
@@ -775,15 +772,16 @@ profile before provider or source work and passes that schedule to the same
 MIR pipeline.
 
 One compiler-owned immutable registry couples each entry's typed identity,
-unique stable lowercase kebab-case name, description, implementation-declared
-identity, and transformation entry point. Deterministic validation rejects
+closed `MirPassStage::{ProofRich, Final}`, unique stable lowercase kebab-case
+name, description, implementation-declared identity and stage, and typed
+transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
-mismatched implementation identity before schedule selection. The production
+mismatched implementation identity or stage before schedule selection. The production
 registry contains `checked-integer-constant-folding`,
 `dead-pure-definition-elimination`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
 `conservative-cfg-cleanup`, and `whole-world-reachability`. Its validated
-descriptors are exposed in stable-name order for the public read-only query
+descriptors, including stage, are exposed in stable-name order for the public read-only query
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
@@ -791,7 +789,7 @@ nine-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
 same schedule as `none`.
 
-A resolved schedule may deliberately repeat a pass, and every occurrence is
+A resolved schedule may deliberately repeat a pass within its region, and every occurrence is
 identified by its resolved schedule position, pass identity, and that pass's
 zero-based occurrence number. Stable-name exclusions remove every matching
 occurrence, duplicate exclusions are idempotent, and unknown names plus the
@@ -799,21 +797,27 @@ complete known-name inventory are sorted lexically. Filesystem order, module
 discovery, registry order, map iteration, or compiler worker completion never
 selects execution order. Exact schedules are a crate-private input for tests
 and compiler tools. The command line selects profiles and exclusions,
-not arbitrary pass order.
+not arbitrary pass order. Resolution rejects any proof-rich occurrence after
+a final occurrence. The mandatory normalization boundary is represented once
+between the two regions, but has no selectable identity: it cannot be listed,
+disabled, registered, selected, or repeated.
 
 The transforming runner first calls complete proof-rich final-MIR
 verification, including immutable static-lifecycle realization and
-target-independent reachability. Every current occurrence receives read-only
+target-independent reachability. Every proof-rich occurrence receives read-only
 access to that `VerifiedProofMirProgram` plus one pipeline-owned capability to
 consume the seal through the atomic whole-program rewrite coordinator. An
 unchanged outcome retains the same seal and facts and adds no verification
 execution. A changed outcome invalidates program and facts together, yields
 raw dense MIR, rewrite maps, change summaries, and explicit
 changed-callable pass data, and immediately repeats proof verification before
-any later pass or inspection checkpoint can observe it. Once the schedule is
-complete, finalization consumes proof provenance, runs normalized
-verification, recomputes reachability, and returns only
-`VerifiedFinalMirProgram`. Input-verification, pass execution,
+any later proof-rich pass or inspection checkpoint can observe it. The runner
+then consumes proof provenance exactly once, performs normalized verification,
+and enters the final region. Each final occurrence uses the distinct final
+capability; unchanged outcomes retain the normalized seal, while changed
+outcomes are normalized-reverified and rebound to fresh reachability before
+the next final pass. The production `whole-world-reachability` occurrence is
+the current final-stage pass. Input-verification, pass execution,
 structural-rewrite, and output-verification failures identify the exact pass
 name, identity, schedule position, and occurrence where applicable, then stop
 without exposing a partial product.
@@ -994,16 +998,18 @@ checked-integer-constant-folding
 dead-pure-definition-elimination
 conservative-cfg-cleanup
 dead-pure-definition-elimination
+-- mandatory proof-provenance normalization --
 whole-world-reachability
 ```
 
-`none` remains empty, stable-name exclusion removes every repeated occurrence,
-and whole-world retention remains last so it can observe calls, callable-
+`none` remains empty of selectable occurrences, stable-name exclusion removes
+every repeated occurrence, and whole-world retention remains last in the
+final region so it can observe calls, callable-
 address formations, and other executable dependencies removed by CFG cleanup.
-Every occurrence continues to consume verified MIR, preserve an unchanged seal
-when possible, atomically commit changes, invalidate all final-MIR-derived
-facts, and immediately reverify before any later pass or backend observes the
-product. Preliminary-MIR static activation and baseline lifecycle authority
+Every occurrence consumes its stage's verified MIR, preserves an unchanged
+seal when possible, atomically commits changes, invalidates all derived facts,
+and immediately reverifies under that stage's contract before any later pass
+or backend observes the product. Preliminary-MIR static activation and baseline lifecycle authority
 remain immutable; final verification rechecks realization against them rather
 than replanning activation.
 

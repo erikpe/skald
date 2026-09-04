@@ -7,8 +7,12 @@ use super::{
     registry::MirPassRegistry,
     resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
     schedule::{resolve_exact, resolve_identities},
+    MirPassStage,
 };
-use crate::passes::pipeline::execution::{MirPassCapability, MirPassFailure, MirPassOutcome};
+use crate::passes::pipeline::execution::{
+    MirFinalPassCapability, MirFinalPassOutcome, MirPassFailure, MirProofPassCapability,
+    MirProofPassOutcome,
+};
 use crate::passes::pipeline::optimizations::{
     checked_integer_folding, conservative_cfg_cleanup, dead_pure_definition_elimination,
     primitive_algebraic_simplification, primitive_constant_folding, whole_world_reachability,
@@ -25,12 +29,32 @@ const fn registration(
     description: &'static str,
 ) -> MirPassRegistration {
     MirPassRegistration::new(
-        MirPassDescriptor::new(descriptor_identity, name, description),
-        MirPassImplementation::new(implementation_identity, metadata_only_pass),
+        MirPassDescriptor::new(
+            descriptor_identity,
+            MirPassStage::ProofRich,
+            name,
+            description,
+        ),
+        MirPassImplementation::proof_rich(implementation_identity, metadata_only_pass),
     )
 }
 
-fn metadata_only_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn metadata_only_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
+    Ok(capability.unchanged())
+}
+
+const fn final_registration(identity: MirPassIdentity, name: &'static str) -> MirPassRegistration {
+    MirPassRegistration::new(
+        MirPassDescriptor::new(identity, MirPassStage::Final, name, "Runs final metadata."),
+        MirPassImplementation::final_stage(identity, final_metadata_only_pass),
+    )
+}
+
+fn final_metadata_only_pass(
+    capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
     Ok(capability.unchanged())
 }
 
@@ -53,6 +77,7 @@ fn production_profiles_select_the_supported_default_order() {
 
     let none = resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap();
     assert!(none.is_empty());
+    assert_eq!(none.normalization_position(), 0);
 
     let default =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
@@ -173,6 +198,9 @@ fn production_profiles_select_the_supported_default_order() {
         checked_exact.as_slice()[0].name(),
         "checked-integer-constant-folding"
     );
+    let final_only =
+        resolve_exact_mir_pass_schedule(&[whole_world_reachability::IDENTITY]).unwrap();
+    assert_eq!(final_only.normalization_position(), 0);
 }
 
 #[test]
@@ -218,13 +246,32 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
 fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     let passes = available_mir_passes();
     assert_eq!(passes.len(), 6);
+    assert_eq!(
+        passes
+            .iter()
+            .map(|descriptor| (descriptor.name(), descriptor.stage()))
+            .collect::<Vec<_>>(),
+        [
+            ("checked-integer-constant-folding", MirPassStage::ProofRich),
+            ("conservative-cfg-cleanup", MirPassStage::ProofRich),
+            ("dead-pure-definition-elimination", MirPassStage::ProofRich),
+            (
+                "primitive-algebraic-simplification",
+                MirPassStage::ProofRich
+            ),
+            ("primitive-constant-folding", MirPassStage::ProofRich),
+            ("whole-world-reachability", MirPassStage::Final),
+        ]
+    );
     assert_eq!(passes[0].identity(), checked_integer_folding::IDENTITY);
+    assert_eq!(passes[0].stage(), MirPassStage::ProofRich);
     assert_eq!(passes[0].name(), "checked-integer-constant-folding");
     assert_eq!(
         passes[0].description(),
         "Folds exact successful checked-integer constant protocols."
     );
     assert_eq!(passes[1].identity(), conservative_cfg_cleanup::IDENTITY);
+    assert_eq!(passes[1].stage(), MirPassStage::ProofRich);
     assert_eq!(passes[1].name(), "conservative-cfg-cleanup");
     assert_eq!(
         passes[1].description(),
@@ -255,6 +302,7 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
         "Folds exact block-local primitive MIR constants."
     );
     assert_eq!(passes[5].identity(), whole_world_reachability::IDENTITY);
+    assert_eq!(passes[5].stage(), MirPassStage::Final);
     assert_eq!(passes[5].name(), "whole-world-reachability");
     assert_eq!(
         passes[5].description(),
@@ -272,12 +320,11 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
 }
 
 #[test]
-fn production_exact_schedules_can_order_and_repeat_reachability() {
+fn production_exact_schedules_preserve_regions_and_repeat_within_a_stage() {
     let dead = dead_pure_definition_elimination::IDENTITY;
     let reachability = whole_world_reachability::IDENTITY;
     let schedule =
-        resolve_exact_mir_pass_schedule(&[reachability, dead, reachability, dead, reachability])
-            .unwrap();
+        resolve_exact_mir_pass_schedule(&[dead, dead, reachability, reachability]).unwrap();
 
     assert_eq!(
         schedule
@@ -289,13 +336,77 @@ fn production_exact_schedules_can_order_and_repeat_reachability() {
             ))
             .collect::<Vec<_>>(),
         vec![
-            (0, "whole-world-reachability", 0),
-            (1, "dead-pure-definition-elimination", 0),
-            (2, "whole-world-reachability", 1),
-            (3, "dead-pure-definition-elimination", 1),
-            (4, "whole-world-reachability", 2),
+            (0, "dead-pure-definition-elimination", 0),
+            (1, "dead-pure-definition-elimination", 1),
+            (2, "whole-world-reachability", 0),
+            (3, "whole-world-reachability", 1),
         ]
     );
+    assert_eq!(schedule.proof_rich().count(), 2);
+    assert_eq!(schedule.final_stage().count(), 2);
+    assert_eq!(schedule.normalization_position(), 2);
+
+    assert_eq!(
+        resolve_exact_mir_pass_schedule(&[reachability, dead]).unwrap_err(),
+        MirPassScheduleError::WrongStageOrder {
+            proof_rich: dead,
+            position: 1,
+        }
+    );
+}
+
+#[test]
+fn normalization_is_never_a_selectable_or_registered_pass() {
+    assert_eq!(
+        resolve_mir_pass_schedule(
+            MirOptimizationProfile::Default,
+            ["proof-provenance-normalization"],
+        )
+        .unwrap_err(),
+        MirPassScheduleError::MandatoryNormalizationSelection
+    );
+
+    static REGISTRATIONS: [MirPassRegistration; 1] = [registration(
+        ALPHA,
+        ALPHA,
+        "proof-provenance-normalization",
+        "Must remain implicit.",
+    )];
+    assert_eq!(
+        MirPassRegistry::new(&REGISTRATIONS)
+            .validate()
+            .unwrap_err()
+            .as_slice(),
+        &[MirPassRegistryError::ReservedNormalizationName]
+    );
+}
+
+#[test]
+fn registry_rejects_descriptor_and_callback_stage_mismatch() {
+    static REGISTRATIONS: [MirPassRegistration; 1] = [MirPassRegistration::new(
+        MirPassDescriptor::new(ALPHA, MirPassStage::ProofRich, "alpha-pass", "Runs alpha."),
+        MirPassImplementation::final_stage(ALPHA, final_metadata_only_pass),
+    )];
+    assert_eq!(
+        MirPassRegistry::new(&REGISTRATIONS)
+            .validate()
+            .unwrap_err()
+            .as_slice(),
+        &[MirPassRegistryError::ImplementationStageMismatch {
+            identity: ALPHA,
+            descriptor: MirPassStage::ProofRich,
+            implementation: MirPassStage::Final,
+        }]
+    );
+
+    static MIXED: [MirPassRegistration; 2] = [
+        registration(ALPHA, ALPHA, "alpha-pass", "Runs alpha."),
+        final_registration(BETA, "beta-pass"),
+    ];
+    let schedule = resolve_exact(MirPassRegistry::new(&MIXED), &[ALPHA, BETA]).unwrap();
+    assert_eq!(schedule.proof_rich().count(), 1);
+    assert_eq!(schedule.final_stage().count(), 1);
+    assert_eq!(schedule.normalization_position(), 1);
 }
 
 #[test]

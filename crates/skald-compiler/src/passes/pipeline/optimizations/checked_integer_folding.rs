@@ -17,10 +17,11 @@ use crate::{
 use super::{
     super::{
         execution::{
-            MirPassCapability, MirPassData, MirPassFailure, MirPassMeasurement, MirPassOutcome,
+            MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
+            MirProofPassOutcome,
         },
         policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
-        MirPassIdentity,
+        MirPassIdentity, MirPassStage,
     },
     checked_integer_protocol::{
         observe_checked_integer_protocols, CheckedIntegerProtocolCandidate,
@@ -40,8 +41,8 @@ const REMOVED_PROTOCOL_LOAD_VALUES: &str = "removed protocol-load values";
 const RETAINED_STATIC_FAILURES: &str = "retained statically failing candidates";
 
 pub(in crate::passes::pipeline) const REGISTRATION: MirPassRegistration = MirPassRegistration::new(
-    MirPassDescriptor::new(IDENTITY, NAME, DESCRIPTION),
-    MirPassImplementation::new(IDENTITY, transform),
+    MirPassDescriptor::new(IDENTITY, MirPassStage::ProofRich, NAME, DESCRIPTION),
+    MirPassImplementation::proof_rich(IDENTITY, transform),
 );
 
 /// Checked-operation families selected while preparing one fold plan.
@@ -192,7 +193,7 @@ impl CheckedIntegerFoldSelection {
     }
 }
 
-fn transform(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
     let plan = CheckedIntegerFoldPlan::prepare(
         capability.verified().program(),
         CheckedIntegerFoldSelection::All,

@@ -115,7 +115,7 @@ fn write_available_mir_passes(output: &mut impl Write) -> io::Result<()> {
 
     writeln!(output, "Available final-MIR passes:")?;
     for pass in passes {
-        writeln!(output, "  {}", pass.name())?;
+        writeln!(output, "  {} [{}]", pass.name(), pass.stage())?;
         writeln!(output, "      {}", pass.description())?;
     }
     Ok(())

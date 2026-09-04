@@ -7,10 +7,11 @@ use crate::{
 
 use super::super::{
     execution::{
-        MirPassCapability, MirPassData, MirPassFailure, MirPassMeasurement, MirPassOutcome,
+        MirFinalPassCapability, MirFinalPassOutcome, MirPassData, MirPassFailure,
+        MirPassMeasurement,
     },
     policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
-    MirPassIdentity,
+    MirPassIdentity, MirPassStage,
 };
 
 pub(in crate::passes::pipeline) const IDENTITY: MirPassIdentity = MirPassIdentity::new(1);
@@ -18,11 +19,11 @@ const NAME: &str = "whole-world-reachability";
 const DESCRIPTION: &str = "Removes unreachable executable MIR definitions.";
 
 pub(in crate::passes::pipeline) const REGISTRATION: MirPassRegistration = MirPassRegistration::new(
-    MirPassDescriptor::new(IDENTITY, NAME, DESCRIPTION),
-    MirPassImplementation::new(IDENTITY, transform),
+    MirPassDescriptor::new(IDENTITY, MirPassStage::Final, NAME, DESCRIPTION),
+    MirPassImplementation::final_stage(IDENTITY, transform),
 );
 
-fn transform(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn transform(capability: MirFinalPassCapability) -> Result<MirFinalPassOutcome, MirPassFailure> {
     let reachability = capability.verified().reachability().counts();
     let retention = capability.retain_reachable_definitions()?;
     let data = pass_data(retention.summary(), reachability);

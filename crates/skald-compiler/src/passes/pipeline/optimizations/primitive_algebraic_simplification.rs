@@ -10,10 +10,11 @@ use crate::mir::{
 use super::{
     super::{
         execution::{
-            MirPassCapability, MirPassData, MirPassFailure, MirPassMeasurement, MirPassOutcome,
+            MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
+            MirProofPassOutcome,
         },
         policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
-        MirPassIdentity,
+        MirPassIdentity, MirPassStage,
     },
     primitive_algebra::{PrimitiveAlgebraicFacts, PrimitiveAlgebraicReplacement},
     primitive_evaluation::PrimitiveConstant,
@@ -29,8 +30,8 @@ const REMOVED_VALUES: &str = "removed value declarations";
 const PROTECTED_REJECTIONS: &str = "rejected protected-use candidates";
 
 pub(in crate::passes::pipeline) const REGISTRATION: MirPassRegistration = MirPassRegistration::new(
-    MirPassDescriptor::new(IDENTITY, NAME, DESCRIPTION),
-    MirPassImplementation::new(IDENTITY, transform),
+    MirPassDescriptor::new(IDENTITY, MirPassStage::ProofRich, NAME, DESCRIPTION),
+    MirPassImplementation::proof_rich(IDENTITY, transform),
 );
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -79,7 +80,7 @@ struct ScanResult {
     protected_rejections: usize,
 }
 
-fn transform(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
     let mut processed_callables = 0;
     let mut protected_rejections = 0usize;
     let mut has_candidate = false;

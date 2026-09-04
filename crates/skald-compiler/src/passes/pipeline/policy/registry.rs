@@ -8,6 +8,8 @@ use crate::passes::pipeline::optimizations::{
     primitive_algebraic_simplification, primitive_constant_folding, whole_world_reachability,
 };
 
+pub(super) const NORMALIZATION_NAME: &str = "proof-provenance-normalization";
+
 /// Immutable view of the compiler-owned final-MIR pass registry.
 #[derive(Clone, Copy)]
 pub(in crate::passes::pipeline) struct MirPassRegistry {
@@ -31,6 +33,9 @@ impl MirPassRegistry {
                     name: descriptor.name(),
                 });
             }
+            if descriptor.name() == NORMALIZATION_NAME {
+                errors.push(MirPassRegistryError::ReservedNormalizationName);
+            }
             if descriptor.description().trim().is_empty() {
                 errors.push(MirPassRegistryError::EmptyDescription {
                     identity: descriptor.identity(),
@@ -40,6 +45,13 @@ impl MirPassRegistry {
                 errors.push(MirPassRegistryError::ImplementationIdentityMismatch {
                     descriptor: descriptor.identity(),
                     implementation: registration.implementation().identity(),
+                });
+            }
+            if descriptor.stage() != registration.implementation().stage() {
+                errors.push(MirPassRegistryError::ImplementationStageMismatch {
+                    identity: descriptor.identity(),
+                    descriptor: descriptor.stage(),
+                    implementation: registration.implementation().stage(),
                 });
             }
 

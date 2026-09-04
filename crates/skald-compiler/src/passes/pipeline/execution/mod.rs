@@ -11,7 +11,8 @@ pub use error::{MirPipelineError, MirPipelineFailureStage};
 pub use inspection::{MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineInspector};
 pub use measurement::{MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord};
 pub(in crate::passes::pipeline) use model::{
-    MirPassCapability, MirPassData, MirPassFailure, MirPassOutcome, MirPassTransform,
+    MirFinalPassCapability, MirFinalPassOutcome, MirFinalPassTransform, MirPassData,
+    MirPassFailure, MirProofPassCapability, MirProofPassOutcome, MirProofPassTransform,
 };
 #[cfg(test)]
 pub(crate) use runner::run_mir_pipeline_measured_inspected;

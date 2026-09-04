@@ -9,12 +9,14 @@ mod identity;
 mod profile;
 mod registry;
 mod schedule;
+mod stage;
 
 pub use descriptor::MirPassDescriptor;
 pub(crate) use error::MirPassScheduleError;
 pub use identity::MirPassIdentity;
 pub use profile::MirOptimizationProfile;
 pub(crate) use schedule::{MirPassOccurrence, MirPassSchedule};
+pub use stage::MirPassStage;
 
 pub(in crate::passes::pipeline) use descriptor::{MirPassImplementation, MirPassRegistration};
 

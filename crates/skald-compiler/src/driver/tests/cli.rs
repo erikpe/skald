@@ -17,7 +17,7 @@ fn help_version_and_mir_pass_listing_are_available_without_compilation() {
     assert_eq!(exit_code, 0);
     assert_eq!(
         stdout,
-        "Available final-MIR passes:\n  checked-integer-constant-folding\n      Folds exact successful checked-integer constant protocols.\n  conservative-cfg-cleanup\n      Folds ordinary branches and removes unprotected unreachable MIR blocks.\n  dead-pure-definition-elimination\n      Removes unused non-failing scalar MIR definitions.\n  primitive-algebraic-simplification\n      Simplifies exact primitive MIR algebraic identities.\n  primitive-constant-folding\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability\n      Removes unreachable executable MIR definitions.\n"
+        "Available final-MIR passes:\n  checked-integer-constant-folding [proof-rich]\n      Folds exact successful checked-integer constant protocols.\n  conservative-cfg-cleanup [proof-rich]\n      Folds ordinary branches and removes unprotected unreachable MIR blocks.\n  dead-pure-definition-elimination [proof-rich]\n      Removes unused non-failing scalar MIR definitions.\n  primitive-algebraic-simplification [proof-rich]\n      Simplifies exact primitive MIR algebraic identities.\n  primitive-constant-folding [proof-rich]\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability [final]\n      Removes unreachable executable MIR definitions.\n"
     );
     assert!(stderr.is_empty());
 }
@@ -53,6 +53,15 @@ fn mir_optimization_cli_selection_is_typed_and_precedes_source_io() {
         (
             vec!["skac", "missing.ska", "--disable-mir-pass", "unknown-pass"],
             "unknown MIR pass name: `unknown-pass`; known MIR passes: `checked-integer-constant-folding`, `conservative-cfg-cleanup`, `dead-pure-definition-elimination`, `primitive-algebraic-simplification`, `primitive-constant-folding`, `whole-world-reachability`",
+        ),
+        (
+            vec![
+                "skac",
+                "missing.ska",
+                "--disable-mir-pass",
+                "proof-provenance-normalization",
+            ],
+            "mandatory proof-provenance normalization cannot be selected, disabled, or repeated",
         ),
         (
             vec!["skac", "--disable-mir-pass", "unknown-pass", "missing.ska"],

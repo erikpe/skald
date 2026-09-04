@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 through PNR2 are complete and PNR3 is next.
+Status: in progress; PNR0 through PNR3 are complete and PNR4 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -110,7 +110,7 @@ Candidate placement and status remain concise in the
 - [x] PNR0 — Partition proof-rich and normalized verification ownership
 - [x] PNR1 — Implement atomic proof-provenance normalization
 - [x] PNR2 — Establish the two sealed final-MIR products
-- [ ] PNR3 — Make pass policy and execution stage aware
+- [x] PNR3 — Make pass policy and execution stage aware
 - [ ] PNR4 — Expose stage-aware inspection, failures, and reporting
 - [ ] PNR5 — Migrate reachability and backend consumption
 - [ ] PNR6 — Add post-proof unreachable-block elimination
@@ -227,22 +227,22 @@ API named “final” returns the proof-rich intermediate.
 **Purpose:** Prevent passes from accidentally consuming the wrong seal and
 make the mandatory boundary part of deterministic pipeline orchestration.
 
-- [ ] Add `MirPassStage::{ProofRich, Final}` to every registry descriptor and
+- [x] Add `MirPassStage::{ProofRich, Final}` to every registry descriptor and
   expose it through the public read-only descriptor query.
-- [ ] Classify current local and checked passes as proof-rich and
+- [x] Classify current local and checked passes as proof-rich and
   whole-world reachability as final.
-- [ ] Resolve schedules into ordered proof-rich and final regions separated by
+- [x] Resolve schedules into ordered proof-rich and final regions separated by
   exactly one implicit normalization occurrence.
-- [ ] Reject proof-rich occurrences after a final occurrence, unknown stage
+- [x] Reject proof-rich occurrences after a final occurrence, unknown stage
   identities, and any attempt to select or repeat normalization.
-- [ ] Split proof-rich and final pass traits/capabilities so their input and
+- [x] Split proof-rich and final pass traits/capabilities so their input and
   output seals cannot be confused.
-- [ ] Run complete proof verification after every changed proof-rich pass,
+- [x] Run complete proof verification after every changed proof-rich pass,
   normalize once, and run normalized verification after every changed final
   pass.
-- [ ] Preserve unchanged seals within one stage and invalidate all local IDs,
+- [x] Preserve unchanged seals within one stage and invalidate all local IDs,
   reachability facts, and snapshots after any changed occurrence.
-- [ ] Keep exclusions stable-name based across the complete schedule and
+- [x] Keep exclusions stable-name based across the complete schedule and
   preserve deterministic occurrence numbering.
 
 **Tests:** Registry validation; descriptor listing order and stages; exact

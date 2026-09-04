@@ -13,7 +13,10 @@ use crate::{
 };
 
 use super::{
-    execution::{MirPassCapability, MirPassData, MirPassFailure, MirPassOutcome},
+    execution::{
+        MirFinalPassCapability, MirFinalPassOutcome, MirPassData, MirPassFailure,
+        MirProofPassCapability, MirProofPassOutcome,
+    },
     optimizations::whole_world_reachability,
     policy::{
         resolve_test_mir_pass_schedule, MirPassDescriptor, MirPassImplementation,
@@ -39,6 +42,8 @@ const OBSERVE_RETARGET: MirPassIdentity = MirPassIdentity::new(113);
 const RETAIN_REACHABLE: MirPassIdentity = MirPassIdentity::new(114);
 const OBSERVE_RETENTION: MirPassIdentity = MirPassIdentity::new(115);
 const INVALID_RETENTION_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(116);
+const FINAL_UNCHANGED: MirPassIdentity = MirPassIdentity::new(117);
+const FINAL_EXECUTION_FAILURE: MirPassIdentity = MirPassIdentity::new(118);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -62,15 +67,36 @@ const ALL_PRODUCTION_PASS_NAMES: [&str; 6] = [
 const fn registration(
     identity: MirPassIdentity,
     name: &'static str,
-    transform: super::execution::MirPassTransform,
+    transform: super::execution::MirProofPassTransform,
 ) -> MirPassRegistration {
     MirPassRegistration::new(
-        MirPassDescriptor::new(identity, name, "Synthetic verified-runner test pass."),
-        MirPassImplementation::new(identity, transform),
+        MirPassDescriptor::new(
+            identity,
+            MirPassStage::ProofRich,
+            name,
+            "Synthetic verified-runner test pass.",
+        ),
+        MirPassImplementation::proof_rich(identity, transform),
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 18] = [
+const fn final_registration(
+    identity: MirPassIdentity,
+    name: &'static str,
+    transform: super::execution::MirFinalPassTransform,
+) -> MirPassRegistration {
+    MirPassRegistration::new(
+        MirPassDescriptor::new(
+            identity,
+            MirPassStage::Final,
+            name,
+            "Synthetic normalized-runner test pass.",
+        ),
+        MirPassImplementation::final_stage(identity, transform),
+    )
+}
+
+static TEST_REGISTRATIONS: [MirPassRegistration; 20] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -127,6 +153,16 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 18] = [
         INVALID_RETENTION_ACCOUNTING,
         "invalid-retention-accounting-pass",
         invalid_retention_accounting_pass,
+    ),
+    final_registration(
+        FINAL_UNCHANGED,
+        "final-unchanged-pass",
+        final_unchanged_pass,
+    ),
+    final_registration(
+        FINAL_EXECUTION_FAILURE,
+        "final-execution-failure-pass",
+        final_execution_failure_pass,
     ),
     whole_world_reachability::REGISTRATION,
 ];
@@ -455,6 +491,20 @@ fn unchanged_pass_retains_the_verified_product_without_reverification() {
 }
 
 #[test]
+fn unchanged_final_pass_retains_the_normalized_seal_without_reverification() {
+    clear_test_state();
+    let mir = lowered_program();
+    let expected = verify_final_mir(mir.clone()).unwrap();
+
+    let measured = run_mir_pipeline_measured(mir, &test_schedule(&[FINAL_UNCHANGED]));
+
+    assert_eq!(measured.result.unwrap(), expected);
+    assert_eq!(execution_log(), ["final-unchanged"]);
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.pass_executions(), 1);
+}
+
+#[test]
 fn unchanged_definition_retention_preserves_the_verified_seal() {
     clear_test_state();
     let mir = lowered_program();
@@ -754,7 +804,7 @@ fn none_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
 }
 
 #[test]
-fn default_pipeline_checkpoints_identify_every_repeated_occurrence() {
+fn proof_checkpoint_api_identifies_every_proof_rich_occurrence() {
     let schedule =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
     let mut collector = CheckpointCollector::default();
@@ -775,7 +825,6 @@ fn default_pipeline_checkpoints_identify_every_repeated_occurrence() {
             "after-5-dead-pure-definition-elimination-1",
             "after-6-conservative-cfg-cleanup-0",
             "after-7-dead-pure-definition-elimination-2",
-            "after-8-whole-world-reachability-0",
             "final",
         ]
     );
@@ -784,7 +833,7 @@ fn default_pipeline_checkpoints_identify_every_repeated_occurrence() {
 }
 
 #[test]
-fn repeated_reachability_checkpoints_expose_resealed_deterministic_facts() {
+fn final_stage_occurrences_do_not_cross_the_proof_checkpoint_type() {
     let mir = lower_source_to_final_mir(
         "fn dead() -> i64 { return 9; }
          fn main() -> i64 { return 0; }",
@@ -801,30 +850,14 @@ fn repeated_reachability_checkpoints_expose_resealed_deterministic_facts() {
     );
 
     assert!(measured.result.is_ok());
+    let output = measured.result.as_ref().unwrap();
+    assert_eq!(collector.labels, ["input", "final"]);
+    assert_eq!(collector.dumps[0], collector.dumps[1]);
     assert_eq!(
-        collector.labels,
-        [
-            "input",
-            "after-0-whole-world-reachability-0",
-            "after-1-whole-world-reachability-1",
-            "final",
-        ]
-    );
-    assert_ne!(collector.dumps[0], collector.dumps[1]);
-    assert_eq!(collector.dumps[1], collector.dumps[2]);
-    assert_eq!(collector.dumps[2], collector.dumps[3]);
-    assert_ne!(
         collector.reachability_dumps[0],
         collector.reachability_dumps[1]
     );
-    assert_eq!(
-        collector.reachability_dumps[1],
-        collector.reachability_dumps[2]
-    );
-    assert_eq!(
-        collector.reachability_dumps[2],
-        collector.reachability_dumps[3]
-    );
+    assert_eq!(output.program().executable_definitions().count(), 1);
 }
 
 #[test]
@@ -1196,6 +1229,24 @@ fn pass_execution_failure_stops_before_later_occurrences() {
 }
 
 #[test]
+fn final_stage_failure_is_attributed_after_the_implicit_boundary() {
+    clear_test_state();
+    let measured = run_mir_pipeline_measured(
+        lowered_program(),
+        &test_schedule(&[UNCHANGED, FINAL_EXECUTION_FAILURE, FINAL_UNCHANGED]),
+    );
+
+    let error = measured.result.unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
+    assert_eq!(error.pass_position(), Some(1));
+    assert_eq!(error.pass_name(), Some("final-execution-failure-pass"));
+    assert_eq!(error.pass_occurrence(), Some(0));
+    assert_eq!(execution_log(), ["unchanged", "final-execution-failure"]);
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.pass_executions(), 2);
+}
+
+#[test]
 fn structural_rewrite_failure_stops_without_publishing_partial_mir() {
     clear_test_state();
     let measured =
@@ -1348,15 +1399,35 @@ fn lifecycle_effect_change_rechecks_immutable_baseline_authority() {
     assert_eq!(execution_log(), ["retarget-static"]);
 }
 
-fn unchanged_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn unchanged_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("unchanged");
     assert!(!capability.verified().definitions.is_empty());
     Ok(capability.unchanged())
 }
 
+fn final_unchanged_pass(
+    capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
+    log_execution("final-unchanged");
+    assert!(capability
+        .verified()
+        .executable_definitions()
+        .all(|definition| definition.body().path_conditions.is_empty()));
+    Ok(capability.unchanged())
+}
+
+fn final_execution_failure_pass(
+    _capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
+    log_execution("final-execution-failure");
+    Err(MirPassFailure::execution("synthetic final-stage failure"))
+}
+
 fn measured_unchanged_pass(
-    capability: MirPassCapability,
-) -> Result<MirPassOutcome, MirPassFailure> {
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("measured-unchanged");
     capability.unchanged_with(
         MirPassData::processed(4)
@@ -1365,12 +1436,16 @@ fn measured_unchanged_pass(
     )
 }
 
-fn delete_equivalent_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn delete_equivalent_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("delete");
     rewrite_equivalent_constants(capability, false)
 }
 
-fn observe_delete_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn observe_delete_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("observe");
     let constants = capability
         .verified()
@@ -1391,13 +1466,15 @@ fn observe_delete_pass(capability: MirPassCapability) -> Result<MirPassOutcome, 
 }
 
 fn execution_failure_pass(
-    _capability: MirPassCapability,
-) -> Result<MirPassOutcome, MirPassFailure> {
+    _capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("execution-failure");
     Err(MirPassFailure::execution("synthetic analysis failure"))
 }
 
-fn rewrite_failure_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn rewrite_failure_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("rewrite-failure");
     let changed = capability.rewrite(|_callable, edit| {
         edit.remove_block(edit.entry())?;
@@ -1406,7 +1483,9 @@ fn rewrite_failure_pass(capability: MirPassCapability) -> Result<MirPassOutcome,
     changed.finish(MirPassData::changed(1))
 }
 
-fn invalid_output_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn invalid_output_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("invalid-output");
     let changed = capability.rewrite(|_callable, edit| {
         let Some((block, replacement, deleted)) = invalid_dominance_substitution(edit) else {
@@ -1417,12 +1496,14 @@ fn invalid_output_pass(capability: MirPassCapability) -> Result<MirPassOutcome, 
     changed.finish(MirPassData::changed(1))
 }
 
-fn later_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn later_pass(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("later");
     Ok(capability.unchanged())
 }
 
-fn fail_second_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn fail_second_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("fail-second");
     let call = FAIL_SECOND_CALLS.with(|calls| {
         let call = calls.get();
@@ -1436,7 +1517,9 @@ fn fail_second_pass(capability: MirPassCapability) -> Result<MirPassOutcome, Mir
     }
 }
 
-fn retarget_static_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn retarget_static_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("retarget-static");
     let (source, target) = RETARGET_CONFIGURATION
         .with(Cell::get)
@@ -1459,7 +1542,9 @@ fn retarget_static_pass(capability: MirPassCapability) -> Result<MirPassOutcome,
     changed.finish(MirPassData::changed(1))
 }
 
-fn retarget_call_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn retarget_call_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("retarget-call");
     let (source, old, target) = RETARGET_CALL_CONFIGURATION
         .with(Cell::get)
@@ -1482,7 +1567,9 @@ fn retarget_call_pass(capability: MirPassCapability) -> Result<MirPassOutcome, M
     changed.finish(MirPassData::changed(1))
 }
 
-fn observe_retarget_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn observe_retarget_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("observe-retarget");
     let (_, old, target) = RETARGET_CALL_CONFIGURATION
         .with(Cell::get)
@@ -1493,14 +1580,18 @@ fn observe_retarget_pass(capability: MirPassCapability) -> Result<MirPassOutcome
     Ok(capability.unchanged())
 }
 
-fn retain_reachable_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn retain_reachable_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("retain-reachable");
     let retention = capability.retain_reachable_definitions()?;
     let removed = retention.summary().removed().total();
     retention.finish(MirPassData::changed(removed))
 }
 
-fn observe_retention_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn observe_retention_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("observe-retention");
     RETENTION_OBSERVATION.with(|observation| {
         observation.set(Some((
@@ -1516,30 +1607,32 @@ fn observe_retention_pass(capability: MirPassCapability) -> Result<MirPassOutcom
 }
 
 fn invalid_retention_accounting_pass(
-    capability: MirPassCapability,
-) -> Result<MirPassOutcome, MirPassFailure> {
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("invalid-retention-accounting");
     let retention = capability.retain_reachable_definitions()?;
     retention.finish(MirPassData::changed(usize::MAX))
 }
 
-fn rewrite_all_pass(capability: MirPassCapability) -> Result<MirPassOutcome, MirPassFailure> {
+fn rewrite_all_pass(
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("rewrite-all");
     rewrite_equivalent_constants(capability, true)
 }
 
 fn invalid_accounting_pass(
-    capability: MirPassCapability,
-) -> Result<MirPassOutcome, MirPassFailure> {
+    capability: MirProofPassCapability,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("invalid-accounting");
     let changed = capability.rewrite(|_callable, _edit| Ok(()))?;
     changed.finish(MirPassData::changed(usize::MAX))
 }
 
 fn rewrite_equivalent_constants(
-    capability: MirPassCapability,
+    capability: MirProofPassCapability,
     record_callables: bool,
-) -> Result<MirPassOutcome, MirPassFailure> {
+) -> Result<MirProofPassOutcome, MirPassFailure> {
     let changed_callables = Cell::new(0usize);
     let changed = capability.rewrite(|callable, edit| {
         if record_callables {

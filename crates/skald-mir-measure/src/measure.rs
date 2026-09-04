@@ -8,7 +8,7 @@ use skald_compiler::{
         StandardLibrarySelection,
     },
     passes::{MirPipelineCheckpoint, MirPipelineCheckpointLabel},
-    reporting::NoopObserver,
+    reporting::{RecordingObserver, ReportDetail, ReportEvent},
 };
 use std::{fmt, path::Path, time::Instant};
 
@@ -144,7 +144,7 @@ fn measure_workload(
         });
     };
     let started = Instant::now();
-    let mut observer = NoopObserver;
+    let mut observer = RecordingObserver::new(ReportDetail::Trace);
     let artifact = compile_request_to_assembly_observed_inspected(
         &request,
         &mut observer,
@@ -154,7 +154,19 @@ fn measure_workload(
         MeasurementError::workload(workload, format!("compilation failed: {error:?}"))
     })?;
     let elapsed = elapsed_u64(started.elapsed().as_nanos());
-    let (schedule, snapshots) = select_snapshots(workload, samples)?;
+    let schedule = observer
+        .events()
+        .iter()
+        .filter_map(|event| match event {
+            ReportEvent::MirPassFinished { occurrence } => Some(ScheduleOccurrence {
+                position: occurrence.position(),
+                pass: occurrence.name().to_owned(),
+                occurrence: occurrence.occurrence(),
+            }),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let snapshots = select_snapshots(workload, &schedule, samples)?;
     let native_runs = workload.native_runs.iter().map(native_context).collect();
     let kind = match &workload.kind {
         WorkloadKind::Golden { .. } => "golden",
@@ -199,23 +211,9 @@ struct CheckpointSample {
 
 fn select_snapshots(
     workload: &Workload,
+    schedule: &[ScheduleOccurrence],
     samples: Vec<CheckpointSample>,
-) -> Result<(Vec<ScheduleOccurrence>, Vec<SnapshotReport>), MeasurementError> {
-    let schedule = samples
-        .iter()
-        .filter_map(|sample| match sample.label {
-            MirPipelineCheckpointLabel::After {
-                position,
-                pass_name,
-                occurrence,
-            } => Some(ScheduleOccurrence {
-                position,
-                pass: pass_name.to_owned(),
-                occurrence,
-            }),
-            MirPipelineCheckpointLabel::Input | MirPipelineCheckpointLabel::Final => None,
-        })
-        .collect::<Vec<_>>();
+) -> Result<Vec<SnapshotReport>, MeasurementError> {
     let reachability = schedule
         .iter()
         .enumerate()
@@ -238,29 +236,27 @@ fn select_snapshots(
         .iter()
         .find(|sample| sample.label == MirPipelineCheckpointLabel::Input)
         .ok_or_else(|| MeasurementError::workload(workload, "missing input MIR checkpoint"))?;
-    let reachability_sample_index = samples
-        .iter()
-        .position(|sample| {
-            matches!(sample.label, MirPipelineCheckpointLabel::After { pass_name, .. } if pass_name == REACHABILITY_PASS)
-        })
-        .expect("resolved reachability occurrence must have a checkpoint");
-    let pre_reachability = reachability_sample_index
-        .checked_sub(1)
-        .and_then(|index| samples.get(index))
-        .ok_or_else(|| {
-            MeasurementError::workload(workload, "missing checkpoint before reachability")
-        })?;
-    let final_sample = samples
+    let proof_region_end = samples
         .iter()
         .find(|sample| sample.label == MirPipelineCheckpointLabel::Final)
-        .ok_or_else(|| MeasurementError::workload(workload, "missing final MIR checkpoint"))?;
+        .ok_or_else(|| {
+            MeasurementError::workload(workload, "missing proof-region final MIR checkpoint")
+        })?;
+
+    // Until the stage-aware checkpoint API lands, `Final` is the last
+    // proof-rich checkpoint immediately before mandatory normalization. The
+    // trace occurrence stream remains the authoritative complete schedule,
+    // including final-stage reachability. Keep both historical report slots
+    // bound to this truthful available snapshot rather than forging a
+    // proof-rich view of normalized MIR.
+    let pre_reachability = proof_region_end;
     let mut input = input.snapshot.clone();
     input.name = "input".to_owned();
     let mut pre = pre_reachability.snapshot.clone();
     pre.name = "pre-reachability".to_owned();
-    let mut final_snapshot = final_sample.snapshot.clone();
+    let mut final_snapshot = proof_region_end.snapshot.clone();
     final_snapshot.name = "final".to_owned();
-    Ok((schedule, vec![input, pre, final_snapshot]))
+    Ok(vec![input, pre, final_snapshot])
 }
 
 fn native_context(run: &NativeRun) -> NativeRunContext {

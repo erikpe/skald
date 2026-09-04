@@ -1,8 +1,12 @@
 use super::{
-    descriptor::MirPassRegistration, error::MirPassScheduleError, identity::MirPassIdentity,
-    profile::MirOptimizationProfile, registry::MirPassRegistry,
+    descriptor::MirPassRegistration,
+    error::MirPassScheduleError,
+    identity::MirPassIdentity,
+    profile::MirOptimizationProfile,
+    registry::{MirPassRegistry, NORMALIZATION_NAME},
+    stage::MirPassStage,
 };
-use crate::passes::pipeline::execution::MirPassTransform;
+use crate::passes::pipeline::execution::{MirFinalPassTransform, MirProofPassTransform};
 
 /// One position in an explicitly resolved pass schedule.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -25,12 +29,24 @@ impl MirPassOccurrence {
         self.occurrence
     }
 
+    pub(crate) const fn stage(self) -> MirPassStage {
+        self.registration.descriptor().stage()
+    }
+
     pub(in crate::passes::pipeline) const fn name(self) -> &'static str {
         self.registration.descriptor().name()
     }
 
-    pub(in crate::passes::pipeline) const fn transform(self) -> MirPassTransform {
-        self.registration.implementation().transform()
+    pub(in crate::passes::pipeline) const fn proof_transform(
+        self,
+    ) -> Option<MirProofPassTransform> {
+        self.registration.implementation().proof_transform()
+    }
+
+    pub(in crate::passes::pipeline) const fn final_transform(
+        self,
+    ) -> Option<MirFinalPassTransform> {
+        self.registration.implementation().final_transform()
     }
 }
 
@@ -38,6 +54,7 @@ impl MirPassOccurrence {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct MirPassSchedule {
     occurrences: Vec<MirPassOccurrence>,
+    normalization_position: usize,
 }
 
 impl MirPassSchedule {
@@ -46,8 +63,26 @@ impl MirPassSchedule {
         &self.occurrences
     }
 
+    #[cfg(test)]
     pub(crate) fn iter(&self) -> impl ExactSizeIterator<Item = MirPassOccurrence> + '_ {
         self.occurrences.iter().copied()
+    }
+
+    pub(crate) fn proof_rich(&self) -> impl Iterator<Item = MirPassOccurrence> + '_ {
+        self.occurrences[..self.normalization_position]
+            .iter()
+            .copied()
+    }
+
+    pub(crate) fn final_stage(&self) -> impl Iterator<Item = MirPassOccurrence> + '_ {
+        self.occurrences[self.normalization_position..]
+            .iter()
+            .copied()
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn normalization_position(&self) -> usize {
+        self.normalization_position
     }
 
     #[cfg(test)]
@@ -86,6 +121,9 @@ pub(super) fn resolve_identities<'a>(
     let mut disabled_identities = Vec::new();
     let mut unknown_names = Vec::new();
     for name in disabled_names {
+        if name == NORMALIZATION_NAME {
+            return Err(MirPassScheduleError::MandatoryNormalizationSelection);
+        }
         match registry.identity_for_name(name) {
             Some(identity) if !disabled_identities.contains(&identity) => {
                 disabled_identities.push(identity);
@@ -114,8 +152,33 @@ pub(super) fn resolve_identities<'a>(
     let retained = identities
         .iter()
         .copied()
-        .filter(|identity| !disabled_identities.contains(identity));
+        .filter(|identity| !disabled_identities.contains(identity))
+        .collect::<Vec<_>>();
+    validate_stage_order(registry, &retained)?;
     Ok(number_occurrences(registry, retained))
+}
+
+fn validate_stage_order(
+    registry: MirPassRegistry,
+    identities: &[MirPassIdentity],
+) -> Result<(), MirPassScheduleError> {
+    let mut reached_final = false;
+    for (position, identity) in identities.iter().copied().enumerate() {
+        let registration = registry
+            .registration(identity)
+            .expect("validated schedule identity must have one registration");
+        match registration.descriptor().stage() {
+            MirPassStage::ProofRich if reached_final => {
+                return Err(MirPassScheduleError::WrongStageOrder {
+                    proof_rich: identity,
+                    position,
+                });
+            }
+            MirPassStage::ProofRich => {}
+            MirPassStage::Final => reached_final = true,
+        }
+    }
+    Ok(())
 }
 
 fn number_occurrences(
@@ -150,5 +213,12 @@ fn number_occurrences(
         });
     }
 
-    MirPassSchedule { occurrences }
+    let normalization_position = occurrences
+        .iter()
+        .position(|occurrence| occurrence.stage() == MirPassStage::Final)
+        .unwrap_or(occurrences.len());
+    MirPassSchedule {
+        occurrences,
+        normalization_position,
+    }
 }
