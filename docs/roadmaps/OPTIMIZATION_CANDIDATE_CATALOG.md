@@ -86,10 +86,13 @@ The first deterministic local-suite measurements and their limits are recorded
 in the
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#initial-measurements-separate-local-wins-from-whole-world-pruning).
 They establish a baseline, not a general workload ranking.
-The planned
+The active
 [local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
 will compare FMV-15, FMV-02, and FMV-03 without committing to implement any of
-them.
+them. Its
+[frozen measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md)
+defines comparable opportunity accounting, reachability-adjusted checkpoints,
+corpus ownership, and recommendation thresholds.
 
 ## Current baseline and design boundary
 
@@ -283,7 +286,7 @@ This is not a roadmap. It is a default order for deciding which candidate is
 worth designing next now that the implemented local-simplification layer has
 produced initial measurements:
 
-1. Execute the planned
+1. Complete the active
    [local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
    to compare narrow scalar-spill constant provenance, redundant cast
    elimination, and local primitive common-subexpression elimination.

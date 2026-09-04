@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: planned; LMR0 is next.
+Status: in progress; LMR0 is complete and LMR1 is next.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -19,6 +19,8 @@ Implementation-specific findings outside this reviewed scope belong in the
 [local redundancy measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md).
 Candidate status, placement, and prioritization remain authoritative in the
 [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md).
+The frozen census, corpus, schema, and decision rules are authoritative in the
+[measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md).
 
 ## Dependencies
 
@@ -117,7 +119,7 @@ Candidate status, placement, and prioritization remain authoritative in the
 
 ## Progress
 
-- [ ] LMR0 — Freeze the census and corpus contract
+- [x] LMR0 — Freeze the census and corpus contract
 - [ ] LMR1 — Compose verified MIR inspection through the driver
 - [ ] LMR2 — Measure scalar-spill constant provenance
 - [ ] LMR3 — Measure redundant primitive casts
@@ -133,25 +135,25 @@ Candidate status, placement, and prioritization remain authoritative in the
 **Purpose:** Make every later number interpretable before analysis code can
 shape the question it is intended to answer.
 
-- [ ] Specify the input, pre-reachability, and final checkpoint selection by
+- [x] Specify the input, pre-reachability, and final checkpoint selection by
       semantic schedule position rather than a hard-coded numeric occurrence.
-- [ ] Define the canonical schema for compilation identity, schedule identity,
+- [x] Define the canonical schema for compilation identity, schedule identity,
       checkpoint identity, structural totals, per-candidate outcomes, blocker
       classifications, overlaps, and operational context.
-- [ ] Define “interesting”, “proven candidate”, “blocked candidate”, and
+- [x] Define “interesting”, “proven candidate”, “blocked candidate”, and
       “estimated downstream unlock” so reports never present speculative sites
       as safe rewrites.
-- [ ] Freeze disjoint primary attribution and overlap rules for FMV-15, FMV-02,
+- [x] Freeze disjoint primary attribution and overlap rules for FMV-15, FMV-02,
       and FMV-03.
-- [ ] Select a versioned corpus covering focused candidate-positive and
+- [x] Select a versioned corpus covering focused candidate-positive and
       candidate-negative fixtures, optimization goldens, checked protocols,
       cast-heavy primitive code, control flow and lifecycle, standard-library-
       backed programs, generic-vector and range benchmarks, and the available
       larger solver workload.
-- [ ] Record how corpus entries carry entry roots, provider roots, standard
+- [x] Record how corpus entries carry entry roots, provider roots, standard
       library selection, compiler arguments, stdin, and native arguments
       without duplicating source ownership from the golden suite.
-- [ ] Define the final comparison matrix and the evidence threshold for a
+- [x] Define the final comparison matrix and the evidence threshold for a
       recommendation, including an allowed “none is justified yet” result.
 
 **Tests:** Documentation link validation; schema examples covering zero,
@@ -161,6 +163,18 @@ identity examples; schedule-position examples; `git diff --check`.
 **Exit criteria:** The measurement units, snapshots, taxonomy, corpus, report
 schema, and decision criteria are explicit enough that all three analyzers can
 be implemented independently and still produce comparable results.
+
+**Completion evidence:** The frozen
+[measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md) defines
+whole-world compilation identity, semantic checkpoint selection, exact census
+accounting, saturated counts, exclusive primary blockers, candidate-specific
+eligibility, disjoint attribution, directed overlaps, a sixteen-workload
+version-one corpus, golden-plan reuse, canonical JSON and human projections,
+operational-field exclusion, manual audit sampling, and an explicit threshold
+that permits a no-optimization conclusion. Documentation examples cover empty,
+positive, rejected, overlapping, saturated, duplicate, and distinct
+compilation identities. No compiler, pipeline, pass, or runtime behavior
+changes in this contract-only milestone.
 
 ### LMR1 — Compose verified MIR inspection through the driver
 

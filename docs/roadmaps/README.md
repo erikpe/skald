@@ -6,7 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
+is in progress. Its
+[frozen measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md)
+defines whole-world compilation identity, verified input/pre-reachability/final
+snapshots, census accounting and overlaps, the version-one corpus, canonical
+report schema, and evidence threshold. Composable verified-MIR inspection
+through the driver is next.
 
 ## Pending discoveries
 
@@ -22,7 +29,7 @@ not an implementation roadmap.
 
 The open
 [local final-MIR redundancy measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md)
-will record out-of-scope findings from the planned measurement work. Ordinary
+records out-of-scope findings from the active measurement work. Ordinary
 census results belong in its durable report, not in the discoveries record.
 
 The open
@@ -70,14 +77,8 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The
-[local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
-is planned, with its census and corpus contract next. It will compare narrow
-scalar-spill constant provenance, redundant primitive casts, and same-block
-primitive common subexpressions across verified input, pre-reachability, and
-final checkpoints. It depends on the completed selectable pipeline, local
-simplification, checked-protocol folding, and whole-world reachability work and
-does not commit to implementing any candidate.
+No additional implementation roadmap is currently planned behind the active
+local final-MIR redundancy measurement work.
 
 ## Design proposals
 
