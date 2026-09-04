@@ -183,20 +183,25 @@ schedule position, and occurrence number, and the driver stops before backend
 emission without exposing a partial product.
 
 Verified checkpoint inspection is implemented by the pass facade's
-`run_mir_pipeline_inspected` entry point rather than by
-`CompilationRequest` or `ReportObserver`. The ordinary driver supplies no
-inspector and performs no checkpoint work. General driver/CLI dump destination
-and retention policy remain intentionally deferred.
+`run_mir_pipeline_inspected` entry point and by the driver's request-local
+`CompilationInspectors` service rather than by `CompilationRequest` or
+`ReportObserver`. The service independently composes optional static-activation
+and final-MIR pipeline inspectors for module-graph and single-source
+compilation. The ordinary driver supplies an empty service and performs no
+inspection callbacks, additional MIR traversal, rendering, or allocation.
+General driver/CLI dump destination and retention policy remain intentionally
+deferred.
 
-Verified static-activation inspection uses the same request-local separation
-without becoming a selectable MIR checkpoint. Tools opt into
-`compile_request_to_assembly_observed_inspected` or
-`compile_source_to_assembly_observed_inspected` and receive exactly one
-borrowed `StaticActivationInspection` after planned-MIR verification. Its
+Verified static-activation inspection remains separate from selectable MIR
+checkpoints. Tools opt into `compile_request_to_assembly_observed_inspected` or
+`compile_source_to_assembly_observed_inspected`, build a
+`CompilationInspectors` value, and receive exactly one borrowed
+`StaticActivationInspection` after planned-MIR verification. Its
 label and allocation-free statistics may be queried without formatting; its
 focused dump is built only by an explicit `activation_dump` call. The ordinary
 compile adapters pass no inspector, while `CompilationRequest`, report detail,
-diagnostics, generated artifacts, and CLI options remain unchanged.
+diagnostics, generated artifacts, backend inputs, and CLI options remain
+unchanged.
 
 ## Local final-MIR simplification selection
 

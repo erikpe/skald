@@ -7,6 +7,7 @@
 
 mod artifact;
 mod cli;
+mod inspection;
 mod observation;
 mod pipeline;
 mod request;
@@ -15,6 +16,7 @@ mod toolchain;
 
 pub use crate::passes::MirOptimizationProfile;
 pub use cli::run_cli;
+pub use inspection::CompilationInspectors;
 pub use pipeline::{
     compile_request_to_assembly, compile_request_to_assembly_observed,
     compile_request_to_assembly_observed_inspected, compile_source_to_assembly,

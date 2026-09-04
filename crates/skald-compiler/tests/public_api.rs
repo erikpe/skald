@@ -9,9 +9,9 @@ use skald_compiler::{
         compile_request_to_assembly, compile_request_to_assembly_observed,
         compile_source_to_assembly, compile_source_to_assembly_observed,
         compile_source_to_assembly_observed_inspected, run_cli, ArtifactKind, ArtifactOptions,
-        AssemblyArtifact, CompilationEnvironment, CompilationError, CompilationRequest,
-        EntrySelector, MirOptimizationOptions, MirOptimizationProfile, StandardLibrarySelection,
-        Toolchain,
+        AssemblyArtifact, CompilationEnvironment, CompilationError, CompilationInspectors,
+        CompilationRequest, EntrySelector, MirOptimizationOptions, MirOptimizationProfile,
+        StandardLibrarySelection, Toolchain,
     },
     external::{ExternalLink, ExternalLinkTable},
     hir::{
@@ -536,18 +536,34 @@ fn intentional_reporting_paths_compose() {
         let _planned = inspection.planned();
         let _dump = inspection.activation_dump();
     };
+    let mut mir_inspection_labels = Vec::new();
+    let mut mir_inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
+        mir_inspection_labels.push(checkpoint.label());
+        let _dump = dump_mir(checkpoint.verified());
+    };
     let mut quiet = NoopObserver;
     compile_source_to_assembly_observed_inspected(
         "inspected-api.ska",
         "fn main() -> i64 { return 0; }",
         Target::X86_64SysV,
         &mut quiet,
-        &mut inspector,
+        CompilationInspectors::new()
+            .with_static_activation(&mut inspector)
+            .with_mir_pipeline(&mut mir_inspector),
     )
     .unwrap();
     assert_eq!(
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
+    );
+    assert_eq!(mir_inspection_labels.len(), 11);
+    assert_eq!(
+        mir_inspection_labels.first(),
+        Some(&MirPipelineCheckpointLabel::Input)
+    );
+    assert_eq!(
+        mir_inspection_labels.last(),
+        Some(&MirPipelineCheckpointLabel::Final)
     );
 
     let _artifact = ReportEvent::ArtifactPublished {

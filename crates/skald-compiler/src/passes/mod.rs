@@ -27,6 +27,6 @@ pub(crate) use pipeline::{
     MirPassScheduleError,
 };
 pub(crate) use pipeline::{
-    run_mir_pipeline_measured, run_mir_pipeline_with_occurrences, MeasuredMirPipeline,
-    MirPipelineStatistics,
+    run_mir_pipeline_instrumented, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
+    MeasuredMirPipeline, MirPipelineStatistics,
 };

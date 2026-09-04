@@ -4,18 +4,19 @@ use std::{
     panic::AssertUnwindSafe,
     path::PathBuf,
     thread,
+    time::Duration,
 };
 
 use crate::{
     backend::{emit_assembly, BackendInput},
     identity::{ClassId, FieldId, ModuleId},
     mir::{
-        MirClassDeclaration, MirClassDeclarationTable, MirCopyCapability, MirDestructionPlan,
-        MirFieldDeclaration, MirType,
+        dump_mir, MirClassDeclaration, MirClassDeclarationTable, MirCopyCapability,
+        MirDestructionPlan, MirFieldDeclaration, MirType,
     },
     passes::{
         run_mir_pipeline, static_lifecycle::StaticActivationInspectionLabel, verify_final_mir,
-        VerifiedFinalMirProgram,
+        MirPipelineCheckpointLabel, VerifiedFinalMirProgram,
     },
     reporting::{
         MetricValue, RecordingObserver, ReportDetail, ReportEvent, ReportMetric, ReportModuleStage,
@@ -54,6 +55,58 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 11] {
+    [
+        MirPipelineCheckpointLabel::Input,
+        MirPipelineCheckpointLabel::After {
+            position: 0,
+            pass_name: "dead-pure-definition-elimination",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 1,
+            pass_name: "primitive-constant-folding",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 2,
+            pass_name: "primitive-algebraic-simplification",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 3,
+            pass_name: "primitive-constant-folding",
+            occurrence: 1,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 4,
+            pass_name: "checked-integer-constant-folding",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 5,
+            pass_name: "dead-pure-definition-elimination",
+            occurrence: 1,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 6,
+            pass_name: "conservative-cfg-cleanup",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 7,
+            pass_name: "dead-pure-definition-elimination",
+            occurrence: 2,
+        },
+        MirPipelineCheckpointLabel::After {
+            position: 8,
+            pass_name: "whole-world-reachability",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::Final,
+    ]
+}
+
 #[test]
 fn singleton_success_observes_every_owned_phase_and_compilation_total() {
     let mut observer = RecordingObserver::new(ReportDetail::Phases);
@@ -91,22 +144,33 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
         EntrySelector::Module("app".parse().unwrap()),
     );
     let mut observer = RecordingObserver::new(ReportDetail::Trace);
-    let mut inspection_labels = Vec::new();
-    let mut inspector =
+    let mut activation_labels = Vec::new();
+    let mut activation_inspector =
         |inspection: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
-            inspection_labels.push(inspection.label());
+            activation_labels.push(inspection.label());
         };
+    let mut mir_labels = Vec::new();
+    let mut mir_inspector = |checkpoint: crate::passes::MirPipelineCheckpoint<'_>| {
+        mir_labels.push(checkpoint.label());
+        let _dump = dump_mir(checkpoint.verified());
+    };
 
-    let artifact =
-        compile_request_to_assembly_observed_inspected(&request, &mut observer, &mut inspector)
-            .unwrap();
+    let artifact = compile_request_to_assembly_observed_inspected(
+        &request,
+        &mut observer,
+        CompilationInspectors::new()
+            .with_static_activation(&mut activation_inspector)
+            .with_mir_pipeline(&mut mir_inspector),
+    )
+    .unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains("mov rax, 42"));
     assert_eq!(
-        inspection_labels,
+        activation_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
+    assert_eq!(mir_labels, default_mir_checkpoint_labels());
     assert_observation(
         observer.events(),
         &completed(&REQUEST_SUCCESS_PHASES),
@@ -503,7 +567,7 @@ fn main() -> i64 {
         source,
         Target::X86_64SysV,
         &mut observer,
-        &mut inspector,
+        CompilationInspectors::new().with_static_activation(&mut inspector),
     )
     .unwrap();
 
@@ -550,6 +614,45 @@ fn main() -> i64 {
 }
 
 #[test]
+fn mir_only_inspection_preserves_artifacts_reports_and_reporting() {
+    let path = "mir-inspection-parity.ska";
+    let source = "fn main() -> i64 { return 40 + 2; }";
+    let mut ordinary_observer = RecordingObserver::new(ReportDetail::Details);
+    let ordinary = compile_source_to_assembly_observed(
+        path,
+        source,
+        Target::X86_64SysV,
+        &mut ordinary_observer,
+    )
+    .unwrap();
+
+    let mut inspected_observer = RecordingObserver::new(ReportDetail::Details);
+    let mut labels = Vec::new();
+    let mut inspector = |checkpoint: crate::passes::MirPipelineCheckpoint<'_>| {
+        labels.push(checkpoint.label());
+    };
+    let inspected = compile_source_to_assembly_observed_inspected(
+        path,
+        source,
+        Target::X86_64SysV,
+        &mut inspected_observer,
+        CompilationInspectors::new().with_mir_pipeline(&mut inspector),
+    )
+    .unwrap();
+
+    assert_eq!(inspected.assembly, ordinary.assembly);
+    assert_eq!(
+        inspected.report.diagnostics.len(),
+        ordinary.report.diagnostics.len()
+    );
+    assert_eq!(labels, default_mir_checkpoint_labels());
+    assert_eq!(
+        without_elapsed(inspected_observer.events()),
+        without_elapsed(ordinary_observer.events())
+    );
+}
+
+#[test]
 fn report_writer_failure_does_not_block_activation_inspection_or_compilation() {
     let mut observer = TextObserver::new(FailingReportWriter, ReportDetail::Details);
     let mut labels = Vec::new();
@@ -563,7 +666,7 @@ fn report_writer_failure_does_not_block_activation_inspection_or_compilation() {
         "fn main() -> i64 { return 42; }",
         Target::X86_64SysV,
         &mut observer,
-        &mut inspector,
+        CompilationInspectors::new().with_static_activation(&mut inspector),
     )
     .unwrap();
 
@@ -579,9 +682,14 @@ class State { static unused: i64 = true; init() {} }
 fn main() -> i64 { return 0; }
 ";
     let mut observer = RecordingObserver::new(ReportDetail::Details);
-    let mut inspections = 0;
-    let mut inspector = |_: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
-        inspections += 1;
+    let mut activation_inspections = 0;
+    let mut activation_inspector =
+        |_: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
+            activation_inspections += 1;
+        };
+    let mut mir_inspections = 0;
+    let mut mir_inspector = |_: crate::passes::MirPipelineCheckpoint<'_>| {
+        mir_inspections += 1;
     };
 
     let result = compile_source_to_assembly_observed_inspected(
@@ -589,13 +697,16 @@ fn main() -> i64 { return 0; }
         invalid,
         Target::X86_64SysV,
         &mut observer,
-        &mut inspector,
+        CompilationInspectors::new()
+            .with_static_activation(&mut activation_inspector)
+            .with_mir_pipeline(&mut mir_inspector),
     );
 
     let Err(CompilationError::Diagnostics(report)) = result else {
         panic!("inactive initializer must retain its ordinary source error");
     };
-    assert_eq!(inspections, 0);
+    assert_eq!(activation_inspections, 0);
+    assert_eq!(mir_inspections, 0);
     assert!(report.diagnostics.has_errors());
     assert!(observer.events().iter().all(|event| !matches!(
         event,
@@ -1002,6 +1113,21 @@ fn assert_observation(
             ..
         }) if *outcome == run_outcome
     ));
+}
+
+fn without_elapsed(events: &[ReportEvent]) -> Vec<ReportEvent> {
+    events
+        .iter()
+        .cloned()
+        .map(|mut event| {
+            match &mut event {
+                ReportEvent::PhaseFinished { elapsed, .. }
+                | ReportEvent::RunFinished { elapsed, .. } => *elapsed = Duration::ZERO,
+                _ => {}
+            }
+            event
+        })
+        .collect()
 }
 
 fn assert_phase_pair(events: &[ReportEvent], phase: ReportPhase, outcome: ReportOutcome) {

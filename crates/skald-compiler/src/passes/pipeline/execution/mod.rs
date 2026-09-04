@@ -13,8 +13,9 @@ pub use measurement::{MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccur
 pub(in crate::passes::pipeline) use model::{
     MirPassCapability, MirPassData, MirPassFailure, MirPassOutcome, MirPassTransform,
 };
+#[cfg(test)]
+pub(crate) use runner::run_mir_pipeline_measured_inspected;
 pub(crate) use runner::{
-    run_mir_pipeline_measured, run_mir_pipeline_measured_inspected,
-    run_mir_pipeline_with_occurrences,
+    run_mir_pipeline_instrumented, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
 };
 pub(crate) use statistics::{MeasuredMirPipeline, MirPipelineStatistics};

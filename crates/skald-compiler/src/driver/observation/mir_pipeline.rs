@@ -5,8 +5,9 @@ use std::time::Instant;
 use crate::{
     mir::MirProgram,
     passes::{
-        run_mir_pipeline_measured, run_mir_pipeline_with_occurrences, MeasuredMirPipeline,
-        MirPassSchedule,
+        run_mir_pipeline_instrumented, run_mir_pipeline_measured,
+        run_mir_pipeline_with_occurrences, MeasuredMirPipeline, MirPassSchedule,
+        MirPipelineInspector,
     },
     reporting::{ReportDetail, ReportEvent, ReportObserver, ReportOutcome, ReportPhase},
 };
@@ -17,9 +18,15 @@ pub(in crate::driver) fn observe_mir_pipeline(
     observer: &mut dyn ReportObserver,
     program: MirProgram,
     schedule: &MirPassSchedule,
+    inspector: Option<&mut dyn MirPipelineInspector>,
 ) -> MeasuredMirPipeline {
     if !observer.enabled(ReportDetail::Phases) {
-        return run_mir_pipeline_measured(program, schedule);
+        return match inspector {
+            Some(inspector) => {
+                run_mir_pipeline_instrumented(program, schedule, false, Some(inspector))
+            }
+            None => run_mir_pipeline_measured(program, schedule),
+        };
     }
 
     let started = Instant::now();
@@ -27,10 +34,15 @@ pub(in crate::driver) fn observe_mir_pipeline(
         phase: ReportPhase::MirPipeline,
     });
     let trace = observer.enabled(ReportDetail::Trace);
-    let mut measured = if trace {
-        run_mir_pipeline_with_occurrences(program, schedule)
-    } else {
-        run_mir_pipeline_measured(program, schedule)
+    let mut measured = match (trace, inspector) {
+        (true, Some(inspector)) => {
+            run_mir_pipeline_instrumented(program, schedule, true, Some(inspector))
+        }
+        (true, None) => run_mir_pipeline_with_occurrences(program, schedule),
+        (false, Some(inspector)) => {
+            run_mir_pipeline_instrumented(program, schedule, false, Some(inspector))
+        }
+        (false, None) => run_mir_pipeline_measured(program, schedule),
     };
 
     if trace {

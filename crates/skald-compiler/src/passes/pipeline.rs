@@ -16,9 +16,11 @@ mod execution;
 mod optimizations;
 mod policy;
 
+#[cfg(test)]
+pub(crate) use execution::run_mir_pipeline_measured_inspected;
 pub(crate) use execution::{
-    run_mir_pipeline_measured, run_mir_pipeline_measured_inspected,
-    run_mir_pipeline_with_occurrences, MeasuredMirPipeline, MirPipelineStatistics,
+    run_mir_pipeline_instrumented, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
+    MeasuredMirPipeline, MirPipelineStatistics,
 };
 pub use execution::{
     MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineCheckpoint,
@@ -139,7 +141,7 @@ pub fn run_mir_pipeline_inspected(
     inspector: &mut dyn MirPipelineInspector,
 ) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
     let schedule = default_mir_pass_schedule();
-    run_mir_pipeline_measured_inspected(program, &schedule, Some(inspector)).result
+    run_mir_pipeline_instrumented(program, &schedule, false, Some(inspector)).result
 }
 
 fn default_mir_pass_schedule() -> MirPassSchedule {

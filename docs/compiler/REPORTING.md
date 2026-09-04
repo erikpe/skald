@@ -464,13 +464,15 @@ activation analysis itself does not observe, log, time, render, or write.
 
 Canonical triggers, witness paths, active/inactive field inventories, and
 activation/reverse-shutdown order belong to a focused deterministic activation
-dump available through the request-local `StaticActivationInspector` supplied
-to `compile_request_to_assembly_observed_inspected` or
-`compile_source_to_assembly_observed_inspected`. The inspector receives one
-borrowed `verified-static-activation` checkpoint after planned-MIR
-verification. Merely enabling the inspector does not render the dump; the
-callback must request `activation_dump`. These details do not become report
-event text, MIR checkpoint bytes, source diagnostics, request identity,
+dump available through a `StaticActivationInspector` placed in the driver-owned
+`CompilationInspectors` service. The same service may independently carry a
+`MirPipelineInspector`; it is supplied to
+`compile_request_to_assembly_observed_inspected` or
+`compile_source_to_assembly_observed_inspected`. The activation inspector
+receives one borrowed `verified-static-activation` checkpoint after
+planned-MIR verification. Merely enabling the inspector does not render the
+dump; the callback must request `activation_dump`. These details do not become
+report event text, MIR checkpoint bytes, source diagnostics, request identity,
 certificate identity, generated artifacts, or quiet-default work. There is no
 per-inactive-static warning: ordinary pay-for-use library declarations are not
 operational warnings, and the frozen contract deliberately adds no eager

@@ -842,9 +842,11 @@ rather than MIR text, distinguish processed from actually changed callables,
 and treat elapsed durations as observations rather than deterministic
 products.
 
-Optional pipeline inspection is a request-local service separate from semantic
-compilation requests and report observers. It receives only borrowed
-`VerifiedFinalMirProgram` checkpoints at `input`, after every successfully
+Optional pipeline inspection is carried through the driver by
+`CompilationInspectors`, a request-local service separate from semantic
+compilation requests and report observers. It can independently compose a MIR
+pipeline inspector with the static-activation inspector. The MIR callback
+receives only borrowed `VerifiedFinalMirProgram` checkpoints at `input`, after every successfully
 completed occurrence, and `final`. After-pass labels use
 `after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, so repeated
 passes cannot collide. Changed MIR is centrally resealed before inspection;
@@ -3177,8 +3179,9 @@ representation used by focused tests. Practical inspection steps are in
 [Debugging the Compiler](../development/DEBUGGING.md).
 
 The final-MIR pipeline exposes `run_mir_pipeline_inspected` with a
-request-local `MirPipelineInspector`. Its callback receives a typed label and
-only a borrowed verified final-MIR product. Checkpoint labels and `dump_mir`
+request-local `MirPipelineInspector`; ordinary driver compilation carries the
+same callback in `CompilationInspectors`. Its callback receives a typed label
+and only a borrowed verified final-MIR product. Checkpoint labels and `dump_mir`
 bytes are deterministic across independent processes. The inspection surface
 is neither a dump serializer nor a filesystem publication service.
 

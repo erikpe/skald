@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: in progress; LMR0 is complete and LMR1 is next.
+Status: in progress; LMR0-LMR1 are complete and LMR2 is next.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -120,7 +120,7 @@ The frozen census, corpus, schema, and decision rules are authoritative in the
 ## Progress
 
 - [x] LMR0 — Freeze the census and corpus contract
-- [ ] LMR1 — Compose verified MIR inspection through the driver
+- [x] LMR1 — Compose verified MIR inspection through the driver
 - [ ] LMR2 — Measure scalar-spill constant provenance
 - [ ] LMR3 — Measure redundant primitive casts
 - [ ] LMR4 — Measure local primitive common subexpressions
@@ -181,20 +181,20 @@ changes in this contract-only milestone.
 **Purpose:** Give repository tools access to real whole-world final-MIR
 checkpoints without adding an optimization pass or parsing dumps.
 
-- [ ] Replace the driver's single-purpose inspected-call plumbing with one
+- [x] Replace the driver's single-purpose inspected-call plumbing with one
       request-local inspection service that can independently carry optional
       static-activation and MIR-pipeline inspectors.
-- [ ] Thread the optional `MirPipelineInspector` through module-graph and
+- [x] Thread the optional `MirPipelineInspector` through module-graph and
       single-source compilation into the existing inspected pipeline runner.
-- [ ] Keep inspectors outside `CompilationRequest`, request equality, report
+- [x] Keep inspectors outside `CompilationRequest`, request equality, report
       events, diagnostics, artifacts, and backend inputs.
-- [ ] Preserve the ordinary no-inspector path without census construction,
+- [x] Preserve the ordinary no-inspector path without census construction,
       dump rendering, filesystem work, or additional MIR traversal.
-- [ ] Expose only the minimal facade needed by workspace tools and integration
+- [x] Expose only the minimal facade needed by workspace tools and integration
       tests; remove superseded overloads rather than accumulating parallel
       inspection APIs unless a concrete repository consumer requires a narrow
       compatibility delegate.
-- [ ] Document the composable inspection boundary in driver, reporting,
+- [x] Document the composable inspection boundary in driver, reporting,
       debugging, and public-API coverage.
 
 **Tests:** No-inspector parity; activation-only, MIR-only, both-inspector, and
@@ -205,6 +205,19 @@ public facade integration tests; full compiler tests.
 **Exit criteria:** A workspace tool can inspect every verified final-MIR
 checkpoint of an ordinary whole-world compilation while the uninspected
 compiler path and all observable products remain unchanged.
+
+**Completion evidence:** `CompilationInspectors` now composes independently
+optional borrowed static-activation and MIR-pipeline callbacks for both
+module-graph and single-source driver entry points, while ordinary adapters
+continue through the allocation-free no-inspector runner. The phase-owned MIR
+coordinator shares one instrumented execution path when inspection and trace
+occurrence reporting are both enabled. Driver tests cover no inspection,
+activation only, MIR only, both services, early compilation failure, exact
+default-schedule checkpoint order, artifact/diagnostic parity, and normalized
+report-event parity. Public API coverage exercises both callbacks together,
+and compile-fail documentation proves that borrowed checkpoints cannot escape
+their invocation. Driver, reporting, phase, and debugging documentation now
+describe the composed boundary.
 
 ### LMR2 — Measure scalar-spill constant provenance
 

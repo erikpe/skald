@@ -20,7 +20,7 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Typed HIR | `hir::dump_hir` | type checker and semantic operation selection |
 | Preliminary MIR | `mir::dump_preliminary_mir` | unplanned static initializer bodies and publication boundaries |
 | Static effects | `passes::static_lifecycle::dump_static_effects` | closed-world static access summaries and call/lifecycle witnesses |
-| Static activation | driver `StaticActivationInspector::activation_dump` | exact preliminary execution/field closure, triggers, witnesses, target counts, and lifecycle order |
+| Static activation | driver `CompilationInspectors` with `StaticActivationInspector::activation_dump` | exact preliminary execution/field closure, triggers, witnesses, target counts, and lifecycle order |
 | Planned MIR | `passes::static_lifecycle::dump_planned_mir` | static activation/destruction regions and selected lifecycle certificates |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
 | Whole-world reachability | checkpoint `reachability_dump` | roots, execution dependencies, retained targets, and witnesses for verified final MIR |
@@ -32,13 +32,15 @@ for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
 Their text is a deterministic
 debugging and regression format, not a stable interchange format.
 
-The request-local static-activation inspector exposes the focused result after
+The request-local `CompilationInspectors` service exposes the focused result after
 preliminary MIR and planned-MIR verification. Its `activation_dump` shows
 declared, active, and inactive fields; canonical first triggers and witnesses;
 coupled execution/static edges; conservative target counts; and the resulting
 activation and reverse-shutdown order. The ordinary compile paths construct no
 checkpoint or dump. Use an observed-inspected driver adapter with a
-`NoopObserver` when only activation inspection is needed.
+`NoopObserver` when only activation inspection is needed. Add a
+`MirPipelineInspector` to the same service when both lifecycle planning and
+verified final-MIR checkpoints are needed in one compilation.
 
 For a missing or unexpected field lifetime, take the shortest path through the
 products:
@@ -73,7 +75,8 @@ total. Reports do not replace deterministic dumps or structured source
 diagnostics.
 
 Use the corresponding `*_observed_inspected` adapter with a
-`StaticActivationInspector` for the detailed activation checkpoint. This is
+`CompilationInspectors` service containing a `StaticActivationInspector` for
+the detailed activation checkpoint. This is
 separate from report detail: neither `-vv` nor `trace` embeds witnesses in
 events, and the compiler has no CLI activation-dump destination.
 

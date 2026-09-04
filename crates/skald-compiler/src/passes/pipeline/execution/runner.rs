@@ -15,30 +15,32 @@ pub(crate) fn run_mir_pipeline_measured(
     program: MirProgram,
     schedule: &MirPassSchedule,
 ) -> MeasuredMirPipeline {
-    run(program, schedule, false, None)
+    run_mir_pipeline_instrumented(program, schedule, false, None)
 }
 
 pub(crate) fn run_mir_pipeline_with_occurrences(
     program: MirProgram,
     schedule: &MirPassSchedule,
 ) -> MeasuredMirPipeline {
-    run(program, schedule, true, None)
+    run_mir_pipeline_instrumented(program, schedule, true, None)
 }
 
+#[cfg(test)]
 pub(crate) fn run_mir_pipeline_measured_inspected(
     program: MirProgram,
     schedule: &MirPassSchedule,
     inspector: Option<&mut dyn MirPipelineInspector>,
 ) -> MeasuredMirPipeline {
-    run(program, schedule, false, inspector)
+    run_mir_pipeline_instrumented(program, schedule, false, inspector)
 }
 
-fn run(
+pub(crate) fn run_mir_pipeline_instrumented(
     program: MirProgram,
     schedule: &MirPassSchedule,
     record_occurrences: bool,
-    mut inspector: Option<&mut dyn MirPipelineInspector>,
+    inspector: Option<&mut dyn MirPipelineInspector>,
 ) -> MeasuredMirPipeline {
+    let mut inspector = inspector;
     let mut statistics = MirPipelineStatistics::default();
     let mut records = if record_occurrences {
         Vec::with_capacity(schedule.len())

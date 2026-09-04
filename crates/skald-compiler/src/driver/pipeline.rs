@@ -14,7 +14,7 @@ use crate::{
     passes::{
         static_lifecycle::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
-            StaticActivationInspection, StaticActivationInspector,
+            StaticActivationInspection,
         },
         MirPassSchedule, MirPipelineError,
     },
@@ -28,6 +28,7 @@ use crate::{
 };
 
 use super::{
+    inspection::CompilationInspectors,
     observation::{observe_mir_pipeline, observe_phase, observe_phase_with_metrics, observe_run},
     statistics, CompilationRequest, MirOptimizationConfigurationError, MirOptimizationOptions,
 };
@@ -80,27 +81,28 @@ pub fn compile_request_to_assembly_observed(
     request: &CompilationRequest,
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
-    compile_request_to_assembly_instrumented(request, observer, None)
+    compile_request_to_assembly_instrumented(request, observer, CompilationInspectors::new())
 }
 
-/// Loads and compiles a request with typed reporting and one opt-in borrowed
-/// checkpoint for the verified static-activation decision.
+/// Loads and compiles a request with typed reporting and opt-in borrowed
+/// inspection services.
 ///
-/// The inspector is invocation-local and separate from request identity,
-/// report events, diagnostics, and artifacts. It is called exactly once after
-/// planned-MIR verification succeeds.
+/// Inspectors are invocation-local and separate from request identity, report
+/// events, diagnostics, and artifacts. Static activation is inspected after
+/// planned-MIR verification. Final MIR is inspected only at verified pipeline
+/// checkpoints.
 pub fn compile_request_to_assembly_observed_inspected(
     request: &CompilationRequest,
     observer: &mut dyn ReportObserver,
-    activation_inspector: &mut dyn StaticActivationInspector,
+    inspectors: CompilationInspectors<'_>,
 ) -> Result<AssemblyArtifact, CompilationError> {
-    compile_request_to_assembly_instrumented(request, observer, Some(activation_inspector))
+    compile_request_to_assembly_instrumented(request, observer, inspectors)
 }
 
 fn compile_request_to_assembly_instrumented(
     request: &CompilationRequest,
     observer: &mut dyn ReportObserver,
-    activation_inspector: Option<&mut dyn StaticActivationInspector>,
+    inspectors: CompilationInspectors<'_>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let mir_schedule = request
         .mir_optimization()
@@ -152,7 +154,7 @@ fn compile_request_to_assembly_instrumented(
                 request.runtime_trace(),
                 &mir_schedule,
                 observer,
-                activation_inspector,
+                inspectors,
             )
         },
         result_outcome,
@@ -180,25 +182,25 @@ pub fn compile_source_to_assembly_observed(
     target: Target,
     observer: &mut dyn ReportObserver,
 ) -> Result<AssemblyArtifact, CompilationError> {
-    compile_source_to_assembly_instrumented(path, text, target, observer, None)
-}
-
-/// Compiles one in-memory source with typed reporting and one opt-in borrowed
-/// checkpoint for the verified static-activation decision.
-pub fn compile_source_to_assembly_observed_inspected(
-    path: impl AsRef<Path>,
-    text: impl Into<String>,
-    target: Target,
-    observer: &mut dyn ReportObserver,
-    activation_inspector: &mut dyn StaticActivationInspector,
-) -> Result<AssemblyArtifact, CompilationError> {
     compile_source_to_assembly_instrumented(
         path,
         text,
         target,
         observer,
-        Some(activation_inspector),
+        CompilationInspectors::new(),
     )
+}
+
+/// Compiles one in-memory source with typed reporting and opt-in borrowed
+/// inspection services.
+pub fn compile_source_to_assembly_observed_inspected(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+    target: Target,
+    observer: &mut dyn ReportObserver,
+    inspectors: CompilationInspectors<'_>,
+) -> Result<AssemblyArtifact, CompilationError> {
+    compile_source_to_assembly_instrumented(path, text, target, observer, inspectors)
 }
 
 fn compile_source_to_assembly_instrumented(
@@ -206,7 +208,7 @@ fn compile_source_to_assembly_instrumented(
     text: impl Into<String>,
     target: Target,
     observer: &mut dyn ReportObserver,
-    activation_inspector: Option<&mut dyn StaticActivationInspector>,
+    inspectors: CompilationInspectors<'_>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let path = path.as_ref();
     let mir_schedule = MirOptimizationOptions::default()
@@ -271,7 +273,7 @@ fn compile_source_to_assembly_instrumented(
                 },
                 &mir_schedule,
                 observer,
-                activation_inspector,
+                inspectors,
             )
         },
         result_outcome,
@@ -284,7 +286,7 @@ fn compile_module_graph_to_assembly(
     runtime_trace: RuntimeTracePolicy,
     mir_schedule: &MirPassSchedule,
     observer: &mut dyn ReportObserver,
-    activation_inspector: Option<&mut dyn StaticActivationInspector>,
+    inspectors: CompilationInspectors<'_>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let resolved = observe_phase_with_metrics(
         observer,
@@ -304,7 +306,7 @@ fn compile_module_graph_to_assembly(
         },
         mir_schedule,
         observer,
-        activation_inspector,
+        inspectors,
     )
 }
 
@@ -315,7 +317,7 @@ fn finish_compilation(
     backend: BackendSelection,
     mir_schedule: &MirPassSchedule,
     observer: &mut dyn ReportObserver,
-    activation_inspector: Option<&mut dyn StaticActivationInspector>,
+    mut inspectors: CompilationInspectors<'_>,
 ) -> Result<AssemblyArtifact, CompilationError> {
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
@@ -371,7 +373,7 @@ fn finish_compilation(
         |result, _| statistics::verification_metrics(result),
     )
     .map_err(CompilationError::MirVerification)?;
-    if let Some(inspector) = activation_inspector {
+    if let Some(inspector) = inspectors.take_static_activation() {
         inspector.inspect(StaticActivationInspection::new(&verified_planned));
     }
     let mir = observe_phase_with_metrics(
@@ -381,7 +383,8 @@ fn finish_compilation(
         |_| ReportOutcome::Completed,
         |program, _| statistics::lifecycle_synthesis_metrics(program),
     );
-    let measured_pipeline = observe_mir_pipeline(observer, mir, mir_schedule);
+    let measured_pipeline =
+        observe_mir_pipeline(observer, mir, mir_schedule, inspectors.take_mir_pipeline());
     let mir = measured_pipeline
         .result
         .map_err(CompilationError::MirPipeline)?;
