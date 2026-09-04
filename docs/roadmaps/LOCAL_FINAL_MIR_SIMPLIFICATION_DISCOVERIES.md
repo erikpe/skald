@@ -60,18 +60,21 @@ not provide.
 the current evaluator or algebraic table would conflate total scalar
 evaluation with control effects or mutable state.
 
-**Likely owner:** Checked integer and conversion extensions FMC-01 through
-FMC-06; deterministic floating evaluation FMV-05 through FMV-07; memory and
-storage reasoning FMM-01 through FMM-06 in the optimization candidate catalog.
+**Likely owner:** The planned
+[checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+owns FMC-01 and FMC-02. Later checked integer and conversion extensions own
+FMC-03 through FMC-06; deterministic floating evaluation owns FMV-05 through
+FMV-07; memory and storage reasoning owns FMM-01 through FMM-06 in the
+optimization candidate catalog.
 
-**Priority:** High for checked integer division/remainder/shift as a bounded
-follow-up; medium or lower for floating and memory families pending workload
-measurements and their prerequisite designs.
+**Priority:** FMC-01 and FMC-02 are now planned. Priority remains medium or
+lower for floating and memory families pending workload measurements and their
+prerequisite designs.
 
-**Bounded direction:** Treat a checked success/failure protocol as the rewrite
-unit, not only its success rvalue. Design deterministic IEEE evaluation before
-folding floating operations. Introduce explicit alias/effect facts before any
-load/store propagation.
+**Bounded direction:** The planned roadmap treats a statically successful
+checked protocol as the rewrite unit, not only its success rvalue. Design
+deterministic IEEE evaluation before folding floating operations. Introduce
+explicit alias/effect facts before any general load/store propagation.
 
 ## Initial measurements separate local wins from whole-world pruning
 

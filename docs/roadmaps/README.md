@@ -27,6 +27,11 @@ floating-evaluation, memory-analysis, and measurement follow-ups found while
 delivering the completed local simplification layer. Cataloged follow-ups do
 not become roadmap work merely by being mentioned there.
 
+The open
+[checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
+will record implementation-specific findings from the planned checked-protocol
+pass without widening its reviewed successful-constant boundary.
+
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven current compiler constraints on modular target-independent and
 target-specific optimization, their interaction with permanent whole-world and
@@ -59,7 +64,15 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No implementation roadmap is currently planned.
+The
+[checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+is planned. Exact checked-integer constant evaluation is next, followed by a
+narrow verified carrier/protocol query, atomic checked-diamond rewriting,
+division/remainder and shift folding, selectable registration, default
+activation, broad semantic evidence, and closure. It depends on the completed
+dense MIR rewriting, selectable pipeline, and local final-MIR simplification
+foundations; general proof normalization and storage analysis are explicitly
+not prerequisites.
 
 ## Design proposals
 

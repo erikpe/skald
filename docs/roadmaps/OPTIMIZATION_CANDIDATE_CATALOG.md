@@ -148,9 +148,9 @@ probably require proof-provenance normalization.
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
 | FMC-16 | [Ordinary branch folding and unprotected unreachable-block cleanup](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After repeated scalar simplification; before final dead-pure cleanup and whole-world retention | Implemented / **Large** | Medium runtime/code size and high proof of CFG-rewrite architecture | Dedicated checked terminators remain unchanged; body entry, static publication, lifecycle, and proof-metadata blocks are protected roots |
-| FMC-01 | Fold constant integer division and remainder with a known nonzero divisor | After primitive constant folding; before general CFG cleanup | Follow-up / **Medium to large** | Medium runtime and code size | Must compute Skald floor-division/divisor-sign remainder including `i64::MIN / -1`, rewrite the divisor-check diamond coherently, preserve spans and evaluation, and remove only safe failure regions |
-| FMC-02 | Fold constant shifts with an in-range constant count | After primitive constant folding; before general CFG cleanup | Follow-up / **Medium to large** | Medium runtime and code size | Must preserve arithmetic/logical shift flavor and `u8` canonicalization while rewriting the exact shift-count check protocol |
-| FMC-03 | Eliminate an always-successful divisor or shift check when only the checked RHS is constant | After constant propagation; before FMC-01/FMC-02 or instruction selection | Foundation needed / **Large** | Medium to high runtime in guarded dynamic arithmetic | The operation remains dynamic, so MIR needs an accepted proof for an unchecked operation or a normalized post-proof representation; simply removing the terminator violates current verification |
+| FMC-01 | Fold constant integer division and remainder with a known nonzero divisor | After primitive constant folding; before general CFG cleanup | Proposed ([roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md#cir3--fold-constant-integer-division-and-remainder-protocols)) / **Medium to large** | Medium runtime and code size | Must compute Skald floor-division/divisor-sign remainder including `i64::MIN / -1`, rewrite the divisor-check diamond coherently, preserve spans and evaluation, and remove only safe failure regions |
+| FMC-02 | Fold constant shifts with an in-range constant count | After primitive constant folding; before general CFG cleanup | Proposed ([roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md#cir4--fold-constant-integer-shift-protocols)) / **Medium to large** | Medium runtime and code size | Must preserve arithmetic/logical shift flavor and `u8` canonicalization while rewriting the exact shift-count check protocol |
+| FMC-03 | Eliminate an always-successful divisor or shift check when only the checked RHS is constant | After checked constant protocol folding; before instruction selection once an unchecked/proven operation representation exists | Foundation needed / **Large** | Medium to high runtime in guarded dynamic arithmetic | The operation remains dynamic, so MIR needs an accepted proof for an unchecked operation or a normalized post-proof representation; simply removing the terminator violates current verification |
 | FMC-04 | Fold constant checked `f64`-to-integer conversions | After exact IEEE/range evaluation; before CFG cleanup | Foundation needed / **Large** | Low to medium runtime and size | Range, finiteness, truncation, target-width result, exact failure reason, and cast-range diamond must be rewritten together |
 | FMC-05 | Simplify statically decidable checked casts and type tests missed by lowering | After whole-world type/dispatch facts; before CFG cleanup | Foundation needed / **Medium to large** | Medium runtime and code size | Dynamic class sets, access views, checked carriers, failure blocks, ownership, and complete-object provenance |
 | FMC-06 | Simplify statically decidable optional presence and unwrap diamonds | After optional-state analysis; before CFG cleanup | Foundation needed / **Large** | Medium runtime and code size | Optional representation, guard counts, pinned mutation, payload lifetime, cleanup, and exact absence/overflow failure behavior |
@@ -278,9 +278,10 @@ This is not a roadmap. It is a default order for deciding which candidate is
 worth designing next now that the implemented local-simplification layer has
 produced initial measurements:
 
-1. Add checked constant integer division/remainder and shift simplification,
-   because their arithmetic is bounded and they directly extend the new local
-   evaluator while exposing the first dedicated-terminator rewrite.
+1. Implement the proposed
+   [checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md),
+   because its arithmetic is bounded and it extends local simplification while
+   exposing the first dedicated-terminator rewrite.
 2. Measure remaining local redundancy and consider redundant cast elimination
    or local primitive common-subexpression elimination.
 3. Decide whether proof-provenance normalization is justified by blocked CFG
