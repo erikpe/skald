@@ -6,7 +6,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+is in progress. PNR0 established exhaustive proof-form classification and
+partitioned shared, proof-rich, and normalized-only verifier ownership without
+changing the production proof-rich pipeline. PNR1, the atomic mechanical
+normalization transaction, is next.
 
 ## Pending discoveries
 
@@ -28,8 +33,8 @@ simplification layer. Its implementation evidence now feeds the frozen
 
 The open
 [proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
-receive implementation findings outside the frozen design and planned
-roadmap. No findings are recorded yet.
+receive implementation findings outside the frozen design and active roadmap.
+No findings are recorded yet.
 
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
@@ -70,14 +75,8 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The planned
-[proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
-implements the frozen two-seal, mandatory-normalization, stage-aware pipeline,
-backend, inspection, and reporting boundary, ending with a conservative
-post-proof unreachable-block canary. PNR0 is next. It depends on the completed
-dense rewriting, selectable pipeline, lifecycle certificate, whole-world
-reachability, reachability-gated lifecycle, and local simplification
-foundations.
+No additional implementation roadmap is currently planned behind the active
+proof-provenance normalization work.
 
 ## Design proposals
 
@@ -88,9 +87,9 @@ a separately sealed executable final-MIR product. It classifies path and
 logical provenance, preserves their runtime carrier behavior as ordinary
 loads, makes pass scheduling and inspection stage-aware, and ends with a
 conservative post-proof unreachable-CFG canary. PPN1 through PPN14 were
-confirmed together on 2026-09-04; the planned
-[implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) starts at
-PNR0.
+confirmed together on 2026-09-04; the active
+[implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) has
+completed PNR0 and continues with PNR1.
 
 The completed checked integer constant protocol simplification delivery record
 is preserved in the [archive](../archive/README.md). FMC-01 and FMC-02 are

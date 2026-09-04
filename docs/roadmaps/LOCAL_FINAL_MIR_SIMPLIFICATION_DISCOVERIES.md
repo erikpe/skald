@@ -35,12 +35,14 @@ prerequisite for the catalog's proof-record deletion, empty-block forwarding,
 block merging, jump threading, logical CFG simplification, and complete
 unreachable-region deletion candidates.
 
-**Priority:** Planned implementation through the
+**Priority:** Active implementation through the
 [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
-Checked
-integer protocol folding now demonstrates atomic proof-aware CFG rewriting,
-while conservative CFG cleanup continues to count and retain proof-protected
-unreachable blocks.
+PNR0 now gives verifier and CFG retention one exhaustive proof-site
+classification and separates proof-rich from normalized-only verification.
+Checked integer protocol folding demonstrates atomic proof-aware CFG
+rewriting, while conservative CFG cleanup continues to count and retain
+proof-protected unreachable blocks until the later normalization and canary
+tasks are delivered.
 
 **Proposed bounded direction:** After complete proof-rich verification,
 atomically lower path-condition reads to ordinary loads, reclassify their
@@ -48,4 +50,5 @@ activation storage, consume path-condition and logical-expression records,
 and seal a distinct executable final-MIR product. Validate the boundary with
 entry-unreachable block cleanup while deferring forwarding, merging,
 threading, and checked-protocol normalization. Proof-named blocks remain
-conservative roots until the roadmap is implemented.
+conservative roots until the roadmap reaches the mandatory normalization
+boundary.

@@ -90,6 +90,7 @@ pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,
 };
 pub(crate) use verify::{checked_scalar_dominates, checked_scalar_predecessors};
+pub(in crate::mir) use verify::{classify_local_identity_site, MirIdentitySiteRole};
 pub use verify::{
     verify_mir, verify_preliminary_mir, MirVerificationError, MirVerificationErrors,
     VerifiedPreliminaryMirProgram,

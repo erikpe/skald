@@ -1027,13 +1027,39 @@ through their retained scalar carriers by this pass.
 
 ### Frozen proof-provenance normalization direction
 
-Status: **planned**. The frozen
+Status: **in progress**. The frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and its
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 define a mandatory one-way boundary between proof-rich and backend-ready final
-MIR. Current production behavior remains the single-seal pipeline described
-above until that roadmap is delivered.
+MIR. Verifier ownership and proof-bearing-form classification are implemented;
+the normalization transaction, two-seal pipeline, and backend migration are
+not. Current production behavior therefore remains the single-seal pipeline
+described above.
+
+The verifier now owns one exhaustive classification boundary for proof
+records, callable-local identity sites, storage kinds, rvalues, instructions,
+and terminators. Path and logical records are consumable proof; condition
+reads and `PathCondition` storage are executable carriers with consumable
+proof classification; body entry and static-publication endpoints are
+permanent attachments; optional guards, checked protocols, write
+authorizations, lifecycle authority, and ordinary executable forms remain
+permanent semantic state. The proof-aware CFG root collector consumes the
+same identity-site classification, so adding an identity-bearing site cannot
+silently give verification and rewriting different retention semantics.
+
+Current verifier orchestration distinguishes three owners without cloning the
+verifier. Shared checks retain declaration and reference validity, ordinary
+block/instruction/terminator structure, checked protocols, optional guards,
+scalar initialization, and function-value provenance. Proof-rich checks retain
+path and logical validation plus cleanup, storage-lifetime, shared-ownership,
+optional-initialization, and array-ownership dataflow. Focused normalized-only
+checks reject leaked path/logical records, path storage and rvalues, and any
+future instruction or terminator classified as proof-bearing. Static lifecycle
+realization and whole-world reachability remain separate reusable final-MIR
+owners outside this callable-local verifier. The normalized contract is only
+test-invokable in this first step; it is not yet a production seal or backend
+precondition.
 
 The planned boundary keeps one `MirProgram` model but uses two private seals.
 `VerifiedProofMirProgram` names the intermediate accepted by complete path-

@@ -9,6 +9,7 @@ use super::{
         BlockId, MirBasicBlock, MirDefinitionRef, MirPlace, MirPlaceBase, MirProgram, MirType,
         PreliminaryMirStaticField, ValueId,
     },
+    contract::MirVerificationContract,
     sink::ErrorSink,
     MirVerificationError,
 };
@@ -17,6 +18,7 @@ pub(super) struct Verifier<'mir> {
     pub(super) program: &'mir MirProgram,
     preliminary_static_fields: Option<&'mir [PreliminaryMirStaticField]>,
     definition_completeness: MirDefinitionCompleteness,
+    verification_contract: MirVerificationContract,
     pub(super) errors: ErrorSink,
 }
 
@@ -54,6 +56,18 @@ impl<'mir> Verifier<'mir> {
             program,
             preliminary_static_fields: None,
             definition_completeness: MirDefinitionCompleteness::RetainedFinal,
+            verification_contract: MirVerificationContract::ProofRich,
+            errors: ErrorSink::new(),
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn new_normalized(program: &'mir MirProgram) -> Self {
+        Self {
+            program,
+            preliminary_static_fields: None,
+            definition_completeness: MirDefinitionCompleteness::RetainedFinal,
+            verification_contract: MirVerificationContract::Normalized,
             errors: ErrorSink::new(),
         }
     }
@@ -66,8 +80,13 @@ impl<'mir> Verifier<'mir> {
             program,
             preliminary_static_fields: Some(static_fields),
             definition_completeness: MirDefinitionCompleteness::CompleteProducer,
+            verification_contract: MirVerificationContract::ProofRich,
             errors: ErrorSink::new(),
         }
+    }
+
+    pub(super) const fn verification_contract(&self) -> MirVerificationContract {
+        self.verification_contract
     }
 
     pub(super) const fn requires_complete_producer_definitions(&self) -> bool {

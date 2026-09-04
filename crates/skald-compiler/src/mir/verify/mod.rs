@@ -19,6 +19,7 @@ mod checked_scalar;
 mod cleanup;
 mod closed_program;
 mod context;
+mod contract;
 mod dataflow;
 mod declarations;
 mod dispatch;
@@ -48,6 +49,8 @@ mod type_operations;
 mod view;
 
 use context::Verifier;
+
+pub(in crate::mir) use contract::{classify_local_identity_site, MirIdentitySiteRole};
 
 pub(crate) use checked_scalar::{
     dominates as checked_scalar_dominates, predecessors as checked_scalar_predecessors,
@@ -118,6 +121,22 @@ impl std::error::Error for MirVerificationErrors {}
 pub fn verify_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
     let mut verifier = Verifier::new(program);
     verifier.verify_program();
+    finish_verification(verifier)
+}
+
+/// Verifies the executable structural contract expected after proof
+/// provenance has been consumed.
+///
+/// This is crate-private groundwork for the future normalizer and final seal.
+/// It deliberately does not recreate path-sensitive proof dataflow.
+#[cfg(test)]
+pub(crate) fn check_normalized_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
+    let mut verifier = Verifier::new_normalized(program);
+    verifier.verify_program();
+    finish_verification(verifier)
+}
+
+fn finish_verification(verifier: Verifier<'_>) -> Result<(), MirVerificationErrors> {
     let errors = verifier.into_errors();
     if errors.is_empty() {
         Ok(())

@@ -20,6 +20,7 @@ impl<'mir> Verifier<'mir> {
         return_type: MirType,
         function: MirDefinitionRef<'mir>,
     ) {
+        self.verify_normalized_definition_contract(function);
         if function.class_owner() != function.callable().class() {
             self.function_error(
                 function.callable(),
@@ -70,18 +71,24 @@ impl<'mir> Verifier<'mir> {
             }
             self.verify_block(return_type, function, block, &mut defined_values);
         }
-        self.verify_path_conditions(function);
-        self.verify_logical_expressions(function);
+        if self.verification_contract().requires_proof_provenance() {
+            self.verify_path_conditions(function);
+            self.verify_logical_expressions(function);
+        }
         self.verify_checked_shifts(function);
         self.verify_checked_integer_divisions(function);
         self.verify_checked_primitive_casts(function);
         self.verify_produced_primitive_aliases(function);
-        self.verify_cleanup_liveness(function);
-        self.verify_storage_lifetimes(function);
-        self.verify_shared_ownership(function);
-        self.verify_optional_initialization(function);
+        if self.verification_contract().requires_proof_provenance() {
+            self.verify_cleanup_liveness(function);
+            self.verify_storage_lifetimes(function);
+            self.verify_shared_ownership(function);
+            self.verify_optional_initialization(function);
+        }
         self.verify_optional_guards(function);
-        self.verify_array_ownership(function);
+        if self.verification_contract().requires_proof_provenance() {
+            self.verify_array_ownership(function);
+        }
         self.verify_scalar_initialization(function);
         self.verify_function_value_provenance(function);
 

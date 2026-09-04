@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Discoveries
 
-Status: open for implementation discoveries from the planned
+Status: open for implementation discoveries from the active
 [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
 
 The frozen

@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: planned; PNR0 is next.
+Status: in progress; PNR0 is complete and PNR1 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -107,7 +107,7 @@ Candidate placement and status remain concise in the
 
 ## Progress
 
-- [ ] PNR0 — Partition proof-rich and normalized verification ownership
+- [x] PNR0 — Partition proof-rich and normalized verification ownership
 - [ ] PNR1 — Implement atomic proof-provenance normalization
 - [ ] PNR2 — Establish the two sealed final-MIR products
 - [ ] PNR3 — Make pass policy and execution stage aware
@@ -124,25 +124,25 @@ Candidate placement and status remain concise in the
 **Purpose:** Make the last proof consumers and the post-consumption checks
 explicit before introducing a product that depends on their separation.
 
-- [ ] Add one exhaustive compiler-owned classification of MIR proof-bearing
+- [x] Add one exhaustive compiler-owned classification of MIR proof-bearing
   records, identities, storage kinds, rvalues, attachments, and continuing
   semantic protocols.
-- [ ] Refactor verifier orchestration into shared structural checks,
+- [x] Refactor verifier orchestration into shared structural checks,
   proof-rich checks, and normalized-only checks without changing current
   accepted or rejected proof-rich MIR.
-- [ ] Keep optional initialization, arrays, shared ownership, cleanup, storage
+- [x] Keep optional initialization, arrays, shared ownership, cleanup, storage
   lifetime, logical-expression, and path-condition dataflow in the proof-rich
   owner.
-- [ ] Keep identity/reference validity, ordinary executable structure,
+- [x] Keep identity/reference validity, ordinary executable structure,
   surviving protocol checks, lifecycle realization, and reachability
   completeness in shared or explicitly reusable owners where their evidence
   permits.
-- [ ] Define a closed normalized-invariant error vocabulary, including leaked
+- [x] Define a closed normalized-invariant error vocabulary, including leaked
   path/logical records, path rvalues, path storage kinds, and unknown
   proof-bearing sites.
-- [ ] Add maintenance tests which fail when a new relevant MIR variant or
+- [x] Add maintenance tests which fail when a new relevant MIR variant or
   identity site lacks classification.
-- [ ] Document verifier ownership in the compiler phase contract without
+- [x] Document verifier ownership in the compiler phase contract without
   claiming normalization is implemented.
 
 **Tests:** Existing MIR verifier suite unchanged; focused classification and

@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::{
     identity::CallableId,
-    mir::{BlockId, MirDefinitionRef, ValueId},
+    mir::{classify_local_identity_site, BlockId, MirDefinitionRef, MirIdentitySiteRole, ValueId},
 };
 
 use super::{
@@ -333,22 +333,12 @@ impl MirLocalIdentityObserver for RootCollector {
         site: MirLocalIdentitySite,
         block: BlockId,
     ) -> Result<(), Self::Error> {
-        match site {
-            MirLocalIdentitySite::BodyEntry => self.entry = Some(block),
-            MirLocalIdentitySite::StaticPublicationInitializationExit
-            | MirLocalIdentitySite::StaticPublicationCleanupEntry
-            | MirLocalIdentitySite::PathCondition(_)
-            | MirLocalIdentitySite::LogicalExpression(_) => {
+        match classify_local_identity_site(site) {
+            MirIdentitySiteRole::BodyEntry => self.entry = Some(block),
+            MirIdentitySiteRole::PermanentAttachment | MirIdentitySiteRole::ConsumableProof => {
                 self.protected.push(MirProtectedBlockRoot { site, block });
             }
-            MirLocalIdentitySite::ReturnStorage
-            | MirLocalIdentitySite::Receiver
-            | MirLocalIdentitySite::Parameter(_)
-            | MirLocalIdentitySite::StorageDeclaration(_)
-            | MirLocalIdentitySite::ValueDeclaration(_)
-            | MirLocalIdentitySite::BlockDeclaration(_)
-            | MirLocalIdentitySite::Instruction { .. }
-            | MirLocalIdentitySite::Terminator(_) => {}
+            MirIdentitySiteRole::Ordinary => {}
         }
         Ok(())
     }
