@@ -6,18 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
-is in progress. Its
-[frozen measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md)
-defines whole-world compilation identity, verified input/pre-reachability/final
-snapshots, census accounting and overlaps, the version-one corpus, canonical
-report schema, and evidence threshold. Composable verified-MIR inspection
-through the driver, all three candidate-family censuses, and deterministic
-corpus aggregation/reporting are implemented. The complete
-[version-one study](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md) found no
-candidate that crosses the frozen recommendation threshold; measurement
-boundary hardening and roadmap closure are next.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -33,10 +22,10 @@ not an implementation roadmap.
 
 The open
 [local final-MIR redundancy measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md)
-records out-of-scope findings from the active measurement work. Ordinary
-census results belong in the
-[durable report](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md), not in the
-discoveries record.
+records an actionable evidence-format finding from the completed measurement
+work. Ordinary census results belong in the
+[durable report](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md), not in
+the discoveries record.
 
 The open
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
@@ -83,8 +72,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No additional implementation roadmap is currently planned behind the active
-local final-MIR redundancy measurement work.
+No additional implementation roadmap is currently planned.
 
 ## Design proposals
 

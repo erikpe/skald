@@ -11,6 +11,7 @@ mod corpus;
 mod digest;
 mod measure;
 mod model;
+mod projection;
 mod render;
 mod revision;
 

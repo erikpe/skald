@@ -115,7 +115,7 @@ and their source:
 The aggregate analyzer API currently retains callable examples rather than
 instruction-level examples. The bounded temporary audit probe was removed
 after inspection; the maintainability limitation remains tracked in the
-[measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md#aggregate-analyzer-apis-do-not-retain-site-level-report-examples).
+[measurement discoveries](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md#aggregate-analyzer-apis-do-not-retain-site-level-report-examples).
 
 ## Benchmark context
 
@@ -172,8 +172,7 @@ remain valid follow-up ideas, but none satisfies the frozen evidence threshold.
 The current corpus provides no basis for a design or implementation roadmap
 for any of them, and no analyzer defect justifies changing the workload set.
 
-The single next action is to harden and close the measurement roadmap while
-retaining the census for regression and future-corpus evidence. Subsequent
-optimization-architecture selection should resume from the candidate catalog;
-new evidence may reopen these three candidates without changing this recorded
+The measurement boundary was subsequently hardened and its roadmap closed.
+Optimization-architecture selection resumes from the candidate catalog; new
+evidence may reopen these three candidates without changing this recorded
 decision.

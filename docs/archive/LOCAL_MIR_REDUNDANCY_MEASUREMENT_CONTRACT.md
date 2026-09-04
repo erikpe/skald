@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Contract
 
-Status: frozen for the active
+Status: frozen historical contract for the completed
 [local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md).
 
 This document defines what the local-redundancy study measures, which

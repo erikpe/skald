@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: in progress; LMR0-LMR6 are complete and LMR7 is next.
+Status: complete; archived after LMR0-LMR7.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -16,29 +16,29 @@ optimizations, assign them synthetic performance scores, or promise that a
 counted MIR opportunity becomes a native speedup.
 
 Implementation-specific findings outside this reviewed scope belong in the
-[local redundancy measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md).
+[local redundancy measurement discoveries](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md).
 Candidate status, placement, and prioritization remain authoritative in the
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md).
+[optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md).
 The frozen census, corpus, schema, and decision rules are authoritative in the
 [measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md).
 
 ## Dependencies
 
 - The completed
-  [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+  [selectable final-MIR pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
   provides deterministic verified checkpoints, typed pass measurements, and
   exact schedule identities.
 - The completed
-  [local final-MIR simplification roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+  [local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
   provides primitive facts, exact constant evaluation, guarded value-use
   classification, CFG cleanup, and the repeated default schedule being
   measured.
 - The completed
-  [checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+  [checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
   provides the first concrete scalar-spill provenance limitation and exact
   checked-protocol consumer.
 - The completed
-  [whole-world reachability roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+  [whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
   lets the census distinguish redundancy in definitions that survive semantic
   retention from redundancy later removed with dead definitions.
 - Current driver inspection reaches static activation directly, while
@@ -126,7 +126,7 @@ The frozen census, corpus, schema, and decision rules are authoritative in the
 - [x] LMR4 — Measure local primitive common subexpressions
 - [x] LMR5 — Build deterministic corpus aggregation and reporting
 - [x] LMR6 — Run the study and select the next optimization project
-- [ ] LMR7 — Harden the measurement boundary and close the roadmap
+- [x] LMR7 — Harden the measurement boundary and close the roadmap
 
 ## PR-sized implementation sequence
 
@@ -485,26 +485,26 @@ result without copying its evidence tables.
 **Purpose:** Leave a maintainable analysis surface, authoritative evidence,
 and no permanent investigative debris.
 
-- [ ] Audit checkpoint plumbing, shared census vocabulary, each candidate
+- [x] Audit checkpoint plumbing, shared census vocabulary, each candidate
       analyzer, corpus ownership, aggregation, rendering, and tests by
       responsibility; split only genuine mixed owners and keep facades concise.
-- [ ] Remove temporary probes, duplicate semantic tables, debugging output,
+- [x] Remove temporary probes, duplicate semantic tables, debugging output,
       hard-coded schedule positions, absolute paths, roadmap codes, and unused
       compatibility helpers from production code and living documentation.
-- [ ] Confirm the tool remains read-only, opt-in, deterministic, target-
+- [x] Confirm the tool remains read-only, opt-in, deterministic, target-
       independent in its MIR classifications, and absent from ordinary
       compilation cost and pass registration.
-- [ ] Retain reusable candidate facts only where a selected future pass has a
+- [x] Retain reusable candidate facts only where a selected future pass has a
       concrete owner; otherwise keep the stable aggregate census or remove the
       unused internal detail.
-- [ ] Reconcile the report, discoveries, catalog statuses, candidate links,
+- [x] Reconcile the report, discoveries, catalog statuses, candidate links,
       and selected next action.
-- [ ] Run the complete repository validation from an artifact-free snapshot,
+- [x] Run the complete repository validation from an artifact-free snapshot,
       supported MSRV, independent-process determinism, the full measurement
       corpus, and documentation/diff hygiene checks.
-- [ ] Mark every task complete, archive the roadmap and durable measurement
+- [x] Mark every task complete, archive the roadmap and durable measurement
       report, update active/archive indexes, and repair all incoming links.
-- [ ] Archive or remove the discoveries record only if no actionable finding
+- [x] Archive or remove the discoveries record only if no actionable finding
       remains; otherwise keep it indexed under `docs/roadmaps/`.
 
 **Tests:** `make check`; `make check-long`; `make msrv-check`; focused
@@ -516,6 +516,23 @@ schema and recommendation against generated evidence.
 backed, ordinary compilation is unchanged, no temporary measurement mechanism
 remains, completed records are archived, and every surviving discovery has a
 clear future owner.
+
+**Completion evidence:** The measurement tool was audited by responsibility.
+Verified-checkpoint collection and semantic selection remain in the real-driver
+owner, while stable report projection and callable labeling moved from that
+mixed 678-line implementation into a private `projection` module. Corpus
+resolution, aggregation, rendering, revision inspection, digesting, and each
+compiler census retain separate cohesive owners behind concise facades. The
+surviving APIs expose stable aggregate evidence only; the bounded site-example
+extension remains an explicitly owned discovery rather than investigative
+scaffolding. No registered pass, ordinary compilation hook, hard-coded numeric
+schedule position, duplicate semantic table, temporary probe, absolute path,
+or optimization mutation was retained. The complete corpus regenerated twice
+with byte-identical structural JSON after operational fields were excluded.
+`make check`, `make check-long`, `make msrv-check`, `make docs-check`, and
+`git diff --check` passed from the closure snapshot. The report, contract,
+catalog, living workflow, indexes, and actionable discoveries were reconciled;
+the roadmap, contract, and version-one report are archived.
 
 ## Ordering and dependencies
 

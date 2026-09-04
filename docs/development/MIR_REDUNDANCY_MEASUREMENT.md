@@ -3,9 +3,9 @@
 Status: authoritative for the opt-in repository opportunity census and its
 generated report. The frozen terminology, corpus, schema, and recommendation
 rules remain defined by the
-[measurement contract](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md).
+[measurement contract](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md).
 The durable corpus-version-one result and recommendation are recorded in the
-[measurement report](../roadmaps/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md).
+[measurement report](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md).
 
 The `skald-mir-measure` repository tool measures scalar-spill constant
 provenance, redundant primitive casts, and exact same-block primitive common
@@ -14,6 +14,12 @@ current `default` final-MIR schedule and omitted runtime traces. A borrowed
 pipeline inspector analyzes verified `input`, `pre-reachability`, and `final`
 products in memory; it does not parse MIR dumps, register a pass, alter backend
 input, or add work to ordinary compilation.
+
+The tool keeps corpus resolution, real-driver checkpoint collection, stable
+report projection, aggregation, and rendering in separate internal owners.
+Compiler-side candidate semantics remain in the read-only
+`passes::redundancy` analyzers; the repository tool only projects their stable
+aggregate observations and does not maintain a second optimization model.
 
 Run the complete reviewed corpus with:
 

@@ -1,7 +1,7 @@
 # Local Final-MIR Redundancy Measurement Discoveries
 
-Status: open companion record for the active
-[local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md).
+Status: open follow-up record for the completed
+[local final-MIR redundancy measurement roadmap](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md).
 
 Use this file for concrete maintainability findings, measurement limitations,
 or optimization opportunities discovered while implementing the roadmap that
@@ -9,7 +9,7 @@ do not belong in its reviewed census scope. Each finding should record the
 problem, evidence, likely owner, priority, and a bounded future direction.
 
 Do not place the study's ordinary results here. The frozen
-[measurement contract](LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md) owns its
+[measurement contract](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_CONTRACT.md) owns its
 method, the durable measurement report owns data and interpretation,
 and the [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md)
 owns concise cross-domain status, placement, effort, value, and priority.
@@ -27,11 +27,11 @@ a second analysis or weakening the borrowed-checkpoint boundary.
 **Evidence:** `ScalarSpillProvenanceObservation`, `PrimitiveCastObservation`,
 and `LocalCseObservation` expose totals and callable observations only. Their
 implementation-private accumulators see exact sites while scanning, then
-discard those identities when producing the stable observation. LMR5 retains
-deterministic proven-callable examples and all aggregate blocker/consumer
+discard those identities when producing the stable observation. The reporting
+tool retains deterministic proven-callable examples and all aggregate blocker/consumer
 detail, which is enough to locate MIR for manual audit but less precise than a
 direct site example. The
-[version-one study](LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md#manual-audit)
+[version-one study](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md#manual-audit)
 therefore required a bounded temporary probe to audit all 26 proven final
 sites; the probe was removed after comparison.
 
@@ -41,8 +41,8 @@ projection.
 
 **Priority:** Medium before the evidence format is declared permanently
 closed. It does not affect counts, candidate safety, checkpoint selection, or
-the LMR6 recommendation threshold because manual review can use callable IDs
-and deterministic MIR dumps.
+the version-one recommendation threshold because manual review can use
+callable IDs and deterministic MIR dumps.
 
 **Bounded future direction:** Add one shared, bounded, deterministically sorted
 read-only example record containing callable, block, instruction position,
