@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 through PNR3 are complete and PNR4 is next.
+Status: in progress; PNR0 through PNR4 are complete and PNR5 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -111,7 +111,7 @@ Candidate placement and status remain concise in the
 - [x] PNR1 — Implement atomic proof-provenance normalization
 - [x] PNR2 — Establish the two sealed final-MIR products
 - [x] PNR3 — Make pass policy and execution stage aware
-- [ ] PNR4 — Expose stage-aware inspection, failures, and reporting
+- [x] PNR4 — Expose stage-aware inspection, failures, and reporting
 - [ ] PNR5 — Migrate reachability and backend consumption
 - [ ] PNR6 — Add post-proof unreachable-block elimination
 - [ ] PNR7 — Activate and validate the two-stage production schedule
@@ -259,24 +259,24 @@ capability accepts both seal types.
 **Purpose:** Preserve observability without hiding two different MIR
 contracts behind the old single-checkpoint API.
 
-- [ ] Replace the homogeneous checkpoint value with a closed borrowed
+- [x] Replace the homogeneous checkpoint value with a closed borrowed
   proof-rich/final view.
-- [ ] Emit proof-rich input and after-pass checkpoints, one named
+- [x] Emit proof-rich input and after-pass checkpoints, one named
   `after-proof-normalization` final checkpoint, post-proof after-pass
   checkpoints, and one final checkpoint in exact order.
-- [ ] Make checkpoint display names collision-free and stage explicit while
+- [x] Make checkpoint display names collision-free and stage explicit while
   retaining schedule-position and occurrence identity for selectable passes.
-- [ ] Add a normalization failure stage distinct from input verification,
+- [x] Add a normalization failure stage distinct from input verification,
   pass execution, structural rewrite, and output verification.
-- [ ] Add mandatory normalization counts to pipeline aggregates without
+- [x] Add mandatory normalization counts to pipeline aggregates without
   inventing a selectable pass occurrence or duration contract.
-- [ ] Keep post-proof canary and whole-world metrics ordinary pass-owned
+- [x] Keep post-proof canary and whole-world metrics ordinary pass-owned
   occurrence data.
-- [ ] Provide the correct seal-bound reachability dump from final checkpoints;
+- [x] Provide the correct seal-bound reachability dump from final checkpoints;
   proof-rich checkpoints remain unable to expose stale final facts.
-- [ ] Preserve quiet-path gating: no inspector, trace record, dump, label
+- [x] Preserve quiet-path gating: no inspector, trace record, dump, label
   allocation, or optional metric scan occurs when not requested.
-- [ ] Update driver adapters and reporting renderers without mixing dumps into
+- [x] Update driver adapters and reporting renderers without mixing dumps into
   report events.
 
 **Tests:** Borrow/lifetime compile-fail coverage; exact labels and callback

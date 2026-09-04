@@ -263,7 +263,7 @@ The implemented metrics appear in this deterministic owner order:
 | MIR verification boundaries | verification executions; failed verification also includes verification errors |
 | Static-lifecycle planning | effect summaries, dependencies; declared, active, inactive, active-explicit, active-zero-default, and inactive-explicit static fields; activation execution nodes, edges, and conservative targets; activation fields, shutdown fields, and retained preliminary static initializers |
 | Static-lifecycle synthesis | final MIR definitions, blocks, instructions, followed by lifecycle definitions and activation/shutdown regions when present |
-| MIR pass pipeline | verification executions, pass executions; when passes run, processed and changed callables, structural rewrite counts, and pass-owned counters grouped in first-owner/first-counter order; then successful final MIR definitions, blocks, instructions |
+| MIR pass pipeline | verification executions; normalization execution and deterministic structural counts; pass executions; when passes run, processed and changed callables, structural rewrite counts, and pass-owned counters grouped in first-owner/first-counter order; then successful final MIR definitions, blocks, instructions |
 | Backend emission | assembly bytes, assembly lines |
 
 A failed loader retains completed loader counters before diagnostic counts. A
@@ -287,7 +287,8 @@ phases-only compilation performs no report-only product scan, sort, or text
 formatting; already-known phase execution counts remain local to the observed
 adapter.
 
-The `none` MIR schedule performs one verification and zero pass executions.
+The `none` MIR schedule performs proof verification, one mandatory
+normalization with normalized verification, and zero pass executions.
 The `default` schedule executes nine pass occurrences in the exact optimization
 order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
@@ -312,7 +313,7 @@ occurrences; `none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
 schedule order. Its stable identity consists of schedule position, typed pass
-identity and stable name, and that pass's zero-based occurrence number. The
+identity, stable name and stage, and that pass's zero-based occurrence number. The
 record carries elapsed duration, `unchanged`, `changed`, or `failed` outcome,
 processed and changed callable counts when pass data exists, structural
 commit counts, verification executions caused by the occurrence, and
@@ -344,17 +345,17 @@ existing detail queries.
 
 Pass modules return data and never call observers, loggers, formatters, or
 filesystem services. The pipeline coordinator converts outcomes into report
-data, and reporting owns rendering. Implemented input, after-occurrence, and
-final MIR checkpoints use the separate request-local `MirPipelineInspector`
-service and accept only borrowed verified final MIR. Labels are `input`,
-`after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, and
+data, and reporting owns rendering. Stage-aware MIR checkpoints use the
+separate request-local `MirPipelineInspector` service. Its closed borrowed view
+contains either proof-rich or normalized final MIR; only the final variant can
+render seal-bound reachability. Labels are `proof-rich-input`,
+`after-proof-rich-<position>-<name>-<occurrence>`,
+`after-proof-normalization`, `after-final-<position>-<name>-<occurrence>`, and
 `final`. Changed results are resealed before callbacks; failures produce no
-failed after-checkpoint or final checkpoint. Checkpoint labels and bytes are
-deterministic. Inspectors may also request the seal-bound deterministic
-reachability dump from a checkpoint, but dump contents do not become report
-events, metrics, semantic request identity, or pass logs. The disabled ordinary
-path performs no checkpoint formatting, dump rendering, allocation, or event
-construction.
+checkpoint for an unpublished product and no product-final checkpoint.
+Checkpoint labels and bytes are deterministic, but dump contents do not become
+report events, metrics, semantic request identity, or pass logs. The disabled
+ordinary path performs no dump rendering, collection, or event construction.
 Filesystem publication and general CLI dump retention remain separate driver
 decisions.
 
@@ -425,33 +426,32 @@ Status: **in progress**. The frozen
 [design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
 [roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) extend final-
 MIR observation with an explicit proof-rich-to-final boundary. The two-seal
-transition is active: aggregate verification counts now include one complete
-proof verification and one normalized final verification even for the `none`
-profile. Stage-aware normalization metrics and checkpoints remain PNR4 work.
+transition and its observation are active: aggregate counts include one
+complete proof verification, one normalization execution, and one normalized
+final verification even for the `none` profile.
 
 Normalization is a mandatory phase transition rather than a registered pass.
 It therefore produces no pass occurrence, selectable identity, exclusion, or
-pass-owned duration contract. Its structural counts are already computed
-privately; PNR4 will publish deterministic aggregate counts for consumed
-path-condition records, consumed logical-expression records, lowered path
-reads, reclassified activation storage, changed callables, and blocks released
-from proof protection.
+pass-owned duration contract. Details reports publish deterministic aggregate
+counts for consumed path-condition records, consumed logical-expression
+records, lowered path reads, reclassified activation storage, changed
+callables, and blocks released from proof protection.
 
-Current inspection carries `VerifiedProofMirProgram` at input, after-pass, and
-the legacy `final` label at the end of the pre-normalization schedule. PNR4
-will expose a closed stage-typed borrowed view where the named
+Inspection exposes a closed stage-typed borrowed view. Proof-rich input and
+after-pass checkpoints carry `VerifiedProofMirProgram`; the named
 `after-proof-normalization` checkpoint, final-stage after-pass checkpoints,
 and product-final checkpoint carry `VerifiedFinalMirProgram`. Labels retain
 schedule position, stable pass name, and occurrence identity where a
-selectable pass exists. Final checkpoints alone will expose final seal-bound
+selectable pass exists. Final checkpoints alone expose final seal-bound
 reachability facts.
 
 A normalization failure has its own pipeline failure stage and prevents every
 final-stage occurrence, backend phase, and final checkpoint. The
 `post-proof-unreachable-block-elimination` canary remains an ordinary
 selectable final-stage pass with processed/changed callable and removed
-block/value counters. `whole-world-reachability` follows it and retains its
-existing pass-owned metrics.
+block/value counters. `whole-world-reachability` remains an ordinary
+final-stage occurrence with its existing pass-owned metrics and stage-bearing
+trace record.
 
 Quiet compilation performs no checkpoint formatting, dump rendering, trace
 record allocation, or optional count scan. Durations remain nondeterministic

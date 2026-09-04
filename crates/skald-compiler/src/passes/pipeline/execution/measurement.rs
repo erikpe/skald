@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::mir::rewrite::MirRewriteChangeSummary;
 
-use super::super::{MirPassIdentity, MirPassOccurrence};
+use super::super::{MirPassIdentity, MirPassOccurrence, MirPassStage};
 use super::model::MirPassData;
 
 /// One stable pass-owned integer measurement.
@@ -45,6 +45,7 @@ pub struct MirPassOccurrenceRecord {
     position: usize,
     identity: MirPassIdentity,
     name: &'static str,
+    stage: MirPassStage,
     occurrence: usize,
     elapsed: Duration,
     outcome: MirPassOccurrenceOutcome,
@@ -69,6 +70,10 @@ impl MirPassOccurrenceRecord {
 
     pub const fn name(&self) -> &'static str {
         self.name
+    }
+
+    pub const fn stage(&self) -> MirPassStage {
+        self.stage
     }
 
     pub const fn occurrence(&self) -> usize {
@@ -188,6 +193,7 @@ impl MirPassOccurrenceRecord {
             position: occurrence.position(),
             identity: occurrence.identity(),
             name: occurrence.name(),
+            stage: occurrence.stage(),
             occurrence: occurrence.occurrence(),
             elapsed,
             outcome,
@@ -205,6 +211,7 @@ impl MirPassOccurrenceRecord {
     #[cfg(test)]
     pub(crate) fn for_test(
         identity: (usize, u16, &'static str, usize),
+        stage: MirPassStage,
         elapsed: Duration,
         outcome: MirPassOccurrenceOutcome,
         callables: Option<(u64, u64)>,
@@ -217,6 +224,7 @@ impl MirPassOccurrenceRecord {
             position,
             identity: MirPassIdentity::new(identity),
             name,
+            stage,
             occurrence,
             elapsed,
             outcome,

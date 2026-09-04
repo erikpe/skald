@@ -45,17 +45,17 @@ use crate::passes::{
 /// reachability facts:
 ///
 /// ```compile_fail
-/// use skald_compiler::passes::MirPipelineCheckpoint;
+/// use skald_compiler::passes::MirProofPipelineCheckpoint;
 ///
-/// fn invalidate(checkpoint: MirPipelineCheckpoint<'_>) {
+/// fn invalidate(checkpoint: MirProofPipelineCheckpoint<'_>) {
 ///     checkpoint.verified().clone().invalidate_for_proof_transformation();
 /// }
 /// ```
 ///
 /// ```compile_fail
-/// use skald_compiler::passes::MirPipelineCheckpoint;
+/// use skald_compiler::passes::MirProofPipelineCheckpoint;
 ///
-/// fn detach(checkpoint: MirPipelineCheckpoint<'_>) {
+/// fn detach(checkpoint: MirProofPipelineCheckpoint<'_>) {
 ///     let _ = checkpoint.verified().reachability();
 /// }
 /// ```
@@ -63,9 +63,9 @@ use crate::passes::{
 /// Proof-rich MIR also cannot be sent directly to backend input:
 ///
 /// ```compile_fail
-/// use skald_compiler::{backend::BackendInput, passes::MirPipelineCheckpoint};
+/// use skald_compiler::{backend::BackendInput, passes::MirProofPipelineCheckpoint};
 ///
-/// fn skip_normalization(checkpoint: MirPipelineCheckpoint<'_>) {
+/// fn skip_normalization(checkpoint: MirProofPipelineCheckpoint<'_>) {
 ///     let _ = BackendInput::without_runtime_trace(checkpoint.verified());
 /// }
 /// ```

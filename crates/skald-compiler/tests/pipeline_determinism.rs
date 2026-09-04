@@ -2668,17 +2668,28 @@ fn mir_pipeline_checkpoint_dump() -> String {
 
     let mut checkpoints = Vec::new();
     let mut inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
-        checkpoints.push((
-            checkpoint.label().to_string(),
-            dump_mir(checkpoint.verified()),
-            checkpoint.reachability_dump(),
-        ));
+        let label = checkpoint.label().to_string();
+        match checkpoint {
+            MirPipelineCheckpoint::ProofRich(checkpoint) => {
+                checkpoints.push((label, dump_mir(checkpoint.verified()), None));
+            }
+            MirPipelineCheckpoint::Final(checkpoint) => checkpoints.push((
+                label,
+                dump_mir(checkpoint.verified()),
+                Some(checkpoint.reachability_dump()),
+            )),
+        }
     };
     run_mir_pipeline_inspected(lower_hir(&checked.hir.unwrap()), &mut inspector).unwrap();
 
     checkpoints
         .into_iter()
-        .map(|(label, mir, reachability)| format!("CHECKPOINT {label}\n{mir}{reachability}"))
+        .map(|(label, mir, reachability)| {
+            format!(
+                "CHECKPOINT {label}\n{mir}{}",
+                reachability.unwrap_or_default()
+            )
+        })
         .collect()
 }
 

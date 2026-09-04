@@ -217,6 +217,10 @@ fn none_pipeline_preserves_valid_mir_and_reports_only_verification() {
 
     assert_eq!(measured.result.unwrap(), expected);
     assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(
+        measured.statistics.normalization(),
+        Some(Default::default())
+    );
     assert_eq!(measured.statistics.pass_executions(), 0);
     assert_eq!(measured.statistics.processed_callables(), 0);
     assert_eq!(measured.statistics.changed_callables(), 0);
@@ -389,13 +393,22 @@ fn proof_checkpoints_preserve_metadata_while_the_final_product_consumes_proof() 
     let expected_proof_dump = dump_mir(&mir);
     let mut collector = CheckpointCollector::default();
     let measured = run_mir_pipeline_measured_inspected(mir, &none_schedule(), Some(&mut collector));
+    let normalization = measured.statistics.normalization().unwrap();
     let final_program = measured.result.unwrap();
 
-    assert_eq!(collector.labels, ["input", "final"]);
     assert_eq!(
-        collector.dumps,
-        [expected_proof_dump.clone(), expected_proof_dump]
+        collector.labels,
+        ["proof-rich-input", "after-proof-normalization", "final"]
     );
+    assert_eq!(collector.dumps[0], expected_proof_dump);
+    assert_ne!(collector.dumps[0], collector.dumps[1]);
+    assert_eq!(collector.dumps[1], collector.dumps[2]);
+    assert!(normalization.path_condition_records() > 0);
+    assert!(normalization.logical_expression_records() > 0);
+    assert!(normalization.path_reads() > 0);
+    assert!(normalization.activation_storage() > 0);
+    assert!(normalization.changed_callables() > 0);
+    assert!(normalization.released_proof_blocks() > 0);
     assert!(final_program
         .executable_definitions()
         .all(|definition| definition.body().path_conditions.is_empty()
@@ -653,6 +666,7 @@ fn occurrence_records_preserve_schedule_identity_outcomes_and_pass_measurements(
                 record.position(),
                 record.identity(),
                 record.name(),
+                record.stage(),
                 record.occurrence(),
                 record.outcome(),
             ))
@@ -662,6 +676,7 @@ fn occurrence_records_preserve_schedule_identity_outcomes_and_pass_measurements(
                 0,
                 MEASURED_UNCHANGED,
                 "measured-unchanged-pass",
+                MirPassStage::ProofRich,
                 0,
                 MirPassOccurrenceOutcome::Unchanged,
             ),
@@ -669,6 +684,7 @@ fn occurrence_records_preserve_schedule_identity_outcomes_and_pass_measurements(
                 1,
                 UNCHANGED,
                 "unchanged-pass",
+                MirPassStage::ProofRich,
                 0,
                 MirPassOccurrenceOutcome::Unchanged,
             ),
@@ -676,6 +692,7 @@ fn occurrence_records_preserve_schedule_identity_outcomes_and_pass_measurements(
                 2,
                 MEASURED_UNCHANGED,
                 "measured-unchanged-pass",
+                MirPassStage::ProofRich,
                 1,
                 MirPassOccurrenceOutcome::Unchanged,
             ),
@@ -747,46 +764,76 @@ fn aggregate_only_runner_skips_occurrence_recording() {
 #[derive(Default)]
 struct CheckpointCollector {
     labels: Vec<String>,
+    stages: Vec<MirPassStage>,
     dumps: Vec<String>,
-    reachability_dumps: Vec<String>,
-    reachable_callables: Vec<Vec<CallableId>>,
+    reachability_dumps: Vec<Option<String>>,
+    reachable_callables: Vec<Option<Vec<CallableId>>>,
     definition_counts: Vec<usize>,
 }
 
 impl MirPipelineInspector for CheckpointCollector {
     fn inspect(&mut self, checkpoint: MirPipelineCheckpoint<'_>) {
         self.labels.push(checkpoint.label().to_string());
-        self.dumps.push(dump_mir(checkpoint.verified()));
-        self.reachability_dumps.push(checkpoint.reachability_dump());
-        self.reachable_callables.push(
-            checkpoint
-                .verified()
-                .reachability()
-                .reachable_callables()
-                .to_vec(),
-        );
-        self.definition_counts
-            .push(checkpoint.verified().definitions.len());
+        self.stages.push(checkpoint.stage());
+        match checkpoint {
+            MirPipelineCheckpoint::ProofRich(checkpoint) => {
+                self.dumps.push(dump_mir(checkpoint.verified()));
+                self.reachability_dumps.push(None);
+                self.reachable_callables.push(None);
+                self.definition_counts
+                    .push(checkpoint.verified().definitions.len());
+            }
+            MirPipelineCheckpoint::Final(checkpoint) => {
+                self.dumps.push(dump_mir(checkpoint.verified()));
+                self.reachability_dumps
+                    .push(Some(checkpoint.reachability_dump()));
+                self.reachable_callables.push(Some(
+                    checkpoint
+                        .verified()
+                        .reachability()
+                        .reachable_callables()
+                        .to_vec(),
+                ));
+                self.definition_counts
+                    .push(checkpoint.verified().definitions.len());
+            }
+        }
     }
 }
 
 #[test]
 fn checkpoint_labels_are_stable_and_unambiguous_for_repetition() {
-    assert_eq!(MirPipelineCheckpointLabel::Input.to_string(), "input");
     assert_eq!(
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::ProofRichInput.to_string(),
+        "proof-rich-input"
+    );
+    assert_eq!(
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 3,
             pass_name: "fixture-pass",
             occurrence: 2,
         }
         .to_string(),
-        "after-3-fixture-pass-2"
+        "after-proof-rich-3-fixture-pass-2"
+    );
+    assert_eq!(
+        MirPipelineCheckpointLabel::AfterProofNormalization.to_string(),
+        "after-proof-normalization"
+    );
+    assert_eq!(
+        MirPipelineCheckpointLabel::AfterFinalPass {
+            position: 4,
+            pass_name: "fixture-pass",
+            occurrence: 1,
+        }
+        .to_string(),
+        "after-final-4-fixture-pass-1"
     );
     assert_eq!(MirPipelineCheckpointLabel::Final.to_string(), "final");
 }
 
 #[test]
-fn none_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
+fn none_pipeline_inspects_both_sides_of_the_mandatory_boundary() {
     let mir = lowered_program();
     let expected_dump = dump_mir(&mir);
     let mut collector = CheckpointCollector::default();
@@ -794,17 +841,32 @@ fn none_pipeline_inspects_verified_input_and_final_without_changing_the_dump() {
     let measured = run_mir_pipeline_measured_inspected(mir, &none_schedule(), Some(&mut collector));
 
     assert!(measured.result.is_ok());
-    assert_eq!(collector.labels, ["input", "final"]);
-    assert_eq!(collector.dumps, [expected_dump.clone(), expected_dump]);
     assert_eq!(
-        collector.reachability_dumps[0],
-        collector.reachability_dumps[1]
+        collector.labels,
+        ["proof-rich-input", "after-proof-normalization", "final"]
     );
-    assert_eq!(collector.definition_counts.len(), 2);
+    assert_eq!(
+        collector.dumps,
+        [expected_dump.clone(), expected_dump.clone(), expected_dump]
+    );
+    assert_eq!(
+        collector.stages,
+        [
+            MirPassStage::ProofRich,
+            MirPassStage::Final,
+            MirPassStage::Final
+        ]
+    );
+    assert_eq!(collector.reachability_dumps[0], None);
+    assert_eq!(
+        collector.reachability_dumps[1],
+        collector.reachability_dumps[2]
+    );
+    assert_eq!(collector.definition_counts.len(), 3);
 }
 
 #[test]
-fn proof_checkpoint_api_identifies_every_proof_rich_occurrence() {
+fn checkpoint_api_identifies_every_stage_and_occurrence() {
     let schedule =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
     let mut collector = CheckpointCollector::default();
@@ -816,16 +878,35 @@ fn proof_checkpoint_api_identifies_every_proof_rich_occurrence() {
     assert_eq!(
         collector.labels,
         [
-            "input",
-            "after-0-dead-pure-definition-elimination-0",
-            "after-1-primitive-constant-folding-0",
-            "after-2-primitive-algebraic-simplification-0",
-            "after-3-primitive-constant-folding-1",
-            "after-4-checked-integer-constant-folding-0",
-            "after-5-dead-pure-definition-elimination-1",
-            "after-6-conservative-cfg-cleanup-0",
-            "after-7-dead-pure-definition-elimination-2",
+            "proof-rich-input",
+            "after-proof-rich-0-dead-pure-definition-elimination-0",
+            "after-proof-rich-1-primitive-constant-folding-0",
+            "after-proof-rich-2-primitive-algebraic-simplification-0",
+            "after-proof-rich-3-primitive-constant-folding-1",
+            "after-proof-rich-4-checked-integer-constant-folding-0",
+            "after-proof-rich-5-dead-pure-definition-elimination-1",
+            "after-proof-rich-6-conservative-cfg-cleanup-0",
+            "after-proof-rich-7-dead-pure-definition-elimination-2",
+            "after-proof-normalization",
+            "after-final-8-whole-world-reachability-0",
             "final",
+        ]
+    );
+    assert_eq!(
+        collector.stages,
+        [
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
+            MirPassStage::Final,
+            MirPassStage::Final,
+            MirPassStage::Final,
         ]
     );
     assert!(collector.dumps.windows(2).all(|pair| pair[0] == pair[1]));
@@ -833,7 +914,7 @@ fn proof_checkpoint_api_identifies_every_proof_rich_occurrence() {
 }
 
 #[test]
-fn final_stage_occurrences_do_not_cross_the_proof_checkpoint_type() {
+fn final_stage_occurrences_publish_only_normalized_checkpoints() {
     let mir = lower_source_to_final_mir(
         "fn dead() -> i64 { return 9; }
          fn main() -> i64 { return 0; }",
@@ -851,12 +932,33 @@ fn final_stage_occurrences_do_not_cross_the_proof_checkpoint_type() {
 
     assert!(measured.result.is_ok());
     let output = measured.result.as_ref().unwrap();
-    assert_eq!(collector.labels, ["input", "final"]);
-    assert_eq!(collector.dumps[0], collector.dumps[1]);
     assert_eq!(
-        collector.reachability_dumps[0],
-        collector.reachability_dumps[1]
+        collector.labels,
+        [
+            "proof-rich-input",
+            "after-proof-normalization",
+            "after-final-0-whole-world-reachability-0",
+            "after-final-1-whole-world-reachability-1",
+            "final",
+        ]
     );
+    assert_eq!(
+        collector.stages,
+        [
+            MirPassStage::ProofRich,
+            MirPassStage::Final,
+            MirPassStage::Final,
+            MirPassStage::Final,
+            MirPassStage::Final,
+        ]
+    );
+    assert_ne!(collector.dumps[1], collector.dumps[2]);
+    assert_eq!(collector.dumps[2], collector.dumps[3]);
+    assert_eq!(collector.dumps[3], collector.dumps[4]);
+    assert_eq!(collector.reachability_dumps[0], None);
+    assert!(collector.reachability_dumps[1..]
+        .iter()
+        .all(Option::is_some));
     assert_eq!(output.program().executable_definitions().count(), 1);
 }
 
@@ -927,6 +1029,7 @@ fn pipeline_determinism_fingerprint() -> String {
         .map(|record| {
             (
                 record.position(),
+                record.stage(),
                 record.name(),
                 record.occurrence(),
                 record.outcome(),
@@ -975,7 +1078,7 @@ fn pipeline_determinism_fingerprint() -> String {
 
     format!(
         "none={:?}\ndefault={:?}\ndisabled={:?}\nrepeated={:?}\n\
-         metrics=({}, {}, {}, {:?})\nerror=({:?}, {:?}, {:?}, {:?}, {})\n\
+         metrics=({}, {}, {:?}, {}, {}, {:?})\nerror=({:?}, {:?}, {:?}, {:?}, {})\n\
          checkpoints={:?}\ncheckpoint-dumps={:?}\nreachability-checkpoints={:?}\n\
          reachability-dumps={:?}\nproductive-occurrences={:?}\nproductive-final-mir=\n{}\nfinal-mir=\n{}",
         schedule_fingerprint(&none),
@@ -983,6 +1086,8 @@ fn pipeline_determinism_fingerprint() -> String {
         schedule_fingerprint(&disabled),
         schedule_fingerprint(&repeated),
         measured.statistics.verification_executions(),
+        measured.statistics.normalization_executions(),
+        measured.statistics.normalization(),
         measured.statistics.pass_executions(),
         measured.statistics.processed_callables(),
         measurements,
@@ -1032,17 +1137,19 @@ fn unchanged_and_repeated_passes_each_publish_one_verified_after_checkpoint() {
     assert_eq!(
         collector.labels,
         [
-            "input",
-            "after-0-unchanged-pass-0",
-            "after-1-unchanged-pass-1",
+            "proof-rich-input",
+            "after-proof-rich-0-unchanged-pass-0",
+            "after-proof-rich-1-unchanged-pass-1",
+            "after-proof-normalization",
             "final",
         ]
     );
     assert!(collector.dumps.windows(2).all(|pair| pair[0] == pair[1]));
-    assert!(collector
-        .reachability_dumps
-        .windows(2)
-        .all(|pair| pair[0] == pair[1]));
+    assert_eq!(collector.reachability_dumps[..3], [None, None, None]);
+    assert_eq!(
+        collector.reachability_dumps[3],
+        collector.reachability_dumps[4]
+    );
     assert_eq!(measured.statistics.verification_executions(), 2);
 }
 
@@ -1079,21 +1186,24 @@ fn changed_call_targets_rebuild_facts_before_later_passes_and_checkpoints() {
     assert_eq!(
         collector.labels,
         [
-            "input",
-            "after-0-retarget-call-pass-0",
-            "after-1-observe-retarget-pass-0",
+            "proof-rich-input",
+            "after-proof-rich-0-retarget-call-pass-0",
+            "after-proof-rich-1-observe-retarget-pass-0",
+            "after-proof-normalization",
             "final",
         ]
     );
-    assert!(collector.reachable_callables[0].contains(&left.into()));
-    assert!(!collector.reachable_callables[0].contains(&right.into()));
-    for callables in &collector.reachable_callables[1..] {
+    assert_eq!(collector.reachable_callables[..3], [None, None, None]);
+    for callables in collector.reachable_callables[3..]
+        .iter()
+        .map(|callables| callables.as_ref().unwrap())
+    {
         assert!(!callables.contains(&left.into()));
         assert!(callables.contains(&right.into()));
     }
-    assert_ne!(
-        collector.reachability_dumps[0],
-        collector.reachability_dumps[1]
+    assert_eq!(
+        collector.reachability_dumps[3],
+        collector.reachability_dumps[4]
     );
     assert_eq!(measured.statistics.verification_executions(), 3);
     assert_eq!(execution_log(), ["retarget-call", "observe-retarget"]);
@@ -1114,15 +1224,17 @@ fn changed_output_is_resealed_before_inspection_and_later_checkpoints() {
     assert_eq!(
         collector.labels,
         [
-            "input",
-            "after-0-delete-equivalent-pass-0",
-            "after-1-observe-delete-pass-0",
+            "proof-rich-input",
+            "after-proof-rich-0-delete-equivalent-pass-0",
+            "after-proof-rich-1-observe-delete-pass-0",
+            "after-proof-normalization",
             "final",
         ]
     );
     assert_ne!(collector.dumps[0], collector.dumps[1]);
     assert_eq!(collector.dumps[1], collector.dumps[2]);
     assert_eq!(collector.dumps[2], collector.dumps[3]);
+    assert_eq!(collector.dumps[3], collector.dumps[4]);
 }
 
 #[test]
@@ -1137,7 +1249,10 @@ fn failed_occurrence_publishes_no_after_or_final_checkpoint() {
     );
 
     assert!(measured.result.is_err());
-    assert_eq!(collector.labels, ["input", "after-0-fail-second-pass-0"]);
+    assert_eq!(
+        collector.labels,
+        ["proof-rich-input", "after-proof-rich-0-fail-second-pass-0"]
+    );
     assert_eq!(execution_log(), ["fail-second", "fail-second"]);
 }
 
@@ -1153,7 +1268,7 @@ fn invalid_changed_output_is_never_inspected() {
     );
 
     assert!(measured.result.is_err());
-    assert_eq!(collector.labels, ["input"]);
+    assert_eq!(collector.labels, ["proof-rich-input"]);
     assert_eq!(execution_log(), ["invalid-output"]);
 }
 
@@ -1223,6 +1338,7 @@ fn pass_execution_failure_stops_before_later_occurrences() {
     let error = measured.result.unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
     assert_eq!(error.pass_name(), Some("execution-failure-pass"));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::ProofRich));
     assert!(error.to_string().contains("synthetic analysis failure"));
     assert_eq!(execution_log(), ["execution-failure"]);
     assert_eq!(measured.statistics.pass_executions(), 1);
@@ -1231,19 +1347,73 @@ fn pass_execution_failure_stops_before_later_occurrences() {
 #[test]
 fn final_stage_failure_is_attributed_after_the_implicit_boundary() {
     clear_test_state();
-    let measured = run_mir_pipeline_measured(
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_measured_inspected(
         lowered_program(),
         &test_schedule(&[UNCHANGED, FINAL_EXECUTION_FAILURE, FINAL_UNCHANGED]),
+        Some(&mut collector),
     );
 
     let error = measured.result.unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
     assert_eq!(error.pass_position(), Some(1));
     assert_eq!(error.pass_name(), Some("final-execution-failure-pass"));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::Final));
     assert_eq!(error.pass_occurrence(), Some(0));
     assert_eq!(execution_log(), ["unchanged", "final-execution-failure"]);
+    assert_eq!(
+        collector.labels,
+        [
+            "proof-rich-input",
+            "after-proof-rich-0-unchanged-pass-0",
+            "after-proof-normalization",
+        ]
+    );
     assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(measured.statistics.pass_executions(), 2);
+}
+
+#[test]
+fn normalization_failure_has_its_own_stage_and_stops_final_observation() {
+    fn fail_normalization(
+        _verified: VerifiedProofMirProgram,
+    ) -> Result<
+        (
+            VerifiedFinalMirProgram,
+            super::normalization::MirProofNormalizationStatistics,
+        ),
+        crate::mir::MirVerificationErrors,
+    > {
+        Err(crate::mir::MirVerificationErrors::program(
+            "synthetic normalization failure",
+        ))
+    }
+
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_with_transition_for_test(
+        lowered_program(),
+        &test_schedule(&[UNCHANGED, FINAL_UNCHANGED]),
+        Some(&mut collector),
+        fail_normalization,
+    );
+
+    let error = measured.result.unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::ProofNormalization);
+    assert_eq!(error.pass_name(), None);
+    assert_eq!(error.pass_stage(), None);
+    assert!(error
+        .to_string()
+        .contains("synthetic normalization failure"));
+    assert_eq!(
+        collector.labels,
+        ["proof-rich-input", "after-proof-rich-0-unchanged-pass-0"]
+    );
+    assert_eq!(execution_log(), ["unchanged"]);
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.normalization_executions(), 1);
+    assert_eq!(measured.statistics.normalization(), None);
+    assert_eq!(measured.statistics.pass_executions(), 1);
 }
 
 #[test]

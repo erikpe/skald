@@ -743,8 +743,12 @@ Pipeline accounting records verification and pass executions at the point they
 occur. Structurally successful commits contribute already-known processed and
 changed callable counts plus retained/inserted/removed entity counts; the
 editor emits no report text. Pass-owned integer counters retain deterministic
-first-owner and first-counter order. The driver renders aggregate counts at
-details level and typed occurrence records at trace level. The `none` schedule
+first-owner and first-counter order. The mandatory normalization contributes
+one execution plus deterministic counts for consumed proof records, lowered
+reads, reclassified storage, changed callables, and released proof-protected
+blocks; it does not create a selectable pass occurrence or duration. The
+driver renders aggregate counts at details level and stage-bearing typed
+occurrence records at trace level. The `none` schedule
 runs zero selectable passes, one complete proof verification, mandatory
 normalization, and one normalized verification. Its proof-rich checkpoints
 remain byte-for-byte stable, while its returned product satisfies the
@@ -859,21 +863,20 @@ products.
 Optional pipeline inspection is carried through the driver by
 `CompilationInspectors`, a request-local service separate from semantic
 compilation requests and report observers. It can independently compose a MIR
-pipeline inspector with the static-activation inspector. During the PNR2
-transition, the MIR callback receives only borrowed
-`VerifiedProofMirProgram` checkpoints at `input`, after every successfully
-completed occurrence, and the legacy `final` label denoting the end of that
-proof-rich schedule. The returned pipeline product is nevertheless
-normalized; PNR4 adds typed normalization and final-stage checkpoints.
-After-pass labels use
-`after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, so repeated
-passes cannot collide. Changed MIR is centrally resealed before inspection;
-pass, rewrite, or output-verification failure emits no failed after-checkpoint
-and no final checkpoint. The ordinary path passes no inspector and therefore
-constructs no checkpoint label strings, dumps, collections, or report events.
-The inspected entry point may invoke phase-owned `mir::dump_mir`, request the
-checkpoint's deterministic seal-bound reachability dump, or collect in-memory
-facts, but filesystem retention and CLI dump policy remain separate.
+pipeline inspector with the static-activation inspector. The MIR callback
+receives a closed borrowed `MirPipelineCheckpoint` view: `ProofRich` contains
+`VerifiedProofMirProgram`, while `Final` contains normalized
+`VerifiedFinalMirProgram`. Exact labels are `proof-rich-input`,
+`after-proof-rich-<position>-<name>-<occurrence>`,
+`after-proof-normalization`, `after-final-<position>-<name>-<occurrence>`, and
+`final`, so stages and repeated passes cannot collide. Only final checkpoints
+expose their seal-bound reachability dump; proof-rich facts cannot be mistaken
+for final reachability. Changed MIR is centrally resealed before inspection.
+Input, pass, rewrite, normalization, or output-verification failure emits no
+checkpoint for an unpublished product and no product-final checkpoint. The
+ordinary path passes no inspector and therefore constructs no dump,
+collection, or report event. Filesystem retention and CLI dump policy remain
+separate.
 
 The framework's production canary removes only an unused
 `MirInstruction::Assign` whose rvalue is an integer, byte, binary64-bit, or

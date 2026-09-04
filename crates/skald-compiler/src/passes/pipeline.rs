@@ -15,15 +15,18 @@ pub(in crate::passes) use optimizations::{
     PrimitiveConstant, PrimitiveEvaluation,
 };
 
-#[cfg(test)]
-pub(crate) use execution::run_mir_pipeline_measured_inspected;
 pub(crate) use execution::{
     run_mir_pipeline_instrumented, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
     MeasuredMirPipeline, MirPipelineStatistics,
 };
+#[cfg(test)]
+pub(crate) use execution::{
+    run_mir_pipeline_measured_inspected, run_mir_pipeline_with_transition_for_test,
+};
 pub use execution::{
-    MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineCheckpoint,
-    MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage, MirPipelineInspector,
+    MirFinalPipelineCheckpoint, MirPassMeasurement, MirPassOccurrenceOutcome,
+    MirPassOccurrenceRecord, MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
+    MirPipelineFailureStage, MirPipelineInspector, MirProofPipelineCheckpoint,
 };
 pub use policy::{
     available_mir_passes, MirOptimizationProfile, MirPassDescriptor, MirPassIdentity, MirPassStage,
@@ -47,12 +50,10 @@ pub fn run_mir_pipeline(program: MirProgram) -> Result<VerifiedFinalMirProgram, 
 
 /// Runs the default final-MIR pipeline with verified inspection checkpoints.
 ///
-/// The inspector receives `input`, every successfully completed pass
-/// occurrence, and the current `final` checkpoint at the end of the proof-rich
-/// schedule. The returned product has then crossed the mandatory normalization
-/// boundary. Stage-typed normalized checkpoints are introduced separately;
-/// ordinary compilation uses [`run_mir_pipeline`] and performs no checkpoint
-/// work.
+/// The inspector receives the proof-rich input, every successfully completed
+/// pass occurrence, the mandatory normalization boundary, and the normalized
+/// final product. Ordinary compilation uses [`run_mir_pipeline`] and performs
+/// no checkpoint work.
 pub fn run_mir_pipeline_inspected(
     program: MirProgram,
     inspector: &mut dyn MirPipelineInspector,

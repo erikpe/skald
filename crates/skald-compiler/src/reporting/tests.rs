@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::passes::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord};
+use crate::passes::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPassStage};
 
 use super::*;
 
@@ -204,6 +204,7 @@ fn module_parse_rendering_is_trace_only_and_keeps_typed_stage_identity() {
 fn mir_pass_rendering_is_trace_only_and_uses_fixed_occurrence_data() {
     let occurrence = MirPassOccurrenceRecord::for_test(
         (2, 7, "fixture-pass", 1),
+        MirPassStage::ProofRich,
         Duration::from_nanos(12_345_500),
         MirPassOccurrenceOutcome::Changed,
         Some((3, 1)),
@@ -216,7 +217,7 @@ fn mir_pass_rendering_is_trace_only_and_uses_fixed_occurrence_data() {
     assert_eq!(
         render_event(&event, ReportDetail::Trace),
         concat!(
-            "skac: trace: MIR pass `fixture-pass` (pass identity 7, schedule position 2, occurrence 1) changed in 12.346 ms\n",
+            "skac: trace: proof-rich MIR pass `fixture-pass` (pass identity 7, schedule position 2, occurrence 1) changed in 12.346 ms\n",
             "skac: trace stats: processed callables: 3\n",
             "skac: trace stats: changed callables: 1\n",
             "skac: trace stats: retained MIR entities: 0\n",
@@ -240,6 +241,7 @@ fn failed_pass_rendering_omits_unavailable_measurements() {
     let event = ReportEvent::MirPassFinished {
         occurrence: MirPassOccurrenceRecord::for_test(
             (0, 8, "failed-pass", 0),
+            MirPassStage::Final,
             Duration::from_millis(1),
             MirPassOccurrenceOutcome::Failed,
             None,

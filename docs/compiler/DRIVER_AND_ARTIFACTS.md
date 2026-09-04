@@ -180,11 +180,11 @@ identity. Profile selection and exclusions are independent of target,
 artifact kind, runtime-trace policy, diagnostic presentation, and operational
 report detail. Selection never changes source acceptance or diagnostics;
 malformed pass output remains a structured compiler failure rather than a
-source diagnostic. The final-MIR runner distinguishes input verification, pass
-execution, structural rewrite, and changed-output verification failures. A
-pass-attributed failure carries its exact stable name, internal identity,
-schedule position, and occurrence number, and the driver stops before backend
-emission without exposing a partial product.
+source diagnostic. The final-MIR runner distinguishes input verification,
+proof normalization, pass execution, structural rewrite, and changed-output
+verification failures. A pass-attributed failure carries its exact stable
+name, stage, internal identity, schedule position, and occurrence number, and
+the driver stops before backend emission without exposing a partial product.
 
 Verified checkpoint inspection is implemented by the pass facade's
 `run_mir_pipeline_inspected` entry point and by the driver's request-local
@@ -266,8 +266,7 @@ Status: **in progress**. The frozen
 [roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) add one
 mandatory compiler-owned phase transition inside final-MIR optimization.
 The two sealed products, mandatory verify-and-normalize transition, and
-stage-aware pass policy are now active; stage-aware observation remains a
-later roadmap step.
+stage-aware pass policy and observation are active.
 
 The driver continues to select only profiles and stable pass exclusions.
 It will not gain a normalization option. After all selected proof-rich
@@ -286,15 +285,19 @@ callbacks cannot accept both seals. Current local passes are proof-rich;
 `whole-world-reachability` runs in the final region. The later final-stage
 canary will be inserted before reachability.
 
-Current inspection exposes proof-rich borrowed checkpoints through the end of
-the proof-rich region; final-stage occurrences cannot cross that proof-only
-borrowed type. The returned result and backend input are normalized.
-PNR4 will add typed proof-rich and final checkpoints plus a single
-`after-proof-normalization` boundary and a distinct normalization-failure
-category. Any current normalization or final verification failure still stops
-before backend emission and artifact publication. Profile selection, source
-loading, static activation, target choice, artifact paths, diagnostics,
-runtime-trace policy, and host-toolchain behavior remain unchanged.
+Inspection exposes a closed borrowed checkpoint view. Proof-rich input and
+after-pass checkpoints carry only `VerifiedProofMirProgram`; the single
+`after-proof-normalization` checkpoint, final-stage after-pass checkpoints,
+and product-final checkpoint carry `VerifiedFinalMirProgram`. Only final
+checkpoints expose seal-bound reachability. Labels include their stage plus
+schedule position, stable pass name, and occurrence where applicable.
+Normalization has a distinct pipeline failure category, and any such failure
+stops before final-stage passes, backend emission, artifact publication, or a
+final checkpoint. Details reporting includes deterministic normalization
+counts without treating the boundary as a pass; trace pass records carry the
+registered stage. Profile selection, source loading, static activation,
+target choice, artifact paths, diagnostics, runtime-trace policy, and
+host-toolchain behavior remain unchanged.
 
 ## Frozen static activation orchestration
 

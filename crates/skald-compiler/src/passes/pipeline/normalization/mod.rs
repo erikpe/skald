@@ -22,7 +22,7 @@ use error::MirProofNormalizationErrorKind;
 
 /// Deterministic structural accounting for the mandatory conversion.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(in crate::passes::pipeline) struct MirProofNormalizationStatistics {
+pub(crate) struct MirProofNormalizationStatistics {
     path_condition_records: usize,
     logical_expression_records: usize,
     path_reads: usize,
@@ -70,27 +70,27 @@ impl MirProofNormalizationStatistics {
             .saturating_add(other.released_proof_blocks);
     }
 
-    pub(in crate::passes::pipeline) const fn path_condition_records(self) -> usize {
+    pub(crate) const fn path_condition_records(self) -> usize {
         self.path_condition_records
     }
 
-    pub(in crate::passes::pipeline) const fn logical_expression_records(self) -> usize {
+    pub(crate) const fn logical_expression_records(self) -> usize {
         self.logical_expression_records
     }
 
-    pub(in crate::passes::pipeline) const fn path_reads(self) -> usize {
+    pub(crate) const fn path_reads(self) -> usize {
         self.path_reads
     }
 
-    pub(in crate::passes::pipeline) const fn activation_storage(self) -> usize {
+    pub(crate) const fn activation_storage(self) -> usize {
         self.activation_storage
     }
 
-    pub(in crate::passes::pipeline) const fn changed_callables(self) -> usize {
+    pub(crate) const fn changed_callables(self) -> usize {
         self.changed_callables
     }
 
-    pub(in crate::passes::pipeline) const fn released_proof_blocks(self) -> usize {
+    pub(crate) const fn released_proof_blocks(self) -> usize {
         self.released_proof_blocks
     }
 }

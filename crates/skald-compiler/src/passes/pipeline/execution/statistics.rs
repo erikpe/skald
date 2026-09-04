@@ -5,11 +5,16 @@ use super::{
     model::MirPassData,
     MirPipelineError,
 };
-use crate::passes::pipeline::{MirPassIdentity, MirPassOccurrence, VerifiedFinalMirProgram};
+use crate::passes::pipeline::{
+    normalization::MirProofNormalizationStatistics, MirPassIdentity, MirPassOccurrence,
+    VerifiedFinalMirProgram,
+};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct MirPipelineStatistics {
     verification_executions: u64,
+    normalization_executions: u64,
+    normalization: Option<MirProofNormalizationStatistics>,
     pass_executions: u64,
     processed_callables: u64,
     changed_callables: u64,
@@ -31,6 +36,14 @@ impl MirPipelineStatistics {
 
     pub(crate) const fn pass_executions(&self) -> u64 {
         self.pass_executions
+    }
+
+    pub(crate) const fn normalization(&self) -> Option<MirProofNormalizationStatistics> {
+        self.normalization
+    }
+
+    pub(crate) const fn normalization_executions(&self) -> u64 {
+        self.normalization_executions
     }
 
     pub(crate) const fn processed_callables(&self) -> u64 {
@@ -59,6 +72,18 @@ impl MirPipelineStatistics {
 
     pub(super) fn record_verification(&mut self) {
         self.verification_executions = self.verification_executions.saturating_add(1);
+    }
+
+    pub(super) fn record_normalization_execution(&mut self) {
+        self.normalization_executions = self.normalization_executions.saturating_add(1);
+    }
+
+    pub(super) fn record_normalization_statistics(
+        &mut self,
+        normalization: MirProofNormalizationStatistics,
+    ) {
+        debug_assert!(self.normalization.is_none());
+        self.normalization = Some(normalization);
     }
 
     pub(super) fn record_pass_execution(&mut self) {
@@ -118,6 +143,8 @@ impl MirPipelineStatistics {
     ) -> Self {
         Self {
             verification_executions,
+            normalization_executions: 0,
+            normalization: None,
             pass_executions,
             processed_callables,
             changed_callables,

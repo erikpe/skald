@@ -769,9 +769,10 @@ fn repeated_exact_schedule_is_idempotent_and_has_stable_checkpoints() {
     assert_eq!(
         labels,
         [
-            "input",
-            "after-0-checked-integer-constant-folding-0",
-            "after-1-checked-integer-constant-folding-1",
+            "proof-rich-input",
+            "after-proof-rich-0-checked-integer-constant-folding-0",
+            "after-proof-rich-1-checked-integer-constant-folding-1",
+            "after-proof-normalization",
             "final",
         ]
     );

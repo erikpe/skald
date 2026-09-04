@@ -16,7 +16,7 @@ use crate::{
     },
     passes::{
         run_mir_pipeline, static_lifecycle::StaticActivationInspectionLabel, verify_final_mir,
-        MirPipelineCheckpointLabel, VerifiedFinalMirProgram,
+        MirPassStage, MirPipelineCheckpoint, MirPipelineCheckpointLabel, VerifiedFinalMirProgram,
     },
     reporting::{
         MetricValue, RecordingObserver, ReportDetail, ReportEvent, ReportMetric, ReportModuleStage,
@@ -55,48 +55,54 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
-fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 10] {
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 12] {
     [
-        MirPipelineCheckpointLabel::Input,
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::ProofRichInput,
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 0,
             pass_name: "dead-pure-definition-elimination",
             occurrence: 0,
         },
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 1,
             pass_name: "primitive-constant-folding",
             occurrence: 0,
         },
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 2,
             pass_name: "primitive-algebraic-simplification",
             occurrence: 0,
         },
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 3,
             pass_name: "primitive-constant-folding",
             occurrence: 1,
         },
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 4,
             pass_name: "checked-integer-constant-folding",
             occurrence: 0,
         },
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 5,
             pass_name: "dead-pure-definition-elimination",
             occurrence: 1,
         },
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 6,
             pass_name: "conservative-cfg-cleanup",
             occurrence: 0,
         },
-        MirPipelineCheckpointLabel::After {
+        MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 7,
             pass_name: "dead-pure-definition-elimination",
             occurrence: 2,
+        },
+        MirPipelineCheckpointLabel::AfterProofNormalization,
+        MirPipelineCheckpointLabel::AfterFinalPass {
+            position: 8,
+            pass_name: "whole-world-reachability",
+            occurrence: 0,
         },
         MirPipelineCheckpointLabel::Final,
     ]
@@ -145,9 +151,12 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             activation_labels.push(inspection.label());
         };
     let mut mir_labels = Vec::new();
-    let mut mir_inspector = |checkpoint: crate::passes::MirPipelineCheckpoint<'_>| {
+    let mut mir_inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
         mir_labels.push(checkpoint.label());
-        let _dump = dump_mir(checkpoint.verified());
+        let _dump = match checkpoint {
+            MirPipelineCheckpoint::ProofRich(checkpoint) => dump_mir(checkpoint.verified()),
+            MirPipelineCheckpoint::Final(checkpoint) => dump_mir(checkpoint.verified()),
+        };
     };
 
     let artifact = compile_request_to_assembly_observed_inspected(
@@ -178,6 +187,7 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             .filter_map(|event| match event {
                 ReportEvent::MirPassFinished { occurrence } => Some((
                     occurrence.position(),
+                    occurrence.stage(),
                     occurrence.name(),
                     occurrence.occurrence(),
                 )),
@@ -185,15 +195,40 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             })
             .collect::<Vec<_>>(),
         [
-            (0, "dead-pure-definition-elimination", 0),
-            (1, "primitive-constant-folding", 0),
-            (2, "primitive-algebraic-simplification", 0),
-            (3, "primitive-constant-folding", 1),
-            (4, "checked-integer-constant-folding", 0),
-            (5, "dead-pure-definition-elimination", 1),
-            (6, "conservative-cfg-cleanup", 0),
-            (7, "dead-pure-definition-elimination", 2),
-            (8, "whole-world-reachability", 0),
+            (
+                0,
+                MirPassStage::ProofRich,
+                "dead-pure-definition-elimination",
+                0
+            ),
+            (1, MirPassStage::ProofRich, "primitive-constant-folding", 0),
+            (
+                2,
+                MirPassStage::ProofRich,
+                "primitive-algebraic-simplification",
+                0
+            ),
+            (3, MirPassStage::ProofRich, "primitive-constant-folding", 1),
+            (
+                4,
+                MirPassStage::ProofRich,
+                "checked-integer-constant-folding",
+                0
+            ),
+            (
+                5,
+                MirPassStage::ProofRich,
+                "dead-pure-definition-elimination",
+                1
+            ),
+            (6, MirPassStage::ProofRich, "conservative-cfg-cleanup", 0),
+            (
+                7,
+                MirPassStage::ProofRich,
+                "dead-pure-definition-elimination",
+                2
+            ),
+            (8, MirPassStage::Final, "whole-world-reachability", 0),
         ]
     );
     let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
@@ -343,9 +378,16 @@ fn details_publish_deterministic_phase_owned_metrics() {
     assert_eq!(synthesis[1], ReportMetric::count("blocks", 1));
     let pipeline = phase_metrics(observer.events(), ReportPhase::MirPipeline);
     assert_eq!(
-        pipeline[..7],
+        pipeline[..14],
         [
             ReportMetric::count("verification executions", 2),
+            ReportMetric::count("normalization executions", 1),
+            ReportMetric::count("path-condition records consumed", 0),
+            ReportMetric::count("logical-expression records consumed", 0),
+            ReportMetric::count("path reads lowered", 0),
+            ReportMetric::count("activation storage declarations reclassified", 0),
+            ReportMetric::count("normalization changed callables", 0),
+            ReportMetric::count("proof-protected blocks released", 0),
             ReportMetric::count("pass executions", 9),
             ReportMetric::count("processed callables", 9),
             ReportMetric::count("changed callables", 0),
@@ -355,7 +397,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
         ]
     );
     assert_eq!(
-        pipeline[7],
+        pipeline[14],
         ReportMetric::pass_count(
             "dead-pure-definition-elimination",
             "removed assignment instructions",
@@ -363,7 +405,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
         )
     );
     assert_eq!(
-        pipeline[8],
+        pipeline[15],
         ReportMetric::pass_count(
             "dead-pure-definition-elimination",
             "removed value declarations",
@@ -372,7 +414,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let folding = |name| ReportMetric::pass_count("primitive-constant-folding", name, 0);
     assert_eq!(
-        pipeline[9..13],
+        pipeline[16..20],
         [
             folding("folded unary assignments"),
             folding("folded binary assignments"),
@@ -382,7 +424,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let algebra = |name| ReportMetric::pass_count("primitive-algebraic-simplification", name, 0);
     assert_eq!(
-        pipeline[13..18],
+        pipeline[20..25],
         [
             algebra("constant-result rewrites"),
             algebra("forwarded value uses"),
@@ -393,7 +435,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let checked = |name| ReportMetric::pass_count("checked-integer-constant-folding", name, 0);
     assert_eq!(
-        pipeline[18..23],
+        pipeline[25..30],
         [
             checked("folded quotient protocols"),
             checked("folded remainder protocols"),
@@ -404,7 +446,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let cfg = |name| ReportMetric::pass_count("conservative-cfg-cleanup", name, 0);
     assert_eq!(
-        pipeline[23..28],
+        pipeline[30..35],
         [
             cfg("folded constant branches"),
             cfg("folded same-target branches"),
@@ -416,7 +458,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[28..49],
+        pipeline[35..56],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -441,8 +483,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[49], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[50], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[56], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[57], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
@@ -650,23 +692,33 @@ fn mir_only_inspection_preserves_artifacts_reports_and_reporting() {
 #[test]
 fn report_writer_failure_does_not_block_activation_inspection_or_compilation() {
     let mut observer = TextObserver::new(FailingReportWriter, ReportDetail::Details);
-    let mut labels = Vec::new();
-    let mut inspector =
+    let mut activation_labels = Vec::new();
+    let mut activation_inspector =
         |inspection: crate::passes::static_lifecycle::StaticActivationInspection<'_>| {
-            labels.push(inspection.label());
+            activation_labels.push(inspection.label());
         };
+    let mut mir_labels = Vec::new();
+    let mut mir_inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
+        mir_labels.push(checkpoint.label());
+    };
 
     let artifact = compile_source_to_assembly_observed_inspected(
         "report-failure-inspection.ska",
         "fn main() -> i64 { return 42; }",
         Target::X86_64SysV,
         &mut observer,
-        CompilationInspectors::new().with_static_activation(&mut inspector),
+        CompilationInspectors::new()
+            .with_static_activation(&mut activation_inspector)
+            .with_mir_pipeline(&mut mir_inspector),
     )
     .unwrap();
 
     assert!(artifact.assembly.contains("mov rax, 42"));
-    assert_eq!(labels, [StaticActivationInspectionLabel::VerifiedPlanning]);
+    assert_eq!(
+        activation_labels,
+        [StaticActivationInspectionLabel::VerifiedPlanning]
+    );
+    assert_eq!(mir_labels, default_mir_checkpoint_labels());
     assert_eq!(observer.error().unwrap().kind(), io::ErrorKind::BrokenPipe);
 }
 

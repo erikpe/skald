@@ -143,7 +143,8 @@ fn render_mir_pass(rendered: &mut String, occurrence: &MirPassOccurrenceRecord) 
     };
     let _ = writeln!(
         rendered,
-        "skac: trace: MIR pass `{}` ({}, schedule position {}, occurrence {}) {outcome} in {}",
+        "skac: trace: {} MIR pass `{}` ({}, schedule position {}, occurrence {}) {outcome} in {}",
+        occurrence.stage(),
         occurrence.name(),
         occurrence.identity(),
         occurrence.position(),

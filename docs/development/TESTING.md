@@ -194,9 +194,9 @@ Status: **in progress** under the frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
-Verifier classification, atomic normalization, and the two sealed products are
-implemented. Stage-aware policy, observation, backend cleanup, and the
-post-proof canary remain later tasks.
+Verifier classification, atomic normalization, the two sealed products,
+stage-aware policy, and stage-aware observation are implemented. Backend
+cleanup and the post-proof canary remain later tasks.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
@@ -214,8 +214,10 @@ proof retention, complete proof consumption, normalized-verifier rejection,
 fresh reachability facts, clone/debug behavior, and two verification
 executions for `none`. Stage-policy tests pin every pass's stage, wrong-stage
 rejection, exact proof-rich and final schedule regions, typed callbacks, and
-the single mandatory normalization boundary. Later inspection and reporting
-tests will pin stage-aware checkpoint order, failure cutoff, and quiet gates.
+the single mandatory normalization boundary. Inspection and reporting tests
+pin stage-typed checkpoint order, normalization failure cutoff, final-only
+reachability, normalization metric order, trace stage identity, quiet gating,
+and report-writer isolation.
 
 The post-proof canary must demonstrate removal of a block retained solely by
 path/logical provenance while preserving body entry, static-publication and

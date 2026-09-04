@@ -59,12 +59,12 @@ use skald_compiler::{
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
         LocalCseBlocker, LocalCseConsumer, LocalCseExcludedFamily, LocalCseOperationFamily,
-        LocalCseOutcome, MirPassDescriptor, MirPassStage, MirPipelineCheckpoint,
-        MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage,
-        PrimitiveCastBlocker, PrimitiveCastConsumer, PrimitiveCastDisposition,
-        RedundancySiteClassification, RedundancySiteExample, ScalarSpillBlocker,
-        ScalarSpillConsumer, ScalarSpillDepth, ScalarSpillUnlock, VerifiedFinalMirProgram,
-        REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
+        LocalCseOutcome, MirFinalPipelineCheckpoint, MirPassDescriptor, MirPassStage,
+        MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
+        MirPipelineFailureStage, MirProofPipelineCheckpoint, PrimitiveCastBlocker,
+        PrimitiveCastConsumer, PrimitiveCastDisposition, RedundancySiteClassification,
+        RedundancySiteExample, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
+        ScalarSpillUnlock, VerifiedFinalMirProgram, REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -330,58 +330,77 @@ fn intentional_phase_and_dump_paths_compose() {
     );
     verify_mir(&mir).unwrap();
     let _pipeline_error: Option<MirPipelineError> = None;
-    let _pipeline_stage = MirPipelineFailureStage::InputVerification;
+    let _pipeline_stages = [
+        MirPipelineFailureStage::InputVerification,
+        MirPipelineFailureStage::ProofNormalization,
+    ];
+    let _proof_checkpoint: Option<MirProofPipelineCheckpoint<'_>> = None;
+    let _final_checkpoint: Option<MirFinalPipelineCheckpoint<'_>> = None;
     let mut checkpoint_labels = Vec::new();
     let mut inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
         checkpoint_labels.push(checkpoint.label());
-        let _verified_dump = dump_mir(checkpoint.verified());
-        let reachability_dump = checkpoint.reachability_dump();
-        assert!(reachability_dump.starts_with("MirReachabilityAnalysis\n"));
+        match checkpoint {
+            MirPipelineCheckpoint::ProofRich(checkpoint) => {
+                let _verified_dump = dump_mir(checkpoint.verified());
+            }
+            MirPipelineCheckpoint::Final(checkpoint) => {
+                let _verified_dump = dump_mir(checkpoint.verified());
+                assert!(checkpoint
+                    .reachability_dump()
+                    .starts_with("MirReachabilityAnalysis\n"));
+            }
+        }
     };
     run_mir_pipeline_inspected(mir.clone(), &mut inspector).unwrap();
     assert_eq!(
         checkpoint_labels,
         [
-            MirPipelineCheckpointLabel::Input,
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::ProofRichInput,
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 0,
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 0,
             },
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 1,
                 pass_name: "primitive-constant-folding",
                 occurrence: 0,
             },
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 2,
                 pass_name: "primitive-algebraic-simplification",
                 occurrence: 0,
             },
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 3,
                 pass_name: "primitive-constant-folding",
                 occurrence: 1,
             },
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 4,
                 pass_name: "checked-integer-constant-folding",
                 occurrence: 0,
             },
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 5,
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 1,
             },
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 6,
                 pass_name: "conservative-cfg-cleanup",
                 occurrence: 0,
             },
-            MirPipelineCheckpointLabel::After {
+            MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 7,
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 2,
+            },
+            MirPipelineCheckpointLabel::AfterProofNormalization,
+            MirPipelineCheckpointLabel::AfterFinalPass {
+                position: 8,
+                pass_name: "whole-world-reachability",
+                occurrence: 0,
             },
             MirPipelineCheckpointLabel::Final,
         ]
@@ -568,7 +587,10 @@ fn intentional_reporting_paths_compose() {
     let mut mir_inspection_labels = Vec::new();
     let mut mir_inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
         mir_inspection_labels.push(checkpoint.label());
-        let _dump = dump_mir(checkpoint.verified());
+        let _dump = match checkpoint {
+            MirPipelineCheckpoint::ProofRich(checkpoint) => dump_mir(checkpoint.verified()),
+            MirPipelineCheckpoint::Final(checkpoint) => dump_mir(checkpoint.verified()),
+        };
     };
     let mut quiet = NoopObserver;
     compile_source_to_assembly_observed_inspected(
@@ -585,10 +607,10 @@ fn intentional_reporting_paths_compose() {
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
-    assert_eq!(mir_inspection_labels.len(), 10);
+    assert_eq!(mir_inspection_labels.len(), 12);
     assert_eq!(
         mir_inspection_labels.first(),
-        Some(&MirPipelineCheckpointLabel::Input)
+        Some(&MirPipelineCheckpointLabel::ProofRichInput)
     );
     assert_eq!(
         mir_inspection_labels.last(),

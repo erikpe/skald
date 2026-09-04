@@ -140,7 +140,7 @@ fn measure_workload(
     let mut inspector = |checkpoint: MirPipelineCheckpoint<'_>| {
         samples.push(CheckpointSample {
             label: checkpoint.label(),
-            snapshot: projection::snapshot("internal", checkpoint.verified().program(), checkpoint),
+            snapshot: projection::snapshot("internal", checkpoint),
         });
     };
     let started = Instant::now();
@@ -234,27 +234,34 @@ fn select_snapshots(
     }
     let input = samples
         .iter()
-        .find(|sample| sample.label == MirPipelineCheckpointLabel::Input)
+        .find(|sample| sample.label == MirPipelineCheckpointLabel::ProofRichInput)
         .ok_or_else(|| MeasurementError::workload(workload, "missing input MIR checkpoint"))?;
-    let proof_region_end = samples
+    let pre_reachability = samples
+        .iter()
+        .find(|sample| {
+            matches!(
+                sample.label,
+                MirPipelineCheckpointLabel::AfterFinalPass { position, .. }
+                    if position + 1 == reachability[0].1.position
+            )
+        })
+        .or_else(|| {
+            samples
+                .iter()
+                .find(|sample| sample.label == MirPipelineCheckpointLabel::AfterProofNormalization)
+        })
+        .ok_or_else(|| {
+            MeasurementError::workload(workload, "missing pre-reachability MIR checkpoint")
+        })?;
+    let final_checkpoint = samples
         .iter()
         .find(|sample| sample.label == MirPipelineCheckpointLabel::Final)
-        .ok_or_else(|| {
-            MeasurementError::workload(workload, "missing proof-region final MIR checkpoint")
-        })?;
-
-    // Until the stage-aware checkpoint API lands, `Final` is the last
-    // proof-rich checkpoint immediately before mandatory normalization. The
-    // trace occurrence stream remains the authoritative complete schedule,
-    // including final-stage reachability. Keep both historical report slots
-    // bound to this truthful available snapshot rather than forging a
-    // proof-rich view of normalized MIR.
-    let pre_reachability = proof_region_end;
+        .ok_or_else(|| MeasurementError::workload(workload, "missing final MIR checkpoint"))?;
     let mut input = input.snapshot.clone();
     input.name = "input".to_owned();
     let mut pre = pre_reachability.snapshot.clone();
     pre.name = "pre-reachability".to_owned();
-    let mut final_snapshot = proof_region_end.snapshot.clone();
+    let mut final_snapshot = final_checkpoint.snapshot.clone();
     final_snapshot.name = "final".to_owned();
     Ok(vec![input, pre, final_snapshot])
 }

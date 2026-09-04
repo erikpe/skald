@@ -4,7 +4,10 @@ use crate::mir::{rewrite::MirProgramRewriteResult, MirProgram};
 
 use super::{
     error::MirPipelineError,
-    inspection::{MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineInspector},
+    inspection::{
+        MirFinalPipelineCheckpoint, MirPipelineCheckpoint, MirPipelineCheckpointLabel,
+        MirPipelineInspector, MirProofPipelineCheckpoint,
+    },
     measurement::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord},
     model::{
         MirFinalPassCapability, MirFinalPassChange, MirFinalPassOutcome, MirPassFailure,
@@ -46,6 +49,42 @@ pub(crate) fn run_mir_pipeline_instrumented(
     record_occurrences: bool,
     inspector: Option<&mut dyn MirPipelineInspector>,
 ) -> MeasuredMirPipeline {
+    run_mir_pipeline_with_transition(
+        program,
+        schedule,
+        record_occurrences,
+        inspector,
+        finalize_proof_mir,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn run_mir_pipeline_with_transition_for_test(
+    program: MirProgram,
+    schedule: &MirPassSchedule,
+    inspector: Option<&mut dyn MirPipelineInspector>,
+    transition: ProofNormalizationTransition,
+) -> MeasuredMirPipeline {
+    run_mir_pipeline_with_transition(program, schedule, false, inspector, transition)
+}
+
+pub(crate) type ProofNormalizationTransition = fn(
+    crate::passes::VerifiedProofMirProgram,
+) -> Result<
+    (
+        crate::passes::VerifiedFinalMirProgram,
+        crate::passes::pipeline::normalization::MirProofNormalizationStatistics,
+    ),
+    crate::mir::MirVerificationErrors,
+>;
+
+fn run_mir_pipeline_with_transition(
+    program: MirProgram,
+    schedule: &MirPassSchedule,
+    record_occurrences: bool,
+    inspector: Option<&mut dyn MirPipelineInspector>,
+    transition: ProofNormalizationTransition,
+) -> MeasuredMirPipeline {
     let mut inspector = inspector;
     let mut statistics = MirPipelineStatistics::default();
     let mut records = if record_occurrences {
@@ -64,7 +103,11 @@ pub(crate) fn run_mir_pipeline_instrumented(
             );
         }
     };
-    inspect_checkpoint(&mut inspector, MirPipelineCheckpointLabel::Input, &verified);
+    inspect_proof_checkpoint(
+        &mut inspector,
+        MirPipelineCheckpointLabel::ProofRichInput,
+        &verified,
+    );
 
     for occurrence in schedule.proof_rich() {
         statistics.record_pass_execution();
@@ -110,7 +153,11 @@ pub(crate) fn run_mir_pipeline_instrumented(
                     ));
                 }
                 verified = unchanged;
-                inspect_checkpoint(&mut inspector, after_label(occurrence), &verified);
+                inspect_proof_checkpoint(
+                    &mut inspector,
+                    after_proof_pass_label(occurrence),
+                    &verified,
+                );
             }
             MirProofPassOutcome::Changed { change, data } => {
                 statistics.record_pass_data(occurrence, &data);
@@ -157,24 +204,35 @@ pub(crate) fn run_mir_pipeline_instrumented(
                         );
                     }
                 };
-                inspect_checkpoint(&mut inspector, after_label(occurrence), &verified);
+                inspect_proof_checkpoint(
+                    &mut inspector,
+                    after_proof_pass_label(occurrence),
+                    &verified,
+                );
             }
         }
     }
 
-    inspect_checkpoint(&mut inspector, MirPipelineCheckpointLabel::Final, &verified);
-
+    statistics.record_normalization_execution();
     statistics.record_verification();
-    let mut verified = match finalize_proof_mir(verified) {
-        Ok((verified, _normalization)) => verified,
+    let mut verified = match transition(verified) {
+        Ok((verified, normalization)) => {
+            statistics.record_normalization_statistics(normalization);
+            verified
+        }
         Err(errors) => {
             return MeasuredMirPipeline::new(
-                Err(MirPipelineError::final_verification(errors)),
+                Err(MirPipelineError::proof_normalization(errors)),
                 statistics,
                 records,
             );
         }
     };
+    inspect_final_checkpoint(
+        &mut inspector,
+        MirPipelineCheckpointLabel::AfterProofNormalization,
+        &verified,
+    );
 
     for occurrence in schedule.final_stage() {
         statistics.record_pass_execution();
@@ -220,6 +278,11 @@ pub(crate) fn run_mir_pipeline_instrumented(
                     ));
                 }
                 verified = unchanged;
+                inspect_final_checkpoint(
+                    &mut inspector,
+                    after_final_pass_label(occurrence),
+                    &verified,
+                );
             }
             MirFinalPassOutcome::Changed { change, data } => {
                 statistics.record_pass_data(occurrence, &data);
@@ -258,28 +321,57 @@ pub(crate) fn run_mir_pipeline_instrumented(
                         );
                     }
                 };
+                inspect_final_checkpoint(
+                    &mut inspector,
+                    after_final_pass_label(occurrence),
+                    &verified,
+                );
             }
         }
     }
 
+    inspect_final_checkpoint(&mut inspector, MirPipelineCheckpointLabel::Final, &verified);
+
     MeasuredMirPipeline::new(Ok(verified), statistics, records)
 }
 
-fn after_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpointLabel {
-    MirPipelineCheckpointLabel::After {
+fn after_proof_pass_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpointLabel {
+    MirPipelineCheckpointLabel::AfterProofRichPass {
         position: occurrence.position(),
         pass_name: occurrence.name(),
         occurrence: occurrence.occurrence(),
     }
 }
 
-fn inspect_checkpoint(
+fn after_final_pass_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpointLabel {
+    MirPipelineCheckpointLabel::AfterFinalPass {
+        position: occurrence.position(),
+        pass_name: occurrence.name(),
+        occurrence: occurrence.occurrence(),
+    }
+}
+
+fn inspect_proof_checkpoint(
     inspector: &mut Option<&mut dyn MirPipelineInspector>,
     label: MirPipelineCheckpointLabel,
     verified: &crate::passes::VerifiedProofMirProgram,
 ) {
     if let Some(inspector) = inspector.as_deref_mut() {
-        inspector.inspect(MirPipelineCheckpoint::new(label, verified));
+        inspector.inspect(MirPipelineCheckpoint::ProofRich(
+            MirProofPipelineCheckpoint::new(label, verified),
+        ));
+    }
+}
+
+fn inspect_final_checkpoint(
+    inspector: &mut Option<&mut dyn MirPipelineInspector>,
+    label: MirPipelineCheckpointLabel,
+    verified: &crate::passes::VerifiedFinalMirProgram,
+) {
+    if let Some(inspector) = inspector.as_deref_mut() {
+        inspector.inspect(MirPipelineCheckpoint::Final(
+            MirFinalPipelineCheckpoint::new(label, verified),
+        ));
     }
 }
 

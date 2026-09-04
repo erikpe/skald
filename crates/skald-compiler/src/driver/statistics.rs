@@ -252,13 +252,43 @@ fn mir_pipeline_metrics_from(
 }
 
 fn pipeline_execution_metrics(statistics: &MirPipelineStatistics) -> Vec<ReportMetric> {
-    let mut metrics = vec![
-        ReportMetric::count(
-            "verification executions",
-            statistics.verification_executions(),
-        ),
-        ReportMetric::count("pass executions", statistics.pass_executions()),
-    ];
+    let mut metrics = vec![ReportMetric::count(
+        "verification executions",
+        statistics.verification_executions(),
+    )];
+    metrics.push(ReportMetric::count(
+        "normalization executions",
+        statistics.normalization_executions(),
+    ));
+    if let Some(normalization) = statistics.normalization() {
+        metrics.extend([
+            ReportMetric::count(
+                "path-condition records consumed",
+                count(normalization.path_condition_records()),
+            ),
+            ReportMetric::count(
+                "logical-expression records consumed",
+                count(normalization.logical_expression_records()),
+            ),
+            ReportMetric::count("path reads lowered", count(normalization.path_reads())),
+            ReportMetric::count(
+                "activation storage declarations reclassified",
+                count(normalization.activation_storage()),
+            ),
+            ReportMetric::count(
+                "normalization changed callables",
+                count(normalization.changed_callables()),
+            ),
+            ReportMetric::count(
+                "proof-protected blocks released",
+                count(normalization.released_proof_blocks()),
+            ),
+        ]);
+    }
+    metrics.push(ReportMetric::count(
+        "pass executions",
+        statistics.pass_executions(),
+    ));
     if statistics.pass_executions() != 0 {
         let changes = statistics.rewrite_changes();
         metrics.extend([
@@ -351,10 +381,57 @@ mod tests {
             .map(|verified| verified.program());
         let metrics = mir_pipeline_metrics_from(&measured.statistics, program);
 
+        assert_eq!(
+            metrics
+                .iter()
+                .take(9)
+                .map(ReportMetric::name)
+                .collect::<Vec<_>>(),
+            [
+                "verification executions",
+                "normalization executions",
+                "path-condition records consumed",
+                "logical-expression records consumed",
+                "path reads lowered",
+                "activation storage declarations reclassified",
+                "normalization changed callables",
+                "proof-protected blocks released",
+                "pass executions",
+            ]
+        );
         assert_eq!(metric(&metrics, "verification executions"), Some(2));
+        assert_eq!(metric(&metrics, "normalization executions"), Some(1));
         assert_eq!(metric(&metrics, "pass executions"), Some(0));
         assert_eq!(metric(&metrics, "processed callables"), None);
         assert_eq!(metric(&metrics, "retained MIR entities"), None);
+    }
+
+    #[test]
+    fn pipeline_metrics_publish_nonzero_normalization_structure_in_owner_order() {
+        let schedule =
+            resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap();
+        let measured = run_mir_pipeline_measured(
+            lower_source_to_final_mir(
+                "fn choose(left: bool, right: bool) -> bool { return left && right; }
+                 fn main() -> i64 { if (choose(true, false)) { return 1; } return 0; }",
+            ),
+            &schedule,
+        );
+        let metrics = mir_pipeline_metrics(&measured);
+
+        for name in [
+            "path-condition records consumed",
+            "logical-expression records consumed",
+            "path reads lowered",
+            "activation storage declarations reclassified",
+            "normalization changed callables",
+            "proof-protected blocks released",
+        ] {
+            assert!(
+                metric(&metrics, name).unwrap() > 0,
+                "expected nonzero {name}"
+            );
+        }
     }
 
     #[test]
@@ -379,6 +456,7 @@ mod tests {
                 .collect::<Vec<_>>(),
             [
                 (None, "verification executions"),
+                (None, "normalization executions"),
                 (None, "pass executions"),
                 (None, "processed callables"),
                 (None, "changed callables"),

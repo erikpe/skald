@@ -4,10 +4,13 @@ use skald_compiler::{
     identity::CallableId,
     mir::{MirPrimitiveCastKind, MirProgram},
     passes::{
+        analyze_local_primitive_common_subexpressions,
         analyze_proof_local_primitive_common_subexpressions,
         analyze_proof_redundant_primitive_casts, analyze_proof_scalar_spill_provenance,
-        LocalCseObservationCounts, MirPipelineCheckpoint, PrimitiveCastObservationCounts,
-        RedundancySiteExample, ScalarSpillProvenanceCounts, ScalarSpillUnlock,
+        analyze_redundant_primitive_casts, analyze_scalar_spill_provenance, LocalCseObservation,
+        LocalCseObservationCounts, MirPipelineCheckpoint, PrimitiveCastObservation,
+        PrimitiveCastObservationCounts, RedundancySiteExample, ScalarSpillProvenanceCounts,
+        ScalarSpillProvenanceObservation, ScalarSpillUnlock,
     },
 };
 use std::{collections::BTreeMap, fmt};
@@ -20,14 +23,32 @@ use crate::{
     },
 };
 
-pub(super) fn snapshot(
+pub(super) fn snapshot(name: &str, checkpoint: MirPipelineCheckpoint<'_>) -> SnapshotReport {
+    match checkpoint {
+        MirPipelineCheckpoint::ProofRich(checkpoint) => snapshot_from_observations(
+            name,
+            checkpoint.verified().program(),
+            analyze_proof_scalar_spill_provenance(checkpoint.verified()),
+            analyze_proof_redundant_primitive_casts(checkpoint.verified()),
+            analyze_proof_local_primitive_common_subexpressions(checkpoint.verified()),
+        ),
+        MirPipelineCheckpoint::Final(checkpoint) => snapshot_from_observations(
+            name,
+            checkpoint.verified().program(),
+            analyze_scalar_spill_provenance(checkpoint.verified()),
+            analyze_redundant_primitive_casts(checkpoint.verified()),
+            analyze_local_primitive_common_subexpressions(checkpoint.verified()),
+        ),
+    }
+}
+
+fn snapshot_from_observations(
     name: &str,
     program: &MirProgram,
-    checkpoint: MirPipelineCheckpoint<'_>,
+    spill: ScalarSpillProvenanceObservation,
+    casts: PrimitiveCastObservation,
+    cse: LocalCseObservation,
 ) -> SnapshotReport {
-    let spill = analyze_proof_scalar_spill_provenance(checkpoint.verified());
-    let casts = analyze_proof_redundant_primitive_casts(checkpoint.verified());
-    let cse = analyze_proof_local_primitive_common_subexpressions(checkpoint.verified());
     let mut scalar_spill = spill_counts(spill.counts());
     let mut redundant_casts = cast_counts(casts.counts());
     let mut local_cse = cse_counts(cse.counts());

@@ -2,19 +2,21 @@ use std::fmt;
 
 use crate::mir::{rewrite::MirRewriteError, MirVerificationErrors};
 
-use super::super::MirPassOccurrence;
+use super::super::{MirPassOccurrence, MirPassStage};
 use super::model::MirPassExecutionError;
 
-/// Failure class owned by the final-MIR pipeline.
+/// Failure class owned by the stage-aware MIR pipeline.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirPipelineFailureStage {
     InputVerification,
+    ProofNormalization,
     PassExecution,
     StructuralRewrite,
     OutputVerification,
 }
 
-/// Structured failure from final-MIR verification or one selected pass.
+/// Structured failure from verification, mandatory normalization, or one
+/// selected pass.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirPipelineError {
     kind: MirPipelineErrorKind,
@@ -35,7 +37,7 @@ enum MirPipelineErrorKind {
         occurrence: MirPassOccurrence,
         errors: Box<MirVerificationErrors>,
     },
-    FinalVerification(Box<MirVerificationErrors>),
+    ProofNormalization(Box<MirVerificationErrors>),
 }
 
 impl MirPipelineError {
@@ -51,8 +53,8 @@ impl MirPipelineError {
             MirPipelineErrorKind::OutputVerification { .. } => {
                 MirPipelineFailureStage::OutputVerification
             }
-            MirPipelineErrorKind::FinalVerification(_) => {
-                MirPipelineFailureStage::OutputVerification
+            MirPipelineErrorKind::ProofNormalization(_) => {
+                MirPipelineFailureStage::ProofNormalization
             }
         }
     }
@@ -69,6 +71,14 @@ impl MirPipelineError {
     pub const fn pass_name(&self) -> Option<&'static str> {
         match self.occurrence() {
             Some(occurrence) => Some(occurrence.name()),
+            None => None,
+        }
+    }
+
+    /// MIR contract consumed by a pass-attributed failure.
+    pub const fn pass_stage(&self) -> Option<MirPassStage> {
+        match self.occurrence() {
+            Some(occurrence) => Some(occurrence.stage()),
             None => None,
         }
     }
@@ -120,16 +130,16 @@ impl MirPipelineError {
         }
     }
 
-    pub(super) fn final_verification(errors: MirVerificationErrors) -> Self {
+    pub(super) fn proof_normalization(errors: MirVerificationErrors) -> Self {
         Self {
-            kind: MirPipelineErrorKind::FinalVerification(Box::new(errors)),
+            kind: MirPipelineErrorKind::ProofNormalization(Box::new(errors)),
         }
     }
 
     const fn occurrence(&self) -> Option<MirPassOccurrence> {
         match &self.kind {
             MirPipelineErrorKind::InputVerification(_) => None,
-            MirPipelineErrorKind::FinalVerification(_) => None,
+            MirPipelineErrorKind::ProofNormalization(_) => None,
             MirPipelineErrorKind::PassExecution { occurrence, .. }
             | MirPipelineErrorKind::StructuralRewrite { occurrence, .. }
             | MirPipelineErrorKind::OutputVerification { occurrence, .. } => Some(*occurrence),
@@ -143,7 +153,7 @@ impl fmt::Display for MirPipelineError {
             MirPipelineErrorKind::InputVerification(errors) => {
                 write!(
                     formatter,
-                    "final-MIR pipeline input verification failed: {errors}"
+                    "proof-rich MIR pipeline input verification failed: {errors}"
                 )
             }
             MirPipelineErrorKind::PassExecution { occurrence, error } => {
@@ -158,11 +168,8 @@ impl fmt::Display for MirPipelineError {
                 write_occurrence(formatter, *occurrence)?;
                 write!(formatter, " output verification failed: {errors}")
             }
-            MirPipelineErrorKind::FinalVerification(errors) => {
-                write!(
-                    formatter,
-                    "final-MIR normalization or verification failed: {errors}"
-                )
+            MirPipelineErrorKind::ProofNormalization(errors) => {
+                write!(formatter, "proof-provenance normalization failed: {errors}")
             }
         }
     }
@@ -172,7 +179,7 @@ impl std::error::Error for MirPipelineError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self.kind {
             MirPipelineErrorKind::InputVerification(errors)
-            | MirPipelineErrorKind::FinalVerification(errors)
+            | MirPipelineErrorKind::ProofNormalization(errors)
             | MirPipelineErrorKind::OutputVerification { errors, .. } => Some(errors.as_ref()),
             MirPipelineErrorKind::PassExecution { error, .. } => Some(error),
             MirPipelineErrorKind::StructuralRewrite { error, .. } => Some(error.as_ref()),
@@ -186,7 +193,8 @@ fn write_occurrence(
 ) -> fmt::Result {
     write!(
         formatter,
-        "final-MIR pass `{}` ({}, schedule position {}, occurrence {})",
+        "{} MIR pass `{}` ({}, schedule position {}, occurrence {})",
+        occurrence.stage(),
         occurrence.name(),
         occurrence.identity(),
         occurrence.position(),

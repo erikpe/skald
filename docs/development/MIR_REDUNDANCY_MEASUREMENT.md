@@ -16,15 +16,14 @@ borrowed pipeline inspector analyzes verified products in memory; it does not
 parse MIR dumps, register a pass, alter backend input, or add work to ordinary
 compilation.
 
-During the active proof-provenance normalization roadmap, the legacy inspector
-is deliberately proof-rich only. It provides `input` and the end of the
-proof-rich region, while `whole-world-reachability` now runs in the final
-region. Until the stage-aware checkpoint view lands, the historical
-`pre-reachability` and `final` report slots both name that last available
-proof-rich snapshot. The tool never forges a proof seal over normalized MIR;
-do not interpret the temporary pre-to-final delta as a reachability
-measurement. Stage-aware inspection will restore distinct normalized and
-post-reachability snapshots.
+The stage-aware inspector provides distinct proof-rich and normalized views.
+The `input` report slot uses `proof-rich-input`; `pre-reachability` uses the
+last final checkpoint before `whole-world-reachability`, currently
+`after-proof-normalization`; and `final` uses the normalized product-final
+checkpoint after reachability. Proof-rich observations call the proof-sealed
+analyzer entry points, while final observations call the normalized-seal entry
+points. The tool never forges either seal, and the pre-to-final delta therefore
+measures the final reachability occurrence again.
 
 The tool keeps corpus resolution, real-driver checkpoint collection, stable
 report projection, aggregation, and rendering in separate internal owners.
