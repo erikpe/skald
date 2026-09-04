@@ -21,6 +21,11 @@ follow-up, foundation-dependent, contract-dependent, and research work. It is
 not an implementation roadmap.
 
 The open
+[local final-MIR redundancy measurement discoveries](LOCAL_MIR_REDUNDANCY_MEASUREMENT_DISCOVERIES.md)
+will record out-of-scope findings from the planned measurement work. Ordinary
+census results belong in its durable report, not in the discoveries record.
+
+The open
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
 record implementation-specific proof-normalization, checked-operation,
 floating-evaluation, memory-analysis, and measurement follow-ups found while
@@ -65,7 +70,14 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No implementation roadmap is currently planned.
+The
+[local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
+is planned, with its census and corpus contract next. It will compare narrow
+scalar-spill constant provenance, redundant primitive casts, and same-block
+primitive common subexpressions across verified input, pre-reachability, and
+final checkpoints. It depends on the completed selectable pipeline, local
+simplification, checked-protocol folding, and whole-world reachability work and
+does not commit to implementing any candidate.
 
 ## Design proposals
 

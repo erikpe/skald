@@ -86,6 +86,10 @@ The first deterministic local-suite measurements and their limits are recorded
 in the
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#initial-measurements-separate-local-wins-from-whole-world-pruning).
 They establish a baseline, not a general workload ranking.
+The planned
+[local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
+will compare FMV-15, FMV-02, and FMV-03 without committing to implement any of
+them.
 
 ## Current baseline and design boundary
 
@@ -126,10 +130,10 @@ and before CFG cleanup, dead-pure cleanup, and whole-world retention.
 | FMV-12 | [Dead-pure-definition elimination](../compiler/PHASES_AND_IR.md#selectable-final-mir-optimization-pipeline) | First pass in the current default final-MIR schedule; before whole-world retention | Implemented / **Medium** | Medium MIR/code-size reduction and cleanup foundation | Intentionally limited to unused non-failing scalar definitions; loads, calls, checked operations, ownership, and semantic queries remain |
 | FMV-13 | [Primitive integer/boolean constant folding](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After an initial dead-pure cleanup; before algebraic simplification, and repeated afterward | Implemented / **Medium** | Medium runtime and code size; high enabling value for CFG cleanup | Exact wrapping/width behavior, unsupported-operation barriers, stable spans/identities, and no checked or floating families initially |
 | FMV-14 | [Primitive algebraic simplification with guarded value forwarding](../compiler/PHASES_AND_IR.md#local-final-mir-simplification) | After primitive constant folding; before repeated folding and dead-pure cleanup | Implemented / **Medium to large** | Medium runtime and code size | Every forwarded use must be an allowed ordinary role; operand evaluation, proof metadata, checked protocols, and floating identities are barriers |
-| FMV-15 | [Narrow scalar-spill constant provenance](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md#nested-successful-protocols-do-not-feed-enclosing-scalar-carriers) | After local constant rewrites; before checked-protocol folding and other consumers of private scalar carriers | Follow-up / **Medium** | Medium enabling value for nested checked expressions and later storage-aware simplification | Must prove canonical private storage, unique writes, dominance, exact types, alias exclusion, lifecycle safety, and seal-local invalidation without becoming unsound general load propagation |
+| FMV-15 | [Narrow scalar-spill constant provenance](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md#nested-successful-protocols-do-not-feed-enclosing-scalar-carriers) | After local constant rewrites; before checked-protocol folding and other consumers of private scalar carriers | Follow-up ([measurement plan](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md#lmr2--measure-scalar-spill-constant-provenance)) / **Medium** | Medium enabling value for nested checked expressions and later storage-aware simplification | Must prove canonical private storage, unique writes, dominance, exact types, alias exclusion, lifecycle safety, and seal-local invalidation without becoming unsound general load propagation |
 | FMV-01 | Raw-bit primitive cast folding | After basic constant folding; before algebraic simplification | Follow-up / **Small** | Low to medium runtime and code size | Only truly bit-preserving `u64`/`f64` reinterpretations are simple; must retain raw NaN payloads and result type exactly |
-| FMV-02 | Redundant primitive cast and cast-chain elimination | After constant folding; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and MIR size | Integer width and boolean canonicalization matter; checked `f64` conversion and proof-coupled casts are barriers |
-| FMV-03 | Local common-subexpression elimination for non-failing primitive rvalues | After constant/algebraic simplification; before dead-pure cleanup | Follow-up / **Medium** | Medium runtime and code size | Restrict to exact same-block pure operations; source values must dominate; floating equivalence, spans, runtime traces, and checked operations need exclusions |
+| FMV-02 | Redundant primitive cast and cast-chain elimination | After constant folding; before dead-pure cleanup | Follow-up ([measurement plan](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md#lmr3--measure-redundant-primitive-casts)) / **Medium** | Medium runtime and MIR size | Integer width and boolean canonicalization matter; checked `f64` conversion and proof-coupled casts are barriers |
+| FMV-03 | Local common-subexpression elimination for non-failing primitive rvalues | After constant/algebraic simplification; before dead-pure cleanup | Follow-up ([measurement plan](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md#lmr4--measure-local-primitive-common-subexpressions)) / **Medium** | Medium runtime and code size | Restrict to exact same-block pure operations; source values must dominate; floating equivalence, spans, runtime traces, and checked operations need exclusions |
 | FMV-04 | Wrapping-integer reassociation and constant aggregation | After primitive constant folding; before local CSE | Follow-up / **Medium** | Medium runtime, especially generated arithmetic | Reassociate only exact wrapping integer operations; do not move or suppress operand producers; exclude floating arithmetic and checked protocols |
 | FMV-05 | Deterministic constant floating comparison | After an exact IEEE constant model; before branch folding | Foundation needed / **Medium** | Low to medium runtime and CFG value | Must specify NaN, unordered predicates, signed zero, and raw-bit handling independently of the Rust host |
 | FMV-06 | Deterministic constant floating arithmetic | After an exact target-independent IEEE evaluator; before algebraic simplification | Foundation needed / **Large** | Medium runtime and code size in numeric programs | Rounding, NaN result/payload policy, infinities, subnormals, signed zero, host independence, and compile-time cost |
@@ -279,9 +283,10 @@ This is not a roadmap. It is a default order for deciding which candidate is
 worth designing next now that the implemented local-simplification layer has
 produced initial measurements:
 
-1. Measure remaining local redundancy and compare narrow scalar-spill constant
-   provenance, redundant cast elimination, and local primitive common-
-   subexpression elimination.
+1. Execute the planned
+   [local final-MIR redundancy measurement roadmap](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
+   to compare narrow scalar-spill constant provenance, redundant cast
+   elimination, and local primitive common-subexpression elimination.
 2. Decide whether proof-provenance normalization is justified by blocked CFG
    candidates rather than implementing isolated metadata rewrites in every
    pass.
