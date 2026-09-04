@@ -55,7 +55,7 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
-fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 12] {
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 13] {
     [
         MirPipelineCheckpointLabel::ProofRichInput,
         MirPipelineCheckpointLabel::AfterProofRichPass {
@@ -101,6 +101,11 @@ fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 12] {
         MirPipelineCheckpointLabel::AfterProofNormalization,
         MirPipelineCheckpointLabel::AfterFinalPass {
             position: 8,
+            pass_name: "post-proof-unreachable-block-elimination",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::AfterFinalPass {
+            position: 9,
             pass_name: "whole-world-reachability",
             occurrence: 0,
         },
@@ -228,7 +233,13 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
                 "dead-pure-definition-elimination",
                 2
             ),
-            (8, MirPassStage::Final, "whole-world-reachability", 0),
+            (
+                8,
+                MirPassStage::Final,
+                "post-proof-unreachable-block-elimination",
+                0
+            ),
+            (9, MirPassStage::Final, "whole-world-reachability", 0),
         ]
     );
     let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
@@ -388,8 +399,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             ReportMetric::count("activation storage declarations reclassified", 0),
             ReportMetric::count("normalization changed callables", 0),
             ReportMetric::count("proof-protected blocks released", 0),
-            ReportMetric::count("pass executions", 9),
-            ReportMetric::count("processed callables", 9),
+            ReportMetric::count("pass executions", 10),
+            ReportMetric::count("processed callables", 10),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -455,10 +466,20 @@ fn details_publish_deterministic_phase_owned_metrics() {
             cfg("retained protected unreachable blocks"),
         ]
     );
+    let final_cfg =
+        |name| ReportMetric::pass_count("post-proof-unreachable-block-elimination", name, 0);
+    assert_eq!(
+        pipeline[35..38],
+        [
+            final_cfg("removed blocks"),
+            final_cfg("removed value declarations"),
+            final_cfg("retained permanent unreachable roots"),
+        ]
+    );
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[35..56],
+        pipeline[38..59],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -483,8 +504,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[56], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[57], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[59], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[60], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
@@ -539,6 +560,59 @@ fn main() -> i64 {
 }
 
 #[test]
+fn details_publish_productive_post_proof_cleanup_measurements() {
+    let source = "
+fn selected() -> bool { return true; }
+fn main() -> i64 {
+    if (true) { return 1; }
+    if (false && selected()) { return 2; }
+    return 3;
+}
+";
+    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let artifact = compile_source_to_assembly_observed(
+        "productive-post-proof-cleanup.ska",
+        source,
+        Target::X86_64SysV,
+        &mut observer,
+    )
+    .unwrap();
+    let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(count_metric(metrics, "normalization executions"), Some(1));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(10));
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "conservative-cfg-cleanup",
+            "retained protected unreachable blocks"
+        ),
+        9
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "post-proof-unreachable-block-elimination",
+            "removed blocks"
+        ),
+        9
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "post-proof-unreachable-block-elimination",
+            "removed value declarations"
+        ),
+        10
+    );
+    assert_eq!(
+        pass_count_metric(metrics, "whole-world-reachability", "removed definitions"),
+        1
+    );
+}
+
+#[test]
 fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
     let mut observer = RecordingObserver::new(ReportDetail::Details);
     let artifact = compile_source_to_assembly_observed(
@@ -551,7 +625,7 @@ fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
     let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert_eq!(count_metric(metrics, "pass executions"), Some(9));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(10));
     assert_eq!(
         pass_count_metric(
             metrics,

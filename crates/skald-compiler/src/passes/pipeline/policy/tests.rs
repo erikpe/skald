@@ -143,6 +143,12 @@ fn production_profiles_select_the_supported_default_order() {
             ),
             (
                 8,
+                post_proof_unreachable_block_elimination::IDENTITY,
+                "post-proof-unreachable-block-elimination",
+                0,
+            ),
+            (
+                9,
                 whole_world_reachability::IDENTITY,
                 "whole-world-reachability",
                 0,
@@ -155,7 +161,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["whole-world-reachability"],
     )
     .unwrap();
-    assert_eq!(reachability_disabled.len(), 8);
+    assert_eq!(reachability_disabled.len(), 9);
     assert!(reachability_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != whole_world_reachability::IDENTITY));
@@ -166,6 +172,7 @@ fn production_profiles_select_the_supported_default_order() {
             "checked-integer-constant-folding",
             "conservative-cfg-cleanup",
             "dead-pure-definition-elimination",
+            "post-proof-unreachable-block-elimination",
             "primitive-algebraic-simplification",
             "primitive-constant-folding",
             "whole-world-reachability",
@@ -179,7 +186,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["checked-integer-constant-folding"],
     )
     .unwrap();
-    assert_eq!(checked_integer_disabled.len(), 8);
+    assert_eq!(checked_integer_disabled.len(), 9);
     assert!(checked_integer_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != checked_integer_folding::IDENTITY));
@@ -238,6 +245,7 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
             "primitive-algebraic-simplification",
             "checked-integer-constant-folding",
             "conservative-cfg-cleanup",
+            "post-proof-unreachable-block-elimination",
             "whole-world-reachability",
         ]
     );

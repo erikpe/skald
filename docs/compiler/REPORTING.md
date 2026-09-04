@@ -289,7 +289,7 @@ adapter.
 
 The `none` MIR schedule performs proof verification, one mandatory
 normalization with normalized verification, and zero pass executions.
-The `default` schedule executes nine pass occurrences in the exact optimization
+The `default` schedule executes ten pass occurrences in the exact optimization
 order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
@@ -450,8 +450,8 @@ final-stage occurrence, backend phase, and final checkpoint. The
 `post-proof-unreachable-block-elimination` canary is an ordinary selectable
 final-stage pass with processed/changed callable counts and deterministic
 removed-block, removed-value-declaration, and permanent-root-retention
-measurements. It is registered but not yet selected by the default
-profile. `whole-world-reachability` remains an ordinary
+measurements. It runs immediately after mandatory normalization in the
+default profile. `whole-world-reachability` remains an ordinary
 final-stage occurrence with its existing pass-owned metrics and stage-bearing
 trace record.
 

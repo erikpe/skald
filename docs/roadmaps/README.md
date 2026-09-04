@@ -14,7 +14,11 @@ implemented the atomic mechanical normalization transaction, defensive
 inventory, dense commit, normalized invariant check, and deterministic
 structural accounting. PNR2 established the distinct proof-rich and normalized
 seals, made public final verification perform the mandatory transition, and
-bound fresh reachability to the normalized result. PNR3 is next.
+bound fresh reachability to the normalized result. PNR3 through PNR6 delivered
+stage-aware execution and observation, normalized reachability/backend input,
+and the conservative post-proof CFG canary. PNR7 activated the exact two-stage
+default schedule and completed its selection, parity, reporting, dump, and
+golden matrices. PNR8 is next.
 
 ## Pending discoveries
 
@@ -92,7 +96,7 @@ loads, makes pass scheduling and inspection stage-aware, and ends with a
 conservative post-proof unreachable-CFG canary. PPN1 through PPN14 were
 confirmed together on 2026-09-04; the active
 [implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) has
-completed PNR0 and PNR1 and continues with PNR2.
+completed PNR0 through PNR7 and continues with PNR8 hardening and closure.
 
 The completed checked integer constant protocol simplification delivery record
 is preserved in the [archive](../archive/README.md). FMC-01 and FMC-02 are

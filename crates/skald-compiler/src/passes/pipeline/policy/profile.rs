@@ -1,7 +1,8 @@
 use super::identity::MirPassIdentity;
 use crate::passes::pipeline::optimizations::{
     checked_integer_folding, conservative_cfg_cleanup, dead_pure_definition_elimination,
-    primitive_algebraic_simplification, primitive_constant_folding, whole_world_reachability,
+    post_proof_unreachable_block_elimination, primitive_algebraic_simplification,
+    primitive_constant_folding, whole_world_reachability,
 };
 
 /// Supported target-independent final-MIR optimization policy.
@@ -22,6 +23,7 @@ const DEFAULT_PASSES: &[MirPassIdentity] = &[
     dead_pure_definition_elimination::IDENTITY,
     conservative_cfg_cleanup::IDENTITY,
     dead_pure_definition_elimination::IDENTITY,
+    post_proof_unreachable_block_elimination::IDENTITY,
     whole_world_reachability::IDENTITY,
 ];
 

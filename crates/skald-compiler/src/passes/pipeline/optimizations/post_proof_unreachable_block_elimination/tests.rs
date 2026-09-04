@@ -232,15 +232,25 @@ fn functions_members_and_static_initializers_share_the_same_final_cfg_rewrite() 
 }
 
 #[test]
-fn registered_canary_is_selectable_but_not_in_the_default_profile() {
+fn registered_canary_runs_before_reachability_in_the_default_profile() {
     let default =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
-    assert!(default
+    let occurrence = default
         .iter()
-        .all(|occurrence| occurrence.identity() != IDENTITY));
+        .find(|occurrence| occurrence.identity() == IDENTITY)
+        .unwrap();
+    assert_eq!(occurrence.position(), 8);
+    assert_eq!(occurrence.stage(), MirPassStage::Final);
+    assert_eq!(
+        default.as_slice().last().unwrap().identity(),
+        whole_world_reachability::IDENTITY
+    );
 
     let excluded = resolve_mir_pass_schedule(MirOptimizationProfile::Default, [NAME]).unwrap();
-    assert_eq!(excluded, default);
+    assert_eq!(excluded.len(), default.len() - 1);
+    assert!(excluded
+        .iter()
+        .all(|occurrence| occurrence.identity() != IDENTITY));
 
     let exact = exact_schedule(&[IDENTITY]);
     assert_eq!(exact.normalization_position(), 0);

@@ -1,0 +1,35 @@
+schema = 2
+
+[[test]]
+name = "profile_equivalence"
+mode = "run"
+source = "proof_provenance_normalization.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "post-proof-cfg-disabled",
+  "reachability-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "nested_paths_optionals_arrays_shared_owners_and_static_lifecycle"
+expect = { stdout = { inline = "10\n1\n5\n7\n30\n20\n30\n20\n" } }
+
+[[test]]
+name = "panic_trace_equivalence"
+mode = "run"
+source = "proof_provenance_normalization_panic.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "post-proof-cfg-disabled",
+  "reachability-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "reason_span_and_runtime_trace"
+expect = { exit = "failure", stderr = { inline = """panic: reachable normalization failure
+stacktrace:
+  at proof_provenance_normalization_panic::fail (tests/golden/optimizations/proof_provenance_normalization_panic.ska:10:9)
+  at proof_provenance_normalization_panic::main (tests/golden/optimizations/proof_provenance_normalization_panic.ska:16:12)
+""" } }

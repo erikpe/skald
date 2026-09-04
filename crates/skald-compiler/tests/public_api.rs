@@ -401,6 +401,11 @@ fn intentional_phase_and_dump_paths_compose() {
             MirPipelineCheckpointLabel::AfterProofNormalization,
             MirPipelineCheckpointLabel::AfterFinalPass {
                 position: 8,
+                pass_name: "post-proof-unreachable-block-elimination",
+                occurrence: 0,
+            },
+            MirPipelineCheckpointLabel::AfterFinalPass {
+                position: 9,
                 pass_name: "whole-world-reachability",
                 occurrence: 0,
             },
@@ -609,7 +614,7 @@ fn intentional_reporting_paths_compose() {
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
-    assert_eq!(mir_inspection_labels.len(), 12);
+    assert_eq!(mir_inspection_labels.len(), 13);
     assert_eq!(
         mir_inspection_labels.first(),
         Some(&MirPipelineCheckpointLabel::ProofRichInput)

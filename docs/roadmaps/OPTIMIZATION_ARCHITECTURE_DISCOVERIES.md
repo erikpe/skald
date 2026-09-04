@@ -289,7 +289,8 @@ and active
 The single-seal constraint is now removed: PNR2 distinguishes proof-rich and
 normalized final products and makes every production pipeline cross the
 mandatory boundary. Stage-aware pass execution and the first post-proof CFG
-canary remain active-roadmap work before this foundation is fully delivered.
+canary are implemented; the canary is active after mandatory normalization in
+the default schedule, before final whole-world reachability.
 
 Do not convert all MIR ownership and aggregate state to SSA. First implement
 the useful transformations supported by current MIR. If measurements then show

@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 through PNR6 are complete and PNR7 is next.
+Status: in progress; PNR0 through PNR7 are complete and PNR8 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -114,7 +114,7 @@ Candidate placement and status remain concise in the
 - [x] PNR4 — Expose stage-aware inspection, failures, and reporting
 - [x] PNR5 — Migrate reachability and backend consumption
 - [x] PNR6 — Add post-proof unreachable-block elimination
-- [ ] PNR7 — Activate and validate the two-stage production schedule
+- [x] PNR7 — Activate and validate the two-stage production schedule
 - [ ] PNR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
@@ -359,26 +359,26 @@ always publishes a freshly normalized verified result.
 **Purpose:** Enable the mandatory boundary and canary only after full pipeline
 composition has independent semantic evidence.
 
-- [ ] Freeze the exact default schedule as the existing proof-rich local
+- [x] Freeze the exact default schedule as the existing proof-rich local
   occurrences, mandatory normalization,
   `post-proof-unreachable-block-elimination`, then
   `whole-world-reachability` last.
-- [ ] Make `none` contain zero selectable passes while still performing proof
+- [x] Make `none` contain zero selectable passes while still performing proof
   verification, mandatory normalization, and normalized verification exactly
   once each.
-- [ ] Prove all-disabled equals `none`; disabling the canary retains normalized
+- [x] Prove all-disabled equals `none`; disabling the canary retains normalized
   proof-only dead CFG, and disabling reachability retains complete normalized
   definition bodies.
-- [ ] Add focused golden fixtures for nested logical conditions, path-sensitive
+- [x] Add focused golden fixtures for nested logical conditions, path-sensitive
   optional/array/shared/lifetime behavior, static initialization/shutdown,
   ownership/destruction, panic spans, and runtime traces.
-- [ ] Pin proof-rich, after-normalization, and final MIR dumps plus exact
+- [x] Pin proof-rich, after-normalization, and final MIR dumps plus exact
   structural/normalization/pass measurements.
-- [ ] Prove representation-only normalization emits the same machine
+- [x] Prove representation-only normalization emits the same machine
   operations under `none` as the former backend path.
-- [ ] Run default, `none`, selective-disabled, all-disabled, debug, release,
+- [x] Run default, `none`, selective-disabled, all-disabled, debug, release,
   repeated-process, and native-equivalence matrices.
-- [ ] Update candidate status and all living selection, phase, reporting,
+- [x] Update candidate status and all living selection, phase, reporting,
   backend, debugging, and testing contracts as behavior becomes current.
 
 **Tests:** Focused pipeline/driver/backend tests; dedicated golden group; full
@@ -437,8 +437,8 @@ PNR4 updates observation against the settled execution model instead of
 creating a temporary checkpoint API.
 
 PNR5 closes the backend trust path before PNR6 demonstrates executable CFG
-deletion. PNR6 remains selectable-only until PNR7 proves composition and
-activates the exact schedule. PNR8 is a genuine ownership, stale-contract, and
+deletion. PNR7 proves composition and activates the exact schedule. PNR8 is a
+genuine ownership, stale-contract, and
 artifact-free validation audit rather than a documentation-only tail.
 
 Verifier factoring and normalization fixtures may be prepared in parallel

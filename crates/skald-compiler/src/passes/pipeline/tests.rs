@@ -55,10 +55,19 @@ fn main() -> i64 {
     return removed_target();
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 6] = [
+const PROOF_NORMALIZATION_PROFILE_SOURCE: &str = "
+fn selected() -> bool { return true; }
+fn main() -> i64 {
+    if (true) { return 1; }
+    if (false && selected()) { return 2; }
+    return 3;
+}
+";
+const ALL_PRODUCTION_PASS_NAMES: [&str; 7] = [
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "dead-pure-definition-elimination",
+    "post-proof-unreachable-block-elimination",
     "primitive-algebraic-simplification",
     "primitive-constant-folding",
     "whole-world-reachability",
@@ -280,7 +289,7 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
     );
     assert_ne!(dump_mir(optimized.program()), input_dump);
     assert_ne!(assembly(optimized), assembly(&none));
-    assert_eq!(measured.statistics.pass_executions(), 9);
+    assert_eq!(measured.statistics.pass_executions(), 10);
     assert!(
         measurement_total(
             &measured,
@@ -325,6 +334,189 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
             "profile excluding {disabled} must verify"
         );
     }
+}
+
+#[test]
+fn production_boundary_selection_matrix_is_normalized_and_compositional() {
+    let input = lower_source_to_final_mir(PROOF_NORMALIZATION_PROFILE_SOURCE);
+    let selected = input
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "selected")
+        .unwrap()
+        .id;
+    let main = input.entry_function;
+    let default_schedule =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    let none_schedule = none_schedule();
+    let canary_disabled_schedule = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["post-proof-unreachable-block-elimination"],
+    )
+    .unwrap();
+    let reachability_disabled_schedule = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["whole-world-reachability"],
+    )
+    .unwrap();
+    let all_disabled_schedule =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, ALL_PRODUCTION_PASS_NAMES)
+            .unwrap();
+
+    let mut default_checkpoints = CheckpointCollector::default();
+    let default = run_mir_pipeline_measured_inspected(
+        input.clone(),
+        &default_schedule,
+        Some(&mut default_checkpoints),
+    );
+    let mut none_checkpoints = CheckpointCollector::default();
+    let none = run_mir_pipeline_measured_inspected(
+        input.clone(),
+        &none_schedule,
+        Some(&mut none_checkpoints),
+    );
+    let canary_disabled = run_mir_pipeline_measured(input.clone(), &canary_disabled_schedule);
+    let reachability_disabled =
+        run_mir_pipeline_measured(input.clone(), &reachability_disabled_schedule);
+    let all_disabled = run_mir_pipeline_measured(input, &all_disabled_schedule);
+
+    let default_program = default.result.as_ref().unwrap();
+    let none_program = none.result.as_ref().unwrap();
+    let canary_disabled_program = canary_disabled.result.as_ref().unwrap();
+    let reachability_disabled_program = reachability_disabled.result.as_ref().unwrap();
+    let all_disabled_program = all_disabled.result.as_ref().unwrap();
+
+    assert_eq!(all_disabled_program, none_program);
+    assert!(default_program.definitions.get(selected).is_none());
+    assert!(canary_disabled_program.definitions.get(selected).is_some());
+    assert!(reachability_disabled_program
+        .definitions
+        .get(selected)
+        .is_some());
+    assert_eq!(
+        (
+            main_block_count(default_program, main),
+            main_block_count(none_program, main),
+            main_block_count(canary_disabled_program, main),
+            main_block_count(reachability_disabled_program, main),
+        ),
+        (2, 11, 11, 2)
+    );
+    assert_normalized(none_program.program());
+    assert_normalized(all_disabled_program.program());
+
+    let normalization = default.statistics.normalization().unwrap();
+    assert_eq!(
+        (
+            normalization.path_condition_records(),
+            normalization.logical_expression_records(),
+            normalization.path_reads(),
+            normalization.activation_storage(),
+            normalization.changed_callables(),
+            normalization.released_proof_blocks(),
+        ),
+        (1, 1, 1, 1, 1, 7)
+    );
+    assert_eq!(default.statistics.pass_executions(), 10);
+    assert_eq!(default.statistics.normalization_executions(), 1);
+    assert_eq!(
+        default_checkpoints
+            .dumps
+            .iter()
+            .map(|dump| stable_text_fingerprint(dump))
+            .collect::<Vec<_>>(),
+        [
+            10_498_604_232_714_687_378,
+            10_498_604_232_714_687_378,
+            10_498_604_232_714_687_378,
+            10_498_604_232_714_687_378,
+            10_498_604_232_714_687_378,
+            10_498_604_232_714_687_378,
+            10_498_604_232_714_687_378,
+            5_184_304_530_184_441_762,
+            5_315_251_139_015_505_937,
+            1_485_384_359_181_637_186,
+            9_839_179_550_885_574_519,
+            14_420_660_371_287_870_903,
+            14_420_660_371_287_870_903,
+        ]
+    );
+    assert_eq!(
+        none_checkpoints
+            .dumps
+            .iter()
+            .map(|dump| stable_text_fingerprint(dump))
+            .collect::<Vec<_>>(),
+        [
+            10_498_604_232_714_687_378,
+            17_852_157_649_381_920_762,
+            17_852_157_649_381_920_762,
+        ]
+    );
+    assert_eq!(
+        measurement_total(
+            &default,
+            "conservative-cfg-cleanup",
+            "retained protected unreachable blocks"
+        ),
+        9
+    );
+    assert_eq!(
+        measurement_total(
+            &default,
+            "post-proof-unreachable-block-elimination",
+            "removed blocks"
+        ),
+        9
+    );
+    assert_eq!(
+        measurement_total(
+            &default,
+            "post-proof-unreachable-block-elimination",
+            "removed value declarations"
+        ),
+        10
+    );
+    assert_eq!(
+        measurement_total(&default, "whole-world-reachability", "removed definitions"),
+        1
+    );
+}
+
+fn main_block_count(program: &VerifiedFinalMirProgram, main: FunctionId) -> usize {
+    program.definitions.get(main).unwrap().body.blocks.len()
+}
+
+fn assert_normalized(program: &MirProgram) {
+    for definition in program.executable_definitions() {
+        assert!(definition.path_conditions().is_empty());
+        assert!(definition.logical_expressions().is_empty());
+        assert!(definition
+            .storage_entries()
+            .iter()
+            .all(|storage| storage.kind != crate::mir::MirStorageKind::PathCondition));
+        assert!(definition
+            .body()
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .all(|instruction| !matches!(
+                instruction,
+                MirInstruction::Assign(MirAssignment {
+                    rvalue: crate::mir::MirRvalue {
+                        kind: MirRvalueKind::PathCondition(_),
+                        ..
+                    },
+                    ..
+                })
+            )));
+    }
+}
+
+fn stable_text_fingerprint(text: &str) -> u64 {
+    text.bytes().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+    })
 }
 
 fn value_count(program: &crate::mir::MirProgram) -> u64 {
@@ -888,7 +1080,8 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             "after-proof-rich-6-conservative-cfg-cleanup-0",
             "after-proof-rich-7-dead-pure-definition-elimination-2",
             "after-proof-normalization",
-            "after-final-8-whole-world-reachability-0",
+            "after-final-8-post-proof-unreachable-block-elimination-0",
+            "after-final-9-whole-world-reachability-0",
             "final",
         ]
     );
@@ -904,6 +1097,7 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
+            MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,

@@ -1,0 +1,58 @@
+import std::io;
+
+fn announce(value: i64) -> i64 {
+    std::io::println_i64(value);
+    return value;
+}
+
+class Resource {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        std::io::println_i64(self.marker);
+    }
+}
+
+class State {
+    static marker: i64 = announce(10);
+    static resource: Resource = Resource(20);
+
+    init() {}
+}
+
+fn dead_target() -> bool {
+    std::io::println_i64(-1);
+    return true;
+}
+
+fn proof_dead_region() -> i64 {
+    if (true) {
+        return 1;
+    }
+    if (false && dead_target()) {
+        return 2;
+    }
+    return 3;
+}
+
+fn main() -> i64 {
+    var maybe: i64? = some(5);
+    var values: i64[] = i64[]{7};
+    var owner: shared Resource = new Resource(30);
+
+    std::io::println_i64(proof_dead_region());
+    if (true && ((maybe is some) || dead_target())) {
+        std::io::println_i64(maybe!);
+        std::io::println_i64(values[0]);
+        std::io::println_i64(owner->marker);
+        std::io::println_i64(State.resource.marker);
+    }
+    if (false && ((values[0] == 7) || dead_target())) {
+        return 1;
+    }
+    return State.marker - 10;
+}

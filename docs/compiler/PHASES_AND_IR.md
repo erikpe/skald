@@ -754,7 +754,7 @@ occurrence records at trace level. The `none` schedule
 runs zero selectable passes, one complete proof verification, mandatory
 normalization, and one normalized verification. Its proof-rich checkpoints
 remain byte-for-byte stable, while its returned product satisfies the
-normalized invariant. The default schedule runs nine pass occurrences in the
+normalized invariant. The default schedule runs ten pass occurrences in the
 exact repeated order documented below.
 
 This direction adds no SSA form, persistent instruction identity, public
@@ -786,12 +786,13 @@ mismatched implementation identity or stage before schedule selection. The produ
 registry contains `checked-integer-constant-folding`,
 `dead-pure-definition-elimination`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
-`conservative-cfg-cleanup`, and `whole-world-reachability`. Its validated
+`conservative-cfg-cleanup`, `post-proof-unreachable-block-elimination`, and
+`whole-world-reachability`. Its validated
 descriptors, including stage, are exposed in stable-name order for the public read-only query
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
-nine-occurrence optimization schedule documented below. Disabling all
+ten-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
 same schedule as `none`.
 
@@ -1004,6 +1005,7 @@ dead-pure-definition-elimination
 conservative-cfg-cleanup
 dead-pure-definition-elimination
 -- mandatory proof-provenance normalization --
+post-proof-unreachable-block-elimination
 whole-world-reachability
 ```
 
@@ -1052,7 +1054,7 @@ through their retained scalar carriers by this pass.
 
 ### Frozen proof-provenance normalization direction
 
-Status: **implemented through backend and reachability migration**. The frozen
+Status: **implemented through production-schedule activation**. The frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and its
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
@@ -1062,8 +1064,9 @@ normalization transaction, the two sealed products, stage-aware policy and
 observation, final-stage reachability, and normalized-only backend input are
 implemented and covered by focused tests. Every production pipeline,
 including `none`, crosses that boundary before returning backend-ready MIR.
-The post-proof CFG canary is registered and selectable; default-schedule
-activation and the broader parity matrix remain later roadmap work.
+The post-proof CFG canary is active immediately after normalization in the
+default schedule, with whole-world reachability last. The selection, parity,
+golden, reporting, and deterministic dump matrices cover that composition.
 
 The verifier now owns one exhaustive classification boundary for proof
 records, callable-local identity sites, storage kinds, rvalues, instructions,
@@ -1156,10 +1159,9 @@ storage, instructions, terminators, proof records, or lifecycle authority.
 
 The canary reports removed blocks, removed value declarations, and permanent
 roots retained outside entry reachability. It is registered, listed, and
-available to exact compiler-internal schedules, but is intentionally absent
-from the current `default` profile until the complete activation and parity
-matrix is delivered. When scheduled before whole-world reachability, removed
-call sites can reduce retained definitions.
+runs immediately after normalization in the current `default` profile.
+Whole-world reachability follows it, so removed call sites can reduce retained
+definitions.
 Empty-block forwarding, block merging, jump threading, storage deletion,
 checked-protocol normalization, and loop transformations remain separate
 designs.

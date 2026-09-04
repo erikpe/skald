@@ -804,6 +804,17 @@ fn default_schedule_exposes_then_folds_and_cleans_checked_protocols() {
         )
         .unwrap(),
     );
+    let both_cfg_passes_disabled = run_mir_pipeline_with_occurrences(
+        input.clone(),
+        &resolve_mir_pass_schedule(
+            MirOptimizationProfile::Default,
+            [
+                "conservative-cfg-cleanup",
+                "post-proof-unreachable-block-elimination",
+            ],
+        )
+        .unwrap(),
+    );
     let none = run_mir_pipeline_with_occurrences(
         input.clone(),
         &resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap(),
@@ -811,6 +822,8 @@ fn default_schedule_exposes_then_folds_and_cleans_checked_protocols() {
     let default_program = default.result.as_ref().unwrap().program();
     let disabled_program = disabled.result.as_ref().unwrap().program();
     let cfg_disabled_program = cfg_disabled.result.as_ref().unwrap().program();
+    let both_cfg_passes_disabled_program =
+        both_cfg_passes_disabled.result.as_ref().unwrap().program();
 
     assert_eq!(checked_division_count(default_program), 0);
     assert_eq!(checked_division_count(disabled_program), 1);
@@ -839,7 +852,15 @@ fn default_schedule_exposes_then_folds_and_cleans_checked_protocols() {
         .body
         .blocks
         .len();
-    assert!(default_blocks < cfg_disabled_blocks);
+    assert_eq!(default_blocks, cfg_disabled_blocks);
+    let both_cfg_passes_disabled_blocks = both_cfg_passes_disabled_program
+        .definitions
+        .get(both_cfg_passes_disabled_program.entry_function)
+        .unwrap()
+        .body
+        .blocks
+        .len();
+    assert!(default_blocks < both_cfg_passes_disabled_blocks);
 
     let checked_record = default
         .occurrences()
@@ -885,6 +906,14 @@ fn default_product_has_stable_structural_win_and_backend_input() {
         ["conservative-cfg-cleanup"],
     )
     .unwrap();
+    let both_cfg_passes_disabled_schedule = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        [
+            "conservative-cfg-cleanup",
+            "post-proof-unreachable-block-elimination",
+        ],
+    )
+    .unwrap();
     let none_schedule =
         resolve_mir_pass_schedule(MirOptimizationProfile::None, std::iter::empty()).unwrap();
 
@@ -893,11 +922,15 @@ fn default_product_has_stable_structural_win_and_backend_input() {
     let checked_disabled =
         run_mir_pipeline_with_occurrences(input.clone(), &checked_disabled_schedule);
     let cfg_disabled = run_mir_pipeline_with_occurrences(input.clone(), &cfg_disabled_schedule);
+    let both_cfg_passes_disabled =
+        run_mir_pipeline_with_occurrences(input.clone(), &both_cfg_passes_disabled_schedule);
     let none = run_mir_pipeline_with_occurrences(input.clone(), &none_schedule);
     let first_program = first.result.as_ref().unwrap().program();
     let second_program = second.result.as_ref().unwrap().program();
     let checked_disabled_program = checked_disabled.result.as_ref().unwrap().program();
     let cfg_disabled_program = cfg_disabled.result.as_ref().unwrap().program();
+    let both_cfg_passes_disabled_program =
+        both_cfg_passes_disabled.result.as_ref().unwrap().program();
     let none_program = none.result.as_ref().unwrap().program();
 
     assert_eq!(
@@ -924,6 +957,17 @@ fn default_product_has_stable_structural_win_and_backend_input() {
     );
     assert_eq!(
         mir_shape(cfg_disabled_program),
+        MirShape {
+            blocks: 5,
+            instructions: 37,
+            values: 11,
+            divisor_checks: 0,
+            shift_checks: 0,
+            checked_operations: 0,
+        }
+    );
+    assert_eq!(
+        mir_shape(both_cfg_passes_disabled_program),
         MirShape {
             blocks: 7,
             instructions: 37,

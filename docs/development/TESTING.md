@@ -196,8 +196,9 @@ and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
 Verifier classification, atomic normalization, the two sealed products,
 stage-aware policy and observation, normalized-only reachability retention,
-backend consumption, and the selectable post-proof CFG canary are implemented.
-Default-profile activation remains a later task.
+backend consumption, and the post-proof CFG canary are implemented. The
+canary is active immediately after normalization in the default profile, with
+whole-world reachability last.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
@@ -229,14 +230,16 @@ authority, permanent CFG roots, loops, empty reachable blocks, checked-failure
 edges, stale snapshot rejection, final resealing, and subsequent whole-world
 removal of a call target whose only site was deleted.
 
-Dedicated goldens will compare default, `none`, canary-disabled,
-reachability-disabled, and all-pass-disabled modes across short-circuit logic,
-path-sensitive optionals/arrays/shared owners, cleanup, static lifecycle,
-destruction, panic spans, and runtime traces. Debug/release and independent-
-process runs must produce deterministic proof-rich, normalized, and final MIR
-dumps, identities, measurements, reachability facts, and assembly. The
-representation-only `none` path must preserve native behavior and the machine
-operations formerly emitted for path-condition loads.
+The dedicated `proof_provenance_normalization` goldens compare default,
+`none`, canary-disabled, reachability-disabled, and all-pass-disabled modes
+across nested short-circuit logic, path-sensitive optionals/arrays/shared
+owners, cleanup, static lifecycle, destruction, panic spans, and runtime
+traces. Debug/release and independent-process runs pin deterministic
+proof-rich, normalized, and final MIR dumps, identities, measurements,
+reachability facts, and assembly. Direct comparison with the pre-boundary
+compiler also established byte-identical `none` assembly for the focused
+fixture, proving that representation-only normalization preserves the former
+path-condition-load machine operations.
 
 Target-artifact tests rebuild runtime-trace strings after closure and cover a
 retained string first interned by a removed context. Retained-domain backend
