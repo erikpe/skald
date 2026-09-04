@@ -1,12 +1,17 @@
-//! Focused tests for the verified program-plus-reachability product.
+//! Focused tests for the proof-rich and normalized MIR trust products.
 
 use crate::{
     identity::FunctionId,
+    mir::{check_normalized_mir, MirStorageKind},
     passes::reachability::{analyze_reachability, dump_reachability},
     test_support::lower_source_to_final_mir,
 };
 
-use super::{reachability_verification_errors, verify_final_mir};
+use super::{
+    reachability_verification_errors,
+    seal::{finalize_proof_mir, verify_proof_mir},
+    verify_final_mir,
+};
 
 fn source() -> &'static str {
     "fn leaf() -> i64 { return 1; }
@@ -14,8 +19,55 @@ fn source() -> &'static str {
      fn main() -> i64 { return leaf(); }"
 }
 
+fn proof_source() -> &'static str {
+    "fn choose(left: bool, right: bool) -> bool { return left && right; }
+     fn main() -> i64 { if (choose(false, true)) { return 1; } return 0; }"
+}
+
 #[test]
-fn final_verification_binds_facts_derived_from_the_exact_program() {
+fn proof_verification_preserves_provenance_and_binds_exact_facts() {
+    let program = lower_source_to_final_mir(proof_source());
+    let expected_program = program.clone();
+    let expected_reachability = analyze_reachability(&program).unwrap();
+
+    let verified = verify_proof_mir(program).unwrap();
+
+    assert_eq!(verified.program(), &expected_program);
+    assert_eq!(verified.reachability(), &expected_reachability);
+    assert!(verified
+        .program()
+        .executable_definitions()
+        .any(|definition| !definition.path_conditions().is_empty()));
+}
+
+#[test]
+fn proof_to_final_transition_consumes_provenance_and_rebinds_facts() {
+    let program = lower_source_to_final_mir(proof_source());
+    let proof = verify_proof_mir(program.clone()).unwrap();
+    let (finalized, statistics) = finalize_proof_mir(proof).unwrap();
+    let public = verify_final_mir(program).unwrap();
+    let expected_reachability = analyze_reachability(finalized.program()).unwrap();
+
+    assert_eq!(finalized, public);
+    assert_eq!(finalized.reachability(), &expected_reachability);
+    check_normalized_mir(finalized.program()).unwrap();
+    assert!(statistics.path_condition_records() > 0);
+    assert!(statistics.logical_expression_records() > 0);
+    assert!(statistics.path_reads() > 0);
+    assert!(statistics.activation_storage() > 0);
+    assert!(finalized
+        .program()
+        .executable_definitions()
+        .all(|definition| definition.path_conditions().is_empty()
+            && definition.logical_expressions().is_empty()
+            && definition
+                .storage_entries()
+                .iter()
+                .all(|storage| storage.kind != MirStorageKind::PathCondition)));
+}
+
+#[test]
+fn final_verification_binds_facts_derived_from_the_exact_normalized_program() {
     let program = lower_source_to_final_mir(source());
     let expected_program = program.clone();
     let expected_reachability = analyze_reachability(&program).unwrap();
@@ -31,22 +83,32 @@ fn final_verification_binds_facts_derived_from_the_exact_program() {
 }
 
 #[test]
-fn cloning_a_verified_product_keeps_its_program_and_facts_coherent() {
-    let verified = verify_final_mir(lower_source_to_final_mir(source())).unwrap();
-    let cloned = verified.clone();
+fn cloning_each_verified_product_keeps_its_program_and_facts_coherent() {
+    let proof = verify_proof_mir(lower_source_to_final_mir(proof_source())).unwrap();
+    let proof_clone = proof.clone();
+    assert_eq!(proof_clone, proof);
+    assert_eq!(proof_clone.program(), proof.program());
+    assert_eq!(proof_clone.reachability(), proof.reachability());
 
-    assert_eq!(cloned, verified);
-    assert_eq!(cloned.program(), verified.program());
-    assert_eq!(cloned.reachability(), verified.reachability());
+    let final_program = verify_final_mir(lower_source_to_final_mir(proof_source())).unwrap();
+    let final_clone = final_program.clone();
+    assert_eq!(final_clone, final_program);
+    assert_eq!(final_clone.program(), final_program.program());
+    assert_eq!(final_clone.reachability(), final_program.reachability());
 }
 
 #[test]
-fn public_debug_output_preserves_the_program_only_shape() {
-    let verified = verify_final_mir(lower_source_to_final_mir(source())).unwrap();
-    let debug = format!("{verified:?}");
+fn public_debug_output_identifies_each_seal_without_exposing_authority() {
+    let proof = verify_proof_mir(lower_source_to_final_mir(proof_source())).unwrap();
+    let proof_debug = format!("{proof:?}");
+    assert!(proof_debug.starts_with("VerifiedProofMirProgram { program:"));
+    assert!(!proof_debug.contains("reachability"));
 
-    assert!(debug.starts_with("VerifiedFinalMirProgram { program:"));
-    assert!(!debug.contains("reachability"));
+    let final_program = verify_final_mir(lower_source_to_final_mir(proof_source())).unwrap();
+    let final_debug = format!("{final_program:?}");
+    assert!(final_debug.starts_with("VerifiedFinalMirProgram { program:"));
+    assert!(!final_debug.contains("reachability"));
+    assert!(!final_debug.contains("consumed_proof"));
 }
 
 #[test]

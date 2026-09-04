@@ -350,7 +350,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     assert_eq!(
         pipeline[..7],
         [
-            ReportMetric::count("verification executions", 1),
+            ReportMetric::count("verification executions", 2),
             ReportMetric::count("pass executions", 9),
             ReportMetric::count("processed callables", 9),
             ReportMetric::count("changed callables", 0),

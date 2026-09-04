@@ -7,8 +7,8 @@ mod lifecycle;
 mod realization;
 
 use crate::mir::{
-    check_preliminary_mir, verify_mir, MirProgram, MirProgramLifecycle, MirStaticInitializerBody,
-    MirVerificationError, MirVerificationErrors,
+    check_normalized_mir, check_preliminary_mir, verify_mir, MirProgram, MirProgramLifecycle,
+    MirStaticInitializerBody, MirVerificationError, MirVerificationErrors,
 };
 
 use super::plan::PlannedMirProgram;
@@ -62,7 +62,21 @@ pub fn verify_planned_mir(
 /// monotone realization of baseline authority using only backend-consumable
 /// `MirProgram`.
 pub fn verify_synthesized_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
-    let structural = verify_mir(program);
+    verify_synthesized_mir_with(program, verify_mir(program))
+}
+
+/// Re-verifies lifecycle realization over executable MIR whose consumable
+/// path and logical proof has already been normalized away.
+pub(crate) fn verify_normalized_synthesized_mir(
+    program: &MirProgram,
+) -> Result<(), MirVerificationErrors> {
+    verify_synthesized_mir_with(program, check_normalized_mir(program))
+}
+
+fn verify_synthesized_mir_with(
+    program: &MirProgram,
+    structural: Result<(), MirVerificationErrors>,
+) -> Result<(), MirVerificationErrors> {
     let structurally_valid = structural.is_ok();
     let mut errors = structural
         .err()

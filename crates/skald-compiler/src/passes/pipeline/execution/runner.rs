@@ -9,7 +9,9 @@ use super::{
     model::{MirPassCapability, MirPassChange, MirPassFailure, MirPassOutcome},
     statistics::{MeasuredMirPipeline, MirPipelineStatistics},
 };
-use crate::passes::pipeline::{verify_final_mir, MirPassOccurrence, MirPassSchedule};
+use crate::passes::pipeline::{
+    seal::finalize_proof_mir, verify_proof_mir, MirPassOccurrence, MirPassSchedule,
+};
 
 pub(crate) fn run_mir_pipeline_measured(
     program: MirProgram,
@@ -48,7 +50,7 @@ pub(crate) fn run_mir_pipeline_instrumented(
         Vec::new()
     };
     statistics.record_verification();
-    let mut verified = match verify_final_mir(program) {
+    let mut verified = match verify_proof_mir(program) {
         Ok(verified) => verified,
         Err(errors) => {
             return MeasuredMirPipeline::new(
@@ -114,7 +116,7 @@ pub(crate) fn run_mir_pipeline_instrumented(
                     MirPassChange::DefinitionRetention(program) => (program, Default::default()),
                 };
                 statistics.record_verification();
-                verified = match verify_final_mir(program) {
+                verified = match verify_proof_mir(program) {
                     Ok(verified) => {
                         if let Some(started) = started {
                             records.push(MirPassOccurrenceRecord::completed(
@@ -153,6 +155,18 @@ pub(crate) fn run_mir_pipeline_instrumented(
 
     inspect_checkpoint(&mut inspector, MirPipelineCheckpointLabel::Final, &verified);
 
+    statistics.record_verification();
+    let verified = match finalize_proof_mir(verified) {
+        Ok((verified, _normalization)) => verified,
+        Err(errors) => {
+            return MeasuredMirPipeline::new(
+                Err(MirPipelineError::final_verification(errors)),
+                statistics,
+                records,
+            );
+        }
+    };
+
     MeasuredMirPipeline::new(Ok(verified), statistics, records)
 }
 
@@ -167,7 +181,7 @@ fn after_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpointLabel {
 fn inspect_checkpoint(
     inspector: &mut Option<&mut dyn MirPipelineInspector>,
     label: MirPipelineCheckpointLabel,
-    verified: &crate::passes::VerifiedFinalMirProgram,
+    verified: &crate::passes::VerifiedProofMirProgram,
 ) {
     if let Some(inspector) = inspector.as_deref_mut() {
         inspector.inspect(MirPipelineCheckpoint::new(label, verified));

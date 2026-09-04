@@ -190,27 +190,30 @@ occurrence measurement and the final MIR dump.
 
 ### Proof-provenance normalization coverage
 
-Status: **planned** under the frozen
+Status: **in progress** under the frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
-Current test expectations continue to use the single proof-bearing final-MIR
-seal until implementation lands.
+Verifier classification, atomic normalization, and the two sealed products are
+implemented. Stage-aware policy, observation, backend cleanup, and the
+post-proof canary remain later tasks.
 
-Focused verifier tests will classify every proof-bearing identity site and
+Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
 weakening path-sensitive optional, array, shared-ownership, cleanup, or
-lifetime acceptance. Normalizer tests will cover empty and nested logical
+lifetime acceptance. Normalizer tests cover empty and nested logical
 regions, parented conditions, methods, lifecycle members, static initializers,
 exact read-to-load conversion, activation-storage reclassification, complete
 record consumption, dense identities, deterministic counts, malformed input,
 and atomic failure.
 
-Compile-fail API tests will prevent forging either
+Compile-fail API tests prevent forging either
 `VerifiedProofMirProgram` or `VerifiedFinalMirProgram`, detaching their facts,
-or sending proof-rich MIR to the backend. Pipeline tests will pin every pass's
-stage, wrong-stage rejection, one mandatory normalization under all profiles,
-typed checkpoint order, failure cutoff, fresh reachability facts, and quiet
+invoking private invalidation, or skipping normalization. Transition tests pin
+proof retention, complete proof consumption, normalized-verifier rejection,
+fresh reachability facts, clone/debug behavior, and two verification
+executions for `none`. Later pipeline tests will pin every pass's stage,
+wrong-stage rejection, typed checkpoint order, failure cutoff, and quiet
 inspection/reporting gates.
 
 The post-proof canary must demonstrate removal of a block retained solely by

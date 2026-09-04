@@ -14,6 +14,12 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
     ) {
+        // Compiler-owned scalar spills are checked while their producing
+        // protocol evidence is present. Former path activations intentionally
+        // become indistinguishable ScalarSpill storage after normalization,
+        // so the normalized contract relies on the consumed-proof authority
+        // and continues checking every source-visible primitive storage kind.
+        let verify_scalar_spills = self.verification_contract().requires_proof_provenance();
         let entry = function
             .storage_entries()
             .iter()
@@ -40,7 +46,11 @@ impl Verifier<'_> {
                 for instruction in &block.instructions {
                     match instruction {
                         MirInstruction::StorageLive(live)
-                            if is_primitive_storage(function, live.storage) =>
+                            if is_definite_initialization_storage(
+                                function,
+                                live.storage,
+                                verify_scalar_spills,
+                            ) =>
                         {
                             initialized.remove(&live.storage);
                         }
@@ -48,15 +58,19 @@ impl Verifier<'_> {
                             initialized.remove(&dead.storage);
                         }
                         MirInstruction::Store(store) => {
-                            if let Some(storage) =
-                                exact_primitive_place(function, &store.destination)
-                            {
+                            if let Some(storage) = exact_primitive_place(
+                                function,
+                                &store.destination,
+                                verify_scalar_spills,
+                            ) {
                                 initialized.insert(storage);
                             }
                         }
                         MirInstruction::Assign(assignment) => {
                             if let MirRvalueKind::Load(place) = &assignment.rvalue.kind {
-                                if let Some(storage) = exact_primitive_place(function, place) {
+                                if let Some(storage) =
+                                    exact_primitive_place(function, place, verify_scalar_spills)
+                                {
                                     if !initialized.contains(&storage)
                                         && reported.insert((block.id, storage))
                                     {
@@ -83,7 +97,11 @@ impl Verifier<'_> {
                     } = terminator
                     {
                         let mut success = initialized.clone();
-                        if is_primitive_storage(function, *destination) {
+                        if is_definite_initialization_storage(
+                            function,
+                            *destination,
+                            verify_scalar_spills,
+                        ) {
                             success.insert(*destination);
                         }
                         merge_initialized(&mut flow, *success_target, &success);
@@ -114,15 +132,26 @@ fn merge_initialized(
     });
 }
 
-fn is_primitive_storage(function: MirDefinitionRef<'_>, storage: StorageId) -> bool {
-    function
-        .storage(storage)
-        .is_some_and(|storage| storage.ty.is_primitive())
+fn is_definite_initialization_storage(
+    function: MirDefinitionRef<'_>,
+    storage: StorageId,
+    verify_scalar_spills: bool,
+) -> bool {
+    function.storage(storage).is_some_and(|storage| {
+        storage.ty.is_primitive()
+            && (verify_scalar_spills || storage.kind != MirStorageKind::ScalarSpill)
+    })
 }
 
-fn exact_primitive_place(function: MirDefinitionRef<'_>, place: &MirPlace) -> Option<StorageId> {
+fn exact_primitive_place(
+    function: MirDefinitionRef<'_>,
+    place: &MirPlace,
+    verify_scalar_spills: bool,
+) -> Option<StorageId> {
     let MirPlaceBase::Storage(storage) = place.base else {
         return None;
     };
-    (place.projections.is_empty() && is_primitive_storage(function, storage)).then_some(storage)
+    (place.projections.is_empty()
+        && is_definite_initialization_storage(function, storage, verify_scalar_spills))
+    .then_some(storage)
 }

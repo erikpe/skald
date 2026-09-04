@@ -3,8 +3,8 @@
 //! The transaction is intentionally not a selectable pass. It first builds a
 //! complete immutable plan for every executable definition, then consumes the
 //! verified input through the existing all-program dense rewrite boundary.
-//! Until the two-seal pipeline lands, this module is exercised only by focused
-//! tests and remains unavailable to production callers.
+//! The result remains private and can only be consumed by final-seal
+//! construction, so no raw normalized program can cross the trust boundary.
 
 use crate::mir::{
     check_normalized_mir,
@@ -12,12 +12,13 @@ use crate::mir::{
     MirProgram,
 };
 
-use super::VerifiedFinalMirProgram;
+use super::VerifiedProofMirProgram;
 
 mod error;
 mod plan;
 
-use error::{MirProofNormalizationError, MirProofNormalizationErrorKind};
+pub(super) use error::MirProofNormalizationError;
+use error::MirProofNormalizationErrorKind;
 
 /// Deterministic structural accounting for the mandatory conversion.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -94,11 +95,19 @@ impl MirProofNormalizationStatistics {
     }
 }
 
-/// Successfully normalized raw MIR awaiting the two-seal boundary.
+/// Successfully normalized raw MIR awaiting final-seal construction.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(in crate::passes::pipeline) struct MirProofNormalizationResult {
     program: MirProgram,
     statistics: MirProofNormalizationStatistics,
+    authority: ConsumedProofAuthority,
+}
+
+/// Unforgeable evidence that the exact proof-rich input passed through the
+/// complete normalization transaction.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct ConsumedProofAuthority {
+    _private: (),
 }
 
 #[allow(dead_code)]
@@ -111,8 +120,14 @@ impl MirProofNormalizationResult {
         self.statistics
     }
 
-    pub(in crate::passes::pipeline) fn into_program(self) -> MirProgram {
-        self.program
+    pub(super) fn into_sealed_parts(
+        self,
+    ) -> (
+        MirProgram,
+        MirProofNormalizationStatistics,
+        ConsumedProofAuthority,
+    ) {
+        (self.program, self.statistics, self.authority)
     }
 }
 
@@ -120,9 +135,9 @@ impl MirProofNormalizationResult {
 /// path and logical provenance.
 #[allow(dead_code)]
 pub(in crate::passes::pipeline) fn normalize_proof_provenance(
-    verified: VerifiedFinalMirProgram,
+    verified: VerifiedProofMirProgram,
 ) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {
-    normalize_program(verified.invalidate_for_transformation())
+    normalize_program(verified.invalidate_for_proof_transformation())
 }
 
 fn normalize_program(
@@ -160,6 +175,7 @@ fn normalize_program(
     Ok(MirProofNormalizationResult {
         program: rewrite.program,
         statistics,
+        authority: ConsumedProofAuthority { _private: () },
     })
 }
 

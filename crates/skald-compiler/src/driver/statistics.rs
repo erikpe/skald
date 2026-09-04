@@ -351,7 +351,7 @@ mod tests {
             .map(|verified| verified.program());
         let metrics = mir_pipeline_metrics_from(&measured.statistics, program);
 
-        assert_eq!(metric(&metrics, "verification executions"), Some(1));
+        assert_eq!(metric(&metrics, "verification executions"), Some(2));
         assert_eq!(metric(&metrics, "pass executions"), Some(0));
         assert_eq!(metric(&metrics, "processed callables"), None);
         assert_eq!(metric(&metrics, "retained MIR entities"), None);

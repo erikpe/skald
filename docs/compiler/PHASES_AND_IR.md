@@ -323,13 +323,16 @@ there is no mirrored transition-vector equality check. Realization verification
 re-derives closed-world targets and normalized effects, requires exact
 contractual lifecycle-root coverage and a subset of baseline authority, then
 checks realized dependencies against the frozen activation order.
-`passes::verify_final_mir` owns this combined verifier, then derives
-target-independent whole-world reachability from the structurally and
-lifecycle-valid program. It constructs one opaque, read-only
-`VerifiedFinalMirProgram` that owns both exact MIR and the facts derived from
-it. `run_mir_pipeline` calls that boundary initially and after every changed
-target-independent transformation. `BackendInput` accepts only the sealed
-result and does not repeat target-independent verification.
+The crate-private `passes::verify_proof_mir` owns this complete proof-rich
+boundary, then derives target-independent whole-world reachability from the
+structurally and lifecycle-valid program. `run_mir_pipeline` calls it initially
+and after every changed current transformation. The public
+`passes::verify_final_mir` convenience additionally consumes path/logical
+provenance, runs normalized lifecycle verification, and recomputes
+reachability from that exact representation. It constructs an opaque,
+read-only `VerifiedFinalMirProgram` owning normalized MIR and its facts.
+`BackendInput` accepts only that sealed result and does not repeat
+target-independent verification.
 No runtime access guard is represented; certified ordinary static accesses are
 valid because their targets are earlier in activation and later in shutdown.
 
@@ -725,17 +728,18 @@ compiler work is parallelized later. The generated Skald program remains
 single threaded.
 
 Only the target-independent pass pipeline may invalidate a
-`VerifiedFinalMirProgram` for transformation. Its private ownership bridge
+`VerifiedProofMirProgram` for a current pre-normalization transformation. Its
+private ownership bridge
 consumes the seal directly into the supported atomic whole-program rewrite
 coordinator. A successful rewrite yields raw dense MIR plus callable-scoped
 commit maps and change summaries; it cannot recreate the seal. The
 transforming coordinator verifies raw input before invoking the rewrite,
 distinguishes input-verification, structural-rewrite, and output-verification
-failures, and returns rewritten output through `verify_final_mir`. That central
-boundary remains authoritative for ordinary MIR semantics and immutable
-static-lifecycle baseline realization. Exact internal schedules exercise the
-same production multi-pass runner without registering a production
-transformation.
+failures, and returns rewritten output through the crate-private
+`verify_proof_mir`. After the current selectable schedule, the runner consumes
+that seal through mandatory proof normalization and creates a
+`VerifiedFinalMirProgram`. Exact internal schedules exercise the same
+production multi-pass runner without registering a production transformation.
 
 Pipeline accounting records verification and pass executions at the point they
 occur. Structurally successful commits contribute already-known processed and
@@ -743,15 +747,18 @@ changed callable counts plus retained/inserted/removed entity counts; the
 editor emits no report text. Pass-owned integer counters retain deterministic
 first-owner and first-counter order. The driver renders aggregate counts at
 details level and typed occurrence records at trace level. The `none` schedule
-retains byte-for-byte MIR, one final verification, zero pass executions, and
-no pass-finished events; the default schedule runs nine pass occurrences in
-the exact repeated order documented below.
+runs zero selectable passes, one complete proof verification, mandatory
+normalization, and one normalized verification. Its proof-rich checkpoints
+remain byte-for-byte stable, while its returned product satisfies the
+normalized invariant. The default schedule runs nine pass occurrences in the
+exact repeated order documented below.
 
 This direction adds no SSA form, persistent instruction identity, public
 common callable-body restructuring, dynamic pass registry, optimization-level
-CLI, broader optimization suite, proof-provenance normalization, alias/effect
-analysis, or backend virtual-register layer. Those remain separate decisions
-that can consume the implemented pipeline boundary.
+CLI, broader optimization suite, alias/effect analysis, or backend
+virtual-register layer. Stage-aware scheduling and
+post-proof transformations remain later steps of the active normalization
+roadmap.
 
 ### Selectable final-MIR optimization pipeline
 
@@ -794,19 +801,22 @@ selects execution order. Exact schedules are a crate-private input for tests
 and compiler tools. The command line selects profiles and exclusions,
 not arbitrary pass order.
 
-The transforming runner first calls central final-MIR verification, including
-immutable static-lifecycle realization and target-independent reachability.
-Every occurrence then receives read-only access to that verified program-plus-
-facts product and one pipeline-owned capability to consume the seal through
-the atomic whole-program rewrite coordinator. An unchanged outcome retains the
-same seal and facts and adds no verification execution. A changed outcome
-invalidates program and facts together, yields raw dense MIR, rewrite maps,
-change summaries, and explicit changed-callable pass data, and immediately
-calls central verification before any later pass, inspection checkpoint, or
-backend can observe it. Input-verification, pass execution, structural-
-rewrite, and output-verification failures identify the exact pass name,
-identity, schedule position, and occurrence where applicable, then stop
-without exposing a partial or later product.
+The transforming runner first calls complete proof-rich final-MIR
+verification, including immutable static-lifecycle realization and
+target-independent reachability. Every current occurrence receives read-only
+access to that `VerifiedProofMirProgram` plus one pipeline-owned capability to
+consume the seal through the atomic whole-program rewrite coordinator. An
+unchanged outcome retains the same seal and facts and adds no verification
+execution. A changed outcome invalidates program and facts together, yields
+raw dense MIR, rewrite maps, change summaries, and explicit
+changed-callable pass data, and immediately repeats proof verification before
+any later pass or inspection checkpoint can observe it. Once the schedule is
+complete, finalization consumes proof provenance, runs normalized
+verification, recomputes reachability, and returns only
+`VerifiedFinalMirProgram`. Input-verification, pass execution,
+structural-rewrite, and output-verification failures identify the exact pass
+name, identity, schedule position, and occurrence where applicable, then stop
+without exposing a partial product.
 
 Passes cannot construct seals, mutate dense definition tables directly,
 change lifecycle authority, emit diagnostics, log, write files, render dumps,
@@ -845,9 +855,13 @@ products.
 Optional pipeline inspection is carried through the driver by
 `CompilationInspectors`, a request-local service separate from semantic
 compilation requests and report observers. It can independently compose a MIR
-pipeline inspector with the static-activation inspector. The MIR callback
-receives only borrowed `VerifiedFinalMirProgram` checkpoints at `input`, after every successfully
-completed occurrence, and `final`. After-pass labels use
+pipeline inspector with the static-activation inspector. During the PNR2
+transition, the MIR callback receives only borrowed
+`VerifiedProofMirProgram` checkpoints at `input`, after every successfully
+completed occurrence, and the legacy `final` label denoting the end of that
+proof-rich schedule. The returned pipeline product is nevertheless
+normalized; PNR4 adds typed normalization and final-stage checkpoints.
+After-pass labels use
 `after-<schedule-position>-<stable-pass-name>-<occurrence-number>`, so repeated
 passes cannot collide. Changed MIR is centrally resealed before inspection;
 pass, rewrite, or output-verification failure emits no failed after-checkpoint
@@ -1032,10 +1046,12 @@ Status: **in progress**. The frozen
 and its
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 define a mandatory one-way boundary between proof-rich and backend-ready final
-MIR. Verifier ownership, proof-bearing-form classification, and the atomic
-normalization transaction are implemented and covered by focused tests; the
-two-seal pipeline and backend migration are not. Current production behavior
-therefore remains the single-seal pipeline described above.
+MIR. Verifier ownership, proof-bearing-form classification, the atomic
+normalization transaction, and the two sealed products are implemented and
+covered by focused tests. Every production pipeline, including `none`, now
+crosses that boundary before returning backend-ready MIR. Stage-aware pass
+policy, final-stage transformations, and stage-typed observation remain later
+roadmap work.
 
 The verifier now owns one exhaustive classification boundary for proof
 records, callable-local identity sites, storage kinds, rvalues, instructions,
@@ -1051,22 +1067,28 @@ silently give verification and rewriting different retention semantics.
 Current verifier orchestration distinguishes three owners without cloning the
 verifier. Shared checks retain declaration and reference validity, ordinary
 block/instruction/terminator structure, checked protocols, optional guards,
-scalar initialization, and function-value provenance. Proof-rich checks retain
+source-visible primitive initialization, and function-value provenance.
+Compiler-owned scalar spills remain completely checked while proof provenance
+is present; normalized verification relies on the consumed-proof authority and
+surviving protocol validators because former path activations intentionally
+share that storage kind. Proof-rich checks retain
 path and logical validation plus cleanup, storage-lifetime, shared-ownership,
 optional-initialization, and array-ownership dataflow. Focused normalized-only
 checks reject leaked path/logical records, path storage and rvalues, and any
 future instruction or terminator classified as proof-bearing. Static lifecycle
 realization and whole-world reachability remain separate reusable final-MIR
-owners outside this callable-local verifier. The normalized contract is now
-invoked by the crate-private normalization transaction and its focused tests;
-it is not yet a production seal or backend precondition.
+owners outside this callable-local verifier. The normalization transaction and
+final-seal construction both invoke the normalized contract; it is now a
+production backend precondition.
 
-The planned boundary keeps one `MirProgram` model but uses two private seals.
-`VerifiedProofMirProgram` names the intermediate accepted by complete path-
-sensitive verification. `VerifiedFinalMirProgram` remains the public pipeline
-and backend result name, but will guarantee that consumable proof provenance
-has been normalized away. No API named “final” will return the proof-rich
-intermediate.
+The implemented boundary keeps one `MirProgram` model but uses two products
+with private construction and invalidation. `VerifiedProofMirProgram` names
+the intermediate accepted by complete path-
+sensitive verification. `VerifiedFinalMirProgram` is the public pipeline and
+backend result and guarantees that consumable proof provenance has been
+normalized away. `verify_final_mir` is now the public verify-and-normalize
+convenience; crate-private `verify_proof_mir` is the only direct proof-seal
+boundary. No public API named “final” returns the proof-rich intermediate.
 
 Complete proof verification remains first. It continues to use path
 conditions and logical-expression records for optional initialization, array
@@ -1089,8 +1111,11 @@ normalized-invariant failure, and reports deterministic counts for consumed
 records, rewritten reads, reclassified storage, changed callables, and blocks
 released from proof protection. It preserves assignment and value identities,
 types, spans, blocks, stores, lifetime operations, and all permanent roots.
-The next pipeline step will consume its raw normalized result, recompute
-reachability, and create the final seal.
+Its successful private result carries unforgeable consumed-proof authority.
+Final-seal construction consumes that result, repeats the normalized contract,
+recomputes target-independent reachability from the exact normalized program,
+and binds those facts to the new seal. Neither the raw normalized program nor
+its authority is externally constructible or detachable.
 
 The normalized verifier shares ordinary structural, lifecycle, reference, and
 reachable-definition owners with proof-rich verification, but does not pretend
@@ -3280,14 +3305,17 @@ representation used by focused tests. Practical inspection steps are in
 The final-MIR pipeline exposes `run_mir_pipeline_inspected` with a
 request-local `MirPipelineInspector`; ordinary driver compilation carries the
 same callback in `CompilationInspectors`. Its callback receives a typed label
-and only a borrowed verified final-MIR product. Checkpoint labels and `dump_mir`
-bytes are deterministic across independent processes. The inspection surface
-is neither a dump serializer nor a filesystem publication service.
+and, until stage-aware inspection lands, a borrowed
+`VerifiedProofMirProgram`. The returned pipeline product is separately
+normalized and sealed. Checkpoint labels and `dump_mir` bytes are deterministic
+across independent processes. The inspection surface is neither a dump
+serializer nor a filesystem publication service.
 
 ### Read-only scalar-spill provenance census
 
-`passes::analyze_scalar_spill_provenance` measures one verified final-MIR
-snapshot without cloning or mutating it. Its inspected unit is a semantic use
+`passes::analyze_scalar_spill_provenance` measures one normalized final-MIR
+snapshot, while `analyze_proof_scalar_spill_provenance` accepts the proof-rich
+inspection product. Neither clones or mutates its input. The inspected unit is a semantic use
 of a value loaded from compiler-owned `ScalarSpill` storage. Arbitrary dynamic
 loads are non-candidates; literal-backed direct, one-hop, and transitive
 load/store chains are interesting sites.
@@ -3317,7 +3345,9 @@ pass, report event, compiler request option, or backend input.
 ### Read-only primitive-cast redundancy census
 
 `passes::analyze_redundant_primitive_casts` inspects every ordinary primitive
-cast assignment in one borrowed, verified final-MIR snapshot. It records exact
+cast assignment in one borrowed normalized final-MIR snapshot;
+`analyze_proof_redundant_primitive_casts` is the explicit proof-rich
+checkpoint entry point. They record exact
 cast kind and source/result types, callable identity, result consumer families,
 checked floating-to-integer rvalues and range checks as excluded protocol
 counts, and deterministic interesting/proven/blocked accounting. The analysis
@@ -3344,8 +3374,10 @@ pass, compiler option, report event, or backend input.
 ### Read-only local primitive common-subexpression census
 
 `passes::analyze_local_primitive_common_subexpressions` measures exact repeated
-integer and boolean primitive rvalues within each basic block of a borrowed,
-verified final-MIR snapshot. Its key contains the exact unary, binary, or
+integer and boolean primitive rvalues within each basic block of a borrowed
+normalized final-MIR snapshot;
+`analyze_proof_local_primitive_common_subexpressions` accepts the proof-rich
+inspection product. Its key contains the exact unary, binary, or
 comparison operation, result type, and ordered operand identities. Instruction
 order supplies local dominance, and all exact and overlap facts reset at every
 block boundary.

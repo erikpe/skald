@@ -24,9 +24,9 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Planned MIR | `passes::static_lifecycle::dump_planned_mir` | static activation/destruction regions and selected lifecycle certificates |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
 | Whole-world reachability | checkpoint `reachability_dump` | roots, execution dependencies, retained targets, and witnesses for verified final MIR |
-| Scalar-spill redundancy | `passes::analyze_scalar_spill_provenance` on a verified MIR checkpoint | direct and chained constant provenance, blockers, consumers, and one-step downstream unlocks without rewriting |
-| Primitive-cast redundancy | `passes::analyze_redundant_primitive_casts` on a verified MIR checkpoint | exact cast shapes, safe complete-domain compositions, excluded checked protocols, consumers, and blockers without rewriting |
-| Local primitive CSE | `passes::analyze_local_primitive_common_subexpressions` on a verified MIR checkpoint; repository workflow in [Local final-MIR redundancy measurement](MIR_REDUNDANCY_MEASUREMENT.md) | exact same-block integer/boolean repetitions or reproducible whole-corpus aggregation without rewriting |
+| Scalar-spill redundancy | `passes::analyze_proof_scalar_spill_provenance` on a proof-rich checkpoint; `analyze_scalar_spill_provenance` on normalized final MIR | direct and chained constant provenance, blockers, consumers, and one-step downstream unlocks without rewriting |
+| Primitive-cast redundancy | `passes::analyze_proof_redundant_primitive_casts` on a proof-rich checkpoint; `analyze_redundant_primitive_casts` on normalized final MIR | exact cast shapes, safe complete-domain compositions, excluded checked protocols, consumers, and blockers without rewriting |
+| Local primitive CSE | `passes::analyze_proof_local_primitive_common_subexpressions` on a proof-rich checkpoint; `analyze_local_primitive_common_subexpressions` on normalized final MIR; repository workflow in [Local final-MIR redundancy measurement](MIR_REDUNDANCY_MEASUREMENT.md) | exact same-block integer/boolean repetitions or reproducible whole-corpus aggregation without rewriting |
 | Diagnostics | `diagnostics::render_diagnostics` | diagnostic model, wording, spans, and source lookup |
 | GNU assembly in Intel syntax | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
 
@@ -43,7 +43,8 @@ activation and reverse-shutdown order. The ordinary compile paths construct no
 checkpoint or dump. Use an observed-inspected driver adapter with a
 `NoopObserver` when only activation inspection is needed. Add a
 `MirPipelineInspector` to the same service when both lifecycle planning and
-verified final-MIR checkpoints are needed in one compilation.
+proof-rich final-MIR checkpoints are needed in one compilation. The pipeline
+return remains the normalized `VerifiedFinalMirProgram`.
 
 For a missing or unexpected field lifetime, take the shortest path through the
 products:
@@ -409,20 +410,25 @@ live. Shared array access should show a stable, copied, adopted, or secured
 owner anchor before the checked projection. MIR contains no header offsets or
 strides; those first appear in x86-64 layout and instruction selection.
 
-The driver has three explicit target-independent verification products:
+The driver has four explicit target-independent verification products:
 
 1. preliminary MIR is checked before lifecycle planning;
 2. `verify_planned_mir` consumes draft planned MIR and seals exact authority
    issuance for synthesis; and
-3. `run_mir_pipeline` calls `verify_final_mir` once after its transformations
-   and seals ordinary MIR plus lifecycle realization for backend input.
+3. the current pass runner calls crate-private `verify_proof_mir` initially and
+   after every changed proof-rich transformation; and
+4. mandatory finalization consumes proof provenance, runs normalized
+   verification, recomputes reachability, and constructs the only
+   `VerifiedFinalMirProgram` accepted by backend input.
 
 A preliminary or planned failure points to its producer. A final failure after
 a pass points to the transformation or its input. Backend construction cannot
 accept raw MIR, so a structured backend error means already verified MIR
 violates a target-specific legality, layout, or lowering contract. When
-experimenting with a transformation, clone the read-only program into a raw
-test product, mutate it, and submit it to `verify_final_mir` before emission.
+experimenting with a proof-rich transformation, clone the read-only program
+into a raw test product, mutate it, and submit it to `verify_final_mir`; that
+public convenience performs complete proof verification and normalization
+before emission.
 
 ## Inspect function values
 

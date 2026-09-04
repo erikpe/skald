@@ -6,7 +6,7 @@ use crate::{
     },
     passes::{
         resolve_exact_mir_pass_schedule, run_mir_pipeline, run_mir_pipeline_with_occurrences,
-        MirPassMeasurement, MirPassOccurrenceOutcome,
+        verify_final_mir, MirPassMeasurement, MirPassOccurrenceOutcome,
     },
     source::Span,
     test_support::lower_source_to_final_mir,
@@ -351,8 +351,9 @@ fn every_eligible_family_is_removed_when_unused_and_retained_when_used() {
         span,
     );
 
+    let expected = verify_final_mir(expected).unwrap();
     let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule());
-    assert_eq!(measured.result.as_ref().unwrap().program(), &expected);
+    assert_eq!(measured.result.as_ref().unwrap(), &expected);
     assert_eq!(
         measured.occurrences()[0].measurements(),
         [
@@ -367,7 +368,7 @@ fn every_eligible_family_is_removed_when_unused_and_retained_when_used() {
         "fn unsigned() -> u64 { return (u64) 1u8 + 2u; }\n",
         "fn main() -> i64 { if (truth() && 1 < 2) { return (i64) unsigned(); } return (i64) floating(3.0); }\n",
     ));
-    let used_dump = dump_mir(&used);
+    let used_dump = dump_mir(verify_final_mir(used.clone()).unwrap().program());
     let measured = run_mir_pipeline_with_occurrences(used, &exact_schedule());
 
     assert_eq!(

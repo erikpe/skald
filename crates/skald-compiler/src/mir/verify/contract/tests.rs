@@ -1,6 +1,6 @@
 use crate::{
     mir::{
-        rewrite::MirLocalIdentitySite, verify_mir, BlockId, MirInstruction, MirPlace,
+        rewrite::MirLocalIdentitySite, verify_mir, BlockId, MirInstruction, MirPlace, MirPlaceBase,
         MirRvalueKind, MirStorageKind, MirTerminator,
     },
     test_support::lower_source_to_mir,
@@ -155,4 +155,38 @@ fn mechanically_normalized_logical_shape_reaches_shared_checks() {
 
     check_normalized_mir(&program)
         .expect("normalized checks must accept the exact executable logical shape");
+}
+
+#[test]
+fn normalized_contract_still_checks_source_visible_primitive_initialization() {
+    let mut program =
+        lower_source_to_mir("fn main() -> i64 { var result: i64 = 7; return result; }");
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let local = definition
+        .storage
+        .iter()
+        .find(|storage| storage.kind == MirStorageKind::Local)
+        .unwrap()
+        .id;
+    for block in &mut definition.body.blocks {
+        block.instructions.retain(|instruction| {
+            !matches!(
+                instruction,
+                MirInstruction::Store(store)
+                    if store.destination.base == MirPlaceBase::Storage(local)
+                        && store.destination.projections.is_empty()
+            )
+        });
+    }
+
+    let errors = check_normalized_mir(&program)
+        .expect_err("normalization authority cannot excuse source-visible storage")
+        .to_string();
+    assert!(
+        errors.contains("loaded without initialization on every incoming path"),
+        "{errors}"
+    );
 }

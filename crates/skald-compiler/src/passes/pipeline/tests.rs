@@ -176,11 +176,11 @@ fn execution_log() -> Vec<&'static str> {
 #[test]
 fn none_pipeline_preserves_valid_mir_and_reports_only_verification() {
     let mir = lowered_program();
-    let expected = mir.clone();
+    let expected = verify_final_mir(mir.clone()).unwrap();
     let measured = run_mir_pipeline_measured(mir, &none_schedule());
 
-    assert_eq!(measured.result.unwrap().program(), &expected);
-    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.result.unwrap(), expected);
+    assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(measured.statistics.pass_executions(), 0);
     assert_eq!(measured.statistics.processed_callables(), 0);
     assert_eq!(measured.statistics.changed_callables(), 0);
@@ -329,7 +329,7 @@ fn measurement_total(measured: &MeasuredMirPipeline, pass: &str, measurement: &s
 }
 
 #[test]
-fn pipeline_preserves_logical_path_and_cleanup_metadata() {
+fn proof_checkpoints_preserve_metadata_while_the_final_product_consumes_proof() {
     let mir = lower_source_to_mir(
         "class Flag {
            truth: bool;
@@ -350,9 +350,38 @@ fn pipeline_preserves_logical_path_and_cleanup_metadata() {
         .definitions
         .iter()
         .any(|definition| !definition.body.path_conditions.is_empty()));
-    let expected = mir.clone();
+    let expected_proof_dump = dump_mir(&mir);
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_measured_inspected(mir, &none_schedule(), Some(&mut collector));
+    let final_program = measured.result.unwrap();
 
-    assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
+    assert_eq!(collector.labels, ["input", "final"]);
+    assert_eq!(
+        collector.dumps,
+        [expected_proof_dump.clone(), expected_proof_dump]
+    );
+    assert!(final_program
+        .executable_definitions()
+        .all(|definition| definition.body().path_conditions.is_empty()
+            && definition.body().logical_expressions.is_empty()));
+    assert!(final_program
+        .executable_definitions()
+        .flat_map(|definition| definition.storage_entries())
+        .all(|storage| storage.kind != crate::mir::MirStorageKind::PathCondition));
+    assert!(final_program
+        .executable_definitions()
+        .flat_map(|definition| &definition.body().blocks)
+        .flat_map(|block| &block.instructions)
+        .all(|instruction| !matches!(
+            instruction,
+            MirInstruction::Assign(MirAssignment {
+                rvalue: crate::mir::MirRvalue {
+                    kind: MirRvalueKind::PathCondition(_),
+                    ..
+                },
+                ..
+            })
+        )));
 }
 
 #[test]
@@ -420,7 +449,7 @@ fn unchanged_pass_retains_the_verified_product_without_reverification() {
 
     assert_eq!(measured.result.unwrap().program(), &expected);
     assert_eq!(execution_log(), ["unchanged"]);
-    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(measured.statistics.pass_executions(), 1);
     assert_eq!(measured.statistics.processed_callables(), 0);
 }
@@ -434,7 +463,7 @@ fn unchanged_definition_retention_preserves_the_verified_seal() {
     let measured = run_mir_pipeline_measured(mir, &test_schedule(&[RETAIN_REACHABLE]));
 
     assert_eq!(measured.result.unwrap(), expected);
-    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(measured.statistics.pass_executions(), 1);
     assert_eq!(measured.statistics.processed_callables(), 1);
     assert_eq!(measured.statistics.changed_callables(), 0);
@@ -464,7 +493,7 @@ fn changed_definition_retention_is_reverified_with_fresh_reachability_facts() {
         Some((1, 1)),
         "the later pass must observe matching retained bodies and refreshed facts"
     );
-    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.verification_executions(), 3);
     assert_eq!(measured.statistics.pass_executions(), 2);
     assert_eq!(measured.statistics.processed_callables(), 2);
     assert_eq!(measured.statistics.changed_callables(), 1);
@@ -485,7 +514,7 @@ fn repeated_definition_retention_is_changed_then_idempotently_unchanged() {
     );
 
     assert!(measured.result.is_ok());
-    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.verification_executions(), 3);
     assert_eq!(measured.statistics.processed_callables(), 4);
     assert_eq!(measured.statistics.changed_callables(), 2);
     assert_eq!(
@@ -539,7 +568,7 @@ fn reachability_uses_facts_rebuilt_after_a_synthetic_edge_change() {
 
     assert!(verified.definitions.get(left).is_none());
     assert!(verified.definitions.get(right).is_some());
-    assert_eq!(measured.statistics.verification_executions(), 3);
+    assert_eq!(measured.statistics.verification_executions(), 4);
     assert_eq!(measured.occurrences()[1].name(), "whole-world-reachability");
     assert_eq!(
         measurement_value(&measured.occurrences()[1], "removed definitions"),
@@ -751,7 +780,7 @@ fn default_pipeline_checkpoints_identify_every_repeated_occurrence() {
         ]
     );
     assert!(collector.dumps.windows(2).all(|pair| pair[0] == pair[1]));
-    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
 }
 
 #[test]
@@ -981,7 +1010,7 @@ fn unchanged_and_repeated_passes_each_publish_one_verified_after_checkpoint() {
         .reachability_dumps
         .windows(2)
         .all(|pair| pair[0] == pair[1]));
-    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
 }
 
 #[test]
@@ -1033,7 +1062,7 @@ fn changed_call_targets_rebuild_facts_before_later_passes_and_checkpoints() {
         collector.reachability_dumps[0],
         collector.reachability_dumps[1]
     );
-    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.verification_executions(), 3);
     assert_eq!(execution_log(), ["retarget-call", "observe-retarget"]);
 }
 
@@ -1124,7 +1153,7 @@ fn changed_output_is_resealed_before_the_next_pass_and_backend() {
     )
     .expect("backend accepts only the resealed result");
     assert_eq!(execution_log(), ["delete", "observe"]);
-    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.verification_executions(), 3);
     assert_eq!(measured.statistics.pass_executions(), 2);
     assert_eq!(measured.statistics.changed_callables(), 1);
     assert_eq!(measured.statistics.rewrite_changes().values.removed, 1);

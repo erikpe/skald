@@ -1,6 +1,6 @@
 # Proof-Provenance Normalization Roadmap
 
-Status: in progress; PNR0 and PNR1 are complete and PNR2 is next.
+Status: in progress; PNR0 through PNR2 are complete and PNR3 is next.
 
 This roadmap implements the frozen
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
@@ -109,7 +109,7 @@ Candidate placement and status remain concise in the
 
 - [x] PNR0 — Partition proof-rich and normalized verification ownership
 - [x] PNR1 — Implement atomic proof-provenance normalization
-- [ ] PNR2 — Establish the two sealed final-MIR products
+- [x] PNR2 — Establish the two sealed final-MIR products
 - [ ] PNR3 — Make pass policy and execution stage aware
 - [ ] PNR4 — Expose stage-aware inspection, failures, and reporting
 - [ ] PNR5 — Migrate reachability and backend consumption
@@ -194,23 +194,23 @@ atomically.
 **Purpose:** Turn proof consumption into a type-enforced trust boundary while
 preserving a coherent public backend-ready final product.
 
-- [ ] Rename the current proof-bearing wrapper and its verifier boundary to
+- [x] Rename the current proof-bearing wrapper and its verifier boundary to
   `VerifiedProofMirProgram` and `verify_proof_mir` inside the pipeline.
-- [ ] Define backend-ready `VerifiedFinalMirProgram` over normalized MIR,
+- [x] Define backend-ready `VerifiedFinalMirProgram` over normalized MIR,
   normalized-verification authority, and fresh seal-bound reachability facts.
-- [ ] Give both wrappers private construction and invalidation paths scoped to
+- [x] Give both wrappers private construction and invalidation paths scoped to
   their legitimate pipeline owners.
-- [ ] Connect the PNR1 transaction from `VerifiedProofMirProgram` to
+- [x] Connect the PNR1 transaction from `VerifiedProofMirProgram` to
   `VerifiedFinalMirProgram`; no raw-MIR shortcut may construct the latter.
-- [ ] Redefine `verify_final_mir` as an unambiguous verify-and-normalize public
+- [x] Redefine `verify_final_mir` as an unambiguous verify-and-normalize public
   convenience returning the final product; keep `verify_proof_mir`
   crate-private.
-- [ ] Ensure normalized verification checks all surviving executable,
+- [x] Ensure normalized verification checks all surviving executable,
   lifecycle, sparse-definition, and reference invariants it can establish
   without reconstructing erased path proofs.
-- [ ] Add compile-fail coverage proving external callers cannot forge either
+- [x] Add compile-fail coverage proving external callers cannot forge either
   seal, detach facts, invoke private invalidation, or skip normalization.
-- [ ] Migrate direct compiler callers and tests to explicit proof or final
+- [x] Migrate direct compiler callers and tests to explicit proof or final
   terminology.
 
 **Tests:** Seal compile-fail tests; raw/proof/final transition tests; leaked

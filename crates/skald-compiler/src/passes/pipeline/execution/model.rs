@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-use super::super::VerifiedFinalMirProgram;
+use super::super::VerifiedProofMirProgram;
 use super::measurement::MirPassMeasurement;
 
 /// Deterministic internal failure reported by a pass outside dense commit.
@@ -105,16 +105,16 @@ impl MirPassData {
 /// seal only by consuming this capability into the atomic all-program rewrite
 /// coordinator.
 pub(in crate::passes::pipeline) struct MirPassCapability {
-    verified: VerifiedFinalMirProgram,
+    verified: VerifiedProofMirProgram,
 }
 
 impl MirPassCapability {
-    pub(super) fn new(verified: VerifiedFinalMirProgram) -> Self {
+    pub(super) fn new(verified: VerifiedProofMirProgram) -> Self {
         Self { verified }
     }
 
     #[allow(dead_code)]
-    pub(in crate::passes::pipeline) const fn verified(&self) -> &VerifiedFinalMirProgram {
+    pub(in crate::passes::pipeline) const fn verified(&self) -> &VerifiedProofMirProgram {
         &self.verified
     }
 
@@ -147,7 +147,7 @@ impl MirPassCapability {
         self,
         rewrite: impl FnMut(CallableId, &mut MirCallableEdit) -> Result<(), MirRewriteError>,
     ) -> Result<MirChangedProgram, MirPassFailure> {
-        rewrite_program(self.verified.invalidate_for_transformation(), rewrite)
+        rewrite_program(self.verified.invalidate_for_proof_transformation(), rewrite)
             .map(|rewrite| MirChangedProgram { rewrite })
             .map_err(MirPassFailure::Rewrite)
     }
@@ -175,7 +175,7 @@ impl MirPassCapability {
                 }
             }
             MirDefinitionRetention::Changed(prepared) => {
-                let program = self.verified.invalidate_for_transformation();
+                let program = self.verified.invalidate_for_proof_transformation();
                 let change = prepared.apply(program);
                 MirDefinitionRetentionOutcome::Changed {
                     program: change.program,
@@ -216,7 +216,7 @@ impl MirChangedProgram {
 /// retention, awaiting pass-owned accounting.
 pub(in crate::passes::pipeline) enum MirDefinitionRetentionOutcome {
     Unchanged {
-        verified: VerifiedFinalMirProgram,
+        verified: VerifiedProofMirProgram,
         summary: MirDefinitionRetentionSummary,
     },
     Changed {
@@ -267,7 +267,7 @@ pub(in crate::passes::pipeline) enum MirPassChange {
 /// Explicit ownership result from one pass occurrence.
 pub(in crate::passes::pipeline) enum MirPassOutcome {
     Unchanged {
-        verified: VerifiedFinalMirProgram,
+        verified: VerifiedProofMirProgram,
         data: MirPassData,
     },
     Changed {

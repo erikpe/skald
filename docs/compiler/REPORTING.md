@@ -421,26 +421,30 @@ phases-only, or details-only timing-allocation boundaries.
 
 ## Frozen proof-normalization observation
 
-Status: **planned**. The frozen
+Status: **in progress**. The frozen
 [design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
 [roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) extend final-
-MIR observation with an explicit proof-rich-to-final boundary. Existing
-single-seal checkpoints and verification counts remain current until that
-roadmap is implemented.
+MIR observation with an explicit proof-rich-to-final boundary. The two-seal
+transition is active: aggregate verification counts now include one complete
+proof verification and one normalized final verification even for the `none`
+profile. Stage-aware normalization metrics and checkpoints remain PNR4 work.
 
 Normalization is a mandatory phase transition rather than a registered pass.
 It therefore produces no pass occurrence, selectable identity, exclusion, or
-pass-owned duration contract. Pipeline aggregates will report deterministic
-counts for consumed path-condition records, consumed logical-expression
-records, lowered path reads, reclassified activation storage, changed
-callables, and blocks released from proof protection.
+pass-owned duration contract. Its structural counts are already computed
+privately; PNR4 will publish deterministic aggregate counts for consumed
+path-condition records, consumed logical-expression records, lowered path
+reads, reclassified activation storage, changed callables, and blocks released
+from proof protection.
 
-Inspection will expose a closed borrowed checkpoint view. Input and
-proof-rich after-pass checkpoints carry `VerifiedProofMirProgram`; the named
+Current inspection carries `VerifiedProofMirProgram` at input, after-pass, and
+the legacy `final` label at the end of the pre-normalization schedule. PNR4
+will expose a closed stage-typed borrowed view where the named
 `after-proof-normalization` checkpoint, final-stage after-pass checkpoints,
-and `final` carry `VerifiedFinalMirProgram`. Labels retain schedule position,
-stable pass name, and occurrence identity where a selectable pass exists.
-Final checkpoints alone expose final seal-bound reachability facts.
+and product-final checkpoint carry `VerifiedFinalMirProgram`. Labels retain
+schedule position, stable pass name, and occurrence identity where a
+selectable pass exists. Final checkpoints alone will expose final seal-bound
+reachability facts.
 
 A normalization failure has its own pipeline failure stage and prevents every
 final-stage occurrence, backend phase, and final checkpoint. The

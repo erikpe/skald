@@ -16,7 +16,7 @@ fn reports_exact_unchanged_and_changed_accounting() {
         &schedule(&[IDENTITY]),
     );
     assert!(unchanged.result.is_ok());
-    assert_eq!(unchanged.statistics.verification_executions(), 1);
+    assert_eq!(unchanged.statistics.verification_executions(), 2);
     assert_eq!(unchanged.statistics.processed_callables(), 1);
     assert_eq!(unchanged.statistics.changed_callables(), 0);
     assert_eq!(
@@ -46,7 +46,7 @@ fn reports_exact_unchanged_and_changed_accounting() {
     );
     let verified = changed.result.as_ref().unwrap();
     assert_eq!(verified.definitions.len(), 1);
-    assert_eq!(changed.statistics.verification_executions(), 2);
+    assert_eq!(changed.statistics.verification_executions(), 3);
     assert_eq!(changed.statistics.processed_callables(), 4);
     assert_eq!(changed.statistics.changed_callables(), 2);
     assert_eq!(

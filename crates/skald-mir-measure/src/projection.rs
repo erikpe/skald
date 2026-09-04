@@ -4,10 +4,10 @@ use skald_compiler::{
     identity::CallableId,
     mir::{MirPrimitiveCastKind, MirProgram},
     passes::{
-        analyze_local_primitive_common_subexpressions, analyze_redundant_primitive_casts,
-        analyze_scalar_spill_provenance, LocalCseObservationCounts, MirPipelineCheckpoint,
-        PrimitiveCastObservationCounts, RedundancySiteExample, ScalarSpillProvenanceCounts,
-        ScalarSpillUnlock,
+        analyze_proof_local_primitive_common_subexpressions,
+        analyze_proof_redundant_primitive_casts, analyze_proof_scalar_spill_provenance,
+        LocalCseObservationCounts, MirPipelineCheckpoint, PrimitiveCastObservationCounts,
+        RedundancySiteExample, ScalarSpillProvenanceCounts, ScalarSpillUnlock,
     },
 };
 use std::{collections::BTreeMap, fmt};
@@ -25,9 +25,9 @@ pub(super) fn snapshot(
     program: &MirProgram,
     checkpoint: MirPipelineCheckpoint<'_>,
 ) -> SnapshotReport {
-    let spill = analyze_scalar_spill_provenance(checkpoint.verified());
-    let casts = analyze_redundant_primitive_casts(checkpoint.verified());
-    let cse = analyze_local_primitive_common_subexpressions(checkpoint.verified());
+    let spill = analyze_proof_scalar_spill_provenance(checkpoint.verified());
+    let casts = analyze_proof_redundant_primitive_casts(checkpoint.verified());
+    let cse = analyze_proof_local_primitive_common_subexpressions(checkpoint.verified());
     let mut scalar_spill = spill_counts(spill.counts());
     let mut redundant_casts = cast_counts(casts.counts());
     let mut local_cse = cse_counts(cse.counts());

@@ -284,9 +284,12 @@ calls have been accounted for.
 
 The
 [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
-and planned
+and active
 [roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md) now own this resolution.
-The current single-seal constraint remains until that roadmap is delivered.
+The single-seal constraint is now removed: PNR2 distinguishes proof-rich and
+normalized final products and makes every production pipeline cross the
+mandatory boundary. Stage-aware pass execution and the first post-proof CFG
+canary remain active-roadmap work before this foundation is fully delivered.
 
 Do not convert all MIR ownership and aggregate state to SSA. First implement
 the useful transformations supported by current MIR. If measurements then show

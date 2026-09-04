@@ -1103,15 +1103,17 @@ closure.
 
 ## Frozen proof-normalized final-MIR boundary
 
-Status: **planned**. The frozen
+Status: **in progress**. The frozen
 [proof-provenance normalization design](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 and
 [implementation roadmap](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
-will make `VerifiedFinalMirProgram` mean normalized backend-ready MIR. Current
-backend input still uses the single proof-bearing seal until that roadmap is
-implemented.
+now make `VerifiedFinalMirProgram` mean normalized backend-ready MIR. Complete
+proof verification, mandatory normalization, normalized verification, and
+fresh final-seal reachability are active for every pipeline profile. Explicit
+final-stage reachability ownership and removal of unreachable selector support
+remain later roadmap work.
 
-The planned backend boundary accepts no path-condition or logical-expression
+The backend boundary accepts no path-condition or logical-expression
 record, no path-condition rvalue, and no `PathCondition` storage declaration.
 Complete proof-rich verification must already have succeeded. The mandatory
 normalizer replaces each path read with an ordinary load from the identical
@@ -1126,9 +1128,10 @@ continues to preserve sparse-definition completeness for every reachable
 target. Static-publication endpoints and lifecycle authority remain permanent
 backend inputs; proof consumption cannot narrow activation or shutdown.
 
-Path-condition-specific assignment lowering becomes unreachable and will be
-removed when the final invariant is active. Raw, proof-rich, or malformed
-normalized MIR cannot construct `BackendInput`. This direction changes no
+Path-condition-specific assignment lowering is now unreachable through
+`BackendInput` and will be removed in the dedicated backend-migration step. Raw,
+proof-rich, or malformed normalized MIR cannot construct `BackendInput`. This
+direction changes no
 layout, ABI, calling convention, symbol, failure, runtime trace, artifact
 retention, or target error contract.
 

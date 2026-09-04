@@ -9,7 +9,7 @@ use crate::{
         BlockId, MirBinaryOperation, MirComparisonOperand, MirDefinitionRef, MirInstruction,
         MirPrimitiveComparison, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
     },
-    passes::{pipeline::PrimitiveConstant, VerifiedFinalMirProgram},
+    passes::{pipeline::PrimitiveConstant, VerifiedFinalMirProgram, VerifiedProofMirProgram},
 };
 
 use super::{
@@ -100,12 +100,23 @@ struct VirtualSeen {
 pub fn analyze_local_primitive_common_subexpressions(
     verified: &VerifiedFinalMirProgram,
 ) -> LocalCseObservation {
+    analyze_program(verified.program())
+}
+
+/// Measures the same opportunities at a proof-rich inspection checkpoint.
+pub fn analyze_proof_local_primitive_common_subexpressions(
+    verified: &VerifiedProofMirProgram,
+) -> LocalCseObservation {
+    analyze_program(verified.program())
+}
+
+fn analyze_program(program: &crate::mir::MirProgram) -> LocalCseObservation {
     let mut total = Accumulator::default();
     let mut callables = Vec::new();
-    for definition in verified.program().executable_definitions() {
+    for definition in program.executable_definitions() {
         let callable = definition.callable();
         let observed = analyze_definition(definition)
-            .expect("verified final MIR must have coherent callable-local identities");
+            .expect("verified MIR must have coherent callable-local identities");
         if observed.has_observations() {
             total.merge(&observed);
             let affected = u64::from(observed.counts.interesting != 0);

@@ -16,7 +16,7 @@ use crate::{
             evaluate_integer_division, evaluate_rvalue, evaluate_shift, CheckedIntegerEvaluation,
             PrimitiveConstant, PrimitiveEvaluation,
         },
-        VerifiedFinalMirProgram,
+        VerifiedFinalMirProgram, VerifiedProofMirProgram,
     },
 };
 
@@ -96,12 +96,23 @@ impl<'mir> ScalarSpillFacts<'mir> {
 pub fn analyze_scalar_spill_provenance(
     verified: &VerifiedFinalMirProgram,
 ) -> ScalarSpillProvenanceObservation {
+    analyze_program(verified.program())
+}
+
+/// Measures the same opportunities at a proof-rich inspection checkpoint.
+pub fn analyze_proof_scalar_spill_provenance(
+    verified: &VerifiedProofMirProgram,
+) -> ScalarSpillProvenanceObservation {
+    analyze_program(verified.program())
+}
+
+fn analyze_program(program: &crate::mir::MirProgram) -> ScalarSpillProvenanceObservation {
     let mut total = Accumulator::default();
     let mut callables = Vec::new();
-    for definition in verified.program().executable_definitions() {
+    for definition in program.executable_definitions() {
         let callable = definition.callable();
         let observed = analyze_definition(definition)
-            .expect("verified final MIR must have coherent callable-local identities");
+            .expect("verified MIR must have coherent callable-local identities");
         if observed.inspected != 0 {
             total.merge(&observed);
             let examples = observed.examples.clone();

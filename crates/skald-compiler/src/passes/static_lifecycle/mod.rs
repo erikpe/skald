@@ -33,4 +33,5 @@ pub use plan::{
     StaticLifetimePhase, STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY,
 };
 pub use synthesize::synthesize_static_lifecycle;
+pub(crate) use verify::verify_normalized_synthesized_mir;
 pub use verify::{verify_planned_mir, verify_synthesized_mir, VerifiedPlannedMirProgram};

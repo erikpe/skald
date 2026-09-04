@@ -12,8 +12,9 @@ is in progress. PNR0 established exhaustive proof-form classification and
 partitioned shared, proof-rich, and normalized-only verifier ownership. PNR1
 implemented the atomic mechanical normalization transaction, defensive
 inventory, dense commit, normalized invariant check, and deterministic
-structural accounting. Production remains on the proof-rich single-seal
-pipeline until PNR2 establishes the two sealed products.
+structural accounting. PNR2 established the distinct proof-rich and normalized
+seals, made public final verification perform the mandatory transition, and
+bound fresh reachability to the normalized result. PNR3 is next.
 
 ## Pending discoveries
 

@@ -15,12 +15,14 @@ pub(crate) mod reachability;
 
 // The exact resolver is a frozen compiler-internal experiment surface; no
 // production adapter selects it yet.
+#[cfg(test)]
+pub(crate) use pipeline::verify_proof_mir;
 pub use pipeline::{
     available_mir_passes, run_mir_pipeline, run_mir_pipeline_inspected, verify_final_mir,
     MirOptimizationProfile, MirPassDescriptor, MirPassIdentity, MirPassMeasurement,
     MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPipelineCheckpoint,
     MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage, MirPipelineInspector,
-    VerifiedFinalMirProgram,
+    VerifiedFinalMirProgram, VerifiedProofMirProgram,
 };
 #[allow(unused_imports)]
 pub(crate) use pipeline::{
@@ -32,7 +34,9 @@ pub(crate) use pipeline::{
     MeasuredMirPipeline, MirPipelineStatistics,
 };
 pub use redundancy::{
-    analyze_local_primitive_common_subexpressions, analyze_redundant_primitive_casts,
+    analyze_local_primitive_common_subexpressions,
+    analyze_proof_local_primitive_common_subexpressions, analyze_proof_redundant_primitive_casts,
+    analyze_proof_scalar_spill_provenance, analyze_redundant_primitive_casts,
     analyze_scalar_spill_provenance, LocalCseBlocker, LocalCseCallableObservation,
     LocalCseConsumer, LocalCseCount, LocalCseExcludedFamily, LocalCseObservation,
     LocalCseObservationCounts, LocalCseOperationFamily, LocalCseOutcome, PrimitiveCastBlocker,

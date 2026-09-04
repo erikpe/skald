@@ -6,7 +6,7 @@ use crate::{
         check_normalized_mir, MirInstruction, MirPlace, MirRvalueKind, MirStorageKind,
         PathConditionId,
     },
-    passes::verify_final_mir,
+    passes::verify_proof_mir,
     test_support::lower_source_to_final_mir,
 };
 
@@ -15,8 +15,8 @@ use super::{
     MirProofNormalizationStatistics,
 };
 
-fn verified(source: &str) -> super::VerifiedFinalMirProgram {
-    verify_final_mir(lower_source_to_final_mir(source))
+fn verified(source: &str) -> super::VerifiedProofMirProgram {
+    verify_proof_mir(lower_source_to_final_mir(source))
         .expect("fixture must produce proof-rich MIR")
 }
 

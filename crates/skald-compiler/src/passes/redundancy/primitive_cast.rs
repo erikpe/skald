@@ -11,7 +11,7 @@ use crate::{
         BlockId, MirDefinitionRef, MirInstruction, MirPrimitiveCast, MirPrimitiveCastKind,
         MirPrimitiveType, MirRvalueKind, MirTerminator, ValueId,
     },
-    passes::VerifiedFinalMirProgram,
+    passes::{VerifiedFinalMirProgram, VerifiedProofMirProgram},
 };
 
 use super::cast_model::{
@@ -47,12 +47,23 @@ struct CastSite {
 pub fn analyze_redundant_primitive_casts(
     verified: &VerifiedFinalMirProgram,
 ) -> PrimitiveCastObservation {
+    analyze_program(verified.program())
+}
+
+/// Measures the same opportunities at a proof-rich inspection checkpoint.
+pub fn analyze_proof_redundant_primitive_casts(
+    verified: &VerifiedProofMirProgram,
+) -> PrimitiveCastObservation {
+    analyze_program(verified.program())
+}
+
+fn analyze_program(program: &crate::mir::MirProgram) -> PrimitiveCastObservation {
     let mut total = Accumulator::default();
     let mut callables = Vec::new();
-    for definition in verified.program().executable_definitions() {
+    for definition in program.executable_definitions() {
         let callable = definition.callable();
         let observed = analyze_definition(definition)
-            .expect("verified final MIR must have coherent callable-local identities");
+            .expect("verified MIR must have coherent callable-local identities");
         if observed.has_observations() {
             total.merge(&observed);
             let affected = u64::from(observed.counts.interesting != 0);

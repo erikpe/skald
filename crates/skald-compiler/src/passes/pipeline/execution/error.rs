@@ -35,6 +35,7 @@ enum MirPipelineErrorKind {
         occurrence: MirPassOccurrence,
         errors: Box<MirVerificationErrors>,
     },
+    FinalVerification(Box<MirVerificationErrors>),
 }
 
 impl MirPipelineError {
@@ -48,6 +49,9 @@ impl MirPipelineError {
                 MirPipelineFailureStage::StructuralRewrite
             }
             MirPipelineErrorKind::OutputVerification { .. } => {
+                MirPipelineFailureStage::OutputVerification
+            }
+            MirPipelineErrorKind::FinalVerification(_) => {
                 MirPipelineFailureStage::OutputVerification
             }
         }
@@ -116,9 +120,16 @@ impl MirPipelineError {
         }
     }
 
+    pub(super) fn final_verification(errors: MirVerificationErrors) -> Self {
+        Self {
+            kind: MirPipelineErrorKind::FinalVerification(Box::new(errors)),
+        }
+    }
+
     const fn occurrence(&self) -> Option<MirPassOccurrence> {
         match &self.kind {
             MirPipelineErrorKind::InputVerification(_) => None,
+            MirPipelineErrorKind::FinalVerification(_) => None,
             MirPipelineErrorKind::PassExecution { occurrence, .. }
             | MirPipelineErrorKind::StructuralRewrite { occurrence, .. }
             | MirPipelineErrorKind::OutputVerification { occurrence, .. } => Some(*occurrence),
@@ -147,6 +158,12 @@ impl fmt::Display for MirPipelineError {
                 write_occurrence(formatter, *occurrence)?;
                 write!(formatter, " output verification failed: {errors}")
             }
+            MirPipelineErrorKind::FinalVerification(errors) => {
+                write!(
+                    formatter,
+                    "final-MIR normalization or verification failed: {errors}"
+                )
+            }
         }
     }
 }
@@ -155,6 +172,7 @@ impl std::error::Error for MirPipelineError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self.kind {
             MirPipelineErrorKind::InputVerification(errors)
+            | MirPipelineErrorKind::FinalVerification(errors)
             | MirPipelineErrorKind::OutputVerification { errors, .. } => Some(errors.as_ref()),
             MirPipelineErrorKind::PassExecution { error, .. } => Some(error),
             MirPipelineErrorKind::StructuralRewrite { error, .. } => Some(error.as_ref()),

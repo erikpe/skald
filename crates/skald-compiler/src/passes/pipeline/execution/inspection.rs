@@ -1,8 +1,8 @@
-//! Verified-only final-MIR pipeline inspection.
+//! Verified proof-rich MIR pipeline inspection.
 
 use std::fmt;
 
-use super::super::VerifiedFinalMirProgram;
+use super::super::VerifiedProofMirProgram;
 use crate::passes::reachability::dump_reachability;
 
 /// Stable identity of one final-MIR pipeline inspection checkpoint.
@@ -31,7 +31,7 @@ impl fmt::Display for MirPipelineCheckpointLabel {
     }
 }
 
-/// One immutable verified final-MIR checkpoint.
+/// One immutable verified proof-rich MIR checkpoint.
 ///
 /// The verified product is borrowed only for the callback. Inspection cannot
 /// mutate it or retain it beyond the checkpoint invocation:
@@ -46,7 +46,7 @@ impl fmt::Display for MirPipelineCheckpointLabel {
 #[derive(Clone, Copy, Debug)]
 pub struct MirPipelineCheckpoint<'a> {
     label: MirPipelineCheckpointLabel,
-    verified: &'a VerifiedFinalMirProgram,
+    verified: &'a VerifiedProofMirProgram,
 }
 
 impl<'a> MirPipelineCheckpoint<'a> {
@@ -54,7 +54,7 @@ impl<'a> MirPipelineCheckpoint<'a> {
         self.label
     }
 
-    pub const fn verified(self) -> &'a VerifiedFinalMirProgram {
+    pub const fn verified(self) -> &'a VerifiedProofMirProgram {
         self.verified
     }
 
@@ -69,13 +69,13 @@ impl<'a> MirPipelineCheckpoint<'a> {
 
     pub(super) const fn new(
         label: MirPipelineCheckpointLabel,
-        verified: &'a VerifiedFinalMirProgram,
+        verified: &'a VerifiedProofMirProgram,
     ) -> Self {
         Self { label, verified }
     }
 }
 
-/// Request-local consumer of borrowed verified final-MIR checkpoints.
+/// Request-local consumer of borrowed verified proof-rich MIR checkpoints.
 ///
 /// The callback is deliberately independent of compilation requests and
 /// operational report observers. Implementations may render [`crate::mir::dump_mir`]
