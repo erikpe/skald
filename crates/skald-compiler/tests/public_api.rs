@@ -48,8 +48,9 @@ use skald_compiler::{
         ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::{
-        analyze_redundant_primitive_casts, analyze_scalar_spill_provenance, available_mir_passes,
-        run_mir_pipeline, run_mir_pipeline_inspected,
+        analyze_local_primitive_common_subexpressions, analyze_redundant_primitive_casts,
+        analyze_scalar_spill_provenance, available_mir_passes, run_mir_pipeline,
+        run_mir_pipeline_inspected,
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
@@ -57,8 +58,9 @@ use skald_compiler::{
             StaticActivationStatistics, StaticEffectAnalysis, StaticLifecyclePlan,
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
-        MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
-        MirPipelineFailureStage, PrimitiveCastBlocker, PrimitiveCastConsumer,
+        LocalCseBlocker, LocalCseConsumer, LocalCseExcludedFamily, LocalCseOperationFamily,
+        LocalCseOutcome, MirPassDescriptor, MirPipelineCheckpoint, MirPipelineCheckpointLabel,
+        MirPipelineError, MirPipelineFailureStage, PrimitiveCastBlocker, PrimitiveCastConsumer,
         PrimitiveCastDisposition, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
         ScalarSpillUnlock, VerifiedFinalMirProgram,
     },
@@ -400,6 +402,14 @@ fn intentional_phase_and_dump_paths_compose() {
     let _cast_disposition = PrimitiveCastDisposition::Identity;
     let _cast_blocker = PrimitiveCastBlocker::MissingValueDomainFact;
     let _cast_consumer = PrimitiveCastConsumer::PrimitiveCast;
+    let common_subexpressions = analyze_local_primitive_common_subexpressions(&mir);
+    let _cse_counts = common_subexpressions.counts();
+    let _cse_callables = common_subexpressions.callables();
+    let _cse_family = LocalCseOperationFamily::IntegerBinary;
+    let _cse_outcome = LocalCseOutcome::Replaceable;
+    let _cse_blocker = LocalCseBlocker::ProtectedMetadataOrUse;
+    let _cse_consumer = LocalCseConsumer::TotalPrimitive;
+    let _cse_exclusion = LocalCseExcludedFamily::FloatingOperation;
     let target = target_by_name("x86_64-sysv").unwrap();
     let omitted = emit_assembly(target, BackendInput::without_runtime_trace(&mir)).unwrap();
     let enabled = emit_assembly(target, BackendInput::with_runtime_trace(&mir, &sources)).unwrap();

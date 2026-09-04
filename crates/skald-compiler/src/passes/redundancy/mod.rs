@@ -4,6 +4,9 @@
 //! pass, mutating MIR, or becoming part of ordinary compilation.
 
 mod cast_model;
+mod count;
+mod cse_model;
+mod local_cse;
 mod model;
 mod primitive_cast;
 mod scalar_spill;
@@ -13,6 +16,12 @@ pub use cast_model::{
     PrimitiveCastCount, PrimitiveCastDisposition, PrimitiveCastObservation,
     PrimitiveCastObservationCounts, PrimitiveCastShape,
 };
+pub use cse_model::{
+    LocalCseBlocker, LocalCseCallableObservation, LocalCseConsumer, LocalCseCount,
+    LocalCseExcludedFamily, LocalCseObservation, LocalCseObservationCounts,
+    LocalCseOperationFamily, LocalCseOutcome,
+};
+pub use local_cse::analyze_local_primitive_common_subexpressions;
 pub use model::{
     ScalarSpillBlocker, ScalarSpillCallableObservation, ScalarSpillConsumer, ScalarSpillCount,
     ScalarSpillDepth, ScalarSpillProvenanceCounts, ScalarSpillProvenanceObservation,

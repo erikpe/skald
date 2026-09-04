@@ -5,6 +5,8 @@ use crate::{
     mir::{MirPrimitiveCastKind, MirPrimitiveType},
 };
 
+pub type PrimitiveCastCount<T> = super::count::RedundancyCount<T>;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PrimitiveCastShape {
     kind: MirPrimitiveCastKind,
@@ -77,27 +79,6 @@ pub enum PrimitiveCastConsumer {
     OwnershipOrLifecycle,
     InputOutput,
     Other,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PrimitiveCastCount<T> {
-    pub(super) key: T,
-    pub(super) sites: u64,
-}
-
-impl<T: Copy> PrimitiveCastCount<T> {
-    pub const fn key(self) -> T {
-        self.key
-    }
-    pub const fn sites(self) -> u64 {
-        self.sites
-    }
-}
-
-impl<T> PrimitiveCastCount<T> {
-    pub(super) const fn new(key: T, sites: u64) -> Self {
-        Self { key, sites }
-    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

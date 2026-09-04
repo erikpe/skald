@@ -3237,6 +3237,33 @@ corpus reporter may attribute initial lowering or an earlier pass when direct
 checkpoint comparison proves that origin. This opt-in census is not a MIR
 pass, compiler option, report event, or backend input.
 
+### Read-only local primitive common-subexpression census
+
+`passes::analyze_local_primitive_common_subexpressions` measures exact repeated
+integer and boolean primitive rvalues within each basic block of a borrowed,
+verified final-MIR snapshot. Its key contains the exact unary, binary, or
+comparison operation, result type, and ordered operand identities. Instruction
+order supplies local dominance, and all exact and overlap facts reset at every
+block boundary.
+
+The census does not canonicalize commutative operands, reassociate expressions,
+look through casts or arbitrary storage, compare floating operations, or admit
+checked and effectful operations. Constants, casts, loads, floating operations,
+checked protocols, calls, ownership/lifecycle instructions, input/output, and
+semantic queries have explicit excluded-family counts outside the inspected
+key universe. A repeated result is proven only when it is dead or every use is
+accepted by the current ordinary value-forwarding boundary; protected metadata,
+source-observation roles, cross-block uses, malformed identities, and invalid
+operation/type combinations remain ordered blockers.
+
+Results contain deterministic program and callable-ordered totals, operation
+families, outcomes, consumers, blockers, replaceable-use counts, maximum
+repetitions per key, supporting identities, and conservative removal ceilings.
+A separate scalar-spill unlock count uses the existing narrow provenance
+analysis to identify immediate constant-equivalence overlap without adding it
+to direct CSE candidates. This is an opt-in analysis, not a registered pass,
+compiler option, report event, persistent fact table, or backend input.
+
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests
 compare those products and assembly both for a complete source pipeline and

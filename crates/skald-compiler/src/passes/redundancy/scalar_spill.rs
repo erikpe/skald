@@ -58,6 +58,38 @@ enum TraceResult {
     NotConstantShaped,
 }
 
+/// Seal-local query used by another census to recognize one-step overlap with
+/// scalar-spill provenance without publishing or persisting MIR facts.
+pub(super) struct ScalarSpillFacts<'mir> {
+    index: DefinitionIndex<'mir>,
+}
+
+impl<'mir> ScalarSpillFacts<'mir> {
+    pub(super) fn new(definition: MirDefinitionRef<'mir>) -> Self {
+        Self {
+            index: DefinitionIndex::new(definition),
+        }
+    }
+
+    pub(super) fn constant_at_instruction(
+        &self,
+        value: ValueId,
+        block: BlockId,
+        instruction: usize,
+    ) -> Option<PrimitiveConstant> {
+        let load = self.index.assignments.get(&value).copied()?;
+        let consumer = InstructionSite { block, instruction };
+        if !dominates(self.index.definition, load.site, consumer) {
+            return None;
+        }
+        let mut visiting = BTreeSet::new();
+        let TraceResult::Constant(trace) = self.index.trace_load(load, &mut visiting) else {
+            return None;
+        };
+        trace.barriers.is_empty().then_some(trace.constant)
+    }
+}
+
 /// Measures constant provenance through exact scalar-spill chains without
 /// cloning, mutating, or invalidating the verified final-MIR product.
 pub fn analyze_scalar_spill_provenance(

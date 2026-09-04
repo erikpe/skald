@@ -2,6 +2,8 @@
 
 use crate::identity::CallableId;
 
+pub type ScalarSpillCount<T> = super::count::RedundancyCount<T>;
+
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum ScalarSpillDepth {
     Direct,
@@ -43,27 +45,6 @@ pub enum ScalarSpillUnlock {
     BranchFolding,
     CommonSubexpression,
     DirectSubstitution,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ScalarSpillCount<T> {
-    key: T,
-    sites: u64,
-}
-
-impl<T: Copy> ScalarSpillCount<T> {
-    pub const fn key(self) -> T {
-        self.key
-    }
-    pub const fn sites(self) -> u64 {
-        self.sites
-    }
-}
-
-impl<T> ScalarSpillCount<T> {
-    pub(super) const fn new(key: T, sites: u64) -> Self {
-        Self { key, sites }
-    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

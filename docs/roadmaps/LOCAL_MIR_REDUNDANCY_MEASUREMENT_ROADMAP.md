@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: in progress; LMR0-LMR3 are complete and LMR4 is next.
+Status: in progress; LMR0-LMR4 are complete and LMR5 is next.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -123,7 +123,7 @@ The frozen census, corpus, schema, and decision rules are authoritative in the
 - [x] LMR1 — Compose verified MIR inspection through the driver
 - [x] LMR2 — Measure scalar-spill constant provenance
 - [x] LMR3 — Measure redundant primitive casts
-- [ ] LMR4 — Measure local primitive common subexpressions
+- [x] LMR4 — Measure local primitive common subexpressions
 - [ ] LMR5 — Build deterministic corpus aggregation and reporting
 - [ ] LMR6 — Run the study and select the next optimization project
 - [ ] LMR7 — Harden the measurement boundary and close the roadmap
@@ -326,23 +326,23 @@ updated without adding a pass or ordinary compilation cost.
 **Purpose:** Establish whether exact same-block scalar repetition is common
 enough to justify CSE before investing in global value numbering or SSA.
 
-- [ ] Build a deterministic same-block expression key from exact operation,
+- [x] Build a deterministic same-block expression key from exact operation,
       result type, and ordered operand identities for the frozen non-failing
       integer/boolean family.
-- [ ] Treat commutative reordering, reassociation, constants, casts, loads,
+- [x] Treat commutative reordering, reassociation, constants, casts, loads,
       floating operations, checked protocols, calls, ownership, and semantic
       queries as separate or excluded observations rather than silently
       broadening equivalence.
-- [ ] Require an earlier same-block definition and classify every later exact
+- [x] Require an earlier same-block definition and classify every later exact
       repeat by replacement-safe use roles, protected roles, dead result,
       source-observation concern, or malformed identity.
-- [ ] Count repeated definitions, replaceable uses, potentially removable
+- [x] Count repeated definitions, replaceable uses, potentially removable
       values/instructions, affected callables, maximum repetitions per key, and
       operation-family distribution.
-- [ ] Record overlap where scalar-spill provenance would make operand identity
+- [x] Record overlap where scalar-spill provenance would make operand identity
       or constant equivalence visible, while keeping the direct CSE count based
       only on current MIR identities.
-- [ ] Keep expression facts block-local and reset them at every CFG boundary;
+- [x] Keep expression facts block-local and reset them at every CFG boundary;
       do not introduce global value numbering, memory numbering, or persistent
       optimization facts.
 
@@ -354,6 +354,27 @@ and aggregate order; unchanged MIR.
 **Exit criteria:** The census identifies the reachable direct ceiling for a
 conservative same-block CSE pass and shows whether broader CFG or storage facts,
 rather than expression matching, dominate the missed opportunities.
+
+**Completion evidence:** The public read-only
+`analyze_local_primitive_common_subexpressions` entry point measures exact
+ordered unary, binary, and comparison keys over the frozen total integer and
+boolean families. Facts reset for every basic block, so instruction order is
+the only admitted dominance proof and loop or cross-block equivalence is never
+silently promoted. Deterministic totals and callable-ordered observations
+separate replaceable and dead results, count replaceable uses, operation and
+consumer families, repetition maxima, supporting identities, blockers, and
+conservative value/instruction removal ceilings. Constants, casts, loads,
+floating operations, checked protocols, calls, ownership/lifecycle work,
+input/output, and semantic queries remain explicit exclusions. A seal-local
+query reuses scalar-spill provenance to count immediate constant-equivalence
+overlap without changing direct CSE attribution or publishing persistent facts.
+Focused tests cover exact repeats, multiple and dead consumers, operand order,
+operation and result-type near misses, unary/comparison families, protected and
+source-observation roles, malformed identities, block and loop boundaries,
+excluded families, scalar-spill overlap, deterministic repetition, and
+unchanged MIR. The three censuses now share one typed count wrapper while
+retaining their established public aliases; no pass or ordinary compilation
+cost was added.
 
 ### LMR5 — Build deterministic corpus aggregation and reporting
 

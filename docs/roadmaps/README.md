@@ -13,9 +13,8 @@ is in progress. Its
 defines whole-world compilation identity, verified input/pre-reachability/final
 snapshots, census accounting and overlaps, the version-one corpus, canonical
 report schema, and evidence threshold. Composable verified-MIR inspection
-through the driver, scalar-spill constant-provenance measurement, and
-redundant primitive-cast measurement are implemented; same-block primitive
-common-subexpression measurement is next.
+through the driver plus all three candidate-family censuses are implemented;
+deterministic corpus aggregation and reporting are next.
 
 ## Pending discoveries
 
