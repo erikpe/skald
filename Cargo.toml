@@ -4,6 +4,7 @@ members = [
     "crates/skald-compiler",
     "crates/skald-docs-check",
     "crates/skald-golden",
+    "crates/skald-mir-measure",
 ]
 resolver = "2"
 

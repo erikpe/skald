@@ -13,8 +13,9 @@ is in progress. Its
 defines whole-world compilation identity, verified input/pre-reachability/final
 snapshots, census accounting and overlaps, the version-one corpus, canonical
 report schema, and evidence threshold. Composable verified-MIR inspection
-through the driver plus all three candidate-family censuses are implemented;
-deterministic corpus aggregation and reporting are next.
+through the driver, all three candidate-family censuses, and deterministic
+corpus aggregation/reporting are implemented; running and auditing the study
+to select the next optimization project is next.
 
 ## Pending discoveries
 

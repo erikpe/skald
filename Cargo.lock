@@ -191,6 +191,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "skald-mir-measure"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "skald-compiler",
+ "skald-golden",
+ "toml",
+]
+
+[[package]]
 name = "syn"
 version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

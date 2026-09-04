@@ -1,6 +1,6 @@
 # Local Final-MIR Redundancy Measurement Roadmap
 
-Status: in progress; LMR0-LMR4 are complete and LMR5 is next.
+Status: in progress; LMR0-LMR5 are complete and LMR6 is next.
 
 This roadmap measures the local redundancy left by Skald's implemented
 final-MIR pipeline and compares three concrete follow-ups: narrow scalar-spill
@@ -124,7 +124,7 @@ The frozen census, corpus, schema, and decision rules are authoritative in the
 - [x] LMR2 — Measure scalar-spill constant provenance
 - [x] LMR3 — Measure redundant primitive casts
 - [x] LMR4 — Measure local primitive common subexpressions
-- [ ] LMR5 — Build deterministic corpus aggregation and reporting
+- [x] LMR5 — Build deterministic corpus aggregation and reporting
 - [ ] LMR6 — Run the study and select the next optimization project
 - [ ] LMR7 — Harden the measurement boundary and close the roadmap
 
@@ -381,23 +381,23 @@ cost was added.
 **Purpose:** Turn the three analyzers into a repeatable repository study rather
 than a collection of synthetic unit-test counts.
 
-- [ ] Add an opt-in repository measurement tool with human and canonical JSON
+- [x] Add an opt-in repository measurement tool with human and canonical JSON
       output; do not add a `skac` flag or registered MIR pass.
-- [ ] Parse and validate the frozen corpus configuration before compilation,
+- [x] Parse and validate the frozen corpus configuration before compilation,
       canonicalize repository-relative identities, and reject duplicate or
       escaping paths deterministically.
-- [ ] Compile each configured root through the real driver and current default
+- [x] Compile each configured root through the real driver and current default
       schedule, collecting the three semantic checkpoints through the composed
       inspection service.
-- [ ] Aggregate with saturating integer counts while preserving per-workload,
+- [x] Aggregate with saturating integer counts while preserving per-workload,
       per-checkpoint, per-candidate, blocker, consumer, and overlap detail.
-- [ ] Record compiler revision or dirty-state context, resolved schedule,
+- [x] Record compiler revision or dirty-state context, resolved schedule,
       target, runtime-trace policy, corpus version, assembly/executable size
       where produced, and explicitly nondeterministic elapsed-time context.
-- [ ] Keep generated outputs under ignored `build/measurements/`; make the
+- [x] Keep generated outputs under ignored `build/measurements/`; make the
       canonical report reproducible without checking binaries or dumps into
       source control.
-- [ ] Add a focused Makefile target and usage documentation without adding the
+- [x] Add a focused Makefile target and usage documentation without adding the
       measurement to ordinary correctness gates.
 
 **Tests:** Manifest validation and path containment; duplicate identities;
@@ -409,6 +409,24 @@ end-to-end repository corpus smoke test.
 **Exit criteria:** One documented command reproducibly measures all three
 candidate families across the reviewed corpus and produces stable machine-
 readable evidence without changing ordinary compiler behavior.
+
+**Completion evidence:** The `skald-mir-measure` repository tool validates the
+versioned sixteen-workload manifest against the complete golden plan before
+compilation, canonicalizes contained repository paths, rejects duplicate IDs
+and compilation identities, and accepts explicit partial selections. It uses
+the real in-process whole-world driver with omitted runtime traces and the
+current default pass schedule, resolves the pre-reachability snapshot by the
+sole final `whole-world-reachability` occurrence, and runs all three read-only
+censuses over verified borrowed checkpoints. One typed report owns canonical
+JSON and human projections, workload/checkpoint/candidate/callable breakdowns,
+directed overlap counts, category breadth, assembly size, native input digests,
+revision and dirty context, optional nondeterministic compile duration, and
+sticky saturating totals. Tests cover manifests, path containment, duplicate
+identity rejection, empty and partial corpora, compilation failure ownership,
+SHA-256 vectors, saturation, projection parity, real-driver checkpoint
+selection, and independent-process structural determinism. The focused
+`make mir-redundancy-measure` command writes only below ignored
+`build/measurements/` and remains outside ordinary correctness gates.
 
 ### LMR6 — Run the study and select the next optimization project
 

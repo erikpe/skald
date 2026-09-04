@@ -26,7 +26,7 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Whole-world reachability | checkpoint `reachability_dump` | roots, execution dependencies, retained targets, and witnesses for verified final MIR |
 | Scalar-spill redundancy | `passes::analyze_scalar_spill_provenance` on a verified MIR checkpoint | direct and chained constant provenance, blockers, consumers, and one-step downstream unlocks without rewriting |
 | Primitive-cast redundancy | `passes::analyze_redundant_primitive_casts` on a verified MIR checkpoint | exact cast shapes, safe complete-domain compositions, excluded checked protocols, consumers, and blockers without rewriting |
-| Local primitive CSE | `passes::analyze_local_primitive_common_subexpressions` on a verified MIR checkpoint | exact same-block integer/boolean repetitions, replacement barriers, exclusions, and scalar-spill overlap without rewriting |
+| Local primitive CSE | `passes::analyze_local_primitive_common_subexpressions` on a verified MIR checkpoint; repository workflow in [Local final-MIR redundancy measurement](MIR_REDUNDANCY_MEASUREMENT.md) | exact same-block integer/boolean repetitions or reproducible whole-corpus aggregation without rewriting |
 | Diagnostics | `diagnostics::render_diagnostics` | diagnostic model, wording, spans, and source lookup |
 | GNU assembly in Intel syntax | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
 

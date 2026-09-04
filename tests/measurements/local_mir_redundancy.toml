@@ -1,0 +1,92 @@
+schema = 1
+name = "local-final-mir-redundancy"
+version = 1
+
+[[workload]]
+id = "focused/local-simplification"
+category = "focused"
+golden_build = "optimizations/local_final_mir_simplification::profile_equivalence::default"
+golden_runs = ["scalars_proof_lifecycle_function_values_and_reachability"]
+
+[[workload]]
+id = "focused/checked-protocols"
+category = "focused"
+golden_build = "optimizations/checked_integer_constant_protocols::successful_protocol_equivalence::default"
+golden_runs = ["integer_types_boundaries_effects_static_lifecycle_and_ownership"]
+
+[[workload]]
+id = "primitives/cast-matrix"
+category = "primitives"
+golden_build = "primitives/conversions::primitive_cast_matrix::default"
+golden_runs = ["type_matrix"]
+
+[[workload]]
+id = "control-flow/loop-lifecycle"
+category = "control-flow"
+golden_build = "control_flow/loops::loop_lifecycle_matrix::default"
+golden_runs = ["cleanup_order"]
+
+[[workload]]
+id = "standard-library/integer-strings"
+category = "standard-library"
+golden_build = "primitive_strings/conversions::integer_helpers::default"
+golden_runs = ["default"]
+
+[[workload]]
+id = "standard-library/generic-vector-values"
+category = "standard-library"
+golden_build = "standard_vec/vectors::generic_values::default"
+golden_runs = ["complete_element_and_lifecycle_profile"]
+
+[[workload]]
+id = "standard-library/generic-vector-iteration"
+category = "standard-library"
+golden_build = "standard_vec/vectors::iteration::default"
+golden_runs = ["stored_values_generic_dispatch_and_loop_exits"]
+
+[[workload]]
+id = "whole-world/reachability"
+category = "whole-world"
+golden_build = "whole_world_reachability/reachability::profile_equivalence::default"
+golden_runs = ["startup_entry_shutdown_and_ownership"]
+
+[[workload]]
+id = "solver/full-input"
+category = "solver"
+golden_build = "aoc/2025/10/part2/solver::solver::default"
+golden_runs = ["full_input"]
+
+[[workload]]
+id = "benchmark/generic-vector-growth"
+category = "benchmark"
+entry = "tests/benchmarks/generic_vec/growth.ska"
+
+[[workload]]
+id = "benchmark/range-i64"
+category = "benchmark"
+entry = "tests/benchmarks/range_loop/i64_range.ska"
+
+[[workload]]
+id = "benchmark/while-i64"
+category = "benchmark"
+entry = "tests/benchmarks/range_loop/i64_while.ska"
+
+[[workload]]
+id = "benchmark/range-u64"
+category = "benchmark"
+entry = "tests/benchmarks/range_loop/u64_range.ska"
+
+[[workload]]
+id = "benchmark/while-u64"
+category = "benchmark"
+entry = "tests/benchmarks/range_loop/u64_while.ska"
+
+[[workload]]
+id = "benchmark/range-u8"
+category = "benchmark"
+entry = "tests/benchmarks/range_loop/u8_range.ska"
+
+[[workload]]
+id = "benchmark/while-u8"
+category = "benchmark"
+entry = "tests/benchmarks/range_loop/u8_while.ska"

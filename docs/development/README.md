@@ -8,6 +8,8 @@ The reproducible enabled-versus-omitted trace measurement is documented in
 [Panic Runtime Trace Performance](PANIC_RUNTIME_TRACE_PERFORMANCE.md).
 The fused-range acceptance measurement is documented in
 [Tight Range-Loop Performance](RANGE_LOOP_PERFORMANCE.md).
+The opt-in structural opportunity census is documented in
+[Local final-MIR redundancy measurement](MIR_REDUNDANCY_MEASUREMENT.md).
 
 ## Prerequisites
 
@@ -24,12 +26,14 @@ The optional performance benchmarks additionally require Python 3; neither
 normal builds nor repository validation use Python.
 
 Production compiler crates and the documentation checker have no third-party
-crate dependencies. The `skald-golden` repository tool is the narrow
-exception: it uses maintained TOML and Serde crates to decode the versioned
+crate dependencies. Repository tools are the narrow exception:
+`skald-golden` uses maintained TOML and Serde crates to decode the versioned
 golden-test schema and report precise field paths, Serde JSON for the machine
 report, plus the narrowly scoped `nix` process/signal API to terminate complete
-Linux child process groups without repository-owned unsafe code. JUnit and
-human reports are rendered by the tool without another production dependency.
+Linux child process groups without repository-owned unsafe code. The
+`skald-mir-measure` tool reuses those already locked TOML, Serde, and JSON
+dependencies. JUnit and human reports are rendered without another production
+dependency.
 Those dependencies and their complete transitive graph are recorded in
 `Cargo.lock`; they do not flow into `skac`, `skald-compiler`, generated
 programs, or the runtime. Native compilation and runtime tests require the host
@@ -83,6 +87,11 @@ threshold or joining `make check`.
 with matched handwritten `while` loops and enforces the documented maximum
 10% median range overhead. It remains outside `make check`; deterministic MIR,
 assembly, and native-result tests are the ordinary correctness gates.
+
+`make mir-redundancy-measure` validates and measures the reviewed versioned
+corpus through the in-process compiler inspection boundary. It writes canonical
+JSON below ignored `build/measurements/` and is intentionally excluded from
+`make check`; it is evidence collection, not a correctness or timing gate.
 
 ## Minimum supported Rust version
 

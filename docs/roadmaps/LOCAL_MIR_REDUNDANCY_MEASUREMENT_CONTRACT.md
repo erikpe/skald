@@ -253,7 +253,8 @@ report
     id
     category
     compilation: { kind, identity, entry, provider_roots,
-                   standard_library, compiler_arguments }
+                   standard_library, compiler_arguments,
+                   artifacts: { assembly_bytes, executable_bytes | absent } }
     native_runs[]: { identity, arguments, stdin }
     snapshots[]
       name: input | pre-reachability | final
@@ -290,6 +291,14 @@ Operational fields are emitted only on request and are excluded from the
 canonical structural fingerprint. Revision and dirty-state context remain in
 the report; a dirty report is valid evidence only when its diff is retained or
 the result is regenerated from a clean revision.
+
+Artifact sizes are deterministic structural context when the corresponding
+artifact is produced. The structural census always produces assembly through
+the real driver and therefore records `assembly_bytes`; it leaves
+`executable_bytes` absent because it does not invoke host linking. Likewise,
+native input context is retained without executing programs during corpus
+aggregation, so requested operational output records compile duration and an
+empty native-duration array.
 
 Native arguments use exact byte strings encoded as either UTF-8 text or
 lowercase hexadecimal bytes. Stdin records its `none`, `inline`, or `file`

@@ -5,11 +5,12 @@ GOLDEN_RELEASE_RUNNER := target/release/skald-golden
 GOLDEN_RELEASE_COMPILER := target/release/skac
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
-	compiler-test cli-test docs-test golden-runner-test golden-tools \
+	compiler-test cli-test docs-test golden-runner-test mir-measure-test golden-tools \
 	golden-release-tools golden-expectations-test golden-test \
 	golden-release-test golden-filter golden-exact \
 	golden-determinism-test runtime-test runtime-trace-benchmark test \
-	generic-vec-benchmark range-loop-benchmark msrv-check robustness-long check check-long
+	generic-vec-benchmark range-loop-benchmark mir-redundancy-measure \
+	msrv-check robustness-long check check-long
 
 help:
 	@echo "Skald repository commands:"
@@ -31,6 +32,7 @@ help:
 	@echo "  make cli-test         Run skac binary and CLI tests"
 	@echo "  make docs-test        Run skald-docs-check unit and documentation tests"
 	@echo "  make golden-runner-test Run skald-golden schema and runner-library tests"
+	@echo "  make mir-measure-test Run local final-MIR measurement tool tests"
 	@echo "  make golden-test      Run all goldens in default determinism-off mode"
 	@echo "  make golden-expectations-test Run focused byte, ownership, and report tests"
 	@echo "  make golden-filter GOLDEN_FILTER='syntax/**'  Run matching golden leaves"
@@ -43,6 +45,7 @@ help:
 	@echo "  make runtime-trace-benchmark Compare enabled and omitted panic trace overhead"
 	@echo "  make generic-vec-benchmark Measure representative generic Vec growth"
 	@echo "  make range-loop-benchmark Compare fused ranges with matched while loops"
+	@echo "  make mir-redundancy-measure Measure the reviewed final-MIR redundancy corpus"
 	@echo "  make msrv-check       Type-check every Rust target with the declared MSRV"
 	@echo "  make robustness-long  Run extended deterministic frontend robustness tests"
 	@echo ""
@@ -73,7 +76,7 @@ docs-check:
 	cargo run --quiet --locked -p skald-docs-check -- .
 
 # Ordinary behavioral suites included in test.
-test: cli-test golden-runner-test golden-test runtime-test docs-test compiler-test
+test: cli-test golden-runner-test mir-measure-test golden-test runtime-test docs-test compiler-test
 
 compiler-test:
 	cargo test --locked -p skald-compiler
@@ -86,6 +89,9 @@ docs-test:
 
 golden-runner-test:
 	cargo test --locked -p skald-golden
+
+mir-measure-test:
+	cargo test --locked -p skald-mir-measure
 
 golden-expectations-test:
 	cargo test --locked -p skald-golden --test planning --test process_execution --test reporting
@@ -125,6 +131,10 @@ generic-vec-benchmark: runtime
 range-loop-benchmark: runtime
 	cargo build --locked -p skac
 	python3 scripts/measure_range_loops.py --compiler target/debug/skac --require-target
+
+mir-redundancy-measure:
+	cargo run --quiet --locked -p skald-mir-measure -- \
+		--format json --output build/measurements/local-mir-redundancy.json
 
 runtime-test: runtime
 	$(MAKE) -C runtime test
