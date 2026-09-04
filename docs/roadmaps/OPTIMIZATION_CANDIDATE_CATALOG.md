@@ -161,7 +161,7 @@ probably require proof-provenance normalization.
 | FMC-04 | Fold constant checked `f64`-to-integer conversions | After exact IEEE/range evaluation; before CFG cleanup | Foundation needed / **Large** | Low to medium runtime and size | Range, finiteness, truncation, target-width result, exact failure reason, and cast-range diamond must be rewritten together |
 | FMC-05 | Simplify statically decidable checked casts and type tests missed by lowering | After whole-world type/dispatch facts; before CFG cleanup | Foundation needed / **Medium to large** | Medium runtime and code size | Dynamic class sets, access views, checked carriers, failure blocks, ownership, and complete-object provenance |
 | FMC-06 | Simplify statically decidable optional presence and unwrap diamonds | After optional-state analysis; before CFG cleanup | Foundation needed / **Large** | Medium runtime and code size | Optional representation, guard counts, pinned mutation, payload lifetime, cleanup, and exact absence/overflow failure behavior |
-| FMC-07 | [Delete obsolete path-condition and logical-expression proof records](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#proof-coupled-logical-cfg-remains-intentionally-opaque) | In a named normalization stage after their final semantic verifier; before broad CFG passes | Foundation needed / **Large** | High architectural value; medium MIR/compile-time reduction | Must classify metadata as semantic, consumed proof, or recomputable analysis and establish a new verified post-normalization product |
+| FMC-07 | [Delete obsolete path-condition and logical-expression proof records](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) | In a mandatory normalization stage after their final semantic verifier; before post-proof CFG passes | Draft design / **Large** | High architectural value; medium MIR/compile-time reduction | The draft uses a one-way proof-rich-to-executable seal transition, exact carrier-load lowering, and a distinct normalized verifier |
 | FMC-08 | Empty-block forwarding | After FMC-07; before block merging | Foundation needed / **Medium** | Medium code size and compile time | Exact predecessor roles, storage epochs, cleanup joins, static publication endpoints, and runtime trace spans |
 | FMC-09 | Basic-block merging | After proof normalization and empty-block forwarding; before jump threading | Foundation needed / **Medium** | Medium code size and target input quality | Lifetime and ownership state, fallthrough spans, terminator semantics, and deterministic block order |
 | FMC-10 | Jump threading and branch-to-branch folding | After proof normalization and scalar propagation; before unreachable-region deletion | Foundation needed / **Large** | Medium to high runtime and code size | Path predicates, duplicated predecessors, cleanup/ownership joins, loop edges, and code-size growth |
@@ -272,7 +272,7 @@ design proposals before implementation.
 
 | Candidate | Primary consumers | Effort | Expected leverage | Main decision |
 |---|---|---|---|---|
-| [Proof-provenance classification and post-proof normalization](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md#proof-coupled-logical-cfg-remains-intentionally-opaque) | FMC-03 through FMC-15; some inlining | **Large** | High | Which metadata remains semantic after final verification, which is consumed, and what verifier seals the normalized product? |
+| [Proof-provenance classification and post-proof normalization](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) | FMC-03 through FMC-15; some inlining | **Large** | High | Draft decision: consume path/logical proof after full verification, retain executable carriers, and seal a distinct normalized product |
 | Conservative whole-program effect summaries | FMV-08, FMM-03 through FMM-12, WWE-04/WWE-07, SLD-01/SLD-02 | **Large** | Very high | What regions and observable effects form the first sound summary lattice? |
 | Points-to, alias, escape, and ownership analysis | Memory, loop, specialization, allocation, retain/release candidates | **Large to extra large** | Very high | How much flow/context sensitivity is justified, and how are recursive/dynamic targets widened deterministically? |
 | Scalar SSA or normalized optimization IR | FMV-09 through FMV-11 and advanced loops | **Extra large** | High | Extend MIR with block parameters or maintain a separate optimizer-facing scalar IR? |
@@ -290,9 +290,9 @@ The completed
 selects no candidate-specific optimization; do not design FMV-15, FMV-02, or
 FMV-03 without new representative evidence.
 
-1. Decide whether proof-provenance normalization is justified by blocked CFG
-   candidates rather than implementing isolated metadata rewrites in every
-   pass.
+1. Review and, if accepted, freeze the
+   [proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+   before implementing isolated metadata rewrites or broader CFG passes.
 2. Build conservative callable effect summaries before attempting memory,
    ownership, pure-call, or aggressive inlining transformations.
 3. Improve reachable-type/target precision, then devirtualize before designing

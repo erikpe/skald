@@ -23,8 +23,8 @@ not an implementation roadmap.
 The open
 [local final-MIR simplification discoveries](LOCAL_FINAL_MIR_SIMPLIFICATION_DISCOVERIES.md)
 record the proof-coupled CFG barrier that remains after the completed local
-simplification layer. It is the evidence input for a future proof-provenance
-classification and post-proof normalization design.
+simplification layer. Its implementation evidence now feeds the draft
+[proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md).
 
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
@@ -68,6 +68,15 @@ generic-interface roadmaps are preserved in the
 No additional implementation roadmap is currently planned.
 
 ## Design proposals
+
+The draft
+[proof-provenance normalization design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
+proposes a mandatory one-way transition from fully proof-verified final MIR to
+a separately sealed executable final-MIR product. It classifies path and
+logical provenance, preserves their runtime carrier behavior as ordinary
+loads, makes pass scheduling and inspection stage-aware, and ends with a
+conservative post-proof unreachable-CFG canary. PPN1 through PPN14 await
+review; no implementation roadmap exists yet.
 
 The completed checked integer constant protocol simplification delivery record
 is preserved in the [archive](../archive/README.md). FMC-01 and FMC-02 are
