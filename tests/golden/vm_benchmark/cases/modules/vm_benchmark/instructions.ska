@@ -25,7 +25,7 @@ public class BaseInstruction implements model::Instruction {
 }
 
 // These template-method bodies are intentionally shared by concrete leaf
-// instructions so the finished workload exercises inherited virtual dispatch.
+// instructions so the workload exercises inherited virtual dispatch.
 public class RegisterWriteInstruction extends BaseInstruction {
     dst: i64;
 
@@ -102,9 +102,266 @@ public class AddOp extends BinaryOp {
     }
 }
 
+public class SubOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value - right_value;
+    }
+}
+
+public class MulOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value * right_value;
+    }
+}
+
+public class DivOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value / right_value;
+    }
+}
+
+public class ModOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value % right_value;
+    }
+}
+
+public class AndOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value & right_value;
+    }
+}
+
+public class OrOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value | right_value;
+    }
+}
+
+public class XorOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value ^ right_value;
+    }
+}
+
+public class ShlOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value << (u64) right_value;
+    }
+}
+
+public class ShrOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value >> (u64) right_value;
+    }
+}
+
+public class UnaryOp extends RegisterWriteInstruction {
+    src: i64;
+
+    init(opcode_id: u64, dst: i64, src: i64) {
+        super(opcode_id, dst);
+        self.src = src;
+    }
+
+    virtual fn apply(value: i64) -> i64 {
+        panic("UnaryOp.apply: abstract");
+        return 0;
+    }
+
+    override fn compute_value(ref vm: model::VmApi) -> i64 {
+        return self.apply(vm.read_reg(self.src));
+    }
+}
+
+public class NotOp extends UnaryOp {
+    init(opcode_id: u64, dst: i64, src: i64) {
+        super(opcode_id, dst, src);
+    }
+
+    override fn apply(value: i64) -> i64 {
+        return ~value;
+    }
+}
+
+public class CompareOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    // Arithmetic-heavy cases mix arithmetic and comparison leaves through the
+    // same inherited BinaryOp execution body.
+    virtual fn compare(left_value: i64, right_value: i64) -> bool {
+        panic("CompareOp.compare: abstract");
+        return false;
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        if (self.compare(left_value, right_value)) {
+            return 1;
+        }
+        return 0;
+    }
+}
+
+public class CmpEqOp extends CompareOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn compare(left_value: i64, right_value: i64) -> bool {
+        return left_value == right_value;
+    }
+}
+
+public class CmpLtOp extends CompareOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn compare(left_value: i64, right_value: i64) -> bool {
+        return left_value < right_value;
+    }
+}
+
+public class JumpOp extends BaseInstruction {
+    target: u64;
+
+    init(opcode_id: u64, target: u64) {
+        super(opcode_id);
+        self.target = target;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        vm.jump(self.target);
+        return;
+    }
+}
+
+public class ConditionalJumpOp extends BaseInstruction {
+    cond_reg: i64;
+    target: u64;
+
+    init(opcode_id: u64, cond_reg: i64, target: u64) {
+        super(opcode_id);
+        self.cond_reg = cond_reg;
+        self.target = target;
+    }
+
+    virtual fn should_jump(ref vm: model::VmApi) -> bool {
+        panic("ConditionalJumpOp.should_jump: abstract");
+        return false;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        if (self.should_jump(vm)) {
+            vm.jump(self.target);
+            return;
+        }
+        vm.advance();
+        return;
+    }
+}
+
+public class JumpIfTrueOp extends ConditionalJumpOp {
+    init(opcode_id: u64, cond_reg: i64, target: u64) {
+        super(opcode_id, cond_reg, target);
+    }
+
+    override fn should_jump(ref vm: model::VmApi) -> bool {
+        return vm.read_reg(self.cond_reg) != 0;
+    }
+}
+
+public class JumpIfFalseOp extends ConditionalJumpOp {
+    init(opcode_id: u64, cond_reg: i64, target: u64) {
+        super(opcode_id, cond_reg, target);
+    }
+
+    override fn should_jump(ref vm: model::VmApi) -> bool {
+        return vm.read_reg(self.cond_reg) == 0;
+    }
+}
+
 public class MemoryOp extends BaseInstruction {
     init(opcode_id: u64) {
         super(opcode_id);
+    }
+}
+
+public class MemoryReadOp extends MemoryOp {
+    dst: i64;
+
+    init(opcode_id: u64, dst: i64) {
+        super(opcode_id);
+        self.dst = dst;
+    }
+
+    virtual fn read_value(ref vm: model::VmApi) -> i64 {
+        panic("MemoryReadOp.read_value: abstract");
+        return 0;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        vm.write_reg(self.dst, self.read_value(vm));
+        vm.advance();
+        return;
+    }
+}
+
+public class MemoryWriteOp extends MemoryOp {
+    src: i64;
+
+    init(opcode_id: u64, src: i64) {
+        super(opcode_id);
+        self.src = src;
+    }
+
+    virtual fn write_value(mut ref vm: model::VmApi, value: i64) -> unit {
+        panic("MemoryWriteOp.write_value: abstract");
+        return;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        self.write_value(vm, vm.read_reg(self.src));
+        vm.advance();
+        return;
     }
 }
 
@@ -178,6 +435,125 @@ public class StoreMemOp extends DirectMemoryWriteOp {
     }
 }
 
+public class IndexedMemoryOp extends MemoryOp {
+    base_reg: i64;
+    index_reg: i64;
+
+    init(opcode_id: u64, base_reg: i64, index_reg: i64) {
+        super(opcode_id);
+        self.base_reg = base_reg;
+        self.index_reg = index_reg;
+    }
+}
+
+public class IndexedMemoryReadOp extends MemoryOp {
+    dst: i64;
+    base_reg: i64;
+    index_reg: i64;
+
+    init(opcode_id: u64, dst: i64, base_reg: i64, index_reg: i64) {
+        super(opcode_id);
+        self.dst = dst;
+        self.base_reg = base_reg;
+        self.index_reg = index_reg;
+    }
+
+    virtual fn read_value(ref vm: model::VmApi) -> i64 {
+        panic("IndexedMemoryReadOp.read_value: abstract");
+        return 0;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        vm.write_reg(self.dst, self.read_value(vm));
+        vm.advance();
+        return;
+    }
+}
+
+public class IndexedMemoryWriteOp extends MemoryOp {
+    src: i64;
+    base_reg: i64;
+    index_reg: i64;
+
+    init(opcode_id: u64, src: i64, base_reg: i64, index_reg: i64) {
+        super(opcode_id);
+        self.src = src;
+        self.base_reg = base_reg;
+        self.index_reg = index_reg;
+    }
+
+    virtual fn write_value(mut ref vm: model::VmApi, value: i64) -> unit {
+        panic("IndexedMemoryWriteOp.write_value: abstract");
+        return;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        self.write_value(vm, vm.read_reg(self.src));
+        vm.advance();
+        return;
+    }
+}
+
+public class LoadMemIndexedOp extends IndexedMemoryReadOp {
+    init(opcode_id: u64, dst: i64, base_reg: i64, index_reg: i64) {
+        super(opcode_id, dst, base_reg, index_reg);
+    }
+
+    override fn read_value(ref vm: model::VmApi) -> i64 {
+        return vm.load_mem_indexed(
+            vm.read_reg(self.base_reg),
+            vm.read_reg(self.index_reg)
+        );
+    }
+}
+
+public class StoreMemIndexedOp extends IndexedMemoryWriteOp {
+    init(opcode_id: u64, src: i64, base_reg: i64, index_reg: i64) {
+        super(opcode_id, src, base_reg, index_reg);
+    }
+
+    override fn write_value(mut ref vm: model::VmApi, value: i64) -> unit {
+        vm.store_mem_indexed(
+            vm.read_reg(self.base_reg),
+            vm.read_reg(self.index_reg),
+            value
+        );
+        return;
+    }
+}
+
+public class SliceCopyOp extends BaseInstruction {
+    dst_base_reg: i64;
+    src_base_reg: i64;
+    begin_reg: i64;
+    end_reg: i64;
+
+    init(
+        opcode_id: u64,
+        dst_base_reg: i64,
+        src_base_reg: i64,
+        begin_reg: i64,
+        end_reg: i64
+    ) {
+        super(opcode_id);
+        self.dst_base_reg = dst_base_reg;
+        self.src_base_reg = src_base_reg;
+        self.begin_reg = begin_reg;
+        self.end_reg = end_reg;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        vm.slice_copy(
+            vm.read_reg(self.dst_base_reg),
+            vm.read_reg(self.src_base_reg),
+            vm.read_reg(self.begin_reg),
+            vm.read_reg(self.end_reg)
+        );
+        vm.advance();
+        return;
+    }
+}
+
 public class InvokableInstruction extends BaseInstruction {
     init(opcode_id: u64) {
         super(opcode_id);
@@ -217,6 +593,28 @@ public class CallBuiltinOp extends InvokableInstruction {
     }
 }
 
+public class CallOp extends InvokableInstruction {
+    function_id: u64;
+    argc: u64;
+    dst_reg: i64;
+
+    init(opcode_id: u64, function_id: u64, argc: u64, dst_reg: i64) {
+        super(opcode_id);
+        self.function_id = function_id;
+        self.argc = argc;
+        self.dst_reg = dst_reg;
+    }
+
+    override fn invoke(mut ref vm: model::VmApi) -> unit {
+        vm.call_function(self.function_id, self.argc, self.dst_reg);
+        return;
+    }
+
+    override fn advances_after_invoke() -> bool {
+        return false;
+    }
+}
+
 public class ReturningInstruction extends BaseInstruction {
     src: i64;
 
@@ -232,6 +630,17 @@ public class ReturningInstruction extends BaseInstruction {
 
     override fn execute(mut ref vm: model::VmApi) -> unit {
         self.finish_with(vm, vm.read_reg(self.src));
+        return;
+    }
+}
+
+public class RetOp extends ReturningInstruction {
+    init(opcode_id: u64, src: i64) {
+        super(opcode_id, src);
+    }
+
+    override fn finish_with(mut ref vm: model::VmApi, value: i64) -> unit {
+        vm.ret_from(self.src);
         return;
     }
 }

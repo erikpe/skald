@@ -14,3 +14,27 @@ name = "slice1_minimal_output"
 args = ["1"]
 expect = { stdout = { inline = "slice1_minimal: return=14 memory0=14 mem_checksum=434 trace_sum=135 steps=11 calls=0 branches=0 builtins=1 checksum=410151703659\n" } }
 
+[[test.run]]
+name = "arithmetic_mixer_output"
+args = ["2"]
+expect = { stdout = { inline = "arithmetic_mixer: return=102 memory0=102 mem_checksum=3162 trace_sum=334 steps=88 calls=0 branches=12 builtins=1 checksum=2987648468241\n" } }
+
+[[test.run]]
+name = "branch_maze_output"
+args = ["3"]
+expect = { stdout = { inline = "branch_maze: return=61 memory0=61 mem_checksum=1891 trace_sum=191 steps=117 calls=0 branches=22 builtins=1 checksum=1786724788594\n" } }
+
+[[test.run]]
+name = "recursive_calls_output"
+args = ["4"]
+expect = { stdout = { inline = "recursive_calls: return=13 memory0=13 mem_checksum=403 trace_sum=134 steps=331 calls=41 branches=21 builtins=1 checksum=380872731837\n" } }
+
+[[test.run]]
+name = "dense_array_output"
+args = ["5"]
+expect = { stdout = { inline = "dense_array: return=180 memory0=1 mem_checksum=28064133262525676 trace_sum=301 steps=156 calls=0 branches=22 builtins=1 checksum=4370731504139617757\n" } }
+
+[[test.run]]
+name = "slice_copy_output"
+args = ["6"]
+expect = { stdout = { inline = "slice_copy: return=159 memory0=10 mem_checksum=-5438759747882907306 trace_sum=280 steps=91 calls=0 branches=12 builtins=1 checksum=-7363314566833659961\n" } }

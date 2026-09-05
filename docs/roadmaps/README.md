@@ -9,12 +9,12 @@ progress. Completed roadmaps and resolved discovery records move to
 The in-progress
 [VM benchmark correctness workload roadmap](VM_BENCHMARK_ROADMAP.md) ports
 Niflheim's deterministic bytecode-VM regression program into one Skald-native
-multi-module golden fixture. The ownership model and minimal vertical slice
-are complete; VB1 is next to port the full instruction hierarchy and the core
-arithmetic, branching, recursion, dense-array, and slice workloads. The roadmap
-depends only on implemented language, standard-library, module, driver, and
-golden-runner contracts; it is independent of the pending optimization
-discoveries.
+multi-module golden fixture. The ownership model, full instruction hierarchy,
+and six core arithmetic, branching, recursion, dense-array, and slice workloads
+are complete; VB2 is next to port heterogeneous constants, builtins, static
+state, and exact `f64` behavior. The roadmap depends only on implemented
+language, standard-library, module, driver, and golden-runner contracts; it is
+independent of the pending optimization discoveries.
 
 ## Pending discoveries
 

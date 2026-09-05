@@ -86,6 +86,325 @@ fn build_minimal_case() -> model::BenchmarkCase {
     );
 }
 
+fn trace_builtin_table() -> (shared model::Builtin)[] {
+    return (shared model::Builtin)[]{
+        new builtins::TraceAccumulatorBuiltin("trace_accumulate")
+    };
+}
+
+fn build_arithmetic_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](26u);
+    code[0] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[1] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 1u);
+    code[2] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 2u);
+    code[3] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 6, 3u);
+    code[4] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 7, 4u);
+    code[5] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 8, 5u);
+    code[6] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 9, 6u);
+    code[7] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 10, 7u);
+    code[8] = new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 3, 0, 1);
+    code[9] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 3, 21u
+    );
+    code[10] = new instructions::AddOp(opcodes::add_opcode(), 2, 2, 0);
+    code[11] = new instructions::MulOp(opcodes::mul_opcode(), 4, 2, 7);
+    code[12] = new instructions::SubOp(opcodes::sub_opcode(), 2, 4, 0);
+    code[13] = new instructions::DivOp(opcodes::div_opcode(), 4, 2, 8);
+    code[14] = new instructions::ModOp(opcodes::mod_opcode(), 5, 2, 9);
+    code[15] = new instructions::AddOp(opcodes::add_opcode(), 2, 4, 5);
+    code[16] = new instructions::CmpEqOp(opcodes::cmp_eq_opcode(), 3, 5, 10);
+    code[17] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 3, 19u
+    );
+    code[18] = new instructions::AddOp(opcodes::add_opcode(), 2, 2, 0);
+    code[19] = new instructions::AddOp(opcodes::add_opcode(), 0, 0, 6);
+    code[20] = new instructions::JumpOp(opcodes::jump_opcode(), 8u);
+    code[21] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 2);
+    code[22] = new instructions::LoadMemOp(opcodes::load_mem_opcode(), 0, 4);
+    code[23] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 4);
+    code[24] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 0u, 3u
+    );
+    code[25] = new instructions::HaltOp(opcodes::halt_opcode(), 2);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 11u, code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(1), new BoxI64(7), new BoxI64(0), new BoxI64(1),
+        new BoxI64(3), new BoxI64(2), new BoxI64(5), new BoxI64(0)
+    };
+    return new model::Program(
+        "arithmetic_mixer", 0u, functions, constants, trace_builtin_table(), 2u
+    );
+}
+
+fn build_arithmetic_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "arithmetic_mixer", build_arithmetic_program(),
+        102, 102, 3162, 334, 88u, 0u, 12u, 1u
+    );
+}
+
+fn build_branch_maze_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](27u);
+    code[0] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[1] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 1u);
+    code[2] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 0u);
+    code[3] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 6, 2u);
+    code[4] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 7, 3u);
+    code[5] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 8, 4u);
+    code[6] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 9, 5u);
+    code[7] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 10, 6u);
+    code[8] = new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 3, 0, 1);
+    code[9] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 3, 23u
+    );
+    code[10] = new instructions::ModOp(opcodes::mod_opcode(), 5, 0, 8);
+    code[11] = new instructions::CmpEqOp(opcodes::cmp_eq_opcode(), 3, 5, 6);
+    code[12] = new instructions::JumpIfTrueOp(
+        opcodes::jump_if_true_opcode(), 3, 15u
+    );
+    code[13] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 4, 10);
+    code[14] = new instructions::JumpOp(opcodes::jump_opcode(), 16u);
+    code[15] = new instructions::MulOp(opcodes::mul_opcode(), 4, 0, 9);
+    code[16] = new instructions::AddOp(opcodes::add_opcode(), 2, 2, 4);
+    code[17] = new instructions::ModOp(opcodes::mod_opcode(), 5, 0, 9);
+    code[18] = new instructions::CmpEqOp(opcodes::cmp_eq_opcode(), 3, 5, 7);
+    code[19] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 3, 21u
+    );
+    code[20] = new instructions::SubOp(opcodes::sub_opcode(), 2, 2, 7);
+    code[21] = new instructions::AddOp(opcodes::add_opcode(), 0, 0, 7);
+    code[22] = new instructions::JumpOp(opcodes::jump_opcode(), 8u);
+    code[23] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 2);
+    code[24] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 2);
+    code[25] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 0u, 2u
+    );
+    code[26] = new instructions::HaltOp(opcodes::halt_opcode(), 2);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 11u, code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(0), new BoxI64(8), new BoxI64(0), new BoxI64(1),
+        new BoxI64(2), new BoxI64(3), new BoxI64(7)
+    };
+    return new model::Program(
+        "branch_maze", 0u, functions, constants, trace_builtin_table(), 2u
+    );
+}
+
+fn build_branch_maze_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "branch_maze", build_branch_maze_program(),
+        61, 61, 1891, 191, 117u, 0u, 22u, 1u
+    );
+}
+
+fn build_recursive_program() -> shared model::Program {
+    var main_code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](6u);
+    main_code[0] = new instructions::LoadConstOp(
+        opcodes::load_const_opcode(), 0, 0u
+    );
+    main_code[1] = new instructions::CallOp(opcodes::call_opcode(), 1u, 1u, 1);
+    main_code[2] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 1);
+    main_code[3] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 1);
+    main_code[4] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 0u, 1u
+    );
+    main_code[5] = new instructions::HaltOp(opcodes::halt_opcode(), 1);
+
+    var fib_code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](12u);
+    fib_code[0] = new instructions::LoadConstOp(
+        opcodes::load_const_opcode(), 1, 1u
+    );
+    fib_code[1] = new instructions::LoadConstOp(
+        opcodes::load_const_opcode(), 2, 2u
+    );
+    fib_code[2] = new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 3, 0, 2);
+    fib_code[3] = new instructions::JumpIfTrueOp(
+        opcodes::jump_if_true_opcode(), 3, 11u
+    );
+    fib_code[4] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 4, 0);
+    fib_code[5] = new instructions::SubOp(opcodes::sub_opcode(), 0, 0, 1);
+    fib_code[6] = new instructions::CallOp(opcodes::call_opcode(), 1u, 1u, 5);
+    fib_code[7] = new instructions::SubOp(opcodes::sub_opcode(), 0, 4, 2);
+    fib_code[8] = new instructions::CallOp(opcodes::call_opcode(), 1u, 1u, 6);
+    fib_code[9] = new instructions::AddOp(opcodes::add_opcode(), 7, 5, 6);
+    fib_code[10] = new instructions::RetOp(opcodes::ret_opcode(), 7);
+    fib_code[11] = new instructions::RetOp(opcodes::ret_opcode(), 0);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 2u, main_code),
+        model::FunctionInfo("fib", 1u, 8u, fib_code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(7), new BoxI64(1), new BoxI64(2)
+    };
+    return new model::Program(
+        "recursive_calls", 0u, functions, constants, trace_builtin_table(), 2u
+    );
+}
+
+fn build_recursive_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "recursive_calls", build_recursive_program(),
+        13, 13, 403, 134, 331u, 41u, 21u, 1u
+    );
+}
+
+fn build_dense_array_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](30u);
+    code[0] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[1] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 1u);
+    code[2] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 2u);
+    code[3] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 3u);
+    code[4] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 4, 4u);
+    code[5] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 5, 5u);
+    code[6] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 6, 6u);
+    code[7] = new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 7, 0, 1);
+    code[8] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 7, 15u
+    );
+    code[9] = new instructions::MulOp(opcodes::mul_opcode(), 8, 0, 0);
+    code[10] = new instructions::AddOp(opcodes::add_opcode(), 8, 8, 0);
+    code[11] = new instructions::AddOp(opcodes::add_opcode(), 8, 8, 2);
+    code[12] = new instructions::StoreMemIndexedOp(
+        opcodes::store_mem_indexed_opcode(), 8, 6, 0
+    );
+    code[13] = new instructions::AddOp(opcodes::add_opcode(), 0, 0, 2);
+    code[14] = new instructions::JumpOp(opcodes::jump_opcode(), 7u);
+    code[15] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[16] = new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 7, 0, 1);
+    code[17] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 7, 26u
+    );
+    code[18] = new instructions::LoadMemIndexedOp(
+        opcodes::load_mem_indexed_opcode(), 8, 6, 0
+    );
+    code[19] = new instructions::AddOp(opcodes::add_opcode(), 3, 3, 8);
+    code[20] = new instructions::ModOp(opcodes::mod_opcode(), 10, 0, 4);
+    code[21] = new instructions::CmpEqOp(opcodes::cmp_eq_opcode(), 7, 10, 5);
+    code[22] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 7, 24u
+    );
+    code[23] = new instructions::AddOp(opcodes::add_opcode(), 3, 3, 2);
+    code[24] = new instructions::AddOp(opcodes::add_opcode(), 0, 0, 2);
+    code[25] = new instructions::JumpOp(opcodes::jump_opcode(), 16u);
+    code[26] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 8, 3);
+    code[27] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 3);
+    code[28] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 0u, 1u
+    );
+    code[29] = new instructions::HaltOp(opcodes::halt_opcode(), 3);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 11u, code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(0), new BoxI64(8), new BoxI64(1), new BoxI64(0),
+        new BoxI64(2), new BoxI64(0), new BoxI64(0)
+    };
+    return new model::Program(
+        "dense_array", 0u, functions, constants, trace_builtin_table(), 12u
+    );
+}
+
+fn build_dense_array_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "dense_array", build_dense_array_program(),
+        180, 1, 28064133262525676, 301, 156u, 0u, 22u, 1u
+    );
+}
+
+fn build_slice_copy_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](34u);
+    code[0] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[1] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 1u);
+    code[2] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 2u);
+    code[3] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 3u);
+    code[4] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 4, 4u);
+    code[5] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 5, 5u);
+    code[6] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 6, 6u);
+    code[7] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 7, 7u);
+    code[8] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 8, 8u);
+    code[9] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 9, 9u);
+    code[10] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 10, 10u);
+    code[11] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 11, 11u);
+    code[12] = new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 12, 0, 1);
+    code[13] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 12, 19u
+    );
+    code[14] = new instructions::MulOp(opcodes::mul_opcode(), 13, 0, 4);
+    code[15] = new instructions::AddOp(opcodes::add_opcode(), 13, 13, 5);
+    code[16] = new instructions::StoreMemIndexedOp(
+        opcodes::store_mem_indexed_opcode(), 13, 6, 0
+    );
+    code[17] = new instructions::AddOp(opcodes::add_opcode(), 0, 0, 2);
+    code[18] = new instructions::JumpOp(opcodes::jump_opcode(), 12u);
+    code[19] = new instructions::SliceCopyOp(
+        opcodes::slice_copy_opcode(), 7, 6, 10, 11
+    );
+    code[20] = new instructions::StoreMemIndexedOp(
+        opcodes::store_mem_indexed_opcode(), 9, 6, 4
+    );
+    code[21] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[22] = new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 12, 0, 8);
+    code[23] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 12, 28u
+    );
+    code[24] = new instructions::LoadMemIndexedOp(
+        opcodes::load_mem_indexed_opcode(), 13, 7, 0
+    );
+    code[25] = new instructions::AddOp(opcodes::add_opcode(), 3, 3, 13);
+    code[26] = new instructions::AddOp(opcodes::add_opcode(), 0, 0, 2);
+    code[27] = new instructions::JumpOp(opcodes::jump_opcode(), 22u);
+    code[28] = new instructions::LoadMemIndexedOp(
+        opcodes::load_mem_indexed_opcode(), 13, 6, 4
+    );
+    code[29] = new instructions::AddOp(opcodes::add_opcode(), 3, 3, 13);
+    code[30] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 14, 3);
+    code[31] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 3);
+    code[32] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 0u, 1u
+    );
+    code[33] = new instructions::HaltOp(opcodes::halt_opcode(), 3);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 14u, code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(0), new BoxI64(6), new BoxI64(1), new BoxI64(0),
+        new BoxI64(2), new BoxI64(10), new BoxI64(0), new BoxI64(6),
+        new BoxI64(4), new BoxI64(99), new BoxI64(1), new BoxI64(5)
+    };
+    return new model::Program(
+        "slice_copy", 0u, functions, constants, trace_builtin_table(), 16u
+    );
+}
+
+fn build_slice_copy_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "slice_copy", build_slice_copy_program(),
+        159, 10, -5438759747882907306, 280, 91u, 0u, 12u, 1u
+    );
+}
+
 public fn build_cases() -> model::BenchmarkCase[] {
-    return model::BenchmarkCase[]{build_minimal_case()};
+    return model::BenchmarkCase[]{
+        build_minimal_case(),
+        build_arithmetic_case(),
+        build_branch_maze_case(),
+        build_recursive_case(),
+        build_dense_array_case(),
+        build_slice_copy_case()
+    };
 }

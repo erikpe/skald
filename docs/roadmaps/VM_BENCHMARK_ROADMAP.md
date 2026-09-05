@@ -1,6 +1,6 @@
 # VM Benchmark Correctness Workload Roadmap
 
-Status: in progress; VB0 is complete and VB1 is next.
+Status: in progress; VB0 and VB1 are complete, and VB2 is next.
 
 This roadmap ports the deterministic bytecode-VM regression workload from the
 sibling Niflheim repository into a Skald-native multi-module golden test. The
@@ -65,7 +65,7 @@ implicit garbage-collected reference semantics.
 ## Progress
 
 - [x] VB0 — Establish the Skald ownership model and minimal vertical slice
-- [ ] VB1 — Port the instruction hierarchy and core VM workloads
+- [x] VB1 — Port the instruction hierarchy and core VM workloads
 - [ ] VB2 — Port heterogeneous constants, builtins, statics, and exact `f64`
 - [ ] VB3 — Port the large algorithmic cases and aggregate verification
 - [ ] VB4 — Add compiler variants, documentation, and full-suite hardening
@@ -117,23 +117,23 @@ is included.
 the ordinary arithmetic, control-flow, guest-call, and memory paths before
 adding erased host values and static state.
 
-- [ ] Port the full base-instruction hierarchy with explicit Skald initializers,
+- [x] Port the full base-instruction hierarchy with explicit Skald initializers,
       base initialization, virtual declarations, overrides, and shared
       interface storage.
-- [ ] Preserve shared inherited execution bodies for register writes, binary
+- [x] Preserve shared inherited execution bodies for register writes, binary
       and unary operations, comparisons, conditional branches, memory access,
       invocations, and returns so both inherited virtual and interface dispatch
       remain exercised.
-- [ ] Port guest function metadata, call/return frame creation, argument
+- [x] Port guest function metadata, call/return frame creation, argument
       transfer, return destinations, and stack-bound checks using the VB0 frame
       representation.
-- [ ] Port `arithmetic_mixer`, `branch_maze`, `recursive_calls`, `dense_array`,
+- [x] Port `arithmetic_mixer`, `branch_maze`, `recursive_calls`, `dense_array`,
       and `slice_copy` without flattening their instruction streams or replacing
       their checks with host-side shortcuts.
-- [ ] Preserve intrinsic array indexing, indexed writes, copied slices, slice
+- [x] Preserve intrinsic array indexing, indexed writes, copied slices, slice
       replacement, integer casts, checked shifts, comparisons, loops, and
       branch counters used by these cases.
-- [ ] Add one exact named golden run per newly ported case and retain the
+- [x] Add one exact named golden run per newly ported case and retain the
       expected metadata beside each readable builder.
 
 **Tests:** `make golden-filter GOLDEN_FILTER='vm_benchmark/**'`; focused runs for
