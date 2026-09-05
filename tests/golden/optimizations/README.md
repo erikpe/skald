@@ -32,6 +32,13 @@ lifecycle, and ownership destruction. Their failure matrix preserves operand
 order and exact panic observations across default, `none`, checked-folding-
 disabled, CFG-cleanup-disabled, and all-pass-disabled products.
 
+The convergent local-constant fixtures exercise deep mixed primitive, cast,
+checked, and logical facts plus every constant-left short-circuit rule. Their
+profile matrix disables each constant consumer and the cleanup layers
+independently; native observations cover selected and skipped effects and
+failures, function values, ordinary locals, shared owners, static startup and
+reverse shutdown, destruction, and exact panic traces.
+
 Use `make golden-filter GOLDEN_FILTER='optimizations/**'` for the ordinary
 focused suite. Use `scripts/golden.sh --determinism full --filter
 'optimizations/**'` to repeat both compiler and native processes.

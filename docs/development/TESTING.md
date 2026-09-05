@@ -233,6 +233,16 @@ bounded-view test separately proves that algebraic and CFG consumers expose
 only definitions already encountered in their current block while observing
 literal rewrites made inside the same transaction.
 
+The production transition suite additionally pins the registered name, stage,
+default position, independent exclusion, all four pass-owned selection counts,
+selected-result replacement count, transition and normalization checkpoints,
+and structured failure ownership. The convergent optimization goldens compare
+default, `none`, each constant consumer disabled, logical folding disabled,
+CFG cleanup exclusions, and every pass disabled. They cover deep mixed
+primitive/cast/checked/logical facts, all four constant-left rules, selected and
+skipped effects and failures, static startup and shutdown, ownership
+destruction, function values, native status and output, and exact panic traces.
+
 Primitive pass tests pin arbitrary-depth folding in one occurrence,
 constants propagated across retained checked and logical structures,
 independent selection, exact identity/span preservation, static-failure and

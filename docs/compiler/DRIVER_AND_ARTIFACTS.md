@@ -242,18 +242,17 @@ publication.
 
 ## Frozen convergent local constant propagation orchestration
 
-Status: **in progress through internal logical selection**. The frozen
+Status: **implemented through production logical selection**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
 the accepted extension. Primitive and checked proof-rich consumers use the
-convergent solution today. The typed single-occurrence transition stage and
-its immutable logical selection plan are implemented and atomically composed
-with mandatory normalization. Production `constant-short-circuit-folding`
-registration, public selection, and reporting remain pending.
+convergent solution, while `constant-short-circuit-folding` is registered as
+the single proof-transition occurrence and atomically composes its immutable
+logical selection plan with mandatory normalization.
 
 The registry retains `primitive-constant-folding` and
-`checked-integer-constant-folding` and will add
+`checked-integer-constant-folding` and includes
 `constant-short-circuit-folding`. The latter is independently discoverable and
 excludable, appears once at the proof-normalization boundary in `default`, and
 uses a new closed `ProofTransition` stage. Schedule validation accepts proof-

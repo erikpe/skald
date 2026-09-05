@@ -27,60 +27,59 @@ impl Verifier<'_> {
         flow.seed(function.body().entry, entry.clone());
         let mut reported = HashSet::new();
 
-        loop {
-            while let Some((block_id, mut initialized)) = flow.pop() {
-                let Some(block) = function.block(block_id) else {
-                    continue;
-                };
-                for instruction in &block.instructions {
-                    match instruction {
-                        MirInstruction::StorageLive(live)
-                            if is_local_function_storage(function, live.storage) =>
+        // Definite initialization is an executable-path property. Optimization
+        // may leave disconnected blocks for the independently selectable CFG
+        // cleanup pass; seeding those components with an empty local state can
+        // otherwise contaminate a reachable join they still target.
+        while let Some((block_id, mut initialized)) = flow.pop() {
+            let Some(block) = function.block(block_id) else {
+                continue;
+            };
+            for instruction in &block.instructions {
+                match instruction {
+                    MirInstruction::StorageLive(live)
+                        if is_local_function_storage(function, live.storage) =>
+                    {
+                        initialized.remove(&live.storage);
+                    }
+                    MirInstruction::StorageDead(dead) => {
+                        initialized.remove(&dead.storage);
+                    }
+                    MirInstruction::Store(store) => {
+                        if let Some(storage) =
+                            exact_local_function_place(function, &store.destination)
                         {
-                            initialized.remove(&live.storage);
+                            initialized.insert(storage);
                         }
-                        MirInstruction::StorageDead(dead) => {
-                            initialized.remove(&dead.storage);
-                        }
-                        MirInstruction::Store(store) => {
-                            if let Some(storage) =
-                                exact_local_function_place(function, &store.destination)
-                            {
-                                initialized.insert(storage);
-                            }
-                        }
-                        MirInstruction::Assign(assignment) => {
-                            if let MirRvalueKind::Load(place) = &assignment.rvalue.kind {
-                                if let Some(storage) = exact_local_function_place(function, place) {
-                                    if !initialized.contains(&storage)
-                                        && reported.insert((block.id, storage))
-                                    {
-                                        self.block_error(
-                                            function.callable(),
-                                            block.id,
-                                            format!(
-                                                "function-value storage {storage} is loaded without non-null initialization on every incoming path"
-                                            ),
-                                        );
-                                    }
+                    }
+                    MirInstruction::Assign(assignment) => {
+                        if let MirRvalueKind::Load(place) = &assignment.rvalue.kind {
+                            if let Some(storage) = exact_local_function_place(function, place) {
+                                if !initialized.contains(&storage)
+                                    && reported.insert((block.id, storage))
+                                {
+                                    self.block_error(
+                                        function.callable(),
+                                        block.id,
+                                        format!(
+                                            "function-value storage {storage} is loaded without non-null initialization on every incoming path"
+                                        ),
+                                    );
                                 }
                             }
                         }
-                        _ => {}
                     }
-                }
-                if let Some(terminator) = &block.terminator {
-                    for successor in terminator.successors() {
-                        flow.merge(successor, &initialized, |existing, incoming| {
-                            let old_len = existing.len();
-                            existing.retain(|storage| incoming.contains(storage));
-                            existing.len() != old_len
-                        });
-                    }
+                    _ => {}
                 }
             }
-            if !flow.seed_next_component(&function.body().blocks, entry.clone()) {
-                break;
+            if let Some(terminator) = &block.terminator {
+                for successor in terminator.successors() {
+                    flow.merge(successor, &initialized, |existing, incoming| {
+                        let old_len = existing.len();
+                        existing.retain(|storage| incoming.contains(storage));
+                        existing.len() != old_len
+                    });
+                }
             }
         }
     }

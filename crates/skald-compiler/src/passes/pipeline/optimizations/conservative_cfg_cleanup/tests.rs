@@ -456,6 +456,7 @@ fn default_cfg_cleanup_exposes_removed_call_targets_to_final_reachability() {
             "dead-pure-definition-elimination",
             "conservative-cfg-cleanup",
             "dead-pure-definition-elimination",
+            "constant-short-circuit-folding",
             "post-proof-unreachable-block-elimination",
             "post-proof-empty-block-forwarding",
             "post-proof-basic-block-merging",

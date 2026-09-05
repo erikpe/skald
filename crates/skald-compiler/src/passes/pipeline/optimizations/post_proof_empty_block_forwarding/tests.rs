@@ -217,14 +217,14 @@ fn default_registration_is_selectable_between_unreachable_cleanup_and_merging() 
         .iter()
         .find(|occurrence| occurrence.identity() == IDENTITY)
         .unwrap();
-    assert_eq!(occurrence.position(), 9);
+    assert_eq!(occurrence.position(), 10);
     assert_eq!(occurrence.stage(), MirPassStage::Final);
     assert_eq!(
-        default.as_slice()[8].identity(),
+        default.as_slice()[9].identity(),
         post_proof_unreachable_block_elimination::IDENTITY
     );
     assert_eq!(
-        default.as_slice()[10].identity(),
+        default.as_slice()[11].identity(),
         post_proof_basic_block_merging::IDENTITY
     );
 

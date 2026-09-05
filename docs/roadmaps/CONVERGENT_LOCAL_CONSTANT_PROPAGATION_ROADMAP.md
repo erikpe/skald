@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 through CLR6 are complete and CLR7 is next.
+Status: in progress; CLR0 through CLR7 are complete and CLR8 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -102,7 +102,7 @@ creating persistent optimizer provenance.
 - [x] CLR4 — Rewrite dependent checked protocols from one solved snapshot
 - [x] CLR5 — Add the proof-consuming transition boundary
 - [x] CLR6 — Implement constant-left logical selection
-- [ ] CLR7 — Complete selection, observation, and semantic evidence
+- [x] CLR7 — Complete selection, observation, and semantic evidence
 - [ ] CLR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
@@ -353,26 +353,26 @@ and no proof-invalid intermediate or retained provenance is observable.
 **Purpose:** Make the completed capability usable, independently diagnosable,
 and proven from public selection through native execution.
 
-- [ ] Add the logical pass to the production registry, public pass query,
+- [x] Add the logical pass to the production registry, public pass query,
   lexical CLI listing, known-name diagnostics, exclusions, and the default
   schedule immediately before mandatory normalization.
-- [ ] Preserve existing pass identities and names, exact proof-rich order, and
+- [x] Preserve existing pass identities and names, exact proof-rich order, and
   the final suffix; update expected default occurrence positions deliberately.
-- [ ] Add logical selection/result metrics split by `&&`/`||` and short/right;
+- [x] Add logical selection/result metrics split by `&&`/`||` and short/right;
   keep normalization and later deletion metrics under their existing owners.
-- [ ] Expose deterministic transition occurrence records and checkpoints plus
+- [x] Expose deterministic transition occurrence records and checkpoints plus
   the existing normalization checkpoint over the same final sealed product.
-- [ ] Attribute logical analysis/plan/rewrite failures to the pass and unchanged
+- [x] Attribute logical analysis/plan/rewrite failures to the pass and unchanged
   core normalization failures to mandatory normalization.
-- [ ] Add focused golden sources covering deep mixed expressions, all four
+- [x] Add focused golden sources covering deep mixed expressions, all four
   short-circuit rules, skipped effects/failures, selected effects/failures,
   static initialization/shutdown, ownership/destruction, and function values.
-- [ ] Compare default, `none`, each constant consumer disabled, logical-only
+- [x] Compare default, `none`, each constant consumer disabled, logical-only
   exclusion, cleanup exclusions, and all-pass-disabled configurations.
-- [ ] Pin native stdout/stderr/status, panic reason/location, runtime traces,
+- [x] Pin native stdout/stderr/status, panic reason/location, runtime traces,
   final MIR, assembly-relevant effects, and cross-process deterministic
   fingerprints under debug and release compiler builds.
-- [ ] Promote implemented behavior into compiler phase, driver, reporting, and
+- [x] Promote implemented behavior into compiler phase, driver, reporting, and
   testing documentation and update both catalog entries to **Implemented**.
 
 **Tests:** Registry/schedule/CLI/driver/reporting suites; exact pass listing,

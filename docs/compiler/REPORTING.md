@@ -427,7 +427,7 @@ phases-only, or details-only timing-allocation boundaries.
 
 ### Frozen convergent local constant propagation observation
 
-Status: **in progress through the dependent checked-protocol consumer**. The frozen
+Status: **implemented through the production logical-transition consumer**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
@@ -435,8 +435,8 @@ the remaining logical-transition observation contract.
 
 The primitive occurrence retains its established counters and adds stable
 crossed-carrier, crossed-checked, crossed-logical, and maximum-folded-depth
-measurements. The checked occurrence now distinguishes protocols whose operands
-required propagated rather than literal facts. The future
+measurements. The checked occurrence distinguishes protocols whose operands
+required propagated rather than literal facts. The
 `constant-short-circuit-folding` occurrence reports `&&` and `||` selections
 split by short versus right path and counts exact selected-result loads replaced
 by constants. Worklist waves, queue operations, graph sizes, and analysis

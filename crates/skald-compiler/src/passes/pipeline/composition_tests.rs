@@ -52,12 +52,12 @@ fn disabling_the_complete_final_suffix_retains_the_proof_prefix_and_boundary() {
     );
 
     assert!(measured.result.is_ok());
-    assert_eq!(measured.statistics.pass_executions(), 8);
+    assert_eq!(measured.statistics.pass_executions(), 9);
     assert_eq!(measured.statistics.normalization_executions(), 1);
     assert!(measured
         .occurrences()
         .iter()
-        .all(|record| record.stage() == MirPassStage::ProofRich));
+        .all(|record| record.stage() != MirPassStage::Final));
 }
 
 #[test]

@@ -68,9 +68,10 @@ fn main() -> i64 {
     return 3;
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 9] = [
+const ALL_PRODUCTION_PASS_NAMES: [&str; 10] = [
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
+    "constant-short-circuit-folding",
     "dead-pure-definition-elimination",
     "post-proof-basic-block-merging",
     "post-proof-empty-block-forwarding",
@@ -334,7 +335,7 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
     );
     assert_ne!(dump_mir(optimized.program()), input_dump);
     assert_ne!(assembly(optimized), assembly(&none));
-    assert_eq!(measured.statistics.pass_executions(), 12);
+    assert_eq!(measured.statistics.pass_executions(), 13);
     assert!(
         measurement_total(
             &measured,
@@ -445,7 +446,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
             main_block_count(canary_disabled_program, main),
             main_block_count(reachability_disabled_program, main),
         ),
-        (1, 11, 10, 1)
+        (1, 11, 8, 1)
     );
     assert_normalized(none_program.program());
     assert_normalized(all_disabled_program.program());
@@ -462,7 +463,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
         ),
         (1, 1, 1, 1, 1, 7)
     );
-    assert_eq!(default.statistics.pass_executions(), 12);
+    assert_eq!(default.statistics.pass_executions(), 13);
     assert_eq!(default.statistics.normalization_executions(), 1);
     assert_eq!(
         default_checkpoints
@@ -480,7 +481,8 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
             10_498_604_232_714_687_378,
             5_184_304_530_184_441_762,
             5_315_251_139_015_505_937,
-            1_485_384_359_181_637_186,
+            2_584_566_262_071_137_682,
+            2_584_566_262_071_137_682,
             9_839_179_550_885_574_519,
             9_839_179_550_885_574_519,
             9_216_028_254_603_842_853,
@@ -1240,11 +1242,12 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             "after-proof-rich-5-dead-pure-definition-elimination-1",
             "after-proof-rich-6-conservative-cfg-cleanup-0",
             "after-proof-rich-7-dead-pure-definition-elimination-2",
+            "after-proof-transition-8-constant-short-circuit-folding-0",
             "after-proof-normalization",
-            "after-final-8-post-proof-unreachable-block-elimination-0",
-            "after-final-9-post-proof-empty-block-forwarding-0",
-            "after-final-10-post-proof-basic-block-merging-0",
-            "after-final-11-whole-world-reachability-0",
+            "after-final-9-post-proof-unreachable-block-elimination-0",
+            "after-final-10-post-proof-empty-block-forwarding-0",
+            "after-final-11-post-proof-basic-block-merging-0",
+            "after-final-12-whole-world-reachability-0",
             "final",
         ]
     );
@@ -1260,6 +1263,7 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
+            MirPassStage::ProofTransition,
             MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,

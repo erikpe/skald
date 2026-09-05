@@ -38,83 +38,83 @@ impl Verifier<'_> {
         flow.seed(function.body().entry, entry.clone());
         let mut reported = HashSet::new();
 
-        loop {
-            while let Some((block_id, mut initialized)) = flow.pop() {
-                let Some(block) = function.block(block_id) else {
-                    continue;
-                };
-                for instruction in &block.instructions {
-                    match instruction {
-                        MirInstruction::StorageLive(live)
-                            if is_definite_initialization_storage(
-                                function,
-                                live.storage,
-                                verify_scalar_spills,
-                            ) =>
-                        {
-                            initialized.remove(&live.storage);
+        // Definite initialization is checked only along executable entry
+        // paths. A CFG transformation may deliberately leave a disconnected
+        // component for a later optional cleanup pass; seeding that component
+        // with an empty local state would make its edge into an otherwise
+        // reachable join look like an executable uninitialized path.
+        while let Some((block_id, mut initialized)) = flow.pop() {
+            let Some(block) = function.block(block_id) else {
+                continue;
+            };
+            for instruction in &block.instructions {
+                match instruction {
+                    MirInstruction::StorageLive(live)
+                        if is_definite_initialization_storage(
+                            function,
+                            live.storage,
+                            verify_scalar_spills,
+                        ) =>
+                    {
+                        initialized.remove(&live.storage);
+                    }
+                    MirInstruction::StorageDead(dead) => {
+                        initialized.remove(&dead.storage);
+                    }
+                    MirInstruction::Store(store) => {
+                        if let Some(storage) = exact_primitive_place(
+                            function,
+                            &store.destination,
+                            verify_scalar_spills,
+                        ) {
+                            initialized.insert(storage);
                         }
-                        MirInstruction::StorageDead(dead) => {
-                            initialized.remove(&dead.storage);
-                        }
-                        MirInstruction::Store(store) => {
-                            if let Some(storage) = exact_primitive_place(
-                                function,
-                                &store.destination,
-                                verify_scalar_spills,
-                            ) {
-                                initialized.insert(storage);
-                            }
-                        }
-                        MirInstruction::Assign(assignment) => {
-                            if let MirRvalueKind::Load(place) = &assignment.rvalue.kind {
-                                if let Some(storage) =
-                                    exact_primitive_place(function, place, verify_scalar_spills)
+                    }
+                    MirInstruction::Assign(assignment) => {
+                        if let MirRvalueKind::Load(place) = &assignment.rvalue.kind {
+                            if let Some(storage) =
+                                exact_primitive_place(function, place, verify_scalar_spills)
+                            {
+                                if !initialized.contains(&storage)
+                                    && reported.insert((block.id, storage))
                                 {
-                                    if !initialized.contains(&storage)
-                                        && reported.insert((block.id, storage))
-                                    {
-                                        self.block_error(
-                                            function.callable(),
-                                            block.id,
-                                            format!(
-                                                "primitive storage {storage} is loaded without initialization on every incoming path"
-                                            ),
-                                        );
-                                    }
+                                    self.block_error(
+                                        function.callable(),
+                                        block.id,
+                                        format!(
+                                            "primitive storage {storage} is loaded without initialization on every incoming path"
+                                        ),
+                                    );
                                 }
                             }
                         }
-                        _ => {}
                     }
-                }
-                if let Some(terminator) = &block.terminator {
-                    if let crate::mir::MirTerminator::OptionalUnwrap {
-                        destination,
-                        success_target,
-                        failure_target,
-                        ..
-                    } = terminator
-                    {
-                        let mut success = initialized.clone();
-                        if is_definite_initialization_storage(
-                            function,
-                            *destination,
-                            verify_scalar_spills,
-                        ) {
-                            success.insert(*destination);
-                        }
-                        merge_initialized(&mut flow, *success_target, &success);
-                        merge_initialized(&mut flow, *failure_target, &initialized);
-                    } else {
-                        for successor in terminator.successors() {
-                            merge_initialized(&mut flow, successor, &initialized);
-                        }
-                    }
+                    _ => {}
                 }
             }
-            if !flow.seed_next_component(&function.body().blocks, entry.clone()) {
-                break;
+            if let Some(terminator) = &block.terminator {
+                if let crate::mir::MirTerminator::OptionalUnwrap {
+                    destination,
+                    success_target,
+                    failure_target,
+                    ..
+                } = terminator
+                {
+                    let mut success = initialized.clone();
+                    if is_definite_initialization_storage(
+                        function,
+                        *destination,
+                        verify_scalar_spills,
+                    ) {
+                        success.insert(*destination);
+                    }
+                    merge_initialized(&mut flow, *success_target, &success);
+                    merge_initialized(&mut flow, *failure_target, &initialized);
+                } else {
+                    for successor in terminator.successors() {
+                        merge_initialized(&mut flow, successor, &initialized);
+                    }
+                }
             }
         }
     }

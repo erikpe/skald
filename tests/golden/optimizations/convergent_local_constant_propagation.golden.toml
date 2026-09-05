@@ -1,0 +1,41 @@
+schema = 2
+
+[[test]]
+name = "convergent_success_equivalence"
+mode = "run"
+source = "convergent_local_constant_propagation.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "constant-folding-disabled",
+  "checked-integer-folding-disabled",
+  "short-circuit-folding-disabled",
+  "cfg-cleanup-disabled",
+  "post-proof-cfg-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "deep_mixed_rules_effects_lifecycle_ownership_and_function_values"
+expect = { stdout = { inline = "10\nfalse\n12\ntrue\ntrue\n14\nfalse\n42\n7\n15\ntrue\n16\ntrue\n17\ntrue\ntrue\ntrue\n90\n90\n" } }
+
+[[test]]
+name = "convergent_failure_equivalence"
+mode = "run"
+source = "convergent_local_constant_propagation_panic.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "constant-folding-disabled",
+  "checked-integer-folding-disabled",
+  "short-circuit-folding-disabled",
+  "cfg-cleanup-disabled",
+  "post-proof-cfg-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "skipped_effects_and_selected_failure_trace"
+expect = { exit = "failure", stdout = { inline = "1\nfalse\ntrue\n4\n5\n" }, stderr = { inline = """panic: selected logical failure
+stacktrace:
+  at convergent_local_constant_propagation_panic::fail (tests/golden/optimizations/convergent_local_constant_propagation_panic.ska:6:5)
+  at convergent_local_constant_propagation_panic::main (tests/golden/optimizations/convergent_local_constant_propagation_panic.ska:15:35)
+""" } }

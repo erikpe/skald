@@ -73,7 +73,6 @@ impl MirPassData {
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn processed_and_changed(
         processed_callables: usize,
         changed_callables: usize,

@@ -56,7 +56,7 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
-fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 15] {
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 16] {
     [
         MirPipelineCheckpointLabel::ProofRichInput,
         MirPipelineCheckpointLabel::AfterProofRichPass {
@@ -99,24 +99,29 @@ fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 15] {
             pass_name: "dead-pure-definition-elimination",
             occurrence: 2,
         },
+        MirPipelineCheckpointLabel::AfterProofTransitionPass {
+            position: 8,
+            pass_name: "constant-short-circuit-folding",
+            occurrence: 0,
+        },
         MirPipelineCheckpointLabel::AfterProofNormalization,
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 8,
+            position: 9,
             pass_name: "post-proof-unreachable-block-elimination",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 9,
+            position: 10,
             pass_name: "post-proof-empty-block-forwarding",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 10,
+            position: 11,
             pass_name: "post-proof-basic-block-merging",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 11,
+            position: 12,
             pass_name: "whole-world-reachability",
             occurrence: 0,
         },
@@ -246,18 +251,24 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             ),
             (
                 8,
-                MirPassStage::Final,
-                "post-proof-unreachable-block-elimination",
+                MirPassStage::ProofTransition,
+                "constant-short-circuit-folding",
                 0
             ),
             (
                 9,
                 MirPassStage::Final,
+                "post-proof-unreachable-block-elimination",
+                0
+            ),
+            (
+                10,
+                MirPassStage::Final,
                 "post-proof-empty-block-forwarding",
                 0
             ),
-            (10, MirPassStage::Final, "post-proof-basic-block-merging", 0),
-            (11, MirPassStage::Final, "whole-world-reachability", 0),
+            (11, MirPassStage::Final, "post-proof-basic-block-merging", 0),
+            (12, MirPassStage::Final, "whole-world-reachability", 0),
         ]
     );
     let descriptors = available_mir_passes();
@@ -429,8 +440,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             ReportMetric::count("activation storage declarations reclassified", 0),
             ReportMetric::count("normalization changed callables", 0),
             ReportMetric::count("proof-protected blocks released", 0),
-            ReportMetric::count("pass executions", 12),
-            ReportMetric::count("processed callables", 12),
+            ReportMetric::count("pass executions", 13),
+            ReportMetric::count("processed callables", 13),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -501,10 +512,21 @@ fn details_publish_deterministic_phase_owned_metrics() {
             cfg("retained protected unreachable blocks"),
         ]
     );
+    let logical = |name| ReportMetric::pass_count("constant-short-circuit-folding", name, 0);
+    assert_eq!(
+        pipeline[40..45],
+        [
+            logical("selected && short paths"),
+            logical("selected && right paths"),
+            logical("selected || short paths"),
+            logical("selected || right paths"),
+            logical("replaced selected-result loads"),
+        ]
+    );
     let final_cfg =
         |name| ReportMetric::pass_count("post-proof-unreachable-block-elimination", name, 0);
     assert_eq!(
-        pipeline[40..43],
+        pipeline[45..48],
         [
             final_cfg("removed blocks"),
             final_cfg("removed value declarations"),
@@ -513,7 +535,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let forwarding = |name| ReportMetric::pass_count("post-proof-empty-block-forwarding", name, 0);
     assert_eq!(
-        pipeline[43..47],
+        pipeline[48..52],
         [
             forwarding("removed forwarding blocks"),
             forwarding("redirected successor occurrences"),
@@ -523,7 +545,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let merging = |name| ReportMetric::pass_count("post-proof-basic-block-merging", name, 0);
     assert_eq!(
-        pipeline[47..52],
+        pipeline[52..57],
         [
             merging("merged block pairs"),
             merging("moved instructions"),
@@ -535,7 +557,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[52..73],
+        pipeline[57..78],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -560,8 +582,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[73], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[74], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[78], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[79], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
@@ -637,7 +659,23 @@ fn main() -> i64 {
 
     assert!(artifact.report.diagnostics.is_empty());
     assert_eq!(count_metric(metrics, "normalization executions"), Some(1));
-    assert_eq!(count_metric(metrics, "pass executions"), Some(12));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(13));
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "constant-short-circuit-folding",
+            "selected && short paths"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "constant-short-circuit-folding",
+            "replaced selected-result loads"
+        ),
+        1
+    );
     assert_eq!(
         pass_count_metric(
             metrics,
@@ -718,7 +756,7 @@ fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
     let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert_eq!(count_metric(metrics, "pass executions"), Some(12));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(13));
     assert_eq!(
         pass_count_metric(
             metrics,

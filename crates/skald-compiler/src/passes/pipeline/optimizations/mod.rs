@@ -5,9 +5,6 @@ pub(in crate::passes::pipeline) mod checked_integer_folding;
 mod checked_integer_rewrite;
 mod checked_integer_topology;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
-// The implementation is exercised through internal exact schedules until its
-// production registration is added with the public observation surface.
-#[allow(dead_code)]
 pub(in crate::passes::pipeline) mod constant_short_circuit_folding;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 mod logical_topology;

@@ -6,7 +6,8 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{MirCallableEdit, MirCallableEditSnapshot, MirRewriteError},
-        BlockId, MirInstruction, MirPlace, MirProgram, MirRvalueKind, MirTerminator, MirType,
+        BlockId, MirInstruction, MirLogicalOperation, MirPlace, MirProgram, MirRvalueKind,
+        MirTerminator, MirType,
     },
 };
 
@@ -107,6 +108,8 @@ struct InstructionRewrite {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct LogicalSelectionCandidate {
     record_index: usize,
+    operation: MirLogicalOperation,
+    selection_kind: LogicalSelectionKind,
     split: TerminatorRewrite,
     selection: TerminatorRewrite,
     selected_result: Option<InstructionRewrite>,
@@ -183,6 +186,8 @@ impl LogicalSelectionCandidate {
 
         Ok(Self {
             record_index: topology.record_index,
+            operation: topology.operation,
+            selection_kind: selection.kind(),
             split: TerminatorRewrite {
                 block: topology.split,
                 expected: split_expected,
@@ -245,6 +250,37 @@ impl LogicalSelectionCandidate {
             )?;
         }
         Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(in crate::passes::pipeline) struct LogicalSelectionCounts {
+    pub(in crate::passes::pipeline) and_short: usize,
+    pub(in crate::passes::pipeline) and_right: usize,
+    pub(in crate::passes::pipeline) or_short: usize,
+    pub(in crate::passes::pipeline) or_right: usize,
+    pub(in crate::passes::pipeline) replaced_selected_results: usize,
+}
+
+impl LogicalSelectionCounts {
+    fn record(&mut self, candidate: &LogicalSelectionCandidate) {
+        match (candidate.operation, candidate.selection_kind) {
+            (MirLogicalOperation::And, LogicalSelectionKind::Short) => {
+                self.and_short = self.and_short.saturating_add(1);
+            }
+            (MirLogicalOperation::And, LogicalSelectionKind::Right) => {
+                self.and_right = self.and_right.saturating_add(1);
+            }
+            (MirLogicalOperation::Or, LogicalSelectionKind::Short) => {
+                self.or_short = self.or_short.saturating_add(1);
+            }
+            (MirLogicalOperation::Or, LogicalSelectionKind::Right) => {
+                self.or_right = self.or_right.saturating_add(1);
+            }
+        }
+        if candidate.selected_result.is_some() {
+            self.replaced_selected_results = self.replaced_selected_results.saturating_add(1);
+        }
     }
 }
 
@@ -344,6 +380,18 @@ impl LogicalSelectionPlan {
             .values()
             .filter(|plan| !plan.candidates.is_empty())
             .count()
+    }
+
+    pub(in crate::passes::pipeline) fn counts(&self) -> LogicalSelectionCounts {
+        let mut counts = LogicalSelectionCounts::default();
+        for candidate in self
+            .callables
+            .values()
+            .flat_map(|callable| &callable.candidates)
+        {
+            counts.record(candidate);
+        }
+        counts
     }
 
     pub(in crate::passes::pipeline) fn validate_program(

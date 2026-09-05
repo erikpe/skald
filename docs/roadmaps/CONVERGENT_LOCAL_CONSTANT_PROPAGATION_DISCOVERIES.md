@@ -24,8 +24,18 @@ logical selection plan, exact edge and optional result rewrites, and their
 single atomic composition with mandatory normalization. Exact proof records
 remain the authority for protocol sites which also happen to be lifecycle
 attachment roots: selection preserves those roots and all blocks, storage,
-lifetime operations, and non-selected instructions. CLR5 and CLR6 produced no
-out-of-scope finding. During the remaining implementation, record only work
+lifetime operations, and non-selected instructions. CLR7 registered that pass,
+placed it once at the default transition boundary, added public selection,
+stable measurements and checkpoints, and pinned native success/failure parity.
+Its production matrix also exposed and fixed definite scalar and function-value
+initialization treating disconnected post-selection blocks as executable
+predecessors; those flow-sensitive checks now start only from the callable
+entry, while structural verification remains exhaustive. The same matrix
+showed that post-proof deletion can leave an inert checked-view declaration
+with only its lifetime/end markers; final verification now permits that inert
+declaration while still requiring a binding for any material carrier use.
+CLR5 through CLR7 produced
+no out-of-scope finding. During the remaining implementation, record only work
 discovered outside the active task's frozen scope. Each entry should
 state the problem, concrete evidence, likely owner and priority, and a bounded
 later direction. Small maintainability improvements that directly support the

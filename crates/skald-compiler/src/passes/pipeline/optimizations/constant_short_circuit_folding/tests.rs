@@ -4,7 +4,10 @@ use crate::{
         rewrite::local_cfg_facts_for_definition, MirDefinitionRef, MirInstruction, MirProgram,
         MirRvalueKind, MirStorageKind, MirTerminator, PathConditionId, ValueId,
     },
-    passes::{run_mir_pipeline_with_occurrences, MirPassOccurrenceOutcome, MirPassStage},
+    passes::{
+        run_mir_pipeline_with_occurrences, MirPassMeasurement, MirPassOccurrenceOutcome,
+        MirPassStage,
+    },
     test_support::lower_source_to_final_mir,
 };
 
@@ -131,6 +134,16 @@ fn all_constant_left_rules_select_the_exact_existing_path() {
     );
     assert_eq!(measured.occurrences()[0].processed_callables(), Some(5));
     assert_eq!(measured.occurrences()[0].changed_callables(), Some(4));
+    assert_eq!(
+        measured.occurrences()[0].measurements(),
+        [
+            MirPassMeasurement::count(SELECTED_AND_SHORT_PATHS, 1),
+            MirPassMeasurement::count(SELECTED_AND_RIGHT_PATHS, 1),
+            MirPassMeasurement::count(SELECTED_OR_SHORT_PATHS, 1),
+            MirPassMeasurement::count(SELECTED_OR_RIGHT_PATHS, 1),
+            MirPassMeasurement::count(REPLACED_SELECTED_RESULTS, 2),
+        ]
+    );
 
     for (callable, kind, result, block_count, split_span, selection_span, topology) in before {
         let definition = definition(output.program(), callable);
@@ -340,6 +353,29 @@ fn dynamic_rhs_calls_are_preserved_and_reached_only_on_the_selected_path() {
 }
 
 #[test]
+fn disconnected_skipped_rhs_does_not_poison_later_function_value_provenance() {
+    let input = lower_source_to_final_mir(concat!(
+        "fn effect() -> bool { return true; }\n",
+        "fn invoke(callback: fn() -> bool) -> bool { return callback(); }\n",
+        "fn main() -> i64 {\n",
+        "  var callback: fn() -> bool = effect;\n",
+        "  var preserved: i64 = 41;\n",
+        "  var skipped: bool = false && effect();\n",
+        "  if (invoke(callback) && !skipped) { return preserved - 41; }\n",
+        "  return 1;\n",
+        "}\n",
+    ));
+
+    let output = run_mir_pipeline_with_occurrences(input, &schedule())
+        .result
+        .expect("disconnected skipped paths must not become executable provenance inputs");
+
+    assert!(output
+        .executable_definitions()
+        .all(|definition| definition.logical_expressions().is_empty()));
+}
+
+#[test]
 fn unresolved_left_is_a_normalized_no_op_transition() {
     let input = lower_source_to_final_mir(
         "fn choose(left: bool, right: bool) -> bool { return left && right; } fn main() -> i64 { return 0; }",
@@ -354,6 +390,16 @@ fn unresolved_left_is_a_normalized_no_op_transition() {
         MirPassOccurrenceOutcome::Unchanged
     );
     assert_eq!(measured.occurrences()[0].changed_callables(), Some(0));
+    assert_eq!(
+        measured.occurrences()[0].measurements(),
+        [
+            MirPassMeasurement::count(SELECTED_AND_SHORT_PATHS, 0),
+            MirPassMeasurement::count(SELECTED_AND_RIGHT_PATHS, 0),
+            MirPassMeasurement::count(SELECTED_OR_SHORT_PATHS, 0),
+            MirPassMeasurement::count(SELECTED_OR_RIGHT_PATHS, 0),
+            MirPassMeasurement::count(REPLACED_SELECTED_RESULTS, 0),
+        ]
+    );
     assert_eq!(measured.statistics.normalization_executions(), 1);
     assert_eq!(measured.statistics.verification_executions(), 2);
 }

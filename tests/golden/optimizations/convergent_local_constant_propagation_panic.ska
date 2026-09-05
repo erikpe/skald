@@ -1,0 +1,17 @@
+import std::io;
+from std::error import panic;
+
+fn fail(marker: i64) -> bool {
+    std::io::println_i64(marker);
+    panic("selected logical failure");
+    return true;
+}
+
+fn main() -> i64 {
+    std::io::println_i64(1);
+    std::io::println_bool(false && fail(2));
+    std::io::println_bool(true || fail(3));
+    std::io::println_i64(4);
+    std::io::println_bool(true && fail(5));
+    return 0;
+}

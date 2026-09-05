@@ -9,6 +9,7 @@ use super::{
     },
     context::Verifier,
 };
+use crate::mir::rewrite::{storage_use_census_for_definition, MirStorageUseRole};
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(super) enum TypeRelation {
@@ -154,9 +155,28 @@ impl Verifier<'_> {
                 }
             }
         }
+        // Normalized CFG cleanup deliberately retains inert storage
+        // declarations after deleting an unreachable checked-cast region.
+        // Lifetime and end markers are inert without their removed region. A
+        // checked-view carrier still needs one definition whenever any
+        // material use remains.
+        let uses = storage_use_census_for_definition(function).ok();
         for storage in function.storage_entries() {
             if matches!(storage.kind, MirStorageKind::CheckedView(_))
                 && !definitions.contains(&storage.id)
+                && uses
+                    .as_ref()
+                    .and_then(|uses| uses.get(storage.id))
+                    .is_none_or(|entry| {
+                        entry.uses().iter().any(|site| {
+                            !matches!(
+                                site.role(),
+                                MirStorageUseRole::LifetimeLive
+                                    | MirStorageUseRole::LifetimeDead
+                                    | MirStorageUseRole::Alias
+                            )
+                        })
+                    })
             {
                 self.function_error(
                     function.callable(),

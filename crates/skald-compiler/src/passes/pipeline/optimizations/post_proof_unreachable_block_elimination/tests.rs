@@ -239,7 +239,7 @@ fn registered_canary_runs_before_reachability_in_the_default_profile() {
         .iter()
         .find(|occurrence| occurrence.identity() == IDENTITY)
         .unwrap();
-    assert_eq!(occurrence.position(), 8);
+    assert_eq!(occurrence.position(), 9);
     assert_eq!(occurrence.stage(), MirPassStage::Final);
     assert_eq!(
         default.as_slice().last().unwrap().identity(),

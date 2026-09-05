@@ -1,0 +1,64 @@
+import std::io;
+
+fn mark_bool(value: bool, marker: i64) -> bool {
+    std::io::println_i64(marker);
+    return value;
+}
+
+fn mark_callback(value: bool, marker: i64) -> bool {
+    std::io::println_i64(marker);
+    return value;
+}
+
+class Resource {
+    value: bool;
+
+    init(value: bool) {
+        self.value = value;
+    }
+
+    fn read() -> bool {
+        return self.value;
+    }
+
+    destroy {
+        std::io::println_i64(90);
+    }
+}
+
+class State {
+    static selected: bool = ((1 + 1) == 2) && mark_bool(true, 10);
+    static resource: Resource = Resource(true);
+
+    init() {}
+}
+
+fn main() -> i64 {
+    var callback: fn(bool, i64) -> bool = mark_callback;
+    var owner: shared Resource = new Resource(true);
+    var preserved: i64 = 42;
+    var maybe: i64? = some(7);
+
+    std::io::println_bool(false && mark_bool(true, 11));
+    std::io::println_bool(true && mark_bool(true, 12));
+    std::io::println_bool(true || mark_bool(false, 13));
+    std::io::println_bool(false || mark_bool(false, 14));
+    std::io::println_i64(preserved);
+    std::io::println_i64(maybe!);
+
+    std::io::println_bool(
+        (((((((1 + 2) * 3) - 4) + 5) - 5) == 5)
+            && mark_bool(true, 15))
+    );
+    std::io::println_bool(
+        (((8 / 2) + (7 % 3)) / 2 == 2) && mark_bool(true, 16)
+    );
+    std::io::println_bool(
+        (((1u << 2u) << 1u) == 8u) && callback(true, 17)
+    );
+    std::io::println_bool(
+        (23u + (u64) (17 + 12) == 52u) && owner->read()
+    );
+    std::io::println_bool(State.selected && State.resource.read());
+    return 0;
+}

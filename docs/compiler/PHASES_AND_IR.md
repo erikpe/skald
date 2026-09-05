@@ -1117,16 +1117,14 @@ certified protocol-owned carrier relation.
 
 ### Frozen convergent local constant propagation direction
 
-Status: **in progress; structural observation, carrier certification, the
-read-only convergent solver, primitive-family consumers, and the dependent
-checked-protocol consumer are implemented**.
+Status: **implemented through all three production consumers; final roadmap
+hardening remains**.
 The complete decisions are frozen in the
 [design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 and delivery is divided by the active
 [implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
-Primitive-family and checked-protocol production consumers now use the
-convergent solution. Logical CFG selection has no production mutation consumer
-yet. The initial structural work
+Primitive-family, checked-protocol, and logical-selection production consumers
+now use the convergent solution. The initial structural work
 separated exact checked-protocol topology from constant eligibility and added
 the corresponding proof-rich logical-topology observer. Carrier work added a shared
 exhaustive storage-use census which classifies declarations, attachments,
@@ -1153,7 +1151,7 @@ carrier-plan evidence, validates a whole-callable plan before mutation, and
 folds arbitrarily nested supported checked protocols in one occurrence.
 Logical expressions likewise have a private seal-local structural observation
 over their matching path condition, selected values, carrier storage, blocks,
-predecessors, and spans; it has no production mutation consumer yet. Both
+predecessors, and spans. Both
 observers return owned deterministic records, structured malformed-identity
 outcomes, and no persistent MIR metadata.
 
@@ -1198,8 +1196,9 @@ complete proof-rich snapshot, retargets the exact split and selection edges,
 and replaces only a selected-result load whose constant is known. Its optional
 edits and the unchanged normalization rules commit atomically and publish only
 verified final MIR; no generally mutable third MIR form or persistent logical
-provenance is introduced. Production registration and public selection of the
-consumer remain roadmap work. Without a selected transition, including under
+provenance is introduced. The consumer is registered once immediately before
+normalization in the default schedule, is publicly listed at
+`ProofTransition`, and can be excluded independently. Without a selected transition, including under
 `none`, mandatory normalization still runs exactly once. Existing final
 unreachable and dead-definition passes own later deletion.
 

@@ -25,13 +25,11 @@ use error::MirProofNormalizationErrorKind;
 /// Optional proof-aware edits which may be composed with mandatory
 /// normalization.
 ///
-#[allow(dead_code)]
 pub(in crate::passes::pipeline) enum MirProofTransitionPlan {
     Logical(LogicalSelectionPlan),
 }
 
 impl MirProofTransitionPlan {
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn logical(plan: LogicalSelectionPlan) -> Self {
         Self::Logical(plan)
     }
