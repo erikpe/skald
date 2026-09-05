@@ -451,18 +451,38 @@ final-stage occurrence, backend phase, and final checkpoint. The
 final-stage pass with processed/changed callable counts and deterministic
 removed-block, removed-value-declaration, and permanent-root-retention
 measurements. It runs immediately after mandatory normalization in the
-default profile. The following selectable
-`post-proof-empty-block-forwarding` occurrence reports removed forwarding
-blocks, redirected successor occurrences, retained cyclic forwarding blocks,
-and retained permanent-attachment barriers. Productive changes are normalized-
-reverified and receive fresh seal-bound reachability; no-op occurrences retain
-the current seal. The following `post-proof-basic-block-merging` occurrence
+default profile.
+
+### Post-proof CFG canonicalization observation
+
+The following selectable `post-proof-empty-block-forwarding` occurrence
+reports removed forwarding blocks, redirected successor occurrences, retained
+cyclic forwarding blocks, and retained permanent-attachment barriers.
+Productive changes are normalized-reverified and receive fresh seal-bound
+reachability; no-op occurrences retain the current seal. The following
+`post-proof-basic-block-merging` occurrence
 reports merged pairs, moved instructions, removed blocks, retained multiple-
 incoming-edge barriers, and retained permanent-attachment barriers. It
 converges each callable before publishing one atomic changed product and keeps
 verifier-significant protocol targets distinct. `whole-world-reachability`
 remains the final occurrence with
 its existing pass-owned metrics and stage-bearing trace record.
+
+The generic structural rewrite summary remains the authority for total
+retained, inserted, and removed MIR entities. The forwarding and merging
+counters explain which eligible operation was performed or retained; they do
+not replace or independently recompute that commit summary. All pass-owned
+counters, including zero and barrier counts, are aggregated in first-pass-
+owner and first-counter order.
+
+Pass-attributed analysis, stale-plan, structural-rewrite, and changed-output
+verification failures expose the exact stable pass identity, name, stage,
+schedule position, and occurrence through `MirPipelineError`. The failed
+occurrence may be traced, but no after-pass or product-final checkpoint is
+published for its unverified result. Cross-process tests fingerprint schedules,
+integer occurrence data, checkpoint labels and dumps, and final MIR for the
+default schedule and for forwarding, merging, and combined exclusions;
+elapsed durations are deliberately outside that deterministic contract.
 
 Quiet compilation performs no checkpoint formatting, dump rendering, trace
 record allocation, or optional count scan. Durations remain nondeterministic

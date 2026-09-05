@@ -297,6 +297,13 @@ all final-stage names leaves the proof-rich prefix intact before mandatory
 normalization. Disabling every registered default name remains equivalent to
 `none`.
 
+The public descriptor query and input-free `--list-mir-passes` command obtain
+both canonicalization entries from the same registry as schedule resolution.
+They present the stable names in lexical order, label both entries `final`,
+and render the registered descriptions. Request and CLI exclusions remove
+each pass independently; duplicate exclusions remain idempotent and unknown-
+name diagnostics retain the complete lexical inventory.
+
 Inspection exposes a closed borrowed checkpoint view. Proof-rich input and
 after-pass checkpoints carry only `VerifiedProofMirProgram`; the single
 `after-proof-normalization` checkpoint, final-stage after-pass checkpoints,
@@ -307,9 +314,14 @@ Normalization has a distinct pipeline failure category, and any such failure
 stops before final-stage passes, backend emission, artifact publication, or a
 final checkpoint. Details reporting includes deterministic normalization
 counts without treating the boundary as a pass; trace pass records carry the
-registered stage. Profile selection, source loading, static activation,
-target choice, artifact paths, diagnostics, runtime-trace policy, and
-host-toolchain behavior remain unchanged.
+registered identity, name, stage, position, and occurrence. Pass-attributed
+pipeline errors expose the same fields, including the typed identity, for
+analysis, stale-plan, structural-rewrite, and output-verification failures.
+Details reporting keeps generic structural commit totals authoritative and
+adds the forwarding, redirect, cycle, merge, moved-instruction, and explicit
+barrier counters in stable owner/counter order. Profile selection, source
+loading, static activation, target choice, artifact paths, diagnostics,
+runtime-trace policy, and host-toolchain behavior remain unchanged.
 
 ## Frozen static activation orchestration
 

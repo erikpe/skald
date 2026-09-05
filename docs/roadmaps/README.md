@@ -10,10 +10,10 @@ The
 [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
 is in progress. Deterministic predecessor-edge facts and exhaustive block
 classification, guarded edits, both selectable transformations, and their
-frozen default composition are implemented; inspection and reporting
-ownership is next. The roadmap depends on the completed proof-provenance
-normalization, dense MIR rewriting, selectable pipeline, static-lifecycle, and
-whole-world reachability foundations.
+frozen default composition and observation contracts are implemented;
+source-level semantic and target equivalence is next. The roadmap depends on
+the completed proof-provenance normalization, dense MIR rewriting, selectable
+pipeline, static-lifecycle, and whole-world reachability foundations.
 
 ## Pending discoveries
 
@@ -91,8 +91,8 @@ static-publication roots, narrow final-stage mutation authority, deterministic
 dense commit, normalized reverification, and fresh reachability. Its active
 [implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) has
 completed deterministic CFG facts, candidate analysis, guarded mutation, both
-passes, and their default composition; it proceeds with inspection and
-reporting ownership.
+passes, their default composition, and inspection/reporting ownership; it
+proceeds with source-level semantic and target equivalence.
 
 The completed proof-provenance normalization
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and

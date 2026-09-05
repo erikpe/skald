@@ -42,7 +42,6 @@ fn forwards_complete_transitive_plan_and_reports_exact_changes() {
     assert_eq!(record.outcome(), MirPassOccurrenceOutcome::Changed);
     assert_eq!(record.processed_callables(), Some(1));
     assert_eq!(record.changed_callables(), Some(1));
-    assert_eq!(record.removed_mir_entities(), Some(2));
     assert_eq!(
         record.measurements(),
         [
@@ -51,6 +50,10 @@ fn forwards_complete_transitive_plan_and_reports_exact_changes() {
             MirPassMeasurement::count(RETAINED_CYCLIC_BLOCKS, 0),
             MirPassMeasurement::count(RETAINED_PERMANENT_ATTACHMENT_BARRIERS, 0),
         ]
+    );
+    assert_eq!(
+        record.removed_mir_entities(),
+        Some(measurement(record, REMOVED_FORWARDING_BLOCKS))
     );
     assert_eq!(
         output.reachability(),

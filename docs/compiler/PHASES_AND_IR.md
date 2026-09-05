@@ -1209,6 +1209,17 @@ checked-scalar, optional-shared, and array-loop protocol targets are barriers.
 The pass reports merged pairs, moved instructions, removed blocks, retained
 multiple-edge barriers, and retained permanent-attachment barriers.
 
+These pass-owned counts describe productive candidates and the exact reasons
+that eligible-looking structures were retained. The atomic rewrite
+coordinator's retained, inserted, and removed entity totals remain the sole
+generic structural-change accounting. Metrics are emitted in stable first-
+owner and counter order, including zeros, while trace records identify the
+pass identity, `Final` stage, schedule position, and occurrence. Successful
+after-pass checkpoints contain only normalized verified MIR and use
+`after-final-<position>-<name>-<occurrence>` labels. Analysis, stale-snapshot,
+rewrite, and output-verification failures carry those same occurrence fields
+and publish no checkpoint for an unverified product.
+
 Whole-world reachability follows merging, so removed call sites can reduce
 retained definitions. Forwarding and merging share only immutable CFG facts
 and guarded edit operations: each recomputes from the verified product it

@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 through PCR5 are complete and PCR6 is next.
+Status: in progress; PCR0 through PCR6 are complete and PCR7 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -101,7 +101,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 - [x] PCR3 — Implement selectable empty-block forwarding
 - [x] PCR4 — Implement selectable basic-block merging
 - [x] PCR5 — Freeze and prove default pass composition
-- [ ] PCR6 — Complete inspection and reporting ownership
+- [x] PCR6 — Complete inspection and reporting ownership
 - [ ] PCR7 — Prove source-level semantic and target equivalence
 - [ ] PCR8 — Harden ownership, documentation, and roadmap closure
 
@@ -375,19 +375,19 @@ the complete default order and deterministic final products.
 **Purpose:** Make structural and semantic reasons observable without
 duplicating rewrite accounting or exposing unverified MIR.
 
-- [ ] Freeze both descriptors in the public query and
+- [x] Freeze both descriptors in the public query and
   `--list-mir-passes` output in stable-name order with `Final` stage.
-- [ ] Emit deterministic productive and barrier metrics in stable first-owner
+- [x] Emit deterministic productive and barrier metrics in stable first-owner
   and counter order.
-- [ ] Keep generic rewrite summaries authoritative for entity changes and
+- [x] Keep generic rewrite summaries authoritative for entity changes and
   avoid conflicting duplicate counters.
-- [ ] Add stage-bearing after-pass checkpoints containing only verified final
+- [x] Add stage-bearing after-pass checkpoints containing only verified final
   products and exact occurrence identities.
-- [ ] Attribute analysis, stale-plan, rewrite, and output-verification failures
+- [x] Attribute analysis, stale-plan, rewrite, and output-verification failures
   to the exact pass, identity, stage, schedule position, and occurrence.
-- [ ] Preserve deterministic dumps and reports across processes and selection
+- [x] Preserve deterministic dumps and reports across processes and selection
   combinations.
-- [ ] Update reporting, driver, phase, and testing documentation with exact
+- [x] Update reporting, driver, phase, and testing documentation with exact
   metrics, checkpoints, listing, and selection behavior.
 
 **Tests:** CLI listing and unknown-name inventory; request adapters; details and
@@ -397,6 +397,26 @@ checkpoint labels/seals; synthetic failures; cross-process output; docs links.
 **Exit criteria:** Users can distinguish forwarding from merging, understand
 productive and retained candidates, inspect only verified products, and
 reproduce stable reports and dumps.
+
+Implemented in PCR6. The public query and CLI listing are pinned to the two
+registry descriptors, and driver trace tests bind every reported occurrence's
+typed identity and stage back to that registry. Details tests cover the stable
+zero-counter vocabulary and a productive merge; pass-owner tests cover
+productive forwarding, cycles, multiple incoming edges, permanent-attachment
+barriers, and equality between pass-specific removed-block counts and the
+pipeline-owned structural commit total. Stage-typed checkpoints expose only
+verified proof-rich or normalized products.
+
+`MirPipelineError` now exposes the typed pass identity alongside its existing
+name, stage, position, and occurrence accessors. Synthetic runner tests cover
+analysis, stale normalized-CFG facts, rewrite-commit, and changed-output
+verification failures and prove that a failed occurrence publishes no
+unverified after-pass or final checkpoint. The independent-process fingerprint
+now includes descriptor stages, exact occurrence data, checkpoints, and final
+MIR for forwarding-disabled, merging-disabled, and both-disabled selections.
+Living reporting, driver, phase, and testing contracts document the resulting
+observation vocabulary and ownership. Focused suites and the complete
+`make check` repository gate pass.
 
 ### PCR7 — Prove source-level semantic and target equivalence
 

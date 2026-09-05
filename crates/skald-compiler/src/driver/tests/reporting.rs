@@ -15,8 +15,9 @@ use crate::{
         MirDestructionPlan, MirFieldDeclaration, MirType,
     },
     passes::{
-        run_mir_pipeline, static_lifecycle::StaticActivationInspectionLabel, verify_final_mir,
-        MirPassStage, MirPipelineCheckpoint, MirPipelineCheckpointLabel, VerifiedFinalMirProgram,
+        available_mir_passes, run_mir_pipeline, static_lifecycle::StaticActivationInspectionLabel,
+        verify_final_mir, MirPassStage, MirPipelineCheckpoint, MirPipelineCheckpointLabel,
+        VerifiedFinalMirProgram,
     },
     reporting::{
         MetricValue, RecordingObserver, ReportDetail, ReportEvent, ReportMetric, ReportModuleStage,
@@ -259,6 +260,18 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             (11, MirPassStage::Final, "whole-world-reachability", 0),
         ]
     );
+    let descriptors = available_mir_passes();
+    for occurrence in observer.events().iter().filter_map(|event| match event {
+        ReportEvent::MirPassFinished { occurrence } => Some(occurrence),
+        _ => None,
+    }) {
+        let descriptor = descriptors
+            .iter()
+            .find(|descriptor| descriptor.name() == occurrence.name())
+            .expect("every reported pass occurrence is registered");
+        assert_eq!(occurrence.identity(), descriptor.identity());
+        assert_eq!(occurrence.stage(), descriptor.stage());
+    }
     let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
     assert_eq!(
         observer
@@ -644,6 +657,43 @@ fn main() -> i64 {
         ),
         10
     );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "post-proof-empty-block-forwarding",
+            "removed forwarding blocks"
+        ),
+        0
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "post-proof-empty-block-forwarding",
+            "redirected successor occurrences"
+        ),
+        0
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "post-proof-basic-block-merging",
+            "merged block pairs"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "post-proof-basic-block-merging",
+            "moved instructions"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(metrics, "post-proof-basic-block-merging", "removed blocks"),
+        1
+    );
+    assert_eq!(count_metric(metrics, "removed MIR entities"), Some(21));
     assert_eq!(
         pass_count_metric(metrics, "whole-world-reachability", "removed definitions"),
         1

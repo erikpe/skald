@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::mir::{rewrite::MirRewriteError, MirVerificationErrors};
 
-use super::super::{MirPassOccurrence, MirPassStage};
+use super::super::{MirPassIdentity, MirPassOccurrence, MirPassStage};
 use super::model::MirPassExecutionError;
 
 /// Failure class owned by the stage-aware MIR pipeline.
@@ -71,6 +71,14 @@ impl MirPipelineError {
     pub const fn pass_name(&self) -> Option<&'static str> {
         match self.occurrence() {
             Some(occurrence) => Some(occurrence.name()),
+            None => None,
+        }
+    }
+
+    /// Stable typed pass identity for a pass-attributed failure.
+    pub const fn pass_identity(&self) -> Option<MirPassIdentity> {
+        match self.occurrence() {
+            Some(occurrence) => Some(occurrence.identity()),
             None => None,
         }
     }

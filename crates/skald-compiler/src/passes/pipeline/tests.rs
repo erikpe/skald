@@ -44,6 +44,7 @@ const OBSERVE_RETENTION: MirPassIdentity = MirPassIdentity::new(115);
 const INVALID_RETENTION_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(116);
 const FINAL_UNCHANGED: MirPassIdentity = MirPassIdentity::new(117);
 const FINAL_EXECUTION_FAILURE: MirPassIdentity = MirPassIdentity::new(118);
+const FINAL_STALE_CFG: MirPassIdentity = MirPassIdentity::new(119);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -107,7 +108,7 @@ const fn final_registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 20] = [
+static TEST_REGISTRATIONS: [MirPassRegistration; 21] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -174,6 +175,11 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 20] = [
         FINAL_EXECUTION_FAILURE,
         "final-execution-failure-pass",
         final_execution_failure_pass,
+    ),
+    final_registration(
+        FINAL_STALE_CFG,
+        "final-stale-cfg-pass",
+        final_stale_cfg_pass,
     ),
     whole_world_reachability::REGISTRATION,
 ];
@@ -680,7 +686,11 @@ fn invalid_input_stops_before_the_first_pass() {
 
     let error = measured.result.as_ref().unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::InputVerification);
+    assert_eq!(error.pass_position(), None);
     assert_eq!(error.pass_name(), None);
+    assert_eq!(error.pass_identity(), None);
+    assert_eq!(error.pass_stage(), None);
+    assert_eq!(error.pass_occurrence(), None);
     assert!(execution_log().is_empty());
     assert_eq!(measured.statistics.verification_executions(), 1);
     assert_eq!(measured.statistics.pass_executions(), 0);
@@ -1211,9 +1221,27 @@ fn pipeline_determinism_fingerprint() -> String {
     let none = none_schedule();
     let default =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
-    let disabled = resolve_mir_pass_schedule(
+    let dead_pure_disabled = resolve_mir_pass_schedule(
         MirOptimizationProfile::Default,
         ["dead-pure-definition-elimination"],
+    )
+    .unwrap();
+    let forwarding_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["post-proof-empty-block-forwarding"],
+    )
+    .unwrap();
+    let merging_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["post-proof-basic-block-merging"],
+    )
+    .unwrap();
+    let both_cfg_passes_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        [
+            "post-proof-empty-block-forwarding",
+            "post-proof-basic-block-merging",
+        ],
     )
     .unwrap();
     let repeated = test_schedule(&[MEASURED_UNCHANGED, MEASURED_UNCHANGED]);
@@ -1248,6 +1276,25 @@ fn pipeline_determinism_fingerprint() -> String {
         })
         .collect::<Vec<_>>();
 
+    let mut selected_cfg_products = Vec::new();
+    for (selection, schedule) in [
+        ("forwarding-disabled", &forwarding_disabled),
+        ("merging-disabled", &merging_disabled),
+        ("both-cfg-disabled", &both_cfg_passes_disabled),
+    ] {
+        let measured = run_mir_pipeline_with_occurrences(
+            lower_source_to_final_mir(PROOF_NORMALIZATION_PROFILE_SOURCE),
+            schedule,
+        );
+        let final_mir = dump_mir(measured.result.as_ref().unwrap().program());
+        selected_cfg_products.push((
+            selection,
+            schedule_fingerprint(schedule),
+            occurrence_fingerprint(measured.occurrences()),
+            final_mir,
+        ));
+    }
+
     let mut reachability_collector = CheckpointCollector::default();
     let reachability_schedule = production_schedule(&[
         whole_world_reachability::IDENTITY,
@@ -1281,13 +1328,19 @@ fn pipeline_determinism_fingerprint() -> String {
     let error = failed.result.unwrap_err();
 
     format!(
-        "none={:?}\ndefault={:?}\ndisabled={:?}\nrepeated={:?}\n\
-         metrics=({}, {}, {:?}, {}, {}, {:?})\nerror=({:?}, {:?}, {:?}, {:?}, {})\n\
+        "none={:?}\ndefault={:?}\ndead-pure-disabled={:?}\n\
+         forwarding-disabled={:?}\nmerging-disabled={:?}\nboth-cfg-disabled={:?}\n\
+         repeated={:?}\nmetrics=({}, {}, {:?}, {}, {}, {:?})\n\
+         error=({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {})\n\
          checkpoints={:?}\ncheckpoint-dumps={:?}\nreachability-checkpoints={:?}\n\
-         reachability-dumps={:?}\nproductive-occurrences={:?}\nproductive-final-mir=\n{}\nfinal-mir=\n{}",
+         reachability-dumps={:?}\nproductive-occurrences={:?}\n\
+         selected-cfg-products={:?}\nproductive-final-mir=\n{}\nfinal-mir=\n{}",
         schedule_fingerprint(&none),
         schedule_fingerprint(&default),
-        schedule_fingerprint(&disabled),
+        schedule_fingerprint(&dead_pure_disabled),
+        schedule_fingerprint(&forwarding_disabled),
+        schedule_fingerprint(&merging_disabled),
+        schedule_fingerprint(&both_cfg_passes_disabled),
         schedule_fingerprint(&repeated),
         measured.statistics.verification_executions(),
         measured.statistics.normalization_executions(),
@@ -1297,6 +1350,8 @@ fn pipeline_determinism_fingerprint() -> String {
         measurements,
         error.stage(),
         error.pass_name(),
+        error.pass_identity(),
+        error.pass_stage(),
         error.pass_position(),
         error.pass_occurrence(),
         error,
@@ -1305,20 +1360,50 @@ fn pipeline_determinism_fingerprint() -> String {
         reachability_collector.labels,
         reachability_collector.reachability_dumps,
         productive_occurrences,
+        selected_cfg_products,
         dump_mir(productive.result.as_ref().unwrap().program()),
         final_dump,
     )
 }
 
+fn occurrence_fingerprint(records: &[MirPassOccurrenceRecord]) -> String {
+    format!(
+        "{:?}",
+        records
+            .iter()
+            .map(|record| (
+                (
+                    record.position(),
+                    record.identity(),
+                    record.stage(),
+                    record.name(),
+                    record.occurrence(),
+                    record.outcome(),
+                ),
+                (
+                    record.processed_callables(),
+                    record.changed_callables(),
+                    record.retained_mir_entities(),
+                    record.inserted_mir_entities(),
+                    record.removed_mir_entities(),
+                    record.verification_executions(),
+                ),
+                record.measurements().to_vec(),
+            ))
+            .collect::<Vec<_>>()
+    )
+}
+
 fn schedule_fingerprint(
     schedule: &MirPassSchedule,
-) -> Vec<(usize, MirPassIdentity, &'static str, usize)> {
+) -> Vec<(usize, MirPassIdentity, MirPassStage, &'static str, usize)> {
     schedule
         .iter()
         .map(|occurrence| {
             (
                 occurrence.position(),
                 occurrence.identity(),
+                occurrence.stage(),
                 occurrence.name(),
                 occurrence.occurrence(),
             )
@@ -1524,6 +1609,8 @@ fn repeated_occurrences_run_in_order_and_report_the_exact_failure() {
     assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
     assert_eq!(error.pass_position(), Some(1));
     assert_eq!(error.pass_name(), Some("fail-second-pass"));
+    assert_eq!(error.pass_identity(), Some(FAIL_SECOND));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::ProofRich));
     assert_eq!(error.pass_occurrence(), Some(1));
     assert!(error.to_string().contains("pass identity 107"));
     assert_eq!(execution_log(), ["fail-second", "fail-second"]);
@@ -1541,8 +1628,11 @@ fn pass_execution_failure_stops_before_later_occurrences() {
 
     let error = measured.result.unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
+    assert_eq!(error.pass_position(), Some(0));
     assert_eq!(error.pass_name(), Some("execution-failure-pass"));
+    assert_eq!(error.pass_identity(), Some(EXECUTION_FAILURE));
     assert_eq!(error.pass_stage(), Some(MirPassStage::ProofRich));
+    assert_eq!(error.pass_occurrence(), Some(0));
     assert!(error.to_string().contains("synthetic analysis failure"));
     assert_eq!(execution_log(), ["execution-failure"]);
     assert_eq!(measured.statistics.pass_executions(), 1);
@@ -1562,6 +1652,7 @@ fn final_stage_failure_is_attributed_after_the_implicit_boundary() {
     assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
     assert_eq!(error.pass_position(), Some(1));
     assert_eq!(error.pass_name(), Some("final-execution-failure-pass"));
+    assert_eq!(error.pass_identity(), Some(FINAL_EXECUTION_FAILURE));
     assert_eq!(error.pass_stage(), Some(MirPassStage::Final));
     assert_eq!(error.pass_occurrence(), Some(0));
     assert_eq!(execution_log(), ["unchanged", "final-execution-failure"]);
@@ -1604,8 +1695,11 @@ fn normalization_failure_has_its_own_stage_and_stops_final_observation() {
 
     let error = measured.result.unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::ProofNormalization);
+    assert_eq!(error.pass_position(), None);
     assert_eq!(error.pass_name(), None);
+    assert_eq!(error.pass_identity(), None);
     assert_eq!(error.pass_stage(), None);
+    assert_eq!(error.pass_occurrence(), None);
     assert!(error
         .to_string()
         .contains("synthetic normalization failure"));
@@ -1630,6 +1724,9 @@ fn structural_rewrite_failure_stops_without_publishing_partial_mir() {
     assert_eq!(error.stage(), MirPipelineFailureStage::StructuralRewrite);
     assert_eq!(error.pass_position(), Some(0));
     assert_eq!(error.pass_name(), Some("rewrite-failure-pass"));
+    assert_eq!(error.pass_identity(), Some(REWRITE_FAILURE));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::ProofRich));
+    assert_eq!(error.pass_occurrence(), Some(0));
     assert!(error.to_string().contains("names a deleted edit slot"));
     assert_eq!(execution_log(), ["rewrite-failure"]);
     assert_eq!(measured.statistics.verification_executions(), 1);
@@ -1644,7 +1741,11 @@ fn changed_output_verification_failure_stops_before_later_occurrences() {
 
     let error = measured.result.as_ref().unwrap_err();
     assert_eq!(error.stage(), MirPipelineFailureStage::OutputVerification);
+    assert_eq!(error.pass_position(), Some(0));
     assert_eq!(error.pass_name(), Some("invalid-output-pass"));
+    assert_eq!(error.pass_identity(), Some(INVALID_OUTPUT));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::ProofRich));
+    assert_eq!(error.pass_occurrence(), Some(0));
     assert_eq!(execution_log(), ["invalid-output"]);
     assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(measured.statistics.pass_executions(), 1);
@@ -1656,6 +1757,37 @@ fn changed_output_verification_failure_stops_before_later_occurrences() {
     );
     assert!(measured.occurrences()[0].processed_callables().is_some());
     assert_eq!(measured.occurrences()[0].verification_executions(), 1);
+}
+
+#[test]
+fn stale_final_cfg_plan_failure_is_attributed_to_the_exact_occurrence() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_measured_inspected(
+        lowered_program(),
+        &test_schedule(&[FINAL_UNCHANGED, FINAL_STALE_CFG, FINAL_UNCHANGED]),
+        Some(&mut collector),
+    );
+
+    let error = measured.result.unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::StructuralRewrite);
+    assert_eq!(error.pass_position(), Some(1));
+    assert_eq!(error.pass_name(), Some("final-stale-cfg-pass"));
+    assert_eq!(error.pass_identity(), Some(FINAL_STALE_CFG));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::Final));
+    assert_eq!(error.pass_occurrence(), Some(0));
+    assert!(error.to_string().contains("normalized CFG facts"));
+    assert_eq!(execution_log(), ["final-unchanged", "final-stale-cfg"]);
+    assert_eq!(
+        collector.labels,
+        [
+            "proof-rich-input",
+            "after-proof-normalization",
+            "after-final-0-final-unchanged-pass-0",
+        ]
+    );
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.pass_executions(), 2);
 }
 
 #[test]
@@ -1797,6 +1929,21 @@ fn final_execution_failure_pass(
 ) -> Result<MirFinalPassOutcome, MirPassFailure> {
     log_execution("final-execution-failure");
     Err(MirPassFailure::execution("synthetic final-stage failure"))
+}
+
+fn final_stale_cfg_pass(
+    capability: MirFinalPassCapability,
+) -> Result<MirFinalPassOutcome, MirPassFailure> {
+    log_execution("final-stale-cfg");
+    match capability.rewrite_cfg(|callable, _edit| {
+        Err(MirRewriteError::StaleCallableSnapshot {
+            callable,
+            subject: "normalized CFG facts",
+        })
+    }) {
+        Ok(_) => panic!("synthetic stale CFG plan unexpectedly committed"),
+        Err(error) => Err(error),
+    }
 }
 
 fn measured_unchanged_pass(

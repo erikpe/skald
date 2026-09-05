@@ -49,7 +49,6 @@ fn merges_a_maximal_chain_and_preserves_contents_and_identities() {
     assert_eq!(record.outcome(), MirPassOccurrenceOutcome::Changed);
     assert_eq!(record.processed_callables(), Some(1));
     assert_eq!(record.changed_callables(), Some(1));
-    assert_eq!(record.removed_mir_entities(), Some(2));
     assert_eq!(
         record.measurements(),
         [
@@ -59,6 +58,10 @@ fn merges_a_maximal_chain_and_preserves_contents_and_identities() {
             MirPassMeasurement::count(RETAINED_MULTIPLE_INCOMING_EDGE_BARRIERS, 0),
             MirPassMeasurement::count(RETAINED_PERMANENT_ATTACHMENT_BARRIERS, 0),
         ]
+    );
+    assert_eq!(
+        record.removed_mir_entities(),
+        Some(measurement(record, REMOVED_BLOCKS))
     );
     assert_eq!(
         output.reachability(),

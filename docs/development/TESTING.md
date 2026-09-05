@@ -232,6 +232,17 @@ checkpoints, deterministic dense compaction, fresh reachability, no-op seal
 reuse, repeated-occurrence idempotence, and the full native/backend suite pin
 the resulting contract.
 
+Shared pipeline and driver observation tests additionally pin the two public
+descriptors and CLI listing, lexical unknown-name inventory, exact trace
+identity/stage/position/occurrence tuples, stable zero and productive details
+counters, and generic structural rewrite totals. Synthetic failures cover
+analysis, stale normalized-CFG facts, rewrite commit, and changed-output
+verification, including the absence of an after-pass checkpoint for an
+unpublished product. The independent-process fingerprint includes default,
+forwarding-disabled, merging-disabled, and both-disabled schedules together
+with occurrence data, checkpoint dumps, and final MIR; live durations are not
+compared.
+
 ### Proof-provenance normalization coverage
 
 The archived

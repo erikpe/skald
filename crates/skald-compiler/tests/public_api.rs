@@ -113,8 +113,16 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(passes[2].name(), "dead-pure-definition-elimination");
     assert_eq!(passes[3].name(), "post-proof-basic-block-merging");
     assert_eq!(passes[3].stage(), MirPassStage::Final);
+    assert_eq!(
+        passes[3].description(),
+        "Fuses maximal eligible single-incoming goto chains while preserving operation order."
+    );
     assert_eq!(passes[4].name(), "post-proof-empty-block-forwarding");
     assert_eq!(passes[4].stage(), MirPassStage::Final);
+    assert_eq!(
+        passes[4].description(),
+        "Forwards normalized MIR edges through instruction-free goto blocks."
+    );
     assert_eq!(passes[5].name(), "post-proof-unreachable-block-elimination");
     assert_eq!(passes[5].stage(), MirPassStage::Final);
     assert_eq!(passes[6].name(), "primitive-algebraic-simplification");
@@ -336,6 +344,7 @@ fn intentional_phase_and_dump_paths_compose() {
     );
     verify_mir(&mir).unwrap();
     let _pipeline_error: Option<MirPipelineError> = None;
+    let _pipeline_error_identity = MirPipelineError::pass_identity;
     let _pipeline_stages = [
         MirPipelineFailureStage::InputVerification,
         MirPipelineFailureStage::ProofNormalization,
