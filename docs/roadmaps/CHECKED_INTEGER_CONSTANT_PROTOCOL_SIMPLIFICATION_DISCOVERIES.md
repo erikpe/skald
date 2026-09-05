@@ -1,7 +1,9 @@
 # Checked Integer Constant Protocol Simplification Discoveries
 
-Status: open; one measured low-priority follow-up remains from the completed
-[checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
+Status: open; the one measured follow-up from the completed
+[checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+is promoted into the draft
+[convergent local constant propagation design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
 
 The [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
 concise cross-domain placement, effort, value, prerequisite, and status
@@ -23,21 +25,30 @@ checked expressions can leave optimization opportunities behind even after
 their inner operations have folded. Repeating the same checked-protocol pass
 cannot expose the outer operation without an additional propagation rule.
 
-**Likely owner:** A future seal-local scalar-spill constant-provenance analysis
-shared by final-MIR simplifications, rather than the checked-protocol topology
-query itself. The existing read-only redundancy census provides the initial
-proof vocabulary but does not authorize mutation.
+**Proposed owner:** The draft convergent design gives one seal-local dependency
+graph and worklist solver ownership of constant provenance, while the checked-
+protocol query retains structural topology and the existing passes retain
+separate mutation authority. The existing read-only redundancy census provides
+initial proof vocabulary but does not authorize mutation.
 
-**Priority:** Low. The version-one
+**Priority:** Promoted for architectural completeness. The version-one
 [local-redundancy study](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md#candidate-comparison)
 confirmed 25 safe carrier substitutions, but every one belongs to the focused
 checked-protocol fixture. No standard-library, solver, control-flow,
 whole-world, or benchmark workload supplied a proven final site, so the
-candidate was measured but not selected for an implementation project.
+candidate was not selected on measured performance benefit. The later design
+decision is instead motivated by the expectation that every expression formed
+entirely from supported constant operations should fold independent of its
+nesting depth. The measurement result remains valid and is not being recast as
+performance evidence.
 
-**Bounded direction:** Prove constants through canonical private scalar-spill
-store/load chains with explicit write, dominance, type, alias, and lifecycle
-conditions. Keep that fact local to one verified seal and let the existing
-checked-protocol query consume it; do not recursively rewrite nested diamonds
-or broaden the pass into general load/store propagation. Reconsider the work
-only when representative non-fixture evidence changes the recorded selection.
+**Proposed resolution:** Prove constants through canonical private scalar-
+spill store/load chains with explicit protocol ownership, access, write,
+dominance, type, alias, and lifecycle conditions. Use those relations in a
+monotonic callable-local solver which reasons through supported primitive and
+successful checked operations to arbitrary graph depth before mutation. Let
+the existing independently selectable primitive and checked passes materialize
+only their own rewrite families. Do not recursively mutate nested diamonds,
+rerun the whole pass to convergence, or broaden the solver into general
+load/store propagation. The linked draft design owns the full proposed
+boundary and remains subject to review before freezing.

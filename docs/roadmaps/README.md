@@ -28,9 +28,10 @@ important before a final-stage storage transformation.
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
 retain the measured nested-carrier limitation from the completed
-checked-protocol pass without widening its reviewed successful-constant
-boundary. Representative non-fixture evidence is required before that
-low-priority optimization is reconsidered.
+checked-protocol pass. Its proposed resolution is now the broader
+[convergent local constant propagation design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
+which treats arbitrary supported expression depth as an architectural
+completeness requirement rather than a one-off scalar-spill cleanup.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
@@ -78,6 +79,19 @@ generic-interface roadmaps are preserved in the
 No additional implementation roadmap is currently planned.
 
 ## Design proposals
+
+The draft
+[convergent local constant propagation design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+proposes one callable-local monotonic worklist solver shared by the existing
+independently selectable primitive and checked-integer folding passes and a
+new constant-left short-circuit consumer. It defines an arbitrary-depth
+completeness guarantee for the supported integer and boolean graph, exact
+private-carrier certification, conditional logical transfer, static-failure
+barriers, plan-level atomic checked rewriting, and a narrow proof-consuming
+transition which composes selectable logical CFG rewriting with mandatory
+normalization. It adds no pipeline-level fixed-point loop or persistent
+logical provenance. CLP1 through CLP18 await review and confirmation; no
+implementation roadmap exists yet.
 
 The completed post-proof CFG canonicalization
 [design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md) and
