@@ -22,8 +22,9 @@ not an implementation roadmap.
 
 The open
 [proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
-retain one low-priority scalar-spill provenance limitation that becomes
-important before a final-stage storage transformation.
+retain one scalar-spill provenance limitation that becomes critical before a
+final-stage storage transformation. Its proposed resolution is the draft
+[normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
@@ -81,6 +82,14 @@ generic-interface roadmaps are preserved in the
 No implementation roadmap is waiting to start.
 
 ## Design proposals
+
+The draft
+[normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+proposes a dedicated final-only activation storage kind, normalizer-exclusive
+construction, explicit proof/final phase legality, and restoration of
+normalized definite-initialization checks for genuine scalar spills. Its
+decisions await confirmation; no implementation roadmap exists yet, and dead
+condition-carrier deletion remains a separate optimization candidate.
 
 The completed convergent local constant propagation
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),

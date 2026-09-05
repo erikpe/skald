@@ -1,7 +1,8 @@
 # Proof-Provenance Normalization Discoveries
 
-Status: open; one storage-provenance follow-up remains from the completed
-[proof-provenance normalization roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md).
+Status: open; the remaining storage-provenance follow-up now has a
+[draft design proposal](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+but no implementation roadmap.
 
 The archived
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) owns the reviewed
@@ -46,12 +47,14 @@ or combining scalar-spill loads because the generic storage kind does not say
 which protocol owns their initialization.
 
 **Likely owner and priority:** MIR storage/protocol representation together
-with normalized verification; low priority during this roadmap, rising to
-high before a final-stage storage or spill transformation.
+with normalized verification; medium priority now that the proof boundary and
+its current consumers are stable, rising to high before a final-stage storage
+or spill transformation.
 
-**Bounded later direction:** If such a pass is proposed, give compiler-owned
-scalar carriers explicit surviving protocol ownership or another
-normalization-stable provenance classification, then make normalized definite
-initialization dispatch through that owner. Do not retain erased path records
-or attach stale pre-normalization identities merely to recover this
-distinction.
+**Proposed resolution:** The
+[normalization-stable path-activation provenance proposal](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+adds a dedicated final-only storage kind produced solely by the mandatory
+normalizer, restores ordinary `ScalarSpill` definite-initialization checking in
+normalized MIR, and retains consumed-proof authority only for the exact marked
+activation class. It does not retain erased path identities or include the
+later dead-carrier optimization.

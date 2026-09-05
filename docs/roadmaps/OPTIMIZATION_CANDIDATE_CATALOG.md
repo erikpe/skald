@@ -201,7 +201,7 @@ precision, but do not themselves prove two aliases distinct or a load stable.
 | FMM-10 | Copy-to-move or copy-elision transformation | After exact source-death and ownership analysis; before cleanup simplification | Foundation needed / **Large** | High runtime for class/shared values | User copy operations may be observable, moved-from state is not a general language concept, and destructor/copy failure behavior must remain identical |
 | FMM-11 | Stack allocation or complete elimination of non-escaping shared allocations | After escape and ownership analysis | Contract decision / **Extra large** | Potentially very high runtime | Removing heap allocation also removes language-observable allocation failure and may change object identity, destruction, runtime traces, and ABI expectations |
 | FMM-12 | Runtime alias-versioned call-site specialization | After points-to/effect facts and cloning infrastructure; before inlining | Research / **Extra large** | High runtime where actual aliases are usually distinct | Requires a sound overlap check, two equivalent paths, code-size policy, cleanup duplication, and exact handling of projected/array ranges |
-| FMM-13 | [Dead normalized condition-carrier storage cleanup](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md#reclassified-path-activations-lose-their-scalar-spill-origin) | After post-proof block/value elimination; before backend frame planning | Foundation needed / **Medium to large** | Medium MIR/frame-size and compile-time value | Former path activations share `ScalarSpill` with other private carriers; safe deletion needs surviving protocol provenance plus exact load/store/lifetime and attachment analysis |
+| FMM-13 | [Dead normalized condition-carrier storage cleanup](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md#reclassified-path-activations-lose-their-scalar-spill-origin) | After post-proof block/value elimination; before backend frame planning | Foundation has a [draft design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md); deletion remains a separate follow-up / **Medium to large** | Medium MIR/frame-size and compile-time value | The proposed final-only activation kind supplies stable provenance, but safe deletion still needs exact load/store/lifetime and attachment analysis |
 
 ## Whole-world execution and call graph
 
@@ -284,6 +284,7 @@ design proposals before implementation.
 | Candidate | Primary consumers | Effort | Expected leverage | Main decision |
 |---|---|---|---|---|
 | [Proof-provenance classification and post-proof normalization](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | FMC-03 through FMC-15; some inlining | **Completed (large)** | High | Implemented: consume path/logical proof after full verification, retain executable carriers, and seal a distinct normalized product ([design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)) |
+| [Normalization-stable path-activation provenance](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md) | FMM-13 and future final-stage storage transformations | **Draft design (medium)** | Medium now; high before storage mutation | Add one final-only activation storage kind and restore normalized checking for ordinary scalar spills without retaining consumed path identities |
 | Conservative whole-program effect summaries | FMV-08, FMM-03 through FMM-12, WWE-04/WWE-07, SLD-01/SLD-02 | **Large** | Very high | What regions and observable effects form the first sound summary lattice? |
 | Points-to, alias, escape, and ownership analysis | Memory, loop, specialization, allocation, retain/release candidates | **Large to extra large** | Very high | How much flow/context sensitivity is justified, and how are recursive/dynamic targets widened deterministically? |
 | Scalar SSA or normalized optimization IR | FMV-09 through FMV-11 and advanced loops | **Extra large** | High | Extend MIR with block parameters or maintain a separate optimizer-facing scalar IR? |
@@ -293,8 +294,8 @@ design proposals before implementation.
 ## Suggested evaluation order
 
 This is not a roadmap. It is a default order for deciding which candidate is
-worth designing next now that the implemented local-simplification layer has
-produced initial measurements:
+worth designing next now that the implemented local-simplification and
+convergent constant-propagation layers have produced their initial evidence:
 
 The completed
 [local final-MIR redundancy study](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md#decision)
@@ -304,8 +305,9 @@ constant propagation as an expected completeness property and promoted the
 broader FMV-16 design on that architectural basis. This does not supply new
 performance evidence for FMV-02 or FMV-03.
 
-1. Complete final hardening of the implemented convergent local constant
-   propagation roadmap before adding more constant-folding families.
+1. Resolve normalization-stable path-activation provenance before adding any
+   final-stage storage mutation; it may proceed independently from read-only
+   effect-summary work.
 2. Build conservative callable effect summaries before attempting memory,
    ownership, pure-call, or aggressive inlining transformations.
 3. Improve reachable-type/target precision, then devirtualize before designing
