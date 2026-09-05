@@ -187,6 +187,10 @@ Resolved proof-provenance normalization inputs:
 - [Proof-provenance normalization design proposal](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 - [Proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 
+Frozen normalization-stable path-activation provenance input:
+
+- [Normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+
 Resolved post-proof CFG canonicalization inputs:
 
 - [Post-proof CFG canonicalization design proposal](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)

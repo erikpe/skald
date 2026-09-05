@@ -1133,6 +1133,19 @@ x86-64 selector observes the same executable load it emits today. Proof
 records themselves never reach legality, layout, frame, instruction-selection,
 or artifact planning.
 
+The accepted
+[normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and planned
+[implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+will refine that final storage discriminant to
+`NormalizedPathActivation`. Backend legality, frame planning, place
+addressing, load/store selection, and emission will treat it as the identical
+addressable boolean stack home. The new kind adds no ABI category, register
+class, relocation, runtime symbol, or instruction, and focused acceptance
+requires byte-for-byte unchanged assembly. `PathCondition` storage remains a
+hard normalized-input error. Until the roadmap lands, the current
+`ScalarSpill` representation remains authoritative.
+
 Final-seal reachability facts are recomputed from the exact normalized
 program and after every changed final-stage pass. Whole-world definition
 retention consumes only that final seal and continues to preserve

@@ -50,6 +50,13 @@ use a bounded same-block view instead of a duplicate arithmetic engine. The
 checked consumer plans all dependent successful protocols from one solved
 snapshot and commits them atomically. Constant-left logical selection is also
 implemented without a pipeline fixed-point loop or general memory analysis.
+Before any final-stage storage mutation, the frozen
+[normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and planned
+[implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+will replace the broad normalized scalar-spill exception with one exact final-
+only activation role. This is a representation and verification prerequisite,
+not the FMM-13 dead-carrier optimization itself.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -649,21 +656,24 @@ architectural investments.
    are implemented. Independently selectable empty-block forwarding and
    basic-block merging run before whole-world reachability.
 
-7. Complete the in-progress convergent callable-local constant work. The solver
-   and its primitive and checked consumers are implemented; the proof-transition
-   logical consumer remains. This completes the expected local constant-folding
-   semantics before new operation families or broader memory reasoning are added.
-
-8. After the bounded CFG and convergent constant layers provide more evidence about remaining
-   barriers, generalize callable effects and alias queries where conservative
-   answers demonstrably block useful transformations.
+7. The convergent callable-local constant work is implemented, including the
+   proof-transition logical consumer. This completes the expected local
+   constant-folding semantics before new operation families or broader memory
+   reasoning are added.
+8. Implement the planned normalization-stable path-activation provenance
+   foundation before any final-stage storage mutation. It restores ordinary
+   scalar-spill verification and gives later storage passes an exact semantic
+   classification without retaining consumed proof identities.
+9. After the bounded CFG and convergent constant layers provide more evidence
+   about remaining barriers, generalize callable effects and alias queries
+   where conservative answers demonstrably block useful transformations.
 
 ### Larger performance investments
 
-9. Add a virtual-register target LIR and register allocation. This is likely
+10. Add a virtual-register target LIR and register allocation. This is likely
    the largest eventual improvement because the current backend gives every MIR
    value a stack home.
-10. Introduce scalar SSA or a separate optimization IR only when global scalar
+11. Introduce scalar SSA or a separate optimization IR only when global scalar
    and loop optimization benefits justify the extra maintained boundary.
 
 The last two decisions should be coordinated around their data-flow boundary:

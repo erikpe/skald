@@ -23,8 +23,12 @@ not an implementation roadmap.
 The open
 [proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
 retain one scalar-spill provenance limitation that becomes critical before a
-final-stage storage transformation. Its proposed resolution is the draft
-[normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
+final-stage storage transformation. Its accepted resolution is the frozen
+[normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and planned
+[implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
+New out-of-scope findings during delivery belong in that roadmap's
+[companion discoveries record](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md).
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
@@ -79,17 +83,25 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No implementation roadmap is waiting to start.
+The
+[normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+is planned with NSR0 next. It adds a final-only activation storage role through
+the mandatory proof-normalization transaction, restores normalized definite-
+initialization checking for ordinary scalar spills, and proves unchanged
+backend behavior. It depends on the completed proof-normalization, dense MIR
+rewriting, post-proof CFG, and convergent constant-propagation foundations.
+Dead normalized carrier deletion remains the separate FMM-13 candidate.
 
 ## Design proposals
 
-The draft
-[normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-proposes a dedicated final-only activation storage kind, normalizer-exclusive
+The frozen
+[normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+accepts a dedicated final-only activation storage kind, normalizer-exclusive
 construction, explicit proof/final phase legality, and restoration of
-normalized definite-initialization checks for genuine scalar spills. Its
-decisions await confirmation; no implementation roadmap exists yet, and dead
-condition-carrier deletion remains a separate optimization candidate.
+normalized definite-initialization checks for genuine scalar spills. The
+[planned roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+owns implementation; dead condition-carrier deletion remains a separate
+optimization candidate.
 
 The completed convergent local constant propagation
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),

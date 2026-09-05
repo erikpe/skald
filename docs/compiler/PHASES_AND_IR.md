@@ -1283,6 +1283,38 @@ recomputes target-independent reachability from the exact normalized program,
 and binds those facts to the new seal. Neither the raw normalized program nor
 its authority is externally constructible or detachable.
 
+#### Frozen normalization-stable path-activation direction
+
+Status: **accepted; implementation planned**. The frozen
+[normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and its active
+[implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+refine the representation at this boundary without changing execution.
+
+Once implemented, the mandatory normalizer will reclassify validated
+`PathCondition` storage to the final-only unit kind
+`NormalizedPathActivation`, rather than to ordinary `ScalarSpill`. The new
+kind retains only the executable storage role: it carries no path condition,
+logical expression, predecessor, parent, merge, or other consumed proof
+identity. `PathCondition` will remain legal only in proof-rich MIR;
+`NormalizedPathActivation` will be legal only in normalized MIR under the
+private consumed-proof seal. The normalizer remains the sole production
+constructor.
+
+That distinction will let normalized verification resume ordinary definite-
+initialization analysis for genuine `ScalarSpill` declarations. Only a
+structurally valid boolean `NormalizedPathActivation` will rely on its
+verified-and-consumed path ancestry rather than an attempted reconstruction of
+erased path-sensitive proof. Current block/value/CFG passes must preserve the
+classification, and a future storage-mutating capability must reject or handle
+it explicitly. FMM-13 dead-carrier deletion remains a separate optimization.
+
+This accepted change preserves the exact `StorageId`, declaration order,
+stores, loads, lifetime markers, blocks, values, spans, evaluation and failure
+order, cleanup, lifecycle, reachability, ABI, and target behavior. Until the
+roadmap is complete, current normalized MIR continues to use `ScalarSpill` and
+the broader documented verifier exception above.
+
 The normalized verifier shares ordinary structural, lifecycle, reference, and
 reachable-definition owners with proof-rich verification, but does not pretend
 to reconstruct erased path proofs. Its private authority records that complete

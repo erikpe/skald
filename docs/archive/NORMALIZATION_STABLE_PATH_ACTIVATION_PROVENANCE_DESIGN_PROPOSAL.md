@@ -1,11 +1,12 @@
 # Normalization-Stable Path-Activation Provenance Design Proposal
 
-Status: draft design proposal; NSP1 through NSP14 await confirmation. No
-implementation roadmap exists yet.
+Status: frozen design; NSP1 through NSP14 were accepted on 2026-09-05 and
+promoted into the living compiler contracts. Implementation is planned by the
+[normalization-stable path-activation provenance roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
 This proposal resolves the remaining storage-classification limitation from
 the completed
-[proof-provenance normalization work](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md):
+[proof-provenance normalization work](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md):
 after path proof is consumed, a path activation currently becomes an ordinary
 `ScalarSpill`, so normalized MIR cannot distinguish it from other compiler-
 owned scalar homes.
@@ -156,20 +157,20 @@ and backend-ready final MIR remain authoritative.
 
 | Decision | Question | Proposed answer | Status |
 |---|---|---|---|
-| [NSP1](#nsp1--add-one-dedicated-normalized-storage-kind) | How is the origin represented? | Add `MirStorageKind::NormalizedPathActivation` | **Proposed** |
-| [NSP2](#nsp2--retain-a-classification-not-consumed-proof) | What survives normalization? | Only a storage-role classification; no path or logical identity | **Proposed** |
-| [NSP3](#nsp3--make-the-normalizer-the-only-producer) | Who may create the kind? | Only the validated mandatory normalizer | **Proposed** |
-| [NSP4](#nsp4--make-storage-phase-legality-explicit) | Where is each form legal? | `PathCondition` only before the boundary; normalized activation only after it | **Proposed** |
-| [NSP5](#nsp5--narrow-the-definite-initialization-exception) | What changes in scalar initialization? | Verify ordinary spills in both stages; exempt only normalized activations | **Proposed** |
-| [NSP6](#nsp6--validate-the-surviving-role-structurally) | What can normalized MIR still prove? | Exact type/source/phase shape, while initialization relies on consumed authority | **Proposed** |
-| [NSP7](#nsp7--preserve-identities-and-executable-shape) | Does normalization otherwise change? | No; preserve every executable operation and identity | **Proposed** |
-| [NSP8](#nsp8--keep-rewriting-phase-aware-and-exhaustive) | How do rewrites treat the kind? | Preserve it by default; storage-mutating capabilities must handle it explicitly | **Proposed** |
-| [NSP9](#nsp9--provide-one-semantic-query-surface) | How do analyses identify it? | Query the storage kind through a narrow MIR helper; never infer names or shapes | **Proposed** |
-| [NSP10](#nsp10--keep-backend-representation-identical) | Does target lowering change? | Treat it as the same boolean stack home as the former scalar spill | **Proposed** |
-| [NSP11](#nsp11--make-observation-deliberate-and-deterministic) | What changes in dumps and reports? | A distinct final-MIR storage label; existing normalization count remains | **Proposed** |
-| [NSP12](#nsp12--leave-dead-carrier-deletion-separate) | Is FMM-13 included? | No; this supplies its provenance prerequisite only | **Proposed** |
-| [NSP13](#nsp13--make-no-language-runtime-or-selection-change) | Does observable behavior change? | No | **Proposed** |
-| [NSP14](#nsp14--retain-facade-oriented-ownership) | Where does implementation live? | MIR model/contract, normalizer, verifier, dump, and existing backend classifiers | **Proposed** |
+| [NSP1](#nsp1--add-one-dedicated-normalized-storage-kind) | How is the origin represented? | Add `MirStorageKind::NormalizedPathActivation` | **Frozen** |
+| [NSP2](#nsp2--retain-a-classification-not-consumed-proof) | What survives normalization? | Only a storage-role classification; no path or logical identity | **Frozen** |
+| [NSP3](#nsp3--make-the-normalizer-the-only-producer) | Who may create the kind? | Only the validated mandatory normalizer | **Frozen** |
+| [NSP4](#nsp4--make-storage-phase-legality-explicit) | Where is each form legal? | `PathCondition` only before the boundary; normalized activation only after it | **Frozen** |
+| [NSP5](#nsp5--narrow-the-definite-initialization-exception) | What changes in scalar initialization? | Verify ordinary spills in both stages; exempt only normalized activations | **Frozen** |
+| [NSP6](#nsp6--validate-the-surviving-role-structurally) | What can normalized MIR still prove? | Exact type/source/phase shape, while initialization relies on consumed authority | **Frozen** |
+| [NSP7](#nsp7--preserve-identities-and-executable-shape) | Does normalization otherwise change? | No; preserve every executable operation and identity | **Frozen** |
+| [NSP8](#nsp8--keep-rewriting-phase-aware-and-exhaustive) | How do rewrites treat the kind? | Preserve it by default; storage-mutating capabilities must handle it explicitly | **Frozen** |
+| [NSP9](#nsp9--provide-one-semantic-query-surface) | How do analyses identify it? | Query the storage kind through a narrow MIR helper; never infer names or shapes | **Frozen** |
+| [NSP10](#nsp10--keep-backend-representation-identical) | Does target lowering change? | Treat it as the same boolean stack home as the former scalar spill | **Frozen** |
+| [NSP11](#nsp11--make-observation-deliberate-and-deterministic) | What changes in dumps and reports? | A distinct final-MIR storage label; existing normalization count remains | **Frozen** |
+| [NSP12](#nsp12--leave-dead-carrier-deletion-separate) | Is FMM-13 included? | No; this supplies its provenance prerequisite only | **Frozen** |
+| [NSP13](#nsp13--make-no-language-runtime-or-selection-change) | Does observable behavior change? | No | **Frozen** |
+| [NSP14](#nsp14--retain-facade-oriented-ownership) | Where does implementation live? | MIR model/contract, normalizer, verifier, dump, and existing backend classifiers | **Frozen** |
 
 ## NSP1 — Add one dedicated normalized storage kind
 
@@ -648,16 +649,13 @@ review should explicitly confirm:
 5. Should dead normalized carrier cleanup remain a separate selectable pass?
    This proposal says yes.
 
-## Promotion criteria
+## Freeze and promotion
 
-If NSP1 through NSP14 are accepted together:
-
-- mark this document frozen and move it to `docs/archive/`;
-- promote the final-only storage role and verifier behavior into the living
-  compiler phase, backend, and testing contracts;
-- update the optimization catalog so the provenance foundation is proposed by
-  a concrete roadmap while dead-carrier deletion remains separate;
-- create an implementation roadmap with PR-sized contract, representation,
-  normalization, verification, integration, and closure tasks; and
-- retain the existing discovery until implementation is complete, then archive
-  it as resolved with links to the frozen design and delivery record.
+NSP1 through NSP14 were accepted together on 2026-09-05. This record is frozen
+in `docs/archive/`; the final-only storage role and verifier direction are
+promoted into the living compiler phase, backend, and testing contracts. The
+[active roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+owns delivery, its companion
+[discoveries record](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md)
+owns out-of-scope findings, and the optimization catalog continues to keep
+FMM-13 dead-carrier deletion separate from this prerequisite.

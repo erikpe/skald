@@ -1,8 +1,9 @@
 # Proof-Provenance Normalization Discoveries
 
-Status: open; the remaining storage-provenance follow-up now has a
-[draft design proposal](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-but no implementation roadmap.
+Status: open; the remaining storage-provenance follow-up now has a frozen
+[design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and a planned
+[implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
 The archived
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) owns the reviewed
@@ -52,7 +53,9 @@ its current consumers are stable, rising to high before a final-stage storage
 or spill transformation.
 
 **Proposed resolution:** The
-[normalization-stable path-activation provenance proposal](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+[frozen normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md),
+implemented through the planned
+[roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md),
 adds a dedicated final-only storage kind produced solely by the mandatory
 normalizer, restores ordinary `ScalarSpill` definite-initialization checking in
 normalized MIR, and retains consumed-proof authority only for the exact marked
