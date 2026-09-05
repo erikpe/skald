@@ -191,6 +191,10 @@ Resolved post-proof CFG canonicalization inputs:
 - [Post-proof CFG canonicalization design proposal](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
 - [Post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
 
+Resolved convergent local constant propagation inputs:
+
+- [Convergent local constant propagation design proposal](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+
 Resolved checked integer constant protocol simplification inputs:
 
 - [Checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)

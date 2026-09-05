@@ -28,10 +28,16 @@ important before a final-stage storage transformation.
 The open
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
 retain the measured nested-carrier limitation from the completed
-checked-protocol pass. Its proposed resolution is now the broader
-[convergent local constant propagation design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
+checked-protocol pass. Its accepted resolution is now the broader frozen
+[convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 which treats arbitrary supported expression depth as an architectural
-completeness requirement rather than a one-off scalar-spill cleanup.
+completeness requirement rather than a one-off scalar-spill cleanup. Delivery
+is tracked by the planned roadmap below.
+
+The
+[convergent local constant propagation discoveries](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md)
+are the empty-at-start implementation companion for that roadmap. New work
+outside the frozen boundary belongs there rather than in an active task.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
@@ -76,22 +82,17 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No additional implementation roadmap is currently planned.
+The planned
+[convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+implements the frozen callable-local solver, checked-protocol carrier
+certificates, depth-independent primitive and checked consumers, and
+constant-left logical selection through one proof-consuming transition.
+CLR0 is next: separate exact checked and logical structural observations from
+constant eligibility without changing current optimization behavior. It
+depends on the completed local simplification, checked integer, proof-
+normalization, selectable pipeline, and dense identity rewriting foundations.
 
 ## Design proposals
-
-The draft
-[convergent local constant propagation design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
-proposes one callable-local monotonic worklist solver shared by the existing
-independently selectable primitive and checked-integer folding passes and a
-new constant-left short-circuit consumer. It defines an arbitrary-depth
-completeness guarantee for the supported integer and boolean graph, exact
-private-carrier certification, conditional logical transfer, static-failure
-barriers, plan-level atomic checked rewriting, and a narrow proof-consuming
-transition which composes selectable logical CFG rewriting with mandatory
-normalization. It adds no pipeline-level fixed-point loop or persistent
-logical provenance. CLP1 through CLP18 await review and confirmation; no
-implementation roadmap exists yet.
 
 The completed post-proof CFG canonicalization
 [design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md) and

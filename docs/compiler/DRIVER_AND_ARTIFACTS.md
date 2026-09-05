@@ -239,6 +239,35 @@ continues to be resolved before provider/source I/O, and malformed transformed
 MIR remains a structured compiler failure before backend emission or artifact
 publication.
 
+## Frozen convergent local constant propagation orchestration
+
+Status: **planned**. The frozen
+[design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+and active
+[roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
+the accepted extension; current requests continue using the implemented
+two-stage behavior until that roadmap delivers it.
+
+The registry will retain `primitive-constant-folding` and
+`checked-integer-constant-folding` and add
+`constant-short-circuit-folding`. The latter is independently discoverable and
+excludable, appears once at the proof-normalization boundary in `default`, and
+uses a new closed `ProofTransition` stage. Schedule validation accepts proof-
+rich occurrences, at most one transition occurrence, and final occurrences in
+that order; it rejects repetition or displacement of the transition.
+
+The driver continues resolving profiles and exclusions before source/provider
+work and passes one typed schedule to the MIR pipeline. `none` and an all-pass-
+disabled request select no pass occurrences but still run mandatory
+normalization. Selecting or disabling logical folding therefore cannot bypass,
+repeat, or change core normalization policy.
+
+The runner will let the transition inspect verified proof-rich MIR, validate
+one optional logical selection plan, and atomically compose it with mandatory
+normalization. Only verified final MIR is returned. There is no public request
+field, arbitrary ordering, optimization level, dynamic registration, target
+dependency, raw unnormalized output, or reusable third MIR product.
+
 ## Whole-world reachability selection
 
 The confirmed

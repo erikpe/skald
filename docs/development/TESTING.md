@@ -205,6 +205,42 @@ driver test pins the same pass-owned counters through structured reporting;
 the cross-process fingerprint excludes elapsed durations and includes every
 occurrence measurement and the final MIR dump.
 
+### Planned convergent local constant propagation coverage
+
+The frozen
+[convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+and active
+[implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+define coverage to add as each boundary is implemented. Existing behavior must
+remain pinned while topology observation, carrier certification, the solver,
+and each consumer are introduced separately.
+
+Focused analysis tests cover exact checked and logical structural records,
+every storage access role, unique writes, types, dominance, lifetimes, aliases,
+protocol ownership, malformed identities, and deterministic snapshot order.
+Solver tests cover primitive, carrier, checked, and logical dependencies;
+fan-in/fan-out and cycles; static failures and unsupported leaves; all four
+constant-left short-circuit rules; skipped unsupported or failing right sides;
+selected dynamic right sides; permuted worklist order; and generated dependency
+depths large enough to prove iterative rather than recursive convergence.
+
+Pass tests cover the primitive, checked, and logical consumers independently.
+They pin arbitrary-depth folding, multi-candidate checked transactions, exact
+edge selection, selected-result replacement, stale-plan rollback, no-op seal
+reuse, dense identities, spans, deterministic metrics, and idempotence. The
+transition matrix covers zero or one transition, stage-order rejection,
+mandatory normalization exactly once, typed capability privacy, transition and
+normalization failure attribution, and absence of a partially verified product.
+
+Pipeline, CLI, driver, and golden tests cover listing, descriptions, stage,
+default placement, exclusions, occurrence numbering, reports, checkpoints,
+`none`, all-pass-disabled parity, and every constant consumer disabled alone.
+Source-to-native fixtures combine deep primitive and checked expressions with
+nested `&&`/`||`, effectful and failing selected or skipped right sides,
+functions, statics, lifecycle, ownership, destruction, and runtime traces.
+Debug, release, repeated-process, full-corpus, MSRV, and repository gates remain
+the final equivalence boundary.
+
 ### Post-proof empty-block forwarding coverage
 
 Focused final-stage pass tests cover productive and no-op execution,

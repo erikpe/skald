@@ -37,6 +37,13 @@ and
 Every profile now crosses the mandatory proof-rich-to-final boundary, and the
 default schedule removes post-proof unreachable blocks before whole-world
 definition retention.
+The next planned broadening is the frozen
+[convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+and active
+[implementation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
+It addresses arbitrary supported expression depth, exact checked-protocol
+carrier provenance, and constant-left logical selection without adding a
+pipeline fixed-point loop or general memory analysis.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -636,16 +643,21 @@ architectural investments.
    are implemented. Independently selectable empty-block forwarding and
    basic-block merging run before whole-world reachability.
 
-7. After the bounded CFG layer provides more evidence about remaining
+7. Implement the planned convergent callable-local constant solver and its
+   primitive, checked, and proof-transition logical consumers. This completes
+   the expected local constant-folding semantics before new operation families
+   or broader memory reasoning are added.
+
+8. After the bounded CFG and convergent constant layers provide more evidence about remaining
    barriers, generalize callable effects and alias queries where conservative
    answers demonstrably block useful transformations.
 
 ### Larger performance investments
 
-8. Add a virtual-register target LIR and register allocation. This is likely
+9. Add a virtual-register target LIR and register allocation. This is likely
    the largest eventual improvement because the current backend gives every MIR
    value a stack home.
-9. Introduce scalar SSA or a separate optimization IR only when global scalar
+10. Introduce scalar SSA or a separate optimization IR only when global scalar
    and loop optimization benefits justify the extra maintained boundary.
 
 The last two decisions should be coordinated around their data-flow boundary:

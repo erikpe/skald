@@ -420,6 +420,39 @@ constant fold and precedes dead-pure and CFG cleanup, so aggregate metrics and
 trace occurrence records retain pipeline order without changing quiet,
 phases-only, or details-only timing-allocation boundaries.
 
+### Frozen convergent local constant propagation observation
+
+Status: **planned**. The frozen
+[design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+and active
+[roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
+the future observation contract; current reports retain the implemented
+block-local and checked-protocol metrics until delivery.
+
+Primitive and checked occurrences will retain their established counters and
+add stable counts for materialized folds whose proof crossed a certified
+carrier or required propagated rather than literal operands. The new
+`constant-short-circuit-folding` occurrence reports `&&` and `||` selections
+split by short versus right path and counts exact selected-result loads replaced
+by constants. Worklist waves, queue operations, graph sizes, and analysis
+implementation details are not semantic metrics.
+
+The transition occurrence has the ordinary stable identity, name, stage,
+schedule position, occurrence number, outcome, duration at trace detail, and
+pass-owned metrics. A transition-labelled verified checkpoint and the existing
+`after-proof-normalization` checkpoint expose the same published final seal;
+there is no checkpoint between optional logical edits and normalization.
+Mandatory normalization retains separate execution and proof-consumption
+counters. Later CFG and dead-definition passes report any blocks or definitions
+they remove.
+
+Logical analysis, plan, or edit failure is attributed to the logical pass.
+Failure in unchanged core normalization remains a normalization failure. A
+combined final-seal verification failure identifies the transition transaction,
+publishes no partial product, and emits no successful after-transition or final
+checkpoint. Unsupported facts and ineligible candidates remain ordinary
+conservative outcomes rather than diagnostics.
+
 ## Proof-normalization observation
 
 The archived

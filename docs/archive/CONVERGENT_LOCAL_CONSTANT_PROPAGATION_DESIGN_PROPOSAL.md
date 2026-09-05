@@ -1,7 +1,8 @@
 # Convergent Local Constant Propagation Design Proposal
 
-Status: draft design proposal; CLP1 through CLP18 are proposed and not yet
-frozen.
+Status: frozen decision record. CLP1 through CLP18 were confirmed together on
+2026-09-05. Implementation is planned by the
+[convergent local constant propagation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 
 This proposal defines expression-complete constant propagation for Skald's
 existing target-independent proof-rich final-MIR simplification passes. Within
@@ -19,11 +20,11 @@ the same kind of solution without repeatedly mutating and reverifying the
 whole program until no pass changes it.
 
 The design builds on the implemented
-[local final-MIR simplification](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
+[local final-MIR simplification](LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
 and
-[checked integer constant protocol simplification](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
+[checked integer constant protocol simplification](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
 It resolves the remaining nested-protocol limitation recorded in the
-[checked-integer discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md#nested-successful-protocols-do-not-feed-enclosing-scalar-carriers),
+[checked-integer discoveries](../roadmaps/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md#nested-successful-protocols-do-not-feed-enclosing-scalar-carriers),
 but intentionally chooses a broader architectural boundary than a one-off
 carrier substitution rule.
 
@@ -812,28 +813,28 @@ publishes no partial program.
 - full compiler, CLI, golden, native, documentation, formatting, lint, and
   supported-toolchain gates pass.
 
-## Proposed decision register
+## Frozen decision register
 
-| Decision | Question | Proposed decision | Status |
+| Decision | Question | Frozen decision | Status |
 |---|---|---|---|
-| [CLP1](#clp1--make-the-supported-domain-expression-complete) | What depth is supported? | Every finite supported dependency graph, with no configured depth or wave limit | **Proposed** |
-| [CLP2](#clp2--solve-facts-before-mutating-mir) | How is convergence reached? | One monotonic callable-local worklist analysis followed by a rewrite plan | **Proposed** |
-| [CLP3](#clp3--keep-transformations-independently-selectable) | What is registered? | Retain primitive and checked names and add a separate constant-left logical pass | **Proposed** |
-| [CLP4](#clp4--share-semantic-facts-across-pass-boundaries-not-seals) | How do the passes cooperate? | Rebuild the same analysis kind per occurrence; never cache facts across a rewrite seal | **Proposed** |
-| [CLP5](#clp5--separate-protocol-shape-from-constant-provenance) | Who recognizes checked topology? | A structural observer independent of constant sources, consumed by the solver and rewriter | **Proposed** |
-| [CLP6](#clp6--certify-only-protocol-owned-private-scalar-carriers) | Which storage propagates constants? | Exact checked-protocol `ScalarSpill` carriers satisfying exhaustive access and dominance rules | **Proposed** |
-| [CLP7](#clp7--reuse-the-exact-existing-evaluators) | Who owns arithmetic? | Existing primitive and checked-integer evaluators remain authoritative | **Proposed** |
-| [CLP8](#clp8--treat-static-failure-as-a-result-barrier) | How are failing checks handled? | Publish no result fact and retain the original runtime protocol and failure | **Proposed** |
-| [CLP9](#clp9--materialize-each-semantic-family-separately) | What does each pass rewrite? | Primitive assignments, checked protocols, and logical selection each retain a separate owner | **Proposed** |
-| [CLP10](#clp10--validate-one-complete-plan-before-atomic-mutation) | How are dependent checked candidates committed? | Revalidate the full source-snapshot plan, then apply it in one unpublished transaction | **Proposed** |
-| [CLP11](#clp11--retain-the-proof-schedule-and-add-one-transition-occurrence) | Does scheduling express depth? | No; retain proof order, then run at most one logical transition at normalization | **Proposed** |
-| [CLP12](#clp12--add-no-persistent-mir-provenance) | Does MIR representation change? | No new executable IR, storage kind, persistent node, or cross-seal identity | **Proposed** |
-| [CLP13](#clp13--keep-the-solver-private-and-facade-oriented) | Where does implementation live? | One private recursive analysis module with narrow immutable queries for three consumers | **Proposed** |
-| [CLP14](#clp14--observe-materialized-capability-not-worklist-mechanics) | What is reported? | Stable transformation/provenance counts, not internal iterations | **Proposed** |
-| [CLP15](#clp15--make-no-language-or-runtime-contract-change) | Which semantic assumptions change? | None; whole-world and single-threaded guarantees do not weaken barriers | **Proposed** |
-| [CLP16](#clp16--support-all-four-constant-left-short-circuit-rules) | Which logical identities are supported? | Select short or right from a constant left operand without requiring RHS purity | **Proposed** |
-| [CLP17](#clp17--introduce-a-narrow-proof-consuming-transition-stage) | Where can logical CFG change safely? | Between proof-rich and final seals through a typed single-occurrence transition | **Proposed** |
-| [CLP18](#clp18--compose-logical-rewriting-atomically-with-mandatory-normalization) | How is proof metadata consumed? | Validate once and publish only the combined verified final-MIR result | **Proposed** |
+| [CLP1](#clp1--make-the-supported-domain-expression-complete) | What depth is supported? | Every finite supported dependency graph, with no configured depth or wave limit | **Frozen** |
+| [CLP2](#clp2--solve-facts-before-mutating-mir) | How is convergence reached? | One monotonic callable-local worklist analysis followed by a rewrite plan | **Frozen** |
+| [CLP3](#clp3--keep-transformations-independently-selectable) | What is registered? | Retain primitive and checked names and add a separate constant-left logical pass | **Frozen** |
+| [CLP4](#clp4--share-semantic-facts-across-pass-boundaries-not-seals) | How do the passes cooperate? | Rebuild the same analysis kind per occurrence; never cache facts across a rewrite seal | **Frozen** |
+| [CLP5](#clp5--separate-protocol-shape-from-constant-provenance) | Who recognizes checked topology? | A structural observer independent of constant sources, consumed by the solver and rewriter | **Frozen** |
+| [CLP6](#clp6--certify-only-protocol-owned-private-scalar-carriers) | Which storage propagates constants? | Exact checked-protocol `ScalarSpill` carriers satisfying exhaustive access and dominance rules | **Frozen** |
+| [CLP7](#clp7--reuse-the-exact-existing-evaluators) | Who owns arithmetic? | Existing primitive and checked-integer evaluators remain authoritative | **Frozen** |
+| [CLP8](#clp8--treat-static-failure-as-a-result-barrier) | How are failing checks handled? | Publish no result fact and retain the original runtime protocol and failure | **Frozen** |
+| [CLP9](#clp9--materialize-each-semantic-family-separately) | What does each pass rewrite? | Primitive assignments, checked protocols, and logical selection each retain a separate owner | **Frozen** |
+| [CLP10](#clp10--validate-one-complete-plan-before-atomic-mutation) | How are dependent checked candidates committed? | Revalidate the full source-snapshot plan, then apply it in one unpublished transaction | **Frozen** |
+| [CLP11](#clp11--retain-the-proof-schedule-and-add-one-transition-occurrence) | Does scheduling express depth? | No; retain proof order, then run at most one logical transition at normalization | **Frozen** |
+| [CLP12](#clp12--add-no-persistent-mir-provenance) | Does MIR representation change? | No new executable IR, storage kind, persistent node, or cross-seal identity | **Frozen** |
+| [CLP13](#clp13--keep-the-solver-private-and-facade-oriented) | Where does implementation live? | One private recursive analysis module with narrow immutable queries for three consumers | **Frozen** |
+| [CLP14](#clp14--observe-materialized-capability-not-worklist-mechanics) | What is reported? | Stable transformation/provenance counts, not internal iterations | **Frozen** |
+| [CLP15](#clp15--make-no-language-or-runtime-contract-change) | Which semantic assumptions change? | None; whole-world and single-threaded guarantees do not weaken barriers | **Frozen** |
+| [CLP16](#clp16--support-all-four-constant-left-short-circuit-rules) | Which logical identities are supported? | Select short or right from a constant left operand without requiring RHS purity | **Frozen** |
+| [CLP17](#clp17--introduce-a-narrow-proof-consuming-transition-stage) | Where can logical CFG change safely? | Between proof-rich and final seals through a typed single-occurrence transition | **Frozen** |
+| [CLP18](#clp18--compose-logical-rewriting-atomically-with-mandatory-normalization) | How is proof metadata consumed? | Validate once and publish only the combined verified final-MIR result | **Frozen** |
 
 ## CLP1 — Make the supported domain expression complete
 
@@ -1136,22 +1137,21 @@ rewrites, and the typed proof-to-final transition.
 | Selection, measurements, and schedule proof | Medium | Stable modular user-facing behavior |
 | Deep, failure, determinism, native, and regression coverage | Medium to large | Evidence for completeness and semantic parity |
 
-A later implementation roadmap should settle contracts and test fixtures
-before restructuring current pass owners, then deliver structural protocol
-facts, carrier certification, logical observations, the solver, proof-rich
-consumers, dependent checked transactions, the transition capability and
-logical consumer, pipeline observation, and broad hardening in that order.
+The implementation roadmap settles contracts and test fixtures before
+restructuring current pass owners, then delivers structural protocol facts,
+carrier certification, logical observations, the solver, proof-rich consumers,
+dependent checked transactions, the transition capability and logical
+consumer, pipeline observation, and broad hardening in that order.
 
 ## Freeze and promotion
 
-CLP1 through CLP18 should be reviewed and frozen as one bundle. In particular,
-the completeness guarantee, narrow carrier boundary, static-failure behavior,
-all four constant-left rules, separate selectable consumers, proof-consuming
-transition, plan-level atomicity, and rejection of pipeline-level repetition
-jointly define what “proper” constant propagation means.
+CLP1 through CLP18 are frozen as one bundle. The completeness guarantee,
+narrow carrier boundary, static-failure behavior, all four constant-left
+rules, separate selectable consumers, proof-consuming transition, plan-level
+atomicity, and rejection of pipeline-level repetition jointly define what
+“proper” constant propagation means.
 
-If confirmed, promote the durable behavior into the compiler phase, driver,
-reporting, and testing contracts; advance the optimization catalog entry from
-**Draft design** to **Proposed**; create an implementation roadmap and a
-separate discoveries record; and preserve this proposal as the authoritative
-decision record until implementation completes.
+The durable direction is promoted into the compiler phase, driver, reporting,
+and testing contracts. The optimization catalog records the work as
+**Proposed**, the active implementation roadmap owns delivery, and the separate
+discoveries record owns additional findings without expanding that roadmap.

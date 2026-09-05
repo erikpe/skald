@@ -1079,6 +1079,57 @@ tests, optional or array checks, calls, loads, ownership operations, or
 target-specific instructions. Nested checked results are not propagated
 through their retained scalar carriers by this pass.
 
+### Frozen convergent local constant propagation direction
+
+Status: **planned**. The complete decisions are frozen in the
+[design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
+and delivery is divided by the active
+[implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
+Until that roadmap changes the implementation, the block-local and literal-
+carrier limitations described above remain current behavior.
+
+The accepted direction introduces one seal-local callable dependency graph
+over transient values and narrowly certified checked-protocol scalar carriers.
+One iterative monotonic worklist derives exact `i64`, `u64`, `u8`, and `bool`
+facts through supported primitive operations, successful checked integer
+protocols, and verified constant-selected logical relations. There is no
+expression-depth, wave, fuel, or pipeline-repetition bound. Existing primitive
+and checked evaluators remain the sole arithmetic authorities.
+
+Checked topology becomes an immutable structural observation independent of
+constant provenance. A carrier transmits a fact only when exhaustive access,
+unique unauthorized write, exact type, dominance, lifetime, alias, protocol-
+ownership, callable, and current-seal checks certify it. Generic storage,
+source locals, normalized former path-condition carriers, calls, arbitrary
+loads, ownership operations, floating semantics, and ambiguous accesses remain
+barriers. Static failure publishes no result fact and keeps its executable
+protocol and exact failure behavior.
+
+Logical observations implement all constant-left short-circuit selections:
+`false && rhs` and `true || rhs` select the existing short path, while
+`true && rhs` and `false || rhs` select the existing right path. Left
+evaluation is always preserved. A skipped RHS need not be pure, supported, or
+non-failing because it is not evaluated by the language; a selected RHS retains
+all effects and failures exactly once. General right-constant identities with
+a dynamic left remain outside this boundary.
+
+Primitive assignment replacement, complete checked-protocol rewriting, and
+logical CFG selection remain three independently selectable consumers of a
+fresh solution. The existing primitive and checked pass names remain stable;
+the logical consumer is named `constant-short-circuit-folding`. No facts,
+certificates, protocol observations, or rewrite positions survive a commit.
+
+Because proof-rich verification requires the exact logical record while
+normalized MIR no longer retains it, the frozen design adds one narrow
+`ProofTransition` stage between `ProofRich` and `Final`. At most one transition
+occurrence may submit a validated logical plan to the mandatory normalizer.
+The optional edits and unchanged normalization rules commit atomically and
+publish only verified final MIR; no generally mutable third MIR form or
+persistent logical provenance is introduced. With the pass disabled or under
+`none`, mandatory normalization still runs exactly once without logical
+optimization. Existing final unreachable and dead-definition passes own later
+deletion.
+
 ### Proof-provenance normalization boundary
 
 The archived
