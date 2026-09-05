@@ -344,8 +344,12 @@ proof-rich
 `path-condition`, final-only `normalized-path-activation`, and ordinary
 `scalar-spill` declarations; reject either activation kind at the wrong seal;
 validate the final-only kind's source-free boolean shape; and prove dense
-rewriting preserves it without side metadata. Later tasks will prove that
-normalized definite-initialization rejects an uninitialized
+rewriting preserves it without side metadata. Mandatory-normalization tests
+now prove exact one-to-one conversion to that final-only kind, exact executable
+operation and identity preservation, malformed-inventory rejection, stale
+multi-callable rollback, and composition with the optional logical transition.
+The next verifier task will prove that normalized definite-initialization
+rejects an uninitialized
 ordinary scalar spill while accepting only structurally valid normalized
 activations backed by consumed proof. Normalization tests must preserve exact
 storage/value/block identities and executable operations. Profile, native,

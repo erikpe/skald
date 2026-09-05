@@ -15,10 +15,11 @@ impl Verifier<'_> {
         function: MirDefinitionRef<'_>,
     ) {
         // Compiler-owned scalar spills are checked while their producing
-        // protocol evidence is present. Former path activations intentionally
-        // become indistinguishable ScalarSpill storage after normalization,
-        // so the normalized contract relies on the consumed-proof authority
-        // and continues checking every source-visible primitive storage kind.
+        // protocol evidence is present. During the provenance migration,
+        // normalized verification retains its existing broad ScalarSpill
+        // exception and also excludes the now-distinct path activations whose
+        // initialization relation relied on consumed path proof. The next
+        // roadmap step narrows this to NormalizedPathActivation alone.
         let verify_scalar_spills = self.verification_contract().requires_proof_provenance();
         let entry = function
             .storage_entries()
@@ -139,7 +140,11 @@ fn is_definite_initialization_storage(
 ) -> bool {
     function.storage(storage).is_some_and(|storage| {
         storage.ty.is_primitive()
-            && (verify_scalar_spills || storage.kind != MirStorageKind::ScalarSpill)
+            && (verify_scalar_spills
+                || !matches!(
+                    storage.kind,
+                    MirStorageKind::ScalarSpill | MirStorageKind::NormalizedPathActivation
+                ))
     })
 }
 

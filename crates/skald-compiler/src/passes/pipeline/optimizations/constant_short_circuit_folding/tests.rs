@@ -186,7 +186,7 @@ fn all_constant_left_rules_select_the_exact_existing_path() {
         assert!(definition.path_conditions().is_empty());
         assert_eq!(
             definition.storage(topology.activation).unwrap().kind,
-            MirStorageKind::ScalarSpill
+            MirStorageKind::NormalizedPathActivation
         );
     }
 }
@@ -431,6 +431,14 @@ fn functions_members_and_static_lifecycle_bodies_share_one_plan() {
         .executable_definitions()
         .all(|definition| definition.logical_expressions().is_empty()
             && definition.path_conditions().is_empty()));
+    assert!(output
+        .executable_definitions()
+        .flat_map(|definition| definition.storage_entries())
+        .any(|storage| storage.kind.is_normalized_path_activation()));
+    assert!(output
+        .executable_definitions()
+        .flat_map(|definition| definition.storage_entries())
+        .all(|storage| storage.kind != MirStorageKind::PathCondition));
 }
 
 #[test]

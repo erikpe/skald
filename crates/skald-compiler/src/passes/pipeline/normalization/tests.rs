@@ -3,8 +3,8 @@ use std::collections::BTreeSet;
 use crate::{
     identity::{CallableId, FunctionId},
     mir::{
-        check_normalized_mir, dump_mir, MirInstruction, MirPlace, MirRvalueKind, MirStorageKind,
-        PathConditionId,
+        check_normalized_mir, dump_mir, rewrite::rewrite_program, MirInstruction, MirPlace,
+        MirRvalueKind, MirStorageKind, MirType, PathConditionId, StorageId,
     },
     passes::verify_proof_mir,
     test_support::lower_source_to_final_mir,
@@ -95,17 +95,26 @@ fn path_reads_and_activation_storage_are_reclassified_without_other_edits() {
             })
             .expect("logical lowering must contain a path read");
     let original_storage = definition.storage(read.activation).unwrap().clone();
-    let original_blocks = definition
-        .body
-        .blocks
-        .iter()
-        .map(|block| block.id)
-        .collect::<Vec<_>>();
-    let original_values = definition
-        .values
-        .iter()
-        .map(|value| value.id)
-        .collect::<Vec<_>>();
+    let mut expected_blocks = definition.body.blocks.clone();
+    for instruction in expected_blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+    {
+        let MirInstruction::Assign(assignment) = instruction else {
+            continue;
+        };
+        let MirRvalueKind::PathCondition(read) = assignment.rvalue.kind else {
+            continue;
+        };
+        assignment.rvalue.kind = MirRvalueKind::Load(MirPlace::base(read.activation));
+    }
+    let mut expected_storage = definition.storage.clone();
+    for storage in &mut expected_storage {
+        if storage.kind == MirStorageKind::PathCondition {
+            storage.kind = MirStorageKind::NormalizedPathActivation;
+        }
+    }
+    let expected_values = definition.values.clone();
 
     let normalized = normalize_proof_provenance(verified).unwrap();
     let output = normalized
@@ -126,31 +135,17 @@ fn path_reads_and_activation_storage_are_reclassified_without_other_edits() {
         MirRvalueKind::Load(MirPlace::base(read.activation))
     );
 
-    let mut expected_storage = original_storage;
-    expected_storage.kind = MirStorageKind::ScalarSpill;
-    assert_eq!(output.storage(read.activation), Some(&expected_storage));
-    assert!(!output
+    let mut expected_activation = original_storage;
+    expected_activation.kind = MirStorageKind::NormalizedPathActivation;
+    assert_eq!(output.storage(read.activation), Some(&expected_activation));
+    assert!(output
         .storage(read.activation)
         .unwrap()
         .kind
         .is_normalized_path_activation());
-    assert_eq!(
-        output
-            .body
-            .blocks
-            .iter()
-            .map(|block| block.id)
-            .collect::<Vec<_>>(),
-        original_blocks
-    );
-    assert_eq!(
-        output
-            .values
-            .iter()
-            .map(|value| value.id)
-            .collect::<Vec<_>>(),
-        original_values
-    );
+    assert_eq!(output.storage, expected_storage);
+    assert_eq!(output.body.blocks, expected_blocks);
+    assert_eq!(output.values, expected_values);
     assert_no_consumed_proof(normalized.program());
 }
 
@@ -166,7 +161,8 @@ fn path_activation_dump_and_measurement_baseline_is_explicit() {
     let normalized = normalize_proof_provenance(verified).unwrap();
     let final_dump = dump_mir(normalized.program());
     assert!(!final_dump.contains("path-condition <path-condition>"));
-    assert!(final_dump.contains("scalar-spill <scalar-spill> \"logical-condition"));
+    assert!(final_dump
+        .contains("normalized-path-activation <normalized-path-activation> \"logical-condition"));
     assert_eq!(
         (
             normalized.statistics().path_condition_records(),
@@ -307,6 +303,11 @@ fn every_executable_definition_kind_uses_the_same_transaction() {
         .filter(|definition| !definition.path_conditions().is_empty())
         .map(|definition| definition.callable())
         .collect::<BTreeSet<_>>();
+    let expected_activations = verified
+        .program()
+        .executable_definitions()
+        .map(|definition| definition.path_conditions().len())
+        .sum::<usize>();
     assert!(changed_kinds
         .iter()
         .any(|callable| matches!(callable, CallableId::Function(_))));
@@ -327,6 +328,15 @@ fn every_executable_definition_kind_uses_the_same_transaction() {
     assert_eq!(
         normalized.statistics().changed_callables(),
         changed_kinds.len()
+    );
+    assert_eq!(
+        normalized
+            .program()
+            .executable_definitions()
+            .flat_map(|definition| definition.storage_entries())
+            .filter(|storage| storage.kind.is_normalized_path_activation())
+            .count(),
+        expected_activations
     );
     assert_no_consumed_proof(normalized.program());
 }
@@ -394,6 +404,125 @@ fn unknown_path_read_is_rejected_without_exposing_partial_output() {
         .body
         .path_conditions
         .is_empty());
+}
+
+#[test]
+fn malformed_activation_inventory_is_rejected_before_rewrite() {
+    let base = verified("fn main() -> i64 { if (true && false) { return 1; } return 0; }")
+        .program()
+        .clone();
+    let entry = base.entry_function;
+    let activation = base.definitions.get(entry).unwrap().body.path_conditions[0].activation;
+
+    let mut already_normalized = base.clone();
+    let definition = already_normalized
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap();
+    definition.storage[activation.index()].kind = MirStorageKind::NormalizedPathActivation;
+    assert!(matches!(
+        normalize_program(already_normalized)
+            .unwrap_err()
+            .kind
+            .as_ref(),
+        MirProofNormalizationErrorKind::UnexpectedNormalizedActivationStorage { .. }
+    ));
+
+    let mut wrong_kind = base.clone();
+    let definition = wrong_kind.definitions.get_mut_for_test(entry).unwrap();
+    definition.storage[activation.index()].kind = MirStorageKind::Temporary;
+    assert!(matches!(
+        normalize_program(wrong_kind).unwrap_err().kind.as_ref(),
+        MirProofNormalizationErrorKind::InvalidActivationStorage { .. }
+    ));
+
+    let mut wrong_type = base.clone();
+    let definition = wrong_type.definitions.get_mut_for_test(entry).unwrap();
+    definition.storage[activation.index()].ty = MirType::I64;
+    assert!(matches!(
+        normalize_program(wrong_type).unwrap_err().kind.as_ref(),
+        MirProofNormalizationErrorKind::InvalidActivationStorage { .. }
+    ));
+
+    let mut missing = base.clone();
+    missing
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap()
+        .body
+        .path_conditions[0]
+        .activation = StorageId::new(CallableId::Function(entry), 999);
+    assert!(matches!(
+        normalize_program(missing).unwrap_err().kind.as_ref(),
+        MirProofNormalizationErrorKind::UnknownActivationStorage { .. }
+    ));
+
+    let mut orphan = base;
+    let definition = orphan.definitions.get_mut_for_test(entry).unwrap();
+    let mut declaration = definition.storage[activation.index()].clone();
+    declaration.id = StorageId::new(CallableId::Function(entry), definition.storage.len());
+    declaration.name = "orphan-condition".to_owned();
+    definition.storage.push(declaration);
+    assert!(matches!(
+        normalize_program(orphan).unwrap_err().kind.as_ref(),
+        MirProofNormalizationErrorKind::OrphanPathConditionStorage { .. }
+    ));
+}
+
+#[test]
+fn duplicate_activation_ownership_is_rejected_before_rewrite() {
+    let mut program = verified(
+        "fn main() -> i64 {
+           var selected: bool = true && (false || true);
+           if (selected) { return 1; }
+           return 0;
+         }",
+    )
+    .program()
+    .clone();
+    let entry = program.entry_function;
+    let definition = program.definitions.get_mut_for_test(entry).unwrap();
+    assert!(definition.body.path_conditions.len() >= 2);
+    definition.body.path_conditions[1].activation = definition.body.path_conditions[0].activation;
+
+    assert!(matches!(
+        normalize_program(program).unwrap_err().kind.as_ref(),
+        MirProofNormalizationErrorKind::DuplicateActivationStorage { .. }
+    ));
+}
+
+#[test]
+fn stale_later_callable_inventory_publishes_no_partial_program() {
+    let program = verified(source_with_two_logical_functions())
+        .program()
+        .clone();
+    let plans = super::plan::inventory_program(&program).unwrap();
+    let mut plans = plans.into_iter();
+    let mut callable_index = 0usize;
+
+    let error = rewrite_program(program, |callable, edit| {
+        let plan = plans.next().expect("every callable has one inventory plan");
+        assert_eq!(plan.callable(), callable);
+        if callable_index == 1 {
+            let condition = edit
+                .path_condition_ids()
+                .next()
+                .expect("the second fixture callable has path proof");
+            edit.remove_path_condition(condition)?;
+        }
+        callable_index += 1;
+        plan.apply(edit)
+    })
+    .unwrap_err();
+
+    assert!(matches!(
+        error,
+        crate::mir::rewrite::MirRewriteError::StaleCallableSnapshot {
+            subject: "path-condition inventory",
+            ..
+        }
+    ));
+    assert_eq!(callable_index, 2);
 }
 
 #[test]

@@ -1128,23 +1128,23 @@ The backend boundary accepts no path-condition or logical-expression
 record, no path-condition rvalue, and no `PathCondition` storage declaration.
 Complete proof-rich verification must already have succeeded. The mandatory
 normalizer replaces each path read with an ordinary load from the identical
-activation storage and reclassifies that boolean home as `ScalarSpill`, so the
-x86-64 selector observes the same executable load it emits today. Proof
-records themselves never reach legality, layout, frame, instruction-selection,
-or artifact planning.
+activation storage and reclassifies that boolean home as
+`NormalizedPathActivation`, so the x86-64 selector observes the same
+executable load and addressable boolean stack home it emitted before the
+classification became explicit. Proof records themselves never reach
+legality, layout, frame, instruction-selection, or artifact planning.
 
 The accepted
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and planned
+and active
 [implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-will refine that final storage discriminant to
+have refined that final storage discriminant to
 `NormalizedPathActivation`. Backend legality, frame planning, place
-addressing, load/store selection, and emission will treat it as the identical
+addressing, load/store selection, and emission treat it as the identical
 addressable boolean stack home. The new kind adds no ABI category, register
 class, relocation, runtime symbol, or instruction, and focused acceptance
 requires byte-for-byte unchanged assembly. `PathCondition` storage remains a
-hard normalized-input error. Until the roadmap lands, the current
-`ScalarSpill` representation remains authoritative.
+hard normalized-input error.
 
 Final-seal reachability facts are recomputed from the exact normalized
 program and after every changed final-stage pass. Whole-world definition

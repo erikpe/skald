@@ -31,6 +31,10 @@ pub(super) enum MirProofNormalizationErrorKind {
         condition: PathConditionId,
         storage: StorageId,
     },
+    UnexpectedNormalizedActivationStorage {
+        callable: CallableId,
+        storage: StorageId,
+    },
     InvalidActivationStorage {
         callable: CallableId,
         condition: PathConditionId,
@@ -96,6 +100,13 @@ impl fmt::Display for MirProofNormalizationError {
             } => write!(
                 formatter,
                 "callable {callable} path condition {condition} uses undeclared activation storage {storage}"
+            ),
+            MirProofNormalizationErrorKind::UnexpectedNormalizedActivationStorage {
+                callable,
+                storage,
+            } => write!(
+                formatter,
+                "callable {callable} contains already-normalized path activation storage {storage} before proof normalization"
             ),
             MirProofNormalizationErrorKind::InvalidActivationStorage {
                 callable,
@@ -165,6 +176,7 @@ impl std::error::Error for MirProofNormalizationError {
             MirProofNormalizationErrorKind::InvalidPathConditionIdentity { .. }
             | MirProofNormalizationErrorKind::ForeignActivationStorage { .. }
             | MirProofNormalizationErrorKind::UnknownActivationStorage { .. }
+            | MirProofNormalizationErrorKind::UnexpectedNormalizedActivationStorage { .. }
             | MirProofNormalizationErrorKind::InvalidActivationStorage { .. }
             | MirProofNormalizationErrorKind::DuplicateActivationStorage { .. }
             | MirProofNormalizationErrorKind::OrphanPathConditionStorage { .. }

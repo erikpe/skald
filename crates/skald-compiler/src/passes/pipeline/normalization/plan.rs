@@ -76,7 +76,7 @@ impl CallableNormalizationPlan {
             edit.replace_storage_kind(
                 storage,
                 MirStorageKind::PathCondition,
-                MirStorageKind::ScalarSpill,
+                MirStorageKind::NormalizedPathActivation,
             )?;
         }
         for rewrite in self.path_reads {
@@ -121,6 +121,20 @@ fn inventory_definition(
     let callable = definition.callable();
     let mut conditions = BTreeMap::new();
     let mut activation_storage = BTreeSet::new();
+
+    if let Some(storage) = definition
+        .storage_entries()
+        .iter()
+        .find(|storage| storage.kind.is_normalized_path_activation())
+    {
+        return Err(
+            MirProofNormalizationErrorKind::UnexpectedNormalizedActivationStorage {
+                callable,
+                storage: storage.id,
+            }
+            .into(),
+        );
+    }
 
     for (index, condition) in definition.path_conditions().iter().enumerate() {
         let expected = PathConditionId::new(callable, index);

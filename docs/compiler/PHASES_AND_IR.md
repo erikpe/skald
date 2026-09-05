@@ -1264,7 +1264,8 @@ validation. The implemented crate-private normalizer:
 - replaces each path-condition rvalue with an ordinary base-place load from
   the same boolean activation storage while preserving result identity, type,
   and span;
-- reclassifies that storage from `PathCondition` to `ScalarSpill` without
+- reclassifies that storage from `PathCondition` to
+  `NormalizedPathActivation` without
   deleting its stores, lifetime, or executable CFG;
 - removes all path-condition and logical-expression records atomically; and
 - rejects any remaining consumed-proof reference with the normalized verifier.
@@ -1302,14 +1303,13 @@ refine the representation at this boundary without changing execution.
 
 The final-only `NormalizedPathActivation` vocabulary, semantic query, phase
 legality, source-free boolean declaration contract, exhaustive dump/import
-handling, and dense-rewrite preservation are implemented. The mandatory
-normalizer does not emit the kind yet: it still reclassifies validated
-`PathCondition` storage to ordinary `ScalarSpill`. The next representation
-transition changes that result to
-`NormalizedPathActivation`. The new kind retains only the executable storage
-role: it carries no path condition, logical expression, predecessor, parent,
-merge, or other consumed proof identity. The normalizer remains the sole
-production constructor.
+handling, dense-rewrite preservation, and mandatory production conversion are
+implemented. The normalizer is the sole production constructor. It changes
+each exactly owned, validated `PathCondition` declaration to
+`NormalizedPathActivation` in the same unpublished transaction which rewrites
+path reads and removes path/logical records. The new kind retains only the
+executable storage role: it carries no path condition, logical expression,
+predecessor, parent, merge, or other consumed proof identity.
 
 That distinction will let normalized verification resume ordinary definite-
 initialization analysis for genuine `ScalarSpill` declarations. Only a
@@ -1319,11 +1319,12 @@ erased path-sensitive proof. Current block/value/CFG passes must preserve the
 classification, and a future storage-mutating capability must reject or handle
 it explicitly. FMM-13 dead-carrier deletion remains a separate optimization.
 
-This accepted change preserves the exact `StorageId`, declaration order,
+This conversion preserves the exact `StorageId`, declaration order,
 stores, loads, lifetime markers, blocks, values, spans, evaluation and failure
-order, cleanup, lifecycle, reachability, ABI, and target behavior. Until the
-normalizer transition lands, production normalized MIR continues to use
-`ScalarSpill` and the broader documented verifier exception above.
+order, cleanup, lifecycle, reachability, ABI, and target behavior. During the
+remaining verifier migration, normalized scalar initialization still retains
+the pre-existing broad `ScalarSpill` exception in addition to exempting the
+now-distinct activation role. NSR3 removes that transitional broad exception.
 
 The normalized verifier shares ordinary structural, lifecycle, reference, and
 reachable-definition owners with proof-rich verification, but does not pretend

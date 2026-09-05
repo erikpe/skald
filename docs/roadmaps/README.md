@@ -8,10 +8,10 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-has completed NSR0 and NSR1, establishing the exhaustive storage-phase
-contract, pre-migration behavioral baseline, and final-only activation
-representation across every current owner. NSR2 is next: it makes mandatory
-proof normalization produce the new kind atomically.
+has completed NSR0 through NSR2, establishing the exhaustive storage-phase
+contract, pre-migration behavioral baseline, final-only activation
+representation, and atomic production conversion. NSR3 is next: it narrows
+normalized definite-initialization authority to the retained activation role.
 
 ## Pending discoveries
 

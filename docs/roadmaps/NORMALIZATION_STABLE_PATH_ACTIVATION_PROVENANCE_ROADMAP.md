@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: in progress; NSR0 and NSR1 are complete and NSR2 is the next task.
+Status: in progress; NSR0 through NSR2 are complete and NSR3 is the next task.
 
 This roadmap implements the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
@@ -81,7 +81,7 @@ load, store, lifetime, attachment, and deletion conditions.
 
 - [x] NSR0 — Freeze the storage-phase contract and baseline
 - [x] NSR1 — Add the final-only storage representation exhaustively
-- [ ] NSR2 — Make normalization retain the stable activation role
+- [x] NSR2 — Make normalization retain the stable activation role
 - [ ] NSR3 — Narrow normalized scalar initialization authority
 - [ ] NSR4 — Seal rewrite and analysis handling of the new role
 - [ ] NSR5 — Preserve backend behavior and deterministic observation
@@ -150,18 +150,18 @@ yet emitted by production normalization.
 **Purpose:** Change the sole production transition atomically while preserving
 the normalizer's established proof-consumption transaction.
 
-- [ ] Reclassify each validated `PathCondition` storage declaration to
+- [x] Reclassify each validated `PathCondition` storage declaration to
   `NormalizedPathActivation` instead of `ScalarSpill` in the mandatory
   normalizer.
-- [ ] Require exact one-to-one ownership between consumed path records and
+- [x] Require exact one-to-one ownership between consumed path records and
   reclassified activation declarations before mutation.
-- [ ] Preserve the original `StorageId`, type, generated origin, order, stores,
+- [x] Preserve the original `StorageId`, type, generated origin, order, stores,
   loads, lifetime markers, blocks, values, and spans.
-- [ ] Keep path-rvalue-to-load conversion, logical/path record removal, optional
+- [x] Keep path-rvalue-to-load conversion, logical/path record removal, optional
   proof-transition edits, and storage reclassification in one validated commit.
-- [ ] Reject stale, foreign, duplicate, missing, already-normalized, wrong-kind,
+- [x] Reject stale, foreign, duplicate, missing, already-normalized, wrong-kind,
   or wrong-type inventory entries before publishing any candidate program.
-- [ ] Keep normalization counters and changed-callable ownership stable; add no
+- [x] Keep normalization counters and changed-callable ownership stable; add no
   second provenance metric solely for the renamed final role.
 
 **Tests:** Empty, simple, nested, parented, method, lifecycle, and static-
