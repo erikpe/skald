@@ -64,10 +64,11 @@ public class Vm implements model::VmApi {
 
     fn memory_checksum() -> i64 {
         var checksum: i64 = 0;
-        var index: i64 = 0;
-        while ((u64) index < self.memory->len()) {
-            checksum = opcodes::mix_checksum(checksum, self.memory->[index]);
-            index = index + 1;
+        for (index in 0u .. self.memory->len()) {
+            checksum = opcodes::mix_checksum(
+                checksum,
+                self.memory->[(i64) index]
+            );
         }
         return checksum;
     }
@@ -276,10 +277,8 @@ public class Vm implements model::VmApi {
         var callee_registers: shared i64[] = new i64[](
             self.program->functions[callee_index].register_count
         );
-        var index: i64 = 0;
-        while ((u64) index < argc) {
-            callee_registers->[index] = caller->registers->[index];
-            index = index + 1;
+        for (index in 0u .. argc) {
+            callee_registers->[(i64) index] = caller->registers->[(i64) index];
         }
 
         self.frame_stack.push(caller);

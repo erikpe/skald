@@ -732,17 +732,13 @@ fn build_sha1_quick_brown_fox_program() -> shared model::Program {
     pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 31, 25u));
 
     // Seed W[0..15] with the padded message block.
-    var word_const_index: i64 = 26;
-    var word_slot: i64 = 0;
-    while (word_slot < 16) {
+    for (word_slot in 0 .. 16) {
         pc = emit_instruction(code, pc, new instructions::LoadConstOp(
-            opcodes::load_const_opcode(), 34, (u64) word_const_index
+            opcodes::load_const_opcode(), 34, (u64) (26 + word_slot)
         ));
         pc = emit_instruction(code, pc, new instructions::StoreMemOp(
             opcodes::store_mem_opcode(), word_slot, 34
         ));
-        word_const_index = word_const_index + 1;
-        word_slot = word_slot + 1;
     }
 
     // Expand W[16..79] with SHA-1's rotate-left-by-one recurrence.
@@ -926,11 +922,11 @@ fn build_sha1_quick_brown_fox_program() -> shared model::Program {
 
 fn build_sha1_quick_brown_fox_case() -> model::BenchmarkCase {
     // Reproduce independently with:
-    // printf '%s' 'The quick brown fox jumps over the lazy dog' | sha1sum
+    // printf '%s' 'The quick brown fox jumps over the lazy dog' | sha1sum -> 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
     // The first 16 hex digits form the return value; the first 8 form memory0.
     return model::BenchmarkCase(
         "sha1_quick_brown_fox", build_sha1_quick_brown_fox_program(),
-        3446627857414826236, 802480582, -1257569273529833621,
+        0x2fd4e1c67a2d28fc, 0x2fd4e1c6, -1257569273529833621,
         10444962923, 3933u, 0u, 326u, 1u
     );
 }

@@ -35,9 +35,8 @@ fn aggregate_results(ref results: model::BenchmarkResult[]) -> model::BenchmarkA
     var total_branch_count: u64 = 0u;
     var total_builtin_calls: u64 = 0u;
     var checksum_value: i64 = 0;
-    var index: i64 = 0;
 
-    while ((u64) index < results.len()) {
+    for (index in 0 .. (i64) results.len()) {
         total_return_value = total_return_value + results[index].return_value;
         total_memory0 = total_memory0 + results[index].memory0;
         total_memory_checksum =
@@ -49,7 +48,6 @@ fn aggregate_results(ref results: model::BenchmarkResult[]) -> model::BenchmarkA
         total_branch_count = total_branch_count + results[index].branch_count;
         total_builtin_calls = total_builtin_calls + results[index].builtin_calls;
         checksum_value = mix_aggregate_result(checksum_value, index, results[index]);
-        index = index + 1;
     }
 
     checksum_value = opcodes::mix_checksum(checksum_value, (i64) results.len());
@@ -74,10 +72,9 @@ fn aggregate_expected_cases(
 ) -> model::BenchmarkAggregate {
     var expected_results: model::BenchmarkResult[] =
         model::BenchmarkResult[](benchmark_cases.len());
-    var index: i64 = 0;
-    while ((u64) index < benchmark_cases.len()) {
-        expected_results[index] = benchmark_cases[index].expected_result();
-        index = index + 1;
+    for (index in 0u .. benchmark_cases.len()) {
+        expected_results[(i64) index] =
+            benchmark_cases[(i64) index].expected_result();
     }
     return aggregate_results(expected_results);
 }
@@ -111,10 +108,8 @@ public fn run_and_report() -> i64 {
     var benchmark_cases: model::BenchmarkCase[] = cases::build_cases();
     var results: model::BenchmarkResult[] =
         model::BenchmarkResult[](benchmark_cases.len());
-    var index: i64 = 0;
-    while ((u64) index < benchmark_cases.len()) {
-        results[index] = run_case_checked(benchmark_cases[index]);
-        index = index + 1;
+    for (index in 0u .. benchmark_cases.len()) {
+        results[(i64) index] = run_case_checked(benchmark_cases[(i64) index]);
     }
 
     var aggregate: model::BenchmarkAggregate = aggregate_results(results);

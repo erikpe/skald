@@ -173,10 +173,8 @@ public class TraceAccumulatorBuiltin extends BaseBuiltin {
 
     override fn invoke(mut ref vm: model::VmApi, argc: u64) -> unit {
         var total: i64 = 0;
-        var index: i64 = 0;
-        while ((u64) index < argc) {
-            total = total + vm.read_reg(index);
-            index = index + 1;
+        for (index in 0u .. argc) {
+            total = total + vm.read_reg((i64) index);
         }
         total = total + StaticBuiltinState.trace_bias(argc);
         vm.note_trace(total);
@@ -191,14 +189,12 @@ public class ConstPoolMixBuiltin extends BaseBuiltin {
 
     override fn invoke(mut ref vm: model::VmApi, argc: u64) -> unit {
         var total: i64 = 0;
-        var index: i64 = 0;
-        while ((u64) index < argc) {
-            var const_id: u64 = (u64) vm.read_reg(index);
+        for (index in 0u .. argc) {
+            var const_id: u64 = (u64) vm.read_reg((i64) index);
             total = opcodes::mix_checksum(
                 total,
                 obj_weight(vm.read_const_obj(const_id))
             );
-            index = index + 1;
         }
 
         var payload: shared WeightSource = new WeightedPayload((i64) argc, 2);
