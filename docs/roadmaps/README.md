@@ -6,7 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The in-progress
+[VM benchmark correctness workload roadmap](VM_BENCHMARK_ROADMAP.md) ports
+Niflheim's deterministic bytecode-VM regression program into one Skald-native
+multi-module golden fixture. The ownership model and minimal vertical slice
+are complete; VB1 is next to port the full instruction hierarchy and the core
+arithmetic, branching, recursion, dense-array, and slice workloads. The roadmap
+depends only on implemented language, standard-library, module, driver, and
+golden-runner contracts; it is independent of the pending optimization
+discoveries.
 
 ## Pending discoveries
 
@@ -82,18 +90,14 @@ The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).
 
+The [VM benchmark port discoveries](VM_BENCHMARK_DISCOVERIES.md) record a
+non-blocking compiler-robustness defect exposed by the minimal workload: an
+owning inline-class field read through a shared receiver can reach an internal
+type-checker assertion instead of compiling or producing a source diagnostic.
+
 ## Planned
 
-The planned
-[VM benchmark correctness workload roadmap](VM_BENCHMARK_ROADMAP.md) ports
-Niflheim's deterministic bytecode-VM regression program into one Skald-native
-multi-module golden fixture. It preserves twelve independently checked guest
-cases and their aggregate while translating the host graph to explicit shared
-ownership and call-scoped borrowing. VB0 is next: establish the ownership
-representation and prove it through the minimal vertical slice. The roadmap
-depends only on implemented language, standard-library, module, driver, and
-golden-runner contracts; it is independent of the pending optimization
-discoveries.
+No additional implementation roadmap is waiting to start.
 
 ## Design proposals
 

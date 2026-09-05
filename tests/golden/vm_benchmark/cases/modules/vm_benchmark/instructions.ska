@@ -1,0 +1,248 @@
+from std::error import panic;
+from std::str import Str;
+import vm_benchmark::model as model;
+import vm_benchmark::opcodes as opcodes;
+
+public class BaseInstruction implements model::Instruction {
+    opcode_id: u64;
+
+    init(opcode_id: u64) {
+        self.opcode_id = opcode_id;
+    }
+
+    fn opcode() -> u64 {
+        return self.opcode_id;
+    }
+
+    fn debug_name() -> Str {
+        return opcodes::opcode_name(self.opcode_id);
+    }
+
+    virtual fn execute(mut ref vm: model::VmApi) -> unit {
+        panic("BaseInstruction.execute: abstract");
+        return;
+    }
+}
+
+// These template-method bodies are intentionally shared by concrete leaf
+// instructions so the finished workload exercises inherited virtual dispatch.
+public class RegisterWriteInstruction extends BaseInstruction {
+    dst: i64;
+
+    init(opcode_id: u64, dst: i64) {
+        super(opcode_id);
+        self.dst = dst;
+    }
+
+    virtual fn compute_value(ref vm: model::VmApi) -> i64 {
+        panic("RegisterWriteInstruction.compute_value: abstract");
+        return 0;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        vm.write_reg(self.dst, self.compute_value(vm));
+        vm.advance();
+        return;
+    }
+}
+
+public class LoadConstOp extends RegisterWriteInstruction {
+    const_id: u64;
+
+    init(opcode_id: u64, dst: i64, const_id: u64) {
+        super(opcode_id, dst);
+        self.const_id = const_id;
+    }
+
+    override fn compute_value(ref vm: model::VmApi) -> i64 {
+        return vm.read_const_i64(self.const_id);
+    }
+}
+
+public class RegisterCopyOp extends RegisterWriteInstruction {
+    src: i64;
+
+    init(opcode_id: u64, dst: i64, src: i64) {
+        super(opcode_id, dst);
+        self.src = src;
+    }
+
+    override fn compute_value(ref vm: model::VmApi) -> i64 {
+        return vm.read_reg(self.src);
+    }
+}
+
+public class BinaryOp extends RegisterWriteInstruction {
+    left: i64;
+    right: i64;
+
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst);
+        self.left = left;
+        self.right = right;
+    }
+
+    virtual fn apply(left_value: i64, right_value: i64) -> i64 {
+        panic("BinaryOp.apply: abstract");
+        return 0;
+    }
+
+    override fn compute_value(ref vm: model::VmApi) -> i64 {
+        return self.apply(vm.read_reg(self.left), vm.read_reg(self.right));
+    }
+}
+
+public class AddOp extends BinaryOp {
+    init(opcode_id: u64, dst: i64, left: i64, right: i64) {
+        super(opcode_id, dst, left, right);
+    }
+
+    override fn apply(left_value: i64, right_value: i64) -> i64 {
+        return left_value + right_value;
+    }
+}
+
+public class MemoryOp extends BaseInstruction {
+    init(opcode_id: u64) {
+        super(opcode_id);
+    }
+}
+
+public class DirectMemoryOp extends MemoryOp {
+    slot: i64;
+
+    init(opcode_id: u64, slot: i64) {
+        super(opcode_id);
+        self.slot = slot;
+    }
+}
+
+public class DirectMemoryReadOp extends DirectMemoryOp {
+    dst: i64;
+
+    init(opcode_id: u64, slot: i64, dst: i64) {
+        super(opcode_id, slot);
+        self.dst = dst;
+    }
+
+    virtual fn read_value(ref vm: model::VmApi) -> i64 {
+        panic("DirectMemoryReadOp.read_value: abstract");
+        return 0;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        vm.write_reg(self.dst, self.read_value(vm));
+        vm.advance();
+        return;
+    }
+}
+
+public class DirectMemoryWriteOp extends DirectMemoryOp {
+    src: i64;
+
+    init(opcode_id: u64, slot: i64, src: i64) {
+        super(opcode_id, slot);
+        self.src = src;
+    }
+
+    virtual fn write_value(mut ref vm: model::VmApi, value: i64) -> unit {
+        panic("DirectMemoryWriteOp.write_value: abstract");
+        return;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        self.write_value(vm, vm.read_reg(self.src));
+        vm.advance();
+        return;
+    }
+}
+
+public class LoadMemOp extends DirectMemoryReadOp {
+    init(opcode_id: u64, slot: i64, dst: i64) {
+        super(opcode_id, slot, dst);
+    }
+
+    override fn read_value(ref vm: model::VmApi) -> i64 {
+        return vm.load_mem(self.slot);
+    }
+}
+
+public class StoreMemOp extends DirectMemoryWriteOp {
+    init(opcode_id: u64, slot: i64, src: i64) {
+        super(opcode_id, slot, src);
+    }
+
+    override fn write_value(mut ref vm: model::VmApi, value: i64) -> unit {
+        vm.store_mem(self.slot, value);
+        return;
+    }
+}
+
+public class InvokableInstruction extends BaseInstruction {
+    init(opcode_id: u64) {
+        super(opcode_id);
+    }
+
+    virtual fn invoke(mut ref vm: model::VmApi) -> unit {
+        panic("InvokableInstruction.invoke: abstract");
+        return;
+    }
+
+    virtual fn advances_after_invoke() -> bool {
+        return true;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        self.invoke(vm);
+        if (self.advances_after_invoke()) {
+            vm.advance();
+        }
+        return;
+    }
+}
+
+public class CallBuiltinOp extends InvokableInstruction {
+    builtin_id: u64;
+    argc: u64;
+
+    init(opcode_id: u64, builtin_id: u64, argc: u64) {
+        super(opcode_id);
+        self.builtin_id = builtin_id;
+        self.argc = argc;
+    }
+
+    override fn invoke(mut ref vm: model::VmApi) -> unit {
+        vm.call_builtin(self.builtin_id, self.argc);
+        return;
+    }
+}
+
+public class ReturningInstruction extends BaseInstruction {
+    src: i64;
+
+    init(opcode_id: u64, src: i64) {
+        super(opcode_id);
+        self.src = src;
+    }
+
+    virtual fn finish_with(mut ref vm: model::VmApi, value: i64) -> unit {
+        panic("ReturningInstruction.finish_with: abstract");
+        return;
+    }
+
+    override fn execute(mut ref vm: model::VmApi) -> unit {
+        self.finish_with(vm, vm.read_reg(self.src));
+        return;
+    }
+}
+
+public class HaltOp extends ReturningInstruction {
+    init(opcode_id: u64, src: i64) {
+        super(opcode_id, src);
+    }
+
+    override fn finish_with(mut ref vm: model::VmApi, value: i64) -> unit {
+        vm.halt_with(value);
+        return;
+    }
+}

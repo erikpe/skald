@@ -1,0 +1,315 @@
+from std::str import Str;
+import vm_benchmark::opcodes as opcodes;
+
+public interface VmApi {
+    fn read_reg(index: i64) -> i64;
+    mut fn write_reg(index: i64, value: i64) -> unit;
+    fn read_const_obj(index: u64) -> shared Obj;
+    fn read_const_i64(index: u64) -> i64;
+    fn load_mem(index: i64) -> i64;
+    mut fn store_mem(index: i64, value: i64) -> unit;
+    fn load_mem_indexed(base: i64, index: i64) -> i64;
+    mut fn store_mem_indexed(base: i64, index: i64, value: i64) -> unit;
+    mut fn slice_copy(dst_base: i64, src_base: i64, begin: i64, end: i64) -> unit;
+    mut fn call_builtin(index: u64, argc: u64) -> unit;
+    mut fn note_trace(value: i64) -> unit;
+    mut fn advance() -> unit;
+    mut fn jump(target: u64) -> unit;
+    mut fn jump_if_true(reg_index: i64, target: u64) -> unit;
+    mut fn jump_if_false(reg_index: i64, target: u64) -> unit;
+    mut fn call_function(function_id: u64, argc: u64, dst_reg: i64) -> unit;
+    mut fn ret_from(src_reg: i64) -> unit;
+    mut fn halt_with(value: i64) -> unit;
+}
+
+public interface Instruction {
+    fn execute(mut ref vm: VmApi) -> unit;
+    fn opcode() -> u64;
+    fn debug_name() -> Str;
+}
+
+public interface Builtin {
+    fn name() -> Str;
+    fn invoke(mut ref vm: VmApi, argc: u64) -> unit;
+}
+
+public class FunctionInfo {
+    name: Str;
+    arg_count: u64;
+    register_count: u64;
+    instructions: ((shared Instruction)?)[];
+
+    init(
+        name: Str,
+        arg_count: u64,
+        register_count: u64,
+        instructions: ((shared Instruction)?)[]
+    ) {
+        self.name = name;
+        self.arg_count = arg_count;
+        self.register_count = register_count;
+        self.instructions = instructions;
+    }
+}
+
+public class Program {
+    name: Str;
+    entry_function_id: u64;
+    functions: FunctionInfo[];
+    constants: (shared Obj)[];
+    builtins: (shared Builtin)[];
+    memory_size: u64;
+
+    init(
+        name: Str,
+        entry_function_id: u64,
+        functions: FunctionInfo[],
+        constants: (shared Obj)[],
+        builtins: (shared Builtin)[],
+        memory_size: u64
+    ) {
+        self.name = name;
+        self.entry_function_id = entry_function_id;
+        self.functions = functions;
+        self.constants = constants;
+        self.builtins = builtins;
+        self.memory_size = memory_size;
+    }
+}
+
+public class BenchmarkCase {
+    name: Str;
+    program: shared Program;
+    expected_return_value: i64;
+    expected_memory0: i64;
+    expected_memory_checksum: i64;
+    expected_trace_sum: i64;
+    expected_instruction_count: u64;
+    expected_call_count: u64;
+    expected_branch_count: u64;
+    expected_builtin_calls: u64;
+
+    init(
+        name: Str,
+        program: shared Program,
+        expected_return_value: i64,
+        expected_memory0: i64,
+        expected_memory_checksum: i64,
+        expected_trace_sum: i64,
+        expected_instruction_count: u64,
+        expected_call_count: u64,
+        expected_branch_count: u64,
+        expected_builtin_calls: u64
+    ) {
+        self.name = name;
+        self.program = program;
+        self.expected_return_value = expected_return_value;
+        self.expected_memory0 = expected_memory0;
+        self.expected_memory_checksum = expected_memory_checksum;
+        self.expected_trace_sum = expected_trace_sum;
+        self.expected_instruction_count = expected_instruction_count;
+        self.expected_call_count = expected_call_count;
+        self.expected_branch_count = expected_branch_count;
+        self.expected_builtin_calls = expected_builtin_calls;
+    }
+
+    fn expected_checksum() -> i64 {
+        var checksum: i64 = 0;
+        checksum = opcodes::mix_checksum(checksum, self.expected_return_value);
+        checksum = opcodes::mix_checksum(checksum, self.expected_memory0);
+        checksum = opcodes::mix_checksum(checksum, self.expected_memory_checksum);
+        checksum = opcodes::mix_checksum(checksum, self.expected_trace_sum);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.expected_instruction_count);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.expected_call_count);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.expected_branch_count);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.expected_builtin_calls);
+        return checksum;
+    }
+
+    fn expected_output_line() -> Str {
+        var output: Str = self.name.concat(": return=");
+        output = output.concat(Str.from_i64(self.expected_return_value));
+        output = output.concat(" memory0=");
+        output = output.concat(Str.from_i64(self.expected_memory0));
+        output = output.concat(" mem_checksum=");
+        output = output.concat(Str.from_i64(self.expected_memory_checksum));
+        output = output.concat(" trace_sum=");
+        output = output.concat(Str.from_i64(self.expected_trace_sum));
+        output = output.concat(" steps=");
+        output = output.concat(Str.from_u64(self.expected_instruction_count));
+        output = output.concat(" calls=");
+        output = output.concat(Str.from_u64(self.expected_call_count));
+        output = output.concat(" branches=");
+        output = output.concat(Str.from_u64(self.expected_branch_count));
+        output = output.concat(" builtins=");
+        output = output.concat(Str.from_u64(self.expected_builtin_calls));
+        output = output.concat(" checksum=");
+        return output.concat(Str.from_i64(self.expected_checksum()));
+    }
+
+    fn expected_result() -> BenchmarkResult {
+        var result_name: Str = self.name;
+        return BenchmarkResult(
+            result_name,
+            self.expected_return_value,
+            self.expected_memory0,
+            self.expected_memory_checksum,
+            self.expected_trace_sum,
+            self.expected_instruction_count,
+            self.expected_call_count,
+            self.expected_branch_count,
+            self.expected_builtin_calls
+        );
+    }
+}
+
+public class BenchmarkResult {
+    name: Str;
+    return_value: i64;
+    memory0: i64;
+    memory_checksum: i64;
+    trace_sum: i64;
+    instruction_count: u64;
+    call_count: u64;
+    branch_count: u64;
+    builtin_calls: u64;
+
+    init() {
+        self.name = "";
+        self.return_value = 0;
+        self.memory0 = 0;
+        self.memory_checksum = 0;
+        self.trace_sum = 0;
+        self.instruction_count = 0u;
+        self.call_count = 0u;
+        self.branch_count = 0u;
+        self.builtin_calls = 0u;
+    }
+
+    init(
+        name: Str,
+        return_value: i64,
+        memory0: i64,
+        memory_checksum: i64,
+        trace_sum: i64,
+        instruction_count: u64,
+        call_count: u64,
+        branch_count: u64,
+        builtin_calls: u64
+    ) {
+        self.name = name;
+        self.return_value = return_value;
+        self.memory0 = memory0;
+        self.memory_checksum = memory_checksum;
+        self.trace_sum = trace_sum;
+        self.instruction_count = instruction_count;
+        self.call_count = call_count;
+        self.branch_count = branch_count;
+        self.builtin_calls = builtin_calls;
+    }
+
+    fn checksum() -> i64 {
+        var checksum: i64 = 0;
+        checksum = opcodes::mix_checksum(checksum, self.return_value);
+        checksum = opcodes::mix_checksum(checksum, self.memory0);
+        checksum = opcodes::mix_checksum(checksum, self.memory_checksum);
+        checksum = opcodes::mix_checksum(checksum, self.trace_sum);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.instruction_count);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.call_count);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.branch_count);
+        checksum = opcodes::mix_checksum(checksum, (i64) self.builtin_calls);
+        return checksum;
+    }
+
+    fn matches_expected(ref benchmark_case: BenchmarkCase) -> bool {
+        return self.return_value == benchmark_case.expected_return_value
+            && self.memory0 == benchmark_case.expected_memory0
+            && self.memory_checksum == benchmark_case.expected_memory_checksum
+            && self.trace_sum == benchmark_case.expected_trace_sum
+            && self.instruction_count == benchmark_case.expected_instruction_count
+            && self.call_count == benchmark_case.expected_call_count
+            && self.branch_count == benchmark_case.expected_branch_count
+            && self.builtin_calls == benchmark_case.expected_builtin_calls
+            && self.checksum() == benchmark_case.expected_checksum();
+    }
+
+    fn render() -> Str {
+        var output: Str = self.name.concat(": return=");
+        output = output.concat(Str.from_i64(self.return_value));
+        output = output.concat(" memory0=");
+        output = output.concat(Str.from_i64(self.memory0));
+        output = output.concat(" mem_checksum=");
+        output = output.concat(Str.from_i64(self.memory_checksum));
+        output = output.concat(" trace_sum=");
+        output = output.concat(Str.from_i64(self.trace_sum));
+        output = output.concat(" steps=");
+        output = output.concat(Str.from_u64(self.instruction_count));
+        output = output.concat(" calls=");
+        output = output.concat(Str.from_u64(self.call_count));
+        output = output.concat(" branches=");
+        output = output.concat(Str.from_u64(self.branch_count));
+        output = output.concat(" builtins=");
+        output = output.concat(Str.from_u64(self.builtin_calls));
+        output = output.concat(" checksum=");
+        return output.concat(Str.from_i64(self.checksum()));
+    }
+}
+
+public class BenchmarkAggregate {
+    case_count: u64;
+    total_return_value: i64;
+    total_memory0: i64;
+    total_memory_checksum: i64;
+    total_trace_sum: i64;
+    total_instruction_count: u64;
+    total_call_count: u64;
+    total_branch_count: u64;
+    total_builtin_calls: u64;
+    checksum_value: i64;
+
+    init(
+        case_count: u64,
+        total_return_value: i64,
+        total_memory0: i64,
+        total_memory_checksum: i64,
+        total_trace_sum: i64,
+        total_instruction_count: u64,
+        total_call_count: u64,
+        total_branch_count: u64,
+        total_builtin_calls: u64,
+        checksum_value: i64
+    ) {
+        self.case_count = case_count;
+        self.total_return_value = total_return_value;
+        self.total_memory0 = total_memory0;
+        self.total_memory_checksum = total_memory_checksum;
+        self.total_trace_sum = total_trace_sum;
+        self.total_instruction_count = total_instruction_count;
+        self.total_call_count = total_call_count;
+        self.total_branch_count = total_branch_count;
+        self.total_builtin_calls = total_builtin_calls;
+        self.checksum_value = checksum_value;
+    }
+
+    fn render() -> Str {
+        var output: Str = "final: cases=".concat(Str.from_u64(self.case_count));
+        output = output.concat(" return=");
+        output = output.concat(Str.from_i64(self.total_return_value));
+        output = output.concat(" memory0=");
+        output = output.concat(Str.from_i64(self.total_memory0));
+        output = output.concat(" mem_checksum=");
+        output = output.concat(Str.from_i64(self.total_memory_checksum));
+        output = output.concat(" trace_sum=");
+        output = output.concat(Str.from_i64(self.total_trace_sum));
+        output = output.concat(" steps=");
+        output = output.concat(Str.from_u64(self.total_instruction_count));
+        output = output.concat(" calls=");
+        output = output.concat(Str.from_u64(self.total_call_count));
+        output = output.concat(" branches=");
+        output = output.concat(Str.from_u64(self.total_branch_count));
+        output = output.concat(" builtins=");
+        output = output.concat(Str.from_u64(self.total_builtin_calls));
+        output = output.concat(" checksum=");
+        return output.concat(Str.from_i64(self.checksum_value));
+    }
+}

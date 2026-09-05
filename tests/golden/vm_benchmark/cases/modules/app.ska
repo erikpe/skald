@@ -1,0 +1,20 @@
+from std::error import panic;
+from std::process import args;
+from std::str import Str;
+import vm_benchmark::main as benchmark;
+
+fn main() -> i64 {
+    var program_args: Str[] = args();
+    if (program_args.len() != 2u) {
+        panic("vm_benchmark: expected one case selector");
+    }
+
+    var selection: u64 = program_args[1].to_u64()!;
+    if (selection >= 1u && selection <= benchmark::num_cases()) {
+        return benchmark::run_case_and_report(selection - 1u);
+    }
+
+    panic("vm_benchmark: invalid case selector");
+    return 1;
+}
+

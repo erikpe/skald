@@ -1,6 +1,6 @@
 # VM Benchmark Correctness Workload Roadmap
 
-Status: planned; VB0 is next.
+Status: in progress; VB0 is complete and VB1 is next.
 
 This roadmap ports the deterministic bytecode-VM regression workload from the
 sibling Niflheim repository into a Skald-native multi-module golden test. The
@@ -31,8 +31,9 @@ implicit garbage-collected reference semantics.
   case fixtures.
 - Model identity-bearing graph edges explicitly. Store instructions, builtins,
   erased constants, VM frames, and the program behind `shared` owners where
-  identity or heterogeneous storage requires it; use `ref` and `mut ref` for
-  non-owning call-scoped access.
+  identity or heterogeneous storage requires it; use explicit optional-owner
+  slots while filling fixed-capacity instruction and frame arrays, and use
+  `ref` and `mut ref` for non-owning call-scoped access.
 - Keep benchmark cases and results as ordinary inline values. Keep function
   metadata inline where doing so preserves behavior without accidental
   identity or deep-copy dependence.
@@ -63,7 +64,7 @@ implicit garbage-collected reference semantics.
 
 ## Progress
 
-- [ ] VB0 — Establish the Skald ownership model and minimal vertical slice
+- [x] VB0 — Establish the Skald ownership model and minimal vertical slice
 - [ ] VB1 — Port the instruction hierarchy and core VM workloads
 - [ ] VB2 — Port heterogeneous constants, builtins, statics, and exact `f64`
 - [ ] VB3 — Port the large algorithmic cases and aggregate verification
@@ -77,26 +78,27 @@ implicit garbage-collected reference semantics.
 of construction sites depend on them, then prove those decisions through one
 complete source-to-native case.
 
-- [ ] Add `tests/golden/vm_benchmark/README.md`,
+- [x] Add `tests/golden/vm_benchmark/README.md`,
       `vm_benchmark.golden.toml`, and the seven-module provider tree below
       `cases/modules/vm_benchmark/`, plus a small logical entry module.
-- [ ] Define `VmApi`, `Instruction`, and `Builtin` with exact read-only versus
+- [x] Define `VmApi`, `Instruction`, and `Builtin` with exact read-only versus
       mutable method and `ref`/`mut ref` contracts; ensure instruction execution
       mutates the VM through a bounded interface view rather than copying it.
-- [ ] Define the program, function, frame, case, result, and aggregate records
+- [x] Define the program, function, frame, case, result, and aggregate records
       with explicit initializers and documented inline/shared ownership at
       every graph edge.
-- [ ] Represent heterogeneous instruction and builtin tables as arrays of
-      shared interface owners and erased constants as shared `Obj` owners.
-- [ ] Represent the active frame and saved-frame stack with shared frame
-      owners, and give each frame shared register backing so call/return cannot
-      accidentally deep-copy live registers.
-- [ ] Port opcode identities, checksum mixing, the minimal instruction subset,
+- [x] Represent heterogeneous instruction and builtin tables with shared
+      interface owners, use optional instruction-owner slots while filling a
+      fixed-capacity stream, and store erased constants as shared `Obj` owners.
+- [x] Represent the active frame with a shared owner, the fixed-capacity saved
+      stack with optional frame-owner slots, and each frame with shared register
+      backing so call/return cannot accidentally deep-copy live registers.
+- [x] Port opcode identities, checksum mixing, the minimal instruction subset,
       the VM dispatch loop, and `slice1_minimal` without adding compatibility
       branches used only during rollout.
-- [ ] Add the minimal named run with exact stdout matching the Niflheim
+- [x] Add the minimal named run with exact stdout matching the Niflheim
       observation after syntax-only naming adaptations.
-- [ ] Document the ownership translation and a direct manual `skac --entry`
+- [x] Document the ownership translation and a direct manual `skac --entry`
       invocation in the fixture README.
 
 **Tests:** `make golden-filter GOLDEN_FILTER='vm_benchmark/**'`; rerun the

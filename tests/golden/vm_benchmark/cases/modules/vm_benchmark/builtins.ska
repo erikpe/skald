@@ -1,0 +1,70 @@
+from std::str import Str;
+import vm_benchmark::model as model;
+
+class StaticBuiltinState {
+    private final static scalar_seed: i64 = 17;
+    private static enabled: bool = true;
+    private static byte_seed: u8 = 3u8;
+    private static probe_count: u64;
+    private final static label: Str = "static-vm";
+
+    init() {}
+
+    static fn primitive_bias() -> i64 {
+        StaticBuiltinState.probe_count = StaticBuiltinState.probe_count + 1u;
+        var bias: i64 = StaticBuiltinState.scalar_seed
+            + (i64) StaticBuiltinState.byte_seed;
+        if (StaticBuiltinState.enabled) {
+            bias = bias + (i64) StaticBuiltinState.probe_count;
+        } else {
+            bias = 0 - bias;
+        }
+        StaticBuiltinState.probe_count = 0u;
+        return bias;
+    }
+
+    static fn label_bias() -> i64 {
+        return (i64) StaticBuiltinState.label.len() * 11;
+    }
+
+    static fn trace_bias(argc: u64) -> i64 {
+        return StaticBuiltinState.primitive_bias()
+            + StaticBuiltinState.label_bias()
+            + (i64) argc;
+    }
+}
+
+public class BaseBuiltin implements model::Builtin {
+    label: Str;
+
+    init(label: Str) {
+        self.label = label;
+    }
+
+    fn name() -> Str {
+        return self.label;
+    }
+
+    virtual fn invoke(mut ref vm: model::VmApi, argc: u64) -> unit {
+        return;
+    }
+}
+
+public class TraceAccumulatorBuiltin extends BaseBuiltin {
+    init(label: Str) {
+        super(label);
+    }
+
+    override fn invoke(mut ref vm: model::VmApi, argc: u64) -> unit {
+        var total: i64 = 0;
+        var index: i64 = 0;
+        while ((u64) index < argc) {
+            total = total + vm.read_reg(index);
+            index = index + 1;
+        }
+
+        total = total + StaticBuiltinState.trace_bias(argc);
+        vm.note_trace(total);
+        return;
+    }
+}

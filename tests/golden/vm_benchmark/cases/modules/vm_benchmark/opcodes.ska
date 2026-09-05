@@ -1,0 +1,67 @@
+from std::error import panic;
+from std::str import Str;
+
+public fn load_const_opcode() -> u64 { return 1u; }
+public fn add_opcode() -> u64 { return 2u; }
+public fn move_opcode() -> u64 { return 3u; }
+public fn load_mem_opcode() -> u64 { return 4u; }
+public fn store_mem_opcode() -> u64 { return 5u; }
+public fn call_builtin_opcode() -> u64 { return 6u; }
+public fn halt_opcode() -> u64 { return 7u; }
+public fn sub_opcode() -> u64 { return 8u; }
+public fn mul_opcode() -> u64 { return 9u; }
+public fn div_opcode() -> u64 { return 10u; }
+public fn mod_opcode() -> u64 { return 11u; }
+public fn cmp_eq_opcode() -> u64 { return 12u; }
+public fn cmp_lt_opcode() -> u64 { return 13u; }
+public fn jump_opcode() -> u64 { return 14u; }
+public fn jump_if_true_opcode() -> u64 { return 15u; }
+public fn jump_if_false_opcode() -> u64 { return 16u; }
+public fn call_opcode() -> u64 { return 17u; }
+public fn ret_opcode() -> u64 { return 18u; }
+public fn load_mem_indexed_opcode() -> u64 { return 19u; }
+public fn store_mem_indexed_opcode() -> u64 { return 20u; }
+public fn slice_copy_opcode() -> u64 { return 21u; }
+public fn and_opcode() -> u64 { return 22u; }
+public fn or_opcode() -> u64 { return 23u; }
+public fn xor_opcode() -> u64 { return 24u; }
+public fn shl_opcode() -> u64 { return 25u; }
+public fn shr_opcode() -> u64 { return 26u; }
+public fn not_opcode() -> u64 { return 27u; }
+
+public fn opcode_name(opcode: u64) -> Str {
+    if (opcode == load_const_opcode()) { return "load_const"; }
+    if (opcode == add_opcode()) { return "add"; }
+    if (opcode == move_opcode()) { return "move"; }
+    if (opcode == load_mem_opcode()) { return "load_mem"; }
+    if (opcode == store_mem_opcode()) { return "store_mem"; }
+    if (opcode == call_builtin_opcode()) { return "call_builtin"; }
+    if (opcode == halt_opcode()) { return "halt"; }
+    if (opcode == sub_opcode()) { return "sub"; }
+    if (opcode == mul_opcode()) { return "mul"; }
+    if (opcode == div_opcode()) { return "div"; }
+    if (opcode == mod_opcode()) { return "mod"; }
+    if (opcode == cmp_eq_opcode()) { return "cmp_eq"; }
+    if (opcode == cmp_lt_opcode()) { return "cmp_lt"; }
+    if (opcode == jump_opcode()) { return "jump"; }
+    if (opcode == jump_if_true_opcode()) { return "jump_if_true"; }
+    if (opcode == jump_if_false_opcode()) { return "jump_if_false"; }
+    if (opcode == call_opcode()) { return "call"; }
+    if (opcode == ret_opcode()) { return "ret"; }
+    if (opcode == load_mem_indexed_opcode()) { return "load_mem_indexed"; }
+    if (opcode == store_mem_indexed_opcode()) { return "store_mem_indexed"; }
+    if (opcode == slice_copy_opcode()) { return "slice_copy"; }
+    if (opcode == and_opcode()) { return "and"; }
+    if (opcode == or_opcode()) { return "or"; }
+    if (opcode == xor_opcode()) { return "xor"; }
+    if (opcode == shl_opcode()) { return "shl"; }
+    if (opcode == shr_opcode()) { return "shr"; }
+    if (opcode == not_opcode()) { return "not"; }
+
+    panic("vm_benchmark.opcode_name: unknown opcode");
+    return "unknown";
+}
+
+public fn mix_checksum(seed: i64, value: i64) -> i64 {
+    return (seed * 31) + value;
+}

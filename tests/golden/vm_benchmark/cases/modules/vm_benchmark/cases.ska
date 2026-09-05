@@ -1,0 +1,91 @@
+from std::i64 import BoxI64;
+import vm_benchmark::builtins as builtins;
+import vm_benchmark::instructions as instructions;
+import vm_benchmark::model as model;
+import vm_benchmark::opcodes as opcodes;
+
+fn build_minimal_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](11u);
+    code[0] = new instructions::LoadConstOp(
+        opcodes::load_const_opcode(),
+        0,
+        0u
+    );
+    code[1] = new instructions::LoadConstOp(
+        opcodes::load_const_opcode(),
+        1,
+        1u
+    );
+    code[2] = new instructions::AddOp(opcodes::add_opcode(), 2, 0, 1);
+    code[3] = new instructions::StoreMemOp(
+        opcodes::store_mem_opcode(),
+        0,
+        2
+    );
+    code[4] = new instructions::LoadMemOp(opcodes::load_mem_opcode(), 0, 3);
+    code[5] = new instructions::LoadConstOp(
+        opcodes::load_const_opcode(),
+        4,
+        2u
+    );
+    code[6] = new instructions::AddOp(opcodes::add_opcode(), 5, 3, 4);
+    code[7] = new instructions::RegisterCopyOp(
+        opcodes::move_opcode(),
+        0,
+        5
+    );
+    code[8] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(),
+        0u,
+        1u
+    );
+    code[9] = new instructions::StoreMemOp(
+        opcodes::store_mem_opcode(),
+        0,
+        5
+    );
+    code[10] = new instructions::HaltOp(opcodes::halt_opcode(), 5);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 6u, code)
+    };
+
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(7),
+        new BoxI64(5),
+        new BoxI64(2)
+    };
+
+    var builtin_table: (shared model::Builtin)[] = (shared model::Builtin)[]{
+        new builtins::TraceAccumulatorBuiltin("trace_accumulate")
+    };
+
+    return new model::Program(
+        "slice1_minimal",
+        0u,
+        functions,
+        constants,
+        builtin_table,
+        2u
+    );
+}
+
+fn build_minimal_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "slice1_minimal",
+        build_minimal_program(),
+        14,
+        14,
+        434,
+        135,
+        11u,
+        0u,
+        0u,
+        1u
+    );
+}
+
+public fn build_cases() -> model::BenchmarkCase[] {
+    return model::BenchmarkCase[]{build_minimal_case()};
+}

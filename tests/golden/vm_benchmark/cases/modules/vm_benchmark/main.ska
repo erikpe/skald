@@ -1,0 +1,31 @@
+from std::error import panic;
+from std::io import write_stdout;
+from std::test import assert_eq_str, assert_true;
+import vm_benchmark::cases as cases;
+import vm_benchmark::model as model;
+import vm_benchmark::runtime as runtime;
+
+fn run_case_checked(ref benchmark_case: model::BenchmarkCase) -> model::BenchmarkResult {
+    var result: model::BenchmarkResult = runtime::run_case(benchmark_case);
+    assert_true(result.matches_expected(benchmark_case));
+    assert_eq_str(result.render(), benchmark_case.expected_output_line());
+    return result;
+}
+
+public fn run_case_and_report(case_index: u64) -> i64 {
+    var benchmark_cases: model::BenchmarkCase[] = cases::build_cases();
+    if (case_index >= benchmark_cases.len()) {
+        panic("vm_benchmark.run_case_and_report: case index out of bounds");
+    }
+
+    var result: model::BenchmarkResult = run_case_checked(
+        benchmark_cases[(i64) case_index]
+    );
+    write_stdout(result.render().concat("\n"));
+    return 0;
+}
+
+public fn num_cases() -> u64 {
+    var benchmark_cases: model::BenchmarkCase[] = cases::build_cases();
+    return benchmark_cases.len();
+}

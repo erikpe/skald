@@ -1,0 +1,16 @@
+schema = 1
+
+[[test]]
+name = "vm_benchmark"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/modules",
+]
+variants = ["default"]
+
+[[test.run]]
+name = "slice1_minimal_output"
+args = ["1"]
+expect = { stdout = { inline = "slice1_minimal: return=14 memory0=14 mem_checksum=434 trace_sum=135 steps=11 calls=0 branches=0 builtins=1 checksum=410151703659\n" } }
+

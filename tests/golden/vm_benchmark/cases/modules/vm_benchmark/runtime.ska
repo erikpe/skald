@@ -1,0 +1,316 @@
+from std::error import panic;
+from std::i64 import BoxI64;
+from std::str import Str;
+import vm_benchmark::model as model;
+import vm_benchmark::opcodes as opcodes;
+
+public class Frame {
+    function_id: u64;
+    pc: u64;
+    registers: shared i64[];
+    return_pc: u64;
+    return_dst_reg: i64;
+
+    init(
+        function_id: u64,
+        pc: u64,
+        registers: shared i64[],
+        return_pc: u64,
+        return_dst_reg: i64
+    ) {
+        self.function_id = function_id;
+        self.pc = pc;
+        self.registers = registers;
+        self.return_pc = return_pc;
+        self.return_dst_reg = return_dst_reg;
+    }
+}
+
+public class Vm implements model::VmApi {
+    name: Str;
+    program: shared model::Program;
+    frame: shared Frame;
+    frame_stack: ((shared Frame)?)[];
+    frame_depth: u64;
+    memory: shared i64[];
+    halted: bool;
+    return_value: i64;
+    trace_sum: i64;
+    executed_instructions: u64;
+    executed_calls: u64;
+    taken_branches: u64;
+    executed_builtins: u64;
+
+    init(
+        name: Str,
+        program: shared model::Program,
+        frame: shared Frame,
+        frame_stack: ((shared Frame)?)[],
+        memory: shared i64[]
+    ) {
+        self.name = name;
+        self.program = program;
+        self.frame = frame;
+        self.frame_stack = frame_stack;
+        self.frame_depth = 0u;
+        self.memory = memory;
+        self.halted = false;
+        self.return_value = 0;
+        self.trace_sum = 0;
+        self.executed_instructions = 0u;
+        self.executed_calls = 0u;
+        self.taken_branches = 0u;
+        self.executed_builtins = 0u;
+    }
+
+    fn memory_checksum() -> i64 {
+        var checksum: i64 = 0;
+        var index: i64 = 0;
+        while ((u64) index < self.memory->len()) {
+            checksum = opcodes::mix_checksum(checksum, self.memory->[index]);
+            index = index + 1;
+        }
+        return checksum;
+    }
+
+    fn resolve_mem_index(base: i64, index: i64) -> i64 {
+        var address: i64 = base + index;
+        if (address < 0 || (u64) address >= self.memory->len()) {
+            panic("Vm.resolve_mem_index: memory index out of bounds");
+        }
+        return address;
+    }
+
+    fn resolve_slice_index(base: i64, offset: i64) -> i64 {
+        var address: i64 = base + offset;
+        if (address < 0 || (u64) address > self.memory->len()) {
+            panic("Vm.resolve_slice_index: memory slice index out of bounds");
+        }
+        return address;
+    }
+
+    mut fn note_branch_taken() -> unit {
+        self.taken_branches = self.taken_branches + 1u;
+        return;
+    }
+
+    fn current_instruction() -> shared model::Instruction {
+        var function_id: i64 = (i64) self.frame->function_id;
+        var pc: i64 = (i64) self.frame->pc;
+        if (self.frame->pc >= self.program->functions[function_id].instructions.len()) {
+            panic("Vm.current_instruction: pc out of bounds");
+        }
+        return self.program->functions[function_id].instructions[pc]!;
+    }
+
+    mut fn run() -> model::BenchmarkResult {
+        while (!self.halted) {
+            var instruction: shared model::Instruction = self.current_instruction();
+            self.executed_instructions = self.executed_instructions + 1u;
+            instruction->execute(self);
+        }
+
+        var program_name: Str = self.name;
+        return model::BenchmarkResult(
+            program_name,
+            self.return_value,
+            self.memory->[0],
+            self.memory_checksum(),
+            self.trace_sum,
+            self.executed_instructions,
+            self.executed_calls,
+            self.taken_branches,
+            self.executed_builtins
+        );
+    }
+
+    fn read_reg(index: i64) -> i64 {
+        return self.frame->registers->[index];
+    }
+
+    mut fn write_reg(index: i64, value: i64) -> unit {
+        self.frame->registers->[index] = value;
+        return;
+    }
+
+    fn read_const_obj(index: u64) -> shared Obj {
+        if (index >= self.program->constants.len()) {
+            panic("Vm.read_const_obj: constant index out of bounds");
+        }
+        return self.program->constants[(i64) index];
+    }
+
+    fn read_const_i64(index: u64) -> i64 {
+        var boxed: shared BoxI64 = (shared BoxI64) self.read_const_obj(index);
+        return boxed->value;
+    }
+
+    fn load_mem(index: i64) -> i64 {
+        if (index < 0 || (u64) index >= self.memory->len()) {
+            panic("Vm.load_mem: memory index out of bounds");
+        }
+        return self.memory->[index];
+    }
+
+    mut fn store_mem(index: i64, value: i64) -> unit {
+        if (index < 0 || (u64) index >= self.memory->len()) {
+            panic("Vm.store_mem: memory index out of bounds");
+        }
+        self.memory->[index] = value;
+        return;
+    }
+
+    fn load_mem_indexed(base: i64, index: i64) -> i64 {
+        return self.memory->[self.resolve_mem_index(base, index)];
+    }
+
+    mut fn store_mem_indexed(base: i64, index: i64, value: i64) -> unit {
+        self.memory->[self.resolve_mem_index(base, index)] = value;
+        return;
+    }
+
+    mut fn slice_copy(
+        dst_base: i64,
+        src_base: i64,
+        begin: i64,
+        end: i64
+    ) -> unit {
+        var src_begin: i64 = self.resolve_slice_index(src_base, begin);
+        var src_end: i64 = self.resolve_slice_index(src_base, end);
+        if (src_end < src_begin) {
+            panic("Vm.slice_copy: invalid slice range");
+        }
+
+        var dst_begin: i64 = self.resolve_slice_index(dst_base, 0);
+        var dst_end: i64 = self.resolve_slice_index(
+            dst_base,
+            src_end - src_begin
+        );
+        var copied: i64[] = self.memory->[src_begin:src_end];
+        self.memory->[dst_begin:dst_end] = copied;
+        return;
+    }
+
+    mut fn call_builtin(index: u64, argc: u64) -> unit {
+        if (index >= self.program->builtins.len()) {
+            panic("Vm.call_builtin: builtin index out of bounds");
+        }
+        self.executed_builtins = self.executed_builtins + 1u;
+        var builtin: shared model::Builtin = self.program->builtins[(i64) index];
+        builtin->invoke(self, argc);
+        return;
+    }
+
+    mut fn note_trace(value: i64) -> unit {
+        self.trace_sum = self.trace_sum + value;
+        return;
+    }
+
+    mut fn advance() -> unit {
+        self.frame->pc = self.frame->pc + 1u;
+        return;
+    }
+
+    mut fn jump(target: u64) -> unit {
+        self.note_branch_taken();
+        self.frame->pc = target;
+        return;
+    }
+
+    mut fn jump_if_true(reg_index: i64, target: u64) -> unit {
+        if (self.read_reg(reg_index) != 0) {
+            self.jump(target);
+            return;
+        }
+        self.advance();
+        return;
+    }
+
+    mut fn jump_if_false(reg_index: i64, target: u64) -> unit {
+        if (self.read_reg(reg_index) == 0) {
+            self.jump(target);
+            return;
+        }
+        self.advance();
+        return;
+    }
+
+    mut fn call_function(function_id: u64, argc: u64, dst_reg: i64) -> unit {
+        if (function_id >= self.program->functions.len()) {
+            panic("Vm.call_function: function index out of bounds");
+        }
+        if (self.frame_depth >= self.frame_stack.len()) {
+            panic("Vm.call_function: frame stack overflow");
+        }
+
+        var callee_index: i64 = (i64) function_id;
+        if (argc != self.program->functions[callee_index].arg_count) {
+            panic("Vm.call_function: argument count mismatch");
+        }
+
+        var caller: shared Frame = self.frame;
+        var callee_registers: shared i64[] = new i64[](
+            self.program->functions[callee_index].register_count
+        );
+        var index: i64 = 0;
+        while ((u64) index < argc) {
+            callee_registers->[index] = caller->registers->[index];
+            index = index + 1;
+        }
+
+        self.frame_stack[(i64) self.frame_depth] = caller;
+        self.frame_depth = self.frame_depth + 1u;
+        self.executed_calls = self.executed_calls + 1u;
+        self.frame = new Frame(
+            function_id,
+            0u,
+            callee_registers,
+            caller->pc + 1u,
+            dst_reg
+        );
+        return;
+    }
+
+    mut fn ret_from(src_reg: i64) -> unit {
+        var value: i64 = self.frame->registers->[src_reg];
+        if (self.frame_depth == 0u) {
+            self.halt_with(value);
+            return;
+        }
+
+        var finished: shared Frame = self.frame;
+        self.frame_depth = self.frame_depth - 1u;
+        self.frame = self.frame_stack[(i64) self.frame_depth]!;
+        self.frame->registers->[finished->return_dst_reg] = value;
+        self.frame->pc = finished->return_pc;
+        return;
+    }
+
+    mut fn halt_with(value: i64) -> unit {
+        self.return_value = value;
+        self.halted = true;
+        return;
+    }
+}
+
+public fn run_case(ref benchmark_case: model::BenchmarkCase) -> model::BenchmarkResult {
+    var program_name: Str = benchmark_case.name;
+    var program: shared model::Program = benchmark_case.program;
+    var entry_index: i64 = (i64) program->entry_function_id;
+    var frame: shared Frame = new Frame(
+        program->entry_function_id,
+        0u,
+        new i64[](program->functions[entry_index].register_count),
+        0u,
+        0
+    );
+    var frame_stack: ((shared Frame)?)[] = ((shared Frame)?)[](128u);
+    var vm: Vm = Vm(
+        program_name,
+        program,
+        frame,
+        frame_stack,
+        new i64[](program->memory_size)
+    );
+    return vm.run();
+}
