@@ -10,6 +10,9 @@ fn main() -> i64 {
     }
 
     var selection: u64 = program_args[1].to_u64()!;
+    if (selection == 999u) {
+        return benchmark::run_and_report();
+    }
     if (selection >= 1u && selection <= benchmark::num_cases()) {
         return benchmark::run_case_and_report(selection - 1u);
     }
@@ -17,4 +20,3 @@ fn main() -> i64 {
     panic("vm_benchmark: invalid case selector");
     return 1;
 }
-

@@ -11,8 +11,9 @@ The in-progress
 Niflheim's deterministic bytecode-VM regression program into one Skald-native
 multi-module golden fixture. The ownership model, full instruction hierarchy,
 six core workloads, heterogeneous constants, builtin dispatch, static state,
-and exact `f64` behavior are complete; VB3 is next to port the three large
-algorithmic cases and aggregate verification. The roadmap depends only on
+exact `f64` behavior, the three large algorithmic cases, and aggregate
+verification are complete; VB4 is next for compiler variants, documentation,
+and full-suite hardening. The roadmap depends only on
 implemented language, standard-library, module, driver, and golden-runner
 contracts; it is independent of the pending optimization discoveries.
 

@@ -1,6 +1,6 @@
 # VM Benchmark Correctness Workload Roadmap
 
-Status: in progress; VB0 through VB2 are complete, and VB3 is next.
+Status: in progress; VB0 through VB3 are complete, and VB4 is next.
 
 This roadmap ports the deterministic bytecode-VM regression workload from the
 sibling Niflheim repository into a Skald-native multi-module golden test. The
@@ -67,7 +67,7 @@ implicit garbage-collected reference semantics.
 - [x] VB0 — Establish the Skald ownership model and minimal vertical slice
 - [x] VB1 — Port the instruction hierarchy and core VM workloads
 - [x] VB2 — Port heterogeneous constants, builtins, statics, and exact `f64`
-- [ ] VB3 — Port the large algorithmic cases and aggregate verification
+- [x] VB3 — Port the large algorithmic cases and aggregate verification
 - [ ] VB4 — Add compiler variants, documentation, and full-suite hardening
 
 ## PR-sized implementation sequence
@@ -186,23 +186,23 @@ expectations.
 flow after every instruction and host service they depend on is independently
 covered.
 
-- [ ] Port `prime_sum_100`, `fibonacci_recursive`, and
+- [x] Port `prime_sum_100`, `fibonacci_recursive`, and
       `sha1_quick_brown_fox`, retaining readable builder helpers and comments
       for guest-loop structure, recursion, message schedule, and digest
       reconstruction.
-- [ ] Preserve all patchable jump targets and ensure replacement of a
+- [x] Preserve all patchable jump targets and ensure replacement of a
       placeholder instruction releases the superseded shared owner without
       changing the final instruction stream.
-- [ ] Keep SHA-1 constants and shifts within Skald's explicit integer and
+- [x] Keep SHA-1 constants and shifts within Skald's explicit integer and
       checked-shift contracts and retain the independently reproducible digest
       explanation next to its golden expectation.
-- [ ] Build the complete twelve-case inline case array and execute each case
+- [x] Build the complete twelve-case inline case array and execute each case
       through the same checked VM path.
-- [ ] Port aggregate accumulation and checksum mixing so every field of every
+- [x] Port aggregate accumulation and checksum mixing so every field of every
       result contributes exactly once in stable case order.
-- [ ] Add the final three per-case runs and the aggregate run with exact stdout;
+- [x] Add the final three per-case runs and the aggregate run with exact stdout;
       do not replace the individual observations with only the aggregate.
-- [ ] Review the completed source graph for opaque generated-looking regions
+- [x] Review the completed source graph for opaque generated-looking regions
       and add narrow comments or helpers where intent is not recoverable from
       the instruction sequence.
 

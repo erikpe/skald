@@ -53,3 +53,23 @@ expect = { stdout = { inline = "obj_cast_builtin: return=400635 memory0=400635 m
 name = "exact_double_output"
 args = ["9"]
 expect = { stdout = { inline = "exact_double: return=33 memory0=33 mem_checksum=33 trace_sum=33 steps=8 calls=0 branches=0 builtins=1 checksum=938179363641\n" } }
+
+[[test.run]]
+name = "prime_sum_100_output"
+args = ["10"]
+expect = { stdout = { inline = "prime_sum_100: return=1060 memory0=1060 mem_checksum=32860 trace_sum=1181 steps=8794 calls=0 branches=2388 builtins=1 checksum=31046231495764\n" } }
+
+[[test.run]]
+name = "fibonacci_recursive_output"
+args = ["11"]
+expect = { stdout = { inline = "fibonacci_recursive: return=610 memory0=610 mem_checksum=18910 trace_sum=731 steps=15787 calls=1973 branches=987 builtins=1 checksum=17866596429549\n" } }
+
+[[test.run]]
+name = "sha1_quick_brown_fox_output"
+args = ["12"]
+expect = { stdout = { inline = "sha1_quick_brown_fox: return=3446627857414826236 memory0=802480582 mem_checksum=-1257569273529833621 trace_sum=10444962923 steps=3933 calls=0 branches=326 builtins=1 checksum=5254056180710066728\n" } }
+
+[[test.run]]
+name = "aggregate_output"
+args = ["999"]
+expect = { stdout = { inline = "final: cases=12 return=3446627857682787395 memory0=1070441413 mem_checksum=-6668256905385763301 trace_sum=10980884339 steps=29350 calls=2014 branches=3790 builtins=16 checksum=2238838265777857473\n" } }
