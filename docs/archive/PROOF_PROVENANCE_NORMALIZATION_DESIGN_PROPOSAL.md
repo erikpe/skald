@@ -4,7 +4,7 @@ Status: frozen decision record; PPN1 through PPN14 were confirmed together on
 2026-09-04. The
 [completed implementation roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 records delivery, and the active
-[discoveries record](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
+[discoveries record](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
 owns the remaining follow-up outside the reviewed scope. The decisions are
 promoted into the implemented compiler
 [phase](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary),

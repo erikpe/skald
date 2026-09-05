@@ -1,8 +1,9 @@
 # Normalization-Stable Path-Activation Provenance Design Proposal
 
-Status: frozen design; NSP1 through NSP14 were accepted on 2026-09-05 and
-promoted into the living compiler contracts. Implementation is planned by the
-[normalization-stable path-activation provenance roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
+Status: frozen design; NSP1 through NSP14 were accepted on 2026-09-05,
+implemented, and promoted into the living compiler contracts. The completed
+[normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+records delivery.
 
 This proposal resolves the remaining storage-classification limitation from
 the completed
@@ -654,8 +655,8 @@ review should explicitly confirm:
 NSP1 through NSP14 were accepted together on 2026-09-05. This record is frozen
 in `docs/archive/`; the final-only storage role and verifier direction are
 promoted into the living compiler phase, backend, and testing contracts. The
-[active roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-owns delivery, its companion
-[discoveries record](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md)
-owns out-of-scope findings, and the optimization catalog continues to keep
-FMM-13 dead-carrier deletion separate from this prerequisite.
+[completed roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+records delivery, its resolved companion
+[discoveries record](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md)
+records that no out-of-scope follow-up was found, and the optimization catalog
+continues to keep FMM-13 dead-carrier deletion separate from this prerequisite.

@@ -1134,10 +1134,10 @@ executable load and addressable boolean stack home it emitted before the
 classification became explicit. Proof records themselves never reach
 legality, layout, frame, instruction-selection, or artifact planning.
 
-The accepted
+The implemented
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and active
-[implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+and completed
+[implementation roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 have refined that final storage discriminant to
 `NormalizedPathActivation`. Backend legality, frame planning, place
 addressing, load/store selection, and emission treat it as the identical

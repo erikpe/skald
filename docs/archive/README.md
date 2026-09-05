@@ -106,6 +106,7 @@ Archived plans:
 - [Proof-provenance normalization](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 - [Post-proof CFG canonicalization](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
 - [Convergent local constant propagation](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+- [Normalization-stable path-activation provenance](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -187,9 +188,13 @@ Resolved proof-provenance normalization inputs:
 - [Proof-provenance normalization design proposal](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 - [Proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 
-Frozen normalization-stable path-activation provenance input:
+Resolved normalization-stable path-activation provenance inputs:
 
 - [Normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+- [Normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+- [Normalization-stable path-activation provenance inventory](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
+- [Normalization-stable path-activation provenance discoveries](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md)
+- [Resolved proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
 
 Resolved post-proof CFG canonicalization inputs:
 

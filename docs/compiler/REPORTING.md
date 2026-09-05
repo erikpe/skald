@@ -483,6 +483,10 @@ checkpoints render the same executable home as
 no pass occurrence or metric, preserves metric names and ordering, and remains
 fully quiet when operational reporting is disabled. Inspection and every
 report detail level produce the same target artifact as an unobserved compile.
+The frozen
+[normalization-stable path-activation design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and [completed roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+record the representation's implemented observation and parity evidence.
 
 Inspection exposes a closed stage-typed borrowed view. Proof-rich input and
 after-pass checkpoints carry `VerifiedProofMirProgram`; the named

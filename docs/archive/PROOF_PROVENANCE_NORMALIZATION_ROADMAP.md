@@ -18,7 +18,7 @@ and storage cleanup remain separate optimization candidates.
 
 Implementation-specific opportunities outside this reviewed scope belong in
 the
-[proof-provenance normalization discoveries](../roadmaps/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
+[proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
 Candidate placement and status remain concise in the
 [optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md).
 

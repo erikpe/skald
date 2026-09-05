@@ -335,11 +335,11 @@ backend consumption, and the normalized CFG suffix are implemented. The
 default suffix runs unreachable-block elimination, empty-block forwarding,
 basic-block merging, and then whole-world reachability.
 
-The accepted
+The implemented
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and active
-[implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-add the next coverage layer. Current model and contract tests distinguish
+and completed
+[implementation roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+record this coverage layer. Current model and contract tests distinguish
 proof-rich
 `path-condition`, final-only `normalized-path-activation`, and ordinary
 `scalar-spill` declarations; reject either activation kind at the wrong seal;
@@ -365,8 +365,8 @@ checked failure through exact output, status, failure spans, runtime traces,
 destruction order, final-MIR vocabulary, repeated reports, and target
 artifacts. The new dump spelling is intentional; no pass-list or
 language/runtime surface changes.
-The checked-in
-[pre-migration inventory](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
+The archived
+[pre-migration inventory](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
 records the exhaustive owner audit and the focused current-behavior baselines.
 
 Backend parity coverage also constructs equivalent final programs which differ

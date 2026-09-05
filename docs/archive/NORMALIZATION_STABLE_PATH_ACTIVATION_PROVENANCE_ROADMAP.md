@@ -1,9 +1,10 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: in progress; NSR0 through NSR6 are complete and NSR7 is the next task.
+Status: complete; NSR0 through NSR7 were implemented, validated, and archived
+on 2026-09-05.
 
 This roadmap implements the frozen
-[normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
+[normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
 It gives the executable boolean storage left by proof normalization a stable,
 final-only classification and narrows the normalized definite-initialization
 exception to that exact class.
@@ -17,17 +18,17 @@ load, store, lifetime, attachment, and deletion conditions.
 ## Dependencies
 
 - The completed
-  [proof-provenance normalization roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+  [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
   provides the proof-rich and final seals, exhaustive proof classification,
   mandatory atomic normalizer, and private consumed-proof authority.
 - The completed
-  [dense MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+  [dense MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
   provides exhaustive identity traversal and deterministic dense commit.
 - The completed
-  [post-proof CFG canonicalization roadmap](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+  [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
   provides narrow final-CFG edit capabilities and normalized reverification.
 - The completed
-  [convergent local constant propagation roadmap](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+  [convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
   provides the proof-transition transaction which may compose logical
   selection with mandatory normalization.
 - Whole-world compilation makes the storage-role inventory closed. It does not
@@ -86,7 +87,7 @@ load, store, lifetime, attachment, and deletion conditions.
 - [x] NSR4 — Seal rewrite and analysis handling of the new role
 - [x] NSR5 — Preserve backend behavior and deterministic observation
 - [x] NSR6 — Complete source, profile, and malformed-MIR evidence
-- [ ] NSR7 — Harden ownership, documentation, and roadmap closure
+- [x] NSR7 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
 
@@ -290,19 +291,19 @@ case fails at its owning contract.
 **Purpose:** Finish with one maintainable authority per concern and archive a
 complete delivery record.
 
-- [ ] Remove obsolete broad scalar-spill exceptions, migration adapters,
+- [x] Remove obsolete broad scalar-spill exceptions, migration adapters,
   rollout suppressions, stale comments, and duplicate classifiers.
-- [ ] Confirm facade-oriented module ownership: model/contract,
+- [x] Confirm facade-oriented module ownership: model/contract,
   normalization, scalar initialization, rewrite, dump, and backend concerns
   remain separate with focused colocated tests.
-- [ ] Update the living phase, backend, testing, reporting, and optimization
+- [x] Update the living phase, backend, testing, reporting, and optimization
   catalog documentation from proposed to implemented behavior.
-- [ ] Resolve the original proof-normalization discovery, retain any unrelated
+- [x] Resolve the original proof-normalization discovery, retain any unrelated
   findings in this roadmap's discoveries record, and keep FMM-13 explicitly
   unimplemented.
-- [ ] Run formatting, lints, compiler tests, golden determinism, release,
+- [x] Run formatting, lints, compiler tests, golden determinism, release,
   MSRV, and long robustness checks without leaving generated artifacts.
-- [ ] Mark every delivered checkbox, archive this roadmap and its resolved
+- [x] Mark every delivered checkbox, archive this roadmap and its resolved
   discoveries, and update both roadmap indices and all incoming links.
 
 **Tests:** `make check`; full golden determinism; release and MSRV gates;

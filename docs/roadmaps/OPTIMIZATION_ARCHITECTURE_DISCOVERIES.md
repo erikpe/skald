@@ -52,13 +52,12 @@ snapshot and commits them atomically. Constant-left logical selection is also
 implemented without a pipeline fixed-point loop or general memory analysis.
 Before any final-stage storage mutation, the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and active
-[implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-have replaced the broad normalized scalar-spill exception with one exact final-
-only activation role. Same-snapshot analysis classification and the fail-closed
-final-CFG mutation boundary are also implemented; the remaining roadmap work
-closes ownership and documentation after target observation and broad
-source/profile/malformed evidence. This is a
+and completed
+[implementation roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+replace the broad normalized scalar-spill exception with one exact final-only
+activation role. Same-snapshot analysis classification, the fail-closed final-
+CFG mutation boundary, target observation, and broad source/profile/malformed
+evidence are implemented. This is a
 representation and verification prerequisite, not the FMM-13 dead-carrier
 optimization itself.
 
@@ -382,8 +381,9 @@ The archived
 [implementation roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 own the completed classification, transaction, seals, verifier split,
 stage-aware pipeline, backend migration, and initial post-proof unreachable
-cleanup. One actionable storage-provenance limitation remains in the
-[follow-up discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
+cleanup. The storage-provenance limitation and its implemented resolution are
+preserved in the archived
+[follow-up discovery](../archive/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
 The completed
 [post-proof CFG canonicalization design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
 and
@@ -664,13 +664,13 @@ architectural investments.
    proof-transition logical consumer. This completes the expected local
    constant-folding semantics before new operation families or broader memory
    reasoning are added.
-8. Implement the planned normalization-stable path-activation provenance
+8. Use the implemented normalization-stable path-activation provenance
    foundation before any final-stage storage mutation. It restores ordinary
    scalar-spill verification and gives later storage passes an exact semantic
    classification without retaining consumed proof identities. The role,
-   verifier authority, rewrite barriers, and byte-identical target/observation
-   parity are implemented, as is broad source/profile and malformed-input
-   evidence; ownership and documentation closure remains.
+   verifier authority, rewrite barriers, ownership, documentation, byte-
+   identical target/observation parity, and broad source/profile/malformed-
+   input evidence are complete.
 9. After the bounded CFG and convergent constant layers provide more evidence
    about remaining barriers, generalize callable effects and alias queries
    where conservative answers demonstrably block useful transformations.

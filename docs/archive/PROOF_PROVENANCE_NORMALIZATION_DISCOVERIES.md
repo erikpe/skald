@@ -1,19 +1,19 @@
 # Proof-Provenance Normalization Discoveries
 
-Status: open; the remaining storage-provenance follow-up has a frozen
-[design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and an active
+Status: resolved; the storage-provenance limitation was addressed by the frozen
+[design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and completed
 [implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
 The archived
-[design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) owns the reviewed
+[design](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) owns the reviewed
 classification, two-seal boundary, mandatory normalization, stage-aware
 pipeline, backend migration, and conservative post-proof cleanup. The
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
+[optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md) owns
 broader optimization placement and status.
 
-This file retains only evidence that still requires later work. The catalog's
-[dead normalized condition-carrier storage cleanup](OPTIMIZATION_CANDIDATE_CATALOG.md#final-mir-storage-alias-effect-and-ownership-graph)
+This file preserves the resolved evidence and decision trail. The catalog's
+[dead normalized condition-carrier storage cleanup](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md#final-mir-storage-alias-effect-and-ownership-graph)
 entry owns its cross-domain status and placement.
 
 ## Reclassified path activations lose their scalar-spill origin
@@ -40,9 +40,9 @@ pipeline can issue the authority needed to seal a final product. Focused tests
 cover initialized and uninitialized ordinary spills, marked activations,
 wrong-stage and malformed declarations, leaked proof, and valid normalized
 programs. Transformation, backend, source/profile, deterministic, and
-malformed-MIR evidence is complete through NSR6. The discovery remains open
-only until NSR7 performs the roadmap-wide ownership, documentation, and archive
-closure; FMM-13 remains a separate optimization candidate.
+malformed-MIR evidence is complete, and the roadmap-wide ownership and
+documentation audit found no transitional owner. FMM-13 remains a separate,
+explicitly unimplemented optimization candidate.
 
 **Impact:** This is sound for the frozen one-way transition and the planned
 block/value-only canary, which neither creates nor moves storage accesses. It
@@ -56,8 +56,8 @@ its current consumers are stable, rising to high before a final-stage storage
 or spill transformation.
 
 **Accepted resolution:** The
-[frozen normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md),
-implemented through the active
+[frozen normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md),
+implemented through the completed
 [roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md),
 adds a dedicated final-only storage kind produced solely by the mandatory
 normalizer, restores ordinary `ScalarSpill` definite-initialization checking in

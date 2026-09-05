@@ -1,13 +1,13 @@
 # Normalization-Stable Path-Activation Provenance Inventory
 
-Status: living implementation inventory through NSR6 for the active
+Status: completed implementation inventory for the archived
 [normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
 This inventory records the `MirStorageKind` ownership boundary captured before
 `NormalizedPathActivation` was added. It remains an implementation aid for
-the later roadmap tasks, not a second architecture contract. The frozen
-[design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and living [phase contract](../compiler/PHASES_AND_IR.md#frozen-normalization-stable-path-activation-direction)
+the completed delivery history, not a second architecture contract. The frozen
+[design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+and living [phase contract](../compiler/PHASES_AND_IR.md#normalization-stable-path-activation-provenance)
 remain authoritative.
 
 ## Reproducing the inventory
@@ -146,3 +146,28 @@ scalar spills. NSR6 adds an undeclared final place and a duplicate proof-rich
 activation lifetime transition. The former fails normalized structural
 verification; the latter fails the proof-rich seal before normalization can
 consume its path evidence.
+
+## NSR7 ownership and closure audit
+
+The final audit found no broad normalized `ScalarSpill` exception, migration
+adapter, rollout suppression, duplicate semantic classifier, or stale source
+comment to remove. Responsibility remains facade-oriented and deliberately
+separate:
+
+- `mir::model` owns the storage vocabulary and its semantic query;
+- `mir::verify::contract` owns orthogonal proof-disposition and phase-legality
+  classifications, while `mir::verify::scalar_initialization` alone consumes
+  the narrow initialization authority;
+- `passes::pipeline::normalization` is the sole production reclassification
+  owner;
+- `mir::rewrite` preserves declarations and guards final CFG mutation;
+- `mir::dump` owns deterministic textual observation; and
+- `backend::x86_64_sysv::frame` owns its exhaustive target layout disposition.
+
+The repeated exhaustive matches are concern-specific compile-time maintenance
+points rather than competing role classifiers. Their focused tests remain
+colocated with the model/contract, normalizer, verifier, rewrite, dump,
+pipeline, and backend owners. No production Rust module required restructuring
+during closure. FMM-13 storage deletion remains unimplemented and must define
+its own storage-use, lifetime, attachment, and rewrite authority before it can
+consume this foundation.

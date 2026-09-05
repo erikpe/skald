@@ -1293,12 +1293,12 @@ and has one model query for consumers which need its semantic role. This
 single classification is the maintenance point for future phase-only storage
 roles; individual verifiers do not choose phase availability independently.
 
-#### Frozen normalization-stable path-activation direction
+#### Normalization-stable path-activation provenance
 
-Status: **accepted; implementation in progress**. The frozen
+Status: **implemented**. The frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and its active
-[implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+and completed
+[implementation roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 refine the representation at this boundary without changing execution.
 
 The final-only `NormalizedPathActivation` vocabulary, semantic query, phase

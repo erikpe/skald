@@ -6,17 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-has completed NSR0 through NSR5, establishing the exhaustive storage-phase
-contract, pre-migration behavioral baseline, final-only activation
-representation, atomic production conversion, and exact normalized
-definite-initialization authority. Same-snapshot analysis classification and a
-fail-closed normalized CFG mutation boundary now preserve that role through
-current transformations. Exhaustive backend handling, deterministic
-observation, and byte-identical complete and retained target emission now prove
-the refinement has no target effect. NSR6 is next: it broadens source, profile,
-and malformed-MIR evidence.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -29,20 +19,6 @@ lifecycle status, effort, value, prerequisites, and pitfalls. Status
 distinguishes implemented, in-progress, frozen proposed, draft-design,
 follow-up, foundation-dependent, contract-dependent, and research work. It is
 not an implementation roadmap.
-
-The open
-[proof-provenance normalization discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
-retain one scalar-spill provenance limitation that becomes critical before a
-final-stage storage transformation. Its accepted resolution is the frozen
-[normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and active
-[implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
-New out-of-scope findings during delivery belong in that roadmap's
-[companion discoveries record](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md).
-The checked-in
-[pre-migration storage-kind inventory](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
-records the exhaustive implementation-owner audit and current-behavior
-baselines established before the representation changes.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
@@ -90,6 +66,17 @@ constant-left logical selection through the proof-consuming transition. Its
 and the resolved
 [checked-protocol discovery](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
 are preserved in the archive.
+The completed
+[normalization-stable path-activation provenance roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+adds a final-only activation storage role, exact normalized initialization
+authority, same-snapshot analysis classification, guarded rewrite ownership,
+and target/observation parity. Its
+[inventory](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md),
+[resolved companion record](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md),
+and the resolved original
+[proof-normalization discovery](../archive/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
+are preserved in the archive. FMM-13 remains explicitly unimplemented in the
+living optimization candidate catalog.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -101,14 +88,14 @@ No implementation roadmap is waiting to start.
 
 ## Design proposals
 
-The frozen
+The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-accepts a dedicated final-only activation storage kind, normalizer-exclusive
-construction, explicit proof/final phase legality, and restoration of
-normalized definite-initialization checks for genuine scalar spills. The
-[active roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-owns implementation; dead condition-carrier deletion remains a separate
-optimization candidate.
+and [delivery record](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+are preserved in the archive. Their dedicated final-only activation storage
+kind, normalizer-exclusive construction, explicit proof/final phase legality,
+and exact normalized definite-initialization authority are authoritative in
+the living compiler documentation. Dead condition-carrier deletion remains a
+separate optimization candidate.
 
 The completed convergent local constant propagation
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
