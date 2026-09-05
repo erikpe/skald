@@ -29,6 +29,12 @@ impl MirVerificationContract {
     pub(super) const fn requires_proof_provenance(self) -> bool {
         matches!(self, Self::ProofRich)
     }
+
+    /// Whether this product may rely on path-sensitive initialization proof
+    /// consumed by mandatory normalization for this exact storage role.
+    pub(super) const fn trusts_consumed_path_initialization(self, kind: MirStorageKind) -> bool {
+        matches!(self, Self::Normalized) && kind.is_normalized_path_activation()
+    }
 }
 
 /// The MIR products in which one storage role may appear.

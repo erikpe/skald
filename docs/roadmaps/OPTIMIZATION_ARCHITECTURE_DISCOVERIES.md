@@ -52,10 +52,11 @@ snapshot and commits them atomically. Constant-left logical selection is also
 implemented without a pipeline fixed-point loop or general memory analysis.
 Before any final-stage storage mutation, the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and planned
+and active
 [implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-will replace the broad normalized scalar-spill exception with one exact final-
-only activation role. This is a representation and verification prerequisite,
+have replaced the broad normalized scalar-spill exception with one exact final-
+only activation role; the remaining roadmap work audits transformations and
+target observation. This is a representation and verification prerequisite,
 not the FMM-13 dead-carrier optimization itself.
 
 This document records the compiler-architecture constraints that currently

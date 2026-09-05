@@ -8,10 +8,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-has completed NSR0 through NSR2, establishing the exhaustive storage-phase
+has completed NSR0 through NSR3, establishing the exhaustive storage-phase
 contract, pre-migration behavioral baseline, final-only activation
-representation, and atomic production conversion. NSR3 is next: it narrows
-normalized definite-initialization authority to the retained activation role.
+representation, atomic production conversion, and exact normalized
+definite-initialization authority. NSR4 is next: it audits rewrite and analysis
+handling of the retained activation role.
 
 ## Pending discoveries
 
@@ -101,7 +102,7 @@ The frozen
 accepts a dedicated final-only activation storage kind, normalizer-exclusive
 construction, explicit proof/final phase legality, and restoration of
 normalized definite-initialization checks for genuine scalar spills. The
-[planned roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+[active roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 owns implementation; dead condition-carrier deletion remains a separate
 optimization candidate.
 

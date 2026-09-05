@@ -127,9 +127,11 @@ pub fn verify_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
 /// Verifies the executable structural contract expected after proof
 /// provenance has been consumed.
 ///
-/// This crate-private boundary seals normalized backend-ready MIR after the
-/// mandatory proof-provenance transaction. It deliberately does not recreate
-/// path-sensitive proof dataflow.
+/// This crate-private checker establishes the structural half of the final
+/// contract. It deliberately does not recreate path-sensitive proof dataflow:
+/// normalized path activations rely on the consumed-proof authority held by
+/// the pipeline's private final-seal path. Calling this helper alone does not
+/// construct or grant that authority.
 pub(crate) fn check_normalized_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
     let mut verifier = Verifier::new_normalized(program);
     verifier.verify_program();

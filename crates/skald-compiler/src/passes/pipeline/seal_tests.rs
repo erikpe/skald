@@ -85,6 +85,11 @@ fn proof_to_final_transition_consumes_provenance_and_rebinds_facts() {
                 .storage_entries()
                 .iter()
                 .all(|storage| storage.kind != MirStorageKind::PathCondition)));
+    assert!(finalized
+        .program()
+        .executable_definitions()
+        .flat_map(|definition| definition.storage_entries())
+        .any(|storage| storage.kind.is_normalized_path_activation()));
 }
 
 #[test]

@@ -1311,9 +1311,9 @@ path reads and removes path/logical records. The new kind retains only the
 executable storage role: it carries no path condition, logical expression,
 predecessor, parent, merge, or other consumed proof identity.
 
-That distinction will let normalized verification resume ordinary definite-
+That distinction lets normalized verification run ordinary definite-
 initialization analysis for genuine `ScalarSpill` declarations. Only a
-structurally valid boolean `NormalizedPathActivation` will rely on its
+structurally valid boolean `NormalizedPathActivation` relies on its
 verified-and-consumed path ancestry rather than an attempted reconstruction of
 erased path-sensitive proof. Current block/value/CFG passes must preserve the
 classification, and a future storage-mutating capability must reject or handle
@@ -1322,9 +1322,12 @@ it explicitly. FMM-13 dead-carrier deletion remains a separate optimization.
 This conversion preserves the exact `StorageId`, declaration order,
 stores, loads, lifetime markers, blocks, values, spans, evaluation and failure
 order, cleanup, lifecycle, reachability, ABI, and target behavior. During the
-remaining verifier migration, normalized scalar initialization still retains
-the pre-existing broad `ScalarSpill` exception in addition to exempting the
-now-distinct activation role. NSR3 removes that transitional broad exception.
+normalized scalar-initialization analysis, the verifier-contract owner grants
+consumed path-initialization trust only when the stage is normalized and the
+storage kind is `NormalizedPathActivation`. Ordinary `ScalarSpill` storage is
+checked in both stages. The crate-private structural checker can exercise this
+contract for malformed-MIR tests, but only the private proof-consuming pipeline
+can construct a sealed final product carrying the required authority.
 
 The normalized verifier shares ordinary structural, lifecycle, reference, and
 reachable-definition owners with proof-rich verification, but does not pretend

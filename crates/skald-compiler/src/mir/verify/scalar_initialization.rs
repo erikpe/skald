@@ -7,20 +7,19 @@ use crate::mir::{
     StorageId,
 };
 
-use super::{context::Verifier, dataflow::ForwardDataflow};
+use super::{context::Verifier, contract::MirVerificationContract, dataflow::ForwardDataflow};
 
 impl Verifier<'_> {
     pub(in crate::mir::verify) fn verify_scalar_initialization(
         &mut self,
         function: MirDefinitionRef<'_>,
     ) {
-        // Compiler-owned scalar spills are checked while their producing
-        // protocol evidence is present. During the provenance migration,
-        // normalized verification retains its existing broad ScalarSpill
-        // exception and also excludes the now-distinct path activations whose
-        // initialization relation relied on consumed path proof. The next
-        // roadmap step narrows this to NormalizedPathActivation alone.
-        let verify_scalar_spills = self.verification_contract().requires_proof_provenance();
+        // Normalized path activations are the only primitive storage whose
+        // initialization relation relies on path proof consumed by the
+        // mandatory normalizer. Every other primitive role, including an
+        // ordinary compiler-owned ScalarSpill, uses this dataflow in both
+        // verifier stages.
+        let contract = self.verification_contract();
         let entry = function
             .storage_entries()
             .iter()
@@ -51,11 +50,7 @@ impl Verifier<'_> {
             for instruction in &block.instructions {
                 match instruction {
                     MirInstruction::StorageLive(live)
-                        if is_definite_initialization_storage(
-                            function,
-                            live.storage,
-                            verify_scalar_spills,
-                        ) =>
+                        if is_definite_initialization_storage(function, live.storage, contract) =>
                     {
                         initialized.remove(&live.storage);
                     }
@@ -63,18 +58,15 @@ impl Verifier<'_> {
                         initialized.remove(&dead.storage);
                     }
                     MirInstruction::Store(store) => {
-                        if let Some(storage) = exact_primitive_place(
-                            function,
-                            &store.destination,
-                            verify_scalar_spills,
-                        ) {
+                        if let Some(storage) =
+                            exact_primitive_place(function, &store.destination, contract)
+                        {
                             initialized.insert(storage);
                         }
                     }
                     MirInstruction::Assign(assignment) => {
                         if let MirRvalueKind::Load(place) = &assignment.rvalue.kind {
-                            if let Some(storage) =
-                                exact_primitive_place(function, place, verify_scalar_spills)
+                            if let Some(storage) = exact_primitive_place(function, place, contract)
                             {
                                 if !initialized.contains(&storage)
                                     && reported.insert((block.id, storage))
@@ -102,11 +94,7 @@ impl Verifier<'_> {
                 } = terminator
                 {
                     let mut success = initialized.clone();
-                    if is_definite_initialization_storage(
-                        function,
-                        *destination,
-                        verify_scalar_spills,
-                    ) {
+                    if is_definite_initialization_storage(function, *destination, contract) {
                         success.insert(*destination);
                     }
                     merge_initialized(&mut flow, *success_target, &success);
@@ -136,27 +124,22 @@ fn merge_initialized(
 fn is_definite_initialization_storage(
     function: MirDefinitionRef<'_>,
     storage: StorageId,
-    verify_scalar_spills: bool,
+    contract: MirVerificationContract,
 ) -> bool {
     function.storage(storage).is_some_and(|storage| {
-        storage.ty.is_primitive()
-            && (verify_scalar_spills
-                || !matches!(
-                    storage.kind,
-                    MirStorageKind::ScalarSpill | MirStorageKind::NormalizedPathActivation
-                ))
+        storage.ty.is_primitive() && !contract.trusts_consumed_path_initialization(storage.kind)
     })
 }
 
 fn exact_primitive_place(
     function: MirDefinitionRef<'_>,
     place: &MirPlace,
-    verify_scalar_spills: bool,
+    contract: MirVerificationContract,
 ) -> Option<StorageId> {
     let MirPlaceBase::Storage(storage) = place.base else {
         return None;
     };
     (place.projections.is_empty()
-        && is_definite_initialization_storage(function, storage, verify_scalar_spills))
+        && is_definite_initialization_storage(function, storage, contract))
     .then_some(storage)
 }

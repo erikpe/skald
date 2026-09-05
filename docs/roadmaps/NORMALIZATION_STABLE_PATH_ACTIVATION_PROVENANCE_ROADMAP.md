@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: in progress; NSR0 through NSR2 are complete and NSR3 is the next task.
+Status: in progress; NSR0 through NSR3 are complete and NSR4 is the next task.
 
 This roadmap implements the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
@@ -82,7 +82,7 @@ load, store, lifetime, attachment, and deletion conditions.
 - [x] NSR0 — Freeze the storage-phase contract and baseline
 - [x] NSR1 — Add the final-only storage representation exhaustively
 - [x] NSR2 — Make normalization retain the stable activation role
-- [ ] NSR3 — Narrow normalized scalar initialization authority
+- [x] NSR3 — Narrow normalized scalar initialization authority
 - [ ] NSR4 — Seal rewrite and analysis handling of the new role
 - [ ] NSR5 — Preserve backend behavior and deterministic observation
 - [ ] NSR6 — Complete source, profile, and malformed-MIR evidence
@@ -178,18 +178,18 @@ partial product, and executable normalized MIR is otherwise unchanged.
 **Purpose:** Remove the broad normalized `ScalarSpill` exception and make the
 consumed-proof reliance precise.
 
-- [ ] Run ordinary compiler-owned `ScalarSpill` definite-initialization
+- [x] Run ordinary compiler-owned `ScalarSpill` definite-initialization
   analysis under both proof-rich and normalized contracts.
-- [ ] Exempt only `NormalizedPathActivation` from reconstructing erased
+- [x] Exempt only `NormalizedPathActivation` from reconstructing erased
   path-sensitive initialization, and only while validating a final product
   carrying private consumed-proof authority.
-- [ ] Structurally require each normalized activation to be compiler-generated,
+- [x] Structurally require each normalized activation to be compiler-generated,
   boolean-typed, locally declared, and free of path/logical proof references.
-- [ ] Continue all applicable declaration, place, reference, lifetime,
+- [x] Continue all applicable declaration, place, reference, lifetime,
   instruction, terminator, checked-protocol, cleanup, and ownership checks.
-- [ ] Reject an uninitialized ordinary scalar spill in normalized MIR while
+- [x] Reject an uninitialized ordinary scalar spill in normalized MIR while
   retaining valid normalized short-circuit and conditional programs.
-- [ ] Keep the proof-rich verifier's complete path-sensitive acceptance and
+- [x] Keep the proof-rich verifier's complete path-sensitive acceptance and
   ordinary spill checking unchanged.
 
 **Tests:** Initialized and uninitialized ordinary spills in both stages;

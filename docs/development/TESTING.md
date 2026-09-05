@@ -348,11 +348,13 @@ rewriting preserves it without side metadata. Mandatory-normalization tests
 now prove exact one-to-one conversion to that final-only kind, exact executable
 operation and identity preservation, malformed-inventory rejection, stale
 multi-callable rollback, and composition with the optional logical transition.
-The next verifier task will prove that normalized definite-initialization
-rejects an uninitialized
-ordinary scalar spill while accepting only structurally valid normalized
-activations backed by consumed proof. Normalization tests must preserve exact
-storage/value/block identities and executable operations. Profile, native,
+Cross-stage verifier tests prove that initialized ordinary scalar spills pass
+both contracts, uninitialized ordinary scalar spills fail both contracts, and
+only the dedicated normalized activation role receives consumed path-
+initialization trust. Wrong-stage, source-backed, wrong-type, and leaked-proof
+forms remain rejected; valid normalized short-circuit and conditional programs
+remain accepted. Normalization tests must preserve exact storage/value/block
+identities and executable operations. Profile, native,
 runtime-trace, lifecycle, deterministic-dump, report, and backend tests must
 show unchanged behavior and byte-identical focused assembly. The new dump
 spelling is intentional; no pass-list or language/runtime surface changes.

@@ -1,8 +1,7 @@
 use crate::{
     mir::{
         dump_mir, rewrite::MirLocalIdentitySite, verify_mir, BlockId, MirAliasAccess,
-        MirArrayAnchorKind, MirInstruction, MirPlace, MirPlaceBase, MirRvalueKind, MirStorageKind,
-        MirTerminator, MirType,
+        MirArrayAnchorKind, MirInstruction, MirPlaceBase, MirStorageKind, MirTerminator, MirType,
     },
     test_support::lower_source_to_mir,
 };
@@ -151,6 +150,13 @@ fn normalized_path_activation_has_one_narrow_semantic_query() {
     assert!(MirStorageKind::NormalizedPathActivation.is_normalized_path_activation());
     assert!(!MirStorageKind::PathCondition.is_normalized_path_activation());
     assert!(!MirStorageKind::ScalarSpill.is_normalized_path_activation());
+
+    assert!(MirVerificationContract::Normalized
+        .trusts_consumed_path_initialization(MirStorageKind::NormalizedPathActivation));
+    assert!(!MirVerificationContract::ProofRich
+        .trusts_consumed_path_initialization(MirStorageKind::NormalizedPathActivation));
+    assert!(!MirVerificationContract::Normalized
+        .trusts_consumed_path_initialization(MirStorageKind::ScalarSpill));
 }
 
 #[test]
@@ -267,61 +273,54 @@ fn normalized_contract_rejects_every_current_path_carrier_family() {
 }
 
 #[test]
-fn mechanically_normalized_logical_shape_reaches_shared_checks() {
-    let mut program =
-        lower_source_to_mir("fn main() -> i64 { if (true && false) { return 1; } return 0; }");
-    let definition = program
+fn only_marked_normalized_activation_trusts_consumed_path_initialization() {
+    let mut program = lower_source_to_mir(
+        "fn main() -> i64 {
+           var active: bool = true;
+           if (active) { return 1; }
+           return 0;
+         }",
+    );
+    let activation =
+        reclassify_first_local(&mut program, MirStorageKind::NormalizedPathActivation, true);
+    remove_direct_stores(&mut program, activation);
+
+    check_normalized_mir(&program)
+        .expect("marked activations may rely on their consumed path proof");
+
+    let mut ordinary_spill = program;
+    let definition = ordinary_spill
         .definitions
-        .get_mut_for_test(program.entry_function)
+        .get_mut_for_test(ordinary_spill.entry_function)
         .unwrap();
     for storage in &mut definition.storage {
-        if storage.kind == MirStorageKind::PathCondition {
+        if storage.kind.is_normalized_path_activation() {
             storage.kind = MirStorageKind::ScalarSpill;
         }
     }
-    for block in &mut definition.body.blocks {
-        for instruction in &mut block.instructions {
-            let MirInstruction::Assign(assignment) = instruction else {
-                continue;
-            };
-            let activation = match &assignment.rvalue.kind {
-                MirRvalueKind::PathCondition(condition) => condition.activation,
-                _ => continue,
-            };
-            assignment.rvalue.kind = MirRvalueKind::Load(MirPlace::base(activation));
-        }
-    }
-    definition.body.path_conditions.clear();
-    definition.body.logical_expressions.clear();
-
-    check_normalized_mir(&program)
-        .expect("normalized checks must accept the exact executable logical shape");
+    let errors = check_normalized_mir(&ordinary_spill)
+        .expect_err("ordinary scalar spills cannot inherit consumed path authority")
+        .to_string();
+    assert!(
+        errors.contains("loaded without initialization on every incoming path"),
+        "{errors}"
+    );
 }
 
 #[test]
 fn normalized_contract_still_checks_source_visible_primitive_initialization() {
     let mut program =
         lower_source_to_mir("fn main() -> i64 { var result: i64 = 7; return result; }");
-    let definition = program
+    let local = program
         .definitions
-        .get_mut_for_test(program.entry_function)
-        .unwrap();
-    let local = definition
+        .get(program.entry_function)
+        .unwrap()
         .storage
         .iter()
         .find(|storage| storage.kind == MirStorageKind::Local)
         .unwrap()
         .id;
-    for block in &mut definition.body.blocks {
-        block.instructions.retain(|instruction| {
-            !matches!(
-                instruction,
-                MirInstruction::Store(store)
-                    if store.destination.base == MirPlaceBase::Storage(local)
-                        && store.destination.projections.is_empty()
-            )
-        });
-    }
+    remove_direct_stores(&mut program, local);
 
     let errors = check_normalized_mir(&program)
         .expect_err("normalization authority cannot excuse source-visible storage")
@@ -344,10 +343,35 @@ fn both_contracts_accept_an_initialized_ordinary_scalar_spill() {
 }
 
 #[test]
-fn normalized_scalar_spill_exception_has_an_explicit_before_state() {
+fn both_contracts_reject_an_uninitialized_ordinary_scalar_spill() {
     let mut program =
         lower_source_to_mir("fn main() -> i64 { var result: i64 = 7; return result; }");
     let spill = reclassify_result_local_as_scalar_spill(&mut program);
+    remove_direct_stores(&mut program, spill);
+
+    let proof_errors = verify_mir(&program)
+        .expect_err("proof-rich MIR must reject an uninitialized ordinary spill")
+        .to_string();
+    assert!(
+        proof_errors.contains("loaded without initialization on every incoming path"),
+        "{proof_errors}"
+    );
+    let normalized_errors = check_normalized_mir(&program)
+        .expect_err("normalized MIR must reject an uninitialized ordinary spill")
+        .to_string();
+    assert!(
+        normalized_errors.contains("loaded without initialization on every incoming path"),
+        "{normalized_errors}"
+    );
+}
+
+fn reclassify_result_local_as_scalar_spill(
+    program: &mut crate::mir::MirProgram,
+) -> crate::mir::StorageId {
+    reclassify_first_local(program, MirStorageKind::ScalarSpill, true)
+}
+
+fn remove_direct_stores(program: &mut crate::mir::MirProgram, storage: crate::mir::StorageId) {
     let definition = program
         .definitions
         .get_mut_for_test(program.entry_function)
@@ -357,27 +381,11 @@ fn normalized_scalar_spill_exception_has_an_explicit_before_state() {
             !matches!(
                 instruction,
                 MirInstruction::Store(store)
-                    if store.destination.base == MirPlaceBase::Storage(spill)
+                    if store.destination.base == MirPlaceBase::Storage(storage)
                         && store.destination.projections.is_empty()
             )
         });
     }
-
-    let errors = verify_mir(&program)
-        .expect_err("proof-rich MIR must reject an uninitialized ordinary spill")
-        .to_string();
-    assert!(
-        errors.contains("loaded without initialization on every incoming path"),
-        "{errors}"
-    );
-    check_normalized_mir(&program)
-        .expect("the current broad normalized spill exception is the baseline narrowed later");
-}
-
-fn reclassify_result_local_as_scalar_spill(
-    program: &mut crate::mir::MirProgram,
-) -> crate::mir::StorageId {
-    reclassify_first_local(program, MirStorageKind::ScalarSpill, true)
 }
 
 fn reclassify_first_local(

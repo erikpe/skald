@@ -1,8 +1,8 @@
 # Proof-Provenance Normalization Discoveries
 
-Status: open; the remaining storage-provenance follow-up now has a frozen
+Status: open; the remaining storage-provenance follow-up has a frozen
 [design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and a planned
+and an active
 [implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
 The archived
@@ -18,10 +18,10 @@ entry owns its cross-domain status and placement.
 
 ## Reclassified path activations lose their scalar-spill origin
 
-**Problem:** The normalized representation deliberately reclassifies
+**Problem:** The original normalized representation reclassified
 `PathCondition` activation storage as the already existing `ScalarSpill`
-kind. After proof records are consumed, ordinary scalar-initialization
-dataflow can no longer distinguish those former path activations from spills
+kind. After proof records were consumed, ordinary scalar-initialization
+dataflow could not distinguish those former path activations from spills
 created by other compiler protocols.
 
 **Concrete evidence:** Enabling the normalized lifecycle verifier for the new
@@ -31,15 +31,16 @@ under the path proof which the mandatory transaction has just consumed. The
 normalizer preserves the exact stores and loads, but the erased path records
 were the evidence needed to re-prove initialization at those sites.
 
-**Current bounded resolution:** Complete proof-rich verification still checks
-every `ScalarSpill` before normalization. Final-seal construction is possible
-only by consuming that seal through the complete transaction, and normalized
-verification continues checking every source-visible primitive storage kind.
-It excludes compiler-owned `ScalarSpill` storage from the general
-definite-initialization analysis and relies on the consumed-proof authority
-plus surviving checked-protocol validators for those internal carriers.
-Focused tests cover both accepted normalized path carriers and rejected
-uninitialized source locals.
+**Implemented core resolution:** Mandatory normalization now reclassifies the
+carrier as the dedicated final-only `NormalizedPathActivation` kind. Ordinary
+`ScalarSpill` declarations undergo definite-initialization analysis in both
+verifier stages. Only a structurally valid normalized activation receives
+consumed path-initialization trust, and only the private proof-consuming
+pipeline can issue the authority needed to seal a final product. Focused tests
+cover initialized and uninitialized ordinary spills, marked activations,
+wrong-stage and malformed declarations, leaked proof, and valid normalized
+programs. The discovery remains open until the active roadmap completes its
+transformation, backend, and source-profile audits.
 
 **Impact:** This is sound for the frozen one-way transition and the planned
 block/value-only canary, which neither creates nor moves storage accesses. It
@@ -52,9 +53,9 @@ with normalized verification; medium priority now that the proof boundary and
 its current consumers are stable, rising to high before a final-stage storage
 or spill transformation.
 
-**Proposed resolution:** The
+**Accepted resolution:** The
 [frozen normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md),
-implemented through the planned
+implemented through the active
 [roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md),
 adds a dedicated final-only storage kind produced solely by the mandatory
 normalizer, restores ordinary `ScalarSpill` definite-initialization checking in
