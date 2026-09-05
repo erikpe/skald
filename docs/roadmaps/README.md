@@ -78,11 +78,6 @@ The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).
 
-The [VM benchmark port discoveries](VM_BENCHMARK_DISCOVERIES.md) record a
-non-blocking compiler-robustness defect exposed by the minimal workload: an
-owning inline-class field read through a shared receiver can reach an internal
-type-checker assertion instead of compiling or producing a source diagnostic.
-
 ## Planned
 
 No additional implementation roadmap is waiting to start.

@@ -1,0 +1,54 @@
+import std::io;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+}
+
+class Payload {
+    item: Item;
+
+    init(value: i64) {
+        self.item = Item(value);
+    }
+}
+
+class Holder {
+    payload: shared Payload;
+
+    init(value: i64) {
+        self.payload = new Payload(value);
+    }
+}
+
+class Envelope {
+    item: Item;
+
+    init(item: Item) {
+        self.item = item;
+    }
+}
+
+fn produce(value: i64) -> shared Payload {
+    return new Payload(value);
+}
+
+fn main() -> i64 {
+    var owner: shared Payload = new Payload(3);
+    var holder: Holder = Holder(5);
+    var stable: Item = owner->item;
+    var anchored: Item = holder.payload->item;
+    var produced: Item = produce(7)->item;
+    var envelope: Envelope = Envelope(owner->item);
+
+    std::io::println_i64(stable.value + anchored.value + produced.value);
+    std::io::println_i64(envelope.item.value);
+    return 0;
+}

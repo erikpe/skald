@@ -23,3 +23,11 @@ source = "shared_copy_allocation.ska"
 [[test.run]]
 name = "allocation_and_cleanup"
 expect = { stdout = { file = "data/shared_copy_allocation.stdout" } }
+
+[[test]]
+name = "inline_field_copy"
+mode = "run"
+source = "shared_inline_field_copy.ska"
+[[test.run]]
+name = "stable_anchored_and_produced_receivers"
+expect = { stdout = { file = "data/shared_inline_field_copy.stdout" } }

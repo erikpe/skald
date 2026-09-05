@@ -610,6 +610,37 @@ impl CallableChecker<'_, '_> {
         Some(place)
     }
 
+    pub(in crate::typeck) fn check_dereference_field_copy_view(
+        &mut self,
+        access: &crate::resolve::ResolvedFieldAccessExpr,
+        field_class: crate::identity::ClassId,
+    ) -> Option<HirCheckedObjectView> {
+        let ResolvedObjectReceiver::Dereference {
+            dereference,
+            projections,
+            class: receiver_class,
+            ..
+        } = &access.receiver
+        else {
+            unreachable!("shared-field copy view requires a dereference receiver")
+        };
+        let pointee =
+            self.check_explicit_shared_pointee(dereference, projections.clone(), access.span)?;
+        let view = pointee.into_view(
+            crate::hir::HirViewTarget::Class(*receiver_class),
+            HirAccess::ReadOnly,
+        );
+        Some(HirCheckedObjectView {
+            view,
+            consumer_target: crate::hir::HirViewTarget::Class(field_class),
+            consumer_access: HirAccess::ReadOnly,
+            kind: crate::hir::HirCheckedObjectViewKind::Static,
+            projections: vec![ObjectProjection::Field(access.field)],
+            class: Some(field_class),
+            span: access.span,
+        })
+    }
+
     pub(in crate::typeck) fn check_binding_place(
         &mut self,
         binding: BindingId,

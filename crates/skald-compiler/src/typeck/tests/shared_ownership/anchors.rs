@@ -70,6 +70,59 @@ fn shared_backed_receivers_cover_inline_payload_subobjects() {
 }
 
 #[test]
+fn inline_field_copy_sources_preserve_shared_pointee_lifetimes() {
+    let output = type_check_source(concat!(
+        "class Leaf {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  copy(ref source: Leaf) { self.value = source.value; }\n",
+        "}\n",
+        "class Container {\n",
+        "  leaf: Leaf;\n",
+        "  init(value: i64) { self.leaf = Leaf(value); }\n",
+        "}\n",
+        "class Holder {\n",
+        "  edge: shared Container;\n",
+        "  init(value: i64) { self.edge = new Container(value); }\n",
+        "}\n",
+        "fn produce(value: i64) -> shared Container {\n",
+        "  return new Container(value);\n",
+        "}\n",
+        "fn consume(value: Leaf) -> i64 { return value.value; }\n",
+        "fn main() -> i64 {\n",
+        "  var owner: shared Container = new Container(3);\n",
+        "  var holder: Holder = Holder(5);\n",
+        "  var stable: Leaf = owner->leaf;\n",
+        "  var anchored: Leaf = holder.edge->leaf;\n",
+        "  return stable.value + anchored.value + consume(produce(7)->leaf);\n",
+        "}\n",
+    ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output
+        .hir
+        .expect("shared-pointee inline fields must be valid owning copy sources");
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).expect("shared-pointee inline-field copies must verify");
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    assert_eq!(
+        main.storage
+            .iter()
+            .filter(|storage| storage.kind == crate::mir::MirStorageKind::SharedAnchor)
+            .count(),
+        2
+    );
+    assert_eq!(
+        main.storage
+            .iter()
+            .filter(|storage| {
+                matches!(storage.kind, crate::mir::MirStorageKind::CheckedView(_))
+            })
+            .count(),
+        3
+    );
+}
+
+#[test]
 fn receiver_and_argument_anchors_precede_later_replacement_and_release_after_call() {
     let output = type_check_source(concat!(
         "class Leaf { value: i64; init(value: i64) { self.value = value; } }\n",

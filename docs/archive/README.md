@@ -108,6 +108,7 @@ Archived plans:
 - [Convergent local constant propagation](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
 - [Normalization-stable path-activation provenance](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 - [VM benchmark correctness workload](VM_BENCHMARK_ROADMAP.md)
+- [VM benchmark resolved discoveries](VM_BENCHMARK_DISCOVERIES.md)
 
 Resolved string-design inputs:
 

@@ -299,6 +299,33 @@ impl CallableChecker<'_, '_> {
             crate::resolve::ResolvedExpression::FieldAccess(access)
                 if matches!(
                     access.receiver,
+                    crate::resolve::ResolvedObjectReceiver::Dereference { .. }
+                ) =>
+            {
+                let field = self
+                    .program
+                    .field(access.field)
+                    .expect("resolved shared-pointee source field must exist");
+                let crate::resolve::ResolvedTypeKind::Class(field_class) = field.type_syntax.kind
+                else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "owning copy source must designate a class object",
+                        )
+                        .with_primary_label(
+                            access.member_span,
+                            "this shared-pointee field has a primitive type",
+                        ),
+                    );
+                    return None;
+                };
+                let checked = self.check_dereference_field_copy_view(access, field_class)?;
+                return self.finish_checked_object_source(checked, class, context);
+            }
+            crate::resolve::ResolvedExpression::FieldAccess(access)
+                if matches!(
+                    access.receiver,
                     crate::resolve::ResolvedObjectReceiver::OptionalPayload { .. }
                 ) =>
             {
