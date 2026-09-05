@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: in progress; NSR0 is complete and NSR1 is the next task.
+Status: in progress; NSR0 and NSR1 are complete and NSR2 is the next task.
 
 This roadmap implements the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
@@ -80,7 +80,7 @@ load, store, lifetime, attachment, and deletion conditions.
 ## Progress
 
 - [x] NSR0 — Freeze the storage-phase contract and baseline
-- [ ] NSR1 — Add the final-only storage representation exhaustively
+- [x] NSR1 — Add the final-only storage representation exhaustively
 - [ ] NSR2 — Make normalization retain the stable activation role
 - [ ] NSR3 — Narrow normalized scalar initialization authority
 - [ ] NSR4 — Seal rewrite and analysis handling of the new role
@@ -124,17 +124,17 @@ reproducible, and no runtime or optimization behavior has changed.
 **Purpose:** Introduce the stable semantic vocabulary and make omissions fail
 at the owners which must understand it.
 
-- [ ] Add the unit `MirStorageKind::NormalizedPathActivation` variant and its
+- [x] Add the unit `MirStorageKind::NormalizedPathActivation` variant and its
   narrow semantic query through the MIR model facade.
-- [ ] Classify it as final-only and `PathCondition` as proof-rich-only; reject
+- [x] Classify it as final-only and `PathCondition` as proof-rich-only; reject
   either kind at the wrong verifier seal.
-- [ ] Update every exhaustive model, identity traversal, rewrite, inspection,
+- [x] Update every exhaustive model, identity traversal, rewrite, inspection,
   analysis, debugging, and backend-facing match identified by NSR0.
-- [ ] Preserve the new kind without remapping or external side tables through
+- [x] Preserve the new kind without remapping or external side tables through
   storage-preserving dense rewrites.
-- [ ] Reject source-originated or otherwise invalid construction by contract;
+- [x] Reject source-originated or otherwise invalid construction by contract;
   do not add a public general constructor or payload.
-- [ ] Add future-variant maintenance tests so a new storage kind cannot bypass
+- [x] Add future-variant maintenance tests so a new storage kind cannot bypass
   phase legality or downstream classification.
 
 **Tests:** Exhaustive storage-kind contract tests; wrong-stage and malformed

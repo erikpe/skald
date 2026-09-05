@@ -370,6 +370,9 @@ pub enum MirStorageKind {
     PrimitiveAlias,
     /// Compiler-owned canonical boolean selecting conditional MIR state.
     PathCondition,
+    /// Compiler-owned boolean activation storage whose path-sensitive proof
+    /// was validated and consumed at the proof-to-final MIR boundary.
+    NormalizedPathActivation,
     /// Compiler-owned scalar destination populated only by a successful
     /// checked primitive-optional unwrap edge.
     OptionalUnwrap,
@@ -389,6 +392,16 @@ pub enum MirStorageKind {
     /// A compiler-owned address captured for one call-scoped array or array
     /// element alias argument.
     ArrayAlias(MirAliasAccess),
+}
+
+impl MirStorageKind {
+    /// Whether this is executable path-activation storage in normalized MIR.
+    ///
+    /// The classification retains no path-condition identity or other
+    /// consumed proof provenance.
+    pub const fn is_normalized_path_activation(self) -> bool {
+        matches!(self, Self::NormalizedPathActivation)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

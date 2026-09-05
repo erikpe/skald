@@ -43,6 +43,8 @@ pub(super) enum MirStoragePhaseAvailability {
     Both,
     /// The storage role is valid only while path-sensitive proof is present.
     ProofRichOnly,
+    /// The storage role is valid only after path-sensitive proof is consumed.
+    NormalizedOnly,
 }
 
 impl MirStoragePhaseAvailability {
@@ -50,6 +52,7 @@ impl MirStoragePhaseAvailability {
         match self {
             Self::Both => true,
             Self::ProofRichOnly => matches!(contract, MirVerificationContract::ProofRich),
+            Self::NormalizedOnly => matches!(contract, MirVerificationContract::Normalized),
         }
     }
 }
@@ -203,6 +206,7 @@ pub(crate) const fn classify_local_identity_site(
 pub(in crate::mir) const fn classify_storage_kind(kind: MirStorageKind) -> MirProofDisposition {
     match kind {
         MirStorageKind::PathCondition => MirProofDisposition::ExecutableCarrierWithProof,
+        MirStorageKind::NormalizedPathActivation => MirProofDisposition::PermanentSemantic,
         MirStorageKind::Return
         | MirStorageKind::Receiver
         | MirStorageKind::Parameter
@@ -235,6 +239,7 @@ pub(super) const fn classify_storage_phase_availability(
 ) -> MirStoragePhaseAvailability {
     match kind {
         MirStorageKind::PathCondition => MirStoragePhaseAvailability::ProofRichOnly,
+        MirStorageKind::NormalizedPathActivation => MirStoragePhaseAvailability::NormalizedOnly,
         MirStorageKind::Return
         | MirStorageKind::Receiver
         | MirStorageKind::Parameter
@@ -364,15 +369,23 @@ impl Verifier<'_> {
         for storage in function.storage_entries() {
             let availability = classify_storage_phase_availability(storage.kind);
             if !availability.permits(contract) {
-                let disposition = classify_storage_kind(storage.kind);
-                debug_assert!(!disposition.is_permanent());
-                self.normalized_function_error(
-                    function,
-                    MirNormalizedInvariantViolation::ProofBearingStorage {
-                        storage: storage.id,
-                        disposition,
-                    },
-                );
+                if contract.requires_proof_provenance() {
+                    debug_assert_eq!(availability, MirStoragePhaseAvailability::NormalizedOnly);
+                    self.function_error(
+                        function.callable(),
+                        format!("storage {} is legal only in normalized MIR", storage.id),
+                    );
+                } else {
+                    let disposition = classify_storage_kind(storage.kind);
+                    debug_assert!(!disposition.is_permanent());
+                    self.normalized_function_error(
+                        function,
+                        MirNormalizedInvariantViolation::ProofBearingStorage {
+                            storage: storage.id,
+                            disposition,
+                        },
+                    );
+                }
             }
         }
 

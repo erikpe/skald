@@ -156,6 +156,7 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::ScalarSpill, None)
                     | (MirStorageKind::PrimitiveAlias, None)
                     | (MirStorageKind::PathCondition, None)
+                    | (MirStorageKind::NormalizedPathActivation, None)
                     | (MirStorageKind::OptionalUnwrap, None)
                     | (MirStorageKind::SharedAllocation, None)
                     | (MirStorageKind::ArrayBacking, None)
@@ -249,6 +250,15 @@ impl<'mir> Verifier<'mir> {
                 self.function_error(
                     function.callable(),
                     format!("path-condition storage {} must be `bool`", storage.id),
+                );
+            }
+            if storage.kind.is_normalized_path_activation() && storage.ty != MirType::Bool {
+                self.function_error(
+                    function.callable(),
+                    format!(
+                        "normalized path-activation storage {} must be `bool`",
+                        storage.id
+                    ),
                 );
             }
             if (matches!(storage.ty, MirType::Shared(_))

@@ -337,12 +337,15 @@ basic-block merging, and then whole-world reachability.
 
 The accepted
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and planned
+and active
 [implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-add the next coverage layer. Tests will distinguish proof-rich
+add the next coverage layer. Current model and contract tests distinguish
+proof-rich
 `path-condition`, final-only `normalized-path-activation`, and ordinary
 `scalar-spill` declarations; reject either activation kind at the wrong seal;
-and prove that normalized definite-initialization rejects an uninitialized
+validate the final-only kind's source-free boolean shape; and prove dense
+rewriting preserves it without side metadata. Later tasks will prove that
+normalized definite-initialization rejects an uninitialized
 ordinary scalar spill while accepting only structurally valid normalized
 activations backed by consumed proof. Normalization tests must preserve exact
 storage/value/block identities and executable operations. Profile, native,

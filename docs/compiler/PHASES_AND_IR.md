@@ -1284,30 +1284,32 @@ and binds those facts to the new seal. Neither the raw normalized program nor
 its authority is externally constructible or detachable.
 
 Storage phase legality is a separate exhaustive verifier-contract decision
-from proof disposition. In the current representation, `PathCondition` is
-proof-rich-only and every other storage kind is legal in both products subject
-to its existing type, source, protocol, lifetime, and use checks. This single
-classification is the maintenance point for introducing any future phase-only
-storage role; individual verifiers do not choose phase availability
-independently.
+from proof disposition. `PathCondition` is proof-rich-only,
+`NormalizedPathActivation` is normalized-only, and every other storage kind is
+legal in both products subject to its existing type, source, protocol,
+lifetime, and use checks. The final-only unit kind carries no proof identity
+and has one model query for consumers which need its semantic role. This
+single classification is the maintenance point for future phase-only storage
+roles; individual verifiers do not choose phase availability independently.
 
 #### Frozen normalization-stable path-activation direction
 
-Status: **accepted; implementation planned**. The frozen
+Status: **accepted; implementation in progress**. The frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
 and its active
 [implementation roadmap](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 refine the representation at this boundary without changing execution.
 
-Once implemented, the mandatory normalizer will reclassify validated
-`PathCondition` storage to the final-only unit kind
-`NormalizedPathActivation`, rather than to ordinary `ScalarSpill`. The new
-kind retains only the executable storage role: it carries no path condition,
-logical expression, predecessor, parent, merge, or other consumed proof
-identity. `PathCondition` will remain legal only in proof-rich MIR;
-`NormalizedPathActivation` will be legal only in normalized MIR under the
-private consumed-proof seal. The normalizer remains the sole production
-constructor.
+The final-only `NormalizedPathActivation` vocabulary, semantic query, phase
+legality, source-free boolean declaration contract, exhaustive dump/import
+handling, and dense-rewrite preservation are implemented. The mandatory
+normalizer does not emit the kind yet: it still reclassifies validated
+`PathCondition` storage to ordinary `ScalarSpill`. The next representation
+transition changes that result to
+`NormalizedPathActivation`. The new kind retains only the executable storage
+role: it carries no path condition, logical expression, predecessor, parent,
+merge, or other consumed proof identity. The normalizer remains the sole
+production constructor.
 
 That distinction will let normalized verification resume ordinary definite-
 initialization analysis for genuine `ScalarSpill` declarations. Only a
@@ -1320,8 +1322,8 @@ it explicitly. FMM-13 dead-carrier deletion remains a separate optimization.
 This accepted change preserves the exact `StorageId`, declaration order,
 stores, loads, lifetime markers, blocks, values, spans, evaluation and failure
 order, cleanup, lifecycle, reachability, ABI, and target behavior. Until the
-roadmap is complete, current normalized MIR continues to use `ScalarSpill` and
-the broader documented verifier exception above.
+normalizer transition lands, production normalized MIR continues to use
+`ScalarSpill` and the broader documented verifier exception above.
 
 The normalized verifier shares ordinary structural, lifecycle, reference, and
 reachable-definition owners with proof-rich verification, but does not pretend

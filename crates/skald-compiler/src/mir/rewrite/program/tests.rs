@@ -3,7 +3,8 @@ use std::process::Command;
 use crate::{
     identity::CallableId,
     mir::{
-        dump_mir, BlockId, MirBasicBlock, MirInstruction, MirRvalueKind, MirTerminator, ValueId,
+        check_normalized_mir, dump_mir, BlockId, MirBasicBlock, MirInstruction, MirRvalueKind,
+        MirStorageKind, MirTerminator, MirType, ValueId,
     },
     passes::verify_final_mir,
     test_support::lower_source_to_final_mir,
@@ -80,6 +81,35 @@ fn no_op_program_rewrite_preserves_every_definition_and_exact_dump() {
             .collect::<Vec<_>>(),
         expected_callables
     );
+}
+
+#[test]
+fn no_op_dense_rewrite_preserves_normalized_activation_classification() {
+    let mut original =
+        lower_source_to_final_mir("fn main() -> i64 { var active: bool = true; return 0; }");
+    let definition = original
+        .definitions
+        .get_mut_for_test(original.entry_function)
+        .unwrap();
+    let activation = definition
+        .storage
+        .iter_mut()
+        .find(|storage| storage.kind == MirStorageKind::Local && storage.ty == MirType::Bool)
+        .expect("fixture must contain one boolean local");
+    activation.kind = MirStorageKind::NormalizedPathActivation;
+    activation.source = None;
+    check_normalized_mir(&original).expect("synthetic final-only storage must be valid");
+
+    let rewritten = rewrite_program(original.clone(), |_callable, _edit| Ok(())).unwrap();
+
+    assert_eq!(rewritten.program, original);
+    assert!(rewritten
+        .program
+        .executable_definitions()
+        .flat_map(|definition| definition.storage_entries())
+        .any(|storage| storage.kind.is_normalized_path_activation()));
+    check_normalized_mir(&rewritten.program)
+        .expect("dense reconstruction must preserve final-only storage exactly");
 }
 
 #[test]

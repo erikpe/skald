@@ -3,9 +3,9 @@
 Status: completed NSR0 baseline for the active
 [normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
-This inventory records the current `MirStorageKind` ownership boundary before
-`NormalizedPathActivation` is added. It is an implementation aid for the next
-roadmap tasks, not a second architecture contract. The frozen
+This inventory records the `MirStorageKind` ownership boundary captured before
+`NormalizedPathActivation` was added. It remains an implementation aid for
+the later roadmap tasks, not a second architecture contract. The frozen
 [design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
 and living [phase contract](../compiler/PHASES_AND_IR.md#frozen-normalization-stable-path-activation-direction)
 remain authoritative.

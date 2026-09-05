@@ -716,6 +716,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::ScalarSpill => "scalar-spill",
             MirStorageKind::PrimitiveAlias => "primitive-alias",
             MirStorageKind::PathCondition => "path-condition",
+            MirStorageKind::NormalizedPathActivation => "normalized-path-activation",
             MirStorageKind::OptionalUnwrap => "optional-unwrap",
             MirStorageKind::SharedAllocation => "shared-allocation",
             MirStorageKind::ArrayBacking => "array-backing",
@@ -741,6 +742,9 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::ScalarSpill => output.push_str("<scalar-spill> "),
                 MirStorageKind::PrimitiveAlias => output.push_str("<primitive-alias> "),
                 MirStorageKind::PathCondition => output.push_str("<path-condition> "),
+                MirStorageKind::NormalizedPathActivation => {
+                    output.push_str("<normalized-path-activation> ")
+                }
                 MirStorageKind::OptionalUnwrap => output.push_str("<optional-unwrap> "),
                 MirStorageKind::SharedAllocation => output.push_str("<shared-allocation> "),
                 MirStorageKind::ArrayBacking => output.push_str("<array-backing> "),

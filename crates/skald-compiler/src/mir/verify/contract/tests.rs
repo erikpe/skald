@@ -1,7 +1,8 @@
 use crate::{
     mir::{
-        rewrite::MirLocalIdentitySite, verify_mir, BlockId, MirAliasAccess, MirArrayAnchorKind,
-        MirInstruction, MirPlace, MirPlaceBase, MirRvalueKind, MirStorageKind, MirTerminator,
+        dump_mir, rewrite::MirLocalIdentitySite, verify_mir, BlockId, MirAliasAccess,
+        MirArrayAnchorKind, MirInstruction, MirPlace, MirPlaceBase, MirRvalueKind, MirStorageKind,
+        MirTerminator, MirType,
     },
     test_support::lower_source_to_mir,
 };
@@ -78,6 +79,10 @@ fn classification_identifies_only_path_carrier_forms_as_mixed() {
         MirProofDisposition::PermanentSemantic
     );
     assert_eq!(
+        classify_storage_kind(MirStorageKind::NormalizedPathActivation),
+        MirProofDisposition::PermanentSemantic
+    );
+    assert_eq!(
         classify_rvalue_kind(&assignment.rvalue.kind),
         MirProofDisposition::PermanentSemantic
     );
@@ -130,6 +135,87 @@ fn every_current_storage_kind_has_one_explicit_phase_availability() {
     assert_eq!(path_condition, MirStoragePhaseAvailability::ProofRichOnly);
     assert!(path_condition.permits(MirVerificationContract::ProofRich));
     assert!(!path_condition.permits(MirVerificationContract::Normalized));
+
+    let normalized_activation =
+        classify_storage_phase_availability(MirStorageKind::NormalizedPathActivation);
+    assert_eq!(
+        normalized_activation,
+        MirStoragePhaseAvailability::NormalizedOnly
+    );
+    assert!(!normalized_activation.permits(MirVerificationContract::ProofRich));
+    assert!(normalized_activation.permits(MirVerificationContract::Normalized));
+}
+
+#[test]
+fn normalized_path_activation_has_one_narrow_semantic_query() {
+    assert!(MirStorageKind::NormalizedPathActivation.is_normalized_path_activation());
+    assert!(!MirStorageKind::PathCondition.is_normalized_path_activation());
+    assert!(!MirStorageKind::ScalarSpill.is_normalized_path_activation());
+}
+
+#[test]
+fn proof_rich_contract_rejects_normalized_path_activation_storage() {
+    let mut program =
+        lower_source_to_mir("fn main() -> i64 { var active: bool = true; return 0; }");
+    reclassify_first_local(&mut program, MirStorageKind::NormalizedPathActivation, true);
+
+    let errors = verify_mir(&program)
+        .expect_err("normalized-only storage must not cross the proof-rich seal")
+        .to_string();
+    assert!(
+        errors.contains("is legal only in normalized MIR"),
+        "{errors}"
+    );
+}
+
+#[test]
+fn normalized_activation_declaration_contract_is_explicit() {
+    let source = "fn main() -> i64 { var active: bool = true; return 0; }";
+    let mut valid = lower_source_to_mir(source);
+    reclassify_first_local(&mut valid, MirStorageKind::NormalizedPathActivation, true);
+    check_normalized_mir(&valid)
+        .expect("a generated boolean normalized activation must be structurally valid");
+    let dump = dump_mir(&valid);
+    assert!(dump.contains("normalized-path-activation <normalized-path-activation> \"active\""));
+
+    let mut source_backed = lower_source_to_mir(source);
+    reclassify_first_local(
+        &mut source_backed,
+        MirStorageKind::NormalizedPathActivation,
+        false,
+    );
+    let errors = check_normalized_mir(&source_backed)
+        .expect_err("source bindings cannot claim compiler-owned activation storage")
+        .to_string();
+    assert!(
+        errors.contains("kind does not match its source binding"),
+        "{errors}"
+    );
+
+    let mut wrong_type =
+        lower_source_to_mir("fn main() -> i64 { var result: i64 = 7; return result; }");
+    let storage = reclassify_first_local(
+        &mut wrong_type,
+        MirStorageKind::NormalizedPathActivation,
+        true,
+    );
+    assert_eq!(
+        wrong_type
+            .definitions
+            .get(wrong_type.entry_function)
+            .unwrap()
+            .storage(storage)
+            .unwrap()
+            .ty,
+        MirType::I64
+    );
+    let errors = check_normalized_mir(&wrong_type)
+        .expect_err("normalized activations must have boolean storage")
+        .to_string();
+    assert!(
+        errors.contains("normalized path-activation storage") && errors.contains("must be `bool`"),
+        "{errors}"
+    );
 }
 
 #[test]
@@ -291,6 +377,14 @@ fn normalized_scalar_spill_exception_has_an_explicit_before_state() {
 fn reclassify_result_local_as_scalar_spill(
     program: &mut crate::mir::MirProgram,
 ) -> crate::mir::StorageId {
+    reclassify_first_local(program, MirStorageKind::ScalarSpill, true)
+}
+
+fn reclassify_first_local(
+    program: &mut crate::mir::MirProgram,
+    kind: MirStorageKind,
+    clear_source: bool,
+) -> crate::mir::StorageId {
     let definition = program
         .definitions
         .get_mut_for_test(program.entry_function)
@@ -300,7 +394,9 @@ fn reclassify_result_local_as_scalar_spill(
         .iter_mut()
         .find(|storage| storage.kind == MirStorageKind::Local)
         .expect("fixture must lower one local result");
-    storage.kind = MirStorageKind::ScalarSpill;
-    storage.source = None;
+    storage.kind = kind;
+    if clear_source {
+        storage.source = None;
+    }
     storage.id
 }

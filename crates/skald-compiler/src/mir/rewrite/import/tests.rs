@@ -4,7 +4,7 @@ use crate::{
     identity::{BindingId, CallableId, FunctionId, LocalId},
     mir::{
         BlockId, MirCallTarget, MirFunctionDefinition, MirInstruction, MirStorageKind,
-        MirTerminator, OptionalGuardId, PathConditionId, StorageId, ValueId,
+        MirTerminator, MirType, OptionalGuardId, PathConditionId, StorageId, ValueId,
     },
     passes::verify_final_mir,
     test_support::lower_source_to_final_mir,
@@ -199,6 +199,25 @@ fn imported_storage_requires_explicit_source_free_destination_provenance() {
         destination.storage(imported).unwrap().kind,
         MirStorageKind::Temporary
     );
+}
+
+#[test]
+fn imported_normalized_activation_preserves_its_identity_free_kind() {
+    let (mut source, mut destination) = source_and_destination();
+    let source_storage = source.storage_ids().next().unwrap();
+    source.storage[0].kind = MirStorageKind::NormalizedPathActivation;
+    source.storage[0].ty = MirType::Bool;
+    source.storage[0].source = None;
+    let mut request = MirImportRequest::new(BlockPlacement::Append);
+    request.import_storage(source_storage, MirStorageKind::NormalizedPathActivation);
+
+    let result = destination.import_region(&source, request).unwrap();
+    let imported = result.maps.storage.destination(source_storage).unwrap();
+    let declaration = destination.storage(imported).unwrap();
+    assert_eq!(declaration.kind, MirStorageKind::NormalizedPathActivation);
+    assert!(declaration.kind.is_normalized_path_activation());
+    assert_eq!(declaration.ty, MirType::Bool);
+    assert_eq!(declaration.source, None);
 }
 
 #[test]

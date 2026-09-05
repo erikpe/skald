@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Discoveries
 
-Status: open companion record for the planned
+Status: open companion record for the active
 [normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
 The frozen

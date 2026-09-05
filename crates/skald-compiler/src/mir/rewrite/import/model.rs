@@ -344,6 +344,7 @@ pub(super) fn is_imported_storage_kind(kind: MirStorageKind) -> bool {
         | MirStorageKind::ScalarSpill
         | MirStorageKind::PrimitiveAlias
         | MirStorageKind::PathCondition
+        | MirStorageKind::NormalizedPathActivation
         | MirStorageKind::OptionalUnwrap
         | MirStorageKind::SharedAllocation
         | MirStorageKind::ArrayBacking

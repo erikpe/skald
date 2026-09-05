@@ -158,6 +158,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 | MirStorageKind::ScalarSpill
                 | MirStorageKind::PrimitiveAlias
                 | MirStorageKind::PathCondition
+                | MirStorageKind::NormalizedPathActivation
                 | MirStorageKind::OptionalUnwrap
                 | MirStorageKind::SharedAllocation
                 | MirStorageKind::ArrayBacking

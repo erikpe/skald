@@ -129,6 +129,11 @@ fn path_reads_and_activation_storage_are_reclassified_without_other_edits() {
     let mut expected_storage = original_storage;
     expected_storage.kind = MirStorageKind::ScalarSpill;
     assert_eq!(output.storage(read.activation), Some(&expected_storage));
+    assert!(!output
+        .storage(read.activation)
+        .unwrap()
+        .kind
+        .is_normalized_path_activation());
     assert_eq!(
         output
             .body
