@@ -296,7 +296,12 @@ public class ExactDoubleBuiltin extends BaseBuiltin {
         if (result > threshold) {
             total = total + 5;
         }
-        total = total + (i64) Str.from_f64(result).len();
+        var result_text: Str = Str.from_f64(result);
+        var round_trip: f64? = result_text.to_f64();
+        if (round_trip is none || round_trip! != result) {
+            panic("ExactDoubleBuiltin.invoke: f64 round trip failed");
+        }
+        total = total + (i64) result_text.len();
 
         vm.write_reg(0, total);
         vm.note_trace(total);

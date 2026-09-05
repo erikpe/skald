@@ -1,6 +1,8 @@
 from std::error import panic;
 from std::i64 import BoxI64;
+from std::map import Map;
 from std::str import Str;
+from std::vec import Vec;
 import vm_benchmark::model as model;
 import vm_benchmark::opcodes as opcodes;
 
@@ -30,37 +32,34 @@ public class Vm implements model::VmApi {
     name: Str;
     program: shared model::Program;
     frame: shared Frame;
-    frame_stack: ((shared Frame)?)[];
-    frame_depth: u64;
+    frame_stack: Vec<shared Frame>;
     memory: shared i64[];
     halted: bool;
     return_value: i64;
     trace_sum: i64;
-    executed_instructions: u64;
     executed_calls: u64;
     taken_branches: u64;
     executed_builtins: u64;
+    instruction_counts: Map<Str, u64>;
 
     init(
         name: Str,
         program: shared model::Program,
         frame: shared Frame,
-        frame_stack: ((shared Frame)?)[],
         memory: shared i64[]
     ) {
         self.name = name;
         self.program = program;
         self.frame = frame;
-        self.frame_stack = frame_stack;
-        self.frame_depth = 0u;
+        self.frame_stack = Vec<shared Frame>.with_capacity(0u);
         self.memory = memory;
         self.halted = false;
         self.return_value = 0;
         self.trace_sum = 0;
-        self.executed_instructions = 0u;
         self.executed_calls = 0u;
         self.taken_branches = 0u;
         self.executed_builtins = 0u;
+        self.instruction_counts = Map<Str, u64>();
     }
 
     fn memory_checksum() -> i64 {
@@ -94,6 +93,30 @@ public class Vm implements model::VmApi {
         return;
     }
 
+    mut fn note_instruction(ref opcode_name: Str) -> unit {
+        var opcode_count: u64 = 0u;
+        if (self.instruction_counts.contains(opcode_name)) {
+            opcode_count = self.instruction_counts[opcode_name];
+        }
+        self.instruction_counts[opcode_name] = opcode_count + 1u;
+
+        var total_key: Str = "__total__";
+        var total_count: u64 = 0u;
+        if (self.instruction_counts.contains(total_key)) {
+            total_count = self.instruction_counts[total_key];
+        }
+        self.instruction_counts[total_key] = total_count + 1u;
+        return;
+    }
+
+    fn instruction_count() -> u64 {
+        var total_key: Str = "__total__";
+        if (!self.instruction_counts.contains(total_key)) {
+            return 0u;
+        }
+        return self.instruction_counts[total_key];
+    }
+
     fn current_instruction() -> shared model::Instruction {
         var function_id: i64 = (i64) self.frame->function_id;
         var pc: i64 = (i64) self.frame->pc;
@@ -106,7 +129,8 @@ public class Vm implements model::VmApi {
     mut fn run() -> model::BenchmarkResult {
         while (!self.halted) {
             var instruction: shared model::Instruction = self.current_instruction();
-            self.executed_instructions = self.executed_instructions + 1u;
+            var opcode_name: Str = instruction->debug_name();
+            self.note_instruction(opcode_name);
             instruction->execute(self);
         }
 
@@ -117,7 +141,7 @@ public class Vm implements model::VmApi {
             self.memory->[0],
             self.memory_checksum(),
             self.trace_sum,
-            self.executed_instructions,
+            self.instruction_count(),
             self.executed_calls,
             self.taken_branches,
             self.executed_builtins
@@ -239,7 +263,7 @@ public class Vm implements model::VmApi {
         if (function_id >= self.program->functions.len()) {
             panic("Vm.call_function: function index out of bounds");
         }
-        if (self.frame_depth >= self.frame_stack.len()) {
+        if (self.frame_stack.len() >= 128u) {
             panic("Vm.call_function: frame stack overflow");
         }
 
@@ -258,8 +282,7 @@ public class Vm implements model::VmApi {
             index = index + 1;
         }
 
-        self.frame_stack[(i64) self.frame_depth] = caller;
-        self.frame_depth = self.frame_depth + 1u;
+        self.frame_stack.push(caller);
         self.executed_calls = self.executed_calls + 1u;
         self.frame = new Frame(
             function_id,
@@ -273,14 +296,13 @@ public class Vm implements model::VmApi {
 
     mut fn ret_from(src_reg: i64) -> unit {
         var value: i64 = self.frame->registers->[src_reg];
-        if (self.frame_depth == 0u) {
+        if (self.frame_stack.is_empty()) {
             self.halt_with(value);
             return;
         }
 
         var finished: shared Frame = self.frame;
-        self.frame_depth = self.frame_depth - 1u;
-        self.frame = self.frame_stack[(i64) self.frame_depth]!;
+        self.frame = self.frame_stack.pop();
         self.frame->registers->[finished->return_dst_reg] = value;
         self.frame->pc = finished->return_pc;
         return;
@@ -304,12 +326,10 @@ public fn run_case(ref benchmark_case: model::BenchmarkCase) -> model::Benchmark
         0u,
         0
     );
-    var frame_stack: ((shared Frame)?)[] = ((shared Frame)?)[](128u);
     var vm: Vm = Vm(
         program_name,
         program,
         frame,
-        frame_stack,
         new i64[](program->memory_size)
     );
     return vm.run();

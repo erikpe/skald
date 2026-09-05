@@ -3,10 +3,70 @@ from std::process import args;
 from std::str import Str;
 import vm_benchmark::main as benchmark;
 
+fn algebraic_optimization_canary(value: i64) -> i64 {
+    // Keep the input dynamic so algebraic, rather than literal, folding owns
+    // the identity and annihilator rewrites.
+    var identity: i64 = value + 0;
+    var zero: i64 = value * 0;
+    return identity + zero;
+}
+
+fn checked_integer_optimization_canary() -> i64 {
+    // Derived constants cross the checked operand carriers before the complete
+    // quotient, remainder, and shift protocols are folded.
+    var quotient: i64 = (40 + 2) / (1 + 5);
+    var remainder: i64 = (8 + 1) % (1 + 3);
+    var shifted: i64 = (1 + 2) << 4u;
+    return quotient + remainder + shifted;
+}
+
+fn checked_result_propagation_canary() -> i64 {
+    // The folded checked result feeds another primitive expression directly,
+    // exercising propagation across the checked protocol carrier.
+    return (8 / 2) + 3;
+}
+
+fn checked_operand_propagation_canary() -> i64 {
+    // Nest complete checked protocols so the outer quotient can consume facts
+    // produced by the inner quotient and remainder protocols.
+    return (100 / 5) / (9 % 4);
+}
+
+fn logical_optimization_canary(rhs: bool) -> bool {
+    // Exercise both selected paths of both short-circuit operators. The final
+    // comparison also lets a primitive fact cross logical provenance.
+    var and_short: bool = false && rhs;
+    var and_right: bool = true && rhs;
+    var or_short: bool = true || rhs;
+    var or_right: bool = false || rhs;
+    var propagated: bool = ((1 + 1) == 2) && rhs;
+    return !and_short && and_right && or_short && or_right && propagated;
+}
+
+fn logical_result_propagation_canary(rhs: bool) -> bool {
+    // Consume the selected short-circuit result immediately so its constant
+    // fact crosses the logical carrier into the equality expression.
+    return (false && rhs) == false;
+}
+
+fn exercise_optimization_canaries() -> i64 {
+    if (!logical_optimization_canary(true)
+            || !logical_result_propagation_canary(true)) {
+        return -1;
+    }
+    return algebraic_optimization_canary(7)
+        + checked_integer_optimization_canary()
+        + checked_result_propagation_canary()
+        + checked_operand_propagation_canary();
+}
+
 fn main() -> i64 {
     var program_args: Str[] = args();
     if (program_args.len() != 2u) {
         panic("vm_benchmark: expected one case selector");
+    }
+    if (exercise_optimization_canaries() != 90) {
+        panic("vm_benchmark: optimization canary failed");
     }
 
     var selection: u64 = program_args[1].to_u64()!;
