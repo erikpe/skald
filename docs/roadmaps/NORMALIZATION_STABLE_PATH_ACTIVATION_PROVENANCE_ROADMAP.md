@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: in progress; NSR0 through NSR3 are complete and NSR4 is the next task.
+Status: in progress; NSR0 through NSR4 are complete and NSR5 is the next task.
 
 This roadmap implements the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
@@ -83,7 +83,7 @@ load, store, lifetime, attachment, and deletion conditions.
 - [x] NSR1 — Add the final-only storage representation exhaustively
 - [x] NSR2 — Make normalization retain the stable activation role
 - [x] NSR3 — Narrow normalized scalar initialization authority
-- [ ] NSR4 — Seal rewrite and analysis handling of the new role
+- [x] NSR4 — Seal rewrite and analysis handling of the new role
 - [ ] NSR5 — Preserve backend behavior and deterministic observation
 - [ ] NSR6 — Complete source, profile, and malformed-MIR evidence
 - [ ] NSR7 — Harden ownership, documentation, and roadmap closure
@@ -206,19 +206,19 @@ obligations remain active.
 **Purpose:** Ensure current transformations preserve the distinction and
 future storage transformations cannot silently erase it.
 
-- [ ] Audit final-stage unreachable deletion, empty-block forwarding, block
+- [x] Audit final-stage unreachable deletion, empty-block forwarding, block
   merging, dead-pure-definition elimination, reachability, and constant
   consumers against normalized activation declarations and accesses.
-- [ ] Make the existing storage-use census and semantic classifiers distinguish
+- [x] Make the existing storage-use census and semantic classifiers distinguish
   the new role from ordinary scalar spills without treating it as an eligible
   checked constant carrier.
-- [ ] Prove current block/value/CFG edit capabilities cannot create, delete,
+- [x] Prove current block/value/CFG edit capabilities cannot create, delete,
   reclassify, or move storage operations as an incidental side effect.
-- [ ] Add an explicit default-reject requirement to any capability or edit plan
+- [x] Add an explicit default-reject requirement to any capability or edit plan
   which gains storage mutation in the future.
-- [ ] Revalidate the kind and its structural invariants after every changed
+- [x] Revalidate the kind and its structural invariants after every changed
   final-stage transaction and fresh seal.
-- [ ] Use only the storage-kind semantic query; add tests rejecting name-,
+- [x] Use only the storage-kind semantic query; add tests rejecting name-,
   span-, topology-, and stale-set-based classification assumptions.
 
 **Tests:** Every current final pass with live and unreachable path activations;

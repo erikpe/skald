@@ -1,14 +1,15 @@
 use crate::{
     identity::CallableId,
-    mir::{BlockId, MirBasicBlock, MirTerminator},
+    mir::{rewrite::storage_use_census_for_definition, BlockId, MirBasicBlock, MirTerminator},
     passes::reachability::analyze_reachability,
     test_support::lower_source_to_final_mir,
 };
 
 use super::{
     optimizations::{
-        post_proof_basic_block_merging, post_proof_empty_block_forwarding,
-        post_proof_unreachable_block_elimination, whole_world_reachability,
+        constant_short_circuit_folding, post_proof_basic_block_merging,
+        post_proof_empty_block_forwarding, post_proof_unreachable_block_elimination,
+        whole_world_reachability,
     },
     resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, run_mir_pipeline_with_occurrences,
     MirOptimizationProfile, MirPassIdentity, MirPassOccurrenceOutcome, MirPassStage,
@@ -41,6 +42,77 @@ fn every_final_suffix_pass_executes_alone_through_the_mandatory_boundary() {
         assert_eq!(measured.occurrences().len(), 1);
         assert_eq!(measured.occurrences()[0].identity(), identity);
         assert_eq!(measured.occurrences()[0].stage(), MirPassStage::Final);
+        assert_eq!(
+            measured.occurrences()[0].outcome(),
+            MirPassOccurrenceOutcome::Unchanged
+        );
+        assert_eq!(measured.occurrences()[0].verification_executions(), 0);
+    }
+}
+
+#[test]
+fn every_final_suffix_pass_preserves_normalized_activation_storage_semantics() {
+    let input = lower_source_to_final_mir(
+        "fn unused() -> bool { return false && true; }
+         fn main() -> i64 {
+           if (false && true) { return 1; }
+           return 0;
+         }",
+    );
+    let unused = input
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "unused")
+        .unwrap()
+        .id;
+    let reference = run_mir_pipeline_with_occurrences(
+        input.clone(),
+        &exact(&[constant_short_circuit_folding::IDENTITY]),
+    )
+    .result
+    .unwrap();
+    let expected_storage = reference
+        .definitions
+        .get(reference.entry_function)
+        .unwrap()
+        .storage
+        .clone();
+    let activations = expected_storage
+        .iter()
+        .filter(|storage| storage.kind.is_normalized_path_activation())
+        .map(|storage| storage.id)
+        .collect::<Vec<_>>();
+    assert!(!activations.is_empty());
+
+    for identity in FINAL_SUFFIX {
+        let measured = run_mir_pipeline_with_occurrences(
+            input.clone(),
+            &exact(&[constant_short_circuit_folding::IDENTITY, identity]),
+        );
+        let final_occurrence = measured.occurrences().last().unwrap();
+        assert_eq!(final_occurrence.identity(), identity);
+        assert_eq!(
+            final_occurrence.verification_executions(),
+            u64::from(final_occurrence.outcome() == MirPassOccurrenceOutcome::Changed)
+        );
+        let output = measured.result.unwrap();
+        let definition = output.definitions.get(output.entry_function).unwrap();
+
+        assert_eq!(definition.storage, expected_storage, "{identity:?}");
+        let census = storage_use_census_for_definition(definition.into()).unwrap();
+        for activation in &activations {
+            assert!(
+                census
+                    .get(*activation)
+                    .unwrap()
+                    .kind()
+                    .is_normalized_path_activation(),
+                "{identity:?}"
+            );
+        }
+        if identity == whole_world_reachability::IDENTITY {
+            assert!(output.definitions.get(unused).is_none());
+        }
     }
 }
 

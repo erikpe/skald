@@ -6,13 +6,58 @@ use crate::{
             MirRewriteError,
         },
         BlockId, MirAssignment, MirBasicBlock, MirInstruction, MirRvalue, MirRvalueKind,
-        MirTerminator, MirType, MirValue, ValueId,
+        MirStorageKind, MirTerminator, MirType, MirValue, ValueId,
     },
     passes::verify_final_mir,
     test_support::lower_source_to_final_mir,
 };
 
 use super::*;
+use crate::passes::pipeline::execution::{MirFinalPassCapability, MirPassFailure};
+
+#[test]
+fn final_cfg_capability_rejects_storage_reclassification_before_commit() {
+    let source = "fn main() -> i64 { if (true && false) { return 1; } return 0; }";
+    let verified = verify_final_mir(lower_source_to_final_mir(source)).unwrap();
+    let original = verified.program().clone();
+    let owner = CallableId::Function(verified.entry_function);
+    let activation = verified
+        .definitions
+        .get(verified.entry_function)
+        .unwrap()
+        .storage
+        .iter()
+        .find(|storage| storage.kind.is_normalized_path_activation())
+        .unwrap()
+        .id;
+
+    let error = match MirFinalPassCapability::new(verified).rewrite_cfg(|callable, edit| {
+        if callable == owner {
+            edit.edit.replace_storage_kind(
+                activation,
+                MirStorageKind::NormalizedPathActivation,
+                MirStorageKind::ScalarSpill,
+            )?;
+        }
+        Ok(())
+    }) {
+        Ok(_) => panic!("final CFG capability unexpectedly published a storage mutation"),
+        Err(error) => error,
+    };
+
+    assert!(matches!(
+        error,
+        MirPassFailure::Rewrite(MirRewriteError::UnsupportedFinalCfgStorageMutation {
+            callable
+        }) if callable == owner
+    ));
+    assert_eq!(
+        original,
+        *verify_final_mir(lower_source_to_final_mir(source))
+            .unwrap()
+            .program()
+    );
+}
 
 #[test]
 fn exact_normalized_snapshot_removes_only_disconnected_blocks_and_values() {

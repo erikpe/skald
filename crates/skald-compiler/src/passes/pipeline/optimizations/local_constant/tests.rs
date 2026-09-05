@@ -110,6 +110,7 @@ fn census_is_deterministic_and_classifies_checked_carrier_accesses() {
     let carrier = only_checked_storage(&program, CheckedCarrierProtocolRole::FirstOperand);
     let entry = first.get(carrier).unwrap();
     assert_eq!(entry.storage(), carrier);
+    assert_eq!(entry.kind(), MirStorageKind::ScalarSpill);
     assert!(matches!(
         entry.declaration(),
         crate::mir::rewrite::MirLocalIdentitySite::StorageDeclaration(_)
@@ -219,17 +220,22 @@ fn every_storage_role_has_an_explicit_carrier_certification_disposition() {
 
 #[test]
 fn rejects_wrong_kind_and_type_without_considering_unrelated_spills() {
-    let mut wrong_kind = lower_source_to_final_mir("fn main() -> i64 { return 8 / 2; }");
-    let carrier = only_checked_storage(&wrong_kind, CheckedCarrierProtocolRole::FirstOperand);
-    entry_definition_mut(&mut wrong_kind).storage[carrier.index()].kind =
-        MirStorageKind::PathCondition;
-    // Topology itself becomes non-canonical, so no carrier observation leaks
-    // through the topology boundary.
-    assert!(
-        certify_checked_integer_carriers(entry_definition(&wrong_kind).into())
-            .unwrap()
-            .is_empty()
-    );
+    for wrong_kind in [
+        MirStorageKind::PathCondition,
+        MirStorageKind::NormalizedPathActivation,
+    ] {
+        let mut program = lower_source_to_final_mir("fn main() -> i64 { return 8 / 2; }");
+        let carrier = only_checked_storage(&program, CheckedCarrierProtocolRole::FirstOperand);
+        entry_definition_mut(&mut program).storage[carrier.index()].kind = wrong_kind;
+        // Name, type, span, and topology remain unchanged. Semantic kind alone
+        // excludes this storage from checked-carrier classification.
+        assert!(
+            certify_checked_integer_carriers(entry_definition(&program).into())
+                .unwrap()
+                .is_empty(),
+            "{wrong_kind:?}"
+        );
+    }
 
     let mut wrong_type = lower_source_to_final_mir("fn main() -> i64 { return 8 / 2; }");
     let carrier = only_checked_storage(&wrong_type, CheckedCarrierProtocolRole::FirstOperand);
@@ -256,6 +262,38 @@ fn rejects_wrong_kind_and_type_without_considering_unrelated_spills() {
             .unwrap()
             .len(),
         3
+    );
+}
+
+#[test]
+fn carrier_classification_recomputes_storage_kind_from_each_snapshot() {
+    let mut program = lower_source_to_final_mir("fn main() -> i64 { return 8 / 2; }");
+    let carrier = only_checked_storage(&program, CheckedCarrierProtocolRole::FirstOperand);
+    let before = storage_use_census_for_definition(entry_definition(&program).into()).unwrap();
+    assert_eq!(
+        before.get(carrier).unwrap().kind(),
+        MirStorageKind::ScalarSpill
+    );
+
+    // Preserve every heuristic property of the declaration and protocol except
+    // its semantic role. A fresh census observes the new role; the old census
+    // remains an immutable description of its own snapshot.
+    entry_definition_mut(&mut program).storage[carrier.index()].kind =
+        MirStorageKind::NormalizedPathActivation;
+    let after = storage_use_census_for_definition(entry_definition(&program).into()).unwrap();
+    assert_eq!(
+        before.get(carrier).unwrap().kind(),
+        MirStorageKind::ScalarSpill
+    );
+    assert!(after
+        .get(carrier)
+        .unwrap()
+        .kind()
+        .is_normalized_path_activation());
+    assert!(
+        certify_checked_integer_carriers(entry_definition(&program).into())
+            .unwrap()
+            .is_empty()
     );
 }
 

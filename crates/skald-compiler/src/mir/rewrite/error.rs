@@ -70,6 +70,9 @@ pub(crate) enum MirRewriteError {
         block: super::super::BlockId,
         site: MirLocalIdentitySite,
     },
+    UnsupportedFinalCfgStorageMutation {
+        callable: CallableId,
+    },
     PathParentNotEarlier {
         condition: super::super::PathConditionId,
         parent: super::super::PathConditionId,
@@ -209,6 +212,10 @@ impl fmt::Display for MirRewriteError {
             Self::ConsumedProofRootInFinalCfg { block, site } => write!(
                 formatter,
                 "normalized CFG root {block} at {site} retains consumed proof provenance"
+            ),
+            Self::UnsupportedFinalCfgStorageMutation { callable } => write!(
+                formatter,
+                "normalized CFG capability changed storage declarations in callable {callable}"
             ),
             Self::PathParentNotEarlier { condition, parent } => write!(
                 formatter,

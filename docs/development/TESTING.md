@@ -362,6 +362,19 @@ The checked-in
 [pre-migration inventory](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
 records the exhaustive owner audit and the focused current-behavior baselines.
 
+Rewrite-boundary coverage runs every current final suffix pass over normalized
+programs with live and transition-created unreachable activations. It checks
+exact storage-declaration preservation through dense block/value editing and
+complete-definition removal through whole-world retention. Capability tests
+attempt a storage-kind reclassification and require rejection before commit;
+stale CFG facts remain rejected. Census tests preserve name, type, span, and
+checked-protocol topology while changing only semantic kind, proving that a
+fresh snapshot excludes normalized activations from checked carriers and that
+an older census cannot classify a newer product. Final reseal tests inject a
+phase-illegal activation kind and require structural verification failure.
+Changed final outcomes reverify once, while no-op outcomes retain the existing
+verified product.
+
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
 weakening path-sensitive optional, array, shared-ownership, cleanup, or

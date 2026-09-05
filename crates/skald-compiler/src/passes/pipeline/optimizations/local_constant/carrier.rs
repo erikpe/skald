@@ -326,16 +326,16 @@ fn certify_one(
     protocol_owner: CheckedCarrierProtocolOwner,
     expected_load: super::super::checked_integer_topology::CheckedIntegerValueSite,
 ) -> Result<CheckedCarrierCertificate, CheckedCarrierRejectionReason> {
+    let census = census.ok_or(CheckedCarrierRejectionReason::MissingDeclaration)?;
     let declaration = definition
         .storage(storage)
         .ok_or(CheckedCarrierRejectionReason::MissingDeclaration)?;
-    if declaration.kind != MirStorageKind::ScalarSpill {
+    if census.kind() != MirStorageKind::ScalarSpill || declaration.kind != census.kind() {
         return Err(CheckedCarrierRejectionReason::WrongStorageKind);
     }
     if declaration.ty != ty {
         return Err(CheckedCarrierRejectionReason::WrongStorageType);
     }
-    let census = census.ok_or(CheckedCarrierRejectionReason::MissingDeclaration)?;
 
     let mut stores = Vec::new();
     let mut loads = Vec::new();

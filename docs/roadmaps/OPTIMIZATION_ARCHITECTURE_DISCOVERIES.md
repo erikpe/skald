@@ -55,9 +55,11 @@ Before any final-stage storage mutation, the frozen
 and active
 [implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 have replaced the broad normalized scalar-spill exception with one exact final-
-only activation role; the remaining roadmap work audits transformations and
-target observation. This is a representation and verification prerequisite,
-not the FMM-13 dead-carrier optimization itself.
+only activation role. Same-snapshot analysis classification and the fail-closed
+final-CFG mutation boundary are also implemented; the remaining roadmap work
+proves target observation and closes integration coverage. This is a
+representation and verification prerequisite, not the FMM-13 dead-carrier
+optimization itself.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It

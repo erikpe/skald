@@ -8,11 +8,13 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The
 [normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-has completed NSR0 through NSR3, establishing the exhaustive storage-phase
+has completed NSR0 through NSR4, establishing the exhaustive storage-phase
 contract, pre-migration behavioral baseline, final-only activation
 representation, atomic production conversion, and exact normalized
-definite-initialization authority. NSR4 is next: it audits rewrite and analysis
-handling of the retained activation role.
+definite-initialization authority. Same-snapshot analysis classification and a
+fail-closed normalized CFG mutation boundary now preserve that role through
+current transformations. NSR5 is next: it proves deterministic observation and
+unchanged backend behavior.
 
 ## Pending discoveries
 

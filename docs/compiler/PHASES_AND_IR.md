@@ -1315,9 +1315,27 @@ That distinction lets normalized verification run ordinary definite-
 initialization analysis for genuine `ScalarSpill` declarations. Only a
 structurally valid boolean `NormalizedPathActivation` relies on its
 verified-and-consumed path ancestry rather than an attempted reconstruction of
-erased path-sensitive proof. Current block/value/CFG passes must preserve the
-classification, and a future storage-mutating capability must reject or handle
-it explicitly. FMM-13 dead-carrier deletion remains a separate optimization.
+erased path-sensitive proof. Current final CFG passes receive only reviewed
+whole-block operations. The capability snapshots exact storage declarations
+around each callable rewrite and rejects any creation, deletion,
+reclassification, or declaration-field change before dense commit.
+Unreachable deletion may remove complete dead blocks, and block merging may
+move a complete successor instruction sequence, but neither operation can edit
+an individual retained activation access. Whole-world retention removes only
+complete unreachable definitions. Every changed final result is resealed,
+repeating normalized activation structure and fresh reachability validation;
+unchanged passes retain their existing seal. A future storage-mutating
+capability must replace this fail-closed guard with an explicit disposition
+for the role. FMM-13 dead-carrier deletion remains a separate optimization.
+
+The storage-use census carries each declaration's semantic kind from the same
+immutable callable snapshot as its use sites and must be recomputed after a
+rewrite. Checked constant-carrier classification requires that exact census
+kind and the current declaration kind to both be `ScalarSpill`, so a
+`NormalizedPathActivation` cannot be selected based on its boolean type,
+generated name, span, CFG topology, or a stale identity set. Proof-rich dead
+definition and constant passes run before this role exists; read-only final
+reachability does not infer storage roles.
 
 This conversion preserves the exact `StorageId`, declaration order,
 stores, loads, lifetime markers, blocks, values, spans, evaluation and failure

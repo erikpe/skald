@@ -1,6 +1,6 @@
 //! Exhaustive semantic use sites for callable-local storage.
 
-use crate::mir::StorageId;
+use crate::mir::{MirStorageKind, StorageId};
 
 use super::{MirLocalIdentitySite, MirRewriteError};
 
@@ -71,6 +71,7 @@ impl MirStorageUseSite {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MirStorageUseCensusEntry {
     storage: StorageId,
+    kind: MirStorageKind,
     declaration: MirLocalIdentitySite,
     uses: Vec<MirStorageUseSite>,
 }
@@ -78,6 +79,11 @@ pub(crate) struct MirStorageUseCensusEntry {
 impl MirStorageUseCensusEntry {
     pub(crate) const fn storage(&self) -> StorageId {
         self.storage
+    }
+
+    /// The semantic role declared by the exact MIR snapshot being counted.
+    pub(crate) const fn kind(&self) -> MirStorageKind {
+        self.kind
     }
 
     pub(crate) const fn declaration(&self) -> MirLocalIdentitySite {
@@ -90,6 +96,10 @@ impl MirStorageUseCensusEntry {
 }
 
 /// Seal-local, deterministic storage-access inventory for one callable.
+///
+/// Declaration roles and use sites belong to the same immutable snapshot.
+/// The census must be recomputed after any rewrite rather than paired with a
+/// remembered set of storage identities from an earlier product.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MirStorageUseCensus {
     callable: crate::identity::CallableId,
@@ -132,6 +142,7 @@ pub(crate) fn storage_use_census_for_definition(
         }
         entries.push(MirStorageUseCensusEntry {
             storage: declaration.id,
+            kind: declaration.kind,
             declaration: MirLocalIdentitySite::StorageDeclaration(index),
             uses: Vec::new(),
         });

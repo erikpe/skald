@@ -66,3 +66,36 @@ module.
 This baseline intentionally records the overly broad normalized spill exception
 rather than endorsing it. The representation and verifier tasks will replace
 that one row while preserving the remaining rows' executable observations.
+
+## NSR4 rewrite and analysis audit
+
+NSR4 repeated the consumer audit after the final-only role became production
+MIR. The result separates proof-rich transformations, normalized CFG
+transformations, and whole-definition retention instead of treating every
+pass as if it shared one mutation surface.
+
+| Owner | Stage and authority | Normalized-activation disposition |
+|---|---|---|
+| Dead-pure-definition elimination | Proof-rich value/instruction rewrite | Cannot observe the final-only role. It removes only unused pure value assignments before mandatory normalization and receives no final seal or final CFG capability. |
+| Primitive, checked-integer, algebraic, logical, and proof-aware CFG constant consumers | Proof-rich analysis/rewrite or proof-transition plan | Observe `PathCondition` while proof exists. The checked-carrier certificate requires a same-snapshot census entry and declaration whose kind is exactly `ScalarSpill`; `NormalizedPathActivation` is not eligible. |
+| Post-proof unreachable-block elimination | Final guarded CFG rewrite | May remove a complete unreachable block and the activation operations owned by that block. It cannot edit a retained storage operation or declaration independently. |
+| Post-proof empty-block forwarding | Final guarded CFG rewrite | Redirects edges and removes instruction-empty blocks only, so it neither edits nor relocates activation operations. |
+| Post-proof basic-block merging | Final guarded CFG rewrite | May move the complete successor instruction sequence into its sole predecessor. It cannot select, synthesize, retarget, or reorder an individual activation operation. |
+| Whole-world reachability analysis | Read-only final analysis | Follows executable references without classifying compiler storage by name, span, topology, or role. It does not mutate MIR. |
+| Whole-world reachability retention | Final whole-program retention | Removes complete unreachable executable definitions, including all storage they own; it cannot partially edit a retained definition. The changed product receives a fresh final seal and reachability snapshot. |
+
+The storage-use census now records the semantic kind from the same immutable
+callable snapshot as its declarations and uses. Consumers must recompute the
+census after rewriting; an identity set from an earlier product is not a role
+classifier. Current normalized CFG passes receive only reviewed whole-block
+operations. The capability snapshots exact storage declarations around every
+callable edit and rejects any creation, deletion, reclassification, or field
+change before dense commit. This guard is deliberately redundant with the
+narrow API surface so a future storage-mutating capability fails closed until
+it defines an explicit normalized-activation policy.
+
+Every changed final CFG or definition-retention outcome is unverified. The
+pipeline reseals it before the next observation or pass, repeating normalized
+phase legality, activation shape, reference, lifetime, initialization, and
+reachability checks. An unchanged pass retains the already verified exact
+product and does not manufacture a redundant seal.

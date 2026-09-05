@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     reachability_verification_errors,
-    seal::{finalize_proof_mir, verify_proof_mir},
+    seal::{finalize_proof_mir, reseal_final_mir, verify_proof_mir, UnverifiedFinalMirProgram},
     verify_final_mir,
 };
 
@@ -120,6 +120,33 @@ fn cloning_each_verified_product_preserves_its_stage_contract() {
     assert_eq!(final_clone, final_program);
     assert_eq!(final_clone.program(), final_program.program());
     assert_eq!(final_clone.reachability(), final_program.reachability());
+}
+
+#[test]
+fn final_resealing_rechecks_normalized_activation_structure() {
+    let finalized = verify_final_mir(lower_source_to_final_mir(
+        "fn main() -> i64 { if (false && true) { return 1; } return 0; }",
+    ))
+    .unwrap();
+    let (mut program, authority) = finalized.invalidate_for_final_transformation().into_parts();
+    let definition = program.definitions.get(program.entry_function).unwrap();
+    let activation = definition
+        .storage
+        .iter()
+        .find(|storage| storage.kind.is_normalized_path_activation())
+        .unwrap()
+        .id;
+    let entry = program.entry_function;
+    let definition = program.definitions.get_mut_for_test(entry).unwrap();
+    definition.storage[activation.index()].kind = MirStorageKind::PathCondition;
+
+    let errors = reseal_final_mir(UnverifiedFinalMirProgram::from_parts(program, authority))
+        .expect_err("fresh final seals must recheck activation phase legality")
+        .to_string();
+    assert!(
+        errors.contains("retains executable carrier with proof provenance"),
+        "{errors}"
+    );
 }
 
 #[test]

@@ -2,12 +2,53 @@
 
 mod canonicalization;
 
-use crate::mir::rewrite::{MirCallableEdit, MirFinalCfgFacts, MirRewriteError};
+use crate::mir::{
+    rewrite::{MirCallableEdit, MirFinalCfgFacts, MirRewriteError},
+    MirStorage,
+};
+
+/// Exact storage declarations protected by the normalized CFG capability.
+///
+/// Current final-stage edits may remove whole unreachable blocks or move a
+/// complete successor body during merging. They have no authority to create,
+/// delete, or reclassify storage declarations. Keeping this guard at the
+/// capability boundary makes that restriction fail closed if the wrapper is
+/// extended later.
+pub(super) struct MirFinalCfgStorageInvariant {
+    declarations: Vec<MirStorage>,
+}
+
+impl MirFinalCfgStorageInvariant {
+    pub(super) fn capture(edit: &MirCallableEdit) -> Result<Self, MirRewriteError> {
+        let declarations = edit
+            .storage_ids()
+            .map(|storage| edit.storage(storage).cloned())
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self { declarations })
+    }
+
+    pub(super) fn verify(self, edit: &MirCallableEdit) -> Result<(), MirRewriteError> {
+        let current = edit
+            .storage_ids()
+            .map(|storage| edit.storage(storage).cloned())
+            .collect::<Result<Vec<_>, _>>()?;
+        if current != self.declarations {
+            return Err(MirRewriteError::UnsupportedFinalCfgStorageMutation {
+                callable: edit.callable(),
+            });
+        }
+        Ok(())
+    }
+}
 
 /// Final-stage access to reviewed executable-CFG compound operations.
 ///
 /// The wrapper deliberately exposes neither raw mutable MIR nor storage,
 /// instruction, terminator, proof-record, or lifecycle mutation.
+/// [`MirFinalPassCapability`](super::model::MirFinalPassCapability) additionally
+/// rejects any storage-declaration change before dense commit, so adding a
+/// storage-editing operation requires replacing this fail-closed contract
+/// deliberately.
 pub(in crate::passes::pipeline) struct MirFinalCfgEdit<'edit> {
     edit: &'edit mut MirCallableEdit,
 }

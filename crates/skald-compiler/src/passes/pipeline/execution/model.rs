@@ -17,7 +17,7 @@ use crate::{
 use super::super::{
     seal::UnverifiedFinalMirProgram, VerifiedFinalMirProgram, VerifiedProofMirProgram,
 };
-use super::final_cfg::MirFinalCfgEdit;
+use super::final_cfg::{MirFinalCfgEdit, MirFinalCfgStorageInvariant};
 use super::measurement::MirPassMeasurement;
 
 /// Deterministic internal failure reported by a pass outside dense commit.
@@ -255,7 +255,9 @@ impl MirFinalPassCapability {
         let invalidated = self.verified.invalidate_for_final_transformation();
         let (program, authority) = invalidated.into_parts();
         let rewrite = rewrite_program(program, |callable, edit| {
-            rewrite(callable, &mut MirFinalCfgEdit::new(edit))
+            let storage = MirFinalCfgStorageInvariant::capture(edit)?;
+            rewrite(callable, &mut MirFinalCfgEdit::new(edit))?;
+            storage.verify(edit)
         })
         .map_err(MirPassFailure::Rewrite)?;
         let MirProgramRewriteResult { program, callables } = rewrite;
