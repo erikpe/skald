@@ -1,6 +1,6 @@
 # VM Benchmark Correctness Workload Roadmap
 
-Status: in progress; VB0 and VB1 are complete, and VB2 is next.
+Status: in progress; VB0 through VB2 are complete, and VB3 is next.
 
 This roadmap ports the deterministic bytecode-VM regression workload from the
 sibling Niflheim repository into a Skald-native multi-module golden test. The
@@ -66,7 +66,7 @@ implicit garbage-collected reference semantics.
 
 - [x] VB0 — Establish the Skald ownership model and minimal vertical slice
 - [x] VB1 — Port the instruction hierarchy and core VM workloads
-- [ ] VB2 — Port heterogeneous constants, builtins, statics, and exact `f64`
+- [x] VB2 — Port heterogeneous constants, builtins, statics, and exact `f64`
 - [ ] VB3 — Port the large algorithmic cases and aggregate verification
 - [ ] VB4 — Add compiler variants, documentation, and full-suite hardening
 
@@ -150,22 +150,22 @@ case-specific outputs are deterministic.
 **Purpose:** Add the host-side type-erasure and standard-library surfaces only
 after the VM's execution and ownership backbone is stable.
 
-- [ ] Port `WeightSource`, `WeightTapeLike`, their implementations, and the
+- [x] Port `WeightSource`, `WeightTapeLike`, their implementations, and the
       builtin hierarchy with exact receiver mutability and structural indexing
       behavior.
-- [ ] Translate constant pools to `(shared Obj)[]`, allocate the canonical
+- [x] Translate constant pools to `(shared Obj)[]`, allocate the canonical
       Skald `BoxI64`, `BoxU64`, `BoxBool`, and `BoxF64` classes explicitly, and
       recover values with owner-preserving shared casts and pointee type tests.
-- [ ] Replace the nullable lazy scratch interface and GC forcing calls with an
+- [x] Replace the nullable lazy scratch interface and GC forcing calls with an
       eagerly initialized non-null shared static while preserving every numeric
       contribution to the expected outputs.
-- [ ] Port string checksum inputs and rendering with `Str.concat`, canonical
+- [x] Port string checksum inputs and rendering with `Str.concat`, canonical
       `Str.from_*` functions, and the explicit standard-output API; do not add
       string operators or convenience I/O solely for this fixture.
-- [ ] Port `builtin_dispatch`, `obj_cast_builtin`, and `exact_double`, using
+- [x] Port `builtin_dispatch`, `obj_cast_builtin`, and `exact_double`, using
       binary-exact `f64` values and exact equality rather than approximate
       expectations.
-- [ ] Add exact named runs for the three cases and verify that failed casts or
+- [x] Add exact named runs for the three cases and verify that failed casts or
       dispatch mistakes cannot silently fall back to a default payload.
 
 **Tests:** `make golden-filter GOLDEN_FILTER='vm_benchmark/**'`; focused runs for

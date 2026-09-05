@@ -1,12 +1,87 @@
+from std::bool import BoxBool;
+from std::error import panic;
+from std::f64 import BoxF64;
+from std::i64 import BoxI64;
 from std::str import Str;
+from std::u64 import BoxU64;
 import vm_benchmark::model as model;
+import vm_benchmark::opcodes as opcodes;
+
+public interface WeightSource {
+    fn weight() -> i64;
+}
+
+public interface WeightTapeLike {
+    fn index_get(index: i64) -> i64;
+    mut fn index_set(index: i64, value: i64) -> unit;
+}
+
+public class WeightedPayload implements WeightSource {
+    value: i64;
+    bonus: i64;
+
+    init(value: i64, bonus: i64) {
+        self.value = value;
+        self.bonus = bonus;
+    }
+
+    fn weight() -> i64 {
+        return self.value + (self.bonus * 2);
+    }
+}
+
+public class TogglePayload implements WeightSource {
+    value: i64;
+    enabled: bool;
+
+    init(value: i64, enabled: bool) {
+        self.value = value;
+        self.enabled = enabled;
+    }
+
+    fn weight() -> i64 {
+        if (self.enabled) {
+            return (self.value * 3) + 1;
+        }
+        return self.value - 4;
+    }
+}
+
+public class WeightTape implements WeightTapeLike {
+    values: i64[];
+
+    init(values: i64[]) {
+        self.values = values;
+    }
+
+    fn index_get(index: i64) -> i64 {
+        return self.values[index];
+    }
+
+    mut fn index_set(index: i64, value: i64) -> unit {
+        self.values[index] = value;
+        return;
+    }
+}
+
+fn blend_weight_tape(
+    tape: shared WeightTapeLike,
+    first: i64,
+    second: i64
+) -> i64 {
+    tape->[0] = first;
+    tape->[1] = second;
+    return tape->[0] + tape->[1];
+}
 
 class StaticBuiltinState {
     private final static scalar_seed: i64 = 17;
     private static enabled: bool = true;
     private static byte_seed: u8 = 3u8;
     private static probe_count: u64;
-    private final static label: Str = "static-vm";
+    private static label: Str = "static-vm";
+    private final static scratch: shared WeightTapeLike =
+        new WeightTape(i64[](2u));
 
     init() {}
 
@@ -32,6 +107,47 @@ class StaticBuiltinState {
             + StaticBuiltinState.label_bias()
             + (i64) argc;
     }
+
+    static fn blend(first: i64, second: i64) -> i64 {
+        return blend_weight_tape(
+            StaticBuiltinState.scratch,
+            first + StaticBuiltinState.primitive_bias(),
+            second + StaticBuiltinState.label_bias()
+        );
+    }
+}
+
+fn obj_weight(value: shared Obj) -> i64 {
+    if (*value is BoxI64) {
+        var signed: shared BoxI64 = (shared BoxI64) value;
+        return signed->value;
+    }
+    if (*value is BoxU64) {
+        var unsigned: shared BoxU64 = (shared BoxU64) value;
+        return (i64) unsigned->value;
+    }
+    if (*value is BoxBool) {
+        var boolean: shared BoxBool = (shared BoxBool) value;
+        if (boolean->value) {
+            return 5;
+        }
+        return -5;
+    }
+    if (*value is BoxF64) {
+        var floating: shared BoxF64 = (shared BoxF64) value;
+        return (i64) (floating->value * 16.0);
+    }
+    if (*value is Str) {
+        var text: shared Str = (shared Str) value;
+        return (i64) text->len() * 11;
+    }
+    var weighted: shared WeightSource = (shared WeightSource) value;
+    return weighted->weight();
+}
+
+fn require_f64(ref vm: model::VmApi, const_id: u64) -> f64 {
+    var boxed: shared BoxF64 = (shared BoxF64) vm.read_const_obj(const_id);
+    return boxed->value;
 }
 
 public class BaseBuiltin implements model::Builtin {
@@ -62,8 +178,127 @@ public class TraceAccumulatorBuiltin extends BaseBuiltin {
             total = total + vm.read_reg(index);
             index = index + 1;
         }
-
         total = total + StaticBuiltinState.trace_bias(argc);
+        vm.note_trace(total);
+        return;
+    }
+}
+
+public class ConstPoolMixBuiltin extends BaseBuiltin {
+    init(label: Str) {
+        super(label);
+    }
+
+    override fn invoke(mut ref vm: model::VmApi, argc: u64) -> unit {
+        var total: i64 = 0;
+        var index: i64 = 0;
+        while ((u64) index < argc) {
+            var const_id: u64 = (u64) vm.read_reg(index);
+            total = opcodes::mix_checksum(
+                total,
+                obj_weight(vm.read_const_obj(const_id))
+            );
+            index = index + 1;
+        }
+
+        var payload: shared WeightSource = new WeightedPayload((i64) argc, 2);
+        var include_seed: bool = true;
+        var first: i64 = total - 1000;
+        var second: i64 = -1000;
+        if (include_seed) {
+            first = total;
+        }
+        if ((*payload is WeightedPayload) && true) {
+            second = payload->weight();
+        }
+
+        var staged_total: i64 =
+            StaticBuiltinState.blend(first, second) - (i64) argc;
+        staged_total = StaticBuiltinState.blend(first, second);
+        total = staged_total;
+
+        while ((2 + 3) == 9) {
+            total = opcodes::mix_checksum(total, -404040404);
+            vm.write_reg(0, -404040404);
+            vm.note_trace(-404040404);
+            panic("ConstPoolMixBuiltin: folded false while loop executed");
+        }
+        while (!(*payload is WeightedPayload)) {
+            total = opcodes::mix_checksum(total, 909090909);
+            vm.write_reg(0, 909090909);
+            vm.note_trace(909090909);
+            panic("ConstPoolMixBuiltin: narrowed false while loop executed");
+        }
+
+        vm.write_reg(0, total);
+        vm.note_trace(total);
+        return;
+    }
+}
+
+public class RangeFoldBuiltin extends BaseBuiltin {
+    init(label: Str) {
+        super(label);
+    }
+
+    override fn invoke(mut ref vm: model::VmApi, argc: u64) -> unit {
+        if (argc != 4u) {
+            panic("RangeFoldBuiltin.invoke: expected 4 args");
+        }
+        var start: i64 = vm.read_reg(0);
+        var stop: i64 = vm.read_reg(1);
+        var stride: i64 = vm.read_reg(2);
+        var payload_const_id: u64 = (u64) vm.read_reg(3);
+        var weight: i64 = obj_weight(vm.read_const_obj(payload_const_id));
+
+        var total: i64 = 0;
+        var cursor: i64 = start;
+        while (cursor < stop) {
+            total = total + (cursor * weight);
+            if (cursor % 2 == 0) {
+                total = total + weight;
+            } else {
+                total = total - stride;
+            }
+            cursor = cursor + stride;
+        }
+        vm.write_reg(0, total);
+        vm.note_trace(total);
+        return;
+    }
+}
+
+public class ExactDoubleBuiltin extends BaseBuiltin {
+    init(label: Str) {
+        super(label);
+    }
+
+    override fn invoke(mut ref vm: model::VmApi, argc: u64) -> unit {
+        if (argc != 5u) {
+            panic("ExactDoubleBuiltin.invoke: expected 5 args");
+        }
+        var half: f64 = require_f64(vm, (u64) vm.read_reg(0));
+        var one_and_quarter: f64 = require_f64(vm, (u64) vm.read_reg(1));
+        var two: f64 = require_f64(vm, (u64) vm.read_reg(2));
+        var eight: f64 = require_f64(vm, (u64) vm.read_reg(3));
+        var scale_box: shared BoxI64 = (shared BoxI64) vm.read_const_obj(
+            (u64) vm.read_reg(4)
+        );
+        var scale: i64 = scale_box->value;
+
+        var result: f64 = ((half + one_and_quarter) * two) + (eight / eight);
+        var expected: f64 = (eight / two) + half;
+        var threshold: f64 = eight / two;
+        var total: i64 = (i64) (result * (f64) scale);
+        if (result == expected) {
+            total = total + 7;
+        }
+        if (result > threshold) {
+            total = total + 5;
+        }
+        total = total + (i64) Str.from_f64(result).len();
+
+        vm.write_reg(0, total);
         vm.note_trace(total);
         return;
     }

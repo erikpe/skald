@@ -1,4 +1,8 @@
+from std::bool import BoxBool;
+from std::f64 import BoxF64;
 from std::i64 import BoxI64;
+from std::str import Str;
+from std::u64 import BoxU64;
 import vm_benchmark::builtins as builtins;
 import vm_benchmark::instructions as instructions;
 import vm_benchmark::model as model;
@@ -398,6 +402,192 @@ fn build_slice_copy_case() -> model::BenchmarkCase {
     );
 }
 
+fn extended_builtin_table() -> (shared model::Builtin)[] {
+    return (shared model::Builtin)[]{
+        new builtins::TraceAccumulatorBuiltin("trace_accumulate"),
+        new builtins::ConstPoolMixBuiltin("const_pool_mix"),
+        new builtins::RangeFoldBuiltin("range_fold")
+    };
+}
+
+fn build_builtin_dispatch_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](18u);
+    code[0] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[1] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 1u);
+    code[2] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 2u);
+    code[3] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 3u);
+    code[4] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 4, 4u);
+    code[5] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 5, 5u);
+    code[6] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 1u, 6u
+    );
+    code[7] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 6, 0);
+    code[8] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 6u);
+    code[9] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 7u);
+    code[10] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 8u);
+    code[11] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 9u);
+    code[12] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 2u, 4u
+    );
+    code[13] = new instructions::AddOp(opcodes::add_opcode(), 7, 6, 0);
+    code[14] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 7);
+    code[15] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 7);
+    code[16] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 0u, 1u
+    );
+    code[17] = new instructions::HaltOp(opcodes::halt_opcode(), 7);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 8u, code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(10),
+        new BoxI64(11),
+        new BoxI64(12),
+        new BoxI64(13),
+        new BoxI64(14),
+        new BoxI64(15),
+        new BoxI64(1),
+        new BoxI64(6),
+        new BoxI64(1),
+        new BoxI64(11),
+        new BoxI64(9),
+        new builtins::WeightedPayload(4, 3),
+        new Str(copy "vm"),
+        new BoxBool(true),
+        new BoxU64(7u),
+        new builtins::TogglePayload(6, false)
+    };
+    return new model::Program(
+        "builtin_dispatch",
+        0u,
+        functions,
+        constants,
+        extended_builtin_table(),
+        4u
+    );
+}
+
+fn build_builtin_dispatch_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "builtin_dispatch", build_builtin_dispatch_program(),
+        267558292, 267558292, 7970829076972, 535116705,
+        18u, 0u, 0u, 3u
+    );
+}
+
+fn build_obj_cast_builtin_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](16u);
+    code[0] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[1] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 1u);
+    code[2] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 2u);
+    code[3] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 3u);
+    code[4] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 1u, 4u
+    );
+    code[5] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 4, 0);
+    code[6] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 4u);
+    code[7] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 5u);
+    code[8] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 6u);
+    code[9] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 7u);
+    code[10] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 2u, 4u
+    );
+    code[11] = new instructions::AddOp(opcodes::add_opcode(), 5, 4, 0);
+    code[12] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 5);
+    code[13] = new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 5);
+    code[14] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 0u, 1u
+    );
+    code[15] = new instructions::HaltOp(opcodes::halt_opcode(), 5);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 6u, code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(10),
+        new BoxI64(11),
+        new BoxI64(12),
+        new BoxI64(13),
+        new BoxI64(2),
+        new BoxI64(9),
+        new BoxI64(2),
+        new BoxI64(14),
+        new BoxI64(0),
+        new BoxI64(0),
+        new BoxU64(12u),
+        new Str(copy "cast"),
+        new builtins::TogglePayload(5, true),
+        new BoxBool(false),
+        new builtins::WeightedPayload(2, 4)
+    };
+    return new model::Program(
+        "obj_cast_builtin",
+        0u,
+        functions,
+        constants,
+        extended_builtin_table(),
+        4u
+    );
+}
+
+fn build_obj_cast_builtin_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "obj_cast_builtin", build_obj_cast_builtin_program(),
+        400635, 400635, 11935317285, 801391,
+        16u, 0u, 0u, 3u
+    );
+}
+
+fn build_exact_double_program() -> shared model::Program {
+    var code: ((shared model::Instruction)?)[] =
+        ((shared model::Instruction)?)[](8u);
+    code[0] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u);
+    code[1] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 1, 1u);
+    code[2] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 2u);
+    code[3] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 3u);
+    code[4] = new instructions::LoadConstOp(opcodes::load_const_opcode(), 4, 4u);
+    code[5] = new instructions::CallBuiltinOp(
+        opcodes::call_builtin_opcode(), 3u, 5u
+    );
+    code[6] = new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 0);
+    code[7] = new instructions::HaltOp(opcodes::halt_opcode(), 0);
+
+    var functions: model::FunctionInfo[] = model::FunctionInfo[]{
+        model::FunctionInfo("main", 0u, 5u, code)
+    };
+    var constants: (shared Obj)[] = (shared Obj)[]{
+        new BoxI64(5),
+        new BoxI64(6),
+        new BoxI64(7),
+        new BoxI64(8),
+        new BoxI64(4),
+        new BoxF64(0.5),
+        new BoxF64(1.25),
+        new BoxF64(2.0),
+        new BoxF64(8.0)
+    };
+    var builtin_table: (shared model::Builtin)[] =
+        (shared model::Builtin)[]{
+            new builtins::TraceAccumulatorBuiltin("trace_accumulate"),
+            new builtins::ConstPoolMixBuiltin("const_pool_mix"),
+            new builtins::RangeFoldBuiltin("range_fold"),
+            new builtins::ExactDoubleBuiltin("exact_double")
+        };
+    return new model::Program(
+        "exact_double", 0u, functions, constants, builtin_table, 1u
+    );
+}
+
+fn build_exact_double_case() -> model::BenchmarkCase {
+    return model::BenchmarkCase(
+        "exact_double", build_exact_double_program(),
+        33, 33, 33, 33, 8u, 0u, 0u, 1u
+    );
+}
+
 public fn build_cases() -> model::BenchmarkCase[] {
     return model::BenchmarkCase[]{
         build_minimal_case(),
@@ -405,6 +595,9 @@ public fn build_cases() -> model::BenchmarkCase[] {
         build_branch_maze_case(),
         build_recursive_case(),
         build_dense_array_case(),
-        build_slice_copy_case()
+        build_slice_copy_case(),
+        build_builtin_dispatch_case(),
+        build_obj_cast_builtin_case(),
+        build_exact_double_case()
     };
 }

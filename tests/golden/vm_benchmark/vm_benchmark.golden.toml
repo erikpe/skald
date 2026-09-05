@@ -38,3 +38,18 @@ expect = { stdout = { inline = "dense_array: return=180 memory0=1 mem_checksum=2
 name = "slice_copy_output"
 args = ["6"]
 expect = { stdout = { inline = "slice_copy: return=159 memory0=10 mem_checksum=-5438759747882907306 trace_sum=280 steps=91 calls=0 branches=12 builtins=1 checksum=-7363314566833659961\n" } }
+
+[[test.run]]
+name = "builtin_dispatch_output"
+args = ["7"]
+expect = { stdout = { inline = "builtin_dispatch: return=267558292 memory0=267558292 mem_checksum=7970829076972 trace_sum=535116705 steps=18 calls=0 branches=0 builtins=3 checksum=-4010422517860774426\n" } }
+
+[[test.run]]
+name = "obj_cast_builtin_output"
+args = ["8"]
+expect = { stdout = { inline = "obj_cast_builtin: return=400635 memory0=400635 mem_checksum=11935317285 trace_sum=801391 steps=16 calls=0 branches=0 builtins=3 checksum=353076822078667325\n" } }
+
+[[test.run]]
+name = "exact_double_output"
+args = ["9"]
+expect = { stdout = { inline = "exact_double: return=33 memory0=33 mem_checksum=33 trace_sum=33 steps=8 calls=0 branches=0 builtins=1 checksum=938179363641\n" } }
