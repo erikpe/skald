@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: planned; CLR0 is next.
+Status: in progress; CLR0 is complete and CLR1 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -95,7 +95,7 @@ creating persistent optimizer provenance.
 
 ## Progress
 
-- [ ] CLR0 — Separate structural protocol observations from constant eligibility
+- [x] CLR0 — Separate structural protocol observations from constant eligibility
 - [ ] CLR1 — Certify checked-protocol scalar carriers
 - [ ] CLR2 — Build the convergent callable-local solver
 - [ ] CLR3 — Migrate primitive-family fact consumers
@@ -112,22 +112,22 @@ creating persistent optimizer provenance.
 **Purpose:** Establish exact immutable topology facts before carrier or solver
 logic depends on them, while preserving all current optimization behavior.
 
-- [ ] Refactor checked-integer discovery so one structural observation records
+- [x] Refactor checked-integer discovery so one structural observation records
   the verifier-owned check, success, failure, result store, join, reload,
   operand/result carriers, private load sites, spans, predecessors, and
   protected-root status without requiring literal operand constants.
-- [ ] Keep existing checked candidate behavior through an adapter which combines
+- [x] Keep existing checked candidate behavior through an adapter which combines
   the structural observation with the current narrow constant-source rule.
-- [ ] Add a seal-local logical observation over each verified
+- [x] Add a seal-local logical observation over each verified
   `MirLogicalExpression` and matching path condition, including operation,
   left/right/selected results, activation/result storage, split and selection
   predecessors, right entry/exit, short block, join, and spans.
-- [ ] Give observations deterministic definition/block/record order and owned
+- [x] Give observations deterministic definition/block/record order and owned
   identity values rather than borrowed mutable state.
-- [ ] Return structured failures for foreign, missing, duplicate, mismatched, or
+- [x] Return structured failures for foreign, missing, duplicate, mismatched, or
   malformed identities; ordinary unsupported shapes remain conservative
   rejections.
-- [ ] Keep topology modules private behind the optimization facade and avoid
+- [x] Keep topology modules private behind the optimization facade and avoid
   adding mutation, solving, pass registration, or persistent MIR metadata.
 
 **Tests:** Existing checked observer and folding suites unchanged; focused

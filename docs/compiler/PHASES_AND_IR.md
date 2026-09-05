@@ -1081,12 +1081,15 @@ through their retained scalar carriers by this pass.
 
 ### Frozen convergent local constant propagation direction
 
-Status: **planned**. The complete decisions are frozen in the
+Status: **in progress; CLR0 implemented**. The complete decisions are frozen in the
 [design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 and delivery is divided by the active
 [implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
-Until that roadmap changes the implementation, the block-local and literal-
-carrier limitations described above remain current behavior.
+The production transformations retain the block-local and literal-carrier
+limitations described above until their later roadmap tasks land. CLR0 has
+separated exact checked-protocol topology from constant eligibility and added
+the corresponding proof-rich logical-topology observer without changing pass
+selection, mutation, or current folding results.
 
 The accepted direction introduces one seal-local callable dependency graph
 over transient values and narrowly certified checked-protocol scalar carriers.
@@ -1096,8 +1099,14 @@ protocols, and verified constant-selected logical relations. There is no
 expression-depth, wave, fuel, or pipeline-repetition bound. Existing primitive
 and checked evaluators remain the sole arithmetic authorities.
 
-Checked topology becomes an immutable structural observation independent of
-constant provenance. A carrier transmits a fact only when exhaustive access,
+Checked topology is now an immutable structural observation independent of
+constant provenance. The existing checked pass consumes it through a narrow
+adapter that preserves literal-carrier eligibility and rejection behavior.
+Logical expressions likewise have a private seal-local structural observation
+over their matching path condition, selected values, carrier storage, blocks,
+predecessors, and spans; it has no production mutation consumer yet. Both
+observers return owned deterministic records, structured malformed-identity
+outcomes, and no persistent MIR metadata. A carrier transmits a fact only when exhaustive access,
 unique unauthorized write, exact type, dominance, lifetime, alias, protocol-
 ownership, callable, and current-seal checks certify it. Generic storage,
 source locals, normalized former path-condition carriers, calls, arbitrary

@@ -215,8 +215,13 @@ define coverage to add as each boundary is implemented. Existing behavior must
 remain pinned while topology observation, carrier certification, the solver,
 and each consumer are introduced separately.
 
-Focused analysis tests cover exact checked and logical structural records,
-every storage access role, unique writes, types, dominance, lifetimes, aliases,
+CLR0 focused tests now cover exact checked division, remainder, and shift
+records independently from literal constants; protected checked topology;
+exact `&&`/`||` path-condition relationships; nested records; functions,
+methods, initializers, destructors, and static initializers; owned spans and
+identities; malformed, foreign, duplicate, and mismatched records; read-only
+queries; deterministic order; and unchanged legacy checked eligibility. Later
+focused analysis tests cover every storage access role, unique writes, types, dominance, lifetimes, aliases,
 protocol ownership, malformed identities, and deterministic snapshot order.
 Solver tests cover primitive, carrier, checked, and logical dependencies;
 fan-in/fan-out and cycles; static failures and unsupported leaves; all four

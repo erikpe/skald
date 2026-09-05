@@ -6,7 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+implements the frozen callable-local solver, checked-protocol carrier
+certificates, depth-independent primitive and checked consumers, and
+constant-left logical selection through one proof-consuming transition. CLR0
+is complete: exact checked and logical structural observations are separate
+from constant eligibility without changing current optimization behavior.
+CLR1 is next.
 
 ## Pending discoveries
 
@@ -82,15 +89,8 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The planned
-[convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
-implements the frozen callable-local solver, checked-protocol carrier
-certificates, depth-independent primitive and checked consumers, and
-constant-left logical selection through one proof-consuming transition.
-CLR0 is next: separate exact checked and logical structural observations from
-constant eligibility without changing current optimization behavior. It
-depends on the completed local simplification, checked integer, proof-
-normalization, selectable pipeline, and dense identity rewriting foundations.
+No implementation roadmap is waiting to start. The convergent local constant
+propagation roadmap is active above.
 
 ## Design proposals
 

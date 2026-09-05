@@ -37,13 +37,15 @@ and
 Every profile now crosses the mandatory proof-rich-to-final boundary, and the
 default schedule removes post-proof unreachable blocks before whole-world
 definition retention.
-The next planned broadening is the frozen
+The current broadening follows the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [implementation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
-It addresses arbitrary supported expression depth, exact checked-protocol
-carrier provenance, and constant-left logical selection without adding a
-pipeline fixed-point loop or general memory analysis.
+CLR0 has separated checked and logical structural observations from constant
+eligibility. The remaining roadmap addresses arbitrary supported expression
+depth, exact checked-protocol carrier provenance, and constant-left logical
+selection without adding a pipeline fixed-point loop or general memory
+analysis.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It

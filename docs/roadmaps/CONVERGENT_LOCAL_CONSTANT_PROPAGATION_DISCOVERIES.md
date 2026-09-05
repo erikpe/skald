@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Discoveries
 
-Status: open implementation companion for the planned
+Status: open implementation companion for the active
 [convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 
 The frozen
@@ -11,8 +11,9 @@ atomic normalization decisions. The
 [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
 cross-domain candidate status and placement.
 
-This file intentionally starts without findings. During implementation, record
-only work discovered outside the active task's frozen scope. Each entry should
+CLR0 completed without an out-of-scope finding. During the remaining
+implementation, record only work discovered outside the active task's frozen
+scope. Each entry should
 state the problem, concrete evidence, likely owner and priority, and a bounded
 later direction. Small maintainability improvements that directly support the
 current task should be implemented in that task instead.
