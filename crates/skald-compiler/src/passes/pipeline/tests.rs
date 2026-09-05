@@ -15,7 +15,8 @@ use crate::{
 use super::{
     execution::{
         MirFinalPassCapability, MirFinalPassOutcome, MirPassData, MirPassFailure,
-        MirProofPassCapability, MirProofPassOutcome,
+        MirProofPassCapability, MirProofPassOutcome, MirProofTransitionCapability,
+        MirProofTransitionFailure, MirProofTransitionOutcome,
     },
     optimizations::whole_world_reachability,
     policy::{
@@ -45,6 +46,9 @@ const INVALID_RETENTION_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(116);
 const FINAL_UNCHANGED: MirPassIdentity = MirPassIdentity::new(117);
 const FINAL_EXECUTION_FAILURE: MirPassIdentity = MirPassIdentity::new(118);
 const FINAL_STALE_CFG: MirPassIdentity = MirPassIdentity::new(119);
+const TRANSITION_UNCHANGED: MirPassIdentity = MirPassIdentity::new(120);
+const TRANSITION_EXECUTION_FAILURE: MirPassIdentity = MirPassIdentity::new(121);
+const TRANSITION_INVALID_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(122);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -108,7 +112,23 @@ const fn final_registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 21] = [
+const fn transition_registration(
+    identity: MirPassIdentity,
+    name: &'static str,
+    transform: super::execution::MirProofTransitionTransform,
+) -> MirPassRegistration {
+    MirPassRegistration::new(
+        MirPassDescriptor::new(
+            identity,
+            MirPassStage::ProofTransition,
+            name,
+            "Synthetic proof-transition runner test pass.",
+        ),
+        MirPassImplementation::proof_transition(identity, transform),
+    )
+}
+
+static TEST_REGISTRATIONS: [MirPassRegistration; 24] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -180,6 +200,21 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 21] = [
         FINAL_STALE_CFG,
         "final-stale-cfg-pass",
         final_stale_cfg_pass,
+    ),
+    transition_registration(
+        TRANSITION_UNCHANGED,
+        "transition-unchanged-pass",
+        transition_unchanged_pass,
+    ),
+    transition_registration(
+        TRANSITION_EXECUTION_FAILURE,
+        "transition-execution-failure-pass",
+        transition_execution_failure_pass,
+    ),
+    transition_registration(
+        TRANSITION_INVALID_ACCOUNTING,
+        "transition-invalid-accounting-pass",
+        transition_invalid_accounting_pass,
     ),
     whole_world_reachability::REGISTRATION,
 ];
@@ -712,6 +747,107 @@ fn unchanged_pass_retains_the_verified_product_without_reverification() {
 }
 
 #[test]
+fn no_op_transition_owns_the_single_normalization_and_final_seal() {
+    clear_test_state();
+    let mir = lower_source_to_mir(PROOF_NORMALIZATION_PROFILE_SOURCE);
+    let expected = run_mir_pipeline_measured(mir.clone(), &none_schedule())
+        .result
+        .unwrap();
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_with_occurrences(
+        mir,
+        &test_schedule(&[UNCHANGED, TRANSITION_UNCHANGED, FINAL_UNCHANGED]),
+    );
+
+    assert_eq!(measured.result.as_ref().unwrap(), &expected);
+    assert_eq!(
+        execution_log(),
+        ["unchanged", "transition-unchanged", "final-unchanged"]
+    );
+    assert_eq!(measured.statistics.normalization_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.pass_executions(), 3);
+    assert_eq!(measured.occurrences().len(), 3);
+    assert_eq!(
+        measured.occurrences()[1].stage(),
+        MirPassStage::ProofTransition
+    );
+    assert_eq!(
+        measured.occurrences()[1].outcome(),
+        MirPassOccurrenceOutcome::Unchanged
+    );
+    assert_eq!(measured.occurrences()[1].verification_executions(), 1);
+
+    let inspected = run_mir_pipeline_measured_inspected(
+        lower_source_to_mir(PROOF_NORMALIZATION_PROFILE_SOURCE),
+        &test_schedule(&[TRANSITION_UNCHANGED]),
+        Some(&mut collector),
+    );
+    assert!(inspected.result.is_ok());
+    assert_eq!(
+        collector.labels,
+        [
+            "proof-rich-input",
+            "after-proof-transition-0-transition-unchanged-pass-0",
+            "after-proof-normalization",
+            "final",
+        ]
+    );
+    assert_eq!(
+        collector.stages,
+        [
+            MirPassStage::ProofRich,
+            MirPassStage::ProofTransition,
+            MirPassStage::Final,
+            MirPassStage::Final,
+        ]
+    );
+    assert_eq!(collector.dumps[1], collector.dumps[2]);
+}
+
+#[test]
+fn transition_execution_failure_precedes_normalization_and_publishes_no_boundary_checkpoint() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_with_transition_and_occurrences_for_test(
+        lowered_program(),
+        &test_schedule(&[TRANSITION_EXECUTION_FAILURE, FINAL_UNCHANGED]),
+        Some(&mut collector),
+        super::seal::transition_proof_mir,
+    );
+
+    let error = measured.result.as_ref().unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
+    assert_eq!(error.pass_identity(), Some(TRANSITION_EXECUTION_FAILURE));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::ProofTransition));
+    assert_eq!(collector.labels, ["proof-rich-input"]);
+    assert_eq!(measured.statistics.normalization_executions(), 0);
+    assert_eq!(measured.statistics.verification_executions(), 1);
+    assert_eq!(measured.occurrences().len(), 1);
+    assert_eq!(
+        measured.occurrences()[0].outcome(),
+        MirPassOccurrenceOutcome::Failed
+    );
+}
+
+#[test]
+fn transition_rejects_changed_accounting_without_an_optional_plan() {
+    clear_test_state();
+    let measured = run_mir_pipeline_with_occurrences(
+        lowered_program(),
+        &test_schedule(&[TRANSITION_INVALID_ACCOUNTING]),
+    );
+
+    let error = measured.result.as_ref().unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::PassExecution);
+    assert_eq!(error.pass_identity(), Some(TRANSITION_INVALID_ACCOUNTING));
+    assert!(error
+        .to_string()
+        .contains("no-op proof transition reported changed callables"));
+    assert_eq!(measured.statistics.normalization_executions(), 0);
+}
+
+#[test]
 fn unchanged_final_pass_retains_the_normalized_seal_without_reverification() {
     clear_test_state();
     let mir = lowered_program();
@@ -1023,6 +1159,15 @@ fn checkpoint_labels_are_stable_and_unambiguous_for_repetition() {
         }
         .to_string(),
         "after-proof-rich-3-fixture-pass-2"
+    );
+    assert_eq!(
+        MirPipelineCheckpointLabel::AfterProofTransitionPass {
+            position: 4,
+            pass_name: "fixture-pass",
+            occurrence: 0,
+        }
+        .to_string(),
+        "after-proof-transition-4-fixture-pass-0"
     );
     assert_eq!(
         MirPipelineCheckpointLabel::AfterProofNormalization.to_string(),
@@ -1670,27 +1815,13 @@ fn final_stage_failure_is_attributed_after_the_implicit_boundary() {
 
 #[test]
 fn normalization_failure_has_its_own_stage_and_stops_final_observation() {
-    fn fail_normalization(
-        _verified: VerifiedProofMirProgram,
-    ) -> Result<
-        (
-            VerifiedFinalMirProgram,
-            super::normalization::MirProofNormalizationStatistics,
-        ),
-        crate::mir::MirVerificationErrors,
-    > {
-        Err(crate::mir::MirVerificationErrors::program(
-            "synthetic normalization failure",
-        ))
-    }
-
     clear_test_state();
     let mut collector = CheckpointCollector::default();
     let measured = run_mir_pipeline_with_transition_for_test(
         lowered_program(),
         &test_schedule(&[UNCHANGED, FINAL_UNCHANGED]),
         Some(&mut collector),
-        fail_normalization,
+        fail_normalization_transition,
     );
 
     let error = measured.result.unwrap_err();
@@ -1712,6 +1843,60 @@ fn normalization_failure_has_its_own_stage_and_stops_final_observation() {
     assert_eq!(measured.statistics.normalization_executions(), 1);
     assert_eq!(measured.statistics.normalization(), None);
     assert_eq!(measured.statistics.pass_executions(), 1);
+}
+
+#[test]
+fn selected_transition_normalization_failure_retains_mandatory_error_ownership() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_with_transition_and_occurrences_for_test(
+        lowered_program(),
+        &test_schedule(&[TRANSITION_UNCHANGED, FINAL_UNCHANGED]),
+        Some(&mut collector),
+        fail_normalization_transition,
+    );
+
+    let error = measured.result.as_ref().unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::ProofNormalization);
+    assert_eq!(error.pass_identity(), None);
+    assert_eq!(collector.labels, ["proof-rich-input"]);
+    assert_eq!(execution_log(), ["transition-unchanged"]);
+    assert_eq!(measured.statistics.normalization_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.normalization(), None);
+    assert_eq!(measured.statistics.pass_executions(), 1);
+    assert_eq!(measured.occurrences().len(), 1);
+    assert_eq!(
+        measured.occurrences()[0].outcome(),
+        MirPassOccurrenceOutcome::Failed
+    );
+}
+
+#[test]
+fn selected_transition_final_verification_failure_is_attributed_to_the_occurrence() {
+    clear_test_state();
+    let mut collector = CheckpointCollector::default();
+    let measured = run_mir_pipeline_with_transition_and_occurrences_for_test(
+        lowered_program(),
+        &test_schedule(&[TRANSITION_UNCHANGED, FINAL_UNCHANGED]),
+        Some(&mut collector),
+        fail_final_verification_transition,
+    );
+
+    let error = measured.result.as_ref().unwrap_err();
+    assert_eq!(error.stage(), MirPipelineFailureStage::OutputVerification);
+    assert_eq!(error.pass_identity(), Some(TRANSITION_UNCHANGED));
+    assert_eq!(error.pass_stage(), Some(MirPassStage::ProofTransition));
+    assert_eq!(collector.labels, ["proof-rich-input"]);
+    assert_eq!(execution_log(), ["transition-unchanged"]);
+    assert_eq!(measured.statistics.normalization_executions(), 1);
+    assert_eq!(measured.statistics.verification_executions(), 2);
+    assert_eq!(measured.statistics.normalization(), None);
+    assert_eq!(measured.occurrences().len(), 1);
+    assert_eq!(
+        measured.occurrences()[0].outcome(),
+        MirPassOccurrenceOutcome::Failed
+    );
 }
 
 #[test]
@@ -1911,6 +2096,62 @@ fn unchanged_pass(
     log_execution("unchanged");
     assert!(!capability.verified().definitions.is_empty());
     Ok(capability.unchanged())
+}
+
+fn transition_unchanged_pass(
+    capability: MirProofTransitionCapability,
+) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
+    log_execution("transition-unchanged");
+    assert!(!capability.verified().definitions.is_empty());
+    capability.normalize(None, MirPassData::default())
+}
+
+fn transition_execution_failure_pass(
+    _capability: MirProofTransitionCapability,
+) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
+    log_execution("transition-execution-failure");
+    Err(MirPassFailure::execution("synthetic proof-transition failure").into())
+}
+
+fn transition_invalid_accounting_pass(
+    capability: MirProofTransitionCapability,
+) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
+    log_execution("transition-invalid-accounting");
+    capability.normalize(None, MirPassData::changed(1))
+}
+
+fn fail_normalization_transition(
+    _verified: VerifiedProofMirProgram,
+    _plan: Option<super::normalization::MirProofTransitionPlan>,
+) -> Result<
+    (
+        VerifiedFinalMirProgram,
+        super::normalization::MirProofNormalizationStatistics,
+    ),
+    super::seal::MirProofTransitionError,
+> {
+    Err(
+        super::seal::MirProofTransitionError::normalization_for_test(
+            "synthetic normalization failure",
+        ),
+    )
+}
+
+fn fail_final_verification_transition(
+    _verified: VerifiedProofMirProgram,
+    _plan: Option<super::normalization::MirProofTransitionPlan>,
+) -> Result<
+    (
+        VerifiedFinalMirProgram,
+        super::normalization::MirProofNormalizationStatistics,
+    ),
+    super::seal::MirProofTransitionError,
+> {
+    Err(
+        super::seal::MirProofTransitionError::final_verification_for_test(
+            "synthetic final verification failure",
+        ),
+    )
 }
 
 fn final_unchanged_pass(

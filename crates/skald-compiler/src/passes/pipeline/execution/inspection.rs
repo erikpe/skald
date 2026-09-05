@@ -14,6 +14,11 @@ pub enum MirPipelineCheckpointLabel {
         pass_name: &'static str,
         occurrence: usize,
     },
+    AfterProofTransitionPass {
+        position: usize,
+        pass_name: &'static str,
+        occurrence: usize,
+    },
     AfterProofNormalization,
     AfterFinalPass {
         position: usize,
@@ -34,6 +39,14 @@ impl fmt::Display for MirPipelineCheckpointLabel {
             } => write!(
                 formatter,
                 "after-proof-rich-{position}-{pass_name}-{occurrence}"
+            ),
+            Self::AfterProofTransitionPass {
+                position,
+                pass_name,
+                occurrence,
+            } => write!(
+                formatter,
+                "after-proof-transition-{position}-{pass_name}-{occurrence}"
             ),
             Self::AfterProofNormalization => formatter.write_str("after-proof-normalization"),
             Self::AfterFinalPass {
@@ -68,6 +81,14 @@ impl MirPipelineCheckpoint<'_> {
     pub const fn stage(self) -> MirPassStage {
         match self {
             Self::ProofRich(_) => MirPassStage::ProofRich,
+            Self::Final(checkpoint)
+                if matches!(
+                    checkpoint.label(),
+                    MirPipelineCheckpointLabel::AfterProofTransitionPass { .. }
+                ) =>
+            {
+                MirPassStage::ProofTransition
+            }
             Self::Final(_) => MirPassStage::Final,
         }
     }

@@ -6,8 +6,8 @@ use crate::mir::{MirProgram, MirVerificationErrors};
 
 use super::{
     normalization::{
-        normalize_proof_provenance, ConsumedProofAuthority, MirProofNormalizationResult,
-        MirProofNormalizationStatistics,
+        normalize_proof_provenance_with_plan, ConsumedProofAuthority, MirProofNormalizationResult,
+        MirProofNormalizationStatistics, MirProofTransitionPlan,
     },
     reachability_verification_errors,
 };
@@ -68,6 +68,13 @@ use crate::passes::{
 /// fn skip_normalization(checkpoint: MirProofPipelineCheckpoint<'_>) {
 ///     let _ = BackendInput::without_runtime_trace(checkpoint.verified());
 /// }
+/// ```
+///
+/// The proof-consuming transition capability is pipeline-private, so external
+/// callers cannot forge a path around mandatory normalization:
+///
+/// ```compile_fail
+/// use skald_compiler::passes::MirProofTransitionCapability;
 /// ```
 #[derive(Clone, Eq, PartialEq)]
 pub struct VerifiedProofMirProgram {
@@ -234,9 +241,43 @@ pub(crate) fn verify_proof_mir(
 pub(super) fn finalize_proof_mir(
     verified: VerifiedProofMirProgram,
 ) -> Result<(VerifiedFinalMirProgram, MirProofNormalizationStatistics), MirVerificationErrors> {
-    let normalized = normalize_proof_provenance(verified)
-        .map_err(|error| normalization_verification_errors(&error))?;
-    seal_normalized_mir(normalized)
+    transition_proof_mir(verified, None).map_err(MirProofTransitionError::into_verification_errors)
+}
+
+/// Failure from one atomic proof-consuming boundary execution.
+pub(in crate::passes::pipeline) enum MirProofTransitionError {
+    Normalization(MirVerificationErrors),
+    FinalVerification(MirVerificationErrors),
+}
+
+impl MirProofTransitionError {
+    pub(in crate::passes::pipeline) fn into_verification_errors(self) -> MirVerificationErrors {
+        match self {
+            Self::Normalization(errors) => errors,
+            Self::FinalVerification(errors) => errors,
+        }
+    }
+
+    #[cfg(test)]
+    pub(in crate::passes::pipeline) fn normalization_for_test(message: &str) -> Self {
+        Self::Normalization(MirVerificationErrors::program(message))
+    }
+
+    #[cfg(test)]
+    pub(in crate::passes::pipeline) fn final_verification_for_test(message: &str) -> Self {
+        Self::FinalVerification(MirVerificationErrors::program(message))
+    }
+}
+
+pub(in crate::passes::pipeline) fn transition_proof_mir(
+    verified: VerifiedProofMirProgram,
+    optional_plan: Option<MirProofTransitionPlan>,
+) -> Result<(VerifiedFinalMirProgram, MirProofNormalizationStatistics), MirProofTransitionError> {
+    let normalized =
+        normalize_proof_provenance_with_plan(verified, optional_plan).map_err(|error| {
+            MirProofTransitionError::Normalization(normalization_verification_errors(&error))
+        })?;
+    seal_normalized_mir(normalized).map_err(MirProofTransitionError::FinalVerification)
 }
 
 /// Re-establishes normalized structure and fresh seal-bound reachability after

@@ -350,6 +350,7 @@ separate request-local `MirPipelineInspector` service. Its closed borrowed view
 contains either proof-rich or normalized final MIR; only the final variant can
 render seal-bound reachability. Labels are `proof-rich-input`,
 `after-proof-rich-<position>-<name>-<occurrence>`,
+`after-proof-transition-<position>-<name>-<occurrence>`,
 `after-proof-normalization`, `after-final-<position>-<name>-<occurrence>`, and
 `final`. Changed results are resealed before callbacks; failures produce no
 checkpoint for an unpublished product and no product-final checkpoint.

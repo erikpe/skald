@@ -20,6 +20,14 @@ mod plan;
 pub(super) use error::MirProofNormalizationError;
 use error::MirProofNormalizationErrorKind;
 
+/// Optional proof-aware edits which may be composed with mandatory
+/// normalization.
+///
+/// CLR5 deliberately leaves this type uninhabited. The transition API accepts
+/// it now so adding the reviewed logical-selection plan does not require
+/// widening the capability later; CLR6 will add the first private variant.
+pub(in crate::passes::pipeline) enum MirProofTransitionPlan {}
+
 /// Deterministic structural accounting for the mandatory conversion.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct MirProofNormalizationStatistics {
@@ -133,9 +141,20 @@ impl MirProofNormalizationResult {
 
 /// Consumes a proof-verified product and atomically removes its proof-only
 /// path and logical provenance.
+#[allow(dead_code)]
 pub(in crate::passes::pipeline) fn normalize_proof_provenance(
     verified: VerifiedProofMirProgram,
 ) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {
+    normalize_proof_provenance_with_plan(verified, None)
+}
+
+pub(in crate::passes::pipeline) fn normalize_proof_provenance_with_plan(
+    verified: VerifiedProofMirProgram,
+    optional_plan: Option<MirProofTransitionPlan>,
+) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {
+    if let Some(plan) = optional_plan {
+        match plan {}
+    }
     normalize_program(verified.invalidate_for_proof_transformation())
 }
 

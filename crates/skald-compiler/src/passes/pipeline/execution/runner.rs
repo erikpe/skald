@@ -14,9 +14,10 @@ use super::{
         MirProofPassCapability, MirProofPassChange, MirProofPassOutcome,
     },
     statistics::{MeasuredMirPipeline, MirPipelineStatistics},
+    MirProofTransitionCapability, MirProofTransitionFailureKind, ProofNormalizationTransition,
 };
 use crate::passes::pipeline::{
-    seal::{finalize_proof_mir, reseal_final_mir},
+    seal::{reseal_final_mir, transition_proof_mir, MirProofTransitionError},
     verify_proof_mir, MirPassOccurrence, MirPassSchedule,
 };
 
@@ -54,12 +55,12 @@ pub(crate) fn run_mir_pipeline_instrumented(
         schedule,
         record_occurrences,
         inspector,
-        finalize_proof_mir,
+        transition_proof_mir,
     )
 }
 
 #[cfg(test)]
-pub(crate) fn run_mir_pipeline_with_transition_for_test(
+pub(in crate::passes::pipeline) fn run_mir_pipeline_with_transition_for_test(
     program: MirProgram,
     schedule: &MirPassSchedule,
     inspector: Option<&mut dyn MirPipelineInspector>,
@@ -68,15 +69,15 @@ pub(crate) fn run_mir_pipeline_with_transition_for_test(
     run_mir_pipeline_with_transition(program, schedule, false, inspector, transition)
 }
 
-pub(crate) type ProofNormalizationTransition = fn(
-    crate::passes::VerifiedProofMirProgram,
-) -> Result<
-    (
-        crate::passes::VerifiedFinalMirProgram,
-        crate::passes::pipeline::normalization::MirProofNormalizationStatistics,
-    ),
-    crate::mir::MirVerificationErrors,
->;
+#[cfg(test)]
+pub(in crate::passes::pipeline) fn run_mir_pipeline_with_transition_and_occurrences_for_test(
+    program: MirProgram,
+    schedule: &MirPassSchedule,
+    inspector: Option<&mut dyn MirPipelineInspector>,
+    transition: ProofNormalizationTransition,
+) -> MeasuredMirPipeline {
+    run_mir_pipeline_with_transition(program, schedule, true, inspector, transition)
+}
 
 fn run_mir_pipeline_with_transition(
     program: MirProgram,
@@ -210,21 +211,74 @@ fn run_mir_pipeline_with_transition(
         }
     }
 
-    statistics.record_normalization_execution();
-    statistics.record_verification();
-    let mut verified = match transition(verified) {
-        Ok((verified, normalization)) => {
-            statistics.record_normalization_statistics(normalization);
-            verified
+    let (mut verified, normalization) = if let Some(occurrence) = schedule.proof_transition() {
+        statistics.record_pass_execution();
+        let started = record_occurrences.then(Instant::now);
+        let transform = occurrence
+            .transition_transform()
+            .expect("validated transition occurrence must have a transition callback");
+        let outcome = match transform(MirProofTransitionCapability::with_transition(
+            verified, transition,
+        )) {
+            Ok(outcome) => outcome,
+            Err(failure) => {
+                let error = match failure.into_kind() {
+                    MirProofTransitionFailureKind::Pass(MirPassFailure::Execution(error)) => {
+                        MirPipelineError::pass_execution(occurrence, error)
+                    }
+                    MirProofTransitionFailureKind::Pass(MirPassFailure::Rewrite(error)) => {
+                        MirPipelineError::structural_rewrite(occurrence, error)
+                    }
+                    MirProofTransitionFailureKind::Boundary(error) => {
+                        statistics.record_normalization_execution();
+                        statistics.record_verification();
+                        transition_boundary_error(Some(occurrence), error)
+                    }
+                };
+                record_failure(&mut records, occurrence, started);
+                return MeasuredMirPipeline::new(Err(error), statistics, records);
+            }
+        };
+
+        statistics.record_normalization_execution();
+        statistics.record_verification();
+        let (verified, normalization, data, changed) = outcome.into_parts();
+        statistics.record_pass_data(occurrence, &data);
+        if let Some(started) = started {
+            records.push(MirPassOccurrenceRecord::completed(
+                occurrence,
+                started.elapsed(),
+                if changed {
+                    MirPassOccurrenceOutcome::Changed
+                } else {
+                    MirPassOccurrenceOutcome::Unchanged
+                },
+                data,
+                Default::default(),
+                1,
+            ));
         }
-        Err(errors) => {
-            return MeasuredMirPipeline::new(
-                Err(MirPipelineError::proof_normalization(errors)),
-                statistics,
-                records,
-            );
+        inspect_final_checkpoint(
+            &mut inspector,
+            after_transition_pass_label(occurrence),
+            &verified,
+        );
+        (verified, normalization)
+    } else {
+        statistics.record_normalization_execution();
+        statistics.record_verification();
+        match transition(verified, None) {
+            Ok(result) => result,
+            Err(error) => {
+                return MeasuredMirPipeline::new(
+                    Err(transition_boundary_error(None, error)),
+                    statistics,
+                    records,
+                );
+            }
         }
     };
+    statistics.record_normalization_statistics(normalization);
     inspect_final_checkpoint(
         &mut inspector,
         MirPipelineCheckpointLabel::AfterProofNormalization,
@@ -352,6 +406,31 @@ fn after_final_pass_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpoin
         position: occurrence.position(),
         pass_name: occurrence.name(),
         occurrence: occurrence.occurrence(),
+    }
+}
+
+fn after_transition_pass_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpointLabel {
+    MirPipelineCheckpointLabel::AfterProofTransitionPass {
+        position: occurrence.position(),
+        pass_name: occurrence.name(),
+        occurrence: occurrence.occurrence(),
+    }
+}
+
+fn transition_boundary_error(
+    occurrence: Option<MirPassOccurrence>,
+    error: MirProofTransitionError,
+) -> MirPipelineError {
+    match (occurrence, error) {
+        (_, MirProofTransitionError::Normalization(errors)) => {
+            MirPipelineError::proof_normalization(errors)
+        }
+        (Some(occurrence), MirProofTransitionError::FinalVerification(errors)) => {
+            MirPipelineError::output_verification(occurrence, errors)
+        }
+        (None, MirProofTransitionError::FinalVerification(errors)) => {
+            MirPipelineError::proof_normalization(errors)
+        }
     }
 }
 

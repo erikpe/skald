@@ -74,7 +74,9 @@ impl MirOptimizationOptions {
             Err(
                 error @ (MirPassScheduleError::InvalidRegistry(_)
                 | MirPassScheduleError::UnknownIdentity { .. }
-                | MirPassScheduleError::WrongStageOrder { .. }),
+                | MirPassScheduleError::WrongStageOrder { .. }
+                | MirPassScheduleError::RepeatedProofTransition { .. }
+                | MirPassScheduleError::ProofTransitionAfterFinal { .. }),
             ) => {
                 panic!("invalid compiler-owned final-MIR pass policy: {error}")
             }

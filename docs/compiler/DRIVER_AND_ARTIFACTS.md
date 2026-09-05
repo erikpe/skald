@@ -89,9 +89,10 @@ Static self-dependencies and cycles are ordinary source diagnostics; malformed
 preliminary or planned MIR remains a distinct verification failure. A valid
 explicit initializer is synthesized directly into structured final coordinator
 regions. The MIR pipeline verifies its proof-rich input and every changed
-proof-rich occurrence, normalizes proof provenance exactly once, verifies the
-normalized product, and reseals every changed final-stage occurrence with
-fresh reachability facts. It returns the sealed, read-only final product
+proof-rich occurrence, runs zero or one typed proof-transition occurrence
+through the one mandatory proof-normalization path, verifies the normalized
+product, and reseals every changed final-stage occurrence with fresh
+reachability facts. It returns the sealed, read-only final product
 required by backend input. These
 regions are the sole executable lifecycle representation consumed by both
 verification and the backend. The x86-64 backend then emits private initializer
@@ -241,15 +242,17 @@ publication.
 
 ## Frozen convergent local constant propagation orchestration
 
-Status: **in progress through the dependent checked-protocol consumer**. The frozen
+Status: **in progress through the proof-consuming transition boundary**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
 the accepted extension. Primitive and checked proof-rich consumers use the
-convergent solution today; the transition-stage extension remains pending.
+convergent solution today, and the typed single-occurrence transition-stage
+extension is implemented. The logical selection plan and production
+`constant-short-circuit-folding` registration remain pending.
 
-The registry will retain `primitive-constant-folding` and
-`checked-integer-constant-folding` and add
+The registry retains `primitive-constant-folding` and
+`checked-integer-constant-folding` and will add
 `constant-short-circuit-folding`. The latter is independently discoverable and
 excludable, appears once at the proof-normalization boundary in `default`, and
 uses a new closed `ProofTransition` stage. Schedule validation accepts proof-
@@ -262,9 +265,13 @@ disabled request select no pass occurrences but still run mandatory
 normalization. Selecting or disabling logical folding therefore cannot bypass,
 repeat, or change core normalization policy.
 
-The runner will let the transition inspect verified proof-rich MIR, validate
-one optional logical selection plan, and atomically compose it with mandatory
-normalization. Only verified final MIR is returned. There is no public request
+The runner lets the transition inspect verified proof-rich MIR and accepts one
+narrowly typed optional plan at the consuming normalization call. The boundary
+leaves that plan type intentionally uninhabited until the logical plan is
+implemented; the no-plan path already proves identical normalization,
+verification, failure, occurrence, and checkpoint behavior. Only verified
+final MIR is returned.
+There is no public request
 field, arbitrary ordering, optimization level, dynamic registration, target
 dependency, raw unnormalized output, or reusable third MIR product.
 
@@ -311,9 +318,10 @@ verification and one normalized verification around that transition.
 
 The mandatory normalizer is not a pass and is never listed, disabled,
 registered, selected, or repeated. Registry descriptors and
-`--list-mir-passes` show each pass's `proof-rich` or `final` stage, exact
-schedules reject proof-rich occurrences after the final boundary, and typed
-callbacks cannot accept both seals. Current local scalar passes are proof-rich;
+`--list-mir-passes` show each registered pass's `proof-rich`,
+`proof-transition`, or `final` stage, exact schedules enforce the ordered
+three-region contract and at most one transition, and typed callbacks cannot
+accept another stage's capability. Current local scalar passes are proof-rich;
 `post-proof-unreachable-block-elimination`,
 `post-proof-empty-block-forwarding`, `post-proof-basic-block-merging`, and
 `whole-world-reachability` run in the final region. The default schedule

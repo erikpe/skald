@@ -5,6 +5,8 @@ use std::fmt;
 pub enum MirPassStage {
     /// Runs while path and logical proof provenance is still available.
     ProofRich,
+    /// Consumes proof provenance while producing the normalized final seal.
+    ProofTransition,
     /// Runs after mandatory proof-provenance normalization.
     Final,
 }
@@ -13,6 +15,7 @@ impl MirPassStage {
     pub const fn name(self) -> &'static str {
         match self {
             Self::ProofRich => "proof-rich",
+            Self::ProofTransition => "proof-transition",
             Self::Final => "final",
         }
     }

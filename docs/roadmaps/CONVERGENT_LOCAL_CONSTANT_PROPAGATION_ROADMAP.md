@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 through CLR4 are complete and CLR5 is next.
+Status: in progress; CLR0 through CLR5 are complete and CLR6 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -100,7 +100,7 @@ creating persistent optimizer provenance.
 - [x] CLR2 — Build the convergent callable-local solver
 - [x] CLR3 — Migrate primitive-family fact consumers
 - [x] CLR4 — Rewrite dependent checked protocols from one solved snapshot
-- [ ] CLR5 — Add the proof-consuming transition boundary
+- [x] CLR5 — Add the proof-consuming transition boundary
 - [ ] CLR6 — Implement constant-left logical selection
 - [ ] CLR7 — Complete selection, observation, and semantic evidence
 - [ ] CLR8 — Harden ownership, documentation, and roadmap closure
@@ -281,23 +281,23 @@ while failures and partial plans retain exact original behavior.
 **Purpose:** Establish a typed place where optional proof-aware transformations
 can safely consume logical records without weakening either verified seal.
 
-- [ ] Extend `MirPassStage` and descriptor/listing vocabulary with
+- [x] Extend `MirPassStage` and descriptor/listing vocabulary with
   `ProofTransition` between `ProofRich` and `Final`.
-- [ ] Extend registrations with a distinct transition callback type and a
+- [x] Extend registrations with a distinct transition callback type and a
   pipeline-owned capability that can inspect `VerifiedProofMirProgram`, accept
   a narrowly typed optional normalization plan, and publish only
   `VerifiedFinalMirProgram`.
-- [ ] Partition resolved schedules into proof-rich, zero-or-one transition, and
+- [x] Partition resolved schedules into proof-rich, zero-or-one transition, and
   final regions; reject repeats, misplaced stages, and callbacks whose declared
   identity/stage disagree.
-- [ ] Refactor the runner so mandatory normalization executes exactly once
+- [x] Refactor the runner so mandatory normalization executes exactly once
   through either the selected transition or the unchanged core path.
-- [ ] Keep `none` and all-disabled schedules free of selectable occurrences but
+- [x] Keep `none` and all-disabled schedules free of selectable occurrences but
   still normalized and final-verified exactly once.
-- [ ] Define atomic error ownership, occurrence records, transition checkpoint
+- [x] Define atomic error ownership, occurrence records, transition checkpoint
   labels, the established `after-proof-normalization` checkpoint, and absence
   of any observable partial state between them.
-- [ ] Keep core normalization rules/statistics separate and prohibit raw MIR,
+- [x] Keep core normalization rules/statistics separate and prohibit raw MIR,
   a reusable third seal, general editor access, or multiple transition passes.
 
 **Tests:** Registry and stage exhaustiveness; exact schedule partitions; zero

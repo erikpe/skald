@@ -1,6 +1,8 @@
 use super::identity::MirPassIdentity;
 use super::stage::MirPassStage;
-use crate::passes::pipeline::execution::{MirFinalPassTransform, MirProofPassTransform};
+use crate::passes::pipeline::execution::{
+    MirFinalPassTransform, MirProofPassTransform, MirProofTransitionTransform,
+};
 
 /// Stable selection and inspection metadata for one pass.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -50,6 +52,11 @@ pub(in crate::passes::pipeline) enum MirPassImplementation {
         identity: MirPassIdentity,
         transform: MirProofPassTransform,
     },
+    #[allow(dead_code)]
+    ProofTransition {
+        identity: MirPassIdentity,
+        transform: MirProofTransitionTransform,
+    },
     Final {
         identity: MirPassIdentity,
         transform: MirFinalPassTransform,
@@ -77,15 +84,29 @@ impl MirPassImplementation {
         }
     }
 
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) const fn proof_transition(
+        identity: MirPassIdentity,
+        transform: MirProofTransitionTransform,
+    ) -> Self {
+        Self::ProofTransition {
+            identity,
+            transform,
+        }
+    }
+
     pub(in crate::passes::pipeline) const fn identity(self) -> MirPassIdentity {
         match self {
-            Self::ProofRich { identity, .. } | Self::Final { identity, .. } => identity,
+            Self::ProofRich { identity, .. }
+            | Self::ProofTransition { identity, .. }
+            | Self::Final { identity, .. } => identity,
         }
     }
 
     pub(in crate::passes::pipeline) const fn stage(self) -> MirPassStage {
         match self {
             Self::ProofRich { .. } => MirPassStage::ProofRich,
+            Self::ProofTransition { .. } => MirPassStage::ProofTransition,
             Self::Final { .. } => MirPassStage::Final,
         }
     }
@@ -95,7 +116,16 @@ impl MirPassImplementation {
     ) -> Option<MirProofPassTransform> {
         match self {
             Self::ProofRich { transform, .. } => Some(transform),
-            Self::Final { .. } => None,
+            Self::ProofTransition { .. } | Self::Final { .. } => None,
+        }
+    }
+
+    pub(in crate::passes::pipeline) const fn transition_transform(
+        self,
+    ) -> Option<MirProofTransitionTransform> {
+        match self {
+            Self::ProofTransition { transform, .. } => Some(transform),
+            Self::ProofRich { .. } | Self::Final { .. } => None,
         }
     }
 
@@ -103,7 +133,7 @@ impl MirPassImplementation {
         self,
     ) -> Option<MirFinalPassTransform> {
         match self {
-            Self::ProofRich { .. } => None,
+            Self::ProofRich { .. } | Self::ProofTransition { .. } => None,
             Self::Final { transform, .. } => Some(transform),
         }
     }

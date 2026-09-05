@@ -20,8 +20,9 @@ pub(crate) use execution::{
     MeasuredMirPipeline, MirPipelineStatistics,
 };
 #[cfg(test)]
-pub(crate) use execution::{
-    run_mir_pipeline_measured_inspected, run_mir_pipeline_with_transition_for_test,
+pub(in crate::passes::pipeline) use execution::{
+    run_mir_pipeline_measured_inspected, run_mir_pipeline_with_transition_and_occurrences_for_test,
+    run_mir_pipeline_with_transition_for_test,
 };
 pub use execution::{
     MirFinalPipelineCheckpoint, MirPassMeasurement, MirPassOccurrenceOutcome,

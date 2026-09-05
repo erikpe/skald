@@ -11,11 +11,13 @@ The
 implements the frozen callable-local solver, checked-protocol carrier
 certificates, depth-independent primitive and checked consumers, and
 constant-left logical selection through one proof-consuming transition. CLR0
-through CLR4 are complete: exact structural observations, auditable checked-
+through CLR5 are complete: exact structural observations, auditable checked-
 carrier certificates, and one immutable convergent callable-local solution are
 implemented; primitive-family and checked-protocol consumers use that solution,
 and both fold to arbitrary supported dependency depth without pipeline
-repetition. CLR5 is next.
+repetition. The pipeline now also has a typed zero-or-one proof-transition
+region whose consuming capability routes through mandatory normalization and
+publishes only verified final MIR. CLR6 is next.
 
 ## Pending discoveries
 
@@ -46,8 +48,9 @@ was completed for the checked consumer in CLR4.
 The
 [convergent local constant propagation discoveries](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md)
 currently contain no open findings; CLR4 resolved the preservation-spill
-mismatch for checked sibling subexpressions. New work outside the frozen
-boundary belongs there rather than in an active task.
+mismatch for checked sibling subexpressions, and CLR5 added no out-of-scope
+finding. New work outside the frozen boundary belongs there rather than in an
+active task.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent

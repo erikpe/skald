@@ -11,7 +11,8 @@ use super::{
 };
 use crate::passes::pipeline::execution::{
     MirFinalPassCapability, MirFinalPassOutcome, MirPassFailure, MirProofPassCapability,
-    MirProofPassOutcome,
+    MirProofPassOutcome, MirProofTransitionCapability, MirProofTransitionFailure,
+    MirProofTransitionOutcome,
 };
 use crate::passes::pipeline::optimizations::{
     checked_integer_folding, conservative_cfg_cleanup, dead_pure_definition_elimination,
@@ -23,6 +24,7 @@ use crate::passes::pipeline::optimizations::{
 const ALPHA: MirPassIdentity = MirPassIdentity::new(1);
 const BETA: MirPassIdentity = MirPassIdentity::new(2);
 const GAMMA: MirPassIdentity = MirPassIdentity::new(3);
+const DELTA: MirPassIdentity = MirPassIdentity::new(4);
 
 const fn registration(
     descriptor_identity: MirPassIdentity,
@@ -58,6 +60,27 @@ fn final_metadata_only_pass(
     capability: MirFinalPassCapability,
 ) -> Result<MirFinalPassOutcome, MirPassFailure> {
     Ok(capability.unchanged())
+}
+
+const fn transition_registration(
+    identity: MirPassIdentity,
+    name: &'static str,
+) -> MirPassRegistration {
+    MirPassRegistration::new(
+        MirPassDescriptor::new(
+            identity,
+            MirPassStage::ProofTransition,
+            name,
+            "Runs proof-transition metadata.",
+        ),
+        MirPassImplementation::proof_transition(identity, transition_metadata_only_pass),
+    )
+}
+
+fn transition_metadata_only_pass(
+    capability: MirProofTransitionCapability,
+) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
+    capability.normalize(None, Default::default())
 }
 
 static VALID_REGISTRATIONS: [MirPassRegistration; 3] = [
@@ -549,6 +572,84 @@ fn production_exact_schedules_preserve_regions_and_repeat_within_a_stage() {
 }
 
 #[test]
+fn proof_transition_stage_has_stable_listing_vocabulary() {
+    assert_eq!(MirPassStage::ProofRich.name(), "proof-rich");
+    assert_eq!(MirPassStage::ProofTransition.name(), "proof-transition");
+    assert_eq!(MirPassStage::Final.name(), "final");
+    assert_eq!(
+        MirPassStage::ProofTransition.to_string(),
+        "proof-transition"
+    );
+}
+
+#[test]
+fn exact_schedule_partitions_zero_or_one_proof_transition() {
+    static REGISTRATIONS: [MirPassRegistration; 3] = [
+        registration(ALPHA, ALPHA, "alpha-pass", "Runs alpha."),
+        transition_registration(DELTA, "delta-pass"),
+        final_registration(BETA, "beta-pass"),
+    ];
+    let registry = MirPassRegistry::new(&REGISTRATIONS);
+
+    let without = resolve_exact(registry, &[ALPHA, BETA]).unwrap();
+    assert_eq!(without.proof_rich().count(), 1);
+    assert_eq!(without.proof_transition(), None);
+    assert_eq!(without.final_stage().count(), 1);
+    assert_eq!(without.normalization_position(), 1);
+
+    let with = resolve_exact(registry, &[ALPHA, DELTA, BETA]).unwrap();
+    assert_eq!(
+        with.proof_rich()
+            .map(|occurrence| occurrence.identity())
+            .collect::<Vec<_>>(),
+        [ALPHA]
+    );
+    assert_eq!(with.proof_transition().unwrap().identity(), DELTA);
+    assert_eq!(with.proof_transition().unwrap().position(), 1);
+    assert_eq!(with.proof_transition().unwrap().occurrence(), 0);
+    assert_eq!(
+        with.final_stage()
+            .map(|occurrence| occurrence.identity())
+            .collect::<Vec<_>>(),
+        [BETA]
+    );
+    assert_eq!(with.normalization_position(), 1);
+}
+
+#[test]
+fn schedules_reject_repeated_or_misplaced_proof_transitions() {
+    static REGISTRATIONS: [MirPassRegistration; 3] = [
+        registration(ALPHA, ALPHA, "alpha-pass", "Runs alpha."),
+        transition_registration(DELTA, "delta-pass"),
+        final_registration(BETA, "beta-pass"),
+    ];
+    let registry = MirPassRegistry::new(&REGISTRATIONS);
+
+    assert_eq!(
+        resolve_exact(registry, &[DELTA, DELTA]).unwrap_err(),
+        MirPassScheduleError::RepeatedProofTransition {
+            transition: DELTA,
+            first_position: 0,
+            position: 1,
+        }
+    );
+    assert_eq!(
+        resolve_exact(registry, &[DELTA, ALPHA]).unwrap_err(),
+        MirPassScheduleError::WrongStageOrder {
+            proof_rich: ALPHA,
+            position: 1,
+        }
+    );
+    assert_eq!(
+        resolve_exact(registry, &[BETA, DELTA]).unwrap_err(),
+        MirPassScheduleError::ProofTransitionAfterFinal {
+            transition: DELTA,
+            position: 1,
+        }
+    );
+}
+
+#[test]
 fn normalization_is_never_a_selectable_or_registered_pass() {
     assert_eq!(
         resolve_mir_pass_schedule(
@@ -600,6 +701,47 @@ fn registry_rejects_descriptor_and_callback_stage_mismatch() {
     assert_eq!(schedule.proof_rich().count(), 1);
     assert_eq!(schedule.final_stage().count(), 1);
     assert_eq!(schedule.normalization_position(), 1);
+
+    static TRANSITION_MISMATCH: [MirPassRegistration; 1] = [MirPassRegistration::new(
+        MirPassDescriptor::new(
+            DELTA,
+            MirPassStage::ProofTransition,
+            "delta-pass",
+            "Runs delta.",
+        ),
+        MirPassImplementation::proof_rich(DELTA, metadata_only_pass),
+    )];
+    assert_eq!(
+        MirPassRegistry::new(&TRANSITION_MISMATCH)
+            .validate()
+            .unwrap_err()
+            .as_slice(),
+        &[MirPassRegistryError::ImplementationStageMismatch {
+            identity: DELTA,
+            descriptor: MirPassStage::ProofTransition,
+            implementation: MirPassStage::ProofRich,
+        }]
+    );
+
+    static TRANSITION_IDENTITY_MISMATCH: [MirPassRegistration; 1] = [MirPassRegistration::new(
+        MirPassDescriptor::new(
+            DELTA,
+            MirPassStage::ProofTransition,
+            "delta-pass",
+            "Runs delta.",
+        ),
+        MirPassImplementation::proof_transition(ALPHA, transition_metadata_only_pass),
+    )];
+    assert_eq!(
+        MirPassRegistry::new(&TRANSITION_IDENTITY_MISMATCH)
+            .validate()
+            .unwrap_err()
+            .as_slice(),
+        &[MirPassRegistryError::ImplementationIdentityMismatch {
+            descriptor: DELTA,
+            implementation: ALPHA,
+        }]
+    );
 }
 
 #[test]

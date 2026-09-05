@@ -334,12 +334,14 @@ and atomic failure.
 Compile-fail API tests prevent forging either
 `VerifiedProofMirProgram` or `VerifiedFinalMirProgram`, detaching final facts,
 invoking private invalidation, skipping normalization, or constructing backend
-input from proof-rich MIR. Transition tests pin proof retention, complete proof
+input from proof-rich MIR. They also prevent external construction of the
+pipeline-private proof-transition capability. Transition tests pin proof retention, complete proof
 consumption, dependency-inventory parity, normalized-verifier rejection,
 fresh reachability facts, clone/debug behavior, and two verification executions
 for `none`. Stage-policy tests pin every pass's stage, wrong-stage
-rejection, exact proof-rich and final schedule regions, typed callbacks, and
-the single mandatory normalization boundary. Inspection and reporting tests
+rejection, exact proof-rich, zero-or-one transition, and final schedule regions,
+typed callbacks, transition repetition and placement rejection, and the single
+mandatory normalization boundary. Inspection and reporting tests
 pin stage-typed checkpoint order, normalization failure cutoff, final-only
 reachability, normalization metric order, trace stage identity, quiet gating,
 and report-writer isolation.

@@ -744,16 +744,21 @@ single threaded.
 Only the target-independent pass pipeline may invalidate either verified MIR
 product. A `ProofRich` pass receives a `VerifiedProofMirProgram` through a
 proof-only capability; a `Final` pass receives a `VerifiedFinalMirProgram`
-through a distinct normalized capability. Neither callback type accepts the
-other seal. Their private ownership bridges consume the seal directly into a
-supported atomic whole-program transformation, and a successful change
-invalidates local identities, snapshots, and reachability facts together.
+through a distinct normalized capability. A `ProofTransition` callback has a
+third, narrow capability: it may inspect the proof-rich seal and can consume it
+only by submitting a typed optional normalization plan to the mandatory
+normalizer, which publishes a verified final seal. None of the three callback
+types accepts another stage's capability. Their private ownership bridges
+consume the seal directly into a supported atomic whole-program
+transformation, and a successful change invalidates local identities,
+snapshots, and reachability facts together.
 Proof-rich changes return through complete `verify_proof_mir`; final-stage
 changes return through normalized verification and freshly computed
 reachability. Proof-rich verification computes reachability only as transient
 validation evidence; only `VerifiedFinalMirProgram` retains seal-bound facts.
-Exact internal schedules exercise this same runner and must form
-one proof-rich prefix followed by one final-stage suffix.
+Exact internal schedules exercise this same runner and must form one
+proof-rich prefix, zero or one proof-transition occurrence, and one final-stage
+suffix.
 
 Pipeline accounting records verification and pass executions at the point they
 occur. Structurally successful commits contribute already-known processed and
@@ -792,7 +797,7 @@ profile before provider or source work and passes that schedule to the same
 MIR pipeline.
 
 One compiler-owned immutable registry couples each entry's typed identity,
-closed `MirPassStage::{ProofRich, Final}`, unique stable lowercase kebab-case
+closed `MirPassStage::{ProofRich, ProofTransition, Final}`, unique stable lowercase kebab-case
 name, description, implementation-declared identity and stage, and typed
 transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
@@ -819,10 +824,11 @@ complete known-name inventory are sorted lexically. Filesystem order, module
 discovery, registry order, map iteration, or compiler worker completion never
 selects execution order. Exact schedules are a crate-private input for tests
 and compiler tools. The command line selects profiles and exclusions,
-not arbitrary pass order. Resolution rejects any proof-rich occurrence after
-a final occurrence. The mandatory normalization boundary is represented once
-between the two regions, but has no selectable identity: it cannot be listed,
-disabled, registered, selected, or repeated.
+not arbitrary pass order. Resolution rejects a proof-rich occurrence after
+either later region, a transition after the final region, and a second
+transition occurrence. The mandatory normalization boundary is represented
+once between proof-rich and final MIR, but has no selectable identity: it
+cannot be listed, disabled, registered, selected, or repeated.
 
 The transforming runner first calls complete proof-rich final-MIR
 verification, including immutable static-lifecycle realization and transient
@@ -834,8 +840,12 @@ changed outcome invalidates the proof-rich program, yields
 raw dense MIR, rewrite maps, change summaries, and explicit
 changed-callable pass data, and immediately repeats proof verification before
 any later proof-rich pass or inspection checkpoint can observe it. The runner
-then consumes proof provenance exactly once, performs normalized verification,
-and enters the final region. Each final occurrence uses the distinct final
+then either invokes the core transition directly or gives the sole selected
+transition occurrence a capability that must invoke that same normalization
+path. Both routes consume proof provenance and perform normalized verification
+exactly once before entering the final region. A transition cannot publish raw
+or partially normalized MIR, reuse a third seal, or obtain the general callable
+editor. Each final occurrence uses the distinct final
 capability; unchanged outcomes retain the normalized seal, while changed
 outcomes are normalized-reverified and rebound to fresh reachability before
 the next final pass. The production `post-proof-unreachable-block-elimination`,
@@ -889,6 +899,7 @@ receives a closed borrowed `MirPipelineCheckpoint` view: `ProofRich` contains
 `VerifiedProofMirProgram`, while `Final` contains normalized
 `VerifiedFinalMirProgram`. Exact labels are `proof-rich-input`,
 `after-proof-rich-<position>-<name>-<occurrence>`,
+`after-proof-transition-<position>-<name>-<occurrence>`,
 `after-proof-normalization`, `after-final-<position>-<name>-<occurrence>`, and
 `final`, so stages and repeated passes cannot collide. Only final checkpoints
 expose their seal-bound reachability dump; proof-rich checkpoints expose no
@@ -1180,7 +1191,7 @@ the logical consumer is named `constant-short-circuit-folding`. No facts,
 certificates, protocol observations, or rewrite positions survive a commit.
 
 Because proof-rich verification requires the exact logical record while
-normalized MIR no longer retains it, the frozen design adds one narrow
+normalized MIR no longer retains it, the implemented pipeline boundary adds one narrow
 `ProofTransition` stage between `ProofRich` and `Final`. At most one transition
 occurrence may submit a validated logical plan to the mandatory normalizer.
 The optional edits and unchanged normalization rules commit atomically and

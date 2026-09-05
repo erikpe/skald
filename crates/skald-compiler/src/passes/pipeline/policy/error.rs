@@ -113,6 +113,15 @@ pub(crate) enum MirPassScheduleError {
         proof_rich: MirPassIdentity,
         position: usize,
     },
+    RepeatedProofTransition {
+        transition: MirPassIdentity,
+        first_position: usize,
+        position: usize,
+    },
+    ProofTransitionAfterFinal {
+        transition: MirPassIdentity,
+        position: usize,
+    },
 }
 
 impl fmt::Display for MirPassScheduleError {
@@ -143,7 +152,22 @@ impl fmt::Display for MirPassScheduleError {
                 position,
             } => write!(
                 formatter,
-                "proof-rich MIR {proof_rich} occurs after the final-stage boundary at schedule position {position}"
+                "proof-rich MIR {proof_rich} occurs after the proof-consuming boundary at schedule position {position}"
+            ),
+            Self::RepeatedProofTransition {
+                transition,
+                first_position,
+                position,
+            } => write!(
+                formatter,
+                "proof-transition MIR {transition} repeats at schedule position {position}; the transition boundary is already occupied at position {first_position}"
+            ),
+            Self::ProofTransitionAfterFinal {
+                transition,
+                position,
+            } => write!(
+                formatter,
+                "proof-transition MIR {transition} occurs after the final-stage boundary at schedule position {position}"
             ),
         }
     }
@@ -156,7 +180,9 @@ impl std::error::Error for MirPassScheduleError {
             Self::UnknownIdentity { .. }
             | Self::UnknownNames { .. }
             | Self::MandatoryNormalizationSelection
-            | Self::WrongStageOrder { .. } => None,
+            | Self::WrongStageOrder { .. }
+            | Self::RepeatedProofTransition { .. }
+            | Self::ProofTransitionAfterFinal { .. } => None,
         }
     }
 }

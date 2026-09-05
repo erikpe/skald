@@ -16,8 +16,12 @@ exhaustive storage-use census and the private checked-carrier certificate;
 CLR2 added the immutable dependency graph and convergent solver. CLR3 migrated
 primitive folding and the bounded algebraic/CFG fact consumers to that shared
 solution. CLR4 migrated checked folding to one solved snapshot and resolved the
-only prior finding below. During the remaining implementation, record only work
-discovered outside the active task's frozen scope. Each entry should
+only prior finding below. CLR5 added the typed single-occurrence
+proof-transition schedule region, capability, atomic normalization route,
+occurrence and checkpoint contracts, and boundary failure ownership without
+adding a production logical pass; it produced no out-of-scope finding. During
+the remaining implementation, record only work discovered outside the active
+task's frozen scope. Each entry should
 state the problem, concrete evidence, likely owner and priority, and a bounded
 later direction. Small maintainability improvements that directly support the
 current task should be implemented in that task instead.
