@@ -42,6 +42,24 @@ impl MirCallableEditSnapshot {
         Ok(())
     }
 
+    /// Rejects a dense callable which no longer matches the analyzed source.
+    ///
+    /// This lets a whole-program plan validate every callable before opening
+    /// the first sparse edit transaction.
+    pub(crate) fn validate_definition(
+        &self,
+        definition: MirDefinitionRef<'_>,
+        subject: &'static str,
+    ) -> Result<(), MirRewriteError> {
+        if !self.matches_definition(definition) {
+            return Err(MirRewriteError::StaleCallableSnapshot {
+                callable: definition.callable(),
+                subject,
+            });
+        }
+        Ok(())
+    }
+
     fn matches(&self, edit: &MirCallableEdit) -> bool {
         self.callable == edit.callable()
             && self.body.entry == edit.entry()
@@ -91,5 +109,12 @@ impl MirCallableEditSnapshot {
                     edit.logical_order().get(index) == Some(&LogicalRecordIndex::new(index))
                         && edit.logical_record(LogicalRecordIndex::new(index)) == Ok(expression)
                 })
+    }
+
+    fn matches_definition(&self, definition: MirDefinitionRef<'_>) -> bool {
+        self.callable == definition.callable()
+            && self.storage == definition.storage_entries()
+            && self.values == definition.values()
+            && &self.body == definition.body()
     }
 }

@@ -7,7 +7,8 @@ use crate::mir::{MirProgram, MirVerificationErrors};
 use super::{
     normalization::{
         normalize_proof_provenance_with_plan, ConsumedProofAuthority, MirProofNormalizationResult,
-        MirProofNormalizationStatistics, MirProofTransitionPlan,
+        MirProofNormalizationStatistics, MirProofTransitionNormalizationError,
+        MirProofTransitionPlan,
     },
     reachability_verification_errors,
 };
@@ -246,6 +247,8 @@ pub(super) fn finalize_proof_mir(
 
 /// Failure from one atomic proof-consuming boundary execution.
 pub(in crate::passes::pipeline) enum MirProofTransitionError {
+    OptionalPlanRewrite(crate::mir::rewrite::MirRewriteError),
+    OptionalPlanVerification(MirVerificationErrors),
     Normalization(MirVerificationErrors),
     FinalVerification(MirVerificationErrors),
 }
@@ -253,6 +256,10 @@ pub(in crate::passes::pipeline) enum MirProofTransitionError {
 impl MirProofTransitionError {
     pub(in crate::passes::pipeline) fn into_verification_errors(self) -> MirVerificationErrors {
         match self {
+            Self::OptionalPlanRewrite(error) => {
+                MirVerificationErrors::program(format!("proof-transition rewrite failed: {error}"))
+            }
+            Self::OptionalPlanVerification(errors) => errors,
             Self::Normalization(errors) => errors,
             Self::FinalVerification(errors) => errors,
         }
@@ -273,10 +280,19 @@ pub(in crate::passes::pipeline) fn transition_proof_mir(
     verified: VerifiedProofMirProgram,
     optional_plan: Option<MirProofTransitionPlan>,
 ) -> Result<(VerifiedFinalMirProgram, MirProofNormalizationStatistics), MirProofTransitionError> {
-    let normalized =
-        normalize_proof_provenance_with_plan(verified, optional_plan).map_err(|error| {
-            MirProofTransitionError::Normalization(normalization_verification_errors(&error))
-        })?;
+    let normalized = normalize_proof_provenance_with_plan(verified, optional_plan).map_err(
+        |error| match error {
+            MirProofTransitionNormalizationError::OptionalPlanRewrite(error) => {
+                MirProofTransitionError::OptionalPlanRewrite(error)
+            }
+            MirProofTransitionNormalizationError::OptionalPlanVerification(errors) => {
+                MirProofTransitionError::OptionalPlanVerification(errors)
+            }
+            MirProofTransitionNormalizationError::Normalization(error) => {
+                MirProofTransitionError::Normalization(normalization_verification_errors(&error))
+            }
+        },
+    )?;
     seal_normalized_mir(normalized).map_err(MirProofTransitionError::FinalVerification)
 }
 

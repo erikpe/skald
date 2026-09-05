@@ -8,11 +8,13 @@
 
 use crate::mir::{
     check_normalized_mir,
-    rewrite::{rewrite_program, MirRewriteError},
-    MirProgram,
+    rewrite::{rewrite_program, MirCallableEdit, MirRewriteError},
+    MirProgram, MirVerificationErrors,
 };
 
-use super::VerifiedProofMirProgram;
+use super::{
+    optimizations::constant_short_circuit_folding::LogicalSelectionPlan, VerifiedProofMirProgram,
+};
 
 mod error;
 mod plan;
@@ -23,10 +25,51 @@ use error::MirProofNormalizationErrorKind;
 /// Optional proof-aware edits which may be composed with mandatory
 /// normalization.
 ///
-/// CLR5 deliberately leaves this type uninhabited. The transition API accepts
-/// it now so adding the reviewed logical-selection plan does not require
-/// widening the capability later; CLR6 will add the first private variant.
-pub(in crate::passes::pipeline) enum MirProofTransitionPlan {}
+#[allow(dead_code)]
+pub(in crate::passes::pipeline) enum MirProofTransitionPlan {
+    Logical(LogicalSelectionPlan),
+}
+
+impl MirProofTransitionPlan {
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) const fn logical(plan: LogicalSelectionPlan) -> Self {
+        Self::Logical(plan)
+    }
+
+    pub(in crate::passes::pipeline) fn processed_callables(&self) -> usize {
+        match self {
+            Self::Logical(plan) => plan.processed_callables(),
+        }
+    }
+
+    pub(in crate::passes::pipeline) fn changed_callable_count(&self) -> usize {
+        match self {
+            Self::Logical(plan) => plan.changed_callable_count(),
+        }
+    }
+
+    fn validate_program(&self, program: &MirProgram) -> Result<(), MirRewriteError> {
+        match self {
+            Self::Logical(plan) => plan.validate_program(program),
+        }
+    }
+
+    fn apply_callable(
+        &self,
+        callable: crate::identity::CallableId,
+        edit: &mut MirCallableEdit,
+    ) -> Result<(), MirRewriteError> {
+        match self {
+            Self::Logical(plan) => plan.apply_callable(callable, edit),
+        }
+    }
+}
+
+pub(in crate::passes::pipeline) enum MirProofTransitionNormalizationError {
+    OptionalPlanRewrite(MirRewriteError),
+    OptionalPlanVerification(MirVerificationErrors),
+    Normalization(MirProofNormalizationError),
+}
 
 /// Deterministic structural accounting for the mandatory conversion.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -145,30 +188,58 @@ impl MirProofNormalizationResult {
 pub(in crate::passes::pipeline) fn normalize_proof_provenance(
     verified: VerifiedProofMirProgram,
 ) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {
-    normalize_proof_provenance_with_plan(verified, None)
+    normalize_program(verified.invalidate_for_proof_transformation())
 }
 
 pub(in crate::passes::pipeline) fn normalize_proof_provenance_with_plan(
     verified: VerifiedProofMirProgram,
     optional_plan: Option<MirProofTransitionPlan>,
-) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {
-    if let Some(plan) = optional_plan {
-        match plan {}
-    }
-    normalize_program(verified.invalidate_for_proof_transformation())
+) -> Result<MirProofNormalizationResult, MirProofTransitionNormalizationError> {
+    normalize_program_with_plan(
+        verified.invalidate_for_proof_transformation(),
+        optional_plan,
+    )
 }
 
 fn normalize_program(
     program: MirProgram,
 ) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {
-    let plans = plan::inventory_program(&program)?;
+    match normalize_program_with_plan(program, None) {
+        Ok(normalized) => Ok(normalized),
+        Err(MirProofTransitionNormalizationError::Normalization(error)) => Err(error),
+        Err(
+            MirProofTransitionNormalizationError::OptionalPlanRewrite(_)
+            | MirProofTransitionNormalizationError::OptionalPlanVerification(_),
+        ) => unreachable!("the core normalization path has no optional plan"),
+    }
+}
+
+fn normalize_program_with_plan(
+    program: MirProgram,
+    optional_plan: Option<MirProofTransitionPlan>,
+) -> Result<MirProofNormalizationResult, MirProofTransitionNormalizationError> {
+    if let Some(plan) = &optional_plan {
+        plan.validate_program(&program)
+            .map_err(MirProofTransitionNormalizationError::OptionalPlanRewrite)?;
+    }
+    let plans = plan::inventory_program(&program)
+        .map_err(MirProofTransitionNormalizationError::Normalization)?;
     let mut statistics = MirProofNormalizationStatistics::default();
     for plan in &plans {
         statistics.add(plan.statistics());
     }
 
     let mut plans = plans.into_iter();
+    let has_optional_plan = optional_plan.is_some();
+    let mut optional_plan_failed = false;
+    let mut normalization_plan_failed = false;
     let rewrite = rewrite_program(program, |callable, edit| {
+        if let Some(plan) = &optional_plan {
+            if let Err(error) = plan.apply_callable(callable, edit) {
+                optional_plan_failed = true;
+                return Err(error);
+            }
+        }
         let Some(plan) = plans.next() else {
             return Err(MirRewriteError::StaleCallableSnapshot {
                 callable,
@@ -181,14 +252,31 @@ fn normalize_program(
                 subject: "proof-normalization plan order",
             });
         }
-        plan.apply(edit)
+        if let Err(error) = plan.apply(edit) {
+            normalization_plan_failed = true;
+            return Err(error);
+        }
+        Ok(())
+    })
+    .map_err(|error| {
+        if normalization_plan_failed {
+            MirProofTransitionNormalizationError::Normalization(error.into())
+        } else if optional_plan_failed || has_optional_plan {
+            MirProofTransitionNormalizationError::OptionalPlanRewrite(error)
+        } else {
+            MirProofTransitionNormalizationError::Normalization(error.into())
+        }
     })?;
     debug_assert!(plans.next().is_none());
 
     check_normalized_mir(&rewrite.program).map_err(|errors| {
-        MirProofNormalizationError::from(MirProofNormalizationErrorKind::NormalizedInvariant(
-            errors,
-        ))
+        if has_optional_plan {
+            MirProofTransitionNormalizationError::OptionalPlanVerification(errors)
+        } else {
+            MirProofTransitionNormalizationError::Normalization(
+                MirProofNormalizationErrorKind::NormalizedInvariant(errors).into(),
+            )
+        }
     })?;
     Ok(MirProofNormalizationResult {
         program: rewrite.program,

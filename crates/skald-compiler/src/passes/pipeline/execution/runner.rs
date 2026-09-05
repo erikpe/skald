@@ -422,6 +422,20 @@ fn transition_boundary_error(
     error: MirProofTransitionError,
 ) -> MirPipelineError {
     match (occurrence, error) {
+        (Some(occurrence), MirProofTransitionError::OptionalPlanRewrite(error)) => {
+            MirPipelineError::structural_rewrite(occurrence, error)
+        }
+        (Some(occurrence), MirProofTransitionError::OptionalPlanVerification(errors)) => {
+            MirPipelineError::output_verification(occurrence, errors)
+        }
+        (None, MirProofTransitionError::OptionalPlanRewrite(error)) => {
+            MirPipelineError::proof_normalization(crate::mir::MirVerificationErrors::program(
+                format!("unexpected proof-transition rewrite: {error}"),
+            ))
+        }
+        (None, MirProofTransitionError::OptionalPlanVerification(errors)) => {
+            MirPipelineError::proof_normalization(errors)
+        }
         (_, MirProofTransitionError::Normalization(errors)) => {
             MirPipelineError::proof_normalization(errors)
         }

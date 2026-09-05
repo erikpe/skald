@@ -74,6 +74,18 @@ impl MirPassData {
     }
 
     #[allow(dead_code)]
+    pub(in crate::passes::pipeline) const fn processed_and_changed(
+        processed_callables: usize,
+        changed_callables: usize,
+    ) -> Self {
+        Self {
+            processed_callables,
+            changed_callables,
+            measurements: Vec::new(),
+        }
+    }
+
+    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn with_measurement(
         mut self,
         measurement: MirPassMeasurement,

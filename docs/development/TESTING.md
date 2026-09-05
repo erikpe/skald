@@ -241,9 +241,13 @@ metrics, no-op seal reuse, and idempotence. Checked-consumer tests cover the
 exact three-protocol sibling expression, nested shifts, deep alternating
 checked chains, primitive-disabled and checked-only schedules, independent
 work around static failures, whole-plan stale/conflict rejection before
-mutation, one dense commit, propagated-operand metrics, and idempotence. Later
-tests cover the logical consumer, including exact edge selection and
-selected-result replacement. The
+mutation, one dense commit, propagated-operand metrics, and idempotence.
+Logical-consumer tests cover all four constant-left rules, derived and nested
+facts, exact edge/span and selected-result rewrites, skipped and selected
+effectful or failing right sides, dynamic selected-right results, functions,
+methods, lifecycle definitions and static initializers, stale/malformed/
+foreign/conflicting plans, atomic rollback, normalized proof consumption,
+dense identities, deterministic independent runs, and no-op behavior. The
 transition matrix covers zero or one transition, stage-order rejection,
 mandatory normalization exactly once, typed capability privacy, transition and
 normalization failure attribution, and absence of a partially verified product.

@@ -1191,15 +1191,17 @@ the logical consumer is named `constant-short-circuit-folding`. No facts,
 certificates, protocol observations, or rewrite positions survive a commit.
 
 Because proof-rich verification requires the exact logical record while
-normalized MIR no longer retains it, the implemented pipeline boundary adds one narrow
-`ProofTransition` stage between `ProofRich` and `Final`. At most one transition
-occurrence may submit a validated logical plan to the mandatory normalizer.
-The optional edits and unchanged normalization rules commit atomically and
-publish only verified final MIR; no generally mutable third MIR form or
-persistent logical provenance is introduced. With the pass disabled or under
-`none`, mandatory normalization still runs exactly once without logical
-optimization. Existing final unreachable and dead-definition passes own later
-deletion.
+normalized MIR no longer retains it, the implemented pipeline boundary adds
+one narrow `ProofTransition` stage between `ProofRich` and `Final`. The internal
+logical consumer builds one immutable plan from a fresh solution, validates its
+complete proof-rich snapshot, retargets the exact split and selection edges,
+and replaces only a selected-result load whose constant is known. Its optional
+edits and the unchanged normalization rules commit atomically and publish only
+verified final MIR; no generally mutable third MIR form or persistent logical
+provenance is introduced. Production registration and public selection of the
+consumer remain roadmap work. Without a selected transition, including under
+`none`, mandatory normalization still runs exactly once. Existing final
+unreachable and dead-definition passes own later deletion.
 
 ### Proof-provenance normalization boundary
 

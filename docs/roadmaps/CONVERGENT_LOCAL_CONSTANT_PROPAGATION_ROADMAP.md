@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 through CLR5 are complete and CLR6 is next.
+Status: in progress; CLR0 through CLR6 are complete and CLR7 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -101,7 +101,7 @@ creating persistent optimizer provenance.
 - [x] CLR3 — Migrate primitive-family fact consumers
 - [x] CLR4 — Rewrite dependent checked protocols from one solved snapshot
 - [x] CLR5 — Add the proof-consuming transition boundary
-- [ ] CLR6 — Implement constant-left logical selection
+- [x] CLR6 — Implement constant-left logical selection
 - [ ] CLR7 — Complete selection, observation, and semantic evidence
 - [ ] CLR8 — Harden ownership, documentation, and roadmap closure
 
@@ -317,22 +317,25 @@ existing normalization path.
 **Purpose:** Materialize all four frozen short-circuit rules using exact proof
 records and the transition capability.
 
-- [ ] Add the stable `constant-short-circuit-folding` implementation and one
+- [x] Add the stable `constant-short-circuit-folding` implementation and one
   immutable logical selection plan built from a fresh solver solution.
-- [ ] For `false && rhs` and `true || rhs`, select the inactive predecessor and
+- [x] For `false && rhs` and `true || rhs`, select the inactive predecessor and
   existing short block without evaluating or requiring purity from the RHS.
-- [ ] For `true && rhs` and `false || rhs`, select the active predecessor and
+- [x] For `true && rhs` and `false || rhs`, select the active predecessor and
   existing right entry while preserving the entire RHS exactly once.
-- [ ] Always preserve left evaluation and the activation/lifetime protocol
+- [x] Always preserve left evaluation and the activation/lifetime protocol
   needed until mandatory normalization consumes it.
-- [ ] Replace only the exact protocol-owned selected-result load when the
+- [x] Replace only the exact protocol-owned selected-result load when the
   solution supplies a constant, preserving its result identity, type, and span.
-- [ ] Validate nested plans together in stable proof-record order and compose
+- [x] Validate nested plans together in stable proof-record order and compose
   all logical edits atomically with the unchanged mandatory normalization plan.
-- [ ] Leave unreachable blocks, stores, carrier declarations, lifetime work,
+- [x] Leave unreachable blocks, stores, carrier declarations, lifetime work,
   and dead ordinary definitions to established final cleanup passes.
-- [ ] Reject stale, overlapping, malformed, protected, foreign, or inconsistent
-  plans with structured pass failure and no published final MIR.
+- [x] Reject stale, overlapping, malformed, foreign, inconsistent, or
+  unauthorized protected-site edits with structured pass failure and no
+  published final MIR. An exact logical proof record remains the authority to
+  retarget its own protocol blocks when one is also a lifecycle attachment;
+  the attachment itself is preserved.
 
 **Tests:** Each rule with literal, derived, checked, and nested left facts;
 dynamic/effectful/failing RHS on both selected and skipped paths; constant and

@@ -19,9 +19,14 @@ solution. CLR4 migrated checked folding to one solved snapshot and resolved the
 only prior finding below. CLR5 added the typed single-occurrence
 proof-transition schedule region, capability, atomic normalization route,
 occurrence and checkpoint contracts, and boundary failure ownership without
-adding a production logical pass; it produced no out-of-scope finding. During
-the remaining implementation, record only work discovered outside the active
-task's frozen scope. Each entry should
+adding a production logical pass. CLR6 added the immutable constant-left
+logical selection plan, exact edge and optional result rewrites, and their
+single atomic composition with mandatory normalization. Exact proof records
+remain the authority for protocol sites which also happen to be lifecycle
+attachment roots: selection preserves those roots and all blocks, storage,
+lifetime operations, and non-selected instructions. CLR5 and CLR6 produced no
+out-of-scope finding. During the remaining implementation, record only work
+discovered outside the active task's frozen scope. Each entry should
 state the problem, concrete evidence, likely owner and priority, and a bounded
 later direction. Small maintainability improvements that directly support the
 current task should be implemented in that task instead.

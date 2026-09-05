@@ -59,6 +59,16 @@ impl MirProofTransitionCapability {
             )
             .into());
         }
+        if let Some(plan) = &optional_plan {
+            if data.processed_callables() != plan.processed_callables()
+                || data.changed_callables() != plan.changed_callable_count()
+            {
+                return Err(MirPassFailure::execution(
+                    "proof-transition plan and callable accounting disagree",
+                )
+                .into());
+            }
+        }
         let (verified, normalization) = (self.transition)(self.verified, optional_plan)
             .map_err(MirProofTransitionFailure::boundary)?;
         Ok(MirProofTransitionOutcome {

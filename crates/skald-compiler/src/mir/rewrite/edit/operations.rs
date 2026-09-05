@@ -121,6 +121,24 @@ impl MirCallableEdit {
         Ok(())
     }
 
+    /// Replaces one terminator after checking the exact analyzed snapshot.
+    pub(crate) fn replace_terminator(
+        &mut self,
+        block: BlockId,
+        expected: &MirTerminator,
+        replacement: MirTerminator,
+    ) -> Result<(), MirRewriteError> {
+        let terminator = &mut self.blocks.get_mut(block)?.terminator;
+        if terminator.as_ref() != Some(expected) {
+            return Err(MirRewriteError::StaleCallableSnapshot {
+                callable: self.callable,
+                subject: "terminator",
+            });
+        }
+        *terminator = Some(replacement);
+        Ok(())
+    }
+
     /// Replaces all uses of `from` with `to`, preserving value definitions.
     ///
     /// Both values must be live, callable-local, and have the same MIR type.

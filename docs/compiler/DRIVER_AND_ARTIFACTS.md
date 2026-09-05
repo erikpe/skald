@@ -242,14 +242,15 @@ publication.
 
 ## Frozen convergent local constant propagation orchestration
 
-Status: **in progress through the proof-consuming transition boundary**. The frozen
+Status: **in progress through internal logical selection**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
 the accepted extension. Primitive and checked proof-rich consumers use the
-convergent solution today, and the typed single-occurrence transition-stage
-extension is implemented. The logical selection plan and production
-`constant-short-circuit-folding` registration remain pending.
+convergent solution today. The typed single-occurrence transition stage and
+its immutable logical selection plan are implemented and atomically composed
+with mandatory normalization. Production `constant-short-circuit-folding`
+registration, public selection, and reporting remain pending.
 
 The registry retains `primitive-constant-folding` and
 `checked-integer-constant-folding` and will add
@@ -266,11 +267,11 @@ normalization. Selecting or disabling logical folding therefore cannot bypass,
 repeat, or change core normalization policy.
 
 The runner lets the transition inspect verified proof-rich MIR and accepts one
-narrowly typed optional plan at the consuming normalization call. The boundary
-leaves that plan type intentionally uninhabited until the logical plan is
-implemented; the no-plan path already proves identical normalization,
-verification, failure, occurrence, and checkpoint behavior. Only verified
-final MIR is returned.
+narrowly typed optional logical plan at the consuming normalization call. The
+plan is checked against the complete dense snapshot before mutation; exact
+logical edge and optional selected-result edits then share one unpublished
+transaction with the unchanged normalizer. The no-plan path retains identical
+normalization behavior. Only verified final MIR is returned.
 There is no public request
 field, arbitrary ordering, optimization level, dynamic registration, target
 dependency, raw unnormalized output, or reusable third MIR product.
