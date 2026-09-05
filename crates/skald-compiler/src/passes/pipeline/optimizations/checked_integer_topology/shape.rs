@@ -161,7 +161,24 @@ pub(super) fn checked_terminator(
             *failure_target,
             *span,
         )),
-        _ => None,
+        MirTerminator::Return { .. }
+        | MirTerminator::ReturnShared { .. }
+        | MirTerminator::ReturnOptionalShared { .. }
+        | MirTerminator::Panic { .. }
+        | MirTerminator::Goto { .. }
+        | MirTerminator::Branch { .. }
+        | MirTerminator::PrimitiveCastRangeCheck { .. }
+        | MirTerminator::CheckedCast { .. }
+        | MirTerminator::SharedCast { .. }
+        | MirTerminator::OptionalUnwrap { .. }
+        | MirTerminator::OptionalSharedUnwrap { .. }
+        | MirTerminator::BeginOptionalView { .. }
+        | MirTerminator::BeginOptionalBoxView { .. }
+        | MirTerminator::CheckOptionalMutation { .. }
+        | MirTerminator::ArrayPositionCheck { .. }
+        | MirTerminator::ArrayOperationCheck { .. }
+        | MirTerminator::ArrayLoop { .. }
+        | MirTerminator::Terminate { .. } => None,
     }
 }
 

@@ -242,10 +242,10 @@ publication.
 
 ## Frozen convergent local constant propagation orchestration
 
-Status: **implemented through production logical selection**. The frozen
+Status: **implemented**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
-and active
-[roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
+and completed
+[roadmap](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) record
 the accepted extension. Primitive and checked proof-rich consumers use the
 convergent solution, while `constant-short-circuit-folding` is registered as
 the single proof-transition occurrence and atomically composes its immutable

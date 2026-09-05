@@ -297,6 +297,7 @@ impl LocalConstantSolution {
         Ok(self.value_constants[value.index()].map(|fact| fact.constant))
     }
 
+    #[cfg(test)]
     pub(in crate::passes::pipeline::optimizations) fn carrier_constant(
         &self,
         storage: StorageId,
@@ -310,6 +311,7 @@ impl LocalConstantSolution {
         Ok(self.carrier_constants[storage.index()].map(|fact| fact.constant))
     }
 
+    #[cfg(test)]
     pub(in crate::passes::pipeline::optimizations) fn selection(
         &self,
         record_index: usize,
@@ -320,6 +322,7 @@ impl LocalConstantSolution {
             .ok_or(LocalConstantAnalysisError::InvalidLogicalRecord { record_index })
     }
 
+    #[cfg(test)]
     pub(in crate::passes::pipeline::optimizations) fn facts(&self) -> &[LocalConstantFact] {
         &self.facts
     }

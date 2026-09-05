@@ -14,13 +14,10 @@ mod view;
 pub(in crate::passes::pipeline::optimizations) use evidence::{
     checked_carrier_plan_evidence, CheckedCarrierPlanEvidence, CheckedCarrierPlanRole,
 };
-// Later roadmap stages still exercise solution queries not yet used by the
-// migrated primitive and checked consumers.
-#[allow(unused_imports)]
 pub(in crate::passes::pipeline::optimizations) use solve::{
     solve_local_constants, LocalConstantAnalysisError, LocalConstantFact, LocalConstantIdentity,
     LocalConstantProvenance, LocalConstantProvenanceCategory, LocalConstantSolution,
-    LogicalSelection, LogicalSelectionKind, RetainedCheckedFailure,
+    LogicalSelection, LogicalSelectionKind,
 };
 pub(in crate::passes::pipeline::optimizations) use view::BlockLocalConstantView;
 

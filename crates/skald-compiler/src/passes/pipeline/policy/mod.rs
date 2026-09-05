@@ -46,7 +46,7 @@ pub(crate) fn resolve_mir_pass_schedule<'a>(
 ///
 /// The driver does not expose this surface. It exists for focused pass tests,
 /// composition checks, and future compiler-internal experiments.
-#[allow(dead_code)]
+#[cfg(test)]
 pub(crate) fn resolve_exact_mir_pass_schedule(
     identities: &[MirPassIdentity],
 ) -> Result<MirPassSchedule, MirPassScheduleError> {

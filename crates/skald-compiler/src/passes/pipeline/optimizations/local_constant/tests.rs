@@ -11,8 +11,9 @@ use crate::{
 };
 
 use super::carrier::{
-    certify_checked_integer_carriers, CheckedCarrierCertificationObservation,
-    CheckedCarrierProtocolRole, CheckedCarrierRejectionReason,
+    carrier_use_disposition, certify_checked_integer_carriers,
+    CheckedCarrierCertificationObservation, CheckedCarrierProtocolRole,
+    CheckedCarrierRejectionReason, CheckedCarrierUseDisposition,
 };
 
 fn entry_definition(program: &crate::mir::MirProgram) -> &crate::mir::MirFunctionDefinition {
@@ -135,6 +136,85 @@ fn census_is_deterministic_and_classifies_checked_carrier_accesses() {
         .uses()
         .iter()
         .any(|site| site.role() == MirStorageUseRole::LifetimeDead));
+}
+
+#[test]
+fn every_storage_role_has_an_explicit_carrier_certification_disposition() {
+    for (role, expected) in [
+        (
+            MirStorageUseRole::OrdinaryWrite {
+                place: MirStoragePlaceUse::ExactBase,
+                authorization: MirStorageWriteAuthorization::None,
+            },
+            CheckedCarrierUseDisposition::Store,
+        ),
+        (
+            MirStorageUseRole::OrdinaryRead(MirStoragePlaceUse::ExactBase),
+            CheckedCarrierUseDisposition::Load,
+        ),
+        (
+            MirStorageUseRole::LifetimeLive,
+            CheckedCarrierUseDisposition::LifetimeLive,
+        ),
+        (
+            MirStorageUseRole::LifetimeDead,
+            CheckedCarrierUseDisposition::LifetimeDead,
+        ),
+        (
+            MirStorageUseRole::CheckedProtocol,
+            CheckedCarrierUseDisposition::Protocol,
+        ),
+        (
+            MirStorageUseRole::Declaration,
+            CheckedCarrierUseDisposition::Declaration,
+        ),
+    ] {
+        assert_eq!(carrier_use_disposition(role), expected, "{role:?}");
+    }
+
+    for role in [
+        MirStorageUseRole::Attachment,
+        MirStorageUseRole::OrdinaryRead(MirStoragePlaceUse::Projected),
+        MirStorageUseRole::OrdinaryRead(MirStoragePlaceUse::Alias),
+        MirStorageUseRole::ProofMetadata,
+        MirStorageUseRole::Alias,
+        MirStorageUseRole::Call,
+        MirStorageUseRole::OwnershipOrLifecycle,
+        MirStorageUseRole::InputOutput,
+        MirStorageUseRole::OtherExecutable,
+    ] {
+        assert_eq!(
+            carrier_use_disposition(role),
+            CheckedCarrierUseDisposition::Reject,
+            "{role:?}"
+        );
+    }
+
+    for place in [
+        MirStoragePlaceUse::ExactBase,
+        MirStoragePlaceUse::Projected,
+        MirStoragePlaceUse::Alias,
+    ] {
+        for authorization in [
+            MirStorageWriteAuthorization::None,
+            MirStorageWriteAuthorization::Cell,
+            MirStorageWriteAuthorization::Final,
+            MirStorageWriteAuthorization::CellAndFinal,
+        ] {
+            let disposition = carrier_use_disposition(MirStorageUseRole::OrdinaryWrite {
+                place,
+                authorization,
+            });
+            let expected = if place == MirStoragePlaceUse::ExactBase
+                && authorization == MirStorageWriteAuthorization::None
+            {
+                CheckedCarrierUseDisposition::Store
+            } else {
+                CheckedCarrierUseDisposition::Reject
+            };
+            assert_eq!(disposition, expected, "{place:?} {authorization:?}");
+        }
+    }
 }
 
 #[test]

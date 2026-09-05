@@ -16,7 +16,7 @@ general storage analysis or requiring proof-provenance normalization.
 
 Implementation-specific findings that do not belong in this reviewed scope go
 in the
-[checked-integer protocol discoveries record](../roadmaps/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md).
+[checked-integer protocol discoveries record](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md).
 Candidate placement and status remain authoritative in the
 [optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md).
 

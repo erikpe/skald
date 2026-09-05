@@ -768,6 +768,35 @@ fn registry_rejects_descriptor_and_callback_stage_mismatch() {
 }
 
 #[test]
+fn every_pass_stage_exposes_only_its_exact_callback_kind() {
+    let implementations = [
+        MirPassImplementation::proof_rich(ALPHA, metadata_only_pass),
+        MirPassImplementation::proof_transition(DELTA, transition_metadata_only_pass),
+        MirPassImplementation::final_stage(BETA, final_metadata_only_pass),
+    ];
+
+    for (implementation, expected) in implementations.into_iter().zip([
+        MirPassStage::ProofRich,
+        MirPassStage::ProofTransition,
+        MirPassStage::Final,
+    ]) {
+        assert_eq!(implementation.stage(), expected);
+        assert_eq!(
+            (
+                implementation.proof_transform().is_some(),
+                implementation.transition_transform().is_some(),
+                implementation.final_transform().is_some(),
+            ),
+            match expected {
+                MirPassStage::ProofRich => (true, false, false),
+                MirPassStage::ProofTransition => (false, true, false),
+                MirPassStage::Final => (false, false, true),
+            }
+        );
+    }
+}
+
+#[test]
 fn registry_rejects_duplicate_identity_and_name() {
     static REGISTRATIONS: [MirPassRegistration; 2] = [
         registration(ALPHA, ALPHA, "same-pass", "First."),

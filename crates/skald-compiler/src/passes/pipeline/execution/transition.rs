@@ -24,7 +24,6 @@ pub(in crate::passes::pipeline) type ProofNormalizationTransition = fn(
 /// A transition may inspect proof-rich MIR, but its only consuming operation
 /// accepts the narrow optional normalization plan and returns a verified final
 /// product. It cannot obtain raw mutable MIR or publish an intermediate seal.
-#[allow(dead_code)]
 pub(in crate::passes::pipeline) struct MirProofTransitionCapability {
     verified: VerifiedProofMirProgram,
     transition: ProofNormalizationTransition,
@@ -41,12 +40,10 @@ impl MirProofTransitionCapability {
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn verified(&self) -> &VerifiedProofMirProgram {
         &self.verified
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn normalize(
         self,
         optional_plan: Option<MirProofTransitionPlan>,

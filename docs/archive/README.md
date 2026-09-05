@@ -105,6 +105,7 @@ Archived plans:
 - [Local final-MIR redundancy measurement](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
 - [Proof-provenance normalization](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 - [Post-proof CFG canonicalization](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+- [Convergent local constant propagation](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -194,10 +195,13 @@ Resolved post-proof CFG canonicalization inputs:
 Resolved convergent local constant propagation inputs:
 
 - [Convergent local constant propagation design proposal](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+- [Convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+- [Convergent local constant propagation discoveries](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md)
 
 Resolved checked integer constant protocol simplification inputs:
 
 - [Checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+- [Checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
 
 Resolved local final-MIR redundancy measurement inputs:
 

@@ -52,7 +52,6 @@ pub(in crate::passes::pipeline) enum MirPassImplementation {
         identity: MirPassIdentity,
         transform: MirProofPassTransform,
     },
-    #[allow(dead_code)]
     ProofTransition {
         identity: MirPassIdentity,
         transform: MirProofTransitionTransform,
@@ -84,7 +83,6 @@ impl MirPassImplementation {
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn proof_transition(
         identity: MirPassIdentity,
         transform: MirProofTransitionTransform,

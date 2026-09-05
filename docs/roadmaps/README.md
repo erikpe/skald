@@ -6,23 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
-implements the frozen callable-local solver, checked-protocol carrier
-certificates, depth-independent primitive and checked consumers, and
-constant-left logical selection through one proof-consuming transition. CLR0
-through CLR7 are complete: exact structural observations, auditable checked-
-carrier certificates, and one immutable convergent callable-local solution are
-implemented; primitive-family and checked-protocol consumers use that solution,
-and both fold to arbitrary supported dependency depth without pipeline
-repetition. The pipeline now also has a typed zero-or-one proof-transition
-region whose consuming capability routes through mandatory normalization and
-publishes only verified final MIR. Its internal logical consumer now selects
-all four constant-left short-circuit paths from one fresh solution and composes
-the exact plan atomically with normalization. The logical pass is now
-registered, publicly discoverable and excludable, enabled once at the default
-proof-transition boundary, independently measured, and covered through native
-success and failure matrices. CLR8 is next and owns final hardening and closure.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -41,28 +25,12 @@ The open
 retain one low-priority scalar-spill provenance limitation that becomes
 important before a final-stage storage transformation.
 
-The resolved
-[checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
-record the measured nested-carrier limitation from the completed
-checked-protocol pass. Its accepted resolution is now the broader frozen
-[convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
-which treats arbitrary supported expression depth as an architectural
-completeness requirement rather than a one-off scalar-spill cleanup. Delivery
-was completed for the checked consumer in CLR4.
-
-The
-[convergent local constant propagation discoveries](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md)
-currently contain no open findings; CLR4 resolved the preservation-spill
-mismatch for checked sibling subexpressions; CLR5 through CLR7 added no
-out-of-scope finding. New work outside the frozen boundary belongs there rather
-than in an active task.
-
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
 and target-specific optimization, their interaction with permanent whole-world
 and single-threaded program semantics, expected impact and effort, and a
 recommended sequence. The completed
-[completed static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
+[static-lifecycle certificate roadmap](../archive/STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 and the completed
 [dense callable-local MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
 are preserved in the archive. The completed
@@ -93,6 +61,16 @@ composition and observation, and source-to-native equivalence. Its
 [frozen design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
 and delivery record are preserved in the archive; implementation produced no
 remaining roadmap-specific follow-up.
+The completed
+[convergent local constant propagation roadmap](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+adds one convergent callable-local solver, exhaustively certified checked-
+protocol carriers, depth-independent primitive and checked consumers, and
+constant-left logical selection through the proof-consuming transition. Its
+[frozen design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
+[resolved discoveries](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md),
+and the resolved
+[checked-protocol discovery](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
+are preserved in the archive.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -100,10 +78,17 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No implementation roadmap is waiting to start. The convergent local constant
-propagation roadmap is active above.
+No implementation roadmap is waiting to start.
 
 ## Design proposals
+
+The completed convergent local constant propagation
+[design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
+[delivery record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md),
+and [resolved discoveries](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md)
+are preserved in the archive. The living compiler phase, driver, reporting,
+testing, and optimization catalog documents are authoritative for current
+behavior.
 
 The completed post-proof CFG canonicalization
 [design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md) and

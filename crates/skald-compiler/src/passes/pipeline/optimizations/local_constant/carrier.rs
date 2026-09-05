@@ -53,6 +53,7 @@ pub(super) struct CheckedCarrierStore {
 }
 
 impl CheckedCarrierStore {
+    #[cfg(test)]
     pub(super) const fn site(self) -> CheckedIntegerInstructionSite {
         self.site
     }
@@ -61,6 +62,7 @@ impl CheckedCarrierStore {
         self.source
     }
 
+    #[cfg(test)]
     pub(super) const fn span(self) -> Span {
         self.span
     }
@@ -75,6 +77,7 @@ pub(super) struct CheckedCarrierLoad {
 }
 
 impl CheckedCarrierLoad {
+    #[cfg(test)]
     pub(super) const fn site(self) -> CheckedIntegerInstructionSite {
         self.site
     }
@@ -83,6 +86,7 @@ impl CheckedCarrierLoad {
         self.result
     }
 
+    #[cfg(test)]
     pub(super) const fn span(self) -> Span {
         self.span
     }
@@ -96,10 +100,12 @@ pub(super) struct CheckedCarrierLifetimeEvidence {
 }
 
 impl CheckedCarrierLifetimeEvidence {
+    #[cfg(test)]
     pub(super) const fn live(self) -> CheckedIntegerInstructionSite {
         self.live
     }
 
+    #[cfg(test)]
     pub(super) const fn dead(self) -> CheckedIntegerInstructionSite {
         self.dead
     }
@@ -124,6 +130,7 @@ impl CheckedCarrierCertificate {
         self.declaration.id
     }
 
+    #[cfg(test)]
     pub(super) const fn declaration(&self) -> &MirStorage {
         &self.declaration
     }
@@ -144,6 +151,7 @@ impl CheckedCarrierCertificate {
         self.protocol_owner
     }
 
+    #[cfg(test)]
     pub(super) const fn lifetime(&self) -> CheckedCarrierLifetimeEvidence {
         self.lifetime
     }
@@ -178,6 +186,65 @@ pub(super) enum CheckedCarrierCertificationObservation {
         protocol_owner: CheckedCarrierProtocolOwner,
         reason: CheckedCarrierRejectionReason,
     },
+}
+
+/// The only storage-use dispositions understood by carrier certification.
+///
+/// Keeping this conversion exhaustive makes a new storage role or place/
+/// authorization variant a compile-time maintenance event instead of silently
+/// granting it constant-propagation authority.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum CheckedCarrierUseDisposition {
+    Store,
+    Load,
+    LifetimeLive,
+    LifetimeDead,
+    Protocol,
+    Declaration,
+    Reject,
+}
+
+pub(super) const fn carrier_use_disposition(
+    role: MirStorageUseRole,
+) -> CheckedCarrierUseDisposition {
+    match role {
+        MirStorageUseRole::OrdinaryWrite {
+            place: MirStoragePlaceUse::ExactBase,
+            authorization: MirStorageWriteAuthorization::None,
+        } => CheckedCarrierUseDisposition::Store,
+        MirStorageUseRole::OrdinaryRead(MirStoragePlaceUse::ExactBase) => {
+            CheckedCarrierUseDisposition::Load
+        }
+        MirStorageUseRole::LifetimeLive => CheckedCarrierUseDisposition::LifetimeLive,
+        MirStorageUseRole::LifetimeDead => CheckedCarrierUseDisposition::LifetimeDead,
+        MirStorageUseRole::CheckedProtocol => CheckedCarrierUseDisposition::Protocol,
+        MirStorageUseRole::Declaration => CheckedCarrierUseDisposition::Declaration,
+        MirStorageUseRole::OrdinaryRead(
+            MirStoragePlaceUse::Projected | MirStoragePlaceUse::Alias,
+        )
+        | MirStorageUseRole::OrdinaryWrite {
+            place: MirStoragePlaceUse::ExactBase,
+            authorization:
+                MirStorageWriteAuthorization::Cell
+                | MirStorageWriteAuthorization::Final
+                | MirStorageWriteAuthorization::CellAndFinal,
+        }
+        | MirStorageUseRole::OrdinaryWrite {
+            place: MirStoragePlaceUse::Projected | MirStoragePlaceUse::Alias,
+            authorization:
+                MirStorageWriteAuthorization::None
+                | MirStorageWriteAuthorization::Cell
+                | MirStorageWriteAuthorization::Final
+                | MirStorageWriteAuthorization::CellAndFinal,
+        }
+        | MirStorageUseRole::Attachment
+        | MirStorageUseRole::ProofMetadata
+        | MirStorageUseRole::Alias
+        | MirStorageUseRole::Call
+        | MirStorageUseRole::OwnershipOrLifecycle
+        | MirStorageUseRole::InputOutput
+        | MirStorageUseRole::OtherExecutable => CheckedCarrierUseDisposition::Reject,
+    }
 }
 
 /// Certifies only the three scalar carriers owned by canonical checked-
@@ -276,27 +343,16 @@ fn certify_one(
     let mut deads = Vec::new();
     let mut protocol_uses = Vec::new();
     for use_site in census.uses() {
-        match use_site.role() {
-            MirStorageUseRole::OrdinaryWrite {
-                place: MirStoragePlaceUse::ExactBase,
-                authorization: MirStorageWriteAuthorization::None,
-            } => stores.push(use_site.site()),
-            MirStorageUseRole::OrdinaryRead(MirStoragePlaceUse::ExactBase) => {
-                loads.push(use_site.site())
+        match carrier_use_disposition(use_site.role()) {
+            CheckedCarrierUseDisposition::Store => stores.push(use_site.site()),
+            CheckedCarrierUseDisposition::Load => loads.push(use_site.site()),
+            CheckedCarrierUseDisposition::LifetimeLive => lives.push(use_site.site()),
+            CheckedCarrierUseDisposition::LifetimeDead => deads.push(use_site.site()),
+            CheckedCarrierUseDisposition::Protocol => protocol_uses.push(use_site.site()),
+            CheckedCarrierUseDisposition::Declaration => {
+                unreachable!("declarations are not census uses")
             }
-            MirStorageUseRole::LifetimeLive => lives.push(use_site.site()),
-            MirStorageUseRole::LifetimeDead => deads.push(use_site.site()),
-            MirStorageUseRole::CheckedProtocol => protocol_uses.push(use_site.site()),
-            MirStorageUseRole::Declaration => unreachable!("declarations are not census uses"),
-            MirStorageUseRole::Attachment
-            | MirStorageUseRole::OrdinaryRead(_)
-            | MirStorageUseRole::OrdinaryWrite { .. }
-            | MirStorageUseRole::ProofMetadata
-            | MirStorageUseRole::Alias
-            | MirStorageUseRole::Call
-            | MirStorageUseRole::OwnershipOrLifecycle
-            | MirStorageUseRole::InputOutput
-            | MirStorageUseRole::OtherExecutable => {
+            CheckedCarrierUseDisposition::Reject => {
                 return Err(CheckedCarrierRejectionReason::InvalidAccess)
             }
         }

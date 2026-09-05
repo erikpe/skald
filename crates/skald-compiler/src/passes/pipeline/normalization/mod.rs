@@ -182,7 +182,7 @@ impl MirProofNormalizationResult {
 
 /// Consumes a proof-verified product and atomically removes its proof-only
 /// path and logical provenance.
-#[allow(dead_code)]
+#[cfg(test)]
 pub(in crate::passes::pipeline) fn normalize_proof_provenance(
     verified: VerifiedProofMirProgram,
 ) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {
@@ -199,6 +199,7 @@ pub(in crate::passes::pipeline) fn normalize_proof_provenance_with_plan(
     )
 }
 
+#[cfg(test)]
 fn normalize_program(
     program: MirProgram,
 ) -> Result<MirProofNormalizationResult, MirProofNormalizationError> {

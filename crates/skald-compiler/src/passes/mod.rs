@@ -13,10 +13,6 @@ mod redundancy;
 #[allow(dead_code, unused_imports)]
 pub(crate) mod reachability;
 
-// The exact resolver is a frozen compiler-internal experiment surface; no
-// production adapter selects it yet.
-#[cfg(test)]
-pub(crate) use pipeline::verify_proof_mir;
 pub use pipeline::{
     available_mir_passes, run_mir_pipeline, run_mir_pipeline_inspected, verify_final_mir,
     MirFinalPipelineCheckpoint, MirOptimizationProfile, MirPassDescriptor, MirPassIdentity,
@@ -25,11 +21,9 @@ pub use pipeline::{
     MirPipelineInspector, MirProofPipelineCheckpoint, VerifiedFinalMirProgram,
     VerifiedProofMirProgram,
 };
-#[allow(unused_imports)]
-pub(crate) use pipeline::{
-    resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, MirPassSchedule,
-    MirPassScheduleError,
-};
+#[cfg(test)]
+pub(crate) use pipeline::{resolve_exact_mir_pass_schedule, verify_proof_mir};
+pub(crate) use pipeline::{resolve_mir_pass_schedule, MirPassSchedule, MirPassScheduleError};
 pub(crate) use pipeline::{
     run_mir_pipeline_instrumented, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
     MeasuredMirPipeline, MirPipelineStatistics,

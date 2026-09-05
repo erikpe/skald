@@ -1,9 +1,9 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 through CLR7 are complete and CLR8 is next.
+Status: complete and archived; CLR0 through CLR8 delivered the frozen design.
 
 This roadmap implements the frozen
-[convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
+[convergent local constant propagation design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
 It replaces depth-sensitive and protocol-local constant discovery with one
 terminating callable-local solver, lets the existing primitive and checked
 integer passes consume complete facts independently, and adds selectable
@@ -18,23 +18,23 @@ creating persistent optimizer provenance.
 ## Dependencies
 
 - The completed
-  [local final-MIR simplification roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
+  [local final-MIR simplification roadmap](LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md)
   provides the exact primitive evaluator, block-local facts, primitive folding,
   algebraic simplification, and conservative proof-rich CFG cleanup.
 - The completed
-  [checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
+  [checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
   provides exact division/remainder/shift evaluators, canonical checked-shape
   discovery, protocol rewrite semantics, and pass-owned metrics.
 - The completed
-  [proof-provenance normalization roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+  [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
   provides verified proof-rich and normalized seals, mandatory atomic
   normalization, and final-only CFG cleanup.
 - The completed
-  [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+  [selectable final-MIR pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
   provides the typed registry, schedules, exclusions, occurrence reporting,
   checkpoints, and atomic verified pass runner.
 - The completed
-  [dense MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+  [dense MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
   provides exhaustive identity traversal, sparse editing, deterministic dense
   commit, and structured stale-plan failures.
 - Permanent whole-world compilation permits closed dependency inventories but
@@ -103,7 +103,7 @@ creating persistent optimizer provenance.
 - [x] CLR5 — Add the proof-consuming transition boundary
 - [x] CLR6 — Implement constant-left logical selection
 - [x] CLR7 — Complete selection, observation, and semantic evidence
-- [ ] CLR8 — Harden ownership, documentation, and roadmap closure
+- [x] CLR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
 
@@ -389,27 +389,27 @@ one stable owner, and source-to-native results match optimization-off semantics.
 **Purpose:** Finish with one maintainable analysis owner, exhaustive future-
 variant defenses, current documentation, and repository-wide evidence.
 
-- [ ] Audit graph, carrier, observation, plan, transition, normalization, and
+- [x] Audit graph, carrier, observation, plan, transition, normalization, and
   pass modules by responsibility; split substantial mixed owners and keep
   public/private facades narrow.
-- [ ] Remove obsolete compatibility paths, duplicate constant engines, rollout
+- [x] Remove obsolete compatibility paths, duplicate constant engines, rollout
   wording, and roadmap codes from living code, tests, and architecture docs.
-- [ ] Add exhaustive maintenance tests for every value/storage identity role,
+- [x] Add exhaustive maintenance tests for every value/storage identity role,
   supported rvalue family, checked terminator, proof record, pass stage,
   callback kind, and transition outcome.
-- [ ] Verify no analysis data or pre-commit identity survives a rewrite and no
+- [x] Verify no analysis data or pre-commit identity survives a rewrite and no
   optimizer component depends on driver, reporting, filesystem, backend, or
   target state.
-- [ ] Recheck deterministic behavior, no-op seal reuse, idempotence, rollback,
+- [x] Recheck deterministic behavior, no-op seal reuse, idempotence, rollback,
   optimization-off parity, lifecycle/static authority, backend input, and
   runtime-trace equivalence across the full repository corpus.
-- [ ] Resolve small maintainability issues directly; record larger unrelated
+- [x] Resolve small maintainability issues directly; record larger unrelated
   opportunities in the indexed discoveries file with evidence, owner,
   priority, and bounded later direction.
-- [ ] Make living documentation authoritative, complete every roadmap checkbox,
+- [x] Make living documentation authoritative, complete every roadmap checkbox,
   archive the roadmap, and archive or retain discoveries according to whether
   actionable items remain.
-- [ ] Run `make check`, `make golden-determinism-test`,
+- [x] Run `make check`, `make golden-determinism-test`,
   `make golden-release-test`, and `make msrv-check` from an artifact-free
   snapshot; run `make robustness-long` because pass policy and Rust compiler
   internals changed.
@@ -422,6 +422,35 @@ documentation links/indexes; formatting and diff hygiene.
 quality gate passes, the implementation has one clear owner per responsibility,
 remaining discoveries are explicitly triaged, and the completed roadmap is
 archived with no stale active status.
+
+**Closure evidence (2026-09-05):** The responsibility audit retained the
+existing private graph, carrier, logical transfer, solver, primitive plan,
+checked plan, logical plan, transition, and normalization owners because each
+has one cohesive purpose and no duplicate constant engine remains. Obsolete
+staged-rollout dead-code suppressions were removed; APIs used only to assert
+private invariants are now explicitly test-only. Storage certification now has
+an exhaustive disposition for every read/write/place/authorization role, the
+checked-terminator observer enumerates every non-owned terminator explicitly,
+and the registry suite exhaustively relates every stage to its sole callback
+kind. Existing exhaustive value-role, rvalue-family, proof-record, transition-
+outcome, plan atomicity, seal, no-op, idempotence, rollback, and source/native
+matrices complete the future-variant defense.
+
+All graph facts, certificates, observations, and plans remain private owned
+snapshots rebuilt from a current verified seal; changed occurrences commit
+once and reverify before later consumers. A focused dependency search found no
+driver, reporting, filesystem, backend, or target-state dependency in the
+analysis, topology, logical-plan, transition, or normalization owners. No new
+out-of-scope maintainability finding remained after the audit.
+
+From an artifact-free archive snapshot with the intended code changes applied,
+`make check` passed, including 2,918 compiler tests, 52 pipeline-determinism
+tests, 531 golden cases, runtime tests, documentation checks, and supporting
+crate suites. `make golden-determinism-test` passed all 531 cases over 928
+compiler processes; `make golden-release-test` passed all 531 release cases;
+`make msrv-check` passed with Rust 1.82; and `make robustness-long` passed its
+five 10,000-case stress suites. Final documentation links and diff hygiene were
+then rechecked in the working tree.
 
 ## Ordering and dependencies
 

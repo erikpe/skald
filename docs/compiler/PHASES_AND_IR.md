@@ -1117,12 +1117,11 @@ certified protocol-owned carrier relation.
 
 ### Frozen convergent local constant propagation direction
 
-Status: **implemented through all three production consumers; final roadmap
-hardening remains**.
+Status: **implemented**.
 The complete decisions are frozen in the
 [design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
-and delivery is divided by the active
-[implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
+and delivery is recorded by the completed
+[implementation roadmap](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 Primitive-family, checked-protocol, and logical-selection production consumers
 now use the convergent solution. The initial structural work
 separated exact checked-protocol topology from constant eligibility and added

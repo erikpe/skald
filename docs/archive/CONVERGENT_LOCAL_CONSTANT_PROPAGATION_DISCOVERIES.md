@@ -1,14 +1,14 @@
 # Convergent Local Constant Propagation Discoveries
 
-Status: open implementation companion for the active
+Status: resolved and archived with the completed
 [convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 
 The frozen
-[design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+[design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 owns the reviewed constant graph, carrier certificate, convergence,
 static-failure, independent-consumer, proof-transition, logical selection, and
 atomic normalization decisions. The
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
+[optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md) owns
 cross-domain candidate status and placement.
 
 CLR0 and CLR1 completed without an out-of-scope finding. CLR1 added the shared
@@ -34,12 +34,9 @@ entry, while structural verification remains exhaustive. The same matrix
 showed that post-proof deletion can leave an inert checked-view declaration
 with only its lifetime/end markers; final verification now permits that inert
 declaration while still requiring a binding for any material carrier use.
-CLR5 through CLR7 produced
-no out-of-scope finding. During the remaining implementation, record only work
-discovered outside the active task's frozen scope. Each entry should
-state the problem, concrete evidence, likely owner and priority, and a bounded
-later direction. Small maintainability improvements that directly support the
-current task should be implemented in that task instead.
+CLR5 through CLR8 produced no out-of-scope finding. CLR8 removed obsolete
+rollout suppressions, strengthened future-variant defenses, and confirmed the
+existing responsibility split without creating another discovery.
 
 There are currently no open roadmap-specific findings.
 

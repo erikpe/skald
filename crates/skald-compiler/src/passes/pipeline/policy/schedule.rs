@@ -117,7 +117,7 @@ pub(super) fn resolve_profile<'a>(
     resolve_identities(registry, profile.identities(), disabled_names)
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
 pub(super) fn resolve_exact(
     registry: MirPassRegistry,
     identities: &[MirPassIdentity],

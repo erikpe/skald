@@ -37,20 +37,19 @@ and
 Every profile now crosses the mandatory proof-rich-to-final boundary, and the
 default schedule removes post-proof unreachable blocks before whole-world
 definition retention.
-The current broadening follows the frozen
+The completed convergent local-constant broadening follows the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
-and active
-[implementation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
+and archived
+[implementation roadmap](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 Checked and logical structural observations are separated from constant
 eligibility, exact checked-protocol scalar carriers have exhaustive semantic
 certificates, and the read-only dense dependency graph converges iteratively
 with conditional logical selection and stable provenance. Primitive constant
 folding now consumes that solution atomically, while algebraic and CFG passes
 use a bounded same-block view instead of a duplicate arithmetic engine. The
-checked consumer now plans all dependent successful protocols from one solved
-snapshot and commits them atomically. The remaining roadmap adds constant-left
-logical selection without a pipeline fixed-point loop or general memory
-analysis.
+checked consumer plans all dependent successful protocols from one solved
+snapshot and commits them atomically. Constant-left logical selection is also
+implemented without a pipeline fixed-point loop or general memory analysis.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It

@@ -28,7 +28,6 @@ pub(in crate::passes::pipeline) use runner::{
     run_mir_pipeline_with_transition_for_test,
 };
 pub(crate) use statistics::{MeasuredMirPipeline, MirPipelineStatistics};
-#[allow(unused_imports)]
 pub(in crate::passes::pipeline) use transition::{
     MirProofTransitionCapability, MirProofTransitionFailure, MirProofTransitionFailureKind,
     MirProofTransitionOutcome, MirProofTransitionTransform, ProofNormalizationTransition,

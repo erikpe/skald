@@ -29,12 +29,13 @@ pub use execution::{
     MirPassOccurrenceRecord, MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
     MirPipelineFailureStage, MirPipelineInspector, MirProofPipelineCheckpoint,
 };
+#[cfg(test)]
+pub(crate) use policy::resolve_exact_mir_pass_schedule;
 pub use policy::{
     available_mir_passes, MirOptimizationProfile, MirPassDescriptor, MirPassIdentity, MirPassStage,
 };
 pub(crate) use policy::{
-    resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule, MirPassOccurrence, MirPassSchedule,
-    MirPassScheduleError,
+    resolve_mir_pass_schedule, MirPassOccurrence, MirPassSchedule, MirPassScheduleError,
 };
 pub(crate) use seal::verify_proof_mir;
 pub use seal::{verify_final_mir, VerifiedFinalMirProgram, VerifiedProofMirProgram};

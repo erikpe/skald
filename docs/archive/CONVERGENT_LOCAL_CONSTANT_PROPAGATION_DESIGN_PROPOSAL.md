@@ -1,8 +1,8 @@
 # Convergent Local Constant Propagation Design Proposal
 
 Status: frozen decision record. CLP1 through CLP18 were confirmed together on
-2026-09-05. Implementation is planned by the
-[convergent local constant propagation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
+2026-09-05 and delivered by the completed
+[convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 
 This proposal defines expression-complete constant propagation for Skald's
 existing target-independent proof-rich final-MIR simplification passes. Within
@@ -24,7 +24,7 @@ The design builds on the implemented
 and
 [checked integer constant protocol simplification](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
 It resolves the remaining nested-protocol limitation recorded in the
-[checked-integer discoveries](../roadmaps/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md#nested-successful-protocols-do-not-feed-enclosing-scalar-carriers),
+[checked-integer discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md#nested-successful-protocols-do-not-feed-enclosing-scalar-carriers),
 but intentionally chooses a broader architectural boundary than a one-off
 carrier substitution rule.
 
@@ -1153,5 +1153,5 @@ atomicity, and rejection of pipeline-level repetition jointly define what
 
 The durable direction is promoted into the compiler phase, driver, reporting,
 and testing contracts. The optimization catalog records the work as
-**Proposed**, the active implementation roadmap owns delivery, and the separate
-discoveries record owns additional findings without expanding that roadmap.
+**Implemented**, the completed roadmap records delivery, and the archived
+discoveries record preserves resolved implementation evidence.

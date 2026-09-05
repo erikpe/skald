@@ -427,11 +427,11 @@ phases-only, or details-only timing-allocation boundaries.
 
 ### Frozen convergent local constant propagation observation
 
-Status: **implemented through the production logical-transition consumer**. The frozen
+Status: **implemented**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
-and active
-[roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
-the remaining logical-transition observation contract.
+and completed
+[roadmap](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) record
+the observation contract and its delivery.
 
 The primitive occurrence retains its established counters and adds stable
 crossed-carrier, crossed-checked, crossed-logical, and maximum-folded-depth

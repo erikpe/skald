@@ -7,11 +7,8 @@ mod checked_integer_topology;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod constant_short_circuit_folding;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
-mod logical_topology;
-// Keep the convergent analysis private; later roadmap stages still exercise
-// APIs that its first production consumers do not yet need.
-#[allow(dead_code)]
 mod local_constant;
+mod logical_topology;
 pub(in crate::passes::pipeline) mod post_proof_basic_block_merging;
 pub(in crate::passes::pipeline) mod post_proof_empty_block_forwarding;
 pub(in crate::passes::pipeline) mod post_proof_unreachable_block_elimination;

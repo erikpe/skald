@@ -210,11 +210,10 @@ occurrence measurement and the final MIR dump.
 
 The frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
-and active
-[implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
-define coverage added as each boundary is implemented. Existing behavior
-remains pinned while topology observation, carrier certification, the solver,
-and each consumer are introduced separately.
+and completed
+[implementation roadmap](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
+record the delivered coverage. Existing behavior remains pinned across
+topology observation, carrier certification, the solver, and each consumer.
 
 Focused observer tests cover exact checked division, remainder, and shift
 records independently from literal constants; protected checked topology;

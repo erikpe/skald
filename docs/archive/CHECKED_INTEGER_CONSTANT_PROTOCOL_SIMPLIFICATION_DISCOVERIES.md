@@ -1,13 +1,13 @@
 # Checked Integer Constant Protocol Simplification Discoveries
 
-Status: resolved by CLR4 of the active
+Status: resolved by CLR4 of the completed
 [convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md),
 following the frozen
-[convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
+[convergent local constant propagation design](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and the completed checked-integer foundation's
-[roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
+[roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
 
-The [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
+The [optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md) owns
 concise cross-domain placement, effort, value, prerequisite, and status
 summaries; this record retains only implementation-specific evidence for
 nested checked results that cross private scalar carriers.
@@ -56,4 +56,4 @@ the existing independently selectable primitive and checked passes materialize
 only their own rewrite families. Do not recursively mutate nested diamonds,
 rerun the whole pass to convergence, or broaden the solver into general
 load/store propagation. The linked frozen design owns the full boundary; the
-active roadmap owns final delivery; CLR4 closes this finding.
+completed roadmap records delivery; CLR4 closed this finding.

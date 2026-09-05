@@ -55,7 +55,6 @@ pub(in crate::passes::pipeline) struct MirPassData {
 }
 
 impl MirPassData {
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn changed(changed_callables: usize) -> Self {
         Self {
             processed_callables: 0,
@@ -64,7 +63,6 @@ impl MirPassData {
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn processed(processed_callables: usize) -> Self {
         Self {
             processed_callables,
@@ -84,7 +82,6 @@ impl MirPassData {
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn with_measurement(
         mut self,
         measurement: MirPassMeasurement,
@@ -129,12 +126,11 @@ impl MirProofPassCapability {
         Self { verified }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn verified(&self) -> &VerifiedProofMirProgram {
         &self.verified
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(in crate::passes::pipeline) fn unchanged(self) -> MirProofPassOutcome {
         MirProofPassOutcome::Unchanged {
             verified: self.verified,
@@ -142,7 +138,6 @@ impl MirProofPassCapability {
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn unchanged_with(
         self,
         data: MirPassData,
@@ -158,7 +153,6 @@ impl MirProofPassCapability {
         })
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn rewrite(
         self,
         rewrite: impl FnMut(CallableId, &mut MirCallableEdit) -> Result<(), MirRewriteError>,
@@ -175,7 +169,6 @@ pub(in crate::passes::pipeline) struct MirProofChangedProgram {
 }
 
 impl MirProofChangedProgram {
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn finish(
         self,
         data: MirPassData,
@@ -226,12 +219,11 @@ impl MirFinalPassCapability {
         Self { verified }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn verified(&self) -> &VerifiedFinalMirProgram {
         &self.verified
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(in crate::passes::pipeline) fn unchanged(self) -> MirFinalPassOutcome {
         MirFinalPassOutcome::Unchanged {
             verified: self.verified,
@@ -239,7 +231,6 @@ impl MirFinalPassCapability {
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn unchanged_with(
         self,
         data: MirPassData,
@@ -278,7 +269,6 @@ impl MirFinalPassCapability {
 
     /// Prepares exact definition retention from reachability facts sealed to
     /// this normalized product.
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn retain_reachable_definitions(
         self,
     ) -> Result<MirFinalDefinitionRetentionOutcome, MirPassFailure> {
@@ -364,14 +354,12 @@ pub(in crate::passes::pipeline) enum MirFinalDefinitionRetentionOutcome {
 }
 
 impl MirFinalDefinitionRetentionOutcome {
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) const fn summary(&self) -> &MirDefinitionRetentionSummary {
         match self {
             Self::Unchanged { summary, .. } | Self::Changed { summary, .. } => summary,
         }
     }
 
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn finish(
         self,
         data: MirPassData,
@@ -421,7 +409,6 @@ pub(in crate::passes::pipeline) enum MirPassFailure {
 }
 
 impl MirPassFailure {
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn execution(message: impl Into<String>) -> Self {
         Self::Execution(MirPassExecutionError::new(message))
     }
