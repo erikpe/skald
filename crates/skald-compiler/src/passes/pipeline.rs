@@ -77,6 +77,9 @@ fn reachability_verification_errors(error: MirDependencyExtractionError) -> MirV
 #[path = "pipeline/composition_tests.rs"]
 mod composition_tests;
 #[cfg(test)]
+#[path = "pipeline/path_activation_evidence_tests.rs"]
+mod path_activation_evidence_tests;
+#[cfg(test)]
 mod seal_tests;
 #[cfg(test)]
 #[path = "pipeline/source_equivalence_tests.rs"]

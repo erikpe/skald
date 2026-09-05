@@ -7,17 +7,26 @@ fn announce(value: i64) -> i64 {
 
 class Resource {
     marker: i64;
+    ready: bool;
 
     init(marker: i64) {
         self.marker = marker;
+        self.ready = (marker > 0) && (false || true);
+    }
+
+    fn allows(marker: i64) -> bool {
+        return self.ready && (self.marker == marker) && (true || dead_target());
     }
 
     destroy {
-        std::io::println_i64(self.marker);
+        if (self.ready && (self.marker > 0) && true) {
+            std::io::println_i64(self.marker);
+        }
     }
 }
 
 class State {
+    static ready: bool = true && (false || true);
     static marker: i64 = announce(10);
     static resource: Resource = Resource(20);
 
@@ -39,13 +48,27 @@ fn proof_dead_region() -> i64 {
     return 3;
 }
 
+fn positive(value: i64) -> bool {
+    return value > 0;
+}
+
 fn main() -> i64 {
+    var predicate: fn(i64) -> bool = positive;
     var maybe: i64? = some(5);
     var values: i64[] = i64[]{7};
     var owner: shared Resource = new Resource(30);
+    var index: i64 = 0;
+    var total: i64 = 0;
 
     std::io::println_i64(proof_dead_region());
-    if (true && ((maybe is some) || dead_target())) {
+    while ((index < 2) && (true || dead_target())) {
+        total = total + 1;
+        index = index + 1;
+    }
+    std::io::println_i64(total);
+    if (false && predicate(total)) {
+        return 1;
+    } elif (predicate(total) && State.ready && owner->allows(30) && ((maybe is some) || dead_target())) {
         std::io::println_i64(maybe!);
         std::io::println_i64(values[0]);
         std::io::println_i64(owner->marker);

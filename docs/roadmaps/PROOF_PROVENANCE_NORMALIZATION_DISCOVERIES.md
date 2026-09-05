@@ -39,8 +39,10 @@ consumed path-initialization trust, and only the private proof-consuming
 pipeline can issue the authority needed to seal a final product. Focused tests
 cover initialized and uninitialized ordinary spills, marked activations,
 wrong-stage and malformed declarations, leaked proof, and valid normalized
-programs. The discovery remains open until the active roadmap completes its
-transformation, backend, and source-profile audits.
+programs. Transformation, backend, source/profile, deterministic, and
+malformed-MIR evidence is complete through NSR6. The discovery remains open
+only until NSR7 performs the roadmap-wide ownership, documentation, and archive
+closure; FMM-13 remains a separate optimization candidate.
 
 **Impact:** This is sound for the frozen one-way transition and the planned
 block/value-only canary, which neither creates nor moves storage accesses. It

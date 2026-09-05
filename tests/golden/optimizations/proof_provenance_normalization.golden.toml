@@ -7,13 +7,16 @@ source = "proof_provenance_normalization.ska"
 variants = [
   "default",
   "optimization-none",
-  "post-proof-cfg-disabled",
+  "short-circuit-folding-disabled",
+  "post-proof-unreachable-disabled",
+  "post-proof-forwarding-disabled",
+  "post-proof-merging-disabled",
   "reachability-disabled",
   "all-mir-passes-disabled",
 ]
 [[test.run]]
 name = "nested_paths_optionals_arrays_shared_owners_and_static_lifecycle"
-expect = { stdout = { inline = "10\n1\n5\n7\n30\n20\n30\n20\n" } }
+expect = { stdout = { inline = "10\n1\n2\n5\n7\n30\n20\n30\n20\n" } }
 
 [[test]]
 name = "panic_trace_equivalence"
@@ -22,7 +25,10 @@ source = "proof_provenance_normalization_panic.ska"
 variants = [
   "default",
   "optimization-none",
-  "post-proof-cfg-disabled",
+  "short-circuit-folding-disabled",
+  "post-proof-unreachable-disabled",
+  "post-proof-forwarding-disabled",
+  "post-proof-merging-disabled",
   "reachability-disabled",
   "all-mir-passes-disabled",
 ]
@@ -32,4 +38,26 @@ expect = { exit = "failure", stderr = { inline = """panic: reachable normalizati
 stacktrace:
   at proof_provenance_normalization_panic::fail (tests/golden/optimizations/proof_provenance_normalization_panic.ska:10:9)
   at proof_provenance_normalization_panic::main (tests/golden/optimizations/proof_provenance_normalization_panic.ska:16:12)
+""" } }
+
+[[test]]
+name = "checked_failure_equivalence"
+mode = "run"
+source = "proof_provenance_normalization_checked_failure.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "short-circuit-folding-disabled",
+  "post-proof-unreachable-disabled",
+  "post-proof-forwarding-disabled",
+  "post-proof-merging-disabled",
+  "reachability-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "checked_reason_span_and_runtime_trace"
+expect = { exit = "failure", stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at proof_provenance_normalization_checked_failure::fail (tests/golden/optimizations/proof_provenance_normalization_checked_failure.ska:4:16)
+  at proof_provenance_normalization_checked_failure::main (tests/golden/optimizations/proof_provenance_normalization_checked_failure.ska:10:12)
 """ } }

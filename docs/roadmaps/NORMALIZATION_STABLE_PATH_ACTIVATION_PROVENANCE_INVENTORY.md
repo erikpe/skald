@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Inventory
 
-Status: completed NSR0 baseline for the active
+Status: living implementation inventory through NSR6 for the active
 [normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 
 This inventory records the `MirStorageKind` ownership boundary captured before
@@ -119,3 +119,30 @@ final dump spellings, checkpoint order, normalization fields/counts, and
 observed-versus-quiet artifact equality. Existing deterministic fingerprints
 already contain the intentional final-MIR vocabulary introduced in NSR2; NSR5
 requires no target golden or fingerprint update.
+
+## NSR6 source, profile, and malformed-evidence audit
+
+The focused source fixture now exercises nested logical operators, `if` and
+`elif`, a loop, a function value, a method, direct-field initialization,
+destruction, static initialization and reverse shutdown, optional inspection
+and unwrap, array indexing, shared-owner cleanup, and unreachable logical
+operands. Its exact stdout pins both ordinary evaluation and the destruction
+order of local and static resources. Companion fixtures pin a direct panic and
+a checked integer failure with exact reason, source span, status, and runtime
+trace.
+
+All three fixtures run under the default and `none` profiles, with logical
+folding disabled, with each post-proof CFG pass disabled separately, with
+whole-world reachability disabled, and with every selectable MIR pass
+disabled. A compiler-level matrix additionally pins the final-only dump kind,
+absence of proof records and proof-bearing rvalues, deterministic reports and
+occurrences, repeated assembly, assembler acceptance, and native result. The
+`none` and all-pass-disabled artifacts are required to be identical.
+
+Malformed evidence remains colocated with its owning contracts. Existing MIR
+contract tests cover forged final-only declarations, wrong stage, wrong type,
+source origin, leaked proof records and rvalues, and uninitialized ordinary
+scalar spills. NSR6 adds an undeclared final place and a duplicate proof-rich
+activation lifetime transition. The former fails normalized structural
+verification; the latter fails the proof-rich seal before normalization can
+consume its path evidence.

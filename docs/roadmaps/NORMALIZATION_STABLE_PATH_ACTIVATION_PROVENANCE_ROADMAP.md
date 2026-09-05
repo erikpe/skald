@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: in progress; NSR0 through NSR5 are complete and NSR6 is the next task.
+Status: in progress; NSR0 through NSR6 are complete and NSR7 is the next task.
 
 This roadmap implements the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
@@ -85,7 +85,7 @@ load, store, lifetime, attachment, and deletion conditions.
 - [x] NSR3 — Narrow normalized scalar initialization authority
 - [x] NSR4 — Seal rewrite and analysis handling of the new role
 - [x] NSR5 — Preserve backend behavior and deterministic observation
-- [ ] NSR6 — Complete source, profile, and malformed-MIR evidence
+- [x] NSR6 — Complete source, profile, and malformed-MIR evidence
 - [ ] NSR7 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
@@ -262,20 +262,20 @@ reconstructs proof history.
 **Purpose:** Validate the refined contract over real lowering and the entire
 selectable pipeline rather than only synthetic MIR.
 
-- [ ] Add or extend focused source fixtures covering nested `&&`/`||`, `if` and
+- [x] Add or extend focused source fixtures covering nested `&&`/`||`, `if` and
   `elif`, loops, methods, initializers, destructors, static initialization and
   shutdown, ownership cleanup, optionals, arrays, function values, checked
   failures, and direct panic.
-- [ ] Compare default, `none`, logical-folding-disabled, every final CFG cleanup
+- [x] Compare default, `none`, logical-folding-disabled, every final CFG cleanup
   disabled individually, reachability-disabled, and all-pass-disabled modes.
-- [ ] Pin source result, stdout, stderr, status, failure reason/span, runtime
+- [x] Pin source result, stdout, stderr, status, failure reason/span, runtime
   trace, lifecycle/destruction order, final MIR kind, and assembly equivalence.
-- [ ] Add mutation tests for forged final-only storage, wrong stage, wrong type,
+- [x] Add mutation tests for forged final-only storage, wrong stage, wrong type,
   source origin, leaked proof records/rvalues, invalid place/lifetime use, and
   an uninitialized ordinary scalar spill.
-- [ ] Exercise debug, release, repeated in-process, and independent-process
+- [x] Exercise debug, release, repeated in-process, and independent-process
   compilation with deterministic identities, dumps, reports, and artifacts.
-- [ ] Confirm zero language, runtime ABI, pass-list, profile, or CLI changes.
+- [x] Confirm zero language, runtime ABI, pass-list, profile, or CLI changes.
 
 **Tests:** Focused compiler suites and optimization/proof-normalization goldens;
 default/off parity; debug/release native execution; deterministic artifact

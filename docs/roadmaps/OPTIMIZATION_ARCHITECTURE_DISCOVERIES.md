@@ -57,7 +57,8 @@ and active
 have replaced the broad normalized scalar-spill exception with one exact final-
 only activation role. Same-snapshot analysis classification and the fail-closed
 final-CFG mutation boundary are also implemented; the remaining roadmap work
-proves target observation and closes integration coverage. This is a
+closes ownership and documentation after target observation and broad
+source/profile/malformed evidence. This is a
 representation and verification prerequisite, not the FMM-13 dead-carrier
 optimization itself.
 
@@ -668,8 +669,8 @@ architectural investments.
    scalar-spill verification and gives later storage passes an exact semantic
    classification without retaining consumed proof identities. The role,
    verifier authority, rewrite barriers, and byte-identical target/observation
-   parity are implemented; broad source/profile and malformed-input evidence
-   remains before roadmap closure.
+   parity are implemented, as is broad source/profile and malformed-input
+   evidence; ownership and documentation closure remains.
 9. After the bounded CFG and convergent constant layers provide more evidence
    about remaining barriers, generalize callable effects and alias queries
    where conservative answers demonstrably block useful transformations.

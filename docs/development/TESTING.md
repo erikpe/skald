@@ -353,11 +353,18 @@ both contracts, uninitialized ordinary scalar spills fail both contracts, and
 only the dedicated normalized activation role receives consumed path-
 initialization trust. Wrong-stage, source-backed, wrong-type, and leaked-proof
 forms remain rejected; valid normalized short-circuit and conditional programs
-remain accepted. Normalization tests must preserve exact storage/value/block
-identities and executable operations. Profile, native,
-runtime-trace, lifecycle, deterministic-dump, report, and backend tests must
-show unchanged behavior and byte-identical focused assembly. The new dump
-spelling is intentional; no pass-list or language/runtime surface changes.
+remain accepted. Normalization tests preserve exact storage/value/block
+identities and executable operations. Profile, native, runtime-trace,
+lifecycle, deterministic-dump, report, and backend tests show unchanged
+behavior and byte-identical focused assembly. The source matrix covers
+default, `none`, logical-folding-disabled, each post-proof CFG cleanup disabled
+independently, reachability-disabled, and all-pass-disabled compilation. It
+pins nested control flow, methods, initializers, destructors, static lifecycle,
+ownership cleanup, optionals, arrays, function values, direct panic, and
+checked failure through exact output, status, failure spans, runtime traces,
+destruction order, final-MIR vocabulary, repeated reports, and target
+artifacts. The new dump spelling is intentional; no pass-list or
+language/runtime surface changes.
 The checked-in
 [pre-migration inventory](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
 records the exhaustive owner audit and the focused current-behavior baselines.
