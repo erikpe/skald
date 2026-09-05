@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use crate::{
     identity::{CallableId, FunctionId},
     mir::{
-        check_normalized_mir, MirInstruction, MirPlace, MirRvalueKind, MirStorageKind,
+        check_normalized_mir, dump_mir, MirInstruction, MirPlace, MirRvalueKind, MirStorageKind,
         PathConditionId,
     },
     passes::verify_proof_mir,
@@ -147,6 +147,31 @@ fn path_reads_and_activation_storage_are_reclassified_without_other_edits() {
         original_values
     );
     assert_no_consumed_proof(normalized.program());
+}
+
+#[test]
+fn path_activation_dump_and_measurement_baseline_is_explicit() {
+    let verified = verified(
+        "fn choose(left: bool, right: bool) -> bool { return left && right; }
+         fn main() -> i64 { if (choose(true, true)) { return 42; } return 0; }",
+    );
+    let proof_dump = dump_mir(verified.program());
+    assert!(proof_dump.contains("path-condition <path-condition> \"logical-condition"));
+
+    let normalized = normalize_proof_provenance(verified).unwrap();
+    let final_dump = dump_mir(normalized.program());
+    assert!(!final_dump.contains("path-condition <path-condition>"));
+    assert!(final_dump.contains("scalar-spill <scalar-spill> \"logical-condition"));
+    assert_eq!(
+        (
+            normalized.statistics().path_condition_records(),
+            normalized.statistics().logical_expression_records(),
+            normalized.statistics().path_reads(),
+            normalized.statistics().activation_storage(),
+            normalized.statistics().changed_callables(),
+        ),
+        (1, 1, 1, 1, 1)
+    );
 }
 
 #[test]

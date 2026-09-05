@@ -6,7 +6,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The
+[normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+has completed NSR0, establishing the exhaustive storage-phase contract and
+pre-migration behavioral baseline. NSR1 is next: it adds the final-only
+activation storage representation across every current owner without yet
+changing normalization behavior.
 
 ## Pending discoveries
 
@@ -25,10 +30,14 @@ The open
 retain one scalar-spill provenance limitation that becomes critical before a
 final-stage storage transformation. Its accepted resolution is the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
-and planned
+and active
 [implementation roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md).
 New out-of-scope findings during delivery belong in that roadmap's
 [companion discoveries record](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md).
+The checked-in
+[pre-migration storage-kind inventory](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
+records the exhaustive implementation-owner audit and current-behavior
+baselines established before the representation changes.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
@@ -83,14 +92,7 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-The
-[normalization-stable path-activation provenance roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
-is planned with NSR0 next. It adds a final-only activation storage role through
-the mandatory proof-normalization transaction, restores normalized definite-
-initialization checking for ordinary scalar spills, and proves unchanged
-backend behavior. It depends on the completed proof-normalization, dense MIR
-rewriting, post-proof CFG, and convergent constant-propagation foundations.
-Dead normalized carrier deletion remains the separate FMM-13 candidate.
+No implementation roadmap is waiting to start.
 
 ## Design proposals
 

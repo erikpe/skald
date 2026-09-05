@@ -31,6 +31,29 @@ impl MirVerificationContract {
     }
 }
 
+/// The MIR products in which one storage role may appear.
+///
+/// This is deliberately separate from [`MirProofDisposition`]. A storage role
+/// can remain executable after proof normalization while still being legal in
+/// only one phase. Keeping phase availability exhaustive here prevents each
+/// verifier consumer from inventing its own boundary.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum MirStoragePhaseAvailability {
+    /// The storage role is valid before and after proof normalization.
+    Both,
+    /// The storage role is valid only while path-sensitive proof is present.
+    ProofRichOnly,
+}
+
+impl MirStoragePhaseAvailability {
+    const fn permits(self, contract: MirVerificationContract) -> bool {
+        match self {
+            Self::Both => true,
+            Self::ProofRichOnly => matches!(contract, MirVerificationContract::ProofRich),
+        }
+    }
+}
+
 /// How one MIR form participates in the post-proof boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::mir) enum MirProofDisposition {
@@ -202,6 +225,38 @@ pub(in crate::mir) const fn classify_storage_kind(kind: MirStorageKind) -> MirPr
     }
 }
 
+/// Classifies every storage role by the verifier products which may contain it.
+///
+/// The exhaustive match is the sole storage phase-legality maintenance point.
+/// Protocol-specific type, source, lifetime, and use validation remains with
+/// its existing verifier owners.
+pub(super) const fn classify_storage_phase_availability(
+    kind: MirStorageKind,
+) -> MirStoragePhaseAvailability {
+    match kind {
+        MirStorageKind::PathCondition => MirStoragePhaseAvailability::ProofRichOnly,
+        MirStorageKind::Return
+        | MirStorageKind::Receiver
+        | MirStorageKind::Parameter
+        | MirStorageKind::AliasParameter(_)
+        | MirStorageKind::CheckedView(_)
+        | MirStorageKind::Local
+        | MirStorageKind::Argument
+        | MirStorageKind::Temporary
+        | MirStorageKind::SharedAnchor
+        | MirStorageKind::ScalarSpill
+        | MirStorageKind::PrimitiveAlias
+        | MirStorageKind::OptionalUnwrap
+        | MirStorageKind::SharedAllocation
+        | MirStorageKind::ArrayBacking
+        | MirStorageKind::ArrayProduced
+        | MirStorageKind::ArraySlice
+        | MirStorageKind::ArrayPosition
+        | MirStorageKind::ArrayAnchor(_)
+        | MirStorageKind::ArrayAlias(_) => MirStoragePhaseAvailability::Both,
+    }
+}
+
 pub(in crate::mir) const fn classify_rvalue_kind(kind: &MirRvalueKind) -> MirProofDisposition {
     match kind {
         MirRvalueKind::PathCondition(_) => MirProofDisposition::ExecutableCarrierWithProof,
@@ -301,10 +356,27 @@ pub(in crate::mir) const fn classify_terminator(terminator: &MirTerminator) -> M
 }
 
 impl Verifier<'_> {
-    /// Checks the closed post-proof invariant without reconstructing consumed
-    /// path dataflow. Shared structural verification still runs afterward.
-    pub(super) fn verify_normalized_definition_contract(&mut self, function: MirDefinitionRef<'_>) {
-        if self.verification_contract().requires_proof_provenance() {
+    /// Checks phase legality and the closed post-proof invariant without
+    /// reconstructing consumed path dataflow. Shared structural verification
+    /// still runs afterward.
+    pub(super) fn verify_definition_contract(&mut self, function: MirDefinitionRef<'_>) {
+        let contract = self.verification_contract();
+        for storage in function.storage_entries() {
+            let availability = classify_storage_phase_availability(storage.kind);
+            if !availability.permits(contract) {
+                let disposition = classify_storage_kind(storage.kind);
+                debug_assert!(!disposition.is_permanent());
+                self.normalized_function_error(
+                    function,
+                    MirNormalizedInvariantViolation::ProofBearingStorage {
+                        storage: storage.id,
+                        disposition,
+                    },
+                );
+            }
+        }
+
+        if contract.requires_proof_provenance() {
             return;
         }
 
@@ -332,19 +404,6 @@ impl Verifier<'_> {
                     count: body.logical_expressions.len(),
                 },
             );
-        }
-
-        for storage in function.storage_entries() {
-            let disposition = classify_storage_kind(storage.kind);
-            if !disposition.is_permanent() {
-                self.normalized_function_error(
-                    function,
-                    MirNormalizedInvariantViolation::ProofBearingStorage {
-                        storage: storage.id,
-                        disposition,
-                    },
-                );
-            }
         }
 
         for block in &body.blocks {

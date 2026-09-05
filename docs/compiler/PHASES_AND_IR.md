@@ -1283,6 +1283,14 @@ recomputes target-independent reachability from the exact normalized program,
 and binds those facts to the new seal. Neither the raw normalized program nor
 its authority is externally constructible or detachable.
 
+Storage phase legality is a separate exhaustive verifier-contract decision
+from proof disposition. In the current representation, `PathCondition` is
+proof-rich-only and every other storage kind is legal in both products subject
+to its existing type, source, protocol, lifetime, and use checks. This single
+classification is the maintenance point for introducing any future phase-only
+storage role; individual verifiers do not choose phase availability
+independently.
+
 #### Frozen normalization-stable path-activation direction
 
 Status: **accepted; implementation planned**. The frozen

@@ -1,15 +1,16 @@
 use crate::{
     mir::{
-        rewrite::MirLocalIdentitySite, verify_mir, BlockId, MirInstruction, MirPlace, MirPlaceBase,
-        MirRvalueKind, MirStorageKind, MirTerminator,
+        rewrite::MirLocalIdentitySite, verify_mir, BlockId, MirAliasAccess, MirArrayAnchorKind,
+        MirInstruction, MirPlace, MirPlaceBase, MirRvalueKind, MirStorageKind, MirTerminator,
     },
     test_support::lower_source_to_mir,
 };
 
 use super::{
     classify_instruction, classify_local_identity_site, classify_proof_record,
-    classify_rvalue_kind, classify_storage_kind, MirIdentitySiteRole, MirProofDisposition,
-    MirProofRecordKind,
+    classify_rvalue_kind, classify_storage_kind, classify_storage_phase_availability,
+    MirIdentitySiteRole, MirProofDisposition, MirProofRecordKind, MirStoragePhaseAvailability,
+    MirVerificationContract,
 };
 use crate::mir::verify::check_normalized_mir;
 
@@ -84,6 +85,51 @@ fn classification_identifies_only_path_carrier_forms_as_mixed() {
         classify_instruction(&MirInstruction::Assign(assignment.clone())),
         MirProofDisposition::PermanentSemantic
     );
+}
+
+#[test]
+fn every_current_storage_kind_has_one_explicit_phase_availability() {
+    let phase_stable_kinds = [
+        MirStorageKind::Return,
+        MirStorageKind::Receiver,
+        MirStorageKind::Parameter,
+        MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly),
+        MirStorageKind::AliasParameter(MirAliasAccess::Mutable),
+        MirStorageKind::CheckedView(MirAliasAccess::ReadOnly),
+        MirStorageKind::CheckedView(MirAliasAccess::Mutable),
+        MirStorageKind::Local,
+        MirStorageKind::Argument,
+        MirStorageKind::Temporary,
+        MirStorageKind::SharedAnchor,
+        MirStorageKind::ScalarSpill,
+        MirStorageKind::PrimitiveAlias,
+        MirStorageKind::OptionalUnwrap,
+        MirStorageKind::SharedAllocation,
+        MirStorageKind::ArrayBacking,
+        MirStorageKind::ArrayProduced,
+        MirStorageKind::ArraySlice,
+        MirStorageKind::ArrayPosition,
+        MirStorageKind::ArrayAnchor(MirArrayAnchorKind::InlineOwner),
+        MirStorageKind::ArrayAnchor(MirArrayAnchorKind::InlineBacking),
+        MirStorageKind::ArrayAnchor(MirArrayAnchorKind::StableSharedOwner),
+        MirStorageKind::ArrayAnchor(MirArrayAnchorKind::CopiedSharedOwner),
+        MirStorageKind::ArrayAnchor(MirArrayAnchorKind::AdoptedSharedOwner),
+        MirStorageKind::ArrayAnchor(MirArrayAnchorKind::SecuredOptionalSharedOwner),
+        MirStorageKind::ArrayAlias(MirAliasAccess::ReadOnly),
+        MirStorageKind::ArrayAlias(MirAliasAccess::Mutable),
+    ];
+
+    for kind in phase_stable_kinds {
+        let availability = classify_storage_phase_availability(kind);
+        assert_eq!(availability, MirStoragePhaseAvailability::Both, "{kind:?}");
+        assert!(availability.permits(MirVerificationContract::ProofRich));
+        assert!(availability.permits(MirVerificationContract::Normalized));
+    }
+
+    let path_condition = classify_storage_phase_availability(MirStorageKind::PathCondition);
+    assert_eq!(path_condition, MirStoragePhaseAvailability::ProofRichOnly);
+    assert!(path_condition.permits(MirVerificationContract::ProofRich));
+    assert!(!path_condition.permits(MirVerificationContract::Normalized));
 }
 
 #[test]
@@ -198,4 +244,63 @@ fn normalized_contract_still_checks_source_visible_primitive_initialization() {
         errors.contains("loaded without initialization on every incoming path"),
         "{errors}"
     );
+}
+
+#[test]
+fn both_contracts_accept_an_initialized_ordinary_scalar_spill() {
+    let mut program =
+        lower_source_to_mir("fn main() -> i64 { var result: i64 = 7; return result; }");
+    reclassify_result_local_as_scalar_spill(&mut program);
+
+    verify_mir(&program).expect("proof-rich MIR must check and accept the initialized spill");
+    check_normalized_mir(&program)
+        .expect("normalized MIR must retain the initialized-spill baseline");
+}
+
+#[test]
+fn normalized_scalar_spill_exception_has_an_explicit_before_state() {
+    let mut program =
+        lower_source_to_mir("fn main() -> i64 { var result: i64 = 7; return result; }");
+    let spill = reclassify_result_local_as_scalar_spill(&mut program);
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    for block in &mut definition.body.blocks {
+        block.instructions.retain(|instruction| {
+            !matches!(
+                instruction,
+                MirInstruction::Store(store)
+                    if store.destination.base == MirPlaceBase::Storage(spill)
+                        && store.destination.projections.is_empty()
+            )
+        });
+    }
+
+    let errors = verify_mir(&program)
+        .expect_err("proof-rich MIR must reject an uninitialized ordinary spill")
+        .to_string();
+    assert!(
+        errors.contains("loaded without initialization on every incoming path"),
+        "{errors}"
+    );
+    check_normalized_mir(&program)
+        .expect("the current broad normalized spill exception is the baseline narrowed later");
+}
+
+fn reclassify_result_local_as_scalar_spill(
+    program: &mut crate::mir::MirProgram,
+) -> crate::mir::StorageId {
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let storage = definition
+        .storage
+        .iter_mut()
+        .find(|storage| storage.kind == MirStorageKind::Local)
+        .expect("fixture must lower one local result");
+    storage.kind = MirStorageKind::ScalarSpill;
+    storage.source = None;
+    storage.id
 }

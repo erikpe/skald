@@ -349,6 +349,9 @@ storage/value/block identities and executable operations. Profile, native,
 runtime-trace, lifecycle, deterministic-dump, report, and backend tests must
 show unchanged behavior and byte-identical focused assembly. The new dump
 spelling is intentional; no pass-list or language/runtime surface changes.
+The checked-in
+[pre-migration inventory](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
+records the exhaustive owner audit and the focused current-behavior baselines.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without

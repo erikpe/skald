@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: planned; NSR0 is the next task.
+Status: in progress; NSR0 is complete and NSR1 is the next task.
 
 This roadmap implements the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
@@ -79,7 +79,7 @@ load, store, lifetime, attachment, and deletion conditions.
 
 ## Progress
 
-- [ ] NSR0 — Freeze the storage-phase contract and baseline
+- [x] NSR0 — Freeze the storage-phase contract and baseline
 - [ ] NSR1 — Add the final-only storage representation exhaustively
 - [ ] NSR2 — Make normalization retain the stable activation role
 - [ ] NSR3 — Narrow normalized scalar initialization authority
@@ -95,20 +95,21 @@ load, store, lifetime, attachment, and deletion conditions.
 **Purpose:** Establish an auditable before-state and one exhaustive phase
 contract before changing the shared storage enum.
 
-- [ ] Inventory every `MirStorageKind` producer, match, verifier branch,
+- [x] Inventory every `MirStorageKind` producer, match, verifier branch,
   normalizer conversion, rewrite path, dump spelling, analysis classifier, and
-  backend layout/lowering consumer.
-- [ ] Centralize the proof-rich versus normalized storage-legality decision in
+  backend layout/lowering consumer in the dedicated
+  [NSR0 inventory](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md).
+- [x] Centralize the proof-rich versus normalized storage-legality decision in
   the MIR contract layer rather than scattering stage tests among consumers.
-- [ ] Add exhaustive tests covering the current kinds, including
+- [x] Add exhaustive tests covering the current kinds, including
   `PathCondition` proof-rich acceptance and normalized rejection.
-- [ ] Freeze focused baselines for path-activation identity, operation, span,
+- [x] Freeze focused baselines for path-activation identity, operation, span,
   storage order, dump, normalization measurements, backend frame behavior, and
   assembly under `none` and the default profile.
-- [ ] Add synthetic fixtures for ordinary initialized and uninitialized
+- [x] Add synthetic fixtures for ordinary initialized and uninitialized
   `ScalarSpill` declarations so the later verifier tightening has an explicit
   before/after boundary.
-- [ ] Record any unclassified or duplicate ownership found during the inventory
+- [x] Record any unclassified or duplicate ownership found during the inventory
   without changing the frozen scope.
 
 **Tests:** MIR contract and verifier tests; normalizer and dump baselines;

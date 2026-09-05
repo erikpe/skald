@@ -20,7 +20,7 @@ impl<'mir> Verifier<'mir> {
         return_type: MirType,
         function: MirDefinitionRef<'mir>,
     ) {
-        self.verify_normalized_definition_contract(function);
+        self.verify_definition_contract(function);
         if function.class_owner() != function.callable().class() {
             self.function_error(
                 function.callable(),

@@ -19,6 +19,29 @@ fn lowers_source_conditionals_to_deterministic_block_branches() {
 }
 
 #[test]
+fn logical_activation_frame_baseline_is_stable_across_pipeline_profiles() {
+    let source = concat!(
+        "fn choose(left: bool, right: bool) -> bool { return left && right; }\n",
+        "fn main() -> i64 {\n",
+        "  if (choose(true, true)) { return 42; }\n",
+        "  return 0;\n",
+        "}\n",
+    );
+
+    let without_optimizations = complete_assembly(source);
+    let default = assembly(source);
+    assert_eq!(without_optimizations, complete_assembly(source));
+    assert_eq!(default, assembly(source));
+
+    for output in [&without_optimizations, &default] {
+        let choose = function_assembly(output, ".Lska.fn.main.choose.f0");
+        assert!(choose.contains("sub rsp,"), "{choose}");
+        assert!(choose.contains("[rbp -"), "{choose}");
+        assert_eq!(run_native_assembly(output).code(), Some(42), "{output}");
+    }
+}
+
+#[test]
 fn lowers_forward_and_backward_jumps_in_stable_block_order() {
     let mut mir = lower_text("fn main() -> i64 { return 0; }");
     let function = mir
