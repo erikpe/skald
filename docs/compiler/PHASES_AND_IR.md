@@ -1092,9 +1092,10 @@ normalization transaction, the two sealed products, stage-aware policy and
 observation, final-stage reachability, and normalized-only backend input are
 covered by focused tests. Every production pipeline,
 including `none`, crosses that boundary before returning backend-ready MIR.
-The post-proof CFG canary is active immediately after normalization in the
-default schedule, with whole-world reachability last. The selection, parity,
-golden, reporting, and deterministic dump matrices cover that composition.
+The default normalized CFG suffix runs immediately after normalization:
+unreachable-block elimination, empty-block forwarding, basic-block merging,
+and finally whole-world reachability. The selection, parity, golden,
+reporting, and deterministic dump matrices cover that composition.
 
 The verifier now owns one exhaustive classification boundary for proof
 records, callable-local identity sites, storage kinds, rvalues, instructions,
@@ -1185,9 +1186,10 @@ can only inspect normalized CFG facts and delete the exact unreachable blocks
 and their block-owned values from a still-current snapshot. It cannot mutate
 storage, instructions, terminators, proof records, or lifecycle authority.
 
-The canary reports removed blocks, removed value declarations, and permanent
-roots retained outside entry reachability. It is registered, listed, and
-runs immediately after normalization in the current `default` profile.
+The unreachable-block pass reports removed blocks, removed value declarations,
+and permanent roots retained outside entry reachability. It is registered,
+listed, and runs immediately after normalization in the current `default`
+profile.
 `post-proof-empty-block-forwarding` follows it and redirects all executable
 successor occurrences through complete transitive chains of instruction-free
 goto blocks. It retains body entry, permanent attachments, incoming permanent-

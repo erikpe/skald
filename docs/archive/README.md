@@ -104,6 +104,7 @@ Archived plans:
 - [Checked integer constant protocol simplification](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
 - [Local final-MIR redundancy measurement](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
 - [Proof-provenance normalization](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+- [Post-proof CFG canonicalization](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -184,6 +185,11 @@ Resolved proof-provenance normalization inputs:
 
 - [Proof-provenance normalization design proposal](PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md)
 - [Proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+
+Resolved post-proof CFG canonicalization inputs:
+
+- [Post-proof CFG canonicalization design proposal](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
+- [Post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
 
 Resolved checked integer constant protocol simplification inputs:
 

@@ -357,17 +357,17 @@ The archived
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and
 [implementation roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
 own the completed classification, transaction, seals, verifier split,
-stage-aware pipeline, backend migration, and conservative post-proof CFG
-canary. One actionable storage-provenance limitation remains in the
+stage-aware pipeline, backend migration, and initial post-proof unreachable
+cleanup. One actionable storage-provenance limitation remains in the
 [follow-up discoveries](PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md).
-The frozen
-[post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
-and its active
-[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) define the
-first implemented expansion of that final-stage capability: independently
-selectable empty-block forwarding and basic-block merging with permanent-root
-and verifier-significant protocol barriers. The remaining roadmap work covers
-composition, observation, equivalence, and closure hardening.
+The completed
+[post-proof CFG canonicalization design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
+and
+[implementation roadmap](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+deliver the first reusable expansion of that final-stage capability:
+independently selectable empty-block forwarding and basic-block merging with
+permanent-root and verifier-significant protocol barriers, deterministic
+composition and observation, and source-to-native equivalence coverage.
 
 ### Optimization possibilities unlocked
 
@@ -631,11 +631,10 @@ This layer offers the best balance of moderate-to-large effort, broad coverage,
 and low semantic risk. It also creates measurements that can justify the later
 architectural investments.
 
-6. The proof-provenance normalization boundary is implemented. Continue its
-   frozen
-   [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md),
-   adding independently selectable empty-block forwarding and basic-block
-   merging before whole-world reachability.
+6. The proof-provenance normalization boundary and its
+   [post-proof CFG canonicalization layer](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+   are implemented. Independently selectable empty-block forwarding and
+   basic-block merging run before whole-world reachability.
 
 7. After the bounded CFG layer provides more evidence about remaining
    barriers, generalize callable effects and alias queries where conservative

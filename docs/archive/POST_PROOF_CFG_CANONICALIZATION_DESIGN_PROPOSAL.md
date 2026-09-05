@@ -1,15 +1,13 @@
 # Post-Proof CFG Canonicalization Design Proposal
 
 Status: frozen decision record. PCG1 through PCG14 were confirmed together on
-2026-09-04. The
-[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) owns
-delivery, and implementation-specific follow-ups belong in the
-[discoveries record](POST_PROOF_CFG_CANONICALIZATION_DISCOVERIES.md).
+2026-09-04 and delivered by the completed
+[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md).
 
 This proposal defines the next conservative final-MIR control-flow layer for
 Skald. It covers the optimization catalog's FMC-08 empty-block forwarding and
 FMC-09 basic-block merging candidates in the
-[final-MIR CFG graph](OPTIMIZATION_CANDIDATE_CATALOG.md#final-mir-checked-operation-and-control-flow-graph).
+[final-MIR CFG graph](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md#final-mir-checked-operation-and-control-flow-graph).
 Both transformations operate only on the normalized
 `VerifiedFinalMirProgram`, after proof provenance has been consumed and before
 target-independent whole-world definition retention.
@@ -774,10 +772,10 @@ scalar-spill propagation, SSA, or target layout under this design.
 ## Freeze and promotion
 
 PCG1 through PCG14 were accepted together on 2026-09-04. The implementation
-roadmap is now the delivery authority, the candidate catalog records FMC-08
-and FMC-09 as **Proposed**, and the roadmap index exposes the planned work.
+[roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) records their completed
+delivery, and the candidate catalog records FMC-08 and FMC-09 as
+**Implemented**.
 
-Living compiler, driver, reporting, backend, and testing documentation remain
-authoritative for current behavior throughout delivery. Each roadmap task
-promotes the behavior it implements; the completed design and roadmap move to
-the archive only after every task and artifact-free quality gate is complete.
+Living compiler, driver, reporting, backend, and testing documentation are
+authoritative for current behavior. This frozen design and its completed
+roadmap are archived as historical decision and delivery records.

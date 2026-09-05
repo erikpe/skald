@@ -171,8 +171,8 @@ of its narrow CFG capability.
 | FMC-05 | Simplify statically decidable checked casts and type tests missed by lowering | After whole-world type/dispatch facts; before CFG cleanup | Foundation needed / **Medium to large** | Medium runtime and code size | Dynamic class sets, access views, checked carriers, failure blocks, ownership, and complete-object provenance |
 | FMC-06 | Simplify statically decidable optional presence and unwrap diamonds | After optional-state analysis; before CFG cleanup | Foundation needed / **Large** | Medium runtime and code size | Optional representation, guard counts, pinned mutation, payload lifetime, cleanup, and exact absence/overflow failure behavior |
 | FMC-07 | [Delete obsolete path-condition and logical-expression proof records](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | In a mandatory normalization stage after their final semantic verifier; before post-proof CFG passes | Implemented and mandatory under every profile ([delivery](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)) / **Large** | High architectural value; medium MIR/compile-time reduction | The implemented boundary uses a one-way proof-rich-to-final seal transition, exact carrier-load lowering, and a distinct normalized verifier |
-| FMC-08 | [Empty-block forwarding](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | After post-proof unreachable deletion; before block merging | Implemented; roadmap hardening remains ([design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md#empty-block-forwarding), [roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)) / **Medium** | Medium code size and compile time | Uses exact predecessor occurrences, transitive cycle-safe resolution, permanent-attachment and array-loop-body barriers, preserved incoming terminator roles/spans, and a narrow final-stage CFG capability |
-| FMC-09 | [Basic-block merging](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | After proof normalization and empty-block forwarding; before whole-world reachability | Implemented; roadmap hardening remains ([design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md#basic-block-merging), [roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)) / **Medium** | Medium code size and target input quality | Uses one total incoming goto edge, block-local value preservation, exact instruction/terminator order, permanent and verifier-significant protocol attachments, deterministic local convergence, and a narrow final-stage CFG capability |
+| FMC-08 | [Empty-block forwarding](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | After post-proof unreachable deletion; before block merging | Implemented ([delivery](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)) / **Medium** | Medium code size and compile time | Uses exact predecessor occurrences, transitive cycle-safe resolution, permanent-attachment and array-loop-body barriers, preserved incoming terminator roles/spans, and a narrow final-stage CFG capability |
+| FMC-09 | [Basic-block merging](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary) | After proof normalization and empty-block forwarding; before whole-world reachability | Implemented ([delivery](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)) / **Medium** | Medium code size and target input quality | Uses one total incoming goto edge, block-local value preservation, exact instruction/terminator order, permanent and verifier-significant protocol attachments, deterministic local convergence, and a narrow final-stage CFG capability |
 | FMC-10 | Jump threading and branch-to-branch folding | After proof normalization and scalar propagation; before unreachable-region deletion | Foundation needed / **Large** | Medium to high runtime and code size | Path predicates, duplicated predecessors, cleanup/ownership joins, loop edges, and code-size growth |
 | FMC-11 | Short-circuit logical CFG simplification | After logical proof records are consumed; before general CFG cleanup | Follow-up / **Large** | Medium runtime and code size | Exactly-once RHS evaluation, selected-result storage, cleanup, observable failure suppression, and expansion of the final-stage CFG capability |
 | FMC-13 | Loop canonicalization and natural-loop discovery | After proof normalization and preferably scalar promotion; before loop optimizations | Follow-up / **Large** | High architectural value | Irreducible CFG, array-generated loops, cleanup edges, failure exits, ownership joins, and stable loop identity |
@@ -299,17 +299,13 @@ The completed
 selects no candidate-specific optimization; do not design FMV-15, FMV-02, or
 FMV-03 without new representative evidence.
 
-1. Continue the active
-   [post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
-   covering the now-unblocked empty-block forwarding and basic-block merging
-   candidates before beginning effect-analysis groundwork.
-2. Build conservative callable effect summaries before attempting memory,
+1. Build conservative callable effect summaries before attempting memory,
    ownership, pure-call, or aggressive inlining transformations.
-3. Improve reachable-type/target precision, then devirtualize before designing
+2. Improve reachable-type/target precision, then devirtualize before designing
    general inlining.
-4. Treat the target virtual-register LIR and register allocator as a separate
+3. Treat the target virtual-register LIR and register allocator as a separate
    major performance program once target-independent simplification is stable.
-5. Introduce scalar SSA or a normalized optimization IR only after measurements
+4. Introduce scalar SSA or a normalized optimization IR only after measurements
    show that storage boundaries, rather than backend stack homes, are the next
    dominant ceiling.
 

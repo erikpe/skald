@@ -6,15 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The
-[post-proof CFG canonicalization roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
-is in progress. Deterministic predecessor-edge facts and exhaustive block
-classification, guarded edits, both selectable transformations, and their
-frozen default composition, observation contracts, and source-to-native
-equivalence are implemented; final ownership and closure are next. The roadmap
-depends on the completed proof-provenance normalization, dense MIR rewriting,
-selectable pipeline, static-lifecycle, and whole-world reachability
-foundations.
+No implementation roadmap is currently in progress.
 
 ## Pending discoveries
 
@@ -39,11 +31,6 @@ retain the measured nested-carrier limitation from the completed
 checked-protocol pass without widening its reviewed successful-constant
 boundary. Representative non-fixture evidence is required before that
 low-priority optimization is reconsidered.
-
-The
-[post-proof CFG canonicalization discoveries](POST_PROOF_CFG_CANONICALIZATION_DISCOVERIES.md)
-record implementation-specific findings outside the frozen forwarding and
-merging design while its roadmap is active.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent
@@ -73,6 +60,14 @@ then adds exact primitive folding, guarded algebraic value forwarding,
 proof-aware ordinary CFG cleanup, and the repeated default schedule. Its
 [frozen design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md)
 and delivery record are preserved in the archive.
+The completed
+[post-proof CFG canonicalization roadmap](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+adds exact predecessor-edge facts, guarded final-CFG edits, independently
+selectable empty-block forwarding and basic-block merging, deterministic
+composition and observation, and source-to-native equivalence. Its
+[frozen design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
+and delivery record are preserved in the archive; implementation produced no
+remaining roadmap-specific follow-up.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -84,16 +79,18 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
-The frozen
-[post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
-covers independently selectable empty-block forwarding and basic-block
-merging on normalized final MIR. Its frozen decisions preserve permanent
-static-publication roots, narrow final-stage mutation authority, deterministic
-dense commit, normalized reverification, and fresh reachability. Its active
-[implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) has
-completed deterministic CFG facts, candidate analysis, guarded mutation, both
-passes, their default composition, inspection/reporting ownership, and
-source-to-native equivalence; it proceeds with final ownership and closure.
+The completed post-proof CFG canonicalization
+[design](../archive/POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md) and
+[delivery record](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) are
+preserved in the archive. Their normalized CFG facts, permanent-attachment
+barriers, narrow final-stage mutation authority, deterministic dense commit,
+reverification, fresh reachability, and independently selectable forwarding
+and merging passes are authoritative in the living
+[compiler phase](../compiler/PHASES_AND_IR.md#proof-provenance-normalization-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#final-mir-optimization-selection),
+[reporting](../compiler/REPORTING.md#post-proof-cfg-canonicalization-observation),
+and [testing](../development/TESTING.md#proof-provenance-normalization-coverage)
+contracts.
 
 The completed proof-provenance normalization
 [design](../archive/PROOF_PROVENANCE_NORMALIZATION_DESIGN_PROPOSAL.md) and

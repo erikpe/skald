@@ -1,6 +1,7 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 through PCR7 are complete and PCR8 is next.
+Status: complete; PCR0 through PCR8 are implemented and the roadmap is
+archived.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -11,29 +12,27 @@ layer beyond unreachable-region deletion, while retaining a narrow mutation
 capability and all current language, lifecycle, failure, trace, and ABI
 semantics.
 
-Implementation-specific opportunities outside the frozen scope belong in the
-[post-proof CFG canonicalization discoveries](POST_PROOF_CFG_CANONICALIZATION_DISCOVERIES.md).
-The
-[optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
-concise cross-domain status for FMC-08 and FMC-09.
+Implementation produced no remaining roadmap-specific follow-up. The
+[optimization candidate catalog](../roadmaps/OPTIMIZATION_CANDIDATE_CATALOG.md)
+owns concise cross-domain status for FMC-08 and FMC-09.
 
 ## Dependencies
 
 - The completed
-  [proof-provenance normalization roadmap](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+  [proof-provenance normalization roadmap](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
   provides distinct proof-rich and normalized seals, stage-aware execution,
   normalized verification, final-stage capability ownership, and the
   conservative unreachable-block canary.
 - The completed
-  [dense MIR identity rewriting roadmap](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+  [dense MIR identity rewriting roadmap](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
   provides exhaustive identity traversal, private sparse edits, explicit block
   order, atomic transactions, and deterministic dense commit.
 - The completed
-  [selectable final-MIR pipeline roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+  [selectable final-MIR pipeline roadmap](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
   provides registrations, profiles, exclusions, exact internal schedules,
   inspection, measurements, verification, and failure attribution.
 - The completed
-  [whole-world reachability roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
+  [whole-world reachability roadmap](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
   provides seal-bound analysis recomputed after every changed final-stage
   occurrence and the final executable-definition retention pass.
 - Completed static-lifecycle certificate and reachability-gated static
@@ -103,7 +102,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 - [x] PCR5 — Freeze and prove default pass composition
 - [x] PCR6 — Complete inspection and reporting ownership
 - [x] PCR7 — Prove source-level semantic and target equivalence
-- [ ] PCR8 — Harden ownership, documentation, and roadmap closure
+- [x] PCR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
 
@@ -494,25 +493,54 @@ are neither a runtime-speed claim nor a stable performance threshold.
 **Purpose:** Audit the delivered layer as reusable infrastructure and close the
 roadmap without stale status, hidden mutation, or high-priority debt.
 
-- [ ] Audit CFG facts, candidate analysis, editing, final capability, passes,
+- [x] Audit CFG facts, candidate analysis, editing, final capability, passes,
   policy, execution, inspection, reporting, driver, and backend by
   responsibility; split owners where that materially improves maintenance.
-- [ ] Confirm no final pass gained raw mutable MIR, general callable editing,
+- [x] Confirm no final pass gained raw mutable MIR, general callable editing,
   storage/proof mutation, or unrestricted instruction/terminator replacement.
-- [ ] Remove stale claims that post-proof CFG work only deletes unreachable
+- [x] Remove stale claims that post-proof CFG work only deletes unreachable
   blocks or that reachability immediately follows normalization.
-- [ ] Ensure maintenance tests catch new terminator edges, permanent block
+- [x] Ensure maintenance tests catch new terminator edges, permanent block
   attachments, and trace events requiring a design decision.
-- [ ] Remove roadmap/decision codes from living source, tests, diagnostics,
+- [x] Remove roadmap/decision codes from living source, tests, diagnostics,
   dumps, metrics, and public compiler documentation.
-- [ ] Resolve small findings and record larger follow-ups with evidence,
+- [x] Resolve small findings and record larger follow-ups with evidence,
   impact, owner, priority, and bounded direction in discoveries.
-- [ ] Promote implemented status in the catalog and living contracts and
+- [x] Promote implemented status in the catalog and living contracts and
   remove superseded discovery wording.
-- [ ] Run complete repository and supported-toolchain gates from an artifact-
+- [x] Run complete repository and supported-toolchain gates from an artifact-
   free snapshot.
-- [ ] Mark all tasks complete, archive roadmap/design, update indexes and
+- [x] Mark all tasks complete, archive roadmap/design, update indexes and
   incoming links, and leave only actionable discoveries active.
+
+**Implementation evidence:** The closure audit found cohesive ownership across
+the shared CFG fact facade and private canonicalization analysis, the guarded
+final-CFG edit adapter, the two small pass modules, policy and execution, and
+the existing inspection, reporting, driver, and backend adapters. No split
+would shorten an implementation owner or clarify a responsibility enough to
+justify another module boundary. Final passes can borrow verified final MIR
+and can consume it only through guarded CFG rewriting or exact definition
+retention; `MirFinalCfgEdit` exposes facts, unreachable deletion, forwarding,
+and merging, but neither the raw program nor the general callable editor,
+storage/proof mutation, or unrestricted instruction/terminator replacement.
+Exhaustive terminator and identity-site classifications make future edge and
+permanent-attachment forms a compile-time maintenance decision. Exact default
+checkpoint, occurrence, metric, and source/native runtime-trace fixtures make
+new pass trace events an explicit test update. Living phase, testing,
+reporting, debugging, architecture, and catalog text now describes the full
+normalized CFG suffix; no larger implementation follow-up was found.
+
+Closure validation started from an artifact-free `git archive` snapshot with
+the intended documentation changes overlaid; it contained neither `target/`
+nor `build/` and excluded the pre-existing user-owned `test_solver.s`. In that
+snapshot, `make check` passed formatting, all-target builds, Clippy,
+documentation validation, runtime tests, 2,874 compiler tests, 52
+independent-process pipeline determinism tests, and all 515 ordinary golden
+cases. `make golden-determinism-test` passed all 515 cases with full repeated
+compilation/execution, `make golden-release-test` passed all 515 cases with
+release-built tools, and `make msrv-check` passed every workspace target on
+Rust 1.82.0. The source worktree retains only PCR8 documentation/archive
+changes plus that unrelated untracked assembly file.
 
 **Tests:** Every focused prior suite; `make check`; full golden/native tests;
 independent-process determinism; release golden tests; docs links/indexes;

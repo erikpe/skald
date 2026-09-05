@@ -90,8 +90,9 @@ Use `--mir-optimization none` to inspect the complete normalized reference
 final MIR. Disable `post-proof-unreachable-block-elimination` to retain
 proof-only dead CFG after normalization. Disable
 `post-proof-empty-block-forwarding` to preserve empty goto chains while still
-running the unreachable canary. Disable `post-proof-basic-block-merging` to
-retain linear goto boundaries after forwarding, or disable
+running unreachable-block elimination. Disable
+`post-proof-basic-block-merging` to retain linear goto boundaries after
+forwarding, or disable
 `whole-world-reachability` to keep the post-proof CFG passes while retaining
 every executable definition. The request-local MIR pipeline
 inspector can compare `proof-rich-input`, stage-qualified after-pass,

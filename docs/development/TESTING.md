@@ -266,9 +266,9 @@ and
 record the delivery history for this coverage.
 Verifier classification, atomic normalization, the two sealed products,
 stage-aware policy and observation, normalized-only reachability retention,
-backend consumption, and the post-proof CFG canary are implemented. The
-canary is active immediately after normalization in the default profile, with
-whole-world reachability last.
+backend consumption, and the normalized CFG suffix are implemented. The
+default suffix runs unreachable-block elimination, empty-block forwarding,
+basic-block merging, and then whole-world reachability.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
