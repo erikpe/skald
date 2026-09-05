@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 through PCR4 are complete and PCR5 is next.
+Status: in progress; PCR0 through PCR5 are complete and PCR6 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -100,7 +100,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 - [x] PCR2 — Add guarded final-CFG compound edits
 - [x] PCR3 — Implement selectable empty-block forwarding
 - [x] PCR4 — Implement selectable basic-block merging
-- [ ] PCR5 — Freeze and prove default pass composition
+- [x] PCR5 — Freeze and prove default pass composition
 - [ ] PCR6 — Complete inspection and reporting ownership
 - [ ] PCR7 — Prove source-level semantic and target equivalence
 - [ ] PCR8 — Harden ownership, documentation, and roadmap closure
@@ -329,20 +329,20 @@ being merged with their following block.
 **Purpose:** Freeze the complete final-stage schedule and prove both passes
 remain modular when composed, excluded, or repeated.
 
-- [ ] Freeze default final order as post-proof unreachable deletion,
+- [x] Freeze default final order as post-proof unreachable deletion,
   forwarding, merging, and whole-world reachability.
-- [ ] Prove each pass alone through exact schedules and each disabled
+- [x] Prove each pass alone through exact schedules and each disabled
   independently from default.
-- [ ] Cover both disabled, the unreachable canary disabled, reachability
+- [x] Cover both disabled, the unreachable canary disabled, reachability
   disabled, duplicate exclusions, and all final passes disabled.
-- [ ] Confirm disabling every default name is equivalent to `none` while
+- [x] Confirm disabling every default name is equivalent to `none` while
   mandatory normalization still runs once.
-- [ ] Demonstrate forwarding exposes merging without hidden shared state.
-- [ ] Verify no frozen-rule alternating case requires another default
+- [x] Demonstrate forwarding exposes merging without hidden shared state.
+- [x] Verify no frozen-rule alternating case requires another default
   occurrence; amend the design if contrary evidence appears.
-- [ ] Prove repeated exact occurrences are unchanged after convergence and do
+- [x] Prove repeated exact occurrences are unchanged after convergence and do
   not trigger redundant verification.
-- [ ] Ensure whole-world reachability consumes remaining call sites and stays
+- [x] Ensure whole-world reachability consumes remaining call sites and stays
   the last target-independent pass.
 
 **Tests:** Registry and schedule suites; exact occurrence identities/stages;
@@ -353,6 +353,22 @@ independent-process schedule determinism.
 **Exit criteria:** One deterministic default schedule owns composition, both
 passes remain independently selectable and convergent, no hidden fixed-point
 loop exists, and reachability sees canonicalized CFG.
+
+**Implementation evidence:** The policy suite freezes the four-occurrence
+final suffix, proves every final pass in a one-occurrence exact schedule, and
+covers independent, paired, duplicate, and complete final-stage exclusions.
+Disabling every registered default name remains exactly equivalent to `none`:
+zero selectable occurrences, one mandatory normalization, and two boundary
+verification executions. A dedicated composition fixture gives the result
+block a second edge from an unreachable empty predecessor. Merging alone
+correctly retains the join; forwarding removes that predecessor; merging then
+consumes the newly unique linear edge from fresh CFG facts. Repeating the pair
+produces two unchanged occurrences and zero additional verification runs, so
+the frozen rules require no pipeline-level iteration. The default call-graph
+fixture proves that canonicalized reachability excludes a removed call target
+before the final whole-world occurrence and that whole-world retention then
+removes its definition. Existing independent-process checkpoint tests cover
+the complete default order and deterministic final products.
 
 ### PCR6 — Complete inspection and reporting ownership
 

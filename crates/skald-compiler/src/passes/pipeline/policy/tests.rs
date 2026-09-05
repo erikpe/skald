@@ -269,6 +269,137 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
 }
 
 #[test]
+fn production_final_suffix_is_frozen_and_independently_selectable() {
+    let suffix = [
+        (
+            post_proof_unreachable_block_elimination::IDENTITY,
+            "post-proof-unreachable-block-elimination",
+        ),
+        (
+            post_proof_empty_block_forwarding::IDENTITY,
+            "post-proof-empty-block-forwarding",
+        ),
+        (
+            post_proof_basic_block_merging::IDENTITY,
+            "post-proof-basic-block-merging",
+        ),
+        (
+            whole_world_reachability::IDENTITY,
+            "whole-world-reachability",
+        ),
+    ];
+    let default =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    assert_eq!(
+        default
+            .final_stage()
+            .map(|occurrence| (
+                occurrence.position(),
+                occurrence.identity(),
+                occurrence.name(),
+                occurrence.stage(),
+            ))
+            .collect::<Vec<_>>(),
+        suffix
+            .iter()
+            .enumerate()
+            .map(|(offset, (identity, name))| {
+                (8 + offset, *identity, *name, MirPassStage::Final)
+            })
+            .collect::<Vec<_>>()
+    );
+
+    for (identity, name) in suffix {
+        let exact = resolve_exact_mir_pass_schedule(&[identity]).unwrap();
+        assert_eq!(exact.normalization_position(), 0);
+        assert_eq!(
+            exact
+                .iter()
+                .map(|occurrence| (
+                    occurrence.position(),
+                    occurrence.identity(),
+                    occurrence.name(),
+                    occurrence.stage(),
+                ))
+                .collect::<Vec<_>>(),
+            [(0, identity, name, MirPassStage::Final)]
+        );
+    }
+
+    for disabled_mask in 0..(1usize << suffix.len()) {
+        let disabled = suffix
+            .iter()
+            .enumerate()
+            .filter_map(|(index, (_, name))| ((disabled_mask & (1 << index)) != 0).then_some(*name))
+            .collect::<Vec<_>>();
+        let selected =
+            resolve_mir_pass_schedule(MirOptimizationProfile::Default, disabled.iter().copied())
+                .unwrap();
+        let expected = suffix
+            .iter()
+            .enumerate()
+            .filter_map(|(index, (_, name))| ((disabled_mask & (1 << index)) == 0).then_some(*name))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            selected
+                .final_stage()
+                .map(|occurrence| occurrence.name())
+                .collect::<Vec<_>>(),
+            expected,
+            "final-pass exclusion mask {disabled_mask:04b}"
+        );
+        assert_eq!(
+            selected
+                .proof_rich()
+                .map(|occurrence| occurrence.identity())
+                .collect::<Vec<_>>(),
+            default
+                .proof_rich()
+                .map(|occurrence| occurrence.identity())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    let both_canonicalizers_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        [
+            "post-proof-empty-block-forwarding",
+            "post-proof-basic-block-merging",
+        ],
+    )
+    .unwrap();
+    let duplicate_exclusions = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        [
+            "post-proof-empty-block-forwarding",
+            "post-proof-empty-block-forwarding",
+            "post-proof-basic-block-merging",
+            "post-proof-basic-block-merging",
+        ],
+    )
+    .unwrap();
+    assert_eq!(duplicate_exclusions, both_canonicalizers_disabled);
+
+    let all_final_disabled = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        suffix.map(|(_, name)| name),
+    )
+    .unwrap();
+    assert_eq!(all_final_disabled.final_stage().count(), 0);
+    assert_eq!(all_final_disabled.normalization_position(), 8);
+    assert_eq!(
+        all_final_disabled
+            .proof_rich()
+            .map(|occurrence| occurrence.identity())
+            .collect::<Vec<_>>(),
+        default
+            .proof_rich()
+            .map(|occurrence| occurrence.identity())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     let passes = available_mir_passes();
     assert_eq!(passes.len(), 9);

@@ -72,6 +72,9 @@ fn reachability_verification_errors(error: MirDependencyExtractionError) -> MirV
 }
 
 #[cfg(test)]
+#[path = "pipeline/composition_tests.rs"]
+mod composition_tests;
+#[cfg(test)]
 mod seal_tests;
 #[cfg(test)]
 mod tests;

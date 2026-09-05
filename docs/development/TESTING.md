@@ -167,6 +167,14 @@ shutdown, ownership, destruction, panic, and runtime traces. Full golden
 determinism repeats every variant in independent compiler and native
 processes.
 
+Post-proof CFG composition tests freeze unreachable deletion, empty-block
+forwarding, basic-block merging, and whole-world reachability as the ordered
+final suffix. They run every final pass alone, cover individual, paired,
+duplicate, and complete exclusions, and use an unreachable empty predecessor
+to prove that forwarding exposes a merge from freshly rebuilt facts. Repeating
+the forwarding/merging pair must be unchanged without another verification,
+and the whole-world occurrence must consume the canonicalized call graph last.
+
 ### Checked-integer constant protocol simplification coverage
 
 Checked-integer pipeline tests pin the default position after the second

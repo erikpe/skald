@@ -255,9 +255,11 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
         input.clone(),
         &resolve_mir_pass_schedule(MirOptimizationProfile::Default, ALL_PRODUCTION_PASS_NAMES)
             .unwrap(),
-    )
-    .result
-    .unwrap();
+    );
+    assert_eq!(all_disabled.statistics.pass_executions(), 0);
+    assert_eq!(all_disabled.statistics.normalization_executions(), 1);
+    assert_eq!(all_disabled.statistics.verification_executions(), 2);
+    let all_disabled = all_disabled.result.unwrap();
     assert_eq!(dump_mir(none.program()), input_dump);
     assert_eq!(all_disabled, none);
     assert_eq!(assembly(&all_disabled), assembly(&none));

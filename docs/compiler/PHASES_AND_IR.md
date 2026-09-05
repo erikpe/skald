@@ -1035,6 +1035,11 @@ whole-world-reachability
 every repeated occurrence, and whole-world retention remains last in the
 final region so it can observe calls, callable-
 address formations, and other executable dependencies removed by CFG cleanup.
+The four-occurrence final suffix is frozen in this order. Each occurrence is
+independently selectable, and exact schedules prove that forwarding followed
+by merging reaches a fixed point without a hidden cross-pass loop. Disabling
+all registered default names remains identical to `none` while still crossing
+the mandatory normalization boundary once.
 Every occurrence consumes its stage's verified MIR, preserves an unchanged
 seal when possible, atomically commits changes, invalidates all derived facts,
 and immediately reverifies under that stage's contract before any later pass
@@ -1205,8 +1210,13 @@ The pass reports merged pairs, moved instructions, removed blocks, retained
 multiple-edge barriers, and retained permanent-attachment barriers.
 
 Whole-world reachability follows merging, so removed call sites can reduce
-retained definitions. Jump threading, storage deletion, checked-protocol
-normalization, and loop transformations remain separate designs.
+retained definitions. Forwarding and merging share only immutable CFG facts
+and guarded edit operations: each recomputes from the verified product it
+receives, and neither retains hidden state for the other. Their frozen order
+converges in one occurrence apiece; an exact repeated pair is unchanged and
+does not trigger redundant verification. Jump threading, storage deletion,
+checked-protocol normalization, and loop transformations remain separate
+designs.
 
 This direction changes compiler representation and optimization-off MIR
 dumps, not the language contract. Whole-world compilation permits one complete

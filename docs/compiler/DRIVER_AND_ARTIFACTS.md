@@ -291,7 +291,11 @@ callbacks cannot accept both seals. Current local scalar passes are proof-rich;
 deletes post-proof unreachable blocks, forwards eligible empty goto chains,
 merges eligible single-incoming goto chains to a local fixed point, and then
 runs whole-world reachability last, so definition retention observes call
-sites removed with dead CFG.
+sites removed with dead CFG. This final suffix order is frozen. Every pass can
+be disabled independently, duplicate exclusions are idempotent, and disabling
+all final-stage names leaves the proof-rich prefix intact before mandatory
+normalization. Disabling every registered default name remains equivalent to
+`none`.
 
 Inspection exposes a closed borrowed checkpoint view. Proof-rich input and
 after-pass checkpoints carry only `VerifiedProofMirProgram`; the single
