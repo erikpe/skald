@@ -84,7 +84,16 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No implementation roadmap is waiting to start.
+The planned
+[VM benchmark correctness workload roadmap](VM_BENCHMARK_ROADMAP.md) ports
+Niflheim's deterministic bytecode-VM regression program into one Skald-native
+multi-module golden fixture. It preserves twelve independently checked guest
+cases and their aggregate while translating the host graph to explicit shared
+ownership and call-scoped borrowing. VB0 is next: establish the ownership
+representation and prove it through the minimal vertical slice. The roadmap
+depends only on implemented language, standard-library, module, driver, and
+golden-runner contracts; it is independent of the pending optimization
+discoveries.
 
 ## Design proposals
 
