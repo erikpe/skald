@@ -8,8 +8,8 @@ mod checked_integer_topology;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 mod logical_topology;
-// The convergent analysis remains private and read-only until its first
-// production consumer is migrated.
+// Keep the convergent analysis private; later roadmap stages still exercise
+// APIs that its first production consumers do not yet need.
 #[allow(dead_code)]
 mod local_constant;
 pub(in crate::passes::pipeline) mod post_proof_basic_block_merging;
@@ -19,7 +19,6 @@ mod primitive_algebra;
 pub(in crate::passes::pipeline) mod primitive_algebraic_simplification;
 pub(in crate::passes::pipeline) mod primitive_constant_folding;
 mod primitive_evaluation;
-mod primitive_facts;
 pub(in crate::passes::pipeline) mod whole_world_reachability;
 
 pub(in crate::passes) use checked_integer_evaluation::{

@@ -472,3 +472,5 @@ fn census_classifies_alias_call_ownership_and_proof_roles() {
 
 #[path = "tests/solver.rs"]
 mod solver;
+#[path = "tests/view.rs"]
+mod view;

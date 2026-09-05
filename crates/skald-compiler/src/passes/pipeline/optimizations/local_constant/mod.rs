@@ -8,6 +8,7 @@ mod carrier;
 mod graph;
 mod logical;
 mod solve;
+mod view;
 
 // The public-within-optimizer facade is intentionally staged one milestone
 // before its first production consumer.
@@ -17,6 +18,7 @@ pub(in crate::passes::pipeline::optimizations) use solve::{
     LocalConstantProvenance, LocalConstantProvenanceCategory, LocalConstantSolution,
     LogicalSelection, LogicalSelectionKind, RetainedCheckedFailure,
 };
+pub(in crate::passes::pipeline::optimizations) use view::BlockLocalConstantView;
 
 #[cfg(test)]
 mod tests;

@@ -492,7 +492,7 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     assert_eq!(passes[7].name(), "primitive-constant-folding");
     assert_eq!(
         passes[7].description(),
-        "Folds exact block-local primitive MIR constants."
+        "Folds exact convergently proven primitive MIR constants."
     );
     assert_eq!(passes[8].identity(), whole_world_reachability::IDENTITY);
     assert_eq!(passes[8].stage(), MirPassStage::Final);

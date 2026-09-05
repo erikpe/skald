@@ -1,5 +1,7 @@
 //! Exact primitive algebraic simplification with guarded value forwarding.
 
+use std::collections::BTreeMap;
+
 use crate::mir::{
     rewrite::{
         value_use_sites_for_definition, MirCallableEdit, MirLocalIdentitySite, MirRewriteError,
@@ -16,6 +18,7 @@ use super::{
         policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
         MirPassIdentity, MirPassStage,
     },
+    local_constant::{solve_local_constants, LocalConstantSolution},
     primitive_algebra::{PrimitiveAlgebraicFacts, PrimitiveAlgebraicReplacement},
     primitive_evaluation::PrimitiveConstant,
 };
@@ -81,18 +84,22 @@ struct ScanResult {
 }
 
 fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let mut solutions = BTreeMap::new();
     let mut processed_callables = 0;
     let mut protected_rejections = 0usize;
     let mut has_candidate = false;
 
     for definition in capability.verified().program().executable_definitions() {
         processed_callables += 1;
-        let scan = scan_definition(definition).map_err(MirPassFailure::Rewrite)?;
+        let solution = solve_local_constants(definition)
+            .map_err(|error| MirPassFailure::execution(error.to_string()))?;
+        let scan = scan_definition(definition, &solution).map_err(MirPassFailure::Rewrite)?;
         if scan.candidate.is_some() {
             has_candidate = true;
-            break;
+        } else {
+            protected_rejections = protected_rejections.saturating_add(scan.protected_rejections);
         }
-        protected_rejections = protected_rejections.saturating_add(scan.protected_rejections);
+        solutions.insert(definition.callable(), solution);
     }
 
     if !has_candidate {
@@ -105,8 +112,11 @@ fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, 
 
     let mut changed_callables = 0;
     let mut counts = SimplificationCounts::default();
-    let rewritten = capability.rewrite(|_, edit| {
-        let callable_counts = simplify_callable(edit)?;
+    let rewritten = capability.rewrite(|callable, edit| {
+        let solution = solutions
+            .get(&callable)
+            .expect("every rewritten callable was solved before invalidation");
+        let callable_counts = simplify_callable(edit, solution)?;
         if callable_counts.has_changes() {
             changed_callables += 1;
         }
@@ -117,8 +127,11 @@ fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, 
     rewritten.finish(pass_data(0, changed_callables, counts))
 }
 
-fn scan_definition(definition: MirDefinitionRef<'_>) -> Result<ScanResult, MirRewriteError> {
-    let mut facts = PrimitiveAlgebraicFacts::default();
+fn scan_definition(
+    definition: MirDefinitionRef<'_>,
+    solution: &LocalConstantSolution,
+) -> Result<ScanResult, MirRewriteError> {
+    let mut facts = PrimitiveAlgebraicFacts::new(solution);
     let mut protected_rejections = 0usize;
 
     for block in &definition.body().blocks {
@@ -166,11 +179,14 @@ fn forwarding_is_safe_in_definition(
         && result_sites.is_forwarding_safe())
 }
 
-fn simplify_callable(edit: &mut MirCallableEdit) -> Result<SimplificationCounts, MirRewriteError> {
+fn simplify_callable(
+    edit: &mut MirCallableEdit,
+    solution: &LocalConstantSolution,
+) -> Result<SimplificationCounts, MirRewriteError> {
     let mut counts = SimplificationCounts::default();
 
     loop {
-        let scan = scan_edit(edit)?;
+        let scan = scan_edit(edit, solution)?;
         let Some(candidate) = scan.candidate else {
             counts.protected_rejections = counts
                 .protected_rejections
@@ -197,8 +213,11 @@ fn simplify_callable(edit: &mut MirCallableEdit) -> Result<SimplificationCounts,
     Ok(counts)
 }
 
-fn scan_edit(edit: &MirCallableEdit) -> Result<ScanResult, MirRewriteError> {
-    let mut facts = PrimitiveAlgebraicFacts::default();
+fn scan_edit(
+    edit: &MirCallableEdit,
+    solution: &LocalConstantSolution,
+) -> Result<ScanResult, MirRewriteError> {
+    let mut facts = PrimitiveAlgebraicFacts::new(solution);
     let mut protected_rejections = 0usize;
 
     for &block in edit.block_order() {
@@ -225,7 +244,7 @@ fn scan_edit(edit: &MirCallableEdit) -> Result<ScanResult, MirRewriteError> {
 fn scan_block(
     block: BlockId,
     instructions: &[MirInstruction],
-    facts: &mut PrimitiveAlgebraicFacts,
+    facts: &mut PrimitiveAlgebraicFacts<'_>,
     protected_rejections: &mut usize,
     mut forwarding_is_safe: impl FnMut(
         ValueId,

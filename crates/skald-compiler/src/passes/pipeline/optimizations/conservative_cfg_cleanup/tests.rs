@@ -150,11 +150,15 @@ fn proof_named_branch_blocks_are_not_rewritten() {
         merge: entry_block,
         span: definition.span,
     });
+    let solution = crate::passes::pipeline::optimizations::local_constant::solve_local_constants(
+        (&*definition).into(),
+    )
+    .unwrap();
 
     let mut observed = None;
     let rewritten = rewrite_program(input, |callable, edit| {
         if callable == owner {
-            observed = Some(cleanup_callable(edit)?);
+            observed = Some(cleanup_callable(edit, &solution)?);
         }
         Ok(())
     })
@@ -599,10 +603,17 @@ fn returned_constant(definition: &crate::mir::MirFunctionDefinition) -> i64 {
 }
 
 fn rewrite_one_raw(program: crate::mir::MirProgram, selected: CallableId) -> CleanupCounts {
+    let solution = crate::passes::pipeline::optimizations::local_constant::solve_local_constants(
+        program
+            .executable_definitions()
+            .find(|definition| definition.callable() == selected)
+            .expect("selected callable belongs to the input program"),
+    )
+    .unwrap();
     let mut observed = None;
     rewrite_program(program, |callable, edit| {
         if callable == selected {
-            observed = Some(cleanup_callable(edit)?);
+            observed = Some(cleanup_callable(edit, &solution)?);
         }
         Ok(())
     })

@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 through CLR2 are complete and CLR3 is next.
+Status: in progress; CLR0 through CLR3 are complete and CLR4 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -98,7 +98,7 @@ creating persistent optimizer provenance.
 - [x] CLR0 — Separate structural protocol observations from constant eligibility
 - [x] CLR1 — Certify checked-protocol scalar carriers
 - [x] CLR2 — Build the convergent callable-local solver
-- [ ] CLR3 — Migrate primitive-family fact consumers
+- [x] CLR3 — Migrate primitive-family fact consumers
 - [ ] CLR4 — Rewrite dependent checked protocols from one solved snapshot
 - [ ] CLR5 — Add the proof-consuming transition boundary
 - [ ] CLR6 — Implement constant-left logical selection
@@ -217,21 +217,21 @@ across a barrier, and remains read-only and seal-local.
 **Purpose:** Make the first production consumer use the shared solution and
 retire duplicate constant reasoning without changing unrelated pass authority.
 
-- [ ] Migrate `primitive-constant-folding` to build one solution per verified
+- [x] Migrate `primitive-constant-folding` to build one solution per verified
   callable and plan exact eligible ordinary assignment replacements from it.
-- [ ] Preserve result `ValueId`, declared type, instruction position, block,
+- [x] Preserve result `ValueId`, declared type, instruction position, block,
   span, uses, operand evaluation, and current fold-family metrics.
-- [ ] Permit facts proven through certified carriers, successful checked
+- [x] Permit facts proven through certified carriers, successful checked
   protocols, and exact logical results even when those structural consumers are
   independently disabled.
-- [ ] Replace `PrimitiveConstantFacts` with the shared solution or a thin
+- [x] Replace `PrimitiveConstantFacts` with the shared solution or a thin
   bounded view for algebraic simplification and conservative CFG cleanup; do
   not retain a second arithmetic/dataflow engine.
-- [ ] Preserve the reviewed same-block/use-role and proof-root restrictions of
+- [x] Preserve the reviewed same-block/use-role and proof-root restrictions of
   algebraic and conservative CFG transformations unless separately authorized.
-- [ ] Keep one immutable plan and at most one atomic callable/program commit per
+- [x] Keep one immutable plan and at most one atomic callable/program commit per
   selected occurrence; rebuild facts after every changed seal.
-- [ ] Add stable propagated-provenance metrics without exposing worklist waves,
+- [x] Add stable propagated-provenance metrics without exposing worklist waves,
   queue operations, or graph size as semantic behavior.
 
 **Tests:** Existing primitive/algebraic/CFG suites; arbitrary-depth primitive

@@ -11,9 +11,10 @@ The
 implements the frozen callable-local solver, checked-protocol carrier
 certificates, depth-independent primitive and checked consumers, and
 constant-left logical selection through one proof-consuming transition. CLR0
-through CLR2 are complete: exact structural observations, auditable checked-
+through CLR3 are complete: exact structural observations, auditable checked-
 carrier certificates, and one immutable convergent callable-local solution are
-implemented without changing current optimization behavior. CLR3 is next.
+implemented; primitive-family consumers now use that solution and primitive
+folding is depth-independent across the supported graph. CLR4 is next.
 
 ## Pending discoveries
 

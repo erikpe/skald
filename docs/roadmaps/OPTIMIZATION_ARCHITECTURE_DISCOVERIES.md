@@ -41,12 +41,13 @@ The current broadening follows the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [implementation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
-CLR0 separated checked and logical structural observations from constant
-eligibility. CLR1 added an exhaustive semantic storage-use census and
-immutable certification for exact checked-protocol scalar carriers. CLR2 has
-added the read-only dense dependency graph and iterative monotonic solver,
-including conditional logical selection and stable provenance queries. The
-remaining roadmap migrates production consumers and adds constant-left logical
+Checked and logical structural observations are separated from constant
+eligibility, exact checked-protocol scalar carriers have exhaustive semantic
+certificates, and the read-only dense dependency graph converges iteratively
+with conditional logical selection and stable provenance. Primitive constant
+folding now consumes that solution atomically, while algebraic and CFG passes
+use a bounded same-block view instead of a duplicate arithmetic engine. The
+remaining roadmap migrates the checked consumer and adds constant-left logical
 selection without a pipeline fixed-point loop or general memory analysis.
 
 This document records the compiler-architecture constraints that currently

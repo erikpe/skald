@@ -1,6 +1,6 @@
 //! Proof-aware ordinary-branch folding and unreachable-block cleanup.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::mir::{
     rewrite::{local_cfg_facts_for_definition, MirCallableEdit, MirRewriteError},
@@ -16,8 +16,8 @@ use super::{
         policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
         MirPassIdentity, MirPassStage,
     },
+    local_constant::{solve_local_constants, BlockLocalConstantView, LocalConstantSolution},
     primitive_evaluation::PrimitiveConstant,
-    primitive_facts::PrimitiveConstantFacts,
 };
 
 pub(in crate::passes::pipeline) const IDENTITY: MirPassIdentity = MirPassIdentity::new(4);
@@ -78,19 +78,22 @@ struct BranchRewrite {
 }
 
 fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let mut solutions = BTreeMap::new();
     let mut processed_callables = 0;
     let mut protected_unreachable_blocks = 0usize;
     let mut has_candidate = false;
 
     for definition in capability.verified().program().executable_definitions() {
         processed_callables += 1;
-        let scan = scan_definition(definition).map_err(MirPassFailure::Rewrite)?;
+        let solution = solve_local_constants(definition)
+            .map_err(|error| MirPassFailure::execution(error.to_string()))?;
+        let scan = scan_definition(definition, &solution).map_err(MirPassFailure::Rewrite)?;
         if scan.has_candidate {
             has_candidate = true;
-            break;
         }
         protected_unreachable_blocks =
             protected_unreachable_blocks.saturating_add(scan.protected_unreachable_blocks);
+        solutions.insert(definition.callable(), solution);
     }
 
     if !has_candidate {
@@ -103,8 +106,11 @@ fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, 
 
     let mut changed_callables = 0;
     let mut counts = CleanupCounts::default();
-    let rewritten = capability.rewrite(|_, edit| {
-        let callable_counts = cleanup_callable(edit)?;
+    let rewritten = capability.rewrite(|callable, edit| {
+        let solution = solutions
+            .get(&callable)
+            .expect("every rewritten callable was solved before invalidation");
+        let callable_counts = cleanup_callable(edit, solution)?;
         if callable_counts.has_changes() {
             changed_callables += 1;
         }
@@ -121,7 +127,10 @@ struct DefinitionScan {
     protected_unreachable_blocks: usize,
 }
 
-fn scan_definition(definition: MirDefinitionRef<'_>) -> Result<DefinitionScan, MirRewriteError> {
+fn scan_definition(
+    definition: MirDefinitionRef<'_>,
+    solution: &LocalConstantSolution,
+) -> Result<DefinitionScan, MirRewriteError> {
     let cfg = local_cfg_facts_for_definition(definition)?;
     let protected = protected_blocks(&cfg);
     let reachable = cfg.reachable().iter().copied().collect::<BTreeSet<_>>();
@@ -136,6 +145,7 @@ fn scan_definition(definition: MirDefinitionRef<'_>) -> Result<DefinitionScan, M
                 &block.instructions,
                 block.terminator.as_ref(),
                 protected.contains(&block.id),
+                solution,
             )
             .is_some()
         });
@@ -145,7 +155,10 @@ fn scan_definition(definition: MirDefinitionRef<'_>) -> Result<DefinitionScan, M
     })
 }
 
-fn cleanup_callable(edit: &mut MirCallableEdit) -> Result<CleanupCounts, MirRewriteError> {
+fn cleanup_callable(
+    edit: &mut MirCallableEdit,
+    solution: &LocalConstantSolution,
+) -> Result<CleanupCounts, MirRewriteError> {
     let before = edit.local_cfg_facts()?;
     let protected = protected_blocks(&before);
     let reachable = before.reachable().iter().copied().collect::<BTreeSet<_>>();
@@ -162,6 +175,7 @@ fn cleanup_callable(edit: &mut MirCallableEdit) -> Result<CleanupCounts, MirRewr
                 &block.instructions,
                 block.terminator.as_ref(),
                 protected.contains(&block.id),
+                solution,
             )
         })
         .collect::<Vec<_>>();
@@ -224,6 +238,7 @@ fn branch_rewrite(
     instructions: &[MirInstruction],
     terminator: Option<&MirTerminator>,
     protected: bool,
+    solution: &LocalConstantSolution,
 ) -> Option<BranchRewrite> {
     if protected {
         return None;
@@ -257,7 +272,7 @@ fn branch_rewrite(
         | MirTerminator::Terminate { .. } => return None,
     };
 
-    let mut facts = PrimitiveConstantFacts::default();
+    let mut facts = BlockLocalConstantView::new(solution);
     facts.begin_block();
     for instruction in instructions {
         if let MirInstruction::Assign(assignment) = instruction {

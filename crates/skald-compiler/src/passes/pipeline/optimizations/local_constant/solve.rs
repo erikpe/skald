@@ -265,6 +265,25 @@ pub(in crate::passes::pipeline::optimizations) struct LocalConstantSolution {
 }
 
 impl LocalConstantSolution {
+    pub(in crate::passes::pipeline::optimizations) fn fact(
+        &self,
+        value: ValueId,
+    ) -> Result<Option<LocalConstantFact>, LocalConstantAnalysisError> {
+        if value.callable() != self.callable || value.index() >= self.value_constants.len() {
+            return Err(LocalConstantAnalysisError::UnknownValue {
+                expected: self.callable,
+                value,
+            });
+        }
+        Ok(
+            self.value_constants[value.index()].map(|fact| LocalConstantFact {
+                identity: LocalConstantIdentity::Value(value),
+                constant: fact.constant,
+                provenance: fact.provenance,
+            }),
+        )
+    }
+
     pub(in crate::passes::pipeline::optimizations) fn constant(
         &self,
         value: ValueId,
@@ -313,6 +332,15 @@ impl LocalConstantSolution {
         &self,
     ) -> &[RetainedCheckedFailure] {
         &self.retained_checked_failures
+    }
+
+    pub(super) fn local_constant(&self, value: ValueId) -> Option<PrimitiveConstant> {
+        debug_assert_eq!(value.callable(), self.callable);
+        self.value_constants
+            .get(value.index())
+            .copied()
+            .flatten()
+            .map(|fact| fact.constant)
     }
 }
 

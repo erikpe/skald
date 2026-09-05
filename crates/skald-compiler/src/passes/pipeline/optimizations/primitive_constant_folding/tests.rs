@@ -14,7 +14,11 @@ use crate::{
     test_support::lower_source_to_final_mir,
 };
 
-use super::{FoldCounts, FOLDED_BINARY, FOLDED_CASTS, FOLDED_COMPARISONS, FOLDED_UNARY, IDENTITY};
+use super::{
+    FoldCounts, FOLDED_BINARY, FOLDED_CASTS, FOLDED_COMPARISONS, FOLDED_UNARY,
+    FOLDS_CROSSING_CARRIERS, FOLDS_CROSSING_CHECKED, FOLDS_CROSSING_LOGICAL, IDENTITY,
+    MAXIMUM_DEPENDENCY_DEPTH,
+};
 use crate::passes::pipeline::optimizations::{
     dead_pure_definition_elimination, whole_world_reachability,
 };
@@ -105,6 +109,31 @@ fn assignment_mut(definition: &mut MirFunctionDefinition, result: ValueId) -> &m
         .unwrap()
 }
 
+fn returned_assignment(definition: &MirFunctionDefinition) -> (&MirAssignment, &MirRvalueKind) {
+    let returned = definition
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match block.terminator {
+            Some(MirTerminator::Return {
+                value: Some(value), ..
+            }) => Some(value),
+            _ => None,
+        })
+        .expect("fixture returns one scalar value");
+    let assignment = definition
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment) if assignment.result == returned => Some(assignment),
+            _ => None,
+        })
+        .expect("returned value has an assignment definition");
+    (assignment, &assignment.rvalue.kind)
+}
+
 struct Chain {
     unary: ValueId,
     first_binary: ValueId,
@@ -187,12 +216,19 @@ fn expected_chain(definition: &mut MirFunctionDefinition, chain: &Chain) {
     assignment_mut(definition, chain.second_binary).rvalue.kind = MirRvalueKind::ConstantI64(42);
 }
 
-fn expected_measurements(counts: FoldCounts) -> [MirPassMeasurement; 4] {
+fn expected_measurements(counts: FoldCounts) -> [MirPassMeasurement; 8] {
     [
         MirPassMeasurement::count(FOLDED_UNARY, counts.unary as u64),
         MirPassMeasurement::count(FOLDED_BINARY, counts.binary as u64),
         MirPassMeasurement::count(FOLDED_COMPARISONS, counts.comparisons as u64),
         MirPassMeasurement::count(FOLDED_CASTS, counts.casts as u64),
+        MirPassMeasurement::count(FOLDS_CROSSING_CARRIERS, counts.crossing_carriers as u64),
+        MirPassMeasurement::count(FOLDS_CROSSING_CHECKED, counts.crossing_checked as u64),
+        MirPassMeasurement::count(FOLDS_CROSSING_LOGICAL, counts.crossing_logical as u64),
+        MirPassMeasurement::count(
+            MAXIMUM_DEPENDENCY_DEPTH,
+            counts.maximum_dependency_depth as u64,
+        ),
     ]
 }
 
@@ -225,6 +261,8 @@ fn straight_line_chain_folds_every_supported_assignment_kind_in_place() {
             binary: 2,
             comparisons: 1,
             casts: 1,
+            maximum_dependency_depth: 5,
+            ..FoldCounts::default()
         })
     );
 }
@@ -279,6 +317,7 @@ fn unsupported_checked_floating_load_and_call_structure_remains_exact() {
         measured.occurrences()[0].measurements(),
         expected_measurements(FoldCounts {
             unary: 1,
+            maximum_dependency_depth: 1,
             ..FoldCounts::default()
         })
     );
@@ -303,6 +342,226 @@ fn repeated_occurrences_are_changed_then_idempotently_unchanged() {
         records[1].measurements(),
         expected_measurements(FoldCounts::default())
     );
+}
+
+#[test]
+fn one_occurrence_folds_arbitrarily_deep_primitive_chains() {
+    const DEPTH: usize = 512;
+    let mut input = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+    let entry = input.entry_function;
+    let definition = input.definitions.get_mut_for_test(entry).unwrap();
+    let one = append_assignment(definition, MirRvalueKind::ConstantI64(1), MirType::I64);
+    let mut result = one;
+    for _ in 0..DEPTH {
+        result = append_assignment(
+            definition,
+            MirRvalueKind::Binary {
+                operation: MirBinaryOperation::AddI64,
+                left: result,
+                right: one,
+            },
+            MirType::I64,
+        );
+    }
+    definition.body.blocks[0].terminator = Some(MirTerminator::Return {
+        value: Some(result),
+        span: definition.span,
+    });
+
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+    let definition = measured
+        .result
+        .as_ref()
+        .unwrap()
+        .definitions
+        .get(entry)
+        .unwrap();
+    assert_eq!(
+        returned_assignment(definition).1,
+        &MirRvalueKind::ConstantI64((DEPTH + 1) as i64)
+    );
+    assert_eq!(
+        measured.occurrences()[0].measurements(),
+        expected_measurements(FoldCounts {
+            binary: DEPTH,
+            maximum_dependency_depth: DEPTH,
+            ..FoldCounts::default()
+        })
+    );
+}
+
+#[test]
+fn propagated_checked_fact_folds_ordinary_consumer_without_rewriting_protocol() {
+    let input = lower_source_to_final_mir("fn main() -> i64 { return (8 / 2) + 3; }");
+    let entry = input.entry_function;
+    let original_checks = input
+        .definitions
+        .get(entry)
+        .unwrap()
+        .body
+        .blocks
+        .iter()
+        .filter(|block| {
+            matches!(
+                block.terminator,
+                Some(MirTerminator::IntegerDivisorCheck { .. })
+            )
+        })
+        .count();
+
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+    let definition = measured
+        .result
+        .as_ref()
+        .unwrap()
+        .definitions
+        .get(entry)
+        .unwrap();
+    assert_eq!(
+        returned_assignment(definition).1,
+        &MirRvalueKind::ConstantI64(7)
+    );
+    assert_eq!(
+        definition
+            .body
+            .blocks
+            .iter()
+            .filter(|block| matches!(
+                block.terminator,
+                Some(MirTerminator::IntegerDivisorCheck { .. })
+            ))
+            .count(),
+        original_checks
+    );
+    let counts = FoldCounts {
+        binary: 1,
+        crossing_carriers: 1,
+        crossing_checked: 1,
+        maximum_dependency_depth: 6,
+        ..FoldCounts::default()
+    };
+    assert_eq!(
+        measured.occurrences()[0].measurements(),
+        expected_measurements(counts)
+    );
+}
+
+#[test]
+fn propagated_logical_result_folds_ordinary_consumer_but_retains_rhs_region() {
+    let input = lower_source_to_final_mir(concat!(
+        "fn effect() -> bool { return true; }\n",
+        "fn choose() -> bool { return (false && effect()) == false; }\n",
+        "fn main() -> i64 { return (i64) choose(); }\n",
+    ));
+    let choose = input
+        .definitions
+        .iter()
+        .find(|definition| !definition.body.logical_expressions.is_empty())
+        .map(|definition| definition.function)
+        .unwrap();
+    let input_definition = input.definitions.get(choose).unwrap();
+    let input_blocks = input_definition.body.blocks.len();
+    let comparison = input_definition
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(
+                    assignment.rvalue.kind,
+                    MirRvalueKind::PrimitiveComparison { .. }
+                ) =>
+            {
+                Some(assignment.result)
+            }
+            _ => None,
+        })
+        .unwrap();
+
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+    let definition = measured
+        .result
+        .as_ref()
+        .unwrap()
+        .definitions
+        .get(choose)
+        .unwrap();
+    let folded = definition
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment) if assignment.result == comparison => {
+                Some(&assignment.rvalue.kind)
+            }
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(folded, &MirRvalueKind::ConstantBool(true));
+    assert_eq!(definition.body.blocks.len(), input_blocks);
+    assert_eq!(
+        measured.occurrences()[0].measurements(),
+        expected_measurements(FoldCounts {
+            comparisons: 1,
+            crossing_logical: 1,
+            maximum_dependency_depth: 2,
+            ..FoldCounts::default()
+        })
+    );
+}
+
+#[test]
+fn statically_failing_checked_result_remains_a_propagation_barrier() {
+    let input = lower_source_to_final_mir("fn main() -> i64 { return (9 / 0) + 1; }");
+    let entry = input.entry_function;
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+    let definition = measured
+        .result
+        .as_ref()
+        .unwrap()
+        .definitions
+        .get(entry)
+        .unwrap();
+
+    assert!(matches!(
+        returned_assignment(definition).1,
+        MirRvalueKind::Binary { .. }
+    ));
+    assert_eq!(
+        measured.occurrences()[0].outcome(),
+        MirPassOccurrenceOutcome::Unchanged
+    );
+}
+
+#[test]
+fn stale_immutable_plan_aborts_before_publishing_a_partial_program() {
+    let mut input = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+    let entry = input.entry_function;
+    let definition = input.definitions.get_mut_for_test(entry).unwrap();
+    let result = append_fold_candidate(
+        CallableId::Function(entry),
+        &mut definition.values,
+        &mut definition.body,
+        definition.span,
+    );
+    let plan = super::plan::PrimitiveFoldPlan::prepare(&input).unwrap();
+    assignment_mut(input.definitions.get_mut_for_test(entry).unwrap(), result)
+        .rvalue
+        .kind = MirRvalueKind::ConstantI64(99);
+
+    let error = crate::mir::rewrite::rewrite_program(input, |callable, edit| {
+        plan.rewrite_callable(callable, edit)
+    })
+    .unwrap_err();
+    assert!(matches!(
+        error,
+        crate::mir::rewrite::MirRewriteError::StaleCallableSnapshot {
+            callable: CallableId::Function(function),
+            subject: "instruction",
+        } if function == entry
+    ));
 }
 
 #[test]
@@ -438,6 +697,7 @@ fn pass_processes_every_executable_callable_kind_and_counts_only_changed_callabl
         record.measurements(),
         expected_measurements(FoldCounts {
             unary: executable_count as usize,
+            maximum_dependency_depth: 1,
             ..FoldCounts::default()
         })
     );

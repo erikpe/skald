@@ -935,7 +935,8 @@ The implemented target-independent local-simplification layer follows the
 [frozen design](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_DESIGN_PROPOSAL.md);
 its delivery and validation history are preserved in the
 [completed roadmap](../archive/LOCAL_FINAL_MIR_SIMPLIFICATION_ROADMAP.md).
-Exact primitive evaluation, block-local constant facts, exhaustive value-use
+Exact primitive evaluation, convergent callable-local constant facts,
+exhaustive value-use
 classification, and the independently selectable `primitive-constant-folding`
 and `primitive-algebraic-simplification` passes are implemented. Proof-aware
 local CFG facts and the independently selectable `conservative-cfg-cleanup`
@@ -947,8 +948,8 @@ the exact `none` reference profile.
 The local-simplification layer consists of three independently selectable
 production passes under the existing verified pipeline:
 
-- `primitive-constant-folding` evaluates a closed exact family of
-  block-local integer and boolean primitive operations;
+- `primitive-constant-folding` replaces a closed exact family of integer and
+  boolean primitive operations using one converged seal-local solution;
 - `primitive-algebraic-simplification` applies the reviewed integer/boolean
   identity catalog and atomically forwards safe result uses; and
 - `conservative-cfg-cleanup` folds eligible ordinary boolean branches and
@@ -977,10 +978,14 @@ outside the initial evaluator. In particular, checked integer and shift
 operations cannot be folded by replacing only their success rvalue because
 verification relates them to exact predecessor diamonds.
 
-Implemented scalar facts are instruction-ordered and reset at every block. A
-constant or constant-result algebraic rewrite preserves the assignment's
-result identity, declared type, instruction position, and source span. MIR has
-no copy rvalue;
+Primitive folding plans every eligible ordinary assignment from one immutable
+solution, validates the captured instruction again before replacement, and
+commits the program at most once. Facts may reach an ordinary assignment
+through certified checked-protocol carriers, a successful checked operation,
+or an exact selected logical result without requiring those structures to be
+rewritten by their independently selectable consumers. A constant or
+constant-result algebraic rewrite preserves the assignment's result identity,
+declared type, instruction position, and source span. MIR has no copy rvalue;
 an algebraic identity that returns an existing operand instead proves exact
 type, earlier same-block definition, and every use role, then substitutes uses
 and deletes the obsolete assignment and declaration in one atomic callable
@@ -997,8 +1002,17 @@ definition/use census ownership with rewriting but remains narrower than the
 general substitution mapper. Its result is a snapshot and must be recomputed
 after any rewrite.
 
+Algebraic simplification and conservative CFG cleanup no longer maintain a
+second arithmetic/dataflow engine. They use an instruction-ordered view over
+the same convergent solution, reset it at each block, and retain their existing
+same-block, use-role, proof-root, and mutation restrictions. The view can
+observe a literal produced by an earlier rewrite in the same private
+transaction; every broader fact is owned by the immutable source-seal
+solution.
+
 CFG cleanup rewrites only ordinary `Branch` terminators whose condition is a
-preceding block-local constant or whose targets are identical. It preserves
+preceding constant available through that bounded block-local view or whose
+targets are identical. It preserves
 the terminator span and never rewrites a dedicated checked or multiway
 terminator. Local block reachability starts from body entry, every callable
 lifecycle/publication attachment, and every block named by path-condition,
@@ -1081,15 +1095,17 @@ through their retained scalar carriers by this pass.
 
 ### Frozen convergent local constant propagation direction
 
-Status: **in progress; structural observation, carrier certification, and the
-read-only convergent solver are implemented**. The complete decisions are frozen in the
+Status: **in progress; structural observation, carrier certification, the
+read-only convergent solver, and primitive-family consumers are implemented**.
+The complete decisions are frozen in the
 [design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 and delivery is divided by the active
 [implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
-The production transformations retain the block-local and literal-carrier
-limitations described above until their later roadmap tasks land. CLR0
+Primitive-family production consumers now use the convergent solution. The
+checked transformation retains its literal-carrier limitation and logical CFG
+selection has no production mutation consumer yet. The initial structural work
 separated exact checked-protocol topology from constant eligibility and added
-the corresponding proof-rich logical-topology observer. CLR1 added a shared
+the corresponding proof-rich logical-topology observer. Carrier work added a shared
 exhaustive storage-use census which classifies declarations, attachments,
 exact and projected reads and writes, authorization, aliases, calls,
 ownership/lifecycle operations, checked-protocol positions, proof metadata,
@@ -1124,9 +1140,13 @@ unauthorized base-place store and source value, exact eligible load, type, and
 dominating lifetime sites. Generic spills, source locals, normalized former
 path-condition carriers, calls, arbitrary loads, ownership operations,
 projections, aliases, attachments, floating semantics, and ambiguous accesses
-remain barriers. Certification and solving are read-only and seal-local; no
-production pass consumes the solution yet, so current pass selection,
-mutation, and folding results are unchanged. The immutable solution exposes
+remain barriers. Certification and solving are read-only and seal-local.
+Primitive constant folding consumes one fresh solution per callable and
+replaces every eligible ordinary assignment through one immutable, atomically
+validated program plan. Algebraic simplification and conservative CFG cleanup
+consume only a same-block instruction-order view, preserving their established
+transformation restrictions without retaining a second constant engine. The
+immutable solution exposes
 typed value/carrier point queries, stable facts and selections, derivation
 depth and crossed-carrier/checked/logical provenance, plus retained checked
 failure observations. Static failure publishes no result fact and keeps its

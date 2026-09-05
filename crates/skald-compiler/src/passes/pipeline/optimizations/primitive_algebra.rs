@@ -7,7 +7,10 @@ use crate::mir::{
     MirIntegerType, MirPrimitiveComparison, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
 };
 
-use super::{primitive_evaluation::PrimitiveConstant, primitive_facts::PrimitiveConstantFacts};
+use super::{
+    local_constant::{BlockLocalConstantView, LocalConstantSolution},
+    primitive_evaluation::PrimitiveConstant,
+};
 
 /// Exact replacement selected by the reviewed identity catalog.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -23,13 +26,19 @@ struct PrimitiveUnaryDefinition {
 }
 
 /// Instruction-ordered facts needed by the algebraic catalog in one block.
-#[derive(Debug, Default)]
-pub(super) struct PrimitiveAlgebraicFacts {
-    constants: PrimitiveConstantFacts,
+pub(super) struct PrimitiveAlgebraicFacts<'solution> {
+    constants: BlockLocalConstantView<'solution>,
     unary_definitions: BTreeMap<ValueId, PrimitiveUnaryDefinition>,
 }
 
-impl PrimitiveAlgebraicFacts {
+impl<'solution> PrimitiveAlgebraicFacts<'solution> {
+    pub(super) fn new(solution: &'solution LocalConstantSolution) -> Self {
+        Self {
+            constants: BlockLocalConstantView::new(solution),
+            unary_definitions: BTreeMap::new(),
+        }
+    }
+
     pub(super) fn begin_block(&mut self) {
         self.constants.begin_block();
         self.unary_definitions.clear();

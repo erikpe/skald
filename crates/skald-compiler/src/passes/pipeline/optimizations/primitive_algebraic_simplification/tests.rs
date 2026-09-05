@@ -218,6 +218,10 @@ fn proof_and_checked_uses_are_counted_as_protected_without_mutation() {
         },
         MirType::I64,
     );
+    let solution = crate::passes::pipeline::optimizations::local_constant::solve_local_constants(
+        (&*definition).into(),
+    )
+    .unwrap();
     let block = definition.body.entry;
     definition
         .body
@@ -242,7 +246,7 @@ fn proof_and_checked_uses_are_counted_as_protected_without_mutation() {
         span: definition.span,
     });
 
-    let scan = scan_definition((&*definition).into()).unwrap();
+    let scan = scan_definition((&*definition).into(), &solution).unwrap();
     assert_eq!(scan.candidate, None);
     assert_eq!(scan.protected_rejections, 1);
 }

@@ -13,8 +13,9 @@ cross-domain candidate status and placement.
 
 CLR0 and CLR1 completed without an out-of-scope finding. CLR1 added the shared
 exhaustive storage-use census and the private checked-carrier certificate;
-CLR2 added the immutable dependency graph and convergent solver. None changes
-executable MIR. During the remaining implementation, record only work
+CLR2 added the immutable dependency graph and convergent solver. CLR3 migrated
+primitive folding and the bounded algebraic/CFG fact consumers to that shared
+solution. During the remaining implementation, record only work
 discovered outside the active task's frozen scope. Each entry should
 state the problem, concrete evidence, likely owner and priority, and a bounded
 later direction. Small maintainability improvements that directly support the

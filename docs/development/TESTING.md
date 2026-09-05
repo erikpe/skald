@@ -205,34 +205,40 @@ driver test pins the same pass-owned counters through structured reporting;
 the cross-process fingerprint excludes elapsed durations and includes every
 occurrence measurement and the final MIR dump.
 
-### Planned convergent local constant propagation coverage
+### Convergent local constant propagation coverage
 
 The frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
-define coverage to add as each boundary is implemented. Existing behavior must
-remain pinned while topology observation, carrier certification, the solver,
+define coverage added as each boundary is implemented. Existing behavior
+remains pinned while topology observation, carrier certification, the solver,
 and each consumer are introduced separately.
 
-CLR0 focused tests now cover exact checked division, remainder, and shift
+Focused observer tests cover exact checked division, remainder, and shift
 records independently from literal constants; protected checked topology;
 exact `&&`/`||` path-condition relationships; nested records; functions,
 methods, initializers, destructors, and static initializers; owned spans and
 identities; malformed, foreign, duplicate, and mismatched records; read-only
-queries; deterministic order; and unchanged legacy checked eligibility. Later
-focused analysis tests cover every storage access role, unique writes, types, dominance, lifetimes, aliases,
+queries; deterministic order; and unchanged legacy checked eligibility.
+Focused analysis tests cover every storage access role, unique writes, types, dominance, lifetimes, aliases,
 protocol ownership, malformed identities, and deterministic snapshot order.
 Solver tests cover primitive, carrier, checked, and logical dependencies;
 fan-in/fan-out and cycles; static failures and unsupported leaves; all four
 constant-left short-circuit rules; skipped unsupported or failing right sides;
 selected dynamic right sides; permuted worklist order; and generated dependency
-depths large enough to prove iterative rather than recursive convergence.
+depths large enough to prove iterative rather than recursive convergence. A
+bounded-view test separately proves that algebraic and CFG consumers expose
+only definitions already encountered in their current block while observing
+literal rewrites made inside the same transaction.
 
-Pass tests cover the primitive, checked, and logical consumers independently.
-They pin arbitrary-depth folding, multi-candidate checked transactions, exact
-edge selection, selected-result replacement, stale-plan rollback, no-op seal
-reuse, dense identities, spans, deterministic metrics, and idempotence. The
+Primitive pass tests now pin arbitrary-depth folding in one occurrence,
+constants propagated across retained checked and logical structures,
+independent selection, exact identity/span preservation, static-failure and
+unsupported barriers, immutable-plan stale-input rejection, stable provenance
+metrics, no-op seal reuse, and idempotence. Later pass tests cover the checked
+and logical consumers independently, including multi-candidate checked
+transactions, exact edge selection, and selected-result replacement. The
 transition matrix covers zero or one transition, stage-order rejection,
 mandatory normalization exactly once, typed capability privacy, transition and
 normalization failure attribution, and absence of a partially verified product.

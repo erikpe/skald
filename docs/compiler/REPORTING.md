@@ -369,8 +369,11 @@ constant folding, primitive algebraic simplification, and conservative CFG
 cleanup use that model under exact compiler-internal schedules and the active
 repeated default profile.
 
-Primitive constant folding reports processed/changed callables and folded
-unary, binary, comparison, and cast assignments. Primitive algebraic
+Primitive constant folding reports processed/changed callables; folded unary,
+binary, comparison, and cast assignments; counts of folds whose provenance
+crossed certified carriers, successful checked protocols, or selected logical
+relations; and the maximum dependency depth among materialized folds.
+Primitive algebraic
 simplification reports constant-result rewrites, forwarded uses, removed
 assignments and value declarations, protected-use rejections, and changed
 callables. Conservative CFG cleanup reports constant and same-target branch
@@ -422,16 +425,17 @@ phases-only, or details-only timing-allocation boundaries.
 
 ### Frozen convergent local constant propagation observation
 
-Status: **planned**. The frozen
+Status: **in progress**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
 the future observation contract; current reports retain the implemented
 block-local and checked-protocol metrics until delivery.
 
-Primitive and checked occurrences will retain their established counters and
-add stable counts for materialized folds whose proof crossed a certified
-carrier or required propagated rather than literal operands. The new
+The primitive occurrence retains its established counters and now adds stable
+crossed-carrier, crossed-checked, crossed-logical, and maximum-folded-depth
+measurements. The checked occurrence will similarly distinguish protocols
+whose operands required propagated rather than literal facts. The new
 `constant-short-circuit-folding` occurrence reports `&&` and `||` selections
 split by short versus right path and counts exact selected-result loads replaced
 by constants. Worklist waves, queue operations, graph sizes, and analysis

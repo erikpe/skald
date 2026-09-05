@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::{collections::BTreeMap, sync::OnceLock};
 
 use crate::{
     identity::{CallableId, FunctionId},
@@ -12,9 +12,50 @@ use crate::{
 };
 
 use super::{
-    all_ones, one, zero, PrimitiveAlgebraicFacts, PrimitiveAlgebraicReplacement as Replacement,
-    PrimitiveConstant,
+    all_ones, catalog_replacement, one, zero, PrimitiveAlgebraicReplacement as Replacement,
+    PrimitiveConstant, PrimitiveUnaryDefinition,
 };
+
+#[derive(Default)]
+struct TestFacts {
+    constants: BTreeMap<ValueId, PrimitiveConstant>,
+    unary_definitions: BTreeMap<ValueId, PrimitiveUnaryDefinition>,
+}
+
+impl TestFacts {
+    fn begin_block(&mut self) {
+        self.constants.clear();
+        self.unary_definitions.clear();
+    }
+
+    fn observe_assignment(&mut self, assignment: &MirAssignment) {
+        let constant = match assignment.rvalue.kind {
+            MirRvalueKind::ConstantI64(value) => Some(PrimitiveConstant::I64(value)),
+            MirRvalueKind::ConstantU64(value) => Some(PrimitiveConstant::U64(value)),
+            MirRvalueKind::ConstantU8(value) => Some(PrimitiveConstant::U8(value)),
+            MirRvalueKind::ConstantBool(value) => Some(PrimitiveConstant::Bool(value)),
+            _ => None,
+        };
+        if let Some(constant) = constant {
+            self.constants.insert(assignment.result, constant);
+        }
+        if let MirRvalueKind::Unary { operation, operand } = assignment.rvalue.kind {
+            self.unary_definitions.insert(
+                assignment.result,
+                PrimitiveUnaryDefinition { operation, operand },
+            );
+        }
+    }
+
+    fn replacement(&self, kind: &MirRvalueKind, ty: MirType) -> Option<Replacement> {
+        catalog_replacement(
+            kind,
+            ty,
+            |value| self.constants.get(&value).copied(),
+            |value| self.unary_definitions.get(&value).copied(),
+        )
+    }
+}
 
 fn value(index: usize) -> ValueId {
     ValueId::new(CallableId::Function(FunctionId::new(0)), index)
@@ -33,8 +74,8 @@ fn assignment(result: usize, kind: MirRvalueKind, ty: MirType) -> MirAssignment 
     }
 }
 
-fn constant(kind: MirRvalueKind, ty: MirType) -> PrimitiveAlgebraicFacts {
-    let mut facts = PrimitiveAlgebraicFacts::default();
+fn constant(kind: MirRvalueKind, ty: MirType) -> TestFacts {
+    let mut facts = TestFacts::default();
     facts.begin_block();
     facts.observe_assignment(&assignment(0, kind, ty));
     facts
@@ -222,7 +263,7 @@ fn self_comparisons_are_limited_to_integer_and_boolean_equality() {
         left: value(0),
         right: value(0),
     };
-    let facts = PrimitiveAlgebraicFacts::default();
+    let facts = TestFacts::default();
 
     for operand in [
         MirComparisonOperand::Integer(MirIntegerType::I64),
@@ -284,7 +325,7 @@ fn unary_involutions_match_only_the_same_exact_operation() {
     ];
 
     for (operation, ty) in cases {
-        let mut facts = PrimitiveAlgebraicFacts::default();
+        let mut facts = TestFacts::default();
         facts.begin_block();
         facts.observe_assignment(&assignment(
             0,
@@ -317,7 +358,7 @@ fn unary_involutions_match_only_the_same_exact_operation() {
         );
     }
 
-    let mut floating = PrimitiveAlgebraicFacts::default();
+    let mut floating = TestFacts::default();
     floating.begin_block();
     floating.observe_assignment(&assignment(
         0,
