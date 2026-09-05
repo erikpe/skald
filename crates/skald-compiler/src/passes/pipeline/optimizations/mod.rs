@@ -8,6 +8,10 @@ mod checked_integer_topology;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 mod logical_topology;
+// CLR1 establishes carrier certificates before CLR2 wires the solver as their
+// first production consumer.
+#[allow(dead_code)]
+mod local_constant;
 pub(in crate::passes::pipeline) mod post_proof_basic_block_merging;
 pub(in crate::passes::pipeline) mod post_proof_empty_block_forwarding;
 pub(in crate::passes::pipeline) mod post_proof_unreachable_block_elimination;

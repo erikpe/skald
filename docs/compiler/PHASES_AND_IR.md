@@ -1081,15 +1081,19 @@ through their retained scalar carriers by this pass.
 
 ### Frozen convergent local constant propagation direction
 
-Status: **in progress; CLR0 implemented**. The complete decisions are frozen in the
+Status: **in progress; CLR0 and CLR1 implemented**. The complete decisions are frozen in the
 [design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 and delivery is divided by the active
 [implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 The production transformations retain the block-local and literal-carrier
-limitations described above until their later roadmap tasks land. CLR0 has
+limitations described above until their later roadmap tasks land. CLR0
 separated exact checked-protocol topology from constant eligibility and added
-the corresponding proof-rich logical-topology observer without changing pass
-selection, mutation, or current folding results.
+the corresponding proof-rich logical-topology observer. CLR1 added a shared
+exhaustive storage-use census which classifies declarations, attachments,
+exact and projected reads and writes, authorization, aliases, calls,
+ownership/lifecycle operations, checked-protocol positions, proof metadata,
+I/O, and conservative executable roles. A traversal occurrence without an
+explicit role is a structured analysis error.
 
 The accepted direction introduces one seal-local callable dependency graph
 over transient values and narrowly certified checked-protocol scalar carriers.
@@ -1106,13 +1110,19 @@ Logical expressions likewise have a private seal-local structural observation
 over their matching path condition, selected values, carrier storage, blocks,
 predecessors, and spans; it has no production mutation consumer yet. Both
 observers return owned deterministic records, structured malformed-identity
-outcomes, and no persistent MIR metadata. A carrier transmits a fact only when exhaustive access,
-unique unauthorized write, exact type, dominance, lifetime, alias, protocol-
-ownership, callable, and current-seal checks certify it. Generic storage,
-source locals, normalized former path-condition carriers, calls, arbitrary
-loads, ownership operations, floating semantics, and ambiguous accesses remain
-barriers. Static failure publishes no result fact and keeps its executable
-protocol and exact failure behavior.
+outcomes, and no persistent MIR metadata.
+
+The private local-constant facade now issues an immutable certificate only for
+a canonical checked protocol's compiler-owned `ScalarSpill` operand or result
+carrier. Each certificate names the declaration, exact protocol owner, unique
+unauthorized base-place store and source value, exact eligible load, type, and
+dominating lifetime sites. Generic spills, source locals, normalized former
+path-condition carriers, calls, arbitrary loads, ownership operations,
+projections, aliases, attachments, floating semantics, and ambiguous accesses
+remain barriers. Certification is read-only and seal-local; no production pass
+consumes it before the CLR2 solver, so current pass selection, mutation, and
+folding results are unchanged. Static failure publishes no result fact and
+keeps its executable protocol and exact failure behavior.
 
 Logical observations implement all constant-left short-circuit selections:
 `false && rhs` and `true || rhs` select the existing short path, while

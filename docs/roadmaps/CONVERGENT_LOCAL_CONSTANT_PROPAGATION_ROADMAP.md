@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 is complete and CLR1 is next.
+Status: in progress; CLR0 and CLR1 are complete and CLR2 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -146,22 +146,22 @@ outlive its verified snapshot.
 **Purpose:** Create the sole sound bridge for constants crossing the lowered
 checked-protocol storage boundary before any broader solver uses storage.
 
-- [ ] Add one exhaustive callable-local storage-access census using shared MIR
+- [x] Add one exhaustive callable-local storage-access census using shared MIR
   identity traversal and classify every read, write, authorization, projection,
   alias, attachment, ownership, call, lifetime, and future storage-bearing role.
-- [ ] Define an immutable carrier certificate naming the declaration, unique
+- [x] Define an immutable carrier certificate naming the declaration, unique
   ordinary store, source value, exact eligible loads, type, protocol owner, and
   dominance/lifetime evidence.
-- [ ] Accept only checked-protocol-owned `ScalarSpill` declarations with exact
+- [x] Accept only checked-protocol-owned `ScalarSpill` declarations with exact
   base places, one unauthorized write, exact types, dominating store, compatible
   lifetime, no escape, no alias, and no unclassified access.
-- [ ] Reject generic spills, normalized former path-condition carriers,
+- [x] Reject generic spills, normalized former path-condition carriers,
   multi-write/read-before-store shapes, projections, authorization, attachments,
   ownership use, and cross-callable or stale identities.
-- [ ] Reuse canonical local CFG/dominance facts and make every future
+- [x] Reuse canonical local CFG/dominance facts and make every future
   storage-bearing MIR variant fail an exhaustive maintenance test until
   classified.
-- [ ] Expose narrow read-only certificate queries only to the local constant
+- [x] Expose narrow read-only certificate queries only to the local constant
   analysis; do not introduce general store-to-load forwarding.
 
 **Tests:** Valid operand/result carriers; same-block order and cross-block

@@ -3,7 +3,7 @@ use std::{convert::Infallible, fmt};
 use crate::identity::CallableId;
 
 use super::super::{BlockId, OptionalGuardId, PathConditionId, StorageId, ValueId};
-use super::value_use::MirValueUseRole;
+use super::{storage_use::MirStorageUseRole, value_use::MirValueUseRole};
 
 /// A deterministic structural location in one callable-owned MIR definition.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -199,6 +199,20 @@ pub(crate) trait MirLocalIdentityObserver {
         _identity: StorageId,
     ) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    /// Observes one semantically classified use of callable-local storage.
+    ///
+    /// Identity-only analyses inherit ordinary storage observation. Analyses
+    /// which reason about storage contents override this hook so every
+    /// storage-bearing MIR position remains an explicit, closed decision.
+    fn observe_storage_use(
+        &mut self,
+        site: MirLocalIdentitySite,
+        _role: MirStorageUseRole,
+        identity: StorageId,
+    ) -> Result<(), Self::Error> {
+        self.observe_storage(site, identity)
     }
 
     fn observe_value(

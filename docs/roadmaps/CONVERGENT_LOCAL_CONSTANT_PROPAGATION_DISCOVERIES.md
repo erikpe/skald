@@ -11,7 +11,9 @@ atomic normalization decisions. The
 [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
 cross-domain candidate status and placement.
 
-CLR0 completed without an out-of-scope finding. During the remaining
+CLR0 and CLR1 completed without an out-of-scope finding. CLR1 added the shared
+exhaustive storage-use census and the private checked-carrier certificate;
+neither changes executable MIR. During the remaining
 implementation, record only work discovered outside the active task's frozen
 scope. Each entry should
 state the problem, concrete evidence, likely owner and priority, and a bounded

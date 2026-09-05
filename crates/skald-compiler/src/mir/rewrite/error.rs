@@ -51,6 +51,10 @@ pub(crate) enum MirRewriteError {
     MissingValueDefinition {
         value: super::super::ValueId,
     },
+    UnclassifiedStorageReference {
+        storage: super::super::StorageId,
+        site: MirLocalIdentitySite,
+    },
     MissingBlockTerminator {
         block: super::super::BlockId,
     },
@@ -188,6 +192,10 @@ impl fmt::Display for MirRewriteError {
             Self::MissingValueDefinition { value } => {
                 write!(formatter, "value {value} has no executable definition")
             }
+            Self::UnclassifiedStorageReference { storage, site } => write!(
+                formatter,
+                "storage {storage} at {site} has no semantic access classification"
+            ),
             Self::MissingBlockTerminator { block } => {
                 write!(formatter, "block {block} has no control-flow terminator")
             }

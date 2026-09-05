@@ -12,6 +12,11 @@ macro_rules! map_identity {
         *$identity = $mapper.map_storage($site, *$identity)?;
         Ok(())
     }};
+    (storage_use, $mapper:expr, $site:expr, $role:expr, $identity:expr) => {{
+        let _ = $role;
+        *$identity = $mapper.map_storage($site, *$identity)?;
+        Ok(())
+    }};
     (value, $mapper:expr, $site:expr, $identity:expr) => {{
         *$identity = $mapper.map_value($site, *$identity)?;
         Ok(())
@@ -43,6 +48,9 @@ macro_rules! observe_identity {
     (storage, $observer:expr, $site:expr, $identity:expr) => {
         $observer.observe_storage($site, *$identity)
     };
+    (storage_use, $observer:expr, $site:expr, $role:expr, $identity:expr) => {
+        $observer.observe_storage_use($site, $role, *$identity)
+    };
     (value, $observer:expr, $site:expr, $identity:expr) => {
         $observer.observe_value($site, *$identity)
     };
@@ -71,7 +79,7 @@ macro_rules! define_identity_traversal {
     ($module:ident, $behavior:ident, ($($mir_mutability:tt)*), $leaf:ident) => {
 mod $module {
 use super::super::super::*;
-use super::super::{MirCallValueUse, MirLocalIdentitySite, MirScalarValueUse, MirValueUseRole, $behavior as MirLocalIdentityMapper};
+use super::super::{MirCallValueUse, MirLocalIdentitySite, MirScalarValueUse, MirStoragePlaceUse, MirStorageUseRole, MirStorageWriteAuthorization, MirValueUseRole, $behavior as MirLocalIdentityMapper};
 
 pub(crate) fn map_function_local_identities<M: MirLocalIdentityMapper>(
     definition: &$($mir_mutability)* MirFunctionDefinition,
@@ -132,7 +140,12 @@ pub(crate) fn map_function_attachments<M: MirLocalIdentityMapper>(
     parameters: &$($mir_mutability)* [StorageId],
     mapper: &mut M,
 ) -> Result<(), M::Error> {
-    map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
+    map_optional_storage(
+        mapper,
+        MirLocalIdentitySite::ReturnStorage,
+        MirStorageUseRole::Attachment,
+        return_storage,
+    )?;
     map_parameters(parameters, mapper)
 }
 
@@ -142,8 +155,18 @@ pub(crate) fn map_member_attachments<M: MirLocalIdentityMapper>(
     parameters: &$($mir_mutability)* [StorageId],
     mapper: &mut M,
 ) -> Result<(), M::Error> {
-    map_optional_storage(mapper, MirLocalIdentitySite::ReturnStorage, return_storage)?;
-    map_optional_storage(mapper, MirLocalIdentitySite::Receiver, receiver)?;
+    map_optional_storage(
+        mapper,
+        MirLocalIdentitySite::ReturnStorage,
+        MirStorageUseRole::Attachment,
+        return_storage,
+    )?;
+    map_optional_storage(
+        mapper,
+        MirLocalIdentitySite::Receiver,
+        MirStorageUseRole::Attachment,
+        receiver,
+    )?;
     map_parameters(parameters, mapper)
 }
 
@@ -173,7 +196,12 @@ fn map_parameters<M: MirLocalIdentityMapper>(
     mapper: &mut M,
 ) -> Result<(), M::Error> {
     for (index, parameter) in parameters.into_iter().enumerate() {
-        map_storage(mapper, MirLocalIdentitySite::Parameter(index), parameter)?;
+        map_storage_use(
+            mapper,
+            MirLocalIdentitySite::Parameter(index),
+            MirStorageUseRole::Attachment,
+            parameter,
+        )?;
     }
     Ok(())
 }
@@ -193,7 +221,12 @@ pub(crate) fn map_common_local_identities<M: MirLocalIdentityMapper>(
             ty: _,
             span: _,
         } = declaration;
-        map_storage(mapper, MirLocalIdentitySite::StorageDeclaration(index), id)?;
+        map_storage_use(
+            mapper,
+            MirLocalIdentitySite::StorageDeclaration(index),
+            MirStorageUseRole::Declaration,
+            id,
+        )?;
     }
     for (index, declaration) in values.into_iter().enumerate() {
         let MirValue { id, ty: _, span: _ } = declaration;
@@ -278,7 +311,7 @@ pub(crate) fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
     if let Some(parent) = parent {
         map_path_condition(mapper, site, parent)?;
     }
-    map_storage(mapper, site, activation)?;
+    map_storage_use(mapper, site, MirStorageUseRole::ProofMetadata, activation)?;
     map_block(mapper, site, active_predecessor)?;
     map_block(mapper, site, inactive_predecessor)?;
     map_block(mapper, site, merge)
@@ -305,7 +338,7 @@ pub(crate) fn map_logical_expression<M: MirLocalIdentityMapper>(
         span: _,
     } = expression;
     map_path_condition(mapper, site, condition)?;
-    map_storage(mapper, site, result)?;
+    map_storage_use(mapper, site, MirStorageUseRole::ProofMetadata, result)?;
     map_value_use(mapper, site, MirValueUseRole::ProofMetadata, left_result)?;
     map_block(mapper, site, split)?;
     map_block(mapper, site, selection)?;
@@ -330,11 +363,11 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
     match instruction {
         MirInstruction::StorageLive(instruction) => {
             let MirStorageLive { storage, span: _ } = instruction;
-            map_storage(mapper, site, storage)
+            map_storage_use(mapper, site, MirStorageUseRole::LifetimeLive, storage)
         }
         MirInstruction::StorageDead(instruction) => {
             let MirStorageDead { storage, span: _ } = instruction;
-            map_storage(mapper, site, storage)
+            map_storage_use(mapper, site, MirStorageUseRole::LifetimeDead, storage)
         }
         MirInstruction::Assign(instruction) => map_assignment(instruction, mapper, site),
         MirInstruction::Call(instruction) => map_call(instruction, mapper, site),
@@ -360,7 +393,7 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
         }
         MirInstruction::EndCheckedView(instruction) => {
             let MirCheckedViewEnd { carrier, span: _ } = instruction;
-            map_storage(mapper, site, carrier)
+            map_storage_use(mapper, site, MirStorageUseRole::Alias, carrier)
         }
         MirInstruction::SharedAllocate(instruction) => {
             map_shared_allocate(instruction, mapper, site)
@@ -373,7 +406,12 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 allocation,
                 span: _,
             } = instruction;
-            map_storage(mapper, site, allocation)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                allocation,
+            )
         }
         MirInstruction::SharedStatic(instruction) => {
             let MirSharedStatic {
@@ -383,7 +421,12 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 origin: _,
                 span: _,
             } = instruction;
-            map_storage(mapper, site, destination)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )
         }
         MirInstruction::SharedAdopt(instruction) => {
             let MirSharedAdopt {
@@ -391,8 +434,18 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 allocation,
                 span: _,
             } = instruction;
-            map_storage(mapper, site, destination)?;
-            map_storage(mapper, site, allocation)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                allocation,
+            )
         }
         MirInstruction::SharedCopy(instruction) => {
             let MirSharedCopy {
@@ -400,8 +453,18 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 source,
                 span: _,
             } = instruction;
-            map_storage(mapper, site, destination)?;
-            map_storage(mapper, site, source)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                source,
+            )
         }
         MirInstruction::SharedFieldCopy(instruction) => {
             let MirSharedFieldCopy {
@@ -409,8 +472,13 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 source,
                 span: _,
             } = instruction;
-            map_storage(mapper, site, destination)?;
-            map_place(source, mapper, site)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_place(source, mapper, site, MirPlaceUseContext::OwnershipOrLifecycle)
         }
         MirInstruction::SharedCast(instruction) => map_shared_cast(instruction, mapper, site),
         MirInstruction::SharedMove(instruction) => {
@@ -419,12 +487,22 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 source,
                 span: _,
             } = instruction;
-            map_storage(mapper, site, destination)?;
-            map_storage(mapper, site, source)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                source,
+            )
         }
         MirInstruction::SharedRelease(instruction) => {
             let MirSharedRelease { owner, span: _ } = instruction;
-            map_storage(mapper, site, owner)
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, owner)
         }
         MirInstruction::SharedFieldInitialize(instruction) => {
             let MirSharedFieldInitialize {
@@ -432,8 +510,13 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 source,
                 span: _,
             } = instruction;
-            map_place(destination, mapper, site)?;
-            map_storage(mapper, site, source)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, source)
         }
         MirInstruction::SharedFieldReplace(instruction) => {
             let MirSharedFieldReplace {
@@ -443,8 +526,13 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 final_authorization: _,
                 span: _,
             } = instruction;
-            map_place(destination, mapper, site)?;
-            map_storage(mapper, site, source)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, source)
         }
         MirInstruction::StringInitialize(instruction) => {
             map_string_initialize(instruction, mapper, site)
@@ -467,7 +555,12 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 destination,
                 span: _,
             } = instruction;
-            map_place(destination, mapper, site)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirInstruction::AggregateOptionalCleanup(instruction) => {
             let MirAggregateOptionalCleanup {
@@ -475,7 +568,12 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 destination,
                 span: _,
             } = instruction;
-            map_place(destination, mapper, site)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirInstruction::ClassOptionalInitialize(instruction) => {
             map_class_optional_initialize(instruction, mapper, site)
@@ -490,7 +588,12 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 class: _,
                 span: _,
             } = instruction;
-            map_place(destination, mapper, site)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirInstruction::ClassOptionalCleanup(instruction) => {
             let MirClassOptionalCleanup {
@@ -499,7 +602,12 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 class: _,
                 span: _,
             } = instruction;
-            map_place(destination, mapper, site)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirInstruction::EndOptionalView(instruction) => {
             map_optional_view_end(instruction, mapper, site)
@@ -520,7 +628,12 @@ pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
                 target: _,
                 span: _,
             } = instruction;
-            map_place(destination, mapper, site)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirInstruction::Array(instruction) => map_array_instruction(instruction, mapper, site),
         MirInstruction::Io(instruction) => map_io_instruction(instruction, mapper, site),
@@ -560,9 +673,11 @@ fn map_rvalue<M: MirLocalIdentityMapper>(
                 activation,
             } = condition;
             map_path_condition(mapper, site, condition)?;
-            map_storage(mapper, site, activation)
+            map_storage_use(mapper, site, MirStorageUseRole::ProofMetadata, activation)
         }
-        MirRvalueKind::Load(place) => map_place(place, mapper, site),
+        MirRvalueKind::Load(place) => {
+            map_place(place, mapper, site, MirPlaceUseContext::OrdinaryRead)
+        }
         MirRvalueKind::Unary {
             operation: _,
             operand,
@@ -640,14 +755,24 @@ fn map_rvalue<M: MirLocalIdentityMapper>(
             map_value_use(mapper, site, MirValueUseRole::CheckedProtocol, right)
         }
         MirRvalueKind::TypeTest { source, target: _ } => map_object_view(source, mapper, site),
-        MirRvalueKind::OptionalPresence { source, kind: _ } => map_place(source, mapper, site),
+        MirRvalueKind::OptionalPresence { source, kind: _ } => map_place(
+            source,
+            mapper,
+            site,
+            MirPlaceUseContext::OtherExecutable,
+        ),
         MirRvalueKind::OptionalBoxPresence {
             owner,
             target: _,
             layer: _,
             kind: _,
-        } => map_storage(mapper, site, owner),
-        MirRvalueKind::ArrayLength { source, array: _ } => map_place(source, mapper, site),
+        } => map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, owner),
+        MirRvalueKind::ArrayLength { source, array: _ } => map_place(
+            source,
+            mapper,
+            site,
+            MirPlaceUseContext::OtherExecutable,
+        ),
     }
 }
 
@@ -695,9 +820,9 @@ fn map_call<M: MirLocalIdentityMapper>(
     if let Some(result) = result {
         map_value_definition(mapper, site, result)?;
     }
-    map_optional_storage(mapper, site, shared_result)?;
+    map_optional_storage(mapper, site, MirStorageUseRole::Call, shared_result)?;
     if let Some(destination) = destination {
-        map_place(destination, mapper, site)?;
+        map_place(destination, mapper, site, MirPlaceUseContext::Call)?;
     }
     Ok(())
 }
@@ -711,10 +836,12 @@ fn map_argument<M: MirLocalIdentityMapper>(
     match argument {
         MirArgument::Value(value) => map_value_use(mapper, site, context.role(), value),
         MirArgument::Place(place) | MirArgument::OwnedPlace(place) => {
-            map_place(place, mapper, site)
+            map_place(place, mapper, site, context.place_context())
         }
         MirArgument::View(view) => map_object_view(view, mapper, site),
-        MirArgument::SharedOwner(owner) => map_storage(mapper, site, owner),
+        MirArgument::SharedOwner(owner) => {
+            map_storage_use(mapper, site, context.storage_role(), owner)
+        }
     }
 }
 
@@ -733,6 +860,20 @@ impl ArgumentUseContext {
             Self::OwnershipOrLifecycle => MirValueUseRole::OwnershipOrLifecycle,
         }
     }
+
+    const fn place_context(self) -> MirPlaceUseContext {
+        match self {
+            Self::OrdinaryCall(_) => MirPlaceUseContext::Call,
+            Self::OwnershipOrLifecycle => MirPlaceUseContext::OwnershipOrLifecycle,
+        }
+    }
+
+    const fn storage_role(self) -> MirStorageUseRole {
+        match self {
+            Self::OrdinaryCall(_) => MirStorageUseRole::Call,
+            Self::OwnershipOrLifecycle => MirStorageUseRole::OwnershipOrLifecycle,
+        }
+    }
 }
 
 fn map_cleanup<M: MirLocalIdentityMapper>(
@@ -745,7 +886,12 @@ fn map_cleanup<M: MirLocalIdentityMapper>(
         target: _,
         span: _,
     } = cleanup;
-    map_place(destination, mapper, site)
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )
 }
 
 fn map_initialize<M: MirLocalIdentityMapper>(
@@ -759,7 +905,12 @@ fn map_initialize<M: MirLocalIdentityMapper>(
         arguments,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     for argument in arguments {
         map_argument(
             argument,
@@ -779,11 +930,22 @@ fn map_store<M: MirLocalIdentityMapper>(
     let MirStore {
         destination,
         value,
-        authorization: _,
-        final_authorization: _,
+        authorization,
+        final_authorization,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    let authorization = match (authorization.is_some(), final_authorization.is_some()) {
+        (false, false) => MirStorageWriteAuthorization::None,
+        (true, false) => MirStorageWriteAuthorization::Cell,
+        (false, true) => MirStorageWriteAuthorization::Final,
+        (true, true) => MirStorageWriteAuthorization::CellAndFinal,
+    };
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OrdinaryWrite(authorization),
+    )?;
     map_value_use(mapper, site, MirValueUseRole::OrdinaryStore, value)
 }
 
@@ -799,8 +961,18 @@ fn map_copy_construction<M: MirLocalIdentityMapper>(
         operation: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
-    map_place(source, mapper, site)
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
+    map_place(
+        source,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )
 }
 
 fn map_copy_assignment<M: MirLocalIdentityMapper>(
@@ -817,8 +989,18 @@ fn map_copy_assignment<M: MirLocalIdentityMapper>(
         final_authorization: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
-    map_place(source, mapper, site)
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
+    map_place(
+        source,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )
 }
 
 fn map_checked_view_binding<M: MirLocalIdentityMapper>(
@@ -831,7 +1013,7 @@ fn map_checked_view_binding<M: MirLocalIdentityMapper>(
         view,
         span: _,
     } = binding;
-    map_storage(mapper, site, destination)?;
+    map_storage_use(mapper, site, MirStorageUseRole::Alias, destination)?;
     map_object_view(view, mapper, site)
 }
 
@@ -847,10 +1029,20 @@ fn map_shared_allocate<M: MirLocalIdentityMapper>(
         mode,
         span: _,
     } = instruction;
-    map_storage(mapper, site, allocation)?;
+    map_storage_use(
+        mapper,
+        site,
+        MirStorageUseRole::OwnershipOrLifecycle,
+        allocation,
+    )?;
     match mode {
         MirSharedAllocationMode::Initialize => Ok(()),
-        MirSharedAllocationMode::Copy { source } => map_place(source, mapper, site),
+        MirSharedAllocationMode::Copy { source } => map_place(
+            source,
+            mapper,
+            site,
+            MirPlaceUseContext::OwnershipOrLifecycle,
+        ),
         MirSharedAllocationMode::OptionalBox { completion: _ } => Ok(()),
     }
 }
@@ -866,7 +1058,12 @@ fn map_shared_initialize<M: MirLocalIdentityMapper>(
         arguments,
         span: _,
     } = instruction;
-    map_storage(mapper, site, allocation)?;
+    map_storage_use(
+        mapper,
+        site,
+        MirStorageUseRole::OwnershipOrLifecycle,
+        allocation,
+    )?;
     for argument in arguments {
         map_argument(
             argument,
@@ -891,10 +1088,25 @@ fn map_shared_cast<M: MirLocalIdentityMapper>(
         exact_dynamic_class: _,
         span: _,
     } = cast;
-    map_storage(mapper, site, destination)?;
+    map_storage_use(
+        mapper,
+        site,
+        MirStorageUseRole::OwnershipOrLifecycle,
+        destination,
+    )?;
     match source {
-        MirSharedCastSource::Owner { storage, target: _ } => map_storage(mapper, site, storage),
-        MirSharedCastSource::Field { place, target: _ } => map_place(place, mapper, site),
+        MirSharedCastSource::Owner { storage, target: _ } => map_storage_use(
+            mapper,
+            site,
+            MirStorageUseRole::OwnershipOrLifecycle,
+            storage,
+        ),
+        MirSharedCastSource::Field { place, target: _ } => map_place(
+            place,
+            mapper,
+            site,
+            MirPlaceUseContext::OwnershipOrLifecycle,
+        ),
     }
 }
 
@@ -916,8 +1128,13 @@ fn map_string_initialize<M: MirLocalIdentityMapper>(
         length: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
-    map_storage(mapper, site, backing)
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
+    map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, backing)
 }
 
 fn map_optional_source<M: MirLocalIdentityMapper>(
@@ -933,7 +1150,12 @@ fn map_optional_source<M: MirLocalIdentityMapper>(
             MirValueUseRole::OwnershipOrLifecycle,
             value,
         ),
-        MirOptionalSource::Copy(place) => map_place(place, mapper, site),
+        MirOptionalSource::Copy(place) => map_place(
+            place,
+            mapper,
+            site,
+            MirPlaceUseContext::OwnershipOrLifecycle,
+        ),
     }
 }
 
@@ -947,7 +1169,12 @@ fn map_optional_initialize<M: MirLocalIdentityMapper>(
         source,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_optional_source(source, mapper, site)
 }
 
@@ -963,7 +1190,12 @@ fn map_optional_assign<M: MirLocalIdentityMapper>(
         final_authorization: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_optional_source(source, mapper, site)
 }
 
@@ -974,7 +1206,12 @@ fn map_aggregate_optional_source<M: MirLocalIdentityMapper>(
 ) -> Result<(), M::Error> {
     match source {
         MirAggregateOptionalSource::Absent | MirAggregateOptionalSource::Unpublished => Ok(()),
-        MirAggregateOptionalSource::Copy(place) => map_place(place, mapper, site),
+        MirAggregateOptionalSource::Copy(place) => map_place(
+            place,
+            mapper,
+            site,
+            MirPlaceUseContext::OwnershipOrLifecycle,
+        ),
     }
 }
 
@@ -989,7 +1226,12 @@ fn map_aggregate_optional_initialize<M: MirLocalIdentityMapper>(
         source,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_aggregate_optional_source(source, mapper, site)
 }
 
@@ -1006,7 +1248,12 @@ fn map_aggregate_optional_assign<M: MirLocalIdentityMapper>(
         final_authorization: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_aggregate_optional_source(source, mapper, site)
 }
 
@@ -1018,7 +1265,12 @@ fn map_class_optional_source<M: MirLocalIdentityMapper>(
     match source {
         MirClassOptionalSource::Absent => Ok(()),
         MirClassOptionalSource::Present(place) | MirClassOptionalSource::Copy(place) => {
-            map_place(place, mapper, site)
+            map_place(
+                place,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
     }
 }
@@ -1036,7 +1288,12 @@ fn map_class_optional_initialize<M: MirLocalIdentityMapper>(
         copy_constructor: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_class_optional_source(source, mapper, site)
 }
 
@@ -1056,7 +1313,12 @@ fn map_class_optional_assign<M: MirLocalIdentityMapper>(
         final_authorization: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_class_optional_source(source, mapper, site)
 }
 
@@ -1073,7 +1335,12 @@ fn map_optional_view_begin<M: MirLocalIdentityMapper>(
         span: _,
     } = begin;
     map_optional_guard(mapper, site, guard)?;
-    map_place(source, mapper, site)
+    map_place(
+        source,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )
 }
 
 fn map_optional_view_end<M: MirLocalIdentityMapper>(
@@ -1089,7 +1356,12 @@ fn map_optional_view_end<M: MirLocalIdentityMapper>(
         span: _,
     } = end;
     map_optional_guard(mapper, site, guard)?;
-    map_place(source, mapper, site)
+    map_place(
+        source,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )
 }
 
 fn map_optional_box_view_begin<M: MirLocalIdentityMapper>(
@@ -1105,7 +1377,7 @@ fn map_optional_box_view_begin<M: MirLocalIdentityMapper>(
         span: _,
     } = begin;
     map_optional_guard(mapper, site, guard)?;
-    map_storage(mapper, site, owner)
+    map_storage_use(mapper, site, MirStorageUseRole::Alias, owner)
 }
 
 fn map_optional_box_view_end<M: MirLocalIdentityMapper>(
@@ -1121,7 +1393,7 @@ fn map_optional_box_view_end<M: MirLocalIdentityMapper>(
         span: _,
     } = end;
     map_optional_guard(mapper, site, guard)?;
-    map_storage(mapper, site, owner)
+    map_storage_use(mapper, site, MirStorageUseRole::Alias, owner)
 }
 
 fn map_optional_shared_source<M: MirLocalIdentityMapper>(
@@ -1132,9 +1404,14 @@ fn map_optional_shared_source<M: MirLocalIdentityMapper>(
     match source {
         MirOptionalSharedSource::Absent => Ok(()),
         MirOptionalSharedSource::Present(owner) | MirOptionalSharedSource::Move(owner) => {
-            map_storage(mapper, site, owner)
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, owner)
         }
-        MirOptionalSharedSource::Copy(place) => map_place(place, mapper, site),
+        MirOptionalSharedSource::Copy(place) => map_place(
+            place,
+            mapper,
+            site,
+            MirPlaceUseContext::OwnershipOrLifecycle,
+        ),
     }
 }
 
@@ -1150,7 +1427,12 @@ fn map_optional_shared_initialize<M: MirLocalIdentityMapper>(
         target: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_optional_shared_source(source, mapper, site)
 }
 
@@ -1168,7 +1450,12 @@ fn map_optional_shared_assign<M: MirLocalIdentityMapper>(
         final_authorization: _,
         span: _,
     } = instruction;
-    map_place(destination, mapper, site)?;
+    map_place(
+        destination,
+        mapper,
+        site,
+        MirPlaceUseContext::OwnershipOrLifecycle,
+    )?;
     map_optional_shared_source(source, mapper, site)
 }
 
@@ -1198,7 +1485,7 @@ fn map_io_instruction<M: MirLocalIdentityMapper>(
         } => {
             map_value_use(mapper, site, MirValueUseRole::InputOutput, handle)?;
             map_io_buffer(destination, mapper, site)?;
-            map_storage(mapper, site, offset)
+            map_storage_use(mapper, site, MirStorageUseRole::InputOutput, offset)
         }
         MirIoOperation::Write {
             handle,
@@ -1207,7 +1494,7 @@ fn map_io_instruction<M: MirLocalIdentityMapper>(
         } => {
             map_value_use(mapper, site, MirValueUseRole::InputOutput, handle)?;
             map_io_buffer(source, mapper, site)?;
-            map_storage(mapper, site, offset)
+            map_storage_use(mapper, site, MirStorageUseRole::InputOutput, offset)
         }
         MirIoOperation::Close { handle } => {
             map_value_use(mapper, site, MirValueUseRole::InputOutput, handle)
@@ -1226,8 +1513,8 @@ fn map_io_buffer<M: MirLocalIdentityMapper>(
         array: _,
         access: _,
     } = buffer;
-    map_place(place, mapper, site)?;
-    map_storage(mapper, site, anchor)
+    map_place(place, mapper, site, MirPlaceUseContext::InputOutput)?;
+    map_storage_use(mapper, site, MirStorageUseRole::InputOutput, anchor)
 }
 
 fn map_array_instruction<M: MirLocalIdentityMapper>(
@@ -1244,7 +1531,12 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             failure: _,
             span: _,
         } => {
-            map_storage(mapper, site, backing)?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                backing,
+            )?;
             map_value_use(
                 mapper,
                 site,
@@ -1267,8 +1559,13 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             position: _,
             span: _,
         } => {
-            map_storage(mapper, site, backing)?;
-            map_storage(mapper, site, prefix)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                backing,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)
         }
         MirArrayInstruction::InitializeElement {
             backing,
@@ -1277,8 +1574,13 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             value,
             span: _,
         } => {
-            map_storage(mapper, site, backing)?;
-            map_storage(mapper, site, prefix)?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                backing,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)?;
             map_value_use(
                 mapper,
                 site,
@@ -1292,8 +1594,13 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             operation: _,
             span: _,
         } => {
-            map_storage(mapper, site, backing)?;
-            map_storage(mapper, site, index)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                backing,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, index)
         }
         MirArrayInstruction::CopyNext {
             backing,
@@ -1302,9 +1609,19 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             operation: _,
             span: _,
         } => {
-            map_storage(mapper, site, backing)?;
-            map_place(source, mapper, site)?;
-            map_storage(mapper, site, index)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                backing,
+            )?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, index)
         }
         MirArrayInstruction::Publish {
             backing,
@@ -1317,8 +1634,18 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             array: _,
             span: _,
         } => {
-            map_storage(mapper, site, backing)?;
-            map_storage(mapper, site, destination)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                backing,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )
         }
         MirArrayInstruction::Adopt {
             destination,
@@ -1326,8 +1653,13 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             array: _,
             span: _,
         } => {
-            map_place(destination, mapper, site)?;
-            map_storage(mapper, site, source)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, source)
         }
         MirArrayInstruction::Replace {
             destination,
@@ -1337,8 +1669,13 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             final_authorization: _,
             span: _,
         } => {
-            map_place(destination, mapper, site)?;
-            map_storage(mapper, site, source)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, source)
         }
         MirArrayInstruction::ElementAssign {
             destination,
@@ -1346,8 +1683,18 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             operation: _,
             span: _,
         } => {
-            map_place(destination, mapper, site)?;
-            map_place(source, mapper, site)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirArrayInstruction::DestroyNext {
             owner,
@@ -1355,14 +1702,24 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             operation: _,
             span: _,
         } => {
-            map_place(owner, mapper, site)?;
-            map_storage(mapper, site, index)
+            map_place(
+                owner,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, index)
         }
         MirArrayInstruction::Release {
             owner,
             array: _,
             span: _,
-        } => map_place(owner, mapper, site),
+        } => map_place(
+            owner,
+            mapper,
+            site,
+            MirPlaceUseContext::OwnershipOrLifecycle,
+        ),
         MirArrayInstruction::AnchorBegin {
             anchor,
             owner,
@@ -1370,19 +1727,21 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             kind: _,
             span: _,
         } => {
-            map_storage(mapper, site, anchor)?;
-            map_place(owner, mapper, site)
+            map_storage_use(mapper, site, MirStorageUseRole::Alias, anchor)?;
+            map_place(owner, mapper, site, MirPlaceUseContext::Alias)
         }
-        MirArrayInstruction::AnchorEnd { anchor, span: _ } => map_storage(mapper, site, anchor),
+        MirArrayInstruction::AnchorEnd { anchor, span: _ } => {
+            map_storage_use(mapper, site, MirStorageUseRole::Alias, anchor)
+        }
         MirArrayInstruction::AliasBind {
             alias,
             source,
             anchor,
             span: _,
         } => {
-            map_storage(mapper, site, alias)?;
-            map_place(source, mapper, site)?;
-            map_storage(mapper, site, anchor)
+            map_storage_use(mapper, site, MirStorageUseRole::Alias, alias)?;
+            map_place(source, mapper, site, MirPlaceUseContext::Alias)?;
+            map_storage_use(mapper, site, MirStorageUseRole::Alias, anchor)
         }
         MirArrayInstruction::Normalize {
             destination,
@@ -1392,8 +1751,18 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             kind: _,
             span: _,
         } => {
-            map_storage(mapper, site, destination)?;
-            map_place(owner, mapper, site)?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_place(
+                owner,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
             map_value_use(
                 mapper,
                 site,
@@ -1408,8 +1777,18 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             array: _,
             span: _,
         } => {
-            map_storage(mapper, site, destination)?;
-            map_place(owner, mapper, site)?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_place(
+                owner,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
             map_value_use(
                 mapper,
                 site,
@@ -1424,8 +1803,18 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             boundary: _,
             span: _,
         } => {
-            map_storage(mapper, site, destination)?;
-            map_place(owner, mapper, site)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_place(
+                owner,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirArrayInstruction::SliceCopy {
             destination,
@@ -1436,10 +1825,20 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             operation: _,
             span: _,
         } => {
-            map_storage(mapper, site, destination)?;
-            map_place(source, mapper, site)?;
-            map_storage(mapper, site, start)?;
-            map_storage(mapper, site, end)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, start)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, end)
         }
         MirArrayInstruction::SliceLengthCheck {
             destination_start,
@@ -1448,9 +1847,24 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             array: _,
             span: _,
         } => {
-            map_storage(mapper, site, destination_start)?;
-            map_storage(mapper, site, destination_end)?;
-            map_place(source, mapper, site)
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination_start,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination_end,
+            )?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )
         }
         MirArrayInstruction::SliceBoundsCheck {
             start,
@@ -1458,8 +1872,8 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             array: _,
             span: _,
         } => {
-            map_storage(mapper, site, start)?;
-            map_storage(mapper, site, end)
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, start)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, end)
         }
         MirArrayInstruction::SliceAssignNext {
             destination,
@@ -1469,10 +1883,30 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             operation: _,
             span: _,
         } => {
-            map_place(destination, mapper, site)?;
-            map_place(source, mapper, site)?;
-            map_storage(mapper, site, destination_index)?;
-            map_storage(mapper, site, source_index)
+            map_place(
+                destination,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination_index,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                source_index,
+            )
         }
     }
 }
@@ -1491,9 +1925,14 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
         }
         MirTerminator::ReturnShared { owner, span: _ }
         | MirTerminator::ReturnOptionalShared { owner, span: _ } => {
-            map_storage(mapper, site, owner)
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, owner)
         }
-        MirTerminator::Panic { message, span: _ } => map_place(message, mapper, site),
+        MirTerminator::Panic { message, span: _ } => map_place(
+            message,
+            mapper,
+            site,
+            MirPlaceUseContext::OtherExecutable,
+        ),
         MirTerminator::Goto { target, span: _ } => map_block(mapper, site, target),
         MirTerminator::Branch {
             condition,
@@ -1517,9 +1956,9 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
                 count,
                 result,
             } = check;
-            map_storage(mapper, site, left)?;
-            map_storage(mapper, site, count)?;
-            map_storage(mapper, site, result)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, left)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, count)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, result)?;
             map_block_pair(mapper, site, success_target, failure_target)
         }
         MirTerminator::IntegerDivisorCheck {
@@ -1534,9 +1973,9 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
                 divisor,
                 result,
             } = check;
-            map_storage(mapper, site, dividend)?;
-            map_storage(mapper, site, divisor)?;
-            map_storage(mapper, site, result)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, dividend)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, divisor)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, result)?;
             map_block_pair(mapper, site, success_target, failure_target)
         }
         MirTerminator::PrimitiveCastRangeCheck {
@@ -1550,8 +1989,8 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
                 source,
                 result,
             } = check;
-            map_storage(mapper, site, source)?;
-            map_storage(mapper, site, result)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, source)?;
+            map_storage_use(mapper, site, MirStorageUseRole::CheckedProtocol, result)?;
             map_block_pair(mapper, site, success_target, failure_target)
         }
         MirTerminator::CheckedCast {
@@ -1579,8 +2018,18 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
             failure_target,
             span: _,
         } => {
-            map_place(source, mapper, site)?;
-            map_storage(mapper, site, destination)?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
             map_block_pair(mapper, site, success_target, failure_target)
         }
         MirTerminator::OptionalSharedUnwrap {
@@ -1596,8 +2045,18 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
                 target: _,
                 span: _,
             } = unwrap;
-            map_place(source, mapper, site)?;
-            map_storage(mapper, site, destination)?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OwnershipOrLifecycle,
+            )?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                destination,
+            )?;
             map_block_pair(mapper, site, success_target, failure_target)
         }
         MirTerminator::BeginOptionalView {
@@ -1626,7 +2085,12 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
             failure_target,
             span: _,
         } => {
-            map_place(source, mapper, site)?;
+            map_place(
+                source,
+                mapper,
+                site,
+                MirPlaceUseContext::OtherExecutable,
+            )?;
             map_block_pair(mapper, site, success_target, failure_target)
         }
         MirTerminator::ArrayPositionCheck {
@@ -1636,7 +2100,7 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
             failure_target,
             span: _,
         } => {
-            map_storage(mapper, site, position)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OtherExecutable, position)?;
             map_block_pair(mapper, site, success_target, failure_target)
         }
         MirTerminator::ArrayOperationCheck {
@@ -1653,9 +2117,14 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
             complete_target,
             span: _,
         } => {
-            map_storage(mapper, site, backing)?;
-            map_storage(mapper, site, index)?;
-            map_storage(mapper, site, length)?;
+            map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OwnershipOrLifecycle,
+                backing,
+            )?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, index)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, length)?;
             map_block_pair(mapper, site, body_target, complete_target)
         }
         MirTerminator::Terminate { reason: _, span: _ } => Ok(()),
@@ -1684,12 +2153,49 @@ fn map_block_triple<M: MirLocalIdentityMapper>(
     map_block(mapper, site, third)
 }
 
+#[derive(Clone, Copy)]
+enum MirPlaceUseContext {
+    OrdinaryRead,
+    OrdinaryWrite(MirStorageWriteAuthorization),
+    Alias,
+    Call,
+    OwnershipOrLifecycle,
+    InputOutput,
+    OtherExecutable,
+}
+
+impl MirPlaceUseContext {
+    const fn storage_role(self, place: MirStoragePlaceUse) -> MirStorageUseRole {
+        match self {
+            Self::OrdinaryRead => MirStorageUseRole::OrdinaryRead(place),
+            Self::OrdinaryWrite(authorization) => MirStorageUseRole::OrdinaryWrite {
+                place,
+                authorization,
+            },
+            Self::Alias => MirStorageUseRole::Alias,
+            Self::Call => MirStorageUseRole::Call,
+            Self::OwnershipOrLifecycle => MirStorageUseRole::OwnershipOrLifecycle,
+            Self::InputOutput => MirStorageUseRole::InputOutput,
+            Self::OtherExecutable => MirStorageUseRole::OtherExecutable,
+        }
+    }
+}
+
 fn map_place<M: MirLocalIdentityMapper>(
     place: &$($mir_mutability)* MirPlace,
     mapper: &mut M,
     site: MirLocalIdentitySite,
+    context: MirPlaceUseContext,
 ) -> Result<(), M::Error> {
     let MirPlace { base, projections } = place;
+    let place_use = if !projections.is_empty() {
+        MirStoragePlaceUse::Projected
+    } else if matches!(base, MirPlaceBase::Storage(_)) {
+        MirStoragePlaceUse::ExactBase
+    } else {
+        MirStoragePlaceUse::Alias
+    };
+    let role = context.storage_role(place_use);
     match base {
         MirPlaceBase::StaticField(_) | MirPlaceBase::StaticLifecycleDestination(_) => {}
         MirPlaceBase::Storage(storage)
@@ -1698,10 +2204,10 @@ fn map_place<M: MirLocalIdentityMapper>(
         | MirPlaceBase::ArrayAlias(storage)
         | MirPlaceBase::SharedPointee(storage)
         | MirPlaceBase::SharedAllocationPayload(storage) => {
-            map_storage(mapper, site, storage)?;
+            map_storage_use(mapper, site, role, storage)?;
         }
         MirPlaceBase::OptionalBoxPayload { owner, target: _ } => {
-            map_storage(mapper, site, owner)?;
+            map_storage_use(mapper, site, role, owner)?;
         }
     }
     for projection in projections {
@@ -1714,7 +2220,12 @@ fn map_place<M: MirLocalIdentityMapper>(
             MirPlaceProjection::ArrayElement {
                 array: _,
                 normalized_index,
-            } => map_storage(mapper, site, normalized_index)?,
+            } => map_storage_use(
+                mapper,
+                site,
+                MirStorageUseRole::OtherExecutable,
+                normalized_index,
+            )?,
         }
     }
     Ok(())
@@ -1733,7 +2244,7 @@ fn map_object_view<M: MirLocalIdentityMapper>(
         provenance: _,
         span: _,
     } = view;
-    map_place(source, mapper, site)?;
+    map_place(source, mapper, site, MirPlaceUseContext::Alias)?;
     map_object_origin(origin, mapper, site)
 }
 
@@ -1748,7 +2259,7 @@ fn map_method_receiver<M: MirLocalIdentityMapper>(
         access: _,
         provenance: _,
     } = receiver;
-    map_place(place, mapper, site)?;
+    map_place(place, mapper, site, MirPlaceUseContext::Alias)?;
     map_object_origin(origin, mapper, site)
 }
 
@@ -1761,41 +2272,43 @@ fn map_object_origin<M: MirLocalIdentityMapper>(
         MirObjectOrigin::Exact {
             complete,
             dynamic_class: _,
-        } => map_place(complete, mapper, site),
+        } => map_place(complete, mapper, site, MirPlaceUseContext::Alias),
         MirObjectOrigin::Forwarded {
             carrier,
             static_target: _,
             access: _,
             dispatch_limit: _,
             span: _,
-        } => map_storage(mapper, site, carrier),
+        } => map_storage_use(mapper, site, MirStorageUseRole::Alias, carrier),
         MirObjectOrigin::Shared {
             owner,
             static_target: _,
             access: _,
             exact_dynamic_class: _,
             span: _,
-        } => map_storage(mapper, site, owner),
+        } => map_storage_use(mapper, site, MirStorageUseRole::Alias, owner),
     }
 }
 
 fn map_optional_storage<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
+    role: MirStorageUseRole,
     identity: &$($mir_mutability)* Option<StorageId>,
 ) -> Result<(), M::Error> {
     if let Some(identity) = identity {
-        map_storage(mapper, site, identity)?;
+        map_storage_use(mapper, site, role, identity)?;
     }
     Ok(())
 }
 
-fn map_storage<M: MirLocalIdentityMapper>(
+fn map_storage_use<M: MirLocalIdentityMapper>(
     mapper: &mut M,
     site: MirLocalIdentitySite,
+    role: MirStorageUseRole,
     identity: &$($mir_mutability)* StorageId,
 ) -> Result<(), M::Error> {
-    $leaf!(storage, mapper, site, identity)
+    $leaf!(storage_use, mapper, site, role, identity)
 }
 
 fn map_value<M: MirLocalIdentityMapper>(
