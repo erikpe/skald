@@ -117,9 +117,8 @@ fn immediate_integer_ranges_match_handwritten_while_instruction_shapes() {
                 .iter()
                 .copied()
                 .filter(|mnemonic| *mnemonic == "jmp")
-                .count()
-                + 1,
-            "fusion may add only its cold scalar-cleanup edge"
+                .count(),
+            "post-proof merging removes the fusion-only scalar-cleanup jump"
         );
         assert_eq!(
             range_profile

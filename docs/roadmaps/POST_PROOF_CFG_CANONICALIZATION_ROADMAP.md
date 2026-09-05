@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 through PCR3 are complete and PCR4 is next.
+Status: in progress; PCR0 through PCR4 are complete and PCR5 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -99,7 +99,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 - [x] PCR1 — Define normalized canonicalization candidates
 - [x] PCR2 — Add guarded final-CFG compound edits
 - [x] PCR3 — Implement selectable empty-block forwarding
-- [ ] PCR4 — Implement selectable basic-block merging
+- [x] PCR4 — Implement selectable basic-block merging
 - [ ] PCR5 — Freeze and prove default pass composition
 - [ ] PCR6 — Complete inspection and reporting ownership
 - [ ] PCR7 — Prove source-level semantic and target equivalence
@@ -280,21 +280,21 @@ array-loop bodies remain attached rather than being forwarded.
 **Purpose:** Deliver FMC-09 and validate ordered movement of executable block
 contents under the normalized contract.
 
-- [ ] Add a cohesive module with a stable identity, exact
+- [x] Add a cohesive module with a stable identity, exact
   `post-proof-basic-block-merging` name, `Final` stage, and frozen description.
-- [ ] Scan borrowed verified definitions first and preserve the seal on a
+- [x] Scan borrowed verified definitions first and preserve the seal on a
   no-candidate result.
-- [ ] Repeatedly select the first current pair, apply the guarded merge,
+- [x] Repeatedly select the first current pair, apply the guarded merge,
   rebuild facts, and stop when no pair remains.
-- [ ] Prove termination by one deletion per step and independent idempotence
+- [x] Prove termination by one deletion per step and independent idempotence
   when forwarding is absent.
-- [ ] Preserve instruction order, successor terminator/span, value/storage
+- [x] Preserve instruction order, successor terminator/span, value/storage
   declarations, and block-local use-before-definition.
-- [ ] Report processed/changed callables, merged pairs, moved instructions,
+- [x] Report processed/changed callables, merged pairs, moved instructions,
   removed blocks, multiple-edge barriers, and permanent-root barriers.
-- [ ] Register and list the pass, insert it after forwarding in default, and
+- [x] Register and list the pass, insert it after forwarding in default, and
   support independent stable-name disabling.
-- [ ] Update pipeline and driver documentation for both passes.
+- [x] Update pipeline and driver documentation for both passes.
 
 **Tests:** One pair and maximal chains; instruction-bearing successors;
 body-entry predecessor; return, panic, terminate, checked, optional, array,
@@ -305,6 +305,24 @@ metrics, listing, selection, idempotence, compaction, and verification.
 **Exit criteria:** The pass deterministically merges all eligible pairs to a
 local fixed point, preserves executable and value/storage invariants, and is
 independently selectable after forwarding in default.
+
+**Implementation evidence:** The registered
+`post-proof-basic-block-merging` final-stage pass first inspects borrowed
+normalized definitions and retains the existing seal for a global no-op. A
+productive occurrence repeatedly rebuilds normalized CFG facts, selects the
+first current pair, and invokes the guarded compound edit until every callable
+converges, then publishes one atomic program rewrite. Each step removes one
+block while preserving instruction order, exact operation and terminator
+spans, and all value/storage identities. Stable measurements cover merged
+pairs, moved instructions, removed blocks, multiple incoming edges, and
+permanent attachments. Focused tests cover maximal chains, unreachable
+regions, two-block loops, functions, members, static initializers, selection,
+listing, checkpoints, metrics, dense compaction, fresh reachability, and
+repeated-occurrence idempotence. Full-suite verification identified and
+directly encoded one additional exact form of frozen rule 7: checked scalar,
+optional-shared unwrap, and array-loop successor blocks whose complete shape
+is verifier-significant remain structural protocol attachments rather than
+being merged with their following block.
 
 ### PCR5 — Freeze and prove default pass composition
 

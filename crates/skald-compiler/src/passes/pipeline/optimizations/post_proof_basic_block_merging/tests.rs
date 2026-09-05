@@ -13,30 +13,37 @@ use crate::{
 };
 
 use super::*;
-use crate::passes::pipeline::optimizations::{
-    post_proof_basic_block_merging, post_proof_unreachable_block_elimination,
+use crate::passes::pipeline::{
+    optimizations::{post_proof_empty_block_forwarding, whole_world_reachability},
+    run_mir_pipeline_measured_inspected,
 };
-use crate::passes::pipeline::run_mir_pipeline_measured_inspected;
 
 #[test]
-fn forwards_complete_transitive_plan_and_reports_exact_changes() {
-    let input = branching_chain_program();
+fn merges_a_maximal_chain_and_preserves_contents_and_identities() {
+    let input = maximal_chain_program();
     let entry = input.entry_function;
+    let original = input.definitions.get(entry).unwrap();
+    let expected_instructions = original.body.blocks[2].instructions.clone();
+    let expected_terminator = original.body.blocks[2].terminator.clone();
+    let expected_storage = original.storage.clone();
+    let expected_values = original.values.clone();
+    let retained_span = original.body.blocks[0].span;
+    let moved_instructions = expected_instructions.len() as u64;
+
     let measured = run_mir_pipeline_with_occurrences(input, &schedule(&[IDENTITY]));
     let output = measured.result.as_ref().unwrap();
     let definition = output.definitions.get(entry).unwrap();
     let record = &measured.occurrences()[0];
 
-    assert_eq!(definition.body.blocks.len(), 2);
-    assert!(matches!(
-        definition.body.blocks[0].terminator,
-        Some(MirTerminator::Branch {
-            true_target,
-            false_target,
-            ..
-        }) if true_target == block(definition.callable(), 1)
-            && false_target == block(definition.callable(), 1)
-    ));
+    assert_eq!(definition.body.blocks.len(), 1);
+    assert_eq!(definition.body.blocks[0].span, retained_span);
+    assert_eq!(
+        definition.body.blocks[0].instructions,
+        expected_instructions
+    );
+    assert_eq!(definition.body.blocks[0].terminator, expected_terminator);
+    assert_eq!(definition.storage, expected_storage);
+    assert_eq!(definition.values, expected_values);
     assert_eq!(record.name(), NAME);
     assert_eq!(record.stage(), MirPassStage::Final);
     assert_eq!(record.outcome(), MirPassOccurrenceOutcome::Changed);
@@ -46,9 +53,10 @@ fn forwards_complete_transitive_plan_and_reports_exact_changes() {
     assert_eq!(
         record.measurements(),
         [
-            MirPassMeasurement::count(REMOVED_FORWARDING_BLOCKS, 2),
-            MirPassMeasurement::count(REDIRECTED_SUCCESSOR_OCCURRENCES, 3),
-            MirPassMeasurement::count(RETAINED_CYCLIC_BLOCKS, 0),
+            MirPassMeasurement::count(MERGED_BLOCK_PAIRS, 2),
+            MirPassMeasurement::count(MOVED_INSTRUCTIONS, moved_instructions),
+            MirPassMeasurement::count(REMOVED_BLOCKS, 2),
+            MirPassMeasurement::count(RETAINED_MULTIPLE_INCOMING_EDGE_BARRIERS, 0),
             MirPassMeasurement::count(RETAINED_PERMANENT_ATTACHMENT_BARRIERS, 0),
         ]
     );
@@ -59,8 +67,8 @@ fn forwards_complete_transitive_plan_and_reports_exact_changes() {
 }
 
 #[test]
-fn repeated_occurrence_is_idempotent_and_checkpoints_every_verified_product() {
-    let input = branching_chain_program();
+fn repeated_occurrence_is_idempotent_and_checkpoints_verified_products() {
+    let input = maximal_chain_program();
     let exact = schedule(&[IDENTITY, IDENTITY]);
     let mut labels = Vec::new();
     let mut dumps = Vec::new();
@@ -78,8 +86,8 @@ fn repeated_occurrence_is_idempotent_and_checkpoints_every_verified_product() {
         [
             "proof-rich-input",
             "after-proof-normalization",
-            "after-final-0-post-proof-empty-block-forwarding-0",
-            "after-final-1-post-proof-empty-block-forwarding-1",
+            "after-final-0-post-proof-basic-block-merging-0",
+            "after-final-1-post-proof-basic-block-merging-1",
             "final",
         ]
     );
@@ -101,14 +109,14 @@ fn repeated_occurrence_is_idempotent_and_checkpoints_every_verified_product() {
         ]
     );
     assert_eq!(
-        measurement(&measured.occurrences()[1], REMOVED_FORWARDING_BLOCKS),
+        measurement(&measured.occurrences()[1], MERGED_BLOCK_PAIRS),
         0
     );
 }
 
 #[test]
-fn cycles_and_chains_entering_cycles_are_retained_without_resealing() {
-    let input = cyclic_program();
+fn multiple_incoming_occurrences_are_reported_without_resealing() {
+    let input = multiple_incoming_program();
     let expected = verify_final_mir(input.clone()).unwrap();
     let measured = run_mir_pipeline_with_occurrences(input, &schedule(&[IDENTITY]));
     let record = &measured.occurrences()[0];
@@ -116,13 +124,39 @@ fn cycles_and_chains_entering_cycles_are_retained_without_resealing() {
     assert_eq!(measured.result.as_ref().unwrap(), &expected);
     assert_eq!(measured.statistics.verification_executions(), 2);
     assert_eq!(record.outcome(), MirPassOccurrenceOutcome::Unchanged);
-    assert_eq!(measurement(record, REMOVED_FORWARDING_BLOCKS), 0);
-    assert_eq!(measurement(record, REDIRECTED_SUCCESSOR_OCCURRENCES), 0);
-    assert_eq!(measurement(record, RETAINED_CYCLIC_BLOCKS), 4);
+    assert_eq!(measurement(record, MERGED_BLOCK_PAIRS), 0);
+    assert_eq!(
+        measurement(record, RETAINED_MULTIPLE_INCOMING_EDGE_BARRIERS),
+        1
+    );
 }
 
 #[test]
-fn functions_members_and_static_initializers_use_one_atomic_pass() {
+fn a_two_block_cycle_contracts_deterministically_to_a_self_loop() {
+    let input = two_block_cycle_program();
+    let entry = input.entry_function;
+    let measured = run_mir_pipeline_with_occurrences(input, &schedule(&[IDENTITY]));
+    let definition = measured
+        .result
+        .as_ref()
+        .unwrap()
+        .definitions
+        .get(entry)
+        .unwrap();
+
+    assert_eq!(
+        measurement(&measured.occurrences()[0], MERGED_BLOCK_PAIRS),
+        1
+    );
+    assert_eq!(definition.body.blocks.len(), 2);
+    assert!(matches!(
+        definition.body.blocks[1].terminator,
+        Some(MirTerminator::Goto { target, .. }) if target == definition.body.blocks[1].id
+    ));
+}
+
+#[test]
+fn functions_members_and_static_initializers_converge_in_one_transaction() {
     let mut input = lower_source_to_final_mir(concat!(
         "class Item {\n",
         "  static seed: i64 = 1;\n",
@@ -139,9 +173,7 @@ fn functions_members_and_static_initializers_use_one_atomic_pass() {
         .map(|definition| definition.function)
         .collect::<Vec<_>>();
     for function in functions {
-        append_unreachable_forwarding_block(
-            &mut input.definitions.get_mut_for_test(function).unwrap().body,
-        );
+        append_two_block_cycle(&mut input.definitions.get_mut_for_test(function).unwrap().body);
     }
     let members = input
         .member_definitions
@@ -149,7 +181,7 @@ fn functions_members_and_static_initializers_use_one_atomic_pass() {
         .map(|definition| definition.callable)
         .collect::<Vec<_>>();
     for callable in members {
-        append_unreachable_forwarding_block(
+        append_two_block_cycle(
             &mut input
                 .member_definitions
                 .get_mut_for_test(callable)
@@ -163,7 +195,7 @@ fn functions_members_and_static_initializers_use_one_atomic_pass() {
         .unwrap()
         .initializers_mut_for_test()
     {
-        append_unreachable_forwarding_block(&mut initializer.body);
+        append_two_block_cycle(&mut initializer.body);
     }
     let callable_count = input.executable_definitions().count();
 
@@ -172,10 +204,7 @@ fn functions_members_and_static_initializers_use_one_atomic_pass() {
     assert!(measured.result.is_ok());
     assert_eq!(record.processed_callables(), Some(callable_count as u64));
     assert_eq!(record.changed_callables(), Some(callable_count as u64));
-    assert_eq!(
-        measurement(record, REMOVED_FORWARDING_BLOCKS),
-        callable_count as u64
-    );
+    assert!(measurement(record, MERGED_BLOCK_PAIRS) >= callable_count as u64);
     assert!(
         measurement(record, RETAINED_PERMANENT_ATTACHMENT_BARRIERS) > 0,
         "measurements: {:?}",
@@ -184,45 +213,22 @@ fn functions_members_and_static_initializers_use_one_atomic_pass() {
 }
 
 #[test]
-fn forwarding_operates_on_entry_unreachable_regions_without_the_unreachable_canary() {
-    let mut input = lower_source_to_final_mir("fn main() -> i64 { return 7; }");
-    let entry = input.entry_function;
-    append_unreachable_forwarding_block(
-        &mut input.definitions.get_mut_for_test(entry).unwrap().body,
-    );
-
-    let measured = run_mir_pipeline_with_occurrences(input, &schedule(&[IDENTITY]));
-    let output = measured
-        .result
-        .as_ref()
-        .unwrap()
-        .definitions
-        .get(entry)
-        .unwrap();
-    assert_eq!(
-        measurement(&measured.occurrences()[0], REMOVED_FORWARDING_BLOCKS),
-        1
-    );
-    assert_eq!(output.body.blocks.len(), 1);
-}
-
-#[test]
-fn default_registration_is_selectable_between_unreachable_cleanup_and_merging() {
+fn default_registration_is_selectable_between_forwarding_and_reachability() {
     let default =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
     let occurrence = default
         .iter()
         .find(|occurrence| occurrence.identity() == IDENTITY)
         .unwrap();
-    assert_eq!(occurrence.position(), 9);
+    assert_eq!(occurrence.position(), 10);
     assert_eq!(occurrence.stage(), MirPassStage::Final);
     assert_eq!(
-        default.as_slice()[8].identity(),
-        post_proof_unreachable_block_elimination::IDENTITY
+        default.as_slice()[9].identity(),
+        post_proof_empty_block_forwarding::IDENTITY
     );
     assert_eq!(
-        default.as_slice()[10].identity(),
-        post_proof_basic_block_merging::IDENTITY
+        default.as_slice()[11].identity(),
+        whole_world_reachability::IDENTITY
     );
 
     let excluded = resolve_mir_pass_schedule(MirOptimizationProfile::Default, [NAME]).unwrap();
@@ -250,7 +256,7 @@ fn measurement(record: &crate::passes::MirPassOccurrenceRecord, name: &str) -> u
         .value()
 }
 
-fn branching_chain_program() -> crate::mir::MirProgram {
+fn maximal_chain_program() -> crate::mir::MirProgram {
     let mut program = lower_source_to_final_mir("fn main() -> i64 { return 7; }");
     let definition = program
         .definitions
@@ -259,7 +265,26 @@ fn branching_chain_program() -> crate::mir::MirProgram {
     let owner = definition.callable();
     let span = definition.span;
     let mut result = take_single_entry(definition);
-    result.id = block(owner, 3);
+    result.id = block(owner, 2);
+    definition.body.entry = block(owner, 0);
+    definition.body.blocks = vec![
+        goto_block(owner, 0, 1, span),
+        goto_block(owner, 1, 2, span),
+        result,
+    ];
+    program
+}
+
+fn multiple_incoming_program() -> crate::mir::MirProgram {
+    let mut program = lower_source_to_final_mir("fn main() -> i64 { return 7; }");
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let owner = definition.callable();
+    let span = definition.span;
+    let mut result = take_single_entry(definition);
+    result.id = block(owner, 2);
     let condition = ValueId::new(owner, definition.values.len());
     definition.values.push(MirValue {
         id: condition,
@@ -280,41 +305,37 @@ fn branching_chain_program() -> crate::mir::MirProgram {
             })],
             terminator: Some(MirTerminator::Branch {
                 condition,
-                true_target: block(owner, 1),
-                false_target: block(owner, 1),
+                true_target: block(owner, 2),
+                false_target: block(owner, 2),
                 span,
             }),
             span,
         },
         goto_block(owner, 1, 2, span),
-        goto_block(owner, 2, 3, span),
         result,
     ];
     program
 }
 
-fn cyclic_program() -> crate::mir::MirProgram {
+fn two_block_cycle_program() -> crate::mir::MirProgram {
     let mut program = lower_source_to_final_mir("fn main() -> i64 { return 7; }");
     let definition = program
         .definitions
         .get_mut_for_test(program.entry_function)
         .unwrap();
-    let owner = definition.callable();
-    let span = definition.span;
-    definition.body.blocks.extend([
-        goto_block(owner, 1, 1, span),
-        goto_block(owner, 2, 3, span),
-        goto_block(owner, 3, 2, span),
-        goto_block(owner, 4, 2, span),
-    ]);
+    append_two_block_cycle(&mut definition.body);
     program
 }
 
-fn append_unreachable_forwarding_block(body: &mut MirBody) {
+fn append_two_block_cycle(body: &mut MirBody) {
     let owner = body.entry.callable();
-    let index = body.blocks.len();
+    let first = body.blocks.len();
+    let second = first + 1;
     let span = body.blocks[0].span;
-    body.blocks.push(goto_block(owner, index, 0, span));
+    body.blocks.extend([
+        goto_block(owner, first, second, span),
+        goto_block(owner, second, first, span),
+    ]);
 }
 
 fn take_single_entry(definition: &mut MirFunctionDefinition) -> MirBasicBlock {

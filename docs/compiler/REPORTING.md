@@ -289,7 +289,7 @@ adapter.
 
 The `none` MIR schedule performs proof verification, one mandatory
 normalization with normalized verification, and zero pass executions.
-The `default` schedule executes eleven pass occurrences in the exact optimization
+The `default` schedule executes twelve pass occurrences in the exact optimization
 order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
@@ -308,7 +308,7 @@ Its
 [completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 records delivery. Registry, request/CLI schedule selection, the verified
 runner, and structured pass reporting are implemented. Ordinary production
-traces contain one pass-finished event for each of the nine default schedule
+traces contain one pass-finished event for each of the twelve default schedule
 occurrences; `none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
@@ -456,7 +456,12 @@ default profile. The following selectable
 blocks, redirected successor occurrences, retained cyclic forwarding blocks,
 and retained permanent-attachment barriers. Productive changes are normalized-
 reverified and receive fresh seal-bound reachability; no-op occurrences retain
-the current seal. `whole-world-reachability` remains the final occurrence with
+the current seal. The following `post-proof-basic-block-merging` occurrence
+reports merged pairs, moved instructions, removed blocks, retained multiple-
+incoming-edge barriers, and retained permanent-attachment barriers. It
+converges each callable before publishing one atomic changed product and keeps
+verifier-significant protocol targets distinct. `whole-world-reachability`
+remains the final occurrence with
 its existing pass-owned metrics and stage-bearing trace record.
 
 Quiet compilation performs no checkpoint formatting, dump rendering, trace

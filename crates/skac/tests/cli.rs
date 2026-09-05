@@ -46,7 +46,7 @@ fn real_binary_lists_registered_mir_passes_without_an_input() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "Available final-MIR passes:\n  checked-integer-constant-folding [proof-rich]\n      Folds exact successful checked-integer constant protocols.\n  conservative-cfg-cleanup [proof-rich]\n      Folds ordinary branches and removes unprotected unreachable MIR blocks.\n  dead-pure-definition-elimination [proof-rich]\n      Removes unused non-failing scalar MIR definitions.\n  post-proof-empty-block-forwarding [final]\n      Forwards normalized MIR edges through instruction-free goto blocks.\n  post-proof-unreachable-block-elimination [final]\n      Removes normalized MIR blocks unreachable from executable and permanent roots.\n  primitive-algebraic-simplification [proof-rich]\n      Simplifies exact primitive MIR algebraic identities.\n  primitive-constant-folding [proof-rich]\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability [final]\n      Removes unreachable executable MIR definitions.\n"
+        "Available final-MIR passes:\n  checked-integer-constant-folding [proof-rich]\n      Folds exact successful checked-integer constant protocols.\n  conservative-cfg-cleanup [proof-rich]\n      Folds ordinary branches and removes unprotected unreachable MIR blocks.\n  dead-pure-definition-elimination [proof-rich]\n      Removes unused non-failing scalar MIR definitions.\n  post-proof-basic-block-merging [final]\n      Fuses maximal eligible single-incoming goto chains while preserving operation order.\n  post-proof-empty-block-forwarding [final]\n      Forwards normalized MIR edges through instruction-free goto blocks.\n  post-proof-unreachable-block-elimination [final]\n      Removes normalized MIR blocks unreachable from executable and permanent roots.\n  primitive-algebraic-simplification [proof-rich]\n      Simplifies exact primitive MIR algebraic identities.\n  primitive-constant-folding [proof-rich]\n      Folds exact block-local primitive MIR constants.\n  whole-world-reachability [final]\n      Removes unreachable executable MIR definitions.\n"
     );
     assert!(output.stderr.is_empty());
 }
@@ -100,6 +100,8 @@ fn real_binary_honors_the_mir_optimization_selection_matrix() {
             "conservative-cfg-cleanup",
             "--disable-mir-pass",
             "dead-pure-definition-elimination",
+            "--disable-mir-pass",
+            "post-proof-basic-block-merging",
             "--disable-mir-pass",
             "post-proof-empty-block-forwarding",
             "--disable-mir-pass",

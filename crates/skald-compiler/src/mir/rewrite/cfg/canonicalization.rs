@@ -396,6 +396,7 @@ pub(crate) enum MirBasicBlockMergeBarrierKind {
     NonGotoPredecessor,
     SelfLoop,
     PredecessorPermanentAttachment,
+    PredecessorProtocolAttachment,
     SuccessorIsEntry,
     SuccessorPermanentAttachment,
     NonUniqueIncomingEdge,
@@ -543,6 +544,14 @@ fn merge_candidate(
             None,
         ));
     }
+    if is_protocol_shape_attachment(facts, predecessor) {
+        return Err(merge_barrier(
+            predecessor_id,
+            Some(successor_id),
+            MirBasicBlockMergeBarrierKind::PredecessorProtocolAttachment,
+            None,
+        ));
+    }
 
     let successor = facts
         .block(successor_id)
@@ -577,6 +586,30 @@ fn merge_candidate(
     Ok(MirBasicBlockMergeCandidate {
         predecessor: predecessor_id,
         successor: successor_id,
+    })
+}
+
+/// Some verifier protocols assign exact meaning to the complete instruction
+/// sequence or back edge of their first successor. Appending the next block
+/// would preserve runtime order but erase that structural certificate, so the
+/// protocol target must remain a distinct block until a protocol-aware pass
+/// rewrites the protocol itself.
+fn is_protocol_shape_attachment(facts: &MirFinalCfgFacts, block: &MirLocalCfgBlockFacts) -> bool {
+    block.predecessor_edges().iter().any(|edge| {
+        if edge.successor_index() != 0 {
+            return false;
+        }
+        let source = facts
+            .block(edge.source())
+            .expect("CFG predecessor belongs to its snapshot");
+        matches!(
+            source.terminator_kind(),
+            MirLocalCfgTerminatorKind::ShiftCountCheck
+                | MirLocalCfgTerminatorKind::IntegerDivisorCheck
+                | MirLocalCfgTerminatorKind::PrimitiveCastRangeCheck
+                | MirLocalCfgTerminatorKind::OptionalSharedUnwrap
+                | MirLocalCfgTerminatorKind::ArrayLoop
+        )
     })
 }
 

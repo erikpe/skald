@@ -364,9 +364,10 @@ The frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md)
 and its active
 [implementation roadmap](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md) define the
-first proposed expansion of that final-stage capability:
-independently selectable empty-block forwarding and basic-block merging with
-permanent-root barriers.
+first implemented expansion of that final-stage capability: independently
+selectable empty-block forwarding and basic-block merging with permanent-root
+and verifier-significant protocol barriers. The remaining roadmap work covers
+composition, observation, equivalence, and closure hardening.
 
 ### Optimization possibilities unlocked
 

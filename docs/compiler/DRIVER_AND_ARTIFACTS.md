@@ -139,7 +139,7 @@ construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to zero
 selectable passes plus mandatory proof verification, normalization, and final
 verification, while `default` resolves to the exact repeated
-eleven-occurrence optimization schedule documented below. Disabling all eight
+twelve-occurrence optimization schedule documented below. Disabling all nine
 stable pass names from `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
 unoptimized mode and preserves behavior while still returning normalized
@@ -161,6 +161,7 @@ errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
 `checked-integer-constant-folding`, `conservative-cfg-cleanup`,
 `dead-pure-definition-elimination`,
+`post-proof-basic-block-merging`,
 `post-proof-empty-block-forwarding`,
 `post-proof-unreachable-block-elimination`,
 `primitive-algebraic-simplification`, `primitive-constant-folding`, and
@@ -285,10 +286,12 @@ registered, selected, or repeated. Registry descriptors and
 schedules reject proof-rich occurrences after the final boundary, and typed
 callbacks cannot accept both seals. Current local scalar passes are proof-rich;
 `post-proof-unreachable-block-elimination`,
-`post-proof-empty-block-forwarding`, and `whole-world-reachability` run in the
-final region. The default schedule deletes post-proof unreachable blocks,
-forwards eligible empty goto chains, and then runs whole-world reachability
-last, so definition retention observes call sites removed with dead CFG.
+`post-proof-empty-block-forwarding`, `post-proof-basic-block-merging`, and
+`whole-world-reachability` run in the final region. The default schedule
+deletes post-proof unreachable blocks, forwards eligible empty goto chains,
+merges eligible single-incoming goto chains to a local fixed point, and then
+runs whole-world reachability last, so definition retention observes call
+sites removed with dead CFG.
 
 Inspection exposes a closed borrowed checkpoint view. Proof-rich input and
 after-pass checkpoints carry only `VerifiedProofMirProgram`; the single

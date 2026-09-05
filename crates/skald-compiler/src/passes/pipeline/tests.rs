@@ -63,10 +63,11 @@ fn main() -> i64 {
     return 3;
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 8] = [
+const ALL_PRODUCTION_PASS_NAMES: [&str; 9] = [
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "dead-pure-definition-elimination",
+    "post-proof-basic-block-merging",
     "post-proof-empty-block-forwarding",
     "post-proof-unreachable-block-elimination",
     "primitive-algebraic-simplification",
@@ -286,11 +287,11 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
             after.instructions(),
             after_values
         ),
-        (2, 3, 3, 3)
+        (2, 2, 3, 3)
     );
     assert_ne!(dump_mir(optimized.program()), input_dump);
     assert_ne!(assembly(optimized), assembly(&none));
-    assert_eq!(measured.statistics.pass_executions(), 11);
+    assert_eq!(measured.statistics.pass_executions(), 12);
     assert!(
         measurement_total(
             &measured,
@@ -401,7 +402,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
             main_block_count(canary_disabled_program, main),
             main_block_count(reachability_disabled_program, main),
         ),
-        (2, 11, 11, 2)
+        (1, 11, 10, 1)
     );
     assert_normalized(none_program.program());
     assert_normalized(all_disabled_program.program());
@@ -418,7 +419,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
         ),
         (1, 1, 1, 1, 1, 7)
     );
-    assert_eq!(default.statistics.pass_executions(), 11);
+    assert_eq!(default.statistics.pass_executions(), 12);
     assert_eq!(default.statistics.normalization_executions(), 1);
     assert_eq!(
         default_checkpoints
@@ -439,8 +440,9 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
             1_485_384_359_181_637_186,
             9_839_179_550_885_574_519,
             9_839_179_550_885_574_519,
-            14_420_660_371_287_870_903,
-            14_420_660_371_287_870_903,
+            9_216_028_254_603_842_853,
+            16_691_035_510_476_634_597,
+            16_691_035_510_476_634_597,
         ]
     );
     assert_eq!(
@@ -1084,7 +1086,8 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             "after-proof-normalization",
             "after-final-8-post-proof-unreachable-block-elimination-0",
             "after-final-9-post-proof-empty-block-forwarding-0",
-            "after-final-10-whole-world-reachability-0",
+            "after-final-10-post-proof-basic-block-merging-0",
+            "after-final-11-whole-world-reachability-0",
             "final",
         ]
     );
@@ -1100,6 +1103,7 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
+            MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,

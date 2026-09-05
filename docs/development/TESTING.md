@@ -211,6 +211,19 @@ reachability after changes, unchanged-seal reuse, and repeated-occurrence
 idempotence. The full compiler and native suites continue to cover semantic,
 ownership, lifecycle, panic, trace, and backend equivalence.
 
+### Post-proof basic-block merging coverage
+
+Focused final-stage pass tests cover one merge, maximal chains, instruction
+movement, exact terminator and span transfer, value/storage identity
+preservation, duplicate and multiple incoming edges, entry and permanent
+attachments, unreachable regions, two-block loops, functions, members, and
+static initializers. Candidate tests keep checked division, shift, primitive
+cast, optional-shared unwrap, and array-loop protocol targets structurally
+distinct. Registration, listing, independent disabling, metric order,
+checkpoints, deterministic dense compaction, fresh reachability, no-op seal
+reuse, repeated-occurrence idempotence, and the full native/backend suite pin
+the resulting contract.
+
 ### Proof-provenance normalization coverage
 
 The archived

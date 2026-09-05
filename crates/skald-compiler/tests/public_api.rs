@@ -106,19 +106,21 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(request.mir_optimization().profile().name(), "default");
     let passes: Vec<MirPassDescriptor> = available_mir_passes();
-    assert_eq!(passes.len(), 8);
+    assert_eq!(passes.len(), 9);
     assert_eq!(passes[0].name(), "checked-integer-constant-folding");
     assert_eq!(passes[0].stage(), MirPassStage::ProofRich);
     assert_eq!(passes[1].name(), "conservative-cfg-cleanup");
     assert_eq!(passes[2].name(), "dead-pure-definition-elimination");
-    assert_eq!(passes[3].name(), "post-proof-empty-block-forwarding");
+    assert_eq!(passes[3].name(), "post-proof-basic-block-merging");
     assert_eq!(passes[3].stage(), MirPassStage::Final);
-    assert_eq!(passes[4].name(), "post-proof-unreachable-block-elimination");
+    assert_eq!(passes[4].name(), "post-proof-empty-block-forwarding");
     assert_eq!(passes[4].stage(), MirPassStage::Final);
-    assert_eq!(passes[5].name(), "primitive-algebraic-simplification");
-    assert_eq!(passes[6].name(), "primitive-constant-folding");
-    assert_eq!(passes[7].name(), "whole-world-reachability");
-    assert_eq!(passes[7].stage(), MirPassStage::Final);
+    assert_eq!(passes[5].name(), "post-proof-unreachable-block-elimination");
+    assert_eq!(passes[5].stage(), MirPassStage::Final);
+    assert_eq!(passes[6].name(), "primitive-algebraic-simplification");
+    assert_eq!(passes[7].name(), "primitive-constant-folding");
+    assert_eq!(passes[8].name(), "whole-world-reachability");
+    assert_eq!(passes[8].stage(), MirPassStage::Final);
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent
@@ -413,6 +415,11 @@ fn intentional_phase_and_dump_paths_compose() {
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
                 position: 10,
+                pass_name: "post-proof-basic-block-merging",
+                occurrence: 0,
+            },
+            MirPipelineCheckpointLabel::AfterFinalPass {
+                position: 11,
                 pass_name: "whole-world-reachability",
                 occurrence: 0,
             },
@@ -621,7 +628,7 @@ fn intentional_reporting_paths_compose() {
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
-    assert_eq!(mir_inspection_labels.len(), 14);
+    assert_eq!(mir_inspection_labels.len(), 15);
     assert_eq!(
         mir_inspection_labels.first(),
         Some(&MirPipelineCheckpointLabel::ProofRichInput)

@@ -55,7 +55,7 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
-fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 14] {
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 15] {
     [
         MirPipelineCheckpointLabel::ProofRichInput,
         MirPipelineCheckpointLabel::AfterProofRichPass {
@@ -111,6 +111,11 @@ fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 14] {
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
             position: 10,
+            pass_name: "post-proof-basic-block-merging",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::AfterFinalPass {
+            position: 11,
             pass_name: "whole-world-reachability",
             occurrence: 0,
         },
@@ -250,7 +255,8 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
                 "post-proof-empty-block-forwarding",
                 0
             ),
-            (10, MirPassStage::Final, "whole-world-reachability", 0),
+            (10, MirPassStage::Final, "post-proof-basic-block-merging", 0),
+            (11, MirPassStage::Final, "whole-world-reachability", 0),
         ]
     );
     let tokens = u64::try_from(crate::test_support::lex_source(source).2.tokens.len()).unwrap();
@@ -410,8 +416,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             ReportMetric::count("activation storage declarations reclassified", 0),
             ReportMetric::count("normalization changed callables", 0),
             ReportMetric::count("proof-protected blocks released", 0),
-            ReportMetric::count("pass executions", 11),
-            ReportMetric::count("processed callables", 11),
+            ReportMetric::count("pass executions", 12),
+            ReportMetric::count("processed callables", 12),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -497,10 +503,21 @@ fn details_publish_deterministic_phase_owned_metrics() {
             forwarding("retained permanent-attachment barriers"),
         ]
     );
+    let merging = |name| ReportMetric::pass_count("post-proof-basic-block-merging", name, 0);
+    assert_eq!(
+        pipeline[42..47],
+        [
+            merging("merged block pairs"),
+            merging("moved instructions"),
+            merging("removed blocks"),
+            merging("retained multiple-incoming-edge barriers"),
+            merging("retained permanent-attachment barriers"),
+        ]
+    );
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[42..63],
+        pipeline[47..68],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -525,8 +542,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[63], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[64], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[68], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[69], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
@@ -558,7 +575,7 @@ fn main() -> i64 {
 
     assert!(artifact.report.diagnostics.is_empty());
     assert_eq!(count_metric(metrics, "definitions"), Some(2));
-    assert_eq!(count_metric(metrics, "blocks"), Some(3));
+    assert_eq!(count_metric(metrics, "blocks"), Some(2));
     assert!(
         pass_count_metric(
             metrics,
@@ -602,7 +619,7 @@ fn main() -> i64 {
 
     assert!(artifact.report.diagnostics.is_empty());
     assert_eq!(count_metric(metrics, "normalization executions"), Some(1));
-    assert_eq!(count_metric(metrics, "pass executions"), Some(11));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(12));
     assert_eq!(
         pass_count_metric(
             metrics,
@@ -646,7 +663,7 @@ fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
     let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert_eq!(count_metric(metrics, "pass executions"), Some(11));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(12));
     assert_eq!(
         pass_count_metric(
             metrics,

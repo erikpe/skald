@@ -768,7 +768,7 @@ occurrence records at trace level. The `none` schedule
 runs zero selectable passes, one complete proof verification, mandatory
 normalization, and one normalized verification. Its proof-rich checkpoints
 remain byte-for-byte stable, while its returned product satisfies the
-normalized invariant. The default schedule runs eleven pass occurrences in the
+normalized invariant. The default schedule runs twelve pass occurrences in the
 exact repeated order documented below.
 
 This boundary adds no SSA form, persistent instruction identity, public
@@ -801,12 +801,13 @@ registry contains `checked-integer-constant-folding`,
 `dead-pure-definition-elimination`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
 `conservative-cfg-cleanup`, `post-proof-unreachable-block-elimination`,
-`post-proof-empty-block-forwarding`, and `whole-world-reachability`. Its validated
+`post-proof-empty-block-forwarding`, `post-proof-basic-block-merging`, and
+`whole-world-reachability`. Its validated
 descriptors, including stage, are exposed in stable-name order for the public read-only query
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
-eleven-occurrence optimization schedule documented below. Disabling all
+twelve-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
 same schedule as `none`.
 
@@ -838,7 +839,8 @@ and enters the final region. Each final occurrence uses the distinct final
 capability; unchanged outcomes retain the normalized seal, while changed
 outcomes are normalized-reverified and rebound to fresh reachability before
 the next final pass. The production `post-proof-unreachable-block-elimination`,
-`post-proof-empty-block-forwarding`, and `whole-world-reachability`
+`post-proof-empty-block-forwarding`, `post-proof-basic-block-merging`, and
+`whole-world-reachability`
 occurrences are the current final-stage passes.
 Input-verification, pass execution,
 structural-rewrite, and output-verification failures identify the exact pass
@@ -1006,9 +1008,10 @@ even when ordinary entry reachability no longer reaches them.
 An unprotected unreachable block is removed together with every transient
 value defined by its instructions. Storage declarations, path conditions,
 logical records, guards, and attachments remain. Post-proof empty-block
-forwarding is implemented separately at the normalized boundary. Block
-merging, jump threading, checked-diamond simplification, storage propagation,
-alias/effect analysis, SSA, and target optimization remain later decisions.
+forwarding and linear basic-block merging are implemented separately at the
+normalized boundary. Jump threading, checked-diamond simplification, storage
+propagation, alias/effect analysis, SSA, and target optimization remain later
+decisions.
 
 The exact `default` schedule is:
 
@@ -1024,6 +1027,7 @@ dead-pure-definition-elimination
 -- mandatory proof-provenance normalization --
 post-proof-unreachable-block-elimination
 post-proof-empty-block-forwarding
+post-proof-basic-block-merging
 whole-world-reachability
 ```
 
@@ -1190,10 +1194,19 @@ reachability; a no-op retains its existing seal. The pass reports removed
 blocks, redirected successor occurrences, retained cyclic blocks, and retained
 permanent-attachment barriers.
 
-Whole-world reachability follows forwarding, so removed call sites can reduce
-retained definitions. Block merging, jump threading, storage deletion,
-checked-protocol normalization, and loop transformations remain separate
-designs.
+`post-proof-basic-block-merging` then repeatedly merges the first eligible
+goto predecessor with its single-incoming, non-entry successor until the
+callable reaches a local fixed point. Each guarded step appends the successor's
+instructions, transfers its exact terminator and span, preserves value and
+storage declarations, and removes one block. Body entry, permanent lifecycle
+attachments, duplicate or multiple incoming edges, and verifier-significant
+checked-scalar, optional-shared, and array-loop protocol targets are barriers.
+The pass reports merged pairs, moved instructions, removed blocks, retained
+multiple-edge barriers, and retained permanent-attachment barriers.
+
+Whole-world reachability follows merging, so removed call sites can reduce
+retained definitions. Jump threading, storage deletion, checked-protocol
+normalization, and loop transformations remain separate designs.
 
 This direction changes compiler representation and optimization-off MIR
 dumps, not the language contract. Whole-world compilation permits one complete

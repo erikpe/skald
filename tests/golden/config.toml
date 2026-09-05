@@ -13,6 +13,7 @@ compiler_args = ["--disable-mir-pass", "whole-world-reachability"]
 compiler_args = [
   "--disable-mir-pass", "post-proof-unreachable-block-elimination",
   "--disable-mir-pass", "post-proof-empty-block-forwarding",
+  "--disable-mir-pass", "post-proof-basic-block-merging",
 ]
 
 [variant.dead-pure-disabled]
@@ -35,6 +36,7 @@ compiler_args = [
   "--disable-mir-pass", "checked-integer-constant-folding",
   "--disable-mir-pass", "conservative-cfg-cleanup",
   "--disable-mir-pass", "dead-pure-definition-elimination",
+  "--disable-mir-pass", "post-proof-basic-block-merging",
   "--disable-mir-pass", "post-proof-empty-block-forwarding",
   "--disable-mir-pass", "post-proof-unreachable-block-elimination",
   "--disable-mir-pass", "primitive-algebraic-simplification",

@@ -329,6 +329,28 @@ fn merge_rejects_entry_successors_self_loops_branches_and_permanent_endpoints() 
 }
 
 #[test]
+fn merge_retains_exact_checked_protocol_success_blocks() {
+    let program = lower_source_to_mir("fn main() -> i64 { return 8 / 2; }");
+    let definition = program.definitions.get(program.entry_function).unwrap();
+    let success = definition
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match block.terminator {
+            Some(MirTerminator::IntegerDivisorCheck { success_target, .. }) => Some(success_target),
+            _ => None,
+        })
+        .expect("checked integer division has a success block");
+    let facts = final_cfg_facts_for_definition(definition.into()).unwrap();
+    let analysis = analyze_basic_block_merging(&facts);
+
+    assert_eq!(
+        merge_barrier_for(&analysis, success).kind(),
+        MirBasicBlockMergeBarrierKind::PredecessorProtocolAttachment
+    );
+}
+
+#[test]
 fn merge_rescan_is_explicit_and_deterministic_after_an_edit() {
     let definition = function(&[
         TerminatorShape::Goto(1),

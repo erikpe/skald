@@ -354,11 +354,10 @@ fn default_profile_selects_cfg_cleanup_and_later_dead_pure_cleanup() {
     let input = constant_diamond(true);
     let output = crate::passes::run_mir_pipeline(input).unwrap();
     let definition = output.definitions.get(output.entry_function).unwrap();
-    assert_eq!(definition.body.blocks.len(), 2);
-    assert!(definition.body.blocks[0].instructions.is_empty());
+    assert_eq!(definition.body.blocks.len(), 1);
     assert!(matches!(
         definition.body.blocks[0].terminator,
-        Some(MirTerminator::Goto { .. })
+        Some(MirTerminator::Return { .. })
     ));
 }
 
@@ -455,6 +454,7 @@ fn default_cfg_cleanup_exposes_removed_call_targets_to_final_reachability() {
             "dead-pure-definition-elimination",
             "post-proof-unreachable-block-elimination",
             "post-proof-empty-block-forwarding",
+            "post-proof-basic-block-merging",
             "whole-world-reachability",
         ]
     );

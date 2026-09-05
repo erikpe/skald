@@ -15,8 +15,9 @@ use crate::passes::pipeline::execution::{
 };
 use crate::passes::pipeline::optimizations::{
     checked_integer_folding, conservative_cfg_cleanup, dead_pure_definition_elimination,
-    post_proof_empty_block_forwarding, post_proof_unreachable_block_elimination,
-    primitive_algebraic_simplification, primitive_constant_folding, whole_world_reachability,
+    post_proof_basic_block_merging, post_proof_empty_block_forwarding,
+    post_proof_unreachable_block_elimination, primitive_algebraic_simplification,
+    primitive_constant_folding, whole_world_reachability,
 };
 
 const ALPHA: MirPassIdentity = MirPassIdentity::new(1);
@@ -155,6 +156,12 @@ fn production_profiles_select_the_supported_default_order() {
             ),
             (
                 10,
+                post_proof_basic_block_merging::IDENTITY,
+                "post-proof-basic-block-merging",
+                0,
+            ),
+            (
+                11,
                 whole_world_reachability::IDENTITY,
                 "whole-world-reachability",
                 0,
@@ -167,7 +174,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["whole-world-reachability"],
     )
     .unwrap();
-    assert_eq!(reachability_disabled.len(), 10);
+    assert_eq!(reachability_disabled.len(), 11);
     assert!(reachability_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != whole_world_reachability::IDENTITY));
@@ -178,6 +185,7 @@ fn production_profiles_select_the_supported_default_order() {
             "checked-integer-constant-folding",
             "conservative-cfg-cleanup",
             "dead-pure-definition-elimination",
+            "post-proof-basic-block-merging",
             "post-proof-empty-block-forwarding",
             "post-proof-unreachable-block-elimination",
             "primitive-algebraic-simplification",
@@ -193,7 +201,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["checked-integer-constant-folding"],
     )
     .unwrap();
-    assert_eq!(checked_integer_disabled.len(), 10);
+    assert_eq!(checked_integer_disabled.len(), 11);
     assert!(checked_integer_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != checked_integer_folding::IDENTITY));
@@ -254,6 +262,7 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
             "conservative-cfg-cleanup",
             "post-proof-unreachable-block-elimination",
             "post-proof-empty-block-forwarding",
+            "post-proof-basic-block-merging",
             "whole-world-reachability",
         ]
     );
@@ -262,7 +271,7 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
 #[test]
 fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     let passes = available_mir_passes();
-    assert_eq!(passes.len(), 8);
+    assert_eq!(passes.len(), 9);
     assert_eq!(
         passes
             .iter()
@@ -272,6 +281,7 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
             ("checked-integer-constant-folding", MirPassStage::ProofRich),
             ("conservative-cfg-cleanup", MirPassStage::ProofRich),
             ("dead-pure-definition-elimination", MirPassStage::ProofRich),
+            ("post-proof-basic-block-merging", MirPassStage::Final),
             ("post-proof-empty-block-forwarding", MirPassStage::Final),
             (
                 "post-proof-unreachable-block-elimination",
@@ -309,45 +319,55 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
         "Removes unused non-failing scalar MIR definitions."
     );
     assert_eq!(
-        passes[3].identity(),
+        passes[4].identity(),
         post_proof_empty_block_forwarding::IDENTITY
     );
-    assert_eq!(passes[3].stage(), MirPassStage::Final);
-    assert_eq!(passes[3].name(), "post-proof-empty-block-forwarding");
+    assert_eq!(passes[4].stage(), MirPassStage::Final);
+    assert_eq!(passes[4].name(), "post-proof-empty-block-forwarding");
     assert_eq!(
-        passes[3].description(),
+        passes[4].description(),
         "Forwards normalized MIR edges through instruction-free goto blocks."
     );
     assert_eq!(
-        passes[4].identity(),
-        post_proof_unreachable_block_elimination::IDENTITY
+        passes[3].identity(),
+        post_proof_basic_block_merging::IDENTITY
     );
-    assert_eq!(passes[4].stage(), MirPassStage::Final);
-    assert_eq!(passes[4].name(), "post-proof-unreachable-block-elimination");
+    assert_eq!(passes[3].stage(), MirPassStage::Final);
+    assert_eq!(passes[3].name(), "post-proof-basic-block-merging");
     assert_eq!(
-        passes[4].description(),
-        "Removes normalized MIR blocks unreachable from executable and permanent roots."
+        passes[3].description(),
+        "Fuses maximal eligible single-incoming goto chains while preserving operation order."
     );
     assert_eq!(
         passes[5].identity(),
-        primitive_algebraic_simplification::IDENTITY
+        post_proof_unreachable_block_elimination::IDENTITY
     );
-    assert_eq!(passes[5].name(), "primitive-algebraic-simplification");
+    assert_eq!(passes[5].stage(), MirPassStage::Final);
+    assert_eq!(passes[5].name(), "post-proof-unreachable-block-elimination");
     assert_eq!(
         passes[5].description(),
-        "Simplifies exact primitive MIR algebraic identities."
+        "Removes normalized MIR blocks unreachable from executable and permanent roots."
     );
-    assert_eq!(passes[6].identity(), primitive_constant_folding::IDENTITY);
-    assert_eq!(passes[6].name(), "primitive-constant-folding");
+    assert_eq!(
+        passes[6].identity(),
+        primitive_algebraic_simplification::IDENTITY
+    );
+    assert_eq!(passes[6].name(), "primitive-algebraic-simplification");
     assert_eq!(
         passes[6].description(),
-        "Folds exact block-local primitive MIR constants."
+        "Simplifies exact primitive MIR algebraic identities."
     );
-    assert_eq!(passes[7].identity(), whole_world_reachability::IDENTITY);
-    assert_eq!(passes[7].stage(), MirPassStage::Final);
-    assert_eq!(passes[7].name(), "whole-world-reachability");
+    assert_eq!(passes[7].identity(), primitive_constant_folding::IDENTITY);
+    assert_eq!(passes[7].name(), "primitive-constant-folding");
     assert_eq!(
         passes[7].description(),
+        "Folds exact block-local primitive MIR constants."
+    );
+    assert_eq!(passes[8].identity(), whole_world_reachability::IDENTITY);
+    assert_eq!(passes[8].stage(), MirPassStage::Final);
+    assert_eq!(passes[8].name(), "whole-world-reachability");
+    assert_eq!(
+        passes[8].description(),
         "Removes unreachable executable MIR definitions."
     );
 

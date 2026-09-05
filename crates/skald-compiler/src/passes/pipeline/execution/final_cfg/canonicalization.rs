@@ -44,8 +44,6 @@ impl MirFinalCfgEdit<'_> {
 
     /// Merges one exact linear pair authorized by an exact normalized CFG
     /// snapshot.
-    // The selectable merging pass is the next production consumer.
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn merge_basic_blocks(
         &mut self,
         expected: &MirFinalCfgFacts,
@@ -101,13 +99,10 @@ impl MirFinalCfgForwarding {
 
 /// Deterministic changes made by one exact block merge.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-// Constructed through the staged capability before its pass is registered.
-#[allow(dead_code)]
 pub(in crate::passes::pipeline) struct MirFinalCfgMerge {
     moved_instructions: usize,
 }
 
-#[allow(dead_code)]
 impl MirFinalCfgMerge {
     pub(in crate::passes::pipeline) const fn moved_instructions(self) -> usize {
         self.moved_instructions

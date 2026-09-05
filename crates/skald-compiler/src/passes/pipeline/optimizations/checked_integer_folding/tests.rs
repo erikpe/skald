@@ -810,6 +810,7 @@ fn default_schedule_exposes_then_folds_and_cleans_checked_protocols() {
             MirOptimizationProfile::Default,
             [
                 "conservative-cfg-cleanup",
+                "post-proof-basic-block-merging",
                 "post-proof-empty-block-forwarding",
                 "post-proof-unreachable-block-elimination",
             ],
@@ -910,6 +911,7 @@ fn default_product_has_stable_structural_win_and_backend_input() {
         MirOptimizationProfile::Default,
         [
             "conservative-cfg-cleanup",
+            "post-proof-basic-block-merging",
             "post-proof-empty-block-forwarding",
             "post-proof-unreachable-block-elimination",
         ],
@@ -947,7 +949,7 @@ fn default_product_has_stable_structural_win_and_backend_input() {
     assert_eq!(
         mir_shape(first_program),
         MirShape {
-            blocks: 5,
+            blocks: 1,
             instructions: 37,
             values: 11,
             divisor_checks: 0,
@@ -958,7 +960,7 @@ fn default_product_has_stable_structural_win_and_backend_input() {
     assert_eq!(
         mir_shape(cfg_disabled_program),
         MirShape {
-            blocks: 5,
+            blocks: 1,
             instructions: 37,
             values: 11,
             divisor_checks: 0,
