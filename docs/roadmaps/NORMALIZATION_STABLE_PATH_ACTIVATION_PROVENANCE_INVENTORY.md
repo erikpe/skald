@@ -99,3 +99,23 @@ pipeline reseals it before the next observation or pass, repeating normalized
 phase legality, activation shape, reference, lifetime, initialization, and
 reachability checks. An unchanged pass retains the already verified exact
 product and does not manufacture a redundant seal.
+
+## NSR5 backend and observation audit
+
+The x86-64 frame owner now classifies every `MirStorageKind` exhaustively.
+`NormalizedPathActivation` is executable storage and deliberately follows the
+ordinary scalar-home path; `PathCondition` is proof-only and fails closed if it
+reaches layout despite the earlier final-MIR seal. Place addressing and
+load/store selection operate on the unchanged storage identity and ordinary
+load/store rvalues, so neither reconstructs consumed proof provenance.
+
+A representation-only fixture replaces normalized activation declarations
+with legacy scalar-spill declarations while preserving all other MIR. Equal
+frame plans and byte-identical complete and reachable-only assembly pin slot
+size/alignment, place selection, instruction order, ABI, symbols, and runtime
+dependencies. Both artifacts are accepted by the system assembler and execute
+with the same result. Stage-aware inspection separately pins proof-rich and
+final dump spellings, checkpoint order, normalization fields/counts, and
+observed-versus-quiet artifact equality. Existing deterministic fingerprints
+already contain the intentional final-MIR vocabulary introduced in NSR2; NSR5
+requires no target golden or fingerprint update.

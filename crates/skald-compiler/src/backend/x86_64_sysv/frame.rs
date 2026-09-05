@@ -20,11 +20,55 @@ const TRACE_RECORD_SIZE: usize = 16;
 const TRACE_RECORD_ALIGNMENT: usize = 16;
 const TRACE_WORD_SIZE: i32 = 8;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum StorageBackendDisposition {
+    Executable,
+    ProofOnly,
+}
+
+/// Classifies every MIR storage role at the normalized backend boundary.
+///
+/// Keep this match exhaustive. Adding a storage role must be accompanied by
+/// an explicit backend decision instead of silently inheriting scalar-home
+/// behavior from the layout fallback below.
+const fn storage_backend_disposition(kind: MirStorageKind) -> StorageBackendDisposition {
+    match kind {
+        MirStorageKind::PathCondition => StorageBackendDisposition::ProofOnly,
+        MirStorageKind::Return
+        | MirStorageKind::Receiver
+        | MirStorageKind::Parameter
+        | MirStorageKind::AliasParameter(_)
+        | MirStorageKind::CheckedView(_)
+        | MirStorageKind::Local
+        | MirStorageKind::Argument
+        | MirStorageKind::Temporary
+        | MirStorageKind::SharedAnchor
+        | MirStorageKind::ScalarSpill
+        | MirStorageKind::PrimitiveAlias
+        | MirStorageKind::NormalizedPathActivation
+        | MirStorageKind::OptionalUnwrap
+        | MirStorageKind::SharedAllocation
+        | MirStorageKind::ArrayBacking
+        | MirStorageKind::ArrayProduced
+        | MirStorageKind::ArraySlice
+        | MirStorageKind::ArrayPosition
+        | MirStorageKind::ArrayAnchor(_)
+        | MirStorageKind::ArrayAlias(_) => StorageBackendDisposition::Executable,
+    }
+}
+
 fn storage_layout(
     kind: MirStorageKind,
     ty: MirType,
     data_layout: &DataLayout,
 ) -> Result<(usize, usize), BackendError> {
+    if storage_backend_disposition(kind) == StorageBackendDisposition::ProofOnly {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            None,
+            "proof-only path-condition storage reached the normalized x86-64 backend boundary",
+        ));
+    }
     if kind == MirStorageKind::SharedAllocation || is_direct_owner(ty, data_layout)? {
         return Ok((SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT));
     }
@@ -576,6 +620,8 @@ fn place_metadata_error(callable: crate::identity::CallableId) -> BackendError {
 #[cfg(test)]
 mod tests {
     use crate::identity::{CallableId, FunctionId};
+    use crate::mir::{MirAliasAccess, MirArrayAnchorKind};
+    use crate::test_support::lower_source_to_final_mir;
 
     use super::*;
 
@@ -627,5 +673,92 @@ mod tests {
         assert_eq!(trace.location().displacement(), -24);
         assert_eq!(trace.previous().displacement() % 16, 0);
         assert_eq!(allocator.finish().unwrap(), untraced_size + 16);
+    }
+
+    #[test]
+    fn normalized_path_activation_retains_the_scalar_spill_layout() {
+        let program = lower_source_to_final_mir("fn main() -> i64 { return 42; }");
+        let data_layout = DataLayout::compute(&program).unwrap();
+
+        assert_eq!(
+            storage_layout(
+                MirStorageKind::NormalizedPathActivation,
+                MirType::Bool,
+                &data_layout,
+            )
+            .unwrap(),
+            storage_layout(MirStorageKind::ScalarSpill, MirType::Bool, &data_layout).unwrap()
+        );
+        assert_eq!(
+            storage_layout(
+                MirStorageKind::NormalizedPathActivation,
+                MirType::Bool,
+                &data_layout,
+            )
+            .unwrap(),
+            (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)
+        );
+    }
+
+    #[test]
+    fn every_storage_kind_has_an_explicit_backend_disposition() {
+        let executable_kinds = [
+            MirStorageKind::Return,
+            MirStorageKind::Receiver,
+            MirStorageKind::Parameter,
+            MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly),
+            MirStorageKind::AliasParameter(MirAliasAccess::Mutable),
+            MirStorageKind::CheckedView(MirAliasAccess::ReadOnly),
+            MirStorageKind::CheckedView(MirAliasAccess::Mutable),
+            MirStorageKind::Local,
+            MirStorageKind::Argument,
+            MirStorageKind::Temporary,
+            MirStorageKind::SharedAnchor,
+            MirStorageKind::ScalarSpill,
+            MirStorageKind::PrimitiveAlias,
+            MirStorageKind::NormalizedPathActivation,
+            MirStorageKind::OptionalUnwrap,
+            MirStorageKind::SharedAllocation,
+            MirStorageKind::ArrayBacking,
+            MirStorageKind::ArrayProduced,
+            MirStorageKind::ArraySlice,
+            MirStorageKind::ArrayPosition,
+            MirStorageKind::ArrayAnchor(MirArrayAnchorKind::InlineOwner),
+            MirStorageKind::ArrayAnchor(MirArrayAnchorKind::InlineBacking),
+            MirStorageKind::ArrayAnchor(MirArrayAnchorKind::StableSharedOwner),
+            MirStorageKind::ArrayAnchor(MirArrayAnchorKind::CopiedSharedOwner),
+            MirStorageKind::ArrayAnchor(MirArrayAnchorKind::AdoptedSharedOwner),
+            MirStorageKind::ArrayAnchor(MirArrayAnchorKind::SecuredOptionalSharedOwner),
+            MirStorageKind::ArrayAlias(MirAliasAccess::ReadOnly),
+            MirStorageKind::ArrayAlias(MirAliasAccess::Mutable),
+        ];
+
+        for kind in executable_kinds {
+            assert_eq!(
+                storage_backend_disposition(kind),
+                StorageBackendDisposition::Executable,
+                "{kind:?}"
+            );
+        }
+        assert_eq!(
+            storage_backend_disposition(MirStorageKind::PathCondition),
+            StorageBackendDisposition::ProofOnly
+        );
+    }
+
+    #[test]
+    fn proof_only_path_condition_storage_is_rejected_by_frame_planning() {
+        let program = lower_source_to_final_mir("fn main() -> i64 { return 42; }");
+        let data_layout = DataLayout::compute(&program).unwrap();
+
+        let error =
+            storage_layout(MirStorageKind::PathCondition, MirType::Bool, &data_layout).unwrap_err();
+
+        assert_eq!(error.target(), Target::X86_64SysV);
+        assert_eq!(error.callable(), None);
+        assert_eq!(
+            error.message(),
+            "proof-only path-condition storage reached the normalized x86-64 backend boundary"
+        );
     }
 }

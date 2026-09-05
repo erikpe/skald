@@ -666,7 +666,10 @@ architectural investments.
 8. Implement the planned normalization-stable path-activation provenance
    foundation before any final-stage storage mutation. It restores ordinary
    scalar-spill verification and gives later storage passes an exact semantic
-   classification without retaining consumed proof identities.
+   classification without retaining consumed proof identities. The role,
+   verifier authority, rewrite barriers, and byte-identical target/observation
+   parity are implemented; broad source/profile and malformed-input evidence
+   remains before roadmap closure.
 9. After the bounded CFG and convergent constant layers provide more evidence
    about remaining barriers, generalize callable effects and alias queries
    where conservative answers demonstrably block useful transformations.

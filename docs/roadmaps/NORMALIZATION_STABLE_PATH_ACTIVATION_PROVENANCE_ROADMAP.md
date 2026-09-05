@@ -1,6 +1,6 @@
 # Normalization-Stable Path-Activation Provenance Roadmap
 
-Status: in progress; NSR0 through NSR4 are complete and NSR5 is the next task.
+Status: in progress; NSR0 through NSR5 are complete and NSR6 is the next task.
 
 This roadmap implements the frozen
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md).
@@ -84,7 +84,7 @@ load, store, lifetime, attachment, and deletion conditions.
 - [x] NSR2 — Make normalization retain the stable activation role
 - [x] NSR3 — Narrow normalized scalar initialization authority
 - [x] NSR4 — Seal rewrite and analysis handling of the new role
-- [ ] NSR5 — Preserve backend behavior and deterministic observation
+- [x] NSR5 — Preserve backend behavior and deterministic observation
 - [ ] NSR6 — Complete source, profile, and malformed-MIR evidence
 - [ ] NSR7 — Harden ownership, documentation, and roadmap closure
 
@@ -234,19 +234,19 @@ has an explicit maintenance barrier.
 **Purpose:** Make the refined representation visible where useful while proving
 that target behavior is unchanged.
 
-- [ ] Render the final-MIR storage kind deterministically as
+- [x] Render the final-MIR storage kind deterministically as
   `normalized-path-activation` with the reviewed generated-source placeholder.
-- [ ] Treat it as the same boolean stack home as the former scalar spill in
+- [x] Treat it as the same boolean stack home as the former scalar spill in
   legality, frame planning, place addressing, load/store selection, and
   complete versus retained emission.
-- [ ] Keep proof-only `PathCondition` storage rejected at the normalized
+- [x] Keep proof-only `PathCondition` storage rejected at the normalized
   backend boundary and add an exhaustive shared-enum maintenance test.
-- [ ] Prove unchanged slot size, alignment, lifetime handling, instruction
+- [x] Prove unchanged slot size, alignment, lifetime handling, instruction
   sequence, ABI, symbols, runtime calls, and emitted assembly for focused
   representation-only fixtures.
-- [ ] Keep normalization report field names, counts, order, occurrence data,
+- [x] Keep normalization report field names, counts, order, occurrence data,
   checkpoints, and quiet gating unchanged while dumps expose the refined kind.
-- [ ] Update deterministic fingerprints and goldens only for intentional MIR
+- [x] Update deterministic fingerprints and goldens only for intentional MIR
   vocabulary changes, never for target output drift.
 
 **Tests:** MIR dump snapshots; report and checkpoint order; x86-64 legality,

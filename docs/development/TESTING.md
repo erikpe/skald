@@ -362,6 +362,15 @@ The checked-in
 [pre-migration inventory](../roadmaps/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_INVENTORY.md)
 records the exhaustive owner audit and the focused current-behavior baselines.
 
+Backend parity coverage also constructs equivalent final programs which differ
+only between `NormalizedPathActivation` and the former `ScalarSpill` spelling.
+It requires identical frame plans, complete and reachable-only assembly,
+assembler acceptance, and native results. Frame-level tests pin the shared
+eight-byte boolean home and the fail-closed `PathCondition` rejection through
+an exhaustive storage-role classifier. Reporting coverage pins checkpoint
+order, stage-specific dump vocabulary, normalization metric names and counts,
+and equality with quiet compilation.
+
 Rewrite-boundary coverage runs every current final suffix pass over normalized
 programs with live and transition-created unreachable activations. It checks
 exact storage-declaration preservation through dense block/value editing and

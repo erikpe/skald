@@ -475,6 +475,15 @@ counts for consumed path-condition records, consumed logical-expression
 records, lowered path reads, reclassified activation storage, changed
 callables, and blocks released from proof protection.
 
+MIR inspection makes the representation transition explicit without changing
+that report schema. Proof-rich checkpoints render the generated carrier as
+`path-condition <path-condition>`; the normalization and all later final
+checkpoints render the same executable home as
+`normalized-path-activation <normalized-path-activation>`. The transition adds
+no pass occurrence or metric, preserves metric names and ordering, and remains
+fully quiet when operational reporting is disabled. Inspection and every
+report detail level produce the same target artifact as an unobserved compile.
+
 Inspection exposes a closed stage-typed borrowed view. Proof-rich input and
 after-pass checkpoints carry `VerifiedProofMirProgram`; the named
 `after-proof-normalization` checkpoint, final-stage after-pass checkpoints,

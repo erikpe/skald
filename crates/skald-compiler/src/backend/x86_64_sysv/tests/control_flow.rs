@@ -42,6 +42,107 @@ fn logical_activation_frame_baseline_is_stable_across_pipeline_profiles() {
 }
 
 #[test]
+fn normalized_path_activation_is_a_representation_only_backend_refinement() {
+    let source = concat!(
+        "fn dead(left: bool, right: bool) -> bool { return left || right; }\n",
+        "fn choose(left: bool, right: bool) -> bool { return left && right; }\n",
+        "fn main() -> i64 {\n",
+        "  if (choose(true, true)) { return 42; }\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let normalized = crate::passes::verify_final_mir(lower_source_to_final_mir(source)).unwrap();
+    let choose = normalized
+        .program()
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "choose")
+        .map(|declaration| declaration.id)
+        .unwrap();
+    let mut scalar_spill_program = normalized.program().clone();
+    let mut reclassified = 0;
+    for declaration in scalar_spill_program.declarations.iter() {
+        let Some(definition) = scalar_spill_program
+            .definitions
+            .get_mut_for_test(declaration.id)
+        else {
+            continue;
+        };
+        for storage in &mut definition.storage {
+            if storage.kind == MirStorageKind::NormalizedPathActivation {
+                storage.kind = MirStorageKind::ScalarSpill;
+                reclassified += 1;
+            }
+        }
+    }
+    assert_eq!(reclassified, 2);
+
+    let scalar_spill = crate::passes::verify_final_mir(scalar_spill_program).unwrap();
+    let normalized_dump = crate::mir::dump_mir(normalized.program());
+    let scalar_spill_dump = crate::mir::dump_mir(scalar_spill.program());
+    assert!(normalized_dump.contains("normalized-path-activation <normalized-path-activation>"));
+    assert!(scalar_spill_dump.contains("scalar-spill <scalar-spill>"));
+    assert_eq!(
+        normalized_dump.replace(
+            "normalized-path-activation <normalized-path-activation>",
+            "scalar-spill <scalar-spill>",
+        ),
+        scalar_spill_dump
+    );
+
+    let normalized_data =
+        crate::backend::x86_64_sysv::layout::DataLayout::compute(normalized.program()).unwrap();
+    let scalar_spill_data =
+        crate::backend::x86_64_sysv::layout::DataLayout::compute(scalar_spill.program()).unwrap();
+    let normalized_frame = crate::backend::x86_64_sysv::frame::FrameLayout::plan(
+        normalized.program().definitions.get(choose).unwrap().into(),
+        &normalized_data,
+    )
+    .unwrap();
+    let scalar_spill_frame = crate::backend::x86_64_sysv::frame::FrameLayout::plan(
+        scalar_spill
+            .program()
+            .definitions
+            .get(choose)
+            .unwrap()
+            .into(),
+        &scalar_spill_data,
+    )
+    .unwrap();
+    assert_eq!(normalized_frame, scalar_spill_frame);
+
+    let normalized_complete = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&normalized),
+    )
+    .unwrap();
+    let scalar_spill_complete = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&scalar_spill),
+    )
+    .unwrap();
+    assert_eq!(normalized_complete, scalar_spill_complete);
+
+    let normalized_retained = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&normalized).with_reachable_artifacts_only(),
+    )
+    .unwrap();
+    let scalar_spill_retained = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&scalar_spill).with_reachable_artifacts_only(),
+    )
+    .unwrap();
+    assert_eq!(normalized_retained, scalar_spill_retained);
+    assert!(normalized_complete.contains(".Lska.fn.main.dead.f0"));
+    assert!(!normalized_retained.contains(".Lska.fn.main.dead.f0"));
+    assert_system_assembler_accepts(&normalized_complete);
+    assert_system_assembler_accepts(&normalized_retained);
+    assert_eq!(run_native_assembly(&normalized_complete).code(), Some(42));
+    assert_eq!(run_native_assembly(&normalized_retained).code(), Some(42));
+}
+
+#[test]
 fn lowers_forward_and_backward_jumps_in_stable_block_order() {
     let mut mir = lower_text("fn main() -> i64 { return 0; }");
     let function = mir

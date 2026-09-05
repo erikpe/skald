@@ -1144,7 +1144,12 @@ addressing, load/store selection, and emission treat it as the identical
 addressable boolean stack home. The new kind adds no ABI category, register
 class, relocation, runtime symbol, or instruction, and focused acceptance
 requires byte-for-byte unchanged assembly. `PathCondition` storage remains a
-hard normalized-input error.
+hard normalized-input error. Frame planning owns an exhaustive disposition for
+every shared `MirStorageKind`: executable roles receive their reviewed layout,
+while the proof-only role fails closed if it reaches this boundary. Backend
+tests compare normalized activations directly with the former scalar-spill
+representation and require identical frame plans and assembly in both complete
+and reachable-artifacts-only emission.
 
 Final-seal reachability facts are recomputed from the exact normalized
 program and after every changed final-stage pass. Whole-world definition

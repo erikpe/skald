@@ -858,7 +858,13 @@ fn main() -> i64 {
 #[test]
 fn mir_only_inspection_preserves_artifacts_reports_and_reporting() {
     let path = "mir-inspection-parity.ska";
-    let source = "fn main() -> i64 { return 40 + 2; }";
+    let source = concat!(
+        "fn choose(left: bool, right: bool) -> bool { return left && right; }\n",
+        "fn main() -> i64 {\n",
+        "  if (choose(true, true)) { return 42; }\n",
+        "  return 0;\n",
+        "}\n",
+    );
     let mut ordinary_observer = RecordingObserver::new(ReportDetail::Details);
     let ordinary = compile_source_to_assembly_observed(
         path,
@@ -869,9 +875,17 @@ fn mir_only_inspection_preserves_artifacts_reports_and_reporting() {
     .unwrap();
 
     let mut inspected_observer = RecordingObserver::new(ReportDetail::Details);
-    let mut labels = Vec::new();
+    let mut checkpoints = Vec::new();
     let mut inspector = |checkpoint: crate::passes::MirPipelineCheckpoint<'_>| {
-        labels.push(checkpoint.label());
+        let (is_final, dump) = match checkpoint {
+            MirPipelineCheckpoint::ProofRich(checkpoint) => {
+                (false, dump_mir(checkpoint.verified().program()))
+            }
+            MirPipelineCheckpoint::Final(checkpoint) => {
+                (true, dump_mir(checkpoint.verified().program()))
+            }
+        };
+        checkpoints.push((checkpoint.label(), is_final, dump));
     };
     let inspected = compile_source_to_assembly_observed_inspected(
         path,
@@ -887,7 +901,39 @@ fn mir_only_inspection_preserves_artifacts_reports_and_reporting() {
         inspected.report.diagnostics.len(),
         ordinary.report.diagnostics.len()
     );
-    assert_eq!(labels, default_mir_checkpoint_labels());
+    assert_eq!(
+        checkpoints
+            .iter()
+            .map(|(label, _, _)| *label)
+            .collect::<Vec<_>>(),
+        default_mir_checkpoint_labels()
+    );
+    assert!(checkpoints
+        .iter()
+        .filter(|(_, is_final, _)| !is_final)
+        .all(|(_, _, dump)| dump.contains("path-condition <path-condition>")));
+    assert!(checkpoints
+        .iter()
+        .filter(|(_, is_final, _)| *is_final)
+        .all(|(_, _, dump)| {
+            dump.contains("normalized-path-activation <normalized-path-activation>")
+                && !dump.contains("path-condition <path-condition>")
+        }));
+    let metrics = phase_metrics(inspected_observer.events(), ReportPhase::MirPipeline);
+    assert_eq!(
+        metrics[..9],
+        [
+            ReportMetric::count("verification executions", 2),
+            ReportMetric::count("normalization executions", 1),
+            ReportMetric::count("path-condition records consumed", 1),
+            ReportMetric::count("logical-expression records consumed", 1),
+            ReportMetric::count("path reads lowered", 1),
+            ReportMetric::count("activation storage declarations reclassified", 1),
+            ReportMetric::count("normalization changed callables", 1),
+            ReportMetric::count("proof-protected blocks released", 6),
+            ReportMetric::count("pass executions", 13),
+        ]
+    );
     assert_eq!(
         without_elapsed(inspected_observer.events()),
         without_elapsed(ordinary_observer.events())
@@ -1149,7 +1195,13 @@ fn malformed_mir_and_backend_errors_receive_failed_phase_outcomes() {
 
 #[test]
 fn observation_preserves_success_artifacts_and_failure_diagnostics() {
-    let source = "fn main() -> i64 { return 42; }";
+    let source = concat!(
+        "fn choose(left: bool, right: bool) -> bool { return left && right; }\n",
+        "fn main() -> i64 {\n",
+        "  if (choose(true, true)) { return 42; }\n",
+        "  return 0;\n",
+        "}\n",
+    );
     let quiet = compile_source_to_assembly("same.ska", source, Target::X86_64SysV).unwrap();
     let mut observer = RecordingObserver::new(ReportDetail::Trace);
     let observed =
