@@ -4,19 +4,6 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
-## In progress
-
-The in-progress
-[VM benchmark correctness workload roadmap](VM_BENCHMARK_ROADMAP.md) ports
-Niflheim's deterministic bytecode-VM regression program into one Skald-native
-multi-module golden fixture. The ownership model, full instruction hierarchy,
-six core workloads, heterogeneous constants, builtin dispatch, static state,
-exact `f64` behavior, the three large algorithmic cases, and aggregate
-verification are complete; VB4 is next for compiler variants, documentation,
-and full-suite hardening. The roadmap depends only on
-implemented language, standard-library, module, driver, and golden-runner
-contracts; it is independent of the pending optimization discoveries.
-
 ## Pending discoveries
 
 The living

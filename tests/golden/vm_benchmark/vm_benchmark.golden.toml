@@ -7,7 +7,7 @@ compiler_args = [
   "--entry", "app",
   "--module-root", "cases/modules",
 ]
-variants = ["default"]
+variants = ["default", "optimization-none", "omit-runtime-trace"]
 
 [[test.run]]
 name = "slice1_minimal_output"

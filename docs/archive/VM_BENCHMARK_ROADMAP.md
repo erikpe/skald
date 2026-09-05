@@ -1,6 +1,6 @@
 # VM Benchmark Correctness Workload Roadmap
 
-Status: in progress; VB0 through VB3 are complete, and VB4 is next.
+Status: complete; all tasks and repository gates are complete.
 
 This roadmap ports the deterministic bytecode-VM regression workload from the
 sibling Niflheim repository into a Skald-native multi-module golden test. The
@@ -68,7 +68,7 @@ implicit garbage-collected reference semantics.
 - [x] VB1 — Port the instruction hierarchy and core VM workloads
 - [x] VB2 — Port heterogeneous constants, builtins, statics, and exact `f64`
 - [x] VB3 — Port the large algorithmic cases and aggregate verification
-- [ ] VB4 — Add compiler variants, documentation, and full-suite hardening
+- [x] VB4 — Add compiler variants, documentation, and full-suite hardening
 
 ## PR-sized implementation sequence
 
@@ -223,27 +223,27 @@ and execution are byte-deterministic.
 compiler configurations it is intended to protect, and prove that its size
 does not destabilize ordinary development workflows.
 
-- [ ] Select `default`, `optimization-none`, and `omit-runtime-trace` in the
+- [x] Select `default`, `optimization-none`, and `omit-runtime-trace` in the
       golden spec and reuse the identical thirteen named runs and exact
       observations for every variant.
-- [ ] Confirm optimized and unoptimized MIR preserve every per-case and
+- [x] Confirm optimized and unoptimized MIR preserve every per-case and
       aggregate value; keep pass-specific selection mechanics in their focused
       optimization fixtures.
-- [ ] Measure and record compile, link, run, assembly-size, and slowest-leaf
+- [x] Measure and record compile, link, run, assembly-size, and slowest-leaf
       observations for the three variants as non-normative maintenance data in
       the fixture README.
-- [ ] Confirm every native run remains within the golden runner timeout and
+- [x] Confirm every native run remains within the golden runner timeout and
       that parallel execution introduces no artifact or resource collision.
-- [ ] Update `docs/development/TESTING.md` to identify the VM benchmark as the
+- [x] Update `docs/development/TESTING.md` to identify the VM benchmark as the
       broad multi-module correctness workload and document focused,
       deterministic, optimized, and unoptimized commands.
-- [ ] Audit the fixture against current grammar, ownership, module, standard
+- [x] Audit the fixture against current grammar, ownership, module, standard
       library, driver, and golden-runner documentation; update living docs only
       where the port reveals a genuine missing description of current behavior.
-- [ ] Run the complete repository quality gate and inspect failures for hidden
+- [x] Run the complete repository quality gate and inspect failures for hidden
       shared-owner leaks, stale frame retention, nondeterministic output, or
       assumptions masked by one optimization profile.
-- [ ] Remove roadmap task codes and rollout wording from fixture source,
+- [x] Remove roadmap task codes and rollout wording from fixture source,
       comments, names, and living documentation before closure.
 
 **Tests:** `make golden-filter GOLDEN_FILTER='vm_benchmark/**'`; the same filter

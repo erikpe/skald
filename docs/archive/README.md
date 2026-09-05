@@ -107,6 +107,7 @@ Archived plans:
 - [Post-proof CFG canonicalization](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
 - [Convergent local constant propagation](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md)
 - [Normalization-stable path-activation provenance](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+- [VM benchmark correctness workload](VM_BENCHMARK_ROADMAP.md)
 
 Resolved string-design inputs:
 

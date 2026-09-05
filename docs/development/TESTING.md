@@ -583,6 +583,33 @@ scripts/golden.sh --determinism compile --filter 'primitives/**'
 The [golden fixture guide](../../tests/golden/README.md) owns the versioned
 schema, stream-matcher semantics, filtering, and canonical-ID contracts.
 
+### Broad multi-module correctness workload
+
+The `vm_benchmark` golden group is the broad source-to-native compiler
+workload. One logical entry reaches seven purpose-specific modules and runs a
+small bytecode VM over twelve guest programs covering shared ownership,
+interfaces, inheritance, virtual dispatch, erased constants, statics, arrays,
+slices, recursion, checked shifts, strings, standard I/O, and process
+arguments. Each guest result and the stable ordered aggregate have exact
+observations. This complements focused feature fixtures; it is not exhaustive
+coverage for any individual language feature and has no timing threshold.
+
+Use these commands for ordinary focus, serialized diagnosis, deterministic
+repetition, optimized execution, unoptimized MIR, and runtime-trace omission:
+
+```text
+make golden-filter GOLDEN_FILTER='vm_benchmark/**'
+scripts/golden.sh --jobs 1 --show-output --filter 'vm_benchmark/**'
+scripts/golden.sh --determinism full --jobs 1 --filter 'vm_benchmark/**'
+scripts/golden.sh --variant default --filter 'vm_benchmark/**'
+scripts/golden.sh --variant optimization-none --filter 'vm_benchmark/**'
+scripts/golden.sh --variant omit-runtime-trace --filter 'vm_benchmark/**'
+```
+
+The fixture's [maintenance guide](../../tests/golden/vm_benchmark/README.md)
+owns its module layout, direct manual invocation, ownership translation, and
+non-normative compile, link, execution, and assembly-size observations.
+
 The runner's compiler-independent process tests use its Rust fake-process
 binary to cover exact and partial byte expectations, non-UTF-8 Unix arguments,
 temporary files, environment isolation, large simultaneous pipes, signals,

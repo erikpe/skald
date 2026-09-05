@@ -1,10 +1,10 @@
 # VM Benchmark Port Discoveries
 
-Status: one actionable compiler-robustness finding; it does not block the port.
+Status: one actionable compiler-robustness finding.
 
 This record holds follow-up work found while implementing the VM benchmark
-roadmap but not required to broaden the active workload. The benchmark roadmap
-keeps its reviewed test-only scope.
+but not required to broaden the workload. The completed benchmark port kept
+its reviewed test-only scope.
 
 ## Owning inline-field read through a shared receiver can panic the compiler
 
