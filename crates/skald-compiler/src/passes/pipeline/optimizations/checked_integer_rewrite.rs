@@ -8,12 +8,123 @@ use crate::mir::{
 };
 
 use super::{
-    checked_integer_protocol::{
-        CheckedIntegerConstantCarrier, CheckedIntegerInstructionSite,
-        CheckedIntegerProtocolCandidate, CheckedIntegerProtocolCheck, CheckedIntegerValueSite,
+    checked_integer_evaluation::{
+        evaluate_integer_division, evaluate_shift, CheckedIntegerEvaluation,
     },
-    primitive_evaluation::{evaluate_rvalue, PrimitiveEvaluation},
+    checked_integer_topology::{
+        CheckedIntegerInstructionSite, CheckedIntegerProtocolCheck,
+        CheckedIntegerProtocolOperation, CheckedIntegerProtocolTopology, CheckedIntegerValueSite,
+    },
+    local_constant::{
+        CheckedCarrierPlanEvidence, CheckedCarrierPlanRole, LocalConstantFact,
+        LocalConstantProvenanceCategory,
+    },
+    primitive_evaluation::PrimitiveConstant,
 };
+
+/// Solved value and certified storage evidence for one checked operand.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct CheckedIntegerOperandEvidence {
+    pub(super) storage: StorageId,
+    pub(super) source_value: ValueId,
+    pub(super) constant: PrimitiveConstant,
+    pub(super) propagated: bool,
+}
+
+/// Exact immutable source-snapshot input for one checked protocol rewrite.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct CheckedIntegerProtocolCandidate {
+    pub(super) check: CheckedIntegerProtocolCheck,
+    pub(super) check_block: BlockId,
+    pub(super) check_span: crate::source::Span,
+    pub(super) success_block: BlockId,
+    pub(super) failure_block: BlockId,
+    pub(super) join_block: BlockId,
+    pub(super) operands: [CheckedIntegerOperandEvidence; 2],
+    pub(super) operand_loads: [CheckedIntegerValueSite; 2],
+    pub(super) result_storage: StorageId,
+    pub(super) result_assignment: CheckedIntegerValueSite,
+    pub(super) result_store: CheckedIntegerInstructionSite,
+    pub(super) result_store_span: crate::source::Span,
+    pub(super) success_edge_span: crate::source::Span,
+    pub(super) result_reload: CheckedIntegerValueSite,
+    pub(super) constant: PrimitiveConstant,
+    carriers: [CheckedCarrierPlanEvidence; 3],
+}
+
+impl CheckedIntegerProtocolCandidate {
+    pub(super) fn from_solution(
+        topology: CheckedIntegerProtocolTopology,
+        carriers: [CheckedCarrierPlanEvidence; 3],
+        operand_facts: [LocalConstantFact; 2],
+        constant: PrimitiveConstant,
+    ) -> Option<Self> {
+        let [(first_storage, first_ty), (second_storage, second_ty)] = topology.check.operands();
+        let (result_storage, result_ty) = topology.check.result();
+        let expected = [
+            (
+                first_storage,
+                first_ty,
+                CheckedCarrierPlanRole::FirstOperand,
+            ),
+            (
+                second_storage,
+                second_ty,
+                CheckedCarrierPlanRole::SecondOperand,
+            ),
+            (result_storage, result_ty, CheckedCarrierPlanRole::Result),
+        ];
+        if constant.ty() != result_ty
+            || carriers.iter().zip(expected).any(|(carrier, expected)| {
+                carrier.storage() != expected.0
+                    || carrier.ty() != expected.1
+                    || carrier.role() != expected.2
+                    || carrier.check_block() != topology.check_block
+            })
+            || !carriers[0]
+                .loads()
+                .contains(&topology.operand_loads[0].value)
+            || !carriers[1]
+                .loads()
+                .contains(&topology.operand_loads[1].value)
+            || !carriers[2].loads().contains(&topology.result_reload.value)
+            || operand_facts[0].constant().ty() != first_ty
+            || operand_facts[1].constant().ty() != second_ty
+        {
+            return None;
+        }
+
+        let operands = std::array::from_fn(|index| CheckedIntegerOperandEvidence {
+            storage: carriers[index].storage(),
+            source_value: carriers[index].source(),
+            constant: operand_facts[index].constant(),
+            propagated: operand_facts[index].provenance().category()
+                != LocalConstantProvenanceCategory::Literal,
+        });
+        Some(Self {
+            check: topology.check,
+            check_block: topology.check_block,
+            check_span: topology.check_span,
+            success_block: topology.success_block,
+            failure_block: topology.failure_block,
+            join_block: topology.join_block,
+            operands,
+            operand_loads: topology.operand_loads,
+            result_storage: topology.result_storage,
+            result_assignment: topology.result_assignment,
+            result_store: topology.result_store,
+            result_store_span: topology.result_store_span,
+            success_edge_span: topology.success_edge_span,
+            result_reload: topology.result_reload,
+            constant,
+            carriers,
+        })
+    }
+
+    pub(super) fn has_propagated_operand(&self) -> bool {
+        self.operands.iter().any(|operand| operand.propagated)
+    }
+}
 
 /// Structural result owned by one successful protocol transaction.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -21,13 +132,20 @@ pub(super) struct CheckedIntegerProtocolRewrite {
     pub(super) removed_operand_loads: usize,
 }
 
-/// Revalidates and rewrites one candidate without publishing intermediate MIR.
-pub(super) fn rewrite_checked_integer_protocol(
+/// Revalidates one candidate without mutating the callable transaction.
+pub(super) fn validate_checked_integer_protocol(
+    edit: &MirCallableEdit,
+    candidate: &CheckedIntegerProtocolCandidate,
+) -> Result<(), MirRewriteError> {
+    revalidate(edit, candidate)?;
+    Ok(())
+}
+
+/// Applies a candidate after its complete callable plan has been validated.
+pub(super) fn apply_checked_integer_protocol(
     edit: &mut MirCallableEdit,
     candidate: &CheckedIntegerProtocolCandidate,
 ) -> Result<CheckedIntegerProtocolRewrite, MirRewriteError> {
-    revalidate(edit, candidate)?;
-
     edit.rewrite_block_terminator(candidate.check_block, |_| {
         Some(MirTerminator::Goto {
             target: candidate.success_block,
@@ -52,6 +170,15 @@ pub(super) fn rewrite_checked_integer_protocol(
     Ok(CheckedIntegerProtocolRewrite {
         removed_operand_loads: candidate.operand_loads.len(),
     })
+}
+
+#[cfg(test)]
+pub(super) fn rewrite_checked_integer_protocol(
+    edit: &mut MirCallableEdit,
+    candidate: &CheckedIntegerProtocolCandidate,
+) -> Result<CheckedIntegerProtocolRewrite, MirRewriteError> {
+    validate_checked_integer_protocol(edit, candidate)?;
+    apply_checked_integer_protocol(edit, candidate)
 }
 
 fn revalidate(
@@ -82,10 +209,8 @@ fn revalidate(
             candidate.check_block,
         )
         || !has_only_predecessor(&predecessors, candidate.join_block, candidate.success_block)
-        || candidate
-            .operands
-            .iter()
-            .any(|carrier| !constant_carrier_matches(edit, &cfg, carrier, candidate.check_block))
+        || !candidate_carriers_match(edit, candidate)
+        || !candidate_evaluation_matches(candidate)
         || storage_write_sites(edit, candidate.result_storage).as_slice()
             != [candidate.result_store]
         || [
@@ -111,10 +236,6 @@ fn validate_live_identities(
         candidate.success_block,
         candidate.failure_block,
         candidate.join_block,
-        candidate.operands[0].source_assignment.block,
-        candidate.operands[0].store.block,
-        candidate.operands[1].source_assignment.block,
-        candidate.operands[1].store.block,
     ] {
         edit.block(block)?;
     }
@@ -136,6 +257,70 @@ fn validate_live_identities(
         edit.value(value)?;
     }
     Ok(())
+}
+
+fn candidate_carriers_match(
+    edit: &MirCallableEdit,
+    candidate: &CheckedIntegerProtocolCandidate,
+) -> bool {
+    let [(first_storage, first_ty), (second_storage, second_ty)] = candidate.check.operands();
+    let (result_storage, result_ty) = candidate.check.result();
+    let expected = [
+        (
+            first_storage,
+            first_ty,
+            CheckedCarrierPlanRole::FirstOperand,
+        ),
+        (
+            second_storage,
+            second_ty,
+            CheckedCarrierPlanRole::SecondOperand,
+        ),
+        (result_storage, result_ty, CheckedCarrierPlanRole::Result),
+    ];
+
+    candidate
+        .carriers
+        .iter()
+        .zip(expected)
+        .all(|(carrier, (storage, ty, role))| {
+            carrier.storage() == storage
+                && carrier.ty() == ty
+                && carrier.role() == role
+                && carrier.check_block() == candidate.check_block
+                && edit
+                    .storage(storage)
+                    .is_ok_and(|declaration| declaration.ty == ty)
+        })
+        && candidate.operands[0].storage == first_storage
+        && candidate.operands[1].storage == second_storage
+        && candidate.operands[0].source_value == candidate.carriers[0].source()
+        && candidate.operands[1].source_value == candidate.carriers[1].source()
+        && candidate.carriers[0]
+            .loads()
+            .contains(&candidate.operand_loads[0].value)
+        && candidate.carriers[1]
+            .loads()
+            .contains(&candidate.operand_loads[1].value)
+        && candidate.carriers[2]
+            .loads()
+            .contains(&candidate.result_reload.value)
+}
+
+fn candidate_evaluation_matches(candidate: &CheckedIntegerProtocolCandidate) -> bool {
+    let evaluation = match candidate.check.operation() {
+        CheckedIntegerProtocolOperation::Division(operation) => evaluate_integer_division(
+            operation,
+            candidate.operands[0].constant,
+            candidate.operands[1].constant,
+        ),
+        CheckedIntegerProtocolOperation::Shift(operation) => evaluate_shift(
+            operation,
+            candidate.operands[0].constant,
+            candidate.operands[1].constant,
+        ),
+    };
+    matches!(evaluation, CheckedIntegerEvaluation::Success(constant) if constant == candidate.constant)
 }
 
 fn check_matches(edit: &MirCallableEdit, candidate: &CheckedIntegerProtocolCandidate) -> bool {
@@ -301,57 +486,6 @@ fn value_site_matches(
         && expected.site == CheckedIntegerInstructionSite { block, instruction }
 }
 
-fn constant_carrier_matches(
-    edit: &MirCallableEdit,
-    cfg: &MirLocalCfgFacts,
-    carrier: &CheckedIntegerConstantCarrier,
-    check_block: BlockId,
-) -> bool {
-    if !dominates(cfg, carrier.store.block, check_block)
-        || !dominates(cfg, carrier.source_assignment.block, carrier.store.block)
-        || (carrier.source_assignment.block == carrier.store.block
-            && carrier.source_assignment.instruction >= carrier.store.instruction)
-        || storage_write_sites(edit, carrier.storage).as_slice() != [carrier.store]
-    {
-        return false;
-    }
-    let Ok(source_block) = edit.block(carrier.source_assignment.block) else {
-        return false;
-    };
-    let Some(MirInstruction::Assign(assignment)) = source_block
-        .instructions
-        .get(carrier.source_assignment.instruction)
-    else {
-        return false;
-    };
-    let Ok(store_block) = edit.block(carrier.store.block) else {
-        return false;
-    };
-    let Some(MirInstruction::Store(store)) =
-        store_block.instructions.get(carrier.store.instruction)
-    else {
-        return false;
-    };
-    let PrimitiveEvaluation::Constant(constant) =
-        evaluate_rvalue(&assignment.rvalue.kind, |_| None)
-    else {
-        return false;
-    };
-    let expected_type = carrier.constant.ty();
-    assignment.result == carrier.source_value
-        && assignment.span == carrier.source_span
-        && assignment.rvalue.ty == expected_type
-        && constant == carrier.constant
-        && edit
-            .value(carrier.source_value)
-            .is_ok_and(|value| value.ty == expected_type)
-        && store.destination == MirPlace::base(carrier.storage)
-        && store.value == carrier.source_value
-        && store.authorization.is_none()
-        && store.final_authorization.is_none()
-        && store.span == carrier.store_span
-}
-
 fn storage_write_sites(
     edit: &MirCallableEdit,
     storage: StorageId,
@@ -398,37 +532,6 @@ fn has_only_predecessor(
     expected: BlockId,
 ) -> bool {
     predecessors.get(&block) == Some(&HashSet::from([expected]))
-}
-
-fn dominates(cfg: &MirLocalCfgFacts, dominator: BlockId, target: BlockId) -> bool {
-    dominator == target
-        || (reachable(cfg, target, None) && !reachable(cfg, target, Some(dominator)))
-}
-
-fn reachable(cfg: &MirLocalCfgFacts, target: BlockId, excluded: Option<BlockId>) -> bool {
-    if excluded == Some(cfg.entry()) {
-        return false;
-    }
-    let mut pending = vec![cfg.entry()];
-    let mut visited = HashSet::new();
-    while let Some(block) = pending.pop() {
-        if block == target {
-            return true;
-        }
-        if !visited.insert(block) {
-            continue;
-        }
-        if let Some(facts) = cfg.block(block) {
-            pending.extend(
-                facts
-                    .successors()
-                    .iter()
-                    .copied()
-                    .filter(|successor| Some(*successor) != excluded),
-            );
-        }
-    }
-    false
 }
 
 fn is_exact_load(kind: &MirRvalueKind, storage: StorageId) -> bool {

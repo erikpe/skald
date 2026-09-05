@@ -1063,11 +1063,13 @@ than replanning activation.
 
 ### Checked-integer constant protocol simplification
 
-The checked-integer occurrence consumes constants exposed by the preceding
-primitive folds. For an eligible division, remainder, or shift protocol it
-preserves operand evaluation, replaces the checked success operation with its
-exact constant, removes the two protocol-private load values, and turns the
-dedicated check into an ordinary successor edge. The following dead-pure and
+The checked-integer occurrence consumes one fresh convergent constant solution
+for every executable callable; it no longer depends on a preceding primitive
+rewrite to expose derived operands. For an eligible division, remainder, or
+shift protocol it preserves operand evaluation, replaces the checked success
+operation with its exact constant, removes the two protocol-private load
+values, and turns the dedicated check into an ordinary successor edge. The
+following dead-pure and
 CFG occurrences can then remove redundant scalar work and the unreachable
 failure region. Disabling `checked-integer-constant-folding` retains the
 checked protocol; disabling CFG cleanup retains its now-unreachable failure
@@ -1075,35 +1077,45 @@ block. Static failures and insufficiently proven protocols remain unchanged.
 
 Eligibility is deliberately narrower than general constant propagation. Both
 operands must reach the checked terminator through distinct canonical
-`ScalarSpill` carriers, each with one exact dominating constant store. The
-observer requires the verifier-owned check, success, failure, result-store,
-join, and reload topology and rejects any block protected by logical,
-path-condition, lifecycle, or static-publication metadata. The rewrite
-revalidates the complete snapshot against live sparse edit state before one
-atomic dense commit. It preserves result identity and source spans, retains
-carrier storage and lifecycle work, and never turns a static failure into a
-compile-time diagnostic or changes failure timing.
+`ScalarSpill` carriers certified for exact protocol ownership, one dominating
+store, exact dominated loads, type, lifetime, authorization, and exhaustive
+access. Lowering reuses a checked result's existing carrier when that result
+must survive evaluation of a checked sibling, avoiding an unclassified second
+spill without changing evaluation order or storage lifetime. The observer
+requires the verifier-owned check, success, failure, result-store, join, and
+reload topology and rejects any block protected by logical, path-condition,
+lifecycle, or static-publication metadata.
+
+All successful candidates, including mutually dependent nested protocols, are
+planned from the same immutable solution and complete callable snapshot. The
+transaction revalidates that snapshot, every carrier certificate, every
+candidate, and the absence of conflicting edits before its first mutation,
+then applies candidates in stable topology order and performs one dense commit.
+It preserves result identity and source spans, retains carrier storage and
+lifecycle work, and never turns a static failure into a compile-time diagnostic
+or changes failure timing.
 
 The pass implements exact Skald floor quotient and divisor-sign remainder,
 including the defined signed-minimum pair, wrapping left shift, arithmetic
 signed right shift, logical unsigned right shift, and canonical byte results.
 It does not fold a dynamic operation with only a known-safe divisor or count,
 checked floating-to-integer conversion, floating arithmetic, casts or type
-tests, optional or array checks, calls, loads, ownership operations, or
-target-specific instructions. Nested checked results are not propagated
-through their retained scalar carriers by this pass.
+tests, optional or array checks, calls, arbitrary loads, ownership operations,
+or target-specific instructions. Storage propagation remains confined to the
+certified protocol-owned carrier relation.
 
 ### Frozen convergent local constant propagation direction
 
 Status: **in progress; structural observation, carrier certification, the
-read-only convergent solver, and primitive-family consumers are implemented**.
+read-only convergent solver, primitive-family consumers, and the dependent
+checked-protocol consumer are implemented**.
 The complete decisions are frozen in the
 [design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 and delivery is divided by the active
 [implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
-Primitive-family production consumers now use the convergent solution. The
-checked transformation retains its literal-carrier limitation and logical CFG
-selection has no production mutation consumer yet. The initial structural work
+Primitive-family and checked-protocol production consumers now use the
+convergent solution. Logical CFG selection has no production mutation consumer
+yet. The initial structural work
 separated exact checked-protocol topology from constant eligibility and added
 the corresponding proof-rich logical-topology observer. Carrier work added a shared
 exhaustive storage-use census which classifies declarations, attachments,
@@ -1125,8 +1137,9 @@ Rust recursion, or pipeline-repetition bound. Existing primitive and checked
 evaluators remain the sole arithmetic authorities.
 
 Checked topology is now an immutable structural observation independent of
-constant provenance. The existing checked pass consumes it through a narrow
-adapter that preserves literal-carrier eligibility and rejection behavior.
+constant provenance. The checked pass combines it with solver facts and narrow
+carrier-plan evidence, validates a whole-callable plan before mutation, and
+folds arbitrarily nested supported checked protocols in one occurrence.
 Logical expressions likewise have a private seal-local structural observation
 over their matching path condition, selected values, carrier storage, blocks,
 predecessors, and spans; it has no production mutation consumer yet. Both

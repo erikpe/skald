@@ -265,17 +265,47 @@ impl BodyLowerer<'_> {
         let left = self
             .lower_expression(left)
             .expect("typed binary operand must produce a value");
-        let spilled_left = super::control_effect::expression_contains_control_effect(right)
-            .then(|| self.spill_scalar(left, operand_type, expression.span));
+        let preserved_left = super::control_effect::expression_contains_control_effect(right)
+            .then(|| self.preserve_scalar(left, operand_type, expression.span));
         let right = self
             .lower_expression(right)
             .expect("typed binary operand must produce a value");
-        let left = spilled_left
+        let left = preserved_left
             .map(|(storage, ty)| {
                 self.assign(MirRvalueKind::Load(storage.into()), ty, expression.span)
             })
             .unwrap_or(left);
         (left, right)
+    }
+
+    /// Secures a block-local scalar across control-flow-producing evaluation.
+    ///
+    /// A checked result already has a compiler-owned carrier whose lifetime
+    /// spans the full expression. Reusing it avoids a redundant unclassified
+    /// preservation spill while retaining the original value snapshot.
+    fn preserve_scalar(
+        &mut self,
+        value: ValueId,
+        ty: MirType,
+        span: crate::source::Span,
+    ) -> (StorageId, MirType) {
+        self.scalar_result_homes
+            .get(&value)
+            .copied()
+            .filter(|storage| self.storage[storage.index()].ty == ty)
+            .map(|storage| (storage, ty))
+            .unwrap_or_else(|| self.spill_scalar(value, ty, span))
+    }
+
+    pub(super) fn load_checked_scalar_result(
+        &mut self,
+        storage: StorageId,
+        ty: MirType,
+        span: crate::source::Span,
+    ) -> ValueId {
+        let value = self.assign(MirRvalueKind::Load(MirPlace::base(storage)), ty, span);
+        self.scalar_result_homes.insert(value, storage);
+        value
     }
 
     pub(super) fn spill_scalar(

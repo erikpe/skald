@@ -8,10 +8,6 @@ use crate::{
 };
 
 use super::*;
-use crate::passes::pipeline::optimizations::checked_integer_protocol::{
-    observe_checked_integer_protocols, CheckedIntegerProtocolObservation,
-    CheckedIntegerProtocolRejectionReason,
-};
 
 fn observations(program: &crate::mir::MirProgram) -> Vec<CheckedIntegerTopologyObservation> {
     program
@@ -62,40 +58,6 @@ fn observes_every_checked_variant_without_requiring_constant_operands() {
         CheckedIntegerTopologyObservation::Protocol(topology)
             if matches!(topology.check, CheckedIntegerProtocolCheck::Shift(_))
     )));
-}
-
-#[test]
-fn structural_observation_precedes_the_legacy_constant_adapter() {
-    let program = lower_source_to_final_mir(
-        "fn divide(value: i64) -> i64 { return value / 2; } fn main() -> i64 { return 0; }",
-    );
-    let definition = program
-        .executable_definitions()
-        .find(|definition| {
-            definition.body().blocks.iter().any(|block| {
-                matches!(
-                    block.terminator,
-                    Some(MirTerminator::IntegerDivisorCheck { .. })
-                )
-            })
-        })
-        .unwrap();
-
-    assert!(matches!(
-        observe_checked_integer_topologies(definition)
-            .unwrap()
-            .as_slice(),
-        [CheckedIntegerTopologyObservation::Protocol(_)]
-    ));
-    assert!(matches!(
-        observe_checked_integer_protocols(definition)
-            .unwrap()
-            .as_slice(),
-        [CheckedIntegerProtocolObservation::Rejected {
-            reason: CheckedIntegerProtocolRejectionReason::DynamicOperand,
-            ..
-        }]
-    ));
 }
 
 #[test]
@@ -157,16 +119,6 @@ fn records_exact_owned_sites_spans_and_protected_status_without_mutation() {
             .unwrap()
             .span()
     );
-
-    assert!(matches!(
-        observe_checked_integer_protocols((&*definition).into())
-            .unwrap()
-            .as_slice(),
-        [CheckedIntegerProtocolObservation::Rejected {
-            reason: CheckedIntegerProtocolRejectionReason::ProtectedTopology,
-            ..
-        }]
-    ));
 }
 
 #[test]

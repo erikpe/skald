@@ -1,10 +1,11 @@
 use crate::{
+    identity::CallableId,
     mir::{
         dump_mir,
-        rewrite::{rewrite_program, MirProgramRewriteResult},
-        MirDefinitionRef, MirInstruction, MirIntegerDivisionKind, MirPathCondition, MirRvalueKind,
-        MirShiftDirection, MirStorage, MirStorageKind, MirTerminator, MirType, PathConditionId,
-        StorageId,
+        rewrite::{rewrite_program, MirProgramRewriteResult, MirRewriteError},
+        MirDefinitionRef, MirInstruction, MirIntegerDivisionKind, MirPathCondition, MirProgram,
+        MirRvalueKind, MirShiftDirection, MirStorage, MirStorageKind, MirTerminator, MirType,
+        PathConditionId, StorageId,
     },
     passes::{
         resolve_exact_mir_pass_schedule, resolve_mir_pass_schedule,
@@ -16,7 +17,8 @@ use crate::{
 
 use super::*;
 use crate::passes::pipeline::optimizations::{
-    primitive_constant_folding, primitive_evaluation::PrimitiveConstant,
+    checked_integer_rewrite::CheckedIntegerProtocolCandidate, primitive_constant_folding,
+    primitive_evaluation::PrimitiveConstant,
 };
 use crate::passes::pipeline::run_mir_pipeline_measured_inspected;
 
@@ -86,7 +88,10 @@ fn apply_and_assert_rewritten(
 }
 
 fn candidates(plan: &CheckedIntegerFoldPlan) -> Vec<&CheckedIntegerProtocolCandidate> {
-    plan.candidates.values().flatten().collect()
+    plan.callables
+        .values()
+        .flat_map(|callable| &callable.candidates)
+        .collect()
 }
 
 fn definition(program: &MirProgram, callable: CallableId) -> MirDefinitionRef<'_> {
@@ -273,15 +278,14 @@ fn folds_signed_extrema_without_host_division_behavior() {
 }
 
 #[test]
-fn primitive_folding_exposes_candidates_to_the_checked_protocol_plan() {
+fn solver_facts_expose_derived_operands_without_a_primitive_rewrite() {
     let input = lower_source_to_final_mir("fn main() -> i64 { return (20 + 1) / (2 + 1); }");
-    assert!(division_plan(&input).is_empty());
-    let primitive_folded = fold_ordinary_primitive_constants(input);
-    let plan = division_plan(&primitive_folded);
+    let plan = division_plan(&input);
     assert_eq!(plan.candidate_count(), 1);
     assert_eq!(candidates(&plan)[0].constant, PrimitiveConstant::I64(7));
+    assert_eq!(plan.counts().propagated_operand_folds, 1);
 
-    let result = apply_plan(primitive_folded, &plan);
+    let result = apply_plan(input, &plan);
     assert_eq!(checked_division_count(&result.program), 0);
     verify_final_mir(result.program).unwrap();
 }
@@ -361,35 +365,37 @@ fn folding_preserves_operand_assignments_and_carrier_store_order() {
         let input = lower_source_to_final_mir(source);
         let plan = CheckedIntegerFoldPlan::prepare(&input, selection).unwrap();
         let candidate = candidates(&plan)[0];
-        let original = definition(&input, candidate.check_block.callable());
-        let retained = candidate.operands.map(|operand| {
-            (
-                original
-                    .block(operand.source_assignment.block)
-                    .unwrap()
-                    .instructions[operand.source_assignment.instruction]
-                    .clone(),
-                original.block(operand.store.block).unwrap().instructions
-                    [operand.store.instruction]
-                    .clone(),
-            )
-        });
 
         let result = apply_plan(input, &plan);
+        let report = result
+            .callables
+            .iter()
+            .find(|report| report.callable == candidate.check_block.callable())
+            .unwrap();
         let rewritten = definition(&result.program, candidate.check_block.callable());
-        for (operand, (assignment, store)) in candidate.operands.iter().zip(retained) {
-            assert_eq!(
-                rewritten
-                    .block(operand.source_assignment.block)
-                    .unwrap()
-                    .instructions[operand.source_assignment.instruction],
-                assignment
-            );
-            assert_eq!(
-                rewritten.block(operand.store.block).unwrap().instructions
-                    [operand.store.instruction],
-                store
-            );
+        for operand in &candidate.operands {
+            let source = report.maps.values.committed(operand.source_value).unwrap();
+            let storage = report.maps.storage.committed(operand.storage).unwrap();
+            assert!(rewritten.body().blocks.iter().any(|block| {
+                block.instructions.iter().any(|instruction| {
+                    matches!(
+                        instruction,
+                        MirInstruction::Assign(assignment)
+                            if assignment.result == source
+                                && assignment.rvalue.kind
+                                    == operand.constant.into_rvalue_kind()
+                    )
+                })
+            }));
+            assert!(rewritten.body().blocks.iter().any(|block| {
+                block.instructions.iter().any(|instruction| {
+                    matches!(
+                        instruction,
+                        MirInstruction::Store(store)
+                            if store.destination == storage.into() && store.value == source
+                    )
+                })
+            }));
         }
         verify_final_mir(result.program).unwrap();
     }
@@ -400,8 +406,9 @@ fn multiple_and_nested_candidates_compact_once_and_second_plan_is_empty() {
     let input = lower_source_to_final_mir("fn main() -> i64 { return ((8 / 2) + (7 % 3)) / 2; }");
     assert_eq!(checked_division_count(&input), 3);
     let plan = division_plan(&input);
-    assert_eq!(plan.candidate_count(), 2);
+    assert_eq!(plan.candidate_count(), 3);
     assert_eq!(plan.changed_callable_count(), 1);
+    assert_eq!(plan.counts().propagated_operand_folds, 1);
 
     let first = apply_plan(input, &plan);
     let report = first
@@ -409,8 +416,8 @@ fn multiple_and_nested_candidates_compact_once_and_second_plan_is_empty() {
         .iter()
         .find(|report| report.callable == first.program.entry_function.into())
         .unwrap();
-    assert_eq!(report.changes.values.removed, 4);
-    assert_eq!(checked_division_count(&first.program), 1);
+    assert_eq!(report.changes.values.removed, 6);
+    assert_eq!(checked_division_count(&first.program), 0);
     let entry = first
         .program
         .definitions
@@ -627,16 +634,155 @@ fn multiple_shift_candidates_share_one_commit_and_repeat_idempotently() {
 }
 
 #[test]
-fn nested_shift_keeps_the_unproven_outer_protocol_checked() {
+fn nested_shift_folds_inner_and_outer_protocols_from_one_snapshot() {
     let input = lower_source_to_final_mir("fn main() -> i64 { return (1 << 2u) << 1u; }");
     assert_eq!(checked_shift_count(&input), 2);
     let plan = shift_plan(&input);
-    assert_eq!(plan.candidate_count(), 1);
+    assert_eq!(plan.candidate_count(), 2);
+    assert_eq!(plan.counts().propagated_operand_folds, 1);
 
     let first = apply_and_assert_rewritten(input, &plan);
-    assert_eq!(checked_shift_count(&first.program), 1);
+    assert_eq!(checked_shift_count(&first.program), 0);
     verify_final_mir(first.program.clone()).unwrap();
     assert!(shift_plan(&first.program).is_empty());
+}
+
+#[test]
+fn deep_alternating_checked_chain_has_no_configured_depth_boundary() {
+    let mut expression = "4096".to_owned();
+    const LAYERS: usize = 8;
+    for _ in 0..LAYERS {
+        expression = format!("(({expression} / 1) << 0u)");
+    }
+    let input = lower_source_to_final_mir(format!("fn main() -> i64 {{ return {expression}; }}"));
+    assert_eq!(checked_division_count(&input), LAYERS);
+    assert_eq!(checked_shift_count(&input), LAYERS);
+
+    let plan = all_checked_integer_plan(&input);
+    assert_eq!(plan.candidate_count(), 2 * LAYERS);
+    assert_eq!(plan.counts().propagated_operand_folds, 2 * LAYERS - 1);
+
+    let result = apply_plan(input, &plan);
+    assert_eq!(checked_division_count(&result.program), 0);
+    assert_eq!(checked_shift_count(&result.program), 0);
+    assert!(all_checked_integer_plan(&result.program).is_empty());
+    verify_final_mir(result.program).unwrap();
+}
+
+#[test]
+fn static_failure_is_a_barrier_without_blocking_independent_candidates() {
+    let input = lower_source_to_final_mir(concat!(
+        "fn main() -> i64 {\n",
+        "  var quotient: i64 = 8 / 2;\n",
+        "  var failed: i64 = 1 / 0;\n",
+        "  var shifted: i64 = 8 >> 1u;\n",
+        "  return quotient + failed + shifted;\n",
+        "}\n",
+    ));
+    let plan = all_checked_integer_plan(&input);
+    assert_eq!(plan.candidate_count(), 2);
+    assert_eq!(plan.counts().retained_static_failures, 1);
+
+    let result = apply_plan(input, &plan);
+    assert_eq!(checked_division_count(&result.program), 1);
+    assert_eq!(checked_shift_count(&result.program), 0);
+    verify_final_mir(result.program).unwrap();
+}
+
+#[test]
+fn complete_plan_rejects_stale_input_before_applying_any_candidate() {
+    let input = lower_source_to_final_mir("fn main() -> i64 { return (8 / 2) + (7 % 3); }");
+    let plan = division_plan(&input);
+    assert_eq!(plan.candidate_count(), 2);
+    let entry = input.entry_function.into();
+    let first_check = candidates(&plan)[0].check_block;
+
+    let error = rewrite_program(input, |callable, edit| {
+        if callable != entry {
+            return Ok(());
+        }
+        edit.rewrite_block_terminator(first_check, |_| None)?;
+        let stale_edit = edit.clone();
+        let error = plan.rewrite_callable(callable, edit).unwrap_err();
+        assert_eq!(
+            edit, &stale_edit,
+            "failed validation must not mutate the edit"
+        );
+        Err(error)
+    })
+    .unwrap_err();
+
+    assert_eq!(
+        error,
+        MirRewriteError::StaleCallableSnapshot {
+            callable: entry,
+            subject: "checked-integer fold plan",
+        }
+    );
+}
+
+#[test]
+fn complete_plan_rejects_conflicts_before_applying_any_candidate() {
+    let input = lower_source_to_final_mir("fn main() -> i64 { return (8 / 2) + (7 % 3); }");
+    let entry = input.entry_function.into();
+    let mut plan = division_plan(&input);
+    let duplicate = candidates(&plan)[0].clone();
+    plan.callables
+        .get_mut(&entry)
+        .unwrap()
+        .candidates
+        .push(duplicate);
+
+    let error = rewrite_program(input, |callable, edit| {
+        if callable != entry {
+            return Ok(());
+        }
+        let unchanged = edit.clone();
+        let error = plan.rewrite_callable(callable, edit).unwrap_err();
+        assert_eq!(edit, &unchanged, "conflict rejection must precede mutation");
+        Err(error)
+    })
+    .unwrap_err();
+
+    assert_eq!(
+        error,
+        MirRewriteError::StaleCallableSnapshot {
+            callable: entry,
+            subject: "checked-integer fold plan conflicts",
+        }
+    );
+}
+
+#[test]
+fn checked_only_and_primitive_disabled_schedules_remain_expression_complete() {
+    let source = "fn main() -> i64 { return ((18 + 2) / (1 + 1)) << 1u; }";
+    let exact = run_mir_pipeline_with_occurrences(
+        lower_source_to_final_mir(source),
+        &resolve_exact_mir_pass_schedule(&[IDENTITY]).unwrap(),
+    );
+    let primitive_disabled = run_mir_pipeline_with_occurrences(
+        lower_source_to_final_mir(source),
+        &resolve_mir_pass_schedule(
+            MirOptimizationProfile::Default,
+            ["primitive-constant-folding"],
+        )
+        .unwrap(),
+    );
+
+    for measured in [exact, primitive_disabled] {
+        let output = measured.result.as_ref().unwrap();
+        assert_eq!(checked_division_count(output.program()), 0);
+        assert_eq!(checked_shift_count(output.program()), 0);
+        let checked = measured
+            .occurrences()
+            .iter()
+            .find(|record| record.identity() == IDENTITY)
+            .unwrap();
+        assert_eq!(
+            checked.measurements()[3],
+            MirPassMeasurement::count(PROPAGATED_OPERAND_FOLDS, 2)
+        );
+    }
 }
 
 #[test]
@@ -688,6 +834,7 @@ fn registered_pass_reports_exact_protocol_and_commit_measurements() {
         MirPassMeasurement::count(FOLDED_QUOTIENTS, 1),
         MirPassMeasurement::count(FOLDED_REMAINDERS, 1),
         MirPassMeasurement::count(FOLDED_SHIFTS, 1),
+        MirPassMeasurement::count(PROPAGATED_OPERAND_FOLDS, 0),
         MirPassMeasurement::count(REMOVED_PROTOCOL_LOAD_VALUES, 6),
         MirPassMeasurement::count(RETAINED_STATIC_FAILURES, 3),
     ];
@@ -730,6 +877,7 @@ fn registered_pass_is_unchanged_and_does_not_reverify_without_candidates() {
             MirPassMeasurement::count(FOLDED_QUOTIENTS, 0),
             MirPassMeasurement::count(FOLDED_REMAINDERS, 0),
             MirPassMeasurement::count(FOLDED_SHIFTS, 0),
+            MirPassMeasurement::count(PROPAGATED_OPERAND_FOLDS, 0),
             MirPassMeasurement::count(REMOVED_PROTOCOL_LOAD_VALUES, 0),
             MirPassMeasurement::count(RETAINED_STATIC_FAILURES, 2),
         ]
@@ -779,10 +927,12 @@ fn repeated_exact_schedule_is_idempotent_and_has_stable_checkpoints() {
 }
 
 #[test]
-fn default_schedule_exposes_then_folds_and_cleans_checked_protocols() {
+fn default_schedule_folds_solver_exposed_and_cleans_checked_protocols() {
     let source = "fn main() -> i64 { return (6 * 7) / (1 + 1); }";
     let input = lower_source_to_final_mir(source);
-    assert!(all_checked_integer_plan(&input).is_empty());
+    let initial_plan = all_checked_integer_plan(&input);
+    assert_eq!(initial_plan.candidate_count(), 1);
+    assert_eq!(initial_plan.counts().propagated_operand_folds, 1);
 
     let default = run_mir_pipeline_with_occurrences(
         input.clone(),
@@ -1003,6 +1153,7 @@ fn default_product_has_stable_structural_win_and_backend_input() {
             MirPassMeasurement::count(FOLDED_QUOTIENTS, 1),
             MirPassMeasurement::count(FOLDED_REMAINDERS, 0),
             MirPassMeasurement::count(FOLDED_SHIFTS, 1),
+            MirPassMeasurement::count(PROPAGATED_OPERAND_FOLDS, 0),
             MirPassMeasurement::count(REMOVED_PROTOCOL_LOAD_VALUES, 4),
             MirPassMeasurement::count(RETAINED_STATIC_FAILURES, 0),
         ]

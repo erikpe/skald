@@ -11,10 +11,11 @@ The
 implements the frozen callable-local solver, checked-protocol carrier
 certificates, depth-independent primitive and checked consumers, and
 constant-left logical selection through one proof-consuming transition. CLR0
-through CLR3 are complete: exact structural observations, auditable checked-
+through CLR4 are complete: exact structural observations, auditable checked-
 carrier certificates, and one immutable convergent callable-local solution are
-implemented; primitive-family consumers now use that solution and primitive
-folding is depth-independent across the supported graph. CLR4 is next.
+implemented; primitive-family and checked-protocol consumers use that solution,
+and both fold to arbitrary supported dependency depth without pipeline
+repetition. CLR5 is next.
 
 ## Pending discoveries
 
@@ -33,20 +34,20 @@ The open
 retain one low-priority scalar-spill provenance limitation that becomes
 important before a final-stage storage transformation.
 
-The open
+The resolved
 [checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
-retain the measured nested-carrier limitation from the completed
+record the measured nested-carrier limitation from the completed
 checked-protocol pass. Its accepted resolution is now the broader frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 which treats arbitrary supported expression depth as an architectural
 completeness requirement rather than a one-off scalar-spill cleanup. Delivery
-is tracked by the planned roadmap below.
+was completed for the checked consumer in CLR4.
 
 The
 [convergent local constant propagation discoveries](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md)
-retain the newly observed preservation-spill mismatch for checked sibling
-subexpressions. New work outside the frozen boundary belongs there rather than
-in an active task.
+currently contain no open findings; CLR4 resolved the preservation-spill
+mismatch for checked sibling subexpressions. New work outside the frozen
+boundary belongs there rather than in an active task.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent

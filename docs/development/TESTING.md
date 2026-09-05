@@ -178,8 +178,9 @@ and the whole-world occurrence must consume the canonicalized call graph last.
 ### Checked-integer constant protocol simplification coverage
 
 Checked-integer pipeline tests pin the default position after the second
-primitive constant fold, constants exposed by those earlier scalar passes,
-successful protocol folding, subsequent unreachable failure-block cleanup,
+primitive constant fold, constants available directly from one convergent
+solution even when primitive rewriting is disabled, successful protocol
+folding, subsequent unreachable failure-block cleanup,
 checked-pass-disabled retention, ordered metrics, checkpoint numbering, and
 verified outputs under every stable pass exclusion. The dedicated optimization
 goldens run successful checked division, remainder, and shifts under default,
@@ -232,13 +233,17 @@ bounded-view test separately proves that algebraic and CFG consumers expose
 only definitions already encountered in their current block while observing
 literal rewrites made inside the same transaction.
 
-Primitive pass tests now pin arbitrary-depth folding in one occurrence,
+Primitive pass tests pin arbitrary-depth folding in one occurrence,
 constants propagated across retained checked and logical structures,
 independent selection, exact identity/span preservation, static-failure and
 unsupported barriers, immutable-plan stale-input rejection, stable provenance
-metrics, no-op seal reuse, and idempotence. Later pass tests cover the checked
-and logical consumers independently, including multi-candidate checked
-transactions, exact edge selection, and selected-result replacement. The
+metrics, no-op seal reuse, and idempotence. Checked-consumer tests cover the
+exact three-protocol sibling expression, nested shifts, deep alternating
+checked chains, primitive-disabled and checked-only schedules, independent
+work around static failures, whole-plan stale/conflict rejection before
+mutation, one dense commit, propagated-operand metrics, and idempotence. Later
+tests cover the logical consumer, including exact edge selection and
+selected-result replacement. The
 transition matrix covers zero or one transition, stage-order rejection,
 mandatory normalization exactly once, typed capability privacy, transition and
 normalization failure attribution, and absence of a partially verified product.

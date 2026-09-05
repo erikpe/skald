@@ -2,7 +2,6 @@
 
 mod checked_integer_evaluation;
 pub(in crate::passes::pipeline) mod checked_integer_folding;
-mod checked_integer_protocol;
 mod checked_integer_rewrite;
 mod checked_integer_topology;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;

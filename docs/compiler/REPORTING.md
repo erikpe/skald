@@ -412,7 +412,8 @@ threshold.
 ### Checked-integer constant protocol simplification observation
 
 The registered `checked-integer-constant-folding` pass reports folded
-quotient, remainder, and shift protocol counts, removed private protocol-load
+quotient, remainder, and shift protocol counts, protocols whose operands use
+propagated rather than direct literal facts, removed private protocol-load
 value counts, and retained statically failing candidate counts in that stable
 order. Generic retained, inserted, and removed MIR entity totals remain owned
 by the atomic commit statistics. An unchanged occurrence reports all
@@ -425,17 +426,16 @@ phases-only, or details-only timing-allocation boundaries.
 
 ### Frozen convergent local constant propagation observation
 
-Status: **in progress**. The frozen
+Status: **in progress through the dependent checked-protocol consumer**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
-the future observation contract; current reports retain the implemented
-block-local and checked-protocol metrics until delivery.
+the remaining logical-transition observation contract.
 
-The primitive occurrence retains its established counters and now adds stable
+The primitive occurrence retains its established counters and adds stable
 crossed-carrier, crossed-checked, crossed-logical, and maximum-folded-depth
-measurements. The checked occurrence will similarly distinguish protocols
-whose operands required propagated rather than literal facts. The new
+measurements. The checked occurrence now distinguishes protocols whose operands
+required propagated rather than literal facts. The future
 `constant-short-circuit-folding` occurrence reports `&&` and `||` selections
 split by short versus right path and counts exact selected-result loads replaced
 by constants. Worklist waves, queue operations, graph sizes, and analysis

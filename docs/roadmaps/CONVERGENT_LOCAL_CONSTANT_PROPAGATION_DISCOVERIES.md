@@ -15,35 +15,22 @@ CLR0 and CLR1 completed without an out-of-scope finding. CLR1 added the shared
 exhaustive storage-use census and the private checked-carrier certificate;
 CLR2 added the immutable dependency graph and convergent solver. CLR3 migrated
 primitive folding and the bounded algebraic/CFG fact consumers to that shared
-solution. During the remaining implementation, record only work
+solution. CLR4 migrated checked folding to one solved snapshot and resolved the
+only prior finding below. During the remaining implementation, record only work
 discovered outside the active task's frozen scope. Each entry should
 state the problem, concrete evidence, likely owner and priority, and a bounded
 later direction. Small maintainability improvements that directly support the
 current task should be implemented in that task instead.
 
-## Sibling checked subexpressions introduce an excluded preservation spill
+There are currently no open roadmap-specific findings.
 
-**Evidence:** On the current lowering of
-`((8 / 2) + (7 % 3)) / 2`, the first inner result is reloaded from its
-protocol-owned result carrier and then stored in a separate `ScalarSpill`
-while the second checked subexpression executes. The addition consumes a load
-from that preservation spill. It is not one of the operand/result storage IDs
-named by any checked terminator, so the frozen carrier rule correctly leaves
-it opaque. The convergent solver therefore proves each inner result but not
-the addition or outer division.
+## Resolved during CLR4
 
-**Impact:** The solver is complete for its frozen supported graph, including
-arbitrarily deep alternating primitive and checked chains which cross only
-protocol-owned carriers, but source expressions with independently checked
-siblings can lower through an extra excluded edge. The roadmap's later exact
-three-protocol fixture cannot become one constant until that mismatch is
-resolved.
-
-**Likely owner:** Carrier provenance and MIR expression-preservation lowering,
-before dependent checked-protocol rewriting. Do not weaken the certificate
-into generic unique-store propagation. Either give these compiler-generated
-continuation spills explicit checked-protocol ownership or revise lowering so
-the preserved value flows through an already certified protocol carrier.
-
-**Priority:** High before the checked-protocol consumer milestone; outside the
-frozen graph/solver scope.
+The sibling checked-expression preservation spill was removed without
+broadening constant propagation into general storage. Lowering now reloads a
+checked result from its existing protocol-owned result carrier when the value
+must survive a checked sibling. Carrier certification accepts all exact,
+dominated, in-lifetime loads while retaining one store, exact protocol
+ownership, exhaustive access classification, and every original alias and
+authorization exclusion. Consequently `((8 / 2) + (7 % 3)) / 2` produces all
+three candidates from one solution and folds through one callable transaction.

@@ -431,7 +431,7 @@ fn available_passes_come_from_the_validated_registry_in_stable_name_order() {
     assert_eq!(passes[0].name(), "checked-integer-constant-folding");
     assert_eq!(
         passes[0].description(),
-        "Folds exact successful checked-integer constant protocols."
+        "Folds exact successful checked-integer protocols from convergent facts."
     );
     assert_eq!(passes[1].identity(), conservative_cfg_cleanup::IDENTITY);
     assert_eq!(passes[1].stage(), MirPassStage::ProofRich);

@@ -100,11 +100,7 @@ impl BodyLowerer<'_> {
         self.body
             .select_block(join)
             .expect("allocated integer-division result join must be selectable");
-        self.assign(
-            MirRvalueKind::Load(MirPlace::base(result)),
-            operation.result_type(),
-            expression.span,
-        )
+        self.load_checked_scalar_result(result, operation.result_type(), expression.span)
     }
 
     fn new_integer_division_result(

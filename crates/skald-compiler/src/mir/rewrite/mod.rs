@@ -30,6 +30,7 @@ mod identity;
 mod import;
 mod map;
 mod program;
+mod snapshot;
 mod storage_use;
 mod value_use;
 
@@ -63,6 +64,7 @@ pub(crate) use map::{
     validate_member_local_identity_owners, validate_static_initializer_local_identity_owners,
 };
 pub(crate) use program::{rewrite_program, MirCallableRewriteResult, MirProgramRewriteResult};
+pub(crate) use snapshot::MirCallableEditSnapshot;
 pub(crate) use storage_use::{
     storage_use_census_for_definition, MirStoragePlaceUse, MirStorageUseCensus,
     MirStorageUseCensusEntry, MirStorageUseRole, MirStorageUseSite, MirStorageWriteAuthorization,

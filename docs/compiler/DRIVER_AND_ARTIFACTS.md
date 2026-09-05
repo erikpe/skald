@@ -241,12 +241,12 @@ publication.
 
 ## Frozen convergent local constant propagation orchestration
 
-Status: **planned**. The frozen
+Status: **in progress through the dependent checked-protocol consumer**. The frozen
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
 and active
 [roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md) define
-the accepted extension; current requests continue using the implemented
-two-stage behavior until that roadmap delivers it.
+the accepted extension. Primitive and checked proof-rich consumers use the
+convergent solution today; the transition-stage extension remains pending.
 
 The registry will retain `primitive-constant-folding` and
 `checked-integer-constant-folding` and add

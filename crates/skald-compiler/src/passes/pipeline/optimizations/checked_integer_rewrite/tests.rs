@@ -9,22 +9,15 @@ use crate::{
 };
 
 use super::*;
-use crate::passes::pipeline::optimizations::checked_integer_protocol::{
-    observe_checked_integer_protocols, CheckedIntegerProtocolObservation,
+use crate::passes::pipeline::optimizations::checked_integer_folding::{
+    CheckedIntegerFoldPlan, CheckedIntegerFoldSelection,
 };
 
 fn only_candidate(program: &crate::mir::MirProgram) -> CheckedIntegerProtocolCandidate {
-    let observations = program
-        .executable_definitions()
-        .flat_map(|definition| observe_checked_integer_protocols(definition).unwrap())
-        .collect::<Vec<_>>();
-    assert_eq!(observations.len(), 1, "{observations:#?}");
-    let CheckedIntegerProtocolObservation::Candidate(candidate) =
-        observations.into_iter().next().unwrap()
-    else {
-        panic!("expected one rewrite candidate");
-    };
-    *candidate
+    let plan = CheckedIntegerFoldPlan::prepare(program, CheckedIntegerFoldSelection::All).unwrap();
+    let candidates = plan.candidates().cloned().collect::<Vec<_>>();
+    assert_eq!(candidates.len(), 1, "{candidates:#?}");
+    candidates.into_iter().next().unwrap()
 }
 
 fn definition(

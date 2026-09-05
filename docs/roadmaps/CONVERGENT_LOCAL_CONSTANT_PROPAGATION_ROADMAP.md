@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 through CLR3 are complete and CLR4 is next.
+Status: in progress; CLR0 through CLR4 are complete and CLR5 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -99,7 +99,7 @@ creating persistent optimizer provenance.
 - [x] CLR1 — Certify checked-protocol scalar carriers
 - [x] CLR2 — Build the convergent callable-local solver
 - [x] CLR3 — Migrate primitive-family fact consumers
-- [ ] CLR4 — Rewrite dependent checked protocols from one solved snapshot
+- [x] CLR4 — Rewrite dependent checked protocols from one solved snapshot
 - [ ] CLR5 — Add the proof-consuming transition boundary
 - [ ] CLR6 — Implement constant-left logical selection
 - [ ] CLR7 — Complete selection, observation, and semantic evidence
@@ -249,21 +249,21 @@ independent `PrimitiveConstantFacts` engine remains.
 **Purpose:** Let one checked pass occurrence fold arbitrarily nested successful
 protocols without mutating and rediscovering intermediate waves.
 
-- [ ] Make checked folding combine structural observations with solver outcomes
+- [x] Make checked folding combine structural observations with solver outcomes
   rather than requiring literal carrier-store assignments.
-- [ ] Plan every eligible successful division, remainder, and shift protocol
+- [x] Plan every eligible successful division, remainder, and shift protocol
   against one immutable verified program snapshot.
-- [ ] Preserve static-failure and unsupported outcomes, exact failure reasons,
+- [x] Preserve static-failure and unsupported outcomes, exact failure reasons,
   source locations, evaluation timing, and independently foldable surrounding
   work.
-- [ ] Revalidate the complete multi-candidate plan, including carrier
+- [x] Revalidate the complete multi-candidate plan, including carrier
   certificates and non-conflicting identity edits, before the first mutation.
-- [ ] Apply dependent candidates in stable order through one unpublished
+- [x] Apply dependent candidates in stable order through one unpublished
   transaction and one deterministic dense commit; publish nothing on failure.
-- [ ] Preserve operand evaluation, result identity, result carrier/reload,
+- [x] Preserve operand evaluation, result identity, result carrier/reload,
   source spans, and existing protocol rewrite granularity; leave storage and
   CFG cleanup to their owners.
-- [ ] Report propagated-operand folds separately from current direct folds while
+- [x] Report propagated-operand folds separately from current direct folds while
   retaining established operation/failure and structural metrics.
 
 **Tests:** `((8 / 2) + (7 % 3)) / 2`, `(1 << 2u) << 1u`, deep alternating

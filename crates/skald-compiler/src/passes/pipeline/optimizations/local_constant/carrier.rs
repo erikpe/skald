@@ -158,7 +158,7 @@ pub(super) enum CheckedCarrierRejectionReason {
     WrongStorageType,
     InvalidAccess,
     MissingOrMultipleStores,
-    MissingOrMultipleLoads,
+    MissingLoads,
     MissingOrMultipleLifetimeMarkers,
     WrongStore,
     WrongLoad,
@@ -305,9 +305,9 @@ fn certify_one(
     let [store_site] = stores.as_slice() else {
         return Err(CheckedCarrierRejectionReason::MissingOrMultipleStores);
     };
-    let [load_site] = loads.as_slice() else {
-        return Err(CheckedCarrierRejectionReason::MissingOrMultipleLoads);
-    };
+    if loads.is_empty() {
+        return Err(CheckedCarrierRejectionReason::MissingLoads);
+    }
     let ([live_site], [dead_site]) = (lives.as_slice(), deads.as_slice()) else {
         return Err(CheckedCarrierRejectionReason::MissingOrMultipleLifetimeMarkers);
     };
@@ -320,18 +320,31 @@ fn certify_one(
 
     let store = exact_store(definition, *store_site, storage)
         .ok_or(CheckedCarrierRejectionReason::WrongStore)?;
-    let load = exact_load(definition, *load_site, storage)
-        .ok_or(CheckedCarrierRejectionReason::WrongLoad)?;
-    if load.site != expected_load.site || load.result != expected_load.value {
+    let loads = loads
+        .into_iter()
+        .map(|site| {
+            exact_load(definition, site, storage).ok_or(CheckedCarrierRejectionReason::WrongLoad)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if !loads
+        .iter()
+        .any(|load| load.site == expected_load.site && load.result == expected_load.value)
+    {
         return Err(CheckedCarrierRejectionReason::WrongLoad);
     }
     if definition.value(store.source).map(|value| value.ty) != Some(ty) {
         return Err(CheckedCarrierRejectionReason::StoreSourceTypeMismatch);
     }
-    if definition.value(load.result).map(|value| value.ty) != Some(ty) {
+    if loads
+        .iter()
+        .any(|load| definition.value(load.result).map(|value| value.ty) != Some(ty))
+    {
         return Err(CheckedCarrierRejectionReason::LoadResultTypeMismatch);
     }
-    if !instruction_dominates(definition, store.site, load.site) {
+    if loads
+        .iter()
+        .any(|load| !instruction_dominates(definition, store.site, load.site))
+    {
         return Err(CheckedCarrierRejectionReason::StoreDoesNotDominateLoad);
     }
     let live = instruction_site(definition, *live_site)
@@ -339,8 +352,10 @@ fn certify_one(
     let dead = instruction_site(definition, *dead_site)
         .ok_or(CheckedCarrierRejectionReason::IncompatibleLifetime)?;
     if !instruction_dominates(definition, live, store.site)
-        || !instruction_dominates(definition, live, load.site)
-        || lifetime_ends_before_load(definition, dead, load.site)
+        || loads.iter().any(|load| {
+            !instruction_dominates(definition, live, load.site)
+                || lifetime_ends_before_load(definition, dead, load.site)
+        })
     {
         return Err(CheckedCarrierRejectionReason::IncompatibleLifetime);
     }
@@ -348,7 +363,7 @@ fn certify_one(
     Ok(CheckedCarrierCertificate {
         declaration: declaration.clone(),
         store,
-        loads: vec![load],
+        loads,
         ty,
         protocol_owner,
         lifetime: CheckedCarrierLifetimeEvidence { live, dead },

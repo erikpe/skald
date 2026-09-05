@@ -40,6 +40,7 @@ impl BodyLowerer<'_> {
         self.end_optional_views_from(0, span);
         let plan = self.full_expression.take_plan();
         self.emit_full_expression_plan(plan, span);
+        self.scalar_result_homes.clear();
     }
 
     fn emit_full_expression_plan(

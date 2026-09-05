@@ -1,5 +1,7 @@
 //! Deterministic lowering from typed HIR to MIR.
 
+use std::collections::BTreeMap;
+
 use super::{build::MirBodyBuilder, model::*};
 use crate::{
     hir::{
@@ -199,6 +201,9 @@ struct BodyLowerer<'hir> {
     cleanup: CleanupPlanner,
     loop_contexts: LoopContextStack,
     full_expression: FullExpressionTracker,
+    /// Existing compiler-owned storage which can safely reload a checked
+    /// scalar result later in the same full expression.
+    scalar_result_homes: BTreeMap<ValueId, StorageId>,
     next_optional_guard: usize,
     active_optional_guards: Vec<ActiveOptionalGuard>,
 }
@@ -307,6 +312,7 @@ impl<'hir> BodyLowerer<'hir> {
             cleanup: CleanupPlanner::new(),
             loop_contexts: LoopContextStack::new(),
             full_expression: FullExpressionTracker::default(),
+            scalar_result_homes: BTreeMap::new(),
             next_optional_guard: 0,
             active_optional_guards: Vec::new(),
             return_storage: None,

@@ -5,13 +5,17 @@
 //! to [`solve_local_constants`] and must be discarded after a MIR rewrite.
 
 mod carrier;
+mod evidence;
 mod graph;
 mod logical;
 mod solve;
 mod view;
 
-// The public-within-optimizer facade is intentionally staged one milestone
-// before its first production consumer.
+pub(in crate::passes::pipeline::optimizations) use evidence::{
+    checked_carrier_plan_evidence, CheckedCarrierPlanEvidence, CheckedCarrierPlanRole,
+};
+// Later roadmap stages still exercise solution queries not yet used by the
+// migrated primitive and checked consumers.
 #[allow(unused_imports)]
 pub(in crate::passes::pipeline::optimizations) use solve::{
     solve_local_constants, LocalConstantAnalysisError, LocalConstantFact, LocalConstantIdentity,

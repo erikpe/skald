@@ -180,7 +180,7 @@ fn rejects_wrong_kind_and_type_without_considering_unrelated_spills() {
 }
 
 #[test]
-fn rejects_multiple_authorized_projected_and_extra_load_accesses() {
+fn rejects_ambiguous_writes_and_projections_but_accepts_dominated_extra_loads() {
     let base = lower_source_to_final_mir("fn main() -> i64 { return 8 / 2; }");
     let carrier = only_checked_storage(&base, CheckedCarrierProtocolRole::FirstOperand);
 
@@ -242,6 +242,7 @@ fn rejects_multiple_authorized_projected_and_extra_load_accesses() {
         .push(MirPlaceProjection::Field(field));
     assert!(rejection_reasons(&projected).contains(&CheckedCarrierRejectionReason::InvalidAccess));
 
+    let result_carrier = only_checked_storage(&base, CheckedCarrierProtocolRole::Result);
     let mut extra_load = base;
     let definition = entry_definition_mut(&mut extra_load);
     let mut load = definition
@@ -251,7 +252,7 @@ fn rejects_multiple_authorized_projected_and_extra_load_accesses() {
         .flat_map(|block| &block.instructions)
         .find_map(|instruction| match instruction {
             MirInstruction::Assign(assignment)
-                if matches!(assignment.rvalue.kind, crate::mir::MirRvalueKind::Load(ref place) if *place == MirPlace::base(carrier)) =>
+                if matches!(assignment.rvalue.kind, crate::mir::MirRvalueKind::Load(ref place) if *place == MirPlace::base(result_carrier)) =>
             {
                 Some(assignment.clone())
             }
@@ -265,11 +266,32 @@ fn rejects_multiple_authorized_projected_and_extra_load_accesses() {
         ty: load.rvalue.ty,
         span: load.span,
     });
-    definition.body.blocks[0]
-        .instructions
-        .push(MirInstruction::Assign(load));
-    assert!(rejection_reasons(&extra_load)
-        .contains(&CheckedCarrierRejectionReason::MissingOrMultipleLoads));
+    let join = definition
+        .body
+        .blocks
+        .iter_mut()
+        .find(|block| {
+            matches!(
+                block.instructions.first(),
+                Some(MirInstruction::Assign(assignment))
+                    if matches!(assignment.rvalue.kind, crate::mir::MirRvalueKind::Load(ref place) if *place == MirPlace::base(result_carrier))
+            )
+        })
+        .unwrap();
+    join.instructions.insert(1, MirInstruction::Assign(load));
+    let evidence = certify_checked_integer_carriers(entry_definition(&extra_load).into()).unwrap();
+    let result = evidence
+        .iter()
+        .find_map(|observation| match observation {
+            CheckedCarrierCertificationObservation::Certified(certificate)
+                if certificate.storage() == result_carrier =>
+            {
+                Some(certificate)
+            }
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(result.loads().len(), 2);
 }
 
 #[test]

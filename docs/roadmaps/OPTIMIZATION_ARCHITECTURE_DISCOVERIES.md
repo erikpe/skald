@@ -47,8 +47,10 @@ certificates, and the read-only dense dependency graph converges iteratively
 with conditional logical selection and stable provenance. Primitive constant
 folding now consumes that solution atomically, while algebraic and CFG passes
 use a bounded same-block view instead of a duplicate arithmetic engine. The
-remaining roadmap migrates the checked consumer and adds constant-left logical
-selection without a pipeline fixed-point loop or general memory analysis.
+checked consumer now plans all dependent successful protocols from one solved
+snapshot and commits them atomically. The remaining roadmap adds constant-left
+logical selection without a pipeline fixed-point loop or general memory
+analysis.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It
@@ -648,10 +650,10 @@ architectural investments.
    are implemented. Independently selectable empty-block forwarding and
    basic-block merging run before whole-world reachability.
 
-7. Implement the planned convergent callable-local constant solver and its
-   primitive, checked, and proof-transition logical consumers. This completes
-   the expected local constant-folding semantics before new operation families
-   or broader memory reasoning are added.
+7. Complete the in-progress convergent callable-local constant work. The solver
+   and its primitive and checked consumers are implemented; the proof-transition
+   logical consumer remains. This completes the expected local constant-folding
+   semantics before new operation families or broader memory reasoning are added.
 
 8. After the bounded CFG and convergent constant layers provide more evidence about remaining
    barriers, generalize callable effects and alias queries where conservative

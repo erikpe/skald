@@ -1,11 +1,11 @@
 # Checked Integer Constant Protocol Simplification Discoveries
 
-Status: open; the one measured follow-up from the completed
-[checked integer constant protocol simplification roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
-is accepted by the frozen
+Status: resolved by CLR4 of the active
+[convergent local constant propagation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md),
+following the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md)
-and tracked by its planned
-[implementation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
+and the completed checked-integer foundation's
+[roadmap](../archive/CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md).
 
 The [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) owns
 concise cross-domain placement, effort, value, prerequisite, and status
@@ -14,18 +14,21 @@ nested checked results that cross private scalar carriers.
 
 ## Nested successful protocols do not feed enclosing scalar carriers
 
-**Evidence:** Division/remainder coverage for `((8 / 2) + (7 % 3)) / 2` finds
-and folds the two independent inner protocols in one callable transaction;
-shift coverage observes the same boundary for `(1 << 2u) << 1u`. The enclosing
-operation remains checked on the next observation: each inner constant is
-stored into its result carrier, reloaded at its join, and then stored into an
-outer operand carrier, while the deliberately narrow candidate query accepts
-only an exact constant assignment as the unique carrier-store source.
+Status: resolved; nested successful protocols now feed enclosing carriers.
 
-**Impact:** Correctness and idempotence are unaffected, but nested constant
-checked expressions can leave optimization opportunities behind even after
-their inner operations have folded. Repeating the same checked-protocol pass
-cannot expose the outer operation without an additional propagation rule.
+**Former evidence:** Division/remainder coverage for
+`((8 / 2) + (7 % 3)) / 2` formerly folded only the two independent inner
+protocols, while `(1 << 2u) << 1u` formerly left the outer shift checked. The
+old candidate query accepted only an exact literal assignment as a carrier's
+unique store source.
+
+**Resolution:** CLR4 makes the checked consumer combine immutable structural
+topology with convergent solver facts and narrow carrier-plan evidence. It
+plans dependent candidates together, revalidates the complete callable
+snapshot and all conflicts before mutation, and commits once. Lowering also
+reuses an existing checked-result carrier for sibling preservation, while the
+carrier certificate accepts multiple exact dominated loads without accepting
+generic storage. Both examples now fold completely in one checked occurrence.
 
 **Accepted owner:** The frozen convergent design gives one seal-local dependency
 graph and worklist solver ownership of constant provenance, while the checked-
@@ -44,7 +47,7 @@ entirely from supported constant operations should fold independent of its
 nesting depth. The measurement result remains valid and is not being recast as
 performance evidence.
 
-**Accepted resolution:** Prove constants through canonical private scalar-
+**Accepted design boundary:** Prove constants through canonical private scalar-
 spill store/load chains with explicit protocol ownership, access, write,
 dominance, type, alias, and lifecycle conditions. Use those relations in a
 monotonic callable-local solver which reasons through supported primitive and
@@ -53,4 +56,4 @@ the existing independently selectable primitive and checked passes materialize
 only their own rewrite families. Do not recursively mutate nested diamonds,
 rerun the whole pass to convergence, or broaden the solver into general
 load/store propagation. The linked frozen design owns the full boundary; the
-active roadmap owns implementation and closure of this finding.
+active roadmap owns final delivery; CLR4 closes this finding.

@@ -480,18 +480,19 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let checked = |name| ReportMetric::pass_count("checked-integer-constant-folding", name, 0);
     assert_eq!(
-        pipeline[29..34],
+        pipeline[29..35],
         [
             checked("folded quotient protocols"),
             checked("folded remainder protocols"),
             checked("folded shift protocols"),
+            checked("folded protocols with propagated operands"),
             checked("removed protocol-load values"),
             checked("retained statically failing candidates"),
         ]
     );
     let cfg = |name| ReportMetric::pass_count("conservative-cfg-cleanup", name, 0);
     assert_eq!(
-        pipeline[34..39],
+        pipeline[35..40],
         [
             cfg("folded constant branches"),
             cfg("folded same-target branches"),
@@ -503,7 +504,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let final_cfg =
         |name| ReportMetric::pass_count("post-proof-unreachable-block-elimination", name, 0);
     assert_eq!(
-        pipeline[39..42],
+        pipeline[40..43],
         [
             final_cfg("removed blocks"),
             final_cfg("removed value declarations"),
@@ -512,7 +513,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let forwarding = |name| ReportMetric::pass_count("post-proof-empty-block-forwarding", name, 0);
     assert_eq!(
-        pipeline[42..46],
+        pipeline[43..47],
         [
             forwarding("removed forwarding blocks"),
             forwarding("redirected successor occurrences"),
@@ -522,7 +523,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let merging = |name| ReportMetric::pass_count("post-proof-basic-block-merging", name, 0);
     assert_eq!(
-        pipeline[46..51],
+        pipeline[47..52],
         [
             merging("merged block pairs"),
             merging("moved instructions"),
@@ -534,7 +535,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[51..72],
+        pipeline[52..73],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -559,8 +560,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[72], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[73], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[73], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[74], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
