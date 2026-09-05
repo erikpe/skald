@@ -1115,8 +1115,14 @@ final-stage reachability ownership and the normalized-only backend boundary are
 implemented. The post-proof unreachable-block pass runs immediately after
 normalization in the default profile and exercises normalized block/value
 deletion and fresh resealing. Empty-block forwarding follows through its
-narrow normalized CFG capability, while whole-world reachability remains last.
-Their selection and parity matrices preserve the backend contract.
+narrow normalized CFG capability, basic-block merging consumes the resulting
+single-incoming linear chains, and whole-world reachability remains last.
+Their selection and parity matrices preserve the backend contract. Source-level
+backend tests additionally compare default, `none`, each canonicalization pass
+disabled, both disabled, and post-proof unreachable deletion disabled. They
+pin native results, failures, runtime traces, lifecycle order, and a productive
+reduction in emitted jump instructions without depending on target label or
+mnemonic spelling as a semantic oracle.
 
 The backend boundary accepts no path-condition or logical-expression
 record, no path-condition rvalue, and no `PathCondition` storage declaration.

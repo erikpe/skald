@@ -1,0 +1,24 @@
+fn forwarded_loop(limit: i64) -> i64 {
+    var value: i64 = 0;
+    while (value < limit) {
+        value = value + 1;
+        if (value < limit) {
+            continue;
+        }
+    }
+    return value;
+}
+
+fn merged_branch(value: bool) -> i64 {
+    if (true) {
+        return 7;
+    }
+    if (value) {
+        return 8;
+    }
+    return 9;
+}
+
+fn main() -> i64 {
+    return forwarded_loop(3) + merged_branch(false);
+}

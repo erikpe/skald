@@ -16,6 +16,21 @@ compiler_args = [
   "--disable-mir-pass", "post-proof-basic-block-merging",
 ]
 
+[variant.post-proof-forwarding-disabled]
+compiler_args = ["--disable-mir-pass", "post-proof-empty-block-forwarding"]
+
+[variant.post-proof-merging-disabled]
+compiler_args = ["--disable-mir-pass", "post-proof-basic-block-merging"]
+
+[variant.post-proof-forwarding-and-merging-disabled]
+compiler_args = [
+  "--disable-mir-pass", "post-proof-empty-block-forwarding",
+  "--disable-mir-pass", "post-proof-basic-block-merging",
+]
+
+[variant.post-proof-unreachable-disabled]
+compiler_args = ["--disable-mir-pass", "post-proof-unreachable-block-elimination"]
+
 [variant.dead-pure-disabled]
 compiler_args = ["--disable-mir-pass", "dead-pure-definition-elimination"]
 

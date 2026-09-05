@@ -15,6 +15,16 @@ companion panic fixture pins the selected failure span and runtime trace across
 default, `none`, post-proof-canary-disabled, reachability-disabled, and
 all-pass-disabled variants.
 
+`post_proof_cfg_shape.ska` is shared by the focused source-lowering test and
+the golden matrix, pinning a transitive forwarding chain and instruction-
+bearing merge. `post_proof_cfg_canonicalization.ska` broadens the native
+matrix across methods, static startup and reverse shutdown, loop control,
+local and shared cleanup, optionals, arrays, calls, returns, and checked
+success. The three sources compare default, `none`, each pass disabled, both
+disabled, and post-proof unreachable deletion disabled. The failure source
+pins panic and hard checked termination, including operand order, status,
+exact source locations, and runtime-trace rows.
+
 The checked-integer fixtures separately cover successful quotient, remainder,
 and shift protocols for every primitive integer type, exact signed and width
 boundaries, dynamic and effectful exclusions, nested expressions, static

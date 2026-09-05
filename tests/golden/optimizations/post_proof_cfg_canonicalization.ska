@@ -1,0 +1,64 @@
+import std::io;
+
+fn publish(value: i64) -> i64 {
+    std::io::println_i64(value);
+    return value;
+}
+
+class Resource {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    fn read() -> i64 {
+        return self.marker;
+    }
+
+    destroy {
+        std::io::println_i64(self.marker);
+    }
+}
+
+class State {
+    static marker: i64 = publish(10);
+    static resource: Resource = Resource(90);
+
+    init() {}
+}
+
+fn loop_total(limit: i64) -> i64 {
+    var total: i64 = 0;
+    var index: i64 = 0;
+    while (index < limit) {
+        index = index + 1;
+        if (index == 2) {
+            continue;
+        }
+        total = total + index;
+    }
+    return total;
+}
+
+fn read_resource(ref resource: Resource) -> i64 {
+    return resource.read();
+}
+
+fn main() -> i64 {
+    var local: Resource = Resource(40);
+    var owner: shared Resource = new Resource(50);
+    var maybe: i64? = some(6);
+    var values: i64[] = i64[]{8, 10};
+    var quotient: i64 = values[1] / 2;
+
+    std::io::println_i64(loop_total(4));
+    std::io::println_i64(read_resource(local));
+    std::io::println_i64(owner->read());
+    std::io::println_i64(maybe!);
+    std::io::println_i64(values[0]);
+    std::io::println_i64(quotient);
+    std::io::println_i64(State.marker);
+    std::io::println_i64(State.resource.read());
+    return 0;
+}

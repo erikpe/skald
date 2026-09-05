@@ -1,6 +1,6 @@
 # Post-Proof CFG Canonicalization Roadmap
 
-Status: in progress; PCR0 through PCR6 are complete and PCR7 is next.
+Status: in progress; PCR0 through PCR7 are complete and PCR8 is next.
 
 This roadmap implements the frozen
 [post-proof CFG canonicalization design](POST_PROOF_CFG_CANONICALIZATION_DESIGN_PROPOSAL.md).
@@ -102,7 +102,7 @@ concise cross-domain status for FMC-08 and FMC-09.
 - [x] PCR4 — Implement selectable basic-block merging
 - [x] PCR5 — Freeze and prove default pass composition
 - [x] PCR6 — Complete inspection and reporting ownership
-- [ ] PCR7 — Prove source-level semantic and target equivalence
+- [x] PCR7 — Prove source-level semantic and target equivalence
 - [ ] PCR8 — Harden ownership, documentation, and roadmap closure
 
 ## PR-sized implementation sequence
@@ -423,22 +423,22 @@ observation vocabulary and ownership. Focused suites and the complete
 **Purpose:** Validate the equivalence argument through real lowering, static
 lifecycle, tracing, backend lowering, and native execution.
 
-- [ ] Add golden fixtures producing transitive empty chains and single-entry
+- [x] Add golden fixtures producing transitive empty chains and single-entry
   instruction-bearing merge chains after normalization.
-- [ ] Cover functions, methods, static initializers, loops, cleanup, checked
+- [x] Cover functions, methods, static initializers, loops, cleanup, checked
   success/failure, optional, array, shared ownership, calls, return, panic, and
   hard termination.
-- [ ] Cover joins, empty cycles, body entry, and publication boundaries which
+- [x] Cover joins, empty cycles, body entry, and publication boundaries which
   must remain unchanged.
-- [ ] Add variants for default, `none`, forwarding disabled, merging disabled,
+- [x] Add variants for default, `none`, forwarding disabled, merging disabled,
   both disabled, and post-proof unreachable deletion disabled.
-- [ ] Compare native output, status, panic text/location, destruction order,
+- [x] Compare native output, status, panic text/location, destruction order,
   static startup/shutdown, and runtime-trace rows.
-- [ ] Assert productive MIR block/jump and relevant assembly reduction without
+- [x] Assert productive MIR block/jump and relevant assembly reduction without
   making target spelling the semantic oracle.
-- [ ] Measure corpus opportunities and reductions and record only supported
+- [x] Measure corpus opportunities and reductions and record only supported
   conclusions.
-- [ ] Update backend and testing contracts with implemented equivalence and
+- [x] Update backend and testing contracts with implemented equivalence and
   coverage.
 
 **Tests:** Focused goldens/variants; native and traced runs; panic/termination;
@@ -448,6 +448,46 @@ reachability, lifecycle, backend, and runtime suites; full debug golden run.
 **Exit criteria:** Both passes reach the backend productively, barrier fixtures
 remain valid, all selections are natively equivalent, traces and failures
 match, and corpus measurements are evidence-backed.
+
+**Implementation evidence:** A source-lowering equivalence test identifies a
+genuinely transitive empty-block forwarding plan and an instruction-bearing
+merge candidate, then proves the default product removes three forwarding
+blocks and one merge block, contains four fewer goto terminators, and lowers
+to fewer x86-64 instructions and assembly bytes than the product with both
+passes disabled. Disabling post-proof unreachable deletion leaves that compact
+fixture's final product unchanged. Existing candidate and guarded-edit tests
+continue to own joins, empty cycles, body entry, permanent publication, and
+checked/optional/array protocol barriers.
+
+The dedicated goldens run 24 native observations across the six required
+schedules. The productive shape is shared directly with the source-lowering
+equivalence test. The broader success case covers functions, a method, active
+static initializers, startup and reverse shutdown, loop control, local and
+shared destruction, checked success, optionals, arrays, calls, and return. The
+failure case covers direct panic and checked hard termination while pinning
+evaluation order, status, exact panic text/location, and trace rows. All
+observations are identical across selections.
+
+An x86-64 measurement on 2026-09-05 compiled four checked-in sources with
+`--omit-runtime-trace -vv`, once under `default` and once with forwarding and
+merging disabled while leaving whole-world reachability enabled:
+
+| Source | Forwarded blocks / redirects | Merged pairs / moved instructions | Final blocks, on / off | Assembly bytes, on / off |
+|---|---:|---:|---:|---:|
+| Post-proof CFG golden | 133 / 159 | 19 / 147 | 91 / 97 | 107,497 / 108,301 |
+| Proof-normalization golden | 138 / 163 | 20 / 148 | 125 / 137 | 113,146 / 114,688 |
+| Loop-lifecycle golden | 137 / 162 | 25 / 198 | 106 / 122 | 131,607 / 133,607 |
+| Whole-world reachability golden | 131 / 156 | 20 / 162 | 90 / 95 | 107,444 / 108,061 |
+| **Total** | **539 / 640** | **84 / 655** | **412 / 451** | **459,694 / 464,657** |
+
+The supported conclusion is structural: both passes find opportunities in all
+four programs and together remove 39 blocks from the retained backend input,
+4,963 assembly bytes, and 78 assembly lines for this snapshot. The much larger
+pre-retention opportunity totals include standard-library definitions later
+removed by whole-world reachability, so they do not imply equivalent emitted
+code savings. Instruction counts remain unchanged because forwarding removes
+goto terminators and merging moves existing instructions. These measurements
+are neither a runtime-speed claim nor a stable performance threshold.
 
 ### PCR8 — Harden ownership, documentation, and roadmap closure
 

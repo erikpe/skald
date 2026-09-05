@@ -1,0 +1,43 @@
+import std::io;
+import std::process;
+from std::error import panic;
+from std::str import Str;
+
+fn mark(value: i64, marker: i64) -> i64 {
+    std::io::println_i64(marker);
+    return value;
+}
+
+fn walk(limit: i64) -> i64 {
+    var value: i64 = 0;
+    while (value < limit) {
+        value = value + 1;
+        if (value < limit) {
+            continue;
+        }
+    }
+    return value;
+}
+
+fn zero() -> i64 {
+    return 0;
+}
+
+fn divide(left: i64, right: i64) -> i64 {
+    return left / right;
+}
+
+fn fail() -> i64 {
+    panic("post-proof CFG failure");
+    return 0;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    if (arguments[1].equals("panic")) {
+        if (walk(3) == 3) {
+            return fail();
+        }
+    }
+    return divide(mark(walk(3), 21), mark(zero(), 22));
+}

@@ -77,4 +77,7 @@ mod composition_tests;
 #[cfg(test)]
 mod seal_tests;
 #[cfg(test)]
+#[path = "pipeline/source_equivalence_tests.rs"]
+mod source_equivalence_tests;
+#[cfg(test)]
 mod tests;

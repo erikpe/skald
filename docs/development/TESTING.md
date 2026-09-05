@@ -243,6 +243,20 @@ forwarding-disabled, merging-disabled, and both-disabled schedules together
 with occurrence data, checkpoint dumps, and final MIR; live durations are not
 compared.
 
+The source-to-native post-proof CFG matrix adds distinct default, `none`,
+forwarding-disabled, merging-disabled, both-disabled, and post-proof-
+unreachable-disabled products. Its successful fixture crosses functions,
+methods, static initialization and reverse shutdown, loop `continue`, local
+and shared-owner destruction, optionals, arrays, calls, return, and a checked
+division success. Its failure fixture pins a direct panic and checked division
+by zero, including operand order, status, exact reason and source location,
+and runtime-trace rows. A colocated source-equivalence test proves that real
+source lowering exposes a transitive forwarding chain and an instruction-
+bearing merge, then compares final block/goto counts and target assembly size
+with both passes disabled. Candidate and guarded-edit suites remain the owners
+of join, empty-cycle, body-entry, permanent-publication, and protocol-shape
+barriers.
+
 ### Proof-provenance normalization coverage
 
 The archived

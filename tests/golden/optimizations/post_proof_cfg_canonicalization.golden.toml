@@ -1,0 +1,62 @@
+schema = 2
+
+[[test]]
+name = "productive_shape_equivalence"
+mode = "run"
+source = "post_proof_cfg_shape.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "post-proof-forwarding-disabled",
+  "post-proof-merging-disabled",
+  "post-proof-forwarding-and-merging-disabled",
+  "post-proof-unreachable-disabled",
+]
+[[test.run]]
+name = "transitive_forwarding_and_instruction_bearing_merge"
+expect = { exit = 10 }
+
+[[test]]
+name = "successful_equivalence"
+mode = "run"
+source = "post_proof_cfg_canonicalization.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "post-proof-forwarding-disabled",
+  "post-proof-merging-disabled",
+  "post-proof-forwarding-and-merging-disabled",
+  "post-proof-unreachable-disabled",
+]
+[[test.run]]
+name = "cfg_lifecycle_ownership_and_checked_success"
+expect = { stdout = { inline = "10\n8\n40\n50\n6\n8\n5\n10\n90\n50\n40\n90\n" } }
+
+[[test]]
+name = "failure_equivalence"
+mode = "run"
+source = "post_proof_cfg_canonicalization_failures.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "post-proof-forwarding-disabled",
+  "post-proof-merging-disabled",
+  "post-proof-forwarding-and-merging-disabled",
+  "post-proof-unreachable-disabled",
+]
+[[test.run]]
+name = "panic_reason_span_and_trace"
+args = ["panic"]
+expect = { exit = "failure", stderr = { inline = """panic: post-proof CFG failure
+stacktrace:
+  at post_proof_cfg_canonicalization_failures::fail (tests/golden/optimizations/post_proof_cfg_canonicalization_failures.ska:31:5)
+  at post_proof_cfg_canonicalization_failures::main (tests/golden/optimizations/post_proof_cfg_canonicalization_failures.ska:39:20)
+""" } }
+[[test.run]]
+name = "checked_termination_order_span_and_trace"
+args = ["division"]
+expect = { exit = "failure", stdout = { inline = "21\n22\n" }, stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at post_proof_cfg_canonicalization_failures::divide (tests/golden/optimizations/post_proof_cfg_canonicalization_failures.ska:27:12)
+  at post_proof_cfg_canonicalization_failures::main (tests/golden/optimizations/post_proof_cfg_canonicalization_failures.ska:42:12)
+""" } }
