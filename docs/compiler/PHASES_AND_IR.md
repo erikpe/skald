@@ -1081,7 +1081,8 @@ through their retained scalar carriers by this pass.
 
 ### Frozen convergent local constant propagation direction
 
-Status: **in progress; CLR0 and CLR1 implemented**. The complete decisions are frozen in the
+Status: **in progress; structural observation, carrier certification, and the
+read-only convergent solver are implemented**. The complete decisions are frozen in the
 [design record](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
 and delivery is divided by the active
 [implementation roadmap](../roadmaps/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
@@ -1097,11 +1098,15 @@ explicit role is a structured analysis error.
 
 The accepted direction introduces one seal-local callable dependency graph
 over transient values and narrowly certified checked-protocol scalar carriers.
-One iterative monotonic worklist derives exact `i64`, `u64`, `u8`, and `bool`
-facts through supported primitive operations, successful checked integer
-protocols, and verified constant-selected logical relations. There is no
-expression-depth, wave, fuel, or pipeline-repetition bound. Existing primitive
-and checked evaluators remain the sole arithmetic authorities.
+One iterative monotonic worklist now derives exact `i64`, `u64`, `u8`, and
+`bool` facts through supported primitive operations, successful checked
+integer protocols, and verified constant-selected logical relations. Dense
+value slots and only certified storage slots back the solution; deterministic
+reverse dependencies drive `Unknown` to `Constant` at most once. Logical path
+selection is a separate monotonic state, so a fixed short result never waits
+for or interprets its skipped RHS. There is no expression-depth, wave, fuel,
+Rust recursion, or pipeline-repetition bound. Existing primitive and checked
+evaluators remain the sole arithmetic authorities.
 
 Checked topology is now an immutable structural observation independent of
 constant provenance. The existing checked pass consumes it through a narrow
@@ -1119,10 +1124,13 @@ unauthorized base-place store and source value, exact eligible load, type, and
 dominating lifetime sites. Generic spills, source locals, normalized former
 path-condition carriers, calls, arbitrary loads, ownership operations,
 projections, aliases, attachments, floating semantics, and ambiguous accesses
-remain barriers. Certification is read-only and seal-local; no production pass
-consumes it before the CLR2 solver, so current pass selection, mutation, and
-folding results are unchanged. Static failure publishes no result fact and
-keeps its executable protocol and exact failure behavior.
+remain barriers. Certification and solving are read-only and seal-local; no
+production pass consumes the solution yet, so current pass selection,
+mutation, and folding results are unchanged. The immutable solution exposes
+typed value/carrier point queries, stable facts and selections, derivation
+depth and crossed-carrier/checked/logical provenance, plus retained checked
+failure observations. Static failure publishes no result fact and keeps its
+executable protocol and exact failure behavior.
 
 Logical observations implement all constant-left short-circuit selections:
 `false && rhs` and `true || rhs` select the existing short path, while

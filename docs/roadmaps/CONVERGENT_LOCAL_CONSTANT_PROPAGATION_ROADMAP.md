@@ -1,6 +1,6 @@
 # Convergent Local Constant Propagation Roadmap
 
-Status: in progress; CLR0 and CLR1 are complete and CLR2 is next.
+Status: in progress; CLR0 through CLR2 are complete and CLR3 is next.
 
 This roadmap implements the frozen
 [convergent local constant propagation design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md).
@@ -96,8 +96,8 @@ creating persistent optimizer provenance.
 ## Progress
 
 - [x] CLR0 — Separate structural protocol observations from constant eligibility
-- [ ] CLR1 — Certify checked-protocol scalar carriers
-- [ ] CLR2 — Build the convergent callable-local solver
+- [x] CLR1 — Certify checked-protocol scalar carriers
+- [x] CLR2 — Build the convergent callable-local solver
 - [ ] CLR3 — Migrate primitive-family fact consumers
 - [ ] CLR4 — Rewrite dependent checked protocols from one solved snapshot
 - [ ] CLR5 — Add the proof-consuming transition boundary
@@ -179,26 +179,26 @@ classification, and no executable MIR behavior changes.
 **Purpose:** Make supported constant discovery complete and terminating before
 any production pass changes its rewrite behavior.
 
-- [ ] Add a private recursive `local_constant` facade separating graph,
+- [x] Add a private recursive `local_constant` facade separating graph,
   carrier, logical-transfer, solving, and focused test ownership.
-- [ ] Build dense `ValueId` and eligible `StorageId` nodes plus deterministic
+- [x] Build dense `ValueId` and eligible `StorageId` nodes plus deterministic
   reverse dependencies from one verified callable snapshot.
-- [ ] Model supported literals, primitive rvalues, certified carrier transfers,
+- [x] Model supported literals, primitive rvalues, certified carrier transfers,
   structurally valid checked protocols, and exact logical selected-result
   relations without creating persistent MIR identities.
-- [ ] Reuse the exact primitive and checked evaluators and require exact result
+- [x] Reuse the exact primitive and checked evaluators and require exact result
   types, integer widths, wrapping behavior, boolean canonicalization, floor
   division, divisor-sign remainder, shift flavor, and byte canonicalization.
-- [ ] Implement the monotonic `Unknown -> Constant` worklist and the separate
+- [x] Implement the monotonic `Unknown -> Constant` worklist and the separate
   `Unselected -> SelectedShort | SelectedRight` logical state.
-- [ ] Make logical dependencies conditional: solve fixed short results without
+- [x] Make logical dependencies conditional: solve fixed short results without
   requiring the RHS, and require the right result only for a selected-right
   constant result.
-- [ ] Treat unsupported nodes and statically failing evaluated checks as
+- [x] Treat unsupported nodes and statically failing evaluated checks as
   barriers while allowing independent facts and failures inside a skipped RHS.
-- [ ] Detect contradictory derivations, invalid types, identities, or graph
+- [x] Detect contradictory derivations, invalid types, identities, or graph
   structure as deterministic internal analysis failures.
-- [ ] Expose immutable point queries, selection queries, provenance categories,
+- [x] Expose immutable point queries, selection queries, provenance categories,
   and stable plan iteration; expose no queue or mutable graph API.
 
 **Tests:** Primitive chains; alternating primitive/carrier/checked/logical

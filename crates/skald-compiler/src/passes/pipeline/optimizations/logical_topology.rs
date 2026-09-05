@@ -3,8 +3,6 @@
 //! The observation owns identities and spans from one callable snapshot. It
 //! deliberately records no constant facts and exposes no mutation surface.
 
-#![allow(dead_code)] // CLR0 establishes this facade before the CLR2 solver consumes it.
-
 use std::collections::{HashMap, HashSet};
 
 use crate::{

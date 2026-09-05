@@ -8,8 +8,8 @@ mod checked_integer_topology;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 mod logical_topology;
-// CLR1 establishes carrier certificates before CLR2 wires the solver as their
-// first production consumer.
+// The convergent analysis remains private and read-only until its first
+// production consumer is migrated.
 #[allow(dead_code)]
 mod local_constant;
 pub(in crate::passes::pipeline) mod post_proof_basic_block_merging;

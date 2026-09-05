@@ -42,11 +42,12 @@ The current broadening follows the frozen
 and active
 [implementation roadmap](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_ROADMAP.md).
 CLR0 separated checked and logical structural observations from constant
-eligibility. CLR1 has added an exhaustive semantic storage-use census and
-immutable certification for exact checked-protocol scalar carriers. The
-remaining roadmap addresses arbitrary supported expression depth, production
-consumers, and constant-left logical selection without adding a pipeline
-fixed-point loop or general memory analysis.
+eligibility. CLR1 added an exhaustive semantic storage-use census and
+immutable certification for exact checked-protocol scalar carriers. CLR2 has
+added the read-only dense dependency graph and iterative monotonic solver,
+including conditional logical selection and stable provenance queries. The
+remaining roadmap migrates production consumers and adds constant-left logical
+selection without a pipeline fixed-point loop or general memory analysis.
 
 This document records the compiler-architecture constraints that currently
 limit target-independent and target-specific optimization in Skald. It

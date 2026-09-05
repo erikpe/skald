@@ -11,9 +11,9 @@ The
 implements the frozen callable-local solver, checked-protocol carrier
 certificates, depth-independent primitive and checked consumers, and
 constant-left logical selection through one proof-consuming transition. CLR0
-is complete: exact checked and logical structural observations are separate
-from constant eligibility without changing current optimization behavior.
-CLR1 is next.
+through CLR2 are complete: exact structural observations, auditable checked-
+carrier certificates, and one immutable convergent callable-local solution are
+implemented without changing current optimization behavior. CLR3 is next.
 
 ## Pending discoveries
 
@@ -43,8 +43,9 @@ is tracked by the planned roadmap below.
 
 The
 [convergent local constant propagation discoveries](CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DISCOVERIES.md)
-are the empty-at-start implementation companion for that roadmap. New work
-outside the frozen boundary belongs there rather than in an active task.
+retain the newly observed preservation-spill mismatch for checked sibling
+subexpressions. New work outside the frozen boundary belongs there rather than
+in an active task.
 
 The [optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md)
 record the seven assessed compiler constraints on modular target-independent

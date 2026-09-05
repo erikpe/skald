@@ -21,7 +21,7 @@ use super::super::checked_integer_topology::{
 
 /// Carrier position owned by one checked-integer protocol.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(in crate::passes::pipeline::optimizations) enum CheckedCarrierProtocolRole {
+pub(super) enum CheckedCarrierProtocolRole {
     FirstOperand,
     SecondOperand,
     Result,
@@ -29,7 +29,7 @@ pub(in crate::passes::pipeline::optimizations) enum CheckedCarrierProtocolRole {
 
 /// Exact protocol ownership of one candidate scalar carrier.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(in crate::passes::pipeline::optimizations) struct CheckedCarrierProtocolOwner {
+pub(super) struct CheckedCarrierProtocolOwner {
     check_block: BlockId,
     role: CheckedCarrierProtocolRole,
 }
@@ -110,7 +110,7 @@ impl CheckedCarrierLifetimeEvidence {
 /// The certificate contains owned MIR data and dense identities from one
 /// verified callable snapshot. It must be recomputed after any rewrite.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) struct CheckedCarrierCertificate {
+pub(super) struct CheckedCarrierCertificate {
     declaration: MirStorage,
     store: CheckedCarrierStore,
     loads: Vec<CheckedCarrierLoad>,
@@ -151,7 +151,7 @@ impl CheckedCarrierCertificate {
 
 /// Conservative reason a checked-protocol carrier was left opaque.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) enum CheckedCarrierRejectionReason {
+pub(super) enum CheckedCarrierRejectionReason {
     DuplicateProtocolOwner,
     MissingDeclaration,
     WrongStorageKind,
@@ -171,7 +171,7 @@ pub(in crate::passes::pipeline::optimizations) enum CheckedCarrierRejectionReaso
 
 /// One deterministic certification result in protocol and carrier order.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) enum CheckedCarrierCertificationObservation {
+pub(super) enum CheckedCarrierCertificationObservation {
     Certified(Box<CheckedCarrierCertificate>),
     Rejected {
         storage: StorageId,
@@ -182,7 +182,7 @@ pub(in crate::passes::pipeline::optimizations) enum CheckedCarrierCertificationO
 
 /// Certifies only the three scalar carriers owned by canonical checked-
 /// integer protocols. Unrelated storage is intentionally never considered.
-pub(in crate::passes::pipeline::optimizations) fn certify_checked_integer_carriers(
+pub(super) fn certify_checked_integer_carriers(
     definition: MirDefinitionRef<'_>,
 ) -> Result<Vec<CheckedCarrierCertificationObservation>, MirRewriteError> {
     let census = storage_use_census_for_definition(definition)?;
@@ -340,7 +340,7 @@ fn certify_one(
         .ok_or(CheckedCarrierRejectionReason::IncompatibleLifetime)?;
     if !instruction_dominates(definition, live, store.site)
         || !instruction_dominates(definition, live, load.site)
-        || !instruction_dominates(definition, load.site, dead)
+        || lifetime_ends_before_load(definition, dead, load.site)
     {
         return Err(CheckedCarrierRejectionReason::IncompatibleLifetime);
     }
@@ -353,6 +353,22 @@ fn certify_one(
         protocol_owner,
         lifetime: CheckedCarrierLifetimeEvidence { live, dead },
     })
+}
+
+/// Verified MIR already proves path-sensitive storage lifetime validity. This
+/// additional certificate check rejects a locally or unconditionally earlier
+/// end, while permitting a common conditional shape where the load executes
+/// only on one branch and `StorageDead` sits in the shared join.
+fn lifetime_ends_before_load(
+    definition: MirDefinitionRef<'_>,
+    dead: CheckedIntegerInstructionSite,
+    load: CheckedIntegerInstructionSite,
+) -> bool {
+    if dead.block == load.block {
+        dead.instruction <= load.instruction
+    } else {
+        checked_scalar_dominates(definition, dead.block, load.block)
+    }
 }
 
 fn exact_store(

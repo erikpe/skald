@@ -469,3 +469,6 @@ fn census_classifies_alias_call_ownership_and_proof_roles() {
         .collect::<Vec<_>>();
     assert!(roles.contains(&MirStorageUseRole::ProofMetadata));
 }
+
+#[path = "tests/solver.rs"]
+mod solver;
