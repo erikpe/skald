@@ -7,7 +7,12 @@ structural copies, logical-length bounds, empty last/pop failure, exact inline
 values, strings, nested optionals, arrays, nested generic vectors, shared
 exact/interface owners, heterogeneous shared `Obj` owners, optional shared
 owners, shared optional boxes, optional box owners, prompt last-owner release,
-cross-module applications, and all four structural bracket protocols. Slice
+cross-module applications, and all four structural bracket protocols.
+`to_array()` coverage proves exact logical-prefix length for empty, spare, and
+grown vectors; ordinary copying for primitive, non-defaultable exact-class,
+nested-array, and optional elements; retention for exact, base, interface,
+`Obj`, optional, and optional-box shared owners; independence from the source
+vector; return, field, module-boundary, and postfix consumers. Slice
 coverage exercises logical-length bounds, every omission shape, normalized
 negative bounds, independent results, equal-length replacement, self and
 overlap snapshots, prompt replacement cleanup, growth after slicing, and

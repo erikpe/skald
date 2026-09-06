@@ -471,8 +471,7 @@ not a temporary and becomes part of the array only through complete
 publication. The authoritative list construction and failure rules are in
 [Arrays](ARRAYS.md#explicit-element-list-construction).
 
-The frozen indexed array construction contract extends this order without
-changing current compiler availability. Its length evaluates once before
+Indexed array construction extends this order. Its length evaluates once before
 checked allocation. The element expression then evaluates once for each
 increasing immutable `i64` index, directly initializes that position, advances
 the dynamic prefix only after completion, and cleans the element's
@@ -480,7 +479,7 @@ non-transferred temporary epoch before the next index begins. Publication
 follows only after the prefix equals the requested length. This per-element
 cleanup boundary deliberately differs from a static element list's enclosing
 full-expression lifetime so dynamic construction retains bounded temporary
-storage. The complete frozen rule is in
+storage. The complete rule is in
 [Arrays](ARRAYS.md#indexed-array-construction).
 
 For a produced read-only alias, the producer runs exactly once at its

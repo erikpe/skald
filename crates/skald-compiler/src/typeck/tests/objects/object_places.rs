@@ -28,14 +28,12 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
         _ => panic!("expected return statement"),
     };
     let mut diagnostics = Diagnostics::new();
-    let mut lowering_diagnostics = Diagnostics::new();
     let inspect = CallableChecker::new(
         &resolved,
         &copy_capabilities,
         inspect_declaration,
         inspect_definition,
         &mut diagnostics,
-        &mut lowering_diagnostics,
     )
     .check();
     assert!(diagnostics.is_empty());
@@ -63,14 +61,12 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let mutable_declaration = resolved.declarations.get(FunctionId::new(2)).unwrap();
     let mutable_definition = resolved.definitions.get(FunctionId::new(2)).unwrap();
     let mut diagnostics = Diagnostics::new();
-    let mut lowering_diagnostics = Diagnostics::new();
     let mutable = CallableChecker::new(
         &resolved,
         &copy_capabilities,
         mutable_declaration,
         mutable_definition,
         &mut diagnostics,
-        &mut lowering_diagnostics,
     )
     .check();
     assert!(diagnostics.is_empty());
@@ -84,14 +80,12 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let local_declaration = resolved.declarations.get(FunctionId::new(3)).unwrap();
     let local_definition = resolved.definitions.get(FunctionId::new(3)).unwrap();
     let mut diagnostics = Diagnostics::new();
-    let mut lowering_diagnostics = Diagnostics::new();
     let local = CallableChecker::new(
         &resolved,
         &copy_capabilities,
         local_declaration,
         local_definition,
         &mut diagnostics,
-        &mut lowering_diagnostics,
     )
     .check();
     assert!(diagnostics.is_empty());
@@ -107,7 +101,6 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let method = &class.methods[0];
     let definition = &resolved.class_definitions.get(class.id).unwrap().methods[0];
     let mut diagnostics = Diagnostics::new();
-    let mut lowering_diagnostics = Diagnostics::new();
     let member = CallableChecker::new_member(
         &resolved,
         &copy_capabilities,
@@ -125,7 +118,6 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
             callable_name: "method `nested`".to_owned(),
         },
         &mut diagnostics,
-        &mut lowering_diagnostics,
     )
     .check_member();
     assert!(diagnostics.is_empty());
@@ -158,7 +150,6 @@ fn checks_a_class_owned_body_with_explicitly_absent_receiver_context() {
     let method = &class.methods[0];
     let definition = &resolved.class_definitions.get(class.id).unwrap().methods[0];
     let mut diagnostics = Diagnostics::new();
-    let mut lowering_diagnostics = Diagnostics::new();
 
     let member = CallableChecker::new_member(
         &resolved,
@@ -174,7 +165,6 @@ fn checks_a_class_owned_body_with_explicitly_absent_receiver_context() {
             callable_name: "receiverless class body".to_owned(),
         },
         &mut diagnostics,
-        &mut lowering_diagnostics,
     )
     .check_member();
 
@@ -195,7 +185,6 @@ fn class_field_selection_does_not_create_an_object_rvalue() {
     let declaration = resolved.declarations.get(FunctionId::new(0)).unwrap();
     let definition = resolved.definitions.get(FunctionId::new(0)).unwrap();
     let mut diagnostics = Diagnostics::new();
-    let mut lowering_diagnostics = Diagnostics::new();
     let copy_capabilities = CopyCapabilities::compute(&resolved);
 
     let _ = CallableChecker::new(
@@ -204,7 +193,6 @@ fn class_field_selection_does_not_create_an_object_rvalue() {
         declaration,
         definition,
         &mut diagnostics,
-        &mut lowering_diagnostics,
     )
     .check();
 

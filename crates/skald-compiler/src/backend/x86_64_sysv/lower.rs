@@ -171,6 +171,9 @@ fn lower_definition(
             .terminator
             .as_ref()
             .expect("verified block is terminated");
+        // Checked terminators may emit attributed runtime failure paths even
+        // when their block contains no ordinary instruction.
+        selector.active_operation_span = Some(block_terminator.span());
         if !selector.select_termination(block_terminator)?
             && !selector.select_shift_terminator(block_terminator)
             && !selector.select_integer_division_terminator(block_terminator)
@@ -265,7 +268,7 @@ struct InstructionSelector<'program, 'output> {
     io_sequence: usize,
     primitive_cast_sequence: usize,
     output: &'output mut Vec<Instruction>,
-    active_instruction_span: Option<Span>,
+    active_operation_span: Option<Span>,
 }
 
 impl<'program, 'output> InstructionSelector<'program, 'output> {
@@ -291,14 +294,14 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             io_sequence: 0,
             primitive_cast_sequence: 0,
             output,
-            active_instruction_span: None,
+            active_operation_span: None,
         }
     }
 
     /// Exhaustive MIR instruction dispatch. Operation-specific selection lives
     /// in sibling modules so adding an instruction identifies one clear owner.
     fn select(&mut self, instruction: &MirInstruction) -> Result<(), BackendError> {
-        self.active_instruction_span = Some(instruction.span());
+        self.active_operation_span = Some(instruction.span());
         match instruction {
             MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
             MirInstruction::Assign(assignment) => self.select_assignment(assignment)?,
@@ -385,8 +388,8 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
 
     fn record_current_runtime_trace_location(&mut self) -> Result<(), BackendError> {
         let span = self
-            .active_instruction_span
-            .expect("call selection must originate from one MIR instruction");
+            .active_operation_span
+            .expect("call selection must originate from one MIR operation");
         self.record_runtime_trace_location(span)
     }
 
@@ -402,8 +405,8 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
         &self,
     ) -> Result<Option<runtime_trace::LocationReplacement>, BackendError> {
         let span = self
-            .active_instruction_span
-            .expect("trace-attributed lowering must originate from one MIR instruction");
+            .active_operation_span
+            .expect("trace-attributed lowering must originate from one MIR operation");
         self.runtime_trace_location(span)
     }
 

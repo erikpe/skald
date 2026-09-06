@@ -200,8 +200,9 @@ makes a result source-observable.
 - [Vectors](VECTORS.md) defines the implemented generic `std::vec::Vec<T>`
   contract, including admitted element capabilities,
   capacity, growth, structural indexing and slicing, snapshot replacement,
-  structural copy independence, and prompt removal cleanup. Its frozen next
-  adopter is `to_array()` after indexed array construction is implemented.
+  structural copy independence, prompt removal cleanup, and exact logical-
+  prefix `to_array()` snapshots implemented through ordinary indexed array
+  construction.
 - [Structural indexing and slicing](INDEXING_AND_SLICING.md) defines the
   implemented class/interface bracket protocol, exact method shapes, array
   precedence, receiver and evaluation rules, and `Vec<T>`/`Str` adoption

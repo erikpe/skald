@@ -20,6 +20,7 @@ public class Vec<T> implements Iterable<T, u64> {
     fn len() -> u64;
     fn capacity() -> u64;
     fn is_empty() -> bool;
+    fn to_array() -> T[];
     fn iter_state() -> u64;
     fn iter_next(mut ref state: u64) -> T?;
     mut fn clear() -> unit;
@@ -164,14 +165,20 @@ operation, or runtime ABI entry. Closed specializations select those methods
 before HIR like any other generic class. Heterogeneous shared-object
 collections use `Vec<shared Obj>` through the same generic implementation.
 
-The frozen indexed array construction direction will permit an ordinary
-`fn to_array() -> T[]` member after that syntax becomes executable. It will
-copy exactly the logical `0..len()` prefix into independent exact-length array
-backing through `T[](self._length; index => self._storage[index]!)`, without
-default-initializing `T`, exposing spare capacity, or granting the compiler
-knowledge of `Vec`. Inline elements follow ordinary copy semantics and shared
-elements become independent handles to the same pointees. This method is not
-part of the currently implemented vector surface.
+`to_array()` copies exactly the logical `0..len()` prefix into independent
+exact-length array backing through ordinary indexed construction:
+
+```ska
+fn to_array() -> T[] {
+    return T[](self._length; index => self._storage[index]!);
+}
+```
+
+It neither default-initializes `T` nor exposes spare capacity. Inline elements
+follow their ordinary copy construction, nested arrays receive independent
+backing, and shared elements become independently retained handles to the same
+pointees. The vector remains live and unchanged. A consuming or draining
+conversion is not part of the vector surface.
 
 Index reads and writes are `O(1)`. A slice read is `O(n)` in the selected
 length and allocates one exact-capacity result backing. Slice replacement
@@ -198,8 +205,8 @@ allocation, runtime entry point, or vector-specific compiler branch.
 
 ## Deliberate limits
 
-The implemented profile does not yet include `to_array`, insertion or removal
-at arbitrary positions, append, sorting, function-valued algorithms, capacity
-reservation after construction, explicit shrinking, allocators, or small-
-vector optimization. Ranges, generators, and broader iterator/adaptor APIs
-remain unspecified.
+The implemented profile does not include insertion or removal at arbitrary
+positions, append, sorting, function-valued algorithms, capacity reservation
+after construction, explicit shrinking, allocators, or small-vector
+optimization. Ranges, generators, and broader iterator/adaptor APIs remain
+unspecified.

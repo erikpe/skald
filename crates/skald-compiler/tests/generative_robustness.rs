@@ -351,18 +351,61 @@ fn exercise_optional_syntax_mutations() {
 }
 
 fn exercise_array_syntax_mutations() {
-    const SEED: &str =
-        "fn main() -> i64 { var values: (shared? i64[])[] = (shared? i64[])[](2u); return values[0:1].len(); }";
+    const SEEDS: &[&str] = &[
+        "fn main() -> i64 { var values: (shared? i64[])[] = (shared? i64[])[](2u); return values[0:1].len(); }",
+        "fn main() -> i64 { var values: i64[][] = i64[][](2u; row => i64[]((u64) row; column => row + column)); return values[0].len(); }",
+    ];
 
-    for index in 0..SEED.len() {
-        let mut deletion = SEED.to_owned();
-        deletion.remove(index);
-        assert_frontend_does_not_panic(&format!("array-delete-{index}"), &deletion);
+    for (seed_index, seed) in SEEDS.iter().enumerate() {
+        for index in 0..seed.len() {
+            let mut deletion = (*seed).to_owned();
+            deletion.remove(index);
+            assert_deterministic_frontend_recovery(
+                &format!("array-{seed_index}-delete-{index}"),
+                &deletion,
+            );
+        }
+        for index in 0..=seed.len() {
+            let mut insertion = (*seed).to_owned();
+            insertion.insert_str(index, ["[", "]", ";", "=>"][index % 4]);
+            assert_deterministic_frontend_recovery(
+                &format!("array-{seed_index}-insert-{index}"),
+                &insertion,
+            );
+        }
     }
-    for index in 0..=SEED.len() {
-        let mut insertion = SEED.to_owned();
-        insertion.insert(index, if index % 2 == 0 { '[' } else { ']' });
-        assert_frontend_does_not_panic(&format!("array-insert-{index}"), &insertion);
+}
+
+#[test]
+fn bounded_deep_indexed_arrays_compile_deterministically() {
+    for depth in 1..=16 {
+        let mut array_type = "i64".to_owned();
+        let mut expression = "42".to_owned();
+        let mut observation = String::new();
+        for level in 0..depth {
+            array_type.push_str("[]");
+            let element = if level == 0 {
+                format!("{expression} + index_{level}")
+            } else {
+                expression
+            };
+            expression = format!("{array_type}(1u; index_{level} => {element})");
+            observation.push_str("[0]");
+        }
+        let source = format!(
+            "fn main() -> i64 {{ var values: {array_type} = {expression}; \
+             return values{observation}; }}"
+        );
+        let name = format!("generated-indexed-array-{depth}.ska");
+        let first = compile_source_to_assembly(&name, &source, Target::X86_64SysV)
+            .unwrap_or_else(|error| panic!("deep indexed array {depth} failed: {error:?}"));
+        let second = compile_source_to_assembly(&name, &source, Target::X86_64SysV).unwrap_or_else(
+            |error| panic!("repeated deep indexed array {depth} failed: {error:?}"),
+        );
+        assert_eq!(
+            first.assembly, second.assembly,
+            "deep indexed array {depth} was nondeterministic"
+        );
     }
 }
 

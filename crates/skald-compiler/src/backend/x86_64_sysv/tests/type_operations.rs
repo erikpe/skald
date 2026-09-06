@@ -25,6 +25,28 @@ class Both implements Marker, Extra {\n\
 class Other { init() {} }\n";
 
 #[test]
+fn shared_cast_terminator_owns_runtime_trace_attribution_in_an_empty_block() {
+    let fixture = crate::test_support::lower_source_to_final_mir_with_sources(
+        "app/shared-cast.ska",
+        concat!(
+            "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+            "fn narrow(value: shared Obj) -> shared Item {\n",
+            "  return (shared Item) value;\n",
+            "}\n",
+            "fn main() -> i64 { return narrow(new Item(42))->value; }\n",
+        ),
+    );
+
+    let output = fixture
+        .emit_assembly(
+            Target::X86_64SysV,
+            crate::backend::RuntimeTracePolicy::Enabled,
+        )
+        .expect("shared-cast terminators must carry their own trace span");
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
 fn emits_unique_class_metadata_membership_checks_and_failure_reports() {
     let output = complete_assembly(&format!(
         "{TYPE_OPERATION_TYPES}\

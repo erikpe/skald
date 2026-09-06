@@ -426,8 +426,8 @@ from any shadowed outer binding. The length resolves before that scope opens;
 the binding must not resolve after the element expression. HIR must show an
 exact `u64` length, a read-only `i64` local with the resolved identity, and one
 typed repeated destination plan rather than a default array plus assignment.
-Every supported stored element plan proceeds to MIR. In MIR, dynamic requested length and
-initialized prefix must remain separate, and publication must occur only on
+Every supported stored element plan proceeds to MIR. In MIR, dynamic requested
+length and initialized prefix must remain separate, and publication occurs only on
 the verified `prefix == length` exit. Primitive dumps fuse current-slot store
 and advance. Exact-class dumps must show an ordinary initializer, result, or
 copy destination at `backing[prefix]`, followed by

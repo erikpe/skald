@@ -299,11 +299,11 @@ recursive deep copy or produced-backing adoption, and shared-owner families
 reuse ordinary retain/adopt/release and zero-niche optional operations.
 Availability remains authoritative in the [status matrix](../language/STATUS.md).
 
-The frozen indexed construction extension adds a typed length, immutable
+Indexed construction adds a typed length, immutable
 `i64` binding, repeated destination plan, dynamic initialized-prefix CFG, and
 complete-prefix publication proof without adding a `Vec` special case or
 runtime ABI. It is specified in the
-[array compiler contract](ARRAYS.md#frozen-indexed-construction-representation).
+[array compiler contract](ARRAYS.md#indexed-construction-representation).
 Primitive, exact-class, inline-optional, nested inline-array, shared-owner, and
 optional shared-owner elements execute through verified MIR and x86-64 using
 ordinary destination operations. Named owners retain, produced owners transfer,

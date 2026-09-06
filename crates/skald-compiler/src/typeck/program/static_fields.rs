@@ -17,7 +17,6 @@ pub(super) fn lower_static_fields(
     copy_capabilities: &CopyCapabilities,
     fields: &[ResolvedStaticFieldDeclaration],
     diagnostics: &mut Diagnostics,
-    lowering_diagnostics: &mut Diagnostics,
 ) -> Option<Vec<HirStaticFieldDeclaration>> {
     let mut valid = true;
     let fields = fields
@@ -35,7 +34,6 @@ pub(super) fn lower_static_fields(
                         copy_capabilities,
                         initializer,
                         diagnostics,
-                        lowering_diagnostics,
                     )
                     .check_static_initializer(ty, &initializer.expression);
                     if value.is_none() {

@@ -31,7 +31,7 @@ The target-independent compiler path is:
 | Lexing | `lexer::lex` | `LexOutput`: tokens and diagnostics |
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
 | Resolution | `resolve::resolve`, `resolve::resolve_module_graph` | `ResolveOutput`: resolved program and diagnostics |
-| Type checking | `typeck::type_check` | `TypeCheckOutput`: semantic diagnostics, optional typed HIR, and any structured executable-lowering gates |
+| Type checking | `typeck::type_check` | `TypeCheckOutput`: semantic diagnostics and optional typed HIR |
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
 | Preliminary MIR verification | `mir::verify_preliminary_mir` | opaque, read-only `VerifiedPreliminaryMirProgram` required by static-lifecycle analysis |
 | Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects from sealed `VerifiedPreliminaryMirProgram`, with witnesses for every callable and implicit lifecycle operation |
@@ -2613,7 +2613,7 @@ owner transfer has been consumed by the exact current destination; temporary
 owners and receiver anchors end inside the element epoch. Optional shared-owner
 absence and presence use ordinary nullable-owner initialization before the
 same prefix transition. The phase ownership is detailed in the
-[array compiler contract](ARRAYS.md#frozen-indexed-construction-representation).
+[array compiler contract](ARRAYS.md#indexed-construction-representation).
 
 Optional types use deterministic interned identities rather than recursively
 wrapping the general type enum at every use. Resolved expressions retain

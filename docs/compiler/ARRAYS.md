@@ -286,9 +286,8 @@ completed construction before prefix advancement, publication, backing
 consumption, and storage lifetime. The
 [status matrix](../language/STATUS.md) remains the concise availability view.
 
-## Frozen indexed-construction representation
+## Indexed-construction representation
 
-The frozen
 [indexed array construction contract](../language/ARRAYS.md#indexed-array-construction)
 extends element-list destination initialization from a static source list to
 one typed expression executed over a dynamic checked prefix. The implemented
@@ -311,9 +310,8 @@ HIR owns one indexed construction mode rather than desugaring to a source
 contain primitive, exact-class, optional, nested-array, shared-owner, or
 optional-owner initialization selected once during type checking. Lower phases
 must not recover its ownership or lifecycle meaning from expression shape.
-Every supported stored element plan proceeds to MIR. The remaining structured
-gate rejects only internal initialization plans that are not array element
-values.
+Every supported stored element plan proceeds to MIR; no indexed-construction
+availability gate remains.
 
 MIR retains one runtime `u64` length, one unpublished backing, one `u64`
 initialized prefix, and canonical CFG. The loop header proves `prefix <
@@ -355,8 +353,8 @@ values.
 
 The complete decisions and rejected alternatives are preserved in the
 [design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md), and
-delivery belongs to the
-[implementation roadmap](../roadmaps/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md).
+the completed delivery is preserved in the
+[implementation roadmap](../archive/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md).
 
 ## Typed HIR
 

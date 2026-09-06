@@ -6,7 +6,7 @@ use crate::{
         HirArrayConstruction, HirArrayConstructionMode, HirArrayElementInitialization,
         HirArrayElementList, HirArrayInitialize, HirArrayOwnership, HirArrayProvenance,
         HirArraySource, HirArrayTransfer, HirExpression, HirExpressionKind,
-        HirIndexedArrayInitialization, HirSharedTarget, HirStoredValueInitialization, Type,
+        HirIndexedArrayInitialization, HirSharedTarget, Type,
     },
     resolve::{
         ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr, ResolvedExpression,
@@ -21,7 +21,6 @@ use super::super::{
 
 pub const ARRAY_CAPABILITY_UNAVAILABLE: &str = "TYP037";
 pub const ARRAY_LENGTH_OUT_OF_RANGE: &str = "TYP038";
-pub const INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE: &str = "TYP054";
 
 impl CallableChecker<'_, '_> {
     pub(crate) fn check_array_construction(
@@ -106,28 +105,6 @@ impl CallableChecker<'_, '_> {
                     span: initializer.element.span(),
                     value,
                 };
-                if !matches!(
-                    &element.value,
-                    HirStoredValueInitialization::Scalar(_)
-                        | HirStoredValueInitialization::Class(_)
-                        | HirStoredValueInitialization::OptionalPrimitive { .. }
-                        | HirStoredValueInitialization::OptionalClass(_)
-                        | HirStoredValueInitialization::Array(_)
-                        | HirStoredValueInitialization::Shared(_)
-                        | HirStoredValueInitialization::OptionalShared(_)
-                        | HirStoredValueInitialization::Optional(_)
-                ) {
-                    self.lowering_diagnostics.push(
-                        Diagnostic::error(
-                            INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE,
-                            "indexed construction for this element type is not executable yet",
-                        )
-                        .with_primary_label(
-                            initializer.arrow_span,
-                            "this internal initialization plan is not an array element value",
-                        ),
-                    );
-                }
                 HirArrayConstructionMode::Indexed(Box::new(HirIndexedArrayInitialization {
                     left_paren_span: initializer.left_paren_span,
                     length: Box::new(length),

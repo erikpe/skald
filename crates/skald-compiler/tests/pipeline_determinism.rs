@@ -29,7 +29,7 @@ use skald_compiler::{
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
     syntax::{dump_ast, parse, INVALID_RANGE_SYNTAX},
-    typeck::{type_check, INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE},
+    typeck::type_check,
 };
 
 #[path = "../test_support/standard_library.rs"]
@@ -1956,45 +1956,18 @@ fn array_element_list_phase_dump() -> String {
 }
 
 fn indexed_array_frontend_phase_dump() -> String {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add(
-        "indexed-array-frontend.ska",
-        concat!(
-            "fn main() -> i64 {\n",
-            "  var length: u64 = 2u;\n",
-            "  var rows: i64[][] = i64[][](length; row =>\n",
-            "    i64[](2u; column => row + column));\n",
-            "  return i64[](1u; index => index)[0];\n",
-            "}\n",
-        ),
-    );
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty());
-    assert!(
-        checked
-            .lowering_diagnostics
-            .iter()
-            .all(|diagnostic| diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE),
-        "{:?}",
-        checked.lowering_diagnostics
-    );
-    let hir = checked.hir.as_ref().unwrap();
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}LOWERING DIAGNOSTICS\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        dump_hir(hir),
-        render_diagnostics(&sources, &checked.lowering_diagnostics),
-    )
+    complete_phase_dump(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } ",
+        "copy(ref other: Item) { self.value = other.value; } }\n",
+        "fn main() -> i64 {\n",
+        "  var length: u64 = 2u;\n",
+        "  var rows: i64[][] = i64[][](length; row =>\n",
+        "    i64[](2u; column => row + column));\n",
+        "  var items: Item[] = Item[](length; index => Item(index));\n",
+        "  var owner: shared Item[] = new Item[](length; index => Item(index));\n",
+        "  return rows[1][1] + items[0].value + owner->[1].value;\n",
+        "}\n",
+    ))
 }
 
 fn static_field_phase_dump() -> String {

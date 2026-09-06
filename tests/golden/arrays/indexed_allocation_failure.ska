@@ -1,0 +1,11 @@
+import std::io;
+
+fn observe(index: i64) -> u8 {
+    std::io::println_i64(index);
+    return 0u8;
+}
+
+fn main() -> i64 {
+    var values: u8[] = u8[](4611686018427387904u; index => observe(index));
+    return (i64) values.len();
+}

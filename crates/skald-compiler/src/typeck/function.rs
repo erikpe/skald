@@ -89,8 +89,6 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
     pub(super) read_only_locals: BTreeSet<crate::identity::LocalId>,
     pub(super) base_initialized: bool,
     pub(super) diagnostics: &'diagnostics mut Diagnostics,
-    /// Valid typed HIR constructs deliberately staged before executable MIR.
-    pub(super) lowering_diagnostics: &'diagnostics mut Diagnostics,
 }
 
 impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
@@ -163,7 +161,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         declaration: &'program ResolvedFunctionDeclaration,
         definition: &'program ResolvedFunctionDefinition,
         diagnostics: &'diagnostics mut Diagnostics,
-        lowering_diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
             program,
@@ -182,7 +179,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             read_only_locals: BTreeSet::new(),
             base_initialized: true,
             diagnostics,
-            lowering_diagnostics,
         }
     }
 
@@ -222,7 +218,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         copy_capabilities: &'program CopyCapabilities,
         context: MemberCheckContext<'program>,
         diagnostics: &'diagnostics mut Diagnostics,
-        lowering_diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         let base_initialized = context.body_kind != MemberBodyKind::OrdinaryInitializer
             || program
@@ -247,7 +242,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             read_only_locals: BTreeSet::new(),
             base_initialized,
             diagnostics,
-            lowering_diagnostics,
         }
     }
 
@@ -321,7 +315,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         copy_capabilities: &'program CopyCapabilities,
         initializer: &'program crate::resolve::ResolvedStaticFieldInitializer,
         diagnostics: &'diagnostics mut Diagnostics,
-        lowering_diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
             program,
@@ -340,7 +333,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             read_only_locals: BTreeSet::new(),
             base_initialized: true,
             diagnostics,
-            lowering_diagnostics,
         }
     }
 

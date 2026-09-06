@@ -4,7 +4,7 @@ Status: frozen, promoted, validated, and archived on 2026-09-06. IAC1 through
 IAC11 adopt the confirmed decisions below. Living language and compiler
 documentation own the frozen direction; this document preserves the decision
 record while the active
-[indexed array construction implementation roadmap](../roadmaps/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md)
+[indexed array construction implementation roadmap](INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md)
 owns delivery.
 
 This proposal defines a destination-typed array construction form whose length

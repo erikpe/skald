@@ -77,6 +77,7 @@ Archived plans:
 - [Spec-driven parallel golden test runner](GOLDEN_TEST_RUNNER_ROADMAP.md)
 - [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md)
 - [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_ROADMAP.md)
+- [Indexed array construction](INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md)
 - [Compositional optional types](COMPOSITIONAL_OPTIONAL_TYPES_ROADMAP.md)
 - [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md)
 - [Generic classes](GENERIC_CLASSES_ROADMAP.md)

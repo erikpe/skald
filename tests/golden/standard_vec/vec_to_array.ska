@@ -1,0 +1,186 @@
+from std::test import assert_eq_i64, assert_eq_u64, assert_true;
+from std::vec import Vec;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Base {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Item extends Base implements Readable {
+    init(value: i64) {
+        super(value);
+    }
+
+    override fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Record {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Record) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Record) {
+        self.value = source.value;
+    }
+}
+
+class Tracked {
+    private static _destroyed: i64;
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        Tracked._destroyed = Tracked._destroyed + 1;
+    }
+
+    static fn destroyed() -> i64 {
+        return Tracked._destroyed;
+    }
+}
+
+class ArrayHolder {
+    values: i64[];
+
+    init(values: i64[]) {
+        self.values = values;
+    }
+}
+
+fn item_from_obj(value: shared Obj) -> shared Item {
+    return (shared Item) value;
+}
+
+fn snapshot_numbers(ref values: Vec<i64>) -> i64[] {
+    return values.to_array();
+}
+
+fn exercise_lengths_and_independence() -> unit {
+    var empty: Vec<i64> = Vec<i64>.with_capacity(9u);
+    var empty_array: i64[] = empty.to_array();
+    assert_eq_u64(empty_array.len(), 0u);
+    assert_eq_u64(empty.capacity(), 9u);
+
+    var spare: Vec<i64> = Vec<i64>.with_capacity(8u);
+    spare.push(10);
+    spare.push(20);
+    var spare_array: i64[] = snapshot_numbers(spare);
+    assert_eq_u64(spare_array.len(), 2u);
+    assert_eq_u64(spare.capacity(), 8u);
+    spare_array[0] = 99;
+    assert_eq_i64(spare.index_get(0), 10);
+
+    var grown: Vec<i64> = Vec<i64>();
+    for (value in 0..6) {
+        grown.push(value * 10);
+    }
+    assert_eq_u64(grown.capacity(), 8u);
+    assert_eq_i64(grown.to_array()[5], 50);
+
+    var holder: ArrayHolder = ArrayHolder(grown.to_array());
+    assert_eq_i64(holder.values[4], 40);
+}
+
+fn exercise_non_defaultable_values() -> unit {
+    var values: Vec<Record> = Vec<Record>.with_capacity(4u);
+    values.push(Record(1));
+    values.push(Record(2));
+    var snapshot: Record[] = values.to_array();
+    assert_eq_i64(snapshot[1].value, 2);
+    snapshot[0].value = 99;
+    assert_eq_i64(values.index_get(0).value, 1);
+}
+
+fn exercise_nested_and_optional_values() -> unit {
+    var rows: Vec<i64[]> = Vec<i64[]>();
+    rows.push(i64[]{1, 2});
+    rows.push(i64[]{3});
+    var row_snapshot: i64[][] = rows.to_array();
+    row_snapshot[0][0] = 99;
+    assert_eq_i64(rows.index_get(0)[0], 1);
+    assert_eq_i64(row_snapshot[1][0], 3);
+
+    var optional: Vec<i64?> = Vec<i64?>();
+    optional.push(none);
+    optional.push(42);
+    var optional_snapshot: i64?[] = optional.to_array();
+    assert_true(optional_snapshot[0] is none);
+    assert_eq_i64(optional_snapshot[1]!, 42);
+}
+
+fn inspect_retained(ref values: Vec<shared Tracked>) -> unit {
+    var snapshot: (shared Tracked)[] = values.to_array();
+    assert_eq_i64(snapshot[0]->value, 7);
+}
+
+fn exercise_shared_values() -> unit {
+    var exact: Vec<shared Item> = Vec<shared Item>();
+    exact.push(new Item(10));
+    var exact_snapshot: (shared Item)[] = exact.to_array();
+    assert_eq_i64(exact_snapshot[0]->value, 10);
+
+    var bases: Vec<shared Base> = Vec<shared Base>();
+    bases.push(new Item(20));
+    var base_snapshot: (shared Base)[] = bases.to_array();
+    assert_eq_i64(base_snapshot[0]->read(), 20);
+
+    var readable: Vec<shared Readable> = Vec<shared Readable>();
+    readable.push(new Item(30));
+    var readable_snapshot: (shared Readable)[] = readable.to_array();
+    assert_eq_i64(readable_snapshot[0]->read(), 30);
+
+    var objects: Vec<shared Obj> = Vec<shared Obj>();
+    objects.push(new Item(40));
+    var object_snapshot: (shared Obj)[] = objects.to_array();
+    assert_eq_i64(item_from_obj(object_snapshot[0])->value, 40);
+
+    var optional_owners: Vec<shared? Item> = Vec<shared? Item>();
+    optional_owners.push(none);
+    optional_owners.push(new Item(50));
+    var optional_owner_snapshot: (shared? Item)[] = optional_owners.to_array();
+    assert_true(optional_owner_snapshot[0] is none);
+    assert_eq_i64(optional_owner_snapshot[1]!->value, 50);
+
+    var boxes: Vec<shared Item?> = Vec<shared Item?>();
+    boxes.push(new Item?());
+    boxes.push(new Item?(Item(60)));
+    var box_snapshot: (shared Item?)[] = boxes.to_array();
+    assert_true(*box_snapshot[0] is none);
+    assert_eq_i64((*box_snapshot[1])!.value, 60);
+
+    var tracked: Vec<shared Tracked> = Vec<shared Tracked>();
+    tracked.push(new Tracked(7));
+    inspect_retained(tracked);
+    assert_eq_i64(Tracked.destroyed(), 0);
+    tracked.clear();
+    assert_eq_i64(Tracked.destroyed(), 1);
+}
+
+fn main() -> i64 {
+    exercise_lengths_and_independence();
+    exercise_non_defaultable_values();
+    exercise_nested_and_optional_values();
+    exercise_shared_values();
+    return 0;
+}

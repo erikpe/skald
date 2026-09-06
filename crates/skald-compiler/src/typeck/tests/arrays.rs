@@ -26,9 +26,7 @@ fn primitive_indexed_array_construction_is_executable_hir() {
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     assert!(output.hir.is_some());
     assert!(!output.has_errors());
-    assert!(!output.has_lowering_errors());
     assert!(output.is_executable());
-    assert!(output.lowering_diagnostics.is_empty());
 }
 
 #[test]
@@ -42,7 +40,6 @@ fn indexed_hir_retains_exact_types_binding_identity_spans_and_evaluation_order()
     );
     let output = check_text(source);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert!(output.lowering_diagnostics.is_empty());
     let hir = output.hir.unwrap();
     let definition = hir.definitions.get(hir.entry_function).unwrap();
     let HirStatement::Local(local) = &definition.body.statements[0] else {
@@ -113,7 +110,6 @@ fn indexed_construction_requires_exact_u64_length_and_an_immutable_i64_index() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
-    assert!(wrong_length.lowering_diagnostics.is_empty());
 
     let excessive = check_text(concat!(
         "fn main() -> i64 {\n",
@@ -160,11 +156,6 @@ fn indexed_construction_selects_every_stored_value_family_without_default_or_ass
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert!(
-        output.lowering_diagnostics.is_empty(),
-        "{:?}",
-        output.lowering_diagnostics
-    );
     assert!(output.is_executable());
     let dump = dump_hir(output.hir.as_ref().unwrap());
     for selected in [
@@ -196,7 +187,6 @@ fn indexed_direct_class_initialization_needs_no_default_or_copy_plan() {
     let output = crate::typeck::type_check(&resolved);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     assert!(output.hir.is_some());
-    assert!(output.lowering_diagnostics.is_empty());
     assert!(output.is_executable());
     let array = output
         .hir
@@ -243,7 +233,6 @@ fn indexed_optional_call_results_require_only_the_selected_conditional_copy() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
-    assert!(output.lowering_diagnostics.is_empty());
 }
 
 #[test]
@@ -265,7 +254,6 @@ fn indexed_element_diagnostics_belong_to_the_element_source() {
         diagnostic.labels[0].span.range().start(),
         source.rfind("Secret()").unwrap()
     );
-    assert!(output.lowering_diagnostics.is_empty());
 
     let invalid_owner_source = concat!(
         "class Item { init() {} }\n",
@@ -334,7 +322,6 @@ fn indexed_construction_specializes_generic_destination_requirements() {
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert!(output.lowering_diagnostics.is_empty());
     let dump = dump_hir(output.hir.as_ref().unwrap());
     assert!(dump.contains("IndexedElements"), "{dump}");
     assert!(dump.contains("ClassInitialization copy"), "{dump}");

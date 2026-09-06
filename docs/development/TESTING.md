@@ -778,18 +778,17 @@ Because array failures promise only non-return, their specs use
 `exit = "failure"`; tests must not depend on a particular signal or numeric
 status.
 
-The frozen indexed-construction extension retains this ownership split. Lexer,
+Indexed construction retains this ownership split. Lexer,
 syntax, and resolution tests own `=>`, punctuation spans, binding scope,
 recovery, nesting, generic source traversal, and deterministic dumps. Type-
 checking tests own exact `u64` length, immutable `i64` index, every stored-value
 destination plan, generic requirements without false default/assignment
-capabilities, deterministic HIR, and the explicit executable-lowering gate.
-MIR tests will own dynamic-prefix CFG,
+capabilities, and deterministic HIR. MIR tests own dynamic-prefix CFG,
 per-element cleanup, complete-exit proof, nested prefixes, and malformed
 transition rejection.
-Backend and golden tests will own every element family, inline/shared
+Backend and golden tests own every element family, inline/shared
 publication, effect order, zero/dynamic lengths, and unchanged ABI. Standard
-vector goldens will finally prove logical-prefix `to_array()` independence for
+vector goldens prove logical-prefix `to_array()` independence for
 the existing specialization matrix.
 
 While-loop coverage follows the phase boundary that owns each invariant.
@@ -1375,13 +1374,12 @@ compile and native run and every compile failure. The non-gating
 `make generic-vec-benchmark` procedure measures representative growth, copy,
 pop, and clear behavior without accepting or rejecting host timing.
 
-When the final indexed-array roadmap phase implements `Vec<T>.to_array()`, this
-owner also gains
-empty, spare-capacity, grown, primitive, exact-class, optional, nested-array,
-nested-vector, shared-exact, shared-interface, and heterogeneous `shared Obj`
-`to_array()` cases. Those cases must prove exact logical length, independent
-backing, ordinary element copy/retain behavior, and no narrowing of valid
-`Vec<T>` applications.
+This owner also covers empty, spare-capacity, and grown `to_array()` snapshots
+across primitive, exact-class, optional, nested-array, shared exact/base/
+interface/`Obj`, optional-owner, and shared optional-box elements. Those cases
+prove exact logical length, independent backing, ordinary element copy/retain
+behavior, module-boundary and postfix use, and no narrowing of valid `Vec<T>`
+applications.
 
 ## Optional-value coverage
 

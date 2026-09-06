@@ -1,11 +1,11 @@
 # Indexed Array Construction Roadmap
 
-Status: in progress; IA0 through IA5 are complete and IA6 is next.
+Status: complete; IA0 through IA6 are complete.
 
 This roadmap implements the frozen
 [indexed array construction contract](../language/ARRAYS.md#indexed-array-construction)
 and its archived
-[design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md).
+[design record](INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md).
 It adds typed `T[](length; index => expression)` and
 `new T[](length; index => expression)` construction from source through
 verified MIR and native x86-64, then uses that ordinary language feature to
@@ -58,7 +58,7 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 - [x] IA3 — Execute exact-class destination placement and copying
 - [x] IA4 — Compose optional and nested-array elements
 - [x] IA5 — Compose shared and optional-shared owner elements
-- [ ] IA6 — Add `Vec<T>.to_array()`, harden, and publish
+- [x] IA6 — Add `Vec<T>.to_array()`, harden, and publish
 
 ## PR-sized implementation sequence
 
@@ -330,29 +330,29 @@ polymorphic targets require no default object.
 ordinary-library adopter and close documentation, determinism, and regression
 coverage.
 
-- [ ] Add public `Vec<T>.to_array() -> T[]` using indexed construction over the
+- [x] Add public `Vec<T>.to_array() -> T[]` using indexed construction over the
       live prefix of private optional capacity storage, with no compiler or
       runtime knowledge of `Vec`.
-- [ ] Validate `to_array()` for primitive, non-defaultable exact class, nested
+- [x] Validate `to_array()` for primitive, non-defaultable exact class, nested
       array, shared exact/base/interface/`Obj`, optional, and optional-shared
       element families, including empty, spare-capacity, and grown vectors.
-- [ ] Prove conversion preserves the vector and uses ordinary source-to-
+- [x] Prove conversion preserves the vector and uses ordinary source-to-
       destination copying or owner retention; document that consuming/draining
       conversion is outside this roadmap.
-- [ ] Remove all remaining family gates and audit every expression position,
+- [x] Remove all remaining family gates and audit every expression position,
       owning destination, generic specialization, module boundary, cleanup
       exit, and postfix consumer.
-- [ ] Add malformed/deep source generation, verifier mutation matrices,
+- [x] Add malformed/deep source generation, verifier mutation matrices,
       allocation-failure and lifecycle stress, independent-process dump and
       diagnostic determinism, optimizer selection, and source/native
       equivalence coverage.
-- [ ] Confirm final-MIR optimization never folds away observable per-index
+- [x] Confirm final-MIR optimization never folds away observable per-index
       effects or weakens requested-length, prefix, epoch, ownership, or
       publication proof obligations.
-- [ ] Promote indexed construction from frozen to implemented across grammar,
+- [x] Promote indexed construction from frozen to implemented across grammar,
       status, array, vector, generic, compiler, backend, runtime ABI, testing,
       and debugging documentation.
-- [ ] Record ABI version 9 compatibility and archive this roadmap only after
+- [x] Record ABI version 9 compatibility and archive this roadmap only after
       the complete standard and replacement-standard-library test matrix
       passes.
 

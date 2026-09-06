@@ -230,7 +230,7 @@ impl InstructionSelector<'_, '_> {
                 self.select_optional_initialize(&MirOptionalInitialize {
                     destination,
                     source: MirOptionalSource::Copy(source),
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 })
             }
             crate::mir::MirOptionalStorage::InlineClass(class) => {
@@ -247,7 +247,7 @@ impl InstructionSelector<'_, '_> {
                     source: MirClassOptionalSource::Copy(source),
                     class,
                     copy_constructor: Some(operation),
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 })
             }
             crate::mir::MirOptionalStorage::SharedOwner(target) => self
@@ -256,7 +256,7 @@ impl InstructionSelector<'_, '_> {
                     destination,
                     source: MirOptionalSharedSource::Copy(source),
                     target,
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_)
             | crate::mir::MirOptionalStorage::InlineArray(_) => {
@@ -282,7 +282,7 @@ impl InstructionSelector<'_, '_> {
                     source: MirOptionalSource::Copy(source),
                     authorization: None,
                     final_authorization: None,
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 })
             }
             crate::mir::MirOptionalStorage::InlineClass(class) => {
@@ -306,7 +306,7 @@ impl InstructionSelector<'_, '_> {
                     copy_assignment: Some(copy_assignment),
                     authorization: None,
                     final_authorization: None,
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 })
             }
             crate::mir::MirOptionalStorage::SharedOwner(target) => self
@@ -317,7 +317,7 @@ impl InstructionSelector<'_, '_> {
                     target,
                     authorization: None,
                     final_authorization: None,
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_)
             | crate::mir::MirOptionalStorage::InlineArray(_) => self
@@ -327,7 +327,7 @@ impl InstructionSelector<'_, '_> {
                     source: MirAggregateOptionalSource::Copy(source),
                     authorization: None,
                     final_authorization: None,
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 }),
         }
     }
@@ -348,14 +348,14 @@ impl InstructionSelector<'_, '_> {
                     optional,
                     destination,
                     class,
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 }),
             crate::mir::MirOptionalStorage::SharedOwner(target) => self
                 .select_optional_shared_cleanup(&MirOptionalSharedCleanup {
                     optional,
                     destination,
                     target,
-                    span: self.active_instruction_span.expect("active instruction"),
+                    span: self.active_operation_span.expect("active operation"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_)
             | crate::mir::MirOptionalStorage::InlineArray(_) => {

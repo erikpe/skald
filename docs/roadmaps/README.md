@@ -78,31 +78,7 @@ The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).
 
-## Planned
-
-The in-progress
-[indexed array construction roadmap](INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md)
-implements the frozen `T[](length; index => expression)` and shared-outer
-forms through verified dynamic-prefix MIR, then adds the ordinary generic
-`Vec<T>.to_array()` adopter. Frontend source retention, scoped resolution, and
-typed repeated destination selection plus verified primitive, exact-class,
-optional, nested-array, shared-owner, and optional shared-owner dynamic-prefix
-execution are complete; the ordinary `Vec<T>.to_array()` adopter and final
-hardening are next. The completed explicit element-list construction pipeline
-is its implementation foundation.
-
 ## Design proposals
-
-The completed
-[indexed array construction design](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md)
-is frozen, promoted into the living language and compiler contracts, and
-preserved in the archive. Its explicit `T[](length; index => expression)` and
-shared-outer forms use direct destination initialization, per-element cleanup,
-a verified dynamic initialized prefix, and no runtime ABI or `Vec` compiler
-special case. The active
-[implementation roadmap](INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md) owns delivery;
-every supported stored element category now executes through the verified
-dynamic-prefix protocol.
 
 The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)

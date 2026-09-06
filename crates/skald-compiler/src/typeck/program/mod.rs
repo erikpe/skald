@@ -84,9 +84,6 @@ pub struct TypeCheckOutput {
     /// Present only when the entire resolved program type-checks successfully.
     pub hir: Option<HirProgram>,
     pub diagnostics: Diagnostics,
-    /// Structured gates for typed constructs whose executable lowering is
-    /// intentionally staged behind a later implementation milestone.
-    pub lowering_diagnostics: Diagnostics,
 }
 
 impl TypeCheckOutput {
@@ -95,20 +92,14 @@ impl TypeCheckOutput {
         self.diagnostics.has_errors()
     }
 
-    /// Returns whether valid HIR contains a deliberately staged construct.
-    pub fn has_lowering_errors(&self) -> bool {
-        self.lowering_diagnostics.has_errors()
-    }
-
     /// Returns whether the output is valid input to executable MIR lowering.
     pub fn is_executable(&self) -> bool {
-        self.hir.is_some() && !self.has_lowering_errors()
+        self.hir.is_some()
     }
 }
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    let mut lowering_diagnostics = Diagnostics::new();
     let optional_types_valid =
         super::optional_validation::validate_optional_types(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
@@ -116,7 +107,6 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         return TypeCheckOutput {
             hir: None,
             diagnostics,
-            lowering_diagnostics,
         };
     }
     super::arrays::validate_array_types(program, &mut diagnostics);
@@ -134,7 +124,6 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         &copy_capabilities,
         &interface_analysis.conformances,
         &mut diagnostics,
-        &mut lowering_diagnostics,
     );
     let declarations = program
         .declarations
@@ -152,18 +141,12 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
                     declaration,
                     definition,
                     &mut diagnostics,
-                    &mut lowering_diagnostics,
                 )
                 .check()
             })
         })
         .collect();
-    let class_definitions = check_class_definitions(
-        program,
-        &copy_capabilities,
-        &mut diagnostics,
-        &mut lowering_diagnostics,
-    );
+    let class_definitions = check_class_definitions(program, &copy_capabilities, &mut diagnostics);
 
     let hir = if diagnostics.has_errors() {
         None
@@ -217,11 +200,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         })
     };
 
-    TypeCheckOutput {
-        hir,
-        diagnostics,
-        lowering_diagnostics,
-    }
+    TypeCheckOutput { hir, diagnostics }
 }
 
 /// Enforces the specialization trust boundary immediately before executable

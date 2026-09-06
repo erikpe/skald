@@ -352,7 +352,7 @@ T[](length; index => expression)
 new T[](length; index => expression)
 ```
 
-The lexer, parser, resolver, and type checker accept this syntax. HIR retains
+The lexer, parser, resolver, and type checker implement this syntax. HIR retains
 the exact `u64` length expression, inline versus shared-outer ownership, one
 immutable exact-`i64` local identity, and one destination-directed element
 initialization plan. The length is checked before the index local becomes
@@ -395,18 +395,17 @@ completed arrays retain ordinary copy, assignment, destruction, parameter,
 result, and reverse-cleanup behavior. Current non-unwinding failure retains no
 new partial-prefix cleanup promise.
 
-The initial frozen form is not an iterable comprehension, fill constructor,
+The implemented form is not an iterable comprehension, fill constructor,
 statement block, closure, or mutable array builder. It adds no inference,
 filtering, flattening, spread, unknown-length collection, array covariance, or
-runtime callback. Its primary ordinary-library adopter will be
-`Vec<T>.to_array()`, whose result contains the logical live prefix rather than
-capacity storage.
+runtime callback. Its primary ordinary-library adopter is
+`Vec<T>.to_array()`, whose independent result contains the logical live prefix
+rather than capacity storage.
 
 The compiler representation, dynamic-prefix proof, runtime boundary, rejected
 alternatives, and decision history are preserved in the
-[frozen design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md).
-Delivery is tracked by the
-[indexed array construction roadmap](../roadmaps/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md).
+[design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md) and
+[completed implementation roadmap](../archive/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md).
 
 ## Inline array value semantics
 

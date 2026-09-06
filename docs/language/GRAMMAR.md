@@ -775,9 +775,9 @@ publication, ownership, and cleanup protocol. The complete semantics are
 defined by the
 [array element-list contract](ARRAYS.md#explicit-element-list-construction).
 
-### Accepted indexed array construction syntax
+### Indexed array construction syntax
 
-The accepted indexed construction form is:
+The implemented indexed construction form is:
 
 ```text
 indexed-array-initializer

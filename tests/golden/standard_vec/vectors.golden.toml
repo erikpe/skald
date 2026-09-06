@@ -26,6 +26,15 @@ source = "vec_generic_type_shapes.ska"
 name = "recursive_aggregate_ownership_and_box_elements"
 
 [[test]]
+name = "to_array"
+mode = "run"
+source = "vec_to_array.ska"
+
+[[test.run]]
+name = "logical_prefix_copy_retention_and_all_element_families"
+expect = { exit = 0 }
+
+[[test]]
 name = "generic_modules"
 mode = "run"
 compiler_args = [

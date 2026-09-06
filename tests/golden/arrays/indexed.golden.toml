@@ -31,3 +31,12 @@ source = "indexed_shared_owner_arrays.ska"
 [[test.run]]
 name = "polymorphic_retain_adopt_optional_anchor_and_outer_ownership"
 expect = { stdout = { file = "data/indexed_shared_owner_arrays.stdout" } }
+
+[[test]]
+name = "allocation-failure"
+mode = "run"
+source = "indexed_allocation_failure.ska"
+
+[[test.run]]
+name = "backing_allocation_fails_before_the_first_element_effect"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: memory allocation failed\n" } }
