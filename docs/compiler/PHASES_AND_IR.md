@@ -1072,6 +1072,66 @@ or backend observes the product. Preliminary-MIR static activation and baseline 
 remain immutable; final verification rechecks realization against them rather
 than replanning activation.
 
+### Frozen target-independent binary64 evaluation direction
+
+Status: **frozen proposed contract; not implemented**. The complete decisions
+are frozen in the
+[design record](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md),
+and the active
+[implementation roadmap](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
+owns delivery. Current type checking still uses Rust host `f64` parsing for
+validated decimal literals, and the primitive evaluator still treats floating
+constants, arithmetic, comparisons, and numeric conversions as unsupported.
+
+The accepted direction adds an unpublished `skald-binary64` workspace crate
+around one exactly pinned published `rustc_apfloat` release. That crate is the
+sole production compile-time authority for exact IEEE-754 binary64 arithmetic,
+numeric comparison, classification, decimal rounding, and integer/boolean
+conversion. It exchanges only opaque Skald-owned values containing exact
+`u64` bits and closed Skald-owned outcomes. No APFloat type, trait, status,
+rounding mode, category, or parser error crosses into `skald-compiler`; the
+wrapper has no dependency on compiler phases, IR, diagnostics, source spans,
+passes, targets, runtime code, or generated programs.
+
+Validated source decimal spellings will round through that authority before
+type checking stores their bits in HIR. Lexical grammar, unary-minus shape,
+finite-range diagnostics, spans, subnormal acceptance, and underflow to
+positive zero remain unchanged. The Skald-written runtime string parser and
+formatter remain ordinary standard-library code and do not depend on the
+compiler support crate.
+
+The existing `PrimitiveConstant` domain will gain exact floating bits. The
+existing primitive evaluator and convergent callable-local solver remain the
+only MIR evaluation and propagation path. Exact sign negation, identity,
+raw-bit reinterpretation, conversion to `bool`, integer/boolean conversion to
+`f64`, and all six unordered floating comparisons become foldable. Binary64
+add, subtract, multiply, and divide become foldable only when their exact
+software result is not NaN. NaN-producing arithmetic remains in MIR so an
+optimization profile cannot select APFloat-specific result bits observable
+through `std::f64::to_bits`; floating algebraic identities remain separately
+excluded.
+
+Successful constant `f64`-to-integer casts will be owned by a separate
+proof-rich `checked-f64-to-integer-constant-folding` pass. It observes and
+certifies the complete range-check diamond, consumes one fresh convergent fact
+solution, and atomically replaces only a proven successful protocol with its
+exact target-typed integer result. NaN, infinity, finite out-of-range,
+malformed, and insufficiently proven protocols remain unchanged on their
+existing runtime failure path. Common checked-scalar site and carrier
+vocabulary may be shared with checked integer operations, but floating-cast
+topology, evaluation, mutation, pass identity, and measurements remain
+distinct owners.
+
+This direction changes no source syntax, source-visible arithmetic or cast
+semantics, HIR/MIR value representation, floating exception visibility,
+backend instruction contract, runtime ABI, evaluation order, cleanup,
+ownership, static lifecycle, or failure reason. It adds no host-float fallback,
+floating remainder, new rounding mode, total ordering, static-failure rewrite,
+C/C++ implementation, FFI, system library, or generated-program dependency.
+The workspace MSRV may be raised deliberately if required by the selected
+dependency; the current arbitrary floor does not justify a custom binary64
+implementation.
+
 ### Checked-integer constant protocol simplification
 
 The checked-integer occurrence consumes one fresh convergent constant solution

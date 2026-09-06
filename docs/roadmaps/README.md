@@ -4,6 +4,16 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
+## Implementation roadmaps
+
+The
+[target-independent binary64 evaluation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
+is planned; BE0 is next. It implements the frozen binary64 design by adding an
+isolated `skald-binary64`/`rustc_apfloat` foundation, migrating decimal literal
+rounding, extending convergent primitive constant evaluation, and adding a
+successful-only checked `f64`-to-integer folding pass. Its compiler foundations
+are complete; no other active roadmap blocks it.
+
 ## Pending discoveries
 
 The living
@@ -80,15 +90,17 @@ generic-interface roadmaps are preserved in the
 
 ## Design proposals
 
-The draft
+The frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md)
-proposes an unpublished `skald-binary64` workspace crate that contains a
+defines an unpublished `skald-binary64` workspace crate that contains a
 pinned `rustc_apfloat` dependency behind a Skald-owned raw-bit facade. It
-would become the shared authority for decimal literal rounding, deterministic
+will become the shared authority for decimal literal rounding, deterministic
 floating arithmetic, comparisons, primitive conversions, and successful
 checked `f64`-to-integer constant-protocol folding while conservatively
 retaining NaN-producing arithmetic and statically failing checked casts. The
-design is not yet frozen and has no implementation roadmap.
+active
+[implementation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
+owns delivery; BE0 is next.
 
 The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)

@@ -1,9 +1,12 @@
 # Target-Independent Binary64 Evaluation Design Proposal
 
-Status: draft design proposal. The decisions below are recommended but not
-frozen. A later confirmation should promote the accepted contract into living
-compiler documentation and create an implementation roadmap before code
-changes begin.
+Status: frozen design. B64E1 through B64E12 were confirmed together on
+2026-09-06. The durable crate and compiler-phase boundaries are promoted into
+the living [compiler architecture](../compiler/README.md) and
+[phase contract](../compiler/PHASES_AND_IR.md#frozen-target-independent-binary64-evaluation-direction).
+The active
+[implementation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
+owns delivery.
 
 This proposal defines one target-independent IEEE-754 binary64 evaluation
 boundary for the Skald compiler. An unpublished workspace crate wraps
@@ -155,18 +158,18 @@ integer division, remainder, and shifts.
 
 | ID | Decision | Recommended direction | State |
 |---|---|---|---|
-| [B64E1](#b64e1--crate-and-dependency-boundary) | Ownership | Add an unpublished `skald-binary64` workspace crate around `rustc_apfloat` | **Proposed** |
-| [B64E2](#b64e2--dependency-version-and-toolchain-policy) | Dependency policy | Pin one published crate version and raise the workspace MSRV if necessary | **Proposed** |
-| [B64E3](#b64e3--public-value-and-outcome-model) | Public model | Expose raw-bit `Binary64` and Skald-owned explicit outcomes only | **Proposed** |
-| [B64E4](#b64e4--arithmetic-negation-and-classification) | Arithmetic | Implement binary64 `+`, `-`, `*`, `/`, exact sign negation, and classification | **Proposed** |
-| [B64E5](#b64e5--comparison-semantics) | Comparison | Return an explicit four-way numeric comparison including unordered | **Proposed** |
-| [B64E6](#b64e6--integer-and-boolean-conversions) | Conversions | Provide typed integer entry points and truncating checked integer outcomes | **Proposed** |
-| [B64E7](#b64e7--decimal-literal-conversion) | Literals | Route validated source decimal spellings through exact APFloat parsing | **Proposed** |
-| [B64E8](#b64e8--nan-folding-policy) | NaN policy | Fold exact NaN observations but retain NaN-producing arithmetic | **Proposed** |
-| [B64E9](#b64e9--primitive-evaluation-and-constant-propagation) | Primitive folding | Extend the existing constant domain and evaluator; add no second solver | **Proposed** |
-| [B64E10](#b64e10--successful-checked-conversion-protocol-folding) | Checked casts | Add a separate proof-rich pass for successful constant `f64`-to-integer diamonds | **Proposed** |
-| [B64E11](#b64e11--module-structure-and-api-hygiene) | Maintainability | Keep a small facade with private responsibility modules and explicit re-exports | **Proposed** |
-| [B64E12](#b64e12--validation-and-differential-evidence) | Validation | Combine fixed bit vectors, boundaries, APFloat conformance, and native parity | **Proposed** |
+| [B64E1](#b64e1--crate-and-dependency-boundary) | Ownership | Add an unpublished `skald-binary64` workspace crate around `rustc_apfloat` | **Confirmed** |
+| [B64E2](#b64e2--dependency-version-and-toolchain-policy) | Dependency policy | Pin one published crate version and raise the workspace MSRV if necessary | **Confirmed** |
+| [B64E3](#b64e3--public-value-and-outcome-model) | Public model | Expose raw-bit `Binary64` and Skald-owned explicit outcomes only | **Confirmed** |
+| [B64E4](#b64e4--arithmetic-negation-and-classification) | Arithmetic | Implement binary64 `+`, `-`, `*`, `/`, exact sign negation, and explicit classification predicates | **Confirmed** |
+| [B64E5](#b64e5--comparison-semantics) | Comparison | Return an explicit four-way numeric comparison including unordered | **Confirmed** |
+| [B64E6](#b64e6--integer-and-boolean-conversions) | Conversions | Provide typed integer entry points and truncating checked integer outcomes | **Confirmed** |
+| [B64E7](#b64e7--decimal-literal-conversion) | Literals | Route validated source decimal spellings through exact APFloat parsing | **Confirmed** |
+| [B64E8](#b64e8--nan-folding-policy) | NaN policy | Fold exact NaN observations but retain NaN-producing arithmetic | **Confirmed** |
+| [B64E9](#b64e9--primitive-evaluation-and-constant-propagation) | Primitive folding | Extend the existing constant domain and evaluator; add no second solver | **Confirmed** |
+| [B64E10](#b64e10--successful-checked-conversion-protocol-folding) | Checked casts | Add a separate proof-rich pass for successful constant `f64`-to-integer diamonds | **Confirmed** |
+| [B64E11](#b64e11--module-structure-and-api-hygiene) | Maintainability | Keep a small facade with private responsibility modules and explicit re-exports | **Confirmed** |
+| [B64E12](#b64e12--validation-and-differential-evidence) | Validation | Combine fixed bit vectors, boundaries, APFloat conformance, and native parity | **Confirmed** |
 
 ## Detailed decisions
 
@@ -257,8 +260,9 @@ dependency API change cannot silently alter control flow.
 
 Negation is exact sign-bit inversion, not an arithmetic operation. It preserves
 the remaining 63 bits of zero, finite values, infinities, quiet NaNs, and
-signaling NaNs. Raw classification should distinguish at least zero, finite,
-infinity, and NaN and make the sign available where consumers require it.
+signaling NaNs. The public facade exposes explicit `is_zero`, `is_finite`,
+`is_infinite`, `is_nan`, and `is_negative` predicates. It does not expose an
+APFloat category or a second public classification enum.
 
 No public operation accepts or returns Rust `f64`.
 
@@ -344,13 +348,14 @@ pub fn parse_decimal(spelling: &str) -> DecimalConversion;
 pub enum DecimalConversion {
     Finite(Binary64),
     Overflow,
+    Invalid,
 }
 ```
 
 The compiler remains responsible for validating source grammar before this
 call. A malformed spelling reaching the wrapper indicates an internal contract
-violation and should be represented without exposing APFloat's parser error;
-the precise API may use a third `Invalid` outcome to keep the crate robust.
+violation and is represented by `Invalid` without exposing APFloat's parser
+error.
 Type checking maps `Finite` to the existing HIR raw bits and `Overflow` to the
 existing `F64_LITERAL_OUT_OF_RANGE` diagnostic with unchanged span, message,
 label, and note.
@@ -555,6 +560,14 @@ pub struct Binary64 {
     bits: u64,
 }
 
+impl Binary64 {
+    pub const fn is_zero(self) -> bool;
+    pub const fn is_finite(self) -> bool;
+    pub const fn is_infinite(self) -> bool;
+    pub const fn is_nan(self) -> bool;
+    pub const fn is_negative(self) -> bool;
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Binary64Comparison {
     Less,
@@ -577,9 +590,8 @@ pub enum DecimalConversion {
 }
 ```
 
-Whether classification is exposed as predicates or one public enum should be
-settled while freezing the design. No currently identified consumer requires
-APFloat's complete category or status vocabulary.
+Classification uses the explicit predicates above. No currently identified
+consumer requires APFloat's complete category or status vocabulary.
 
 ## Compiler ownership after delivery
 
@@ -639,12 +651,11 @@ unstable API and lets dependency-specific status and rounding concepts become
 accidental architecture. The proposed opaque bit boundary costs little and
 keeps replacement feasible.
 
-## Confirmation and delivery boundary
+## Delivery boundary
 
-Freezing this proposal should confirm B64E1 through B64E12 together, resolve
-the small public-classification API question, promote the accepted compiler
-boundary into living architecture and phase documentation, and create a
-PR-sized implementation roadmap.
+B64E1 through B64E12 are frozen together. The living compiler documentation
+owns their durable architecture and phase boundary, while the active roadmap
+owns their implementation order and completion evidence.
 
 Implementation should establish the crate and test oracle before migrating
 literal conversion or enabling optimization. Pure floating evaluation should
