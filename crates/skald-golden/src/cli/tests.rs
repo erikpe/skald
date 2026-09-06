@@ -76,7 +76,7 @@ fn parses_compiler_and_determinism_execution_options() {
 }
 
 #[test]
-fn defaults_compiler_linker_and_execution_stages_to_thirty_seconds() {
+fn defaults_compiler_linker_and_execution_stages_to_sixty_seconds() {
     let options = stage_options(
         PathBuf::from("skac"),
         Path::new("."),
@@ -85,9 +85,9 @@ fn defaults_compiler_linker_and_execution_stages_to_thirty_seconds() {
         SandboxRetention::Failures,
     );
 
-    assert_eq!(options.compiler().default_timeout().as_secs(), 30);
-    assert_eq!(options.linker_timeout().as_secs(), 30);
-    assert_eq!(options.execution().default_timeout().as_secs(), 30);
+    assert_eq!(options.compiler().default_timeout().as_secs(), 60);
+    assert_eq!(options.linker_timeout().as_secs(), 60);
+    assert_eq!(options.execution().default_timeout().as_secs(), 60);
     assert_eq!(options.runtime().command().timeout().as_secs(), 120);
 }
 

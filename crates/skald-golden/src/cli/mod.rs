@@ -33,7 +33,7 @@ Execution and read-only inspection:
   --compiler-arg ARG     Append a compiler argument; repeatable
   --determinism MODE     Use off (default), compile, or full
   --jobs N               Bound active processes; defaults to host parallelism
-  --timeout SECONDS      Override the 30-second timeout for each process
+  --timeout SECONDS      Override the 60-second timeout for each process
   --fail-fast            Stop starting unrelated work after a failure
   --show-output          Show captured output for passing cases too
   --slowest N            Report the N slowest completed leaf IDs

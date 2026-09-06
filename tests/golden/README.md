@@ -182,7 +182,7 @@ populates it.
 
 Child environments are rebuilt from the toolchain allowlist plus declared
 values and a private `TMPDIR`. Stdin writing and output capture proceed
-concurrently. Each process has a 30-second default timeout, and Linux timeouts
+concurrently. Each process has a 60-second default timeout, and Linux timeouts
 terminate the complete child process group. `serial = true` requests exclusive
 execution; equal names in `resources = ["..."]` prevent only those nodes from
 overlapping.

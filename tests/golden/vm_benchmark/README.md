@@ -99,5 +99,5 @@ build profile. “Aggregate run” executes and checks all twelve guest programs
 | `omit-runtime-trace` | 9.172 s | 0.249 s | 44.532 ms | 6,851,646 bytes |
 
 Every observed compiler, linker, and native process remained below the golden
-runner's default 30-second per-process timeout. Timing is deliberately absent
+runner's default 60-second per-process timeout. Timing is deliberately absent
 from the checked expectations.
