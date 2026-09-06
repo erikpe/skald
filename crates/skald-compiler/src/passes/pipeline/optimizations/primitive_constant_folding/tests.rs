@@ -109,6 +109,19 @@ fn assignment_mut(definition: &mut MirFunctionDefinition, result: ValueId) -> &m
         .unwrap()
 }
 
+fn assignment(definition: &MirFunctionDefinition, result: ValueId) -> &MirAssignment {
+    definition
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment) if assignment.result == result => Some(assignment),
+            _ => None,
+        })
+        .unwrap()
+}
+
 fn returned_assignment(definition: &MirFunctionDefinition) -> (&MirAssignment, &MirRvalueKind) {
     let returned = definition
         .body
@@ -268,6 +281,235 @@ fn straight_line_chain_folds_every_supported_assignment_kind_in_place() {
 }
 
 #[test]
+fn floating_matrix_folds_exact_results_but_retains_nan_arithmetic() {
+    let mut input = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+    let entry = input.entry_function;
+    let definition = input.definitions.get_mut_for_test(entry).unwrap();
+    let one = append_assignment(
+        definition,
+        MirRvalueKind::ConstantF64Bits(0x3ff0_0000_0000_0000),
+        MirType::F64,
+    );
+    let two = append_assignment(
+        definition,
+        MirRvalueKind::ConstantF64Bits(0x4000_0000_0000_0000),
+        MirType::F64,
+    );
+    let nan = append_assignment(
+        definition,
+        MirRvalueKind::ConstantF64Bits(0x7ff8_0000_0000_0042),
+        MirType::F64,
+    );
+    let negative_zero = append_assignment(
+        definition,
+        MirRvalueKind::ConstantF64Bits(0x8000_0000_0000_0000),
+        MirType::F64,
+    );
+    let nan_bits = append_assignment(
+        definition,
+        MirRvalueKind::ConstantU64(0x7ff0_0000_0000_0042),
+        MirType::U64,
+    );
+    let maximum = append_assignment(
+        definition,
+        MirRvalueKind::ConstantI64(i64::MAX),
+        MirType::I64,
+    );
+    let negated = append_assignment(
+        definition,
+        MirRvalueKind::Unary {
+            operation: MirUnaryOperation::NegateF64,
+            operand: one,
+        },
+        MirType::F64,
+    );
+    let sum = append_assignment(
+        definition,
+        MirRvalueKind::Binary {
+            operation: MirBinaryOperation::AddF64,
+            left: one,
+            right: two,
+        },
+        MirType::F64,
+    );
+    let unordered = append_assignment(
+        definition,
+        MirRvalueKind::PrimitiveComparison {
+            operation: MirPrimitiveComparison {
+                predicate: MirComparisonPredicate::NotEqual,
+                operand: MirComparisonOperand::F64,
+            },
+            left: nan,
+            right: one,
+        },
+        MirType::Bool,
+    );
+    let integer_to_float = append_assignment(
+        definition,
+        MirRvalueKind::PrimitiveCast {
+            operation: MirPrimitiveCast::new(MirPrimitiveType::I64, MirPrimitiveType::F64),
+            operand: maximum,
+        },
+        MirType::F64,
+    );
+    let boolean_to_float = append_assignment(
+        definition,
+        MirRvalueKind::PrimitiveCast {
+            operation: MirPrimitiveCast::new(MirPrimitiveType::Bool, MirPrimitiveType::F64),
+            operand: unordered,
+        },
+        MirType::F64,
+    );
+    let float_to_boolean = append_assignment(
+        definition,
+        MirRvalueKind::PrimitiveCast {
+            operation: MirPrimitiveCast::new(MirPrimitiveType::F64, MirPrimitiveType::Bool),
+            operand: negative_zero,
+        },
+        MirType::Bool,
+    );
+    let from_bits = append_assignment(
+        definition,
+        MirRvalueKind::PrimitiveCast {
+            operation: MirPrimitiveCast::bit_reinterpretation(
+                MirPrimitiveType::U64,
+                MirPrimitiveType::F64,
+            ),
+            operand: nan_bits,
+        },
+        MirType::F64,
+    );
+    let to_bits = append_assignment(
+        definition,
+        MirRvalueKind::PrimitiveCast {
+            operation: MirPrimitiveCast::bit_reinterpretation(
+                MirPrimitiveType::F64,
+                MirPrimitiveType::U64,
+            ),
+            operand: from_bits,
+        },
+        MirType::U64,
+    );
+    let identity = append_assignment(
+        definition,
+        MirRvalueKind::PrimitiveCast {
+            operation: MirPrimitiveCast::new(MirPrimitiveType::F64, MirPrimitiveType::F64),
+            operand: nan,
+        },
+        MirType::F64,
+    );
+    let nan_sum = append_assignment(
+        definition,
+        MirRvalueKind::Binary {
+            operation: MirBinaryOperation::AddF64,
+            left: nan,
+            right: one,
+        },
+        MirType::F64,
+    );
+
+    let mut expected = input.clone();
+    for (result, replacement) in [
+        (
+            negated,
+            MirRvalueKind::ConstantF64Bits(0xbff0_0000_0000_0000),
+        ),
+        (sum, MirRvalueKind::ConstantF64Bits(0x4008_0000_0000_0000)),
+        (unordered, MirRvalueKind::ConstantBool(true)),
+        (
+            integer_to_float,
+            MirRvalueKind::ConstantF64Bits(0x43e0_0000_0000_0000),
+        ),
+        (
+            boolean_to_float,
+            MirRvalueKind::ConstantF64Bits(0x3ff0_0000_0000_0000),
+        ),
+        (float_to_boolean, MirRvalueKind::ConstantBool(false)),
+        (
+            from_bits,
+            MirRvalueKind::ConstantF64Bits(0x7ff0_0000_0000_0042),
+        ),
+        (to_bits, MirRvalueKind::ConstantU64(0x7ff0_0000_0000_0042)),
+        (
+            identity,
+            MirRvalueKind::ConstantF64Bits(0x7ff8_0000_0000_0042),
+        ),
+    ] {
+        assignment_mut(
+            expected.definitions.get_mut_for_test(entry).unwrap(),
+            result,
+        )
+        .rvalue
+        .kind = replacement;
+    }
+
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+    assert_eq!(measured.result.as_ref().unwrap().program(), &expected);
+    assert!(matches!(
+        assignment(
+            measured
+                .result
+                .as_ref()
+                .unwrap()
+                .definitions
+                .get(entry)
+                .unwrap(),
+            nan_sum,
+        )
+        .rvalue
+        .kind,
+        MirRvalueKind::Binary {
+            operation: MirBinaryOperation::AddF64,
+            ..
+        }
+    ));
+    assert_eq!(
+        measured.occurrences()[0].measurements(),
+        expected_measurements(FoldCounts {
+            unary: 1,
+            binary: 1,
+            comparisons: 1,
+            casts: 6,
+            maximum_dependency_depth: 2,
+            ..FoldCounts::default()
+        })
+    );
+}
+
+#[test]
+fn source_floating_fold_dump_is_exact_and_independently_deterministic() {
+    let source = concat!(
+        "fn value() -> f64 { return -(1.0 + 2.0) / 2.0; } ",
+        "fn compare() -> bool { return 0.0 / 0.0 != 1.0; } ",
+        "fn main() -> i64 { return 0; }",
+    );
+    let compile = || {
+        let input = lower_source_to_final_mir(source);
+        let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+        crate::mir::dump_mir(measured.result.as_ref().unwrap().program())
+    };
+
+    let first = compile();
+    assert_eq!(first, compile());
+    assert!(
+        first.contains("const.f64 0x4008000000000000 : f64"),
+        "{first}"
+    );
+    assert!(
+        first.contains("const.f64 0xc008000000000000 : f64"),
+        "{first}"
+    );
+    assert!(
+        first.contains("const.f64 0xbff8000000000000 : f64"),
+        "{first}"
+    );
+    assert!(
+        first.contains("div.f64"),
+        "NaN-producing division was removed: {first}"
+    );
+}
+
+#[test]
 fn candidate_free_occurrence_preserves_the_verified_product_without_reverification() {
     let input = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
     let expected = input.clone();
@@ -379,6 +621,52 @@ fn one_occurrence_folds_arbitrarily_deep_primitive_chains() {
     assert_eq!(
         returned_assignment(definition).1,
         &MirRvalueKind::ConstantI64((DEPTH + 1) as i64)
+    );
+    assert_eq!(
+        measured.occurrences()[0].measurements(),
+        expected_measurements(FoldCounts {
+            binary: DEPTH,
+            maximum_dependency_depth: DEPTH,
+            ..FoldCounts::default()
+        })
+    );
+}
+
+#[test]
+fn one_occurrence_folds_arbitrarily_deep_floating_chains() {
+    const DEPTH: usize = 512;
+    let mut input = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+    let entry = input.entry_function;
+    let definition = input.definitions.get_mut_for_test(entry).unwrap();
+    let one = append_assignment(
+        definition,
+        MirRvalueKind::ConstantF64Bits(0x3ff0_0000_0000_0000),
+        MirType::F64,
+    );
+    let mut result = one;
+    for _ in 0..DEPTH {
+        result = append_assignment(
+            definition,
+            MirRvalueKind::Binary {
+                operation: MirBinaryOperation::AddF64,
+                left: result,
+                right: one,
+            },
+            MirType::F64,
+        );
+    }
+
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(&[IDENTITY]));
+    let definition = measured
+        .result
+        .as_ref()
+        .unwrap()
+        .definitions
+        .get(entry)
+        .unwrap();
+    assert_eq!(
+        assignment(definition, result).rvalue.kind,
+        MirRvalueKind::ConstantF64Bits(0x4080_0800_0000_0000)
     );
     assert_eq!(
         measured.occurrences()[0].measurements(),

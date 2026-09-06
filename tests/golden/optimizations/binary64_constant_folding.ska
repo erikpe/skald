@@ -1,0 +1,52 @@
+import std::f64;
+import std::io as io;
+from std::test import assert_eq_u64, assert_false, assert_true;
+
+fn exact_arithmetic() -> unit {
+    assert_eq_u64(std::f64::to_bits(-(1.0 + 2.0) / 2.0), 0xbff8000000000000u);
+    assert_eq_u64(std::f64::to_bits(1.0 / 3.0), 0x3fd5555555555555u);
+    assert_eq_u64(std::f64::to_bits(-0.0 + -0.0), 0x8000000000000000u);
+    assert_eq_u64(
+        std::f64::to_bits(2.2250738585072014e-308 - 2.225073858507201e-308),
+        1u
+    );
+    assert_eq_u64(std::f64::to_bits(1.0 / 0.0), 0x7ff0000000000000u);
+}
+
+fn exact_casts() -> unit {
+    assert_eq_u64(std::f64::to_bits((f64) 9007199254740993), 0x4340000000000000u);
+    assert_eq_u64(
+        std::f64::to_bits((f64) 18446744073709551615u),
+        0x43f0000000000000u
+    );
+    assert_eq_u64(std::f64::to_bits((f64) true), 0x3ff0000000000000u);
+    assert_eq_u64(std::f64::to_bits((f64) 1.5), 0x3ff8000000000000u);
+    assert_false((bool) -0.0);
+    assert_true((bool) 1.0);
+}
+
+fn comparisons() -> unit {
+    assert_true(-1.0 < 0.0);
+    assert_true(0.0 == -0.0);
+    assert_true((1.0 / 0.0) > 1.0);
+
+    var raw_nan: f64 = std::f64::from_bits(0x7ff8000000000042u);
+    assert_false(raw_nan == raw_nan);
+    assert_true(raw_nan != raw_nan);
+    assert_true((bool) raw_nan);
+    assert_eq_u64(std::f64::to_bits(-raw_nan), 0xfff8000000000042u);
+}
+
+fn main() -> i64 {
+    exact_arithmetic();
+    exact_casts();
+    comparisons();
+
+    // Arithmetic NaN production stays executable so both profiles observe the
+    // backend's same raw result rather than an optimizer-selected payload.
+    var arithmetic_nan: f64 = 0.0 / 0.0;
+    assert_false(arithmetic_nan == arithmetic_nan);
+    io::println_u64(std::f64::to_bits(arithmetic_nan));
+    io::println_i64(64);
+    return 0;
+}

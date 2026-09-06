@@ -139,6 +139,7 @@ impl LocalConstantGraph {
                     MirRvalueKind::ConstantI64(_)
                     | MirRvalueKind::ConstantU64(_)
                     | MirRvalueKind::ConstantU8(_)
+                    | MirRvalueKind::ConstantF64Bits(_)
                     | MirRvalueKind::ConstantBool(_) => {
                         Some(LocalConstantProvenanceCategory::Literal)
                     }
@@ -148,8 +149,7 @@ impl LocalConstantGraph {
                     | MirRvalueKind::PrimitiveCast { .. } => {
                         Some(LocalConstantProvenanceCategory::Primitive)
                     }
-                    MirRvalueKind::ConstantF64Bits(_)
-                    | MirRvalueKind::CallableAddress(_)
+                    MirRvalueKind::CallableAddress(_)
                     | MirRvalueKind::PathCondition(_)
                     | MirRvalueKind::Load(_)
                     | MirRvalueKind::IntegerDivision { .. }
@@ -313,9 +313,9 @@ impl LocalConstantGraph {
                 MirRvalueKind::ConstantI64(_)
                 | MirRvalueKind::ConstantU64(_)
                 | MirRvalueKind::ConstantU8(_)
+                | MirRvalueKind::ConstantF64Bits(_)
                 | MirRvalueKind::ConstantBool(_) => Vec::new(),
-                MirRvalueKind::ConstantF64Bits(_)
-                | MirRvalueKind::CallableAddress(_)
+                MirRvalueKind::CallableAddress(_)
                 | MirRvalueKind::PathCondition(_)
                 | MirRvalueKind::Load(_)
                 | MirRvalueKind::IntegerDivision { .. }

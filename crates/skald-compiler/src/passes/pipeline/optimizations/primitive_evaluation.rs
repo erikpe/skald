@@ -1,5 +1,8 @@
 //! Exact target-independent evaluation of the foldable primitive MIR subset.
 
+#[path = "primitive_evaluation/floating.rs"]
+mod floating;
+
 use crate::mir::{
     MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate, MirIntegerBitwiseOperation,
     MirIntegerType, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveComparison,
@@ -16,6 +19,7 @@ pub(in crate::passes) enum PrimitiveConstant {
     I64(i64),
     U64(u64),
     U8(u8),
+    F64Bits(u64),
     Bool(bool),
 }
 
@@ -29,6 +33,7 @@ impl PrimitiveConstant {
             Self::I64(_) => MirPrimitiveType::I64,
             Self::U64(_) => MirPrimitiveType::U64,
             Self::U8(_) => MirPrimitiveType::U8,
+            Self::F64Bits(_) => MirPrimitiveType::F64,
             Self::Bool(_) => MirPrimitiveType::Bool,
         }
     }
@@ -38,6 +43,7 @@ impl PrimitiveConstant {
             Self::I64(value) => MirRvalueKind::ConstantI64(value),
             Self::U64(value) => MirRvalueKind::ConstantU64(value),
             Self::U8(value) => MirRvalueKind::ConstantU8(value),
+            Self::F64Bits(bits) => MirRvalueKind::ConstantF64Bits(bits),
             Self::Bool(value) => MirRvalueKind::ConstantBool(value),
         }
     }
@@ -65,8 +71,8 @@ pub(in crate::passes) fn evaluate_rvalue(
         MirRvalueKind::ConstantI64(value) => constant(PrimitiveConstant::I64(*value)),
         MirRvalueKind::ConstantU64(value) => constant(PrimitiveConstant::U64(*value)),
         MirRvalueKind::ConstantU8(value) => constant(PrimitiveConstant::U8(*value)),
+        MirRvalueKind::ConstantF64Bits(bits) => constant(PrimitiveConstant::F64Bits(*bits)),
         MirRvalueKind::ConstantBool(value) => constant(PrimitiveConstant::Bool(*value)),
-        MirRvalueKind::ConstantF64Bits(_) => PrimitiveEvaluation::Unsupported,
         MirRvalueKind::Unary { operation, operand } => known_constant(*operand)
             .map_or(PrimitiveEvaluation::Unsupported, |operand| {
                 evaluate_unary(*operation, operand)
@@ -112,16 +118,18 @@ fn evaluate_unary(operation: MirUnaryOperation, operand: PrimitiveConstant) -> P
     match operation {
         MirUnaryOperation::NegateI64 => match operand {
             PrimitiveConstant::I64(value) => constant(PrimitiveConstant::I64(value.wrapping_neg())),
-            PrimitiveConstant::U64(_) | PrimitiveConstant::U8(_) | PrimitiveConstant::Bool(_) => {
-                PrimitiveEvaluation::Unsupported
-            }
+            PrimitiveConstant::U64(_)
+            | PrimitiveConstant::U8(_)
+            | PrimitiveConstant::F64Bits(_)
+            | PrimitiveConstant::Bool(_) => PrimitiveEvaluation::Unsupported,
         },
-        MirUnaryOperation::NegateF64 => PrimitiveEvaluation::Unsupported,
+        MirUnaryOperation::NegateF64 => floating::evaluate_negation(operand),
         MirUnaryOperation::LogicalNotBool => match operand {
             PrimitiveConstant::Bool(value) => constant(PrimitiveConstant::Bool(!value)),
-            PrimitiveConstant::I64(_) | PrimitiveConstant::U64(_) | PrimitiveConstant::U8(_) => {
-                PrimitiveEvaluation::Unsupported
-            }
+            PrimitiveConstant::I64(_)
+            | PrimitiveConstant::U64(_)
+            | PrimitiveConstant::U8(_)
+            | PrimitiveConstant::F64Bits(_) => PrimitiveEvaluation::Unsupported,
         },
         MirUnaryOperation::BitwiseComplement(integer) => complement(integer, operand),
     }
@@ -131,23 +139,26 @@ fn complement(integer: MirIntegerType, operand: PrimitiveConstant) -> PrimitiveE
     match integer {
         MirIntegerType::I64 => match operand {
             PrimitiveConstant::I64(value) => constant(PrimitiveConstant::I64(!value)),
-            PrimitiveConstant::U64(_) | PrimitiveConstant::U8(_) | PrimitiveConstant::Bool(_) => {
-                PrimitiveEvaluation::Unsupported
-            }
+            PrimitiveConstant::U64(_)
+            | PrimitiveConstant::U8(_)
+            | PrimitiveConstant::F64Bits(_)
+            | PrimitiveConstant::Bool(_) => PrimitiveEvaluation::Unsupported,
         },
         MirIntegerType::U64 => match operand {
             PrimitiveConstant::U64(value) => constant(PrimitiveConstant::U64(!value)),
-            PrimitiveConstant::I64(_) | PrimitiveConstant::U8(_) | PrimitiveConstant::Bool(_) => {
-                PrimitiveEvaluation::Unsupported
-            }
+            PrimitiveConstant::I64(_)
+            | PrimitiveConstant::U8(_)
+            | PrimitiveConstant::F64Bits(_)
+            | PrimitiveConstant::Bool(_) => PrimitiveEvaluation::Unsupported,
         },
         MirIntegerType::U8 => match operand {
             PrimitiveConstant::U8(value) => {
                 constant(PrimitiveConstant::U8(canonical_u8(!u64::from(value))))
             }
-            PrimitiveConstant::I64(_) | PrimitiveConstant::U64(_) | PrimitiveConstant::Bool(_) => {
-                PrimitiveEvaluation::Unsupported
-            }
+            PrimitiveConstant::I64(_)
+            | PrimitiveConstant::U64(_)
+            | PrimitiveConstant::F64Bits(_)
+            | PrimitiveConstant::Bool(_) => PrimitiveEvaluation::Unsupported,
         },
     }
 }
@@ -170,7 +181,7 @@ fn evaluate_binary(
         MirBinaryOperation::AddF64
         | MirBinaryOperation::SubtractF64
         | MirBinaryOperation::MultiplyF64
-        | MirBinaryOperation::DivideF64 => PrimitiveEvaluation::Unsupported,
+        | MirBinaryOperation::DivideF64 => floating::evaluate_binary(operation, left, right),
         MirBinaryOperation::IntegerBitwise { operation, operand } => {
             evaluate_bitwise(operation, operand, left, right)
         }
@@ -305,7 +316,9 @@ fn evaluate_comparison(
                 PrimitiveEvaluation::Unsupported
             }
         },
-        MirComparisonOperand::F64 => PrimitiveEvaluation::Unsupported,
+        MirComparisonOperand::F64 => {
+            floating::evaluate_comparison(operation.predicate, left, right)
+        }
     }
 }
 
@@ -339,14 +352,19 @@ fn evaluate_cast(operation: MirPrimitiveCast, operand: PrimitiveConstant) -> Pri
             evaluate_integer_bits(operation.source, operation.target, operand)
         }
         MirPrimitiveCastKind::ToBool => {
-            evaluate_integer_to_bool(operation.source, operation.target, operand)
+            if operation.source == MirPrimitiveType::F64 {
+                floating::evaluate_cast(operation, operand)
+            } else {
+                evaluate_integer_to_bool(operation.source, operation.target, operand)
+            }
         }
         MirPrimitiveCastKind::FromBool => {
             evaluate_bool_to_integer(operation.source, operation.target, operand)
         }
-        MirPrimitiveCastKind::ToF64
-        | MirPrimitiveCastKind::BitReinterpretation
-        | MirPrimitiveCastKind::CheckedF64ToInteger => PrimitiveEvaluation::Unsupported,
+        MirPrimitiveCastKind::ToF64 | MirPrimitiveCastKind::BitReinterpretation => {
+            floating::evaluate_cast(operation, operand)
+        }
+        MirPrimitiveCastKind::CheckedF64ToInteger => PrimitiveEvaluation::Unsupported,
     }
 }
 

@@ -731,14 +731,40 @@ fn default_pipeline_removes_a_valid_disconnected_block() {
 }
 
 #[test]
-fn pipeline_preserves_pure_and_checked_primitive_casts_exactly() {
+fn pipeline_folds_pure_floating_casts_and_preserves_checked_casts() {
     let mir = lower_source_to_mir(
         "fn source() -> f64 { return 7.9; }
          fn main() -> i64 { return (i64) source() + (i64) (f64) 1u; }",
     );
-    let expected = mir.clone();
+    let input = dump_mir(&mir);
+    let optimized = run_mir_pipeline(mir).unwrap();
+    let output = dump_mir(optimized.program());
 
-    assert_eq!(run_mir_pipeline(mir).unwrap().program(), &expected);
+    assert_eq!(input.matches("cast.u64.f64 to_f64").count(), 1, "{input}");
+    assert_eq!(output.matches("cast.u64.f64 to_f64").count(), 0, "{output}");
+    assert!(
+        output.contains("const.f64 0x3ff0000000000000 : f64"),
+        "{output}"
+    );
+    assert_eq!(
+        output.matches("primitive-cast-range-check f64.i64").count(),
+        2,
+        "{output}"
+    );
+    assert_eq!(
+        output
+            .matches("checked-cast.f64.i64 trunc=toward-zero")
+            .count(),
+        2,
+        "{output}"
+    );
+    assert_eq!(
+        output
+            .matches("terminate primitive-cast-out-of-range")
+            .count(),
+        2,
+        "{output}"
+    );
 }
 
 #[test]

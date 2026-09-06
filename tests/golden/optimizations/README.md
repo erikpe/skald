@@ -39,6 +39,11 @@ independently; native observations cover selected and skipped effects and
 failures, function values, ordinary locals, shared owners, static startup and
 reverse shutdown, destruction, and exact panic traces.
 
+The binary64 constant-folding fixture covers exact raw-bit arithmetic, casts,
+comparisons, signed zero, subnormals, infinities, and conservative arithmetic
+NaN retention across default, optimization-free, folding-disabled, and fully
+disabled profiles.
+
 Use `make golden-filter GOLDEN_FILTER='optimizations/**'` for the ordinary
 focused suite. Use `scripts/golden.sh --determinism full --filter
 'optimizations/**'` to repeat both compiler and native processes.

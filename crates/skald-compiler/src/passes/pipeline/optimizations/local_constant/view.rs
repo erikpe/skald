@@ -42,9 +42,9 @@ impl<'solution> BlockLocalConstantView<'solution> {
             MirRvalueKind::ConstantI64(value) => Some(PrimitiveConstant::I64(value)),
             MirRvalueKind::ConstantU64(value) => Some(PrimitiveConstant::U64(value)),
             MirRvalueKind::ConstantU8(value) => Some(PrimitiveConstant::U8(value)),
+            MirRvalueKind::ConstantF64Bits(bits) => Some(PrimitiveConstant::F64Bits(bits)),
             MirRvalueKind::ConstantBool(value) => Some(PrimitiveConstant::Bool(value)),
-            MirRvalueKind::ConstantF64Bits(_)
-            | MirRvalueKind::CallableAddress(_)
+            MirRvalueKind::CallableAddress(_)
             | MirRvalueKind::PathCondition(_)
             | MirRvalueKind::Load(_)
             | MirRvalueKind::Unary { .. }

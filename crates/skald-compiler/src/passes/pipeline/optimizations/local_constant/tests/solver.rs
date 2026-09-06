@@ -317,6 +317,83 @@ fn solution_order_and_provenance_are_stable_across_worklist_seed_orders() {
 }
 
 #[test]
+fn floating_facts_converge_independently_of_worklist_seed_order() {
+    let mut program = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+    let definition = entry_definition_mut(&mut program);
+    let block = definition.body.entry;
+    let span = definition.span;
+    let nan = push_assignment(
+        definition,
+        block,
+        span,
+        MirRvalueKind::ConstantF64Bits(0x7ff8_0000_0000_0042),
+        MirType::F64,
+    );
+    let one = push_assignment(
+        definition,
+        block,
+        span,
+        MirRvalueKind::ConstantF64Bits(0x3ff0_0000_0000_0000),
+        MirType::F64,
+    );
+    let unordered = push_assignment(
+        definition,
+        block,
+        span,
+        MirRvalueKind::PrimitiveComparison {
+            operation: crate::mir::MirPrimitiveComparison {
+                predicate: crate::mir::MirComparisonPredicate::NotEqual,
+                operand: crate::mir::MirComparisonOperand::F64,
+            },
+            left: nan,
+            right: one,
+        },
+        MirType::Bool,
+    );
+    let converted = push_assignment(
+        definition,
+        block,
+        span,
+        MirRvalueKind::PrimitiveCast {
+            operation: crate::mir::MirPrimitiveCast::new(
+                crate::mir::MirPrimitiveType::Bool,
+                crate::mir::MirPrimitiveType::F64,
+            ),
+            operand: unordered,
+        },
+        MirType::F64,
+    );
+    let nan_sum = push_assignment(
+        definition,
+        block,
+        span,
+        MirRvalueKind::Binary {
+            operation: MirBinaryOperation::AddF64,
+            left: nan,
+            right: one,
+        },
+        MirType::F64,
+    );
+
+    let forward = solve_local_constants((&*definition).into()).unwrap();
+    let reversed = solve_local_constants_with_reversed_seeds((&*definition).into()).unwrap();
+    assert_eq!(forward, reversed);
+    assert_eq!(
+        forward.constant(nan).unwrap(),
+        Some(PrimitiveConstant::F64Bits(0x7ff8_0000_0000_0042))
+    );
+    assert_eq!(
+        forward.constant(unordered).unwrap(),
+        Some(PrimitiveConstant::Bool(true))
+    );
+    assert_eq!(
+        forward.constant(converted).unwrap(),
+        Some(PrimitiveConstant::F64Bits(0x3ff0_0000_0000_0000))
+    );
+    assert_eq!(forward.constant(nan_sum).unwrap(), None);
+}
+
+#[test]
 fn nested_logical_relations_converge_in_record_order() {
     let program = lower_source_to_final_mir(concat!(
         "fn dynamic() -> bool { return false; } ",
@@ -393,6 +470,49 @@ fn iterative_solver_handles_depth_far_beyond_normal_source_nesting() {
         .provenance();
     assert_eq!(provenance.depth(), DEPTH);
     assert_eq!(result.callable(), callable);
+}
+
+#[test]
+fn iterative_solver_propagates_deep_floating_chains() {
+    const DEPTH: usize = 512;
+    let mut program = lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+    let definition = entry_definition_mut(&mut program);
+    let block = definition.body.entry;
+    let span = definition.span;
+    let one = push_assignment(
+        definition,
+        block,
+        span,
+        MirRvalueKind::ConstantF64Bits(0x3ff0_0000_0000_0000),
+        MirType::F64,
+    );
+    let mut result = one;
+    for _ in 0..DEPTH {
+        result = push_assignment(
+            definition,
+            block,
+            span,
+            MirRvalueKind::Binary {
+                operation: MirBinaryOperation::AddF64,
+                left: result,
+                right: one,
+            },
+            MirType::F64,
+        );
+    }
+
+    let solution = solve_local_constants((&*definition).into()).unwrap();
+    assert_eq!(
+        solution.constant(result).unwrap(),
+        Some(PrimitiveConstant::F64Bits(0x4080_0800_0000_0000))
+    );
+    let provenance = solution
+        .facts()
+        .iter()
+        .find(|fact| fact.identity() == LocalConstantIdentity::Value(result))
+        .unwrap()
+        .provenance();
+    assert_eq!(provenance.depth(), DEPTH);
 }
 
 #[test]

@@ -959,8 +959,9 @@ the exact `none` reference profile.
 The local-simplification layer consists of three independently selectable
 production passes under the existing verified pipeline:
 
-- `primitive-constant-folding` replaces a closed exact family of integer and
-  boolean primitive operations using one converged seal-local solution;
+- `primitive-constant-folding` replaces a closed exact family of integer,
+  boolean, and binary64 primitive operations using one converged seal-local
+  solution;
 - `primitive-algebraic-simplification` applies the reviewed integer/boolean
   identity catalog and atomically forwards safe result uses; and
 - `conservative-cfg-cleanup` folds eligible ordinary boolean branches and
@@ -979,13 +980,17 @@ folding includes explicit wrapping `i64`, `u64`, and `u8` add, subtract, and
 multiply; wrapping `i64` negation; integer bitwise operations and complement;
 boolean not; integer and boolean comparisons; identity casts; integer width
 conversions; integer-to-boolean zero testing; and canonical boolean-to-integer
-conversion. `u8` results are explicitly canonicalized. Host arithmetic whose
+conversion. It also includes exact binary64 sign negation, identity, raw-bit
+reinterpretation, boolean conversion, integer/boolean-to-binary64 conversion,
+all unordered comparison predicates, and non-NaN add, subtract, multiply, and
+divide. `u8` results are explicitly canonicalized. Host arithmetic whose
 debug/release behavior differs is not a valid evaluator.
 
-Floating operations and conversions, division, remainder, shifts, checked
-conversions, loads, calls, path conditions, callable addresses, type/optional
-queries, array length, ownership operations, and failure-bearing protocols are
-outside the initial evaluator. In particular, checked integer and shift
+NaN-producing floating arithmetic, floating algebraic identities, integer
+division, remainder, shifts, checked conversions, loads, calls, path
+conditions, callable addresses, type/optional queries, array length, ownership
+operations, and failure-bearing protocols remain outside this evaluator. In
+particular, checked integer and shift
 operations cannot be folded by replacing only their success rvalue because
 verification relates them to exact predecessor diamonds.
 
@@ -1081,11 +1086,12 @@ and the active
 [implementation roadmap](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
 owns delivery. The isolated crate now implements its complete frozen public
 facade: raw-bit values, exact arithmetic, four-way numeric comparison,
-integer/boolean conversion, and decimal rounding. Type checking now routes
-every validated decimal floating literal through that facade and stores the
+integer/boolean conversion, and decimal rounding. Type checking routes every
+validated decimal floating literal through that facade and stores the
 resulting exact bits in HIR without consulting Rust host `f64` parsing. The
-primitive evaluator still treats floating constants, arithmetic, comparisons,
-and numeric conversions as unsupported.
+primitive evaluator and convergent local solver now carry exact raw-bit
+binary64 facts and fold the supported pure floating matrix through the same
+authority.
 
 The implementation has established an unpublished `skald-binary64` workspace
 crate around one exactly pinned published `rustc_apfloat` release. Its opaque
@@ -1118,13 +1124,13 @@ subnormal acceptance, and underflow to positive zero remain unchanged. The
 Skald-written runtime string parser and formatter remain ordinary
 standard-library code and do not depend on the compiler support crate.
 
-The existing `PrimitiveConstant` domain will gain exact floating bits. The
+The existing `PrimitiveConstant` domain includes exact floating bits. The
 existing primitive evaluator and convergent callable-local solver remain the
-only MIR evaluation and propagation path. Exact sign negation, identity,
-raw-bit reinterpretation, conversion to `bool`, integer/boolean conversion to
-`f64`, and all six unordered floating comparisons become foldable. Binary64
-add, subtract, multiply, and divide become foldable only when their exact
-software result is not NaN. NaN-producing arithmetic remains in MIR so an
+only MIR evaluation and propagation path. They fold exact sign negation,
+identity, raw-bit reinterpretation, conversion to `bool`, integer/boolean
+conversion to `f64`, and all six unordered floating comparisons. Binary64
+add, subtract, multiply, and divide fold only when their exact software result
+is not NaN. NaN-producing arithmetic remains in MIR so an
 optimization profile cannot select APFloat-specific result bits observable
 through `std::f64::to_bits`; floating algebraic identities remain separately
 excluded.

@@ -206,6 +206,15 @@ driver test pins the same pass-owned counters through structured reporting;
 the cross-process fingerprint excludes elapsed durations and includes every
 occurrence measurement and the final MIR dump.
 
+The binary64 constant-folding fixture crosses `default`, `none`, the
+primitive-fold exclusion, and all-pass exclusion. It checks exact arithmetic,
+rounding, signed zero, subnormal and infinity boundaries, every unordered
+comparison class, integer/boolean conversions, raw-bit reinterpretation, raw
+NaN facts, and native raw-bit parity while retaining NaN-producing arithmetic.
+Focused evaluator, solver, folding, dump, and reporting tests additionally pin
+malformed barriers, deep propagation, worklist-order independence, exact MIR
+rewrites, and deterministic generic operation-family measurements.
+
 ### Convergent local constant propagation coverage
 
 The frozen

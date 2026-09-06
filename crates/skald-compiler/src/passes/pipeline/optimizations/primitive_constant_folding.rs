@@ -1,4 +1,4 @@
-//! Convergent folding of exact integer and boolean primitive constants.
+//! Convergent folding of exact integer, boolean, and binary64 constants.
 
 #[path = "primitive_constant_folding/plan.rs"]
 mod plan;

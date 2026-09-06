@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: in progress; BE0 through BE3 are complete, and BE4 is next.
+Status: in progress; BE0 through BE4 are complete, and BE5 is next.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -98,7 +98,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 - [x] BE1 — Implement exact binary64 arithmetic and comparison
 - [x] BE2 — Implement conversions and decimal parsing
 - [x] BE3 — Migrate compiler literal rounding to the binary64 authority
-- [ ] BE4 — Extend primitive constant evaluation and propagation
+- [x] BE4 — Extend primitive constant evaluation and propagation
 - [ ] BE5 — Generalize checked-scalar topology, carriers, and solved facts
 - [ ] BE6 — Fold successful checked floating-to-integer protocols
 - [ ] BE7 — Harden the complete boundary and close the roadmap
@@ -258,29 +258,29 @@ rounding.
 **Purpose:** Activate exact pure floating folds through the existing primitive
 evaluator and convergent solver without creating parallel optimization state.
 
-- [ ] Add `PrimitiveConstant::F64Bits(u64)` and exact conversion back to
+- [x] Add `PrimitiveConstant::F64Bits(u64)` and exact conversion back to
       `MirRvalueKind::ConstantF64Bits`, preserving internal bit equality.
-- [ ] Extend exhaustive rvalue, graph, view, test-fixture, and future-variant
+- [x] Extend exhaustive rvalue, graph, view, test-fixture, and future-variant
       classifications so floating constants participate in the existing
       callable-local solution without becoming approximate facts.
-- [ ] Add a private floating-evaluation helper mapping MIR types, operations,
+- [x] Add a private floating-evaluation helper mapping MIR types, operations,
       casts, and predicates to the `skald-binary64` facade; keep MIR ownership
       in the existing primitive evaluator.
-- [ ] Fold exact sign negation, identity, `f64`-to-`bool`, integer/bool-to-
+- [x] Fold exact sign negation, identity, `f64`-to-`bool`, integer/bool-to-
       `f64`, and `f64`/`u64` raw-bit reinterpretation.
-- [ ] Fold all six floating comparisons through the explicit unordered
+- [x] Fold all six floating comparisons through the explicit unordered
       outcome, including either-operand NaN, both zeroes, and infinities.
-- [ ] Fold add, subtract, multiply, and divide only when the calculated result
+- [x] Fold add, subtract, multiply, and divide only when the calculated result
       is not NaN; retain every NaN-producing arithmetic assignment unchanged.
-- [ ] Preserve assignment identity, result type, instruction position, span,
+- [x] Preserve assignment identity, result type, instruction position, span,
       operand evaluation, and all existing unsupported-operation barriers.
-- [ ] Keep floating algebraic identities excluded from
+- [x] Keep floating algebraic identities excluded from
       `primitive-algebraic-simplification` and its use-forwarding catalog.
-- [ ] Extend deterministic primitive-fold measurements and reporting only
+- [x] Extend deterministic primitive-fold measurements and reporting only
       where the current schema requires family visibility; update living
       phase, reporting, testing, and optimization-catalog documentation with
       implemented pure-fold behavior.
-- [ ] Demonstrate propagation through arbitrary supported expression depth
+- [x] Demonstrate propagation through arbitrary supported expression depth
       and independence from pass repetition, iteration order, host build mode,
       and optimization profile selection.
 

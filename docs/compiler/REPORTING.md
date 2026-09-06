@@ -374,6 +374,9 @@ Primitive constant folding reports processed/changed callables; folded unary,
 binary, comparison, and cast assignments; counts of folds whose provenance
 crossed certified carriers, successful checked protocols, or selected logical
 relations; and the maximum dependency depth among materialized folds.
+The same stable operation-family counters include exact binary64 folds; no
+floating-specific counter family is needed. NaN-producing floating arithmetic
+is retained and therefore does not increment a folded-operation counter.
 Primitive algebraic
 simplification reports constant-result rewrites, forwarded uses, removed
 assignments and value declarations, protected-use rejections, and changed

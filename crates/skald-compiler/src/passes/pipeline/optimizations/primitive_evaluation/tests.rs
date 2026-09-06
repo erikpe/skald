@@ -147,6 +147,11 @@ fn literal_constants_retain_exact_type_and_payload() {
             MirType::U8,
         ),
         (
+            MirRvalueKind::ConstantF64Bits(0x7ff8_0000_0000_0042),
+            PrimitiveConstant::F64Bits(0x7ff8_0000_0000_0042),
+            MirType::F64,
+        ),
+        (
             MirRvalueKind::ConstantBool(true),
             PrimitiveConstant::Bool(true),
             MirType::Bool,
@@ -161,11 +166,7 @@ fn literal_constants_retain_exact_type_and_payload() {
 }
 
 #[test]
-fn floating_literals_and_floating_operations_are_observably_unsupported() {
-    assert_eq!(
-        evaluate(&MirRvalueKind::ConstantF64Bits(1.5_f64.to_bits())),
-        PrimitiveEvaluation::Unsupported
-    );
+fn floating_operations_reject_mismatched_primitive_facts() {
     assert_eq!(
         evaluate_unary(MirUnaryOperation::NegateF64, PrimitiveConstant::I64(1)),
         PrimitiveEvaluation::Unsupported
@@ -195,6 +196,161 @@ fn floating_literals_and_floating_operations_are_observably_unsupported() {
         ),
         PrimitiveEvaluation::Unsupported
     );
+}
+
+#[test]
+fn floating_negation_inverts_only_the_sign_bit() {
+    for bits in [
+        0x0000_0000_0000_0000,
+        0x0000_0000_0000_0001,
+        0x3ff0_0000_0000_0000,
+        0x7ff0_0000_0000_0000,
+        0x7ff0_0000_0000_0042,
+        0x7ff8_0000_0000_0042,
+        0xffff_ffff_ffff_ffff,
+    ] {
+        assert_eq!(
+            evaluate_unary(
+                MirUnaryOperation::NegateF64,
+                PrimitiveConstant::F64Bits(bits),
+            ),
+            folded(PrimitiveConstant::F64Bits(bits ^ 0x8000_0000_0000_0000))
+        );
+    }
+}
+
+#[test]
+fn floating_arithmetic_returns_fixed_non_nan_results() {
+    let cases = [
+        (
+            crate::mir::MirBinaryOperation::AddF64,
+            0x3ff0_0000_0000_0000,
+            0x4000_0000_0000_0000,
+            0x4008_0000_0000_0000,
+        ),
+        (
+            crate::mir::MirBinaryOperation::SubtractF64,
+            0x0010_0000_0000_0000,
+            0x000f_ffff_ffff_ffff,
+            0x0000_0000_0000_0001,
+        ),
+        (
+            crate::mir::MirBinaryOperation::MultiplyF64,
+            0x7fef_ffff_ffff_ffff,
+            0x4000_0000_0000_0000,
+            0x7ff0_0000_0000_0000,
+        ),
+        (
+            crate::mir::MirBinaryOperation::DivideF64,
+            0x3ff0_0000_0000_0000,
+            0x4008_0000_0000_0000,
+            0x3fd5_5555_5555_5555,
+        ),
+        (
+            crate::mir::MirBinaryOperation::DivideF64,
+            0x0000_0000_0000_0001,
+            0x4000_0000_0000_0000,
+            0x0000_0000_0000_0000,
+        ),
+        (
+            crate::mir::MirBinaryOperation::AddF64,
+            0x8000_0000_0000_0000,
+            0x8000_0000_0000_0000,
+            0x8000_0000_0000_0000,
+        ),
+    ];
+
+    for (operation, left, right, expected) in cases {
+        assert_eq!(
+            evaluate_binary(
+                operation,
+                PrimitiveConstant::F64Bits(left),
+                PrimitiveConstant::F64Bits(right),
+            ),
+            folded(PrimitiveConstant::F64Bits(expected))
+        );
+    }
+}
+
+#[test]
+fn nan_producing_floating_arithmetic_remains_unsupported() {
+    let cases = [
+        (
+            crate::mir::MirBinaryOperation::DivideF64,
+            0x0000_0000_0000_0000,
+            0x0000_0000_0000_0000,
+        ),
+        (
+            crate::mir::MirBinaryOperation::SubtractF64,
+            0x7ff0_0000_0000_0000,
+            0x7ff0_0000_0000_0000,
+        ),
+        (
+            crate::mir::MirBinaryOperation::AddF64,
+            0x7ff8_0000_0000_0042,
+            0x3ff0_0000_0000_0000,
+        ),
+        (
+            crate::mir::MirBinaryOperation::MultiplyF64,
+            0x7ff0_0000_0000_0042,
+            0x4000_0000_0000_0000,
+        ),
+    ];
+
+    for (operation, left, right) in cases {
+        assert_eq!(
+            evaluate_binary(
+                operation,
+                PrimitiveConstant::F64Bits(left),
+                PrimitiveConstant::F64Bits(right),
+            ),
+            PrimitiveEvaluation::Unsupported
+        );
+    }
+}
+
+#[test]
+fn floating_comparisons_cover_ordered_and_unordered_relations() {
+    let relations = [
+        (
+            0x3ff0_0000_0000_0000,
+            0x4000_0000_0000_0000,
+            [false, true, true, true, false, false],
+        ),
+        (
+            0x0000_0000_0000_0000,
+            0x8000_0000_0000_0000,
+            [true, false, false, true, false, true],
+        ),
+        (
+            0x7ff0_0000_0000_0000,
+            0x4000_0000_0000_0000,
+            [false, true, false, false, true, true],
+        ),
+        (
+            0x7ff8_0000_0000_0042,
+            0x3ff0_0000_0000_0000,
+            [false, true, false, false, false, false],
+        ),
+        (
+            0x3ff0_0000_0000_0000,
+            0xfff0_0000_0000_0042,
+            [false, true, false, false, false, false],
+        ),
+    ];
+
+    for (left, right, expected) in relations {
+        for (predicate, expected) in PREDICATES.into_iter().zip(expected) {
+            assert_eq!(
+                evaluate_comparison(
+                    comparison(predicate, MirComparisonOperand::F64),
+                    PrimitiveConstant::F64Bits(left),
+                    PrimitiveConstant::F64Bits(right),
+                ),
+                folded(PrimitiveConstant::Bool(expected))
+            );
+        }
+    }
 }
 
 #[test]
@@ -568,6 +724,10 @@ fn identity_and_integer_width_casts_preserve_exact_bits() {
         (MirPrimitiveType::I64, PrimitiveConstant::I64(i64::MIN)),
         (MirPrimitiveType::U64, PrimitiveConstant::U64(u64::MAX)),
         (MirPrimitiveType::U8, PrimitiveConstant::U8(u8::MAX)),
+        (
+            MirPrimitiveType::F64,
+            PrimitiveConstant::F64Bits(0x7ff8_0000_0000_0042),
+        ),
         (MirPrimitiveType::Bool, PrimitiveConstant::Bool(true)),
     ];
     for (ty, operand) in identities {
@@ -659,7 +819,83 @@ fn boolean_integer_casts_use_zero_testing_and_canonical_zero_or_one() {
 }
 
 #[test]
-fn cast_type_mismatches_and_every_floating_cast_family_are_unsupported() {
+fn floating_casts_use_exact_software_results_and_raw_bit_transfer() {
+    for (source, operand, expected_bits) in [
+        (
+            MirPrimitiveType::I64,
+            PrimitiveConstant::I64(i64::MAX),
+            0x43e0_0000_0000_0000,
+        ),
+        (
+            MirPrimitiveType::U64,
+            PrimitiveConstant::U64(u64::MAX),
+            0x43f0_0000_0000_0000,
+        ),
+        (
+            MirPrimitiveType::U8,
+            PrimitiveConstant::U8(u8::MAX),
+            0x406f_e000_0000_0000,
+        ),
+        (
+            MirPrimitiveType::Bool,
+            PrimitiveConstant::Bool(false),
+            0x0000_0000_0000_0000,
+        ),
+        (
+            MirPrimitiveType::Bool,
+            PrimitiveConstant::Bool(true),
+            0x3ff0_0000_0000_0000,
+        ),
+    ] {
+        assert_eq!(
+            evaluate_cast(
+                MirPrimitiveCast::new(source, MirPrimitiveType::F64),
+                operand,
+            ),
+            folded(PrimitiveConstant::F64Bits(expected_bits))
+        );
+    }
+
+    for (bits, expected) in [
+        (0x0000_0000_0000_0000, false),
+        (0x8000_0000_0000_0000, false),
+        (0x0000_0000_0000_0001, true),
+        (0x7ff0_0000_0000_0000, true),
+        (0x7ff8_0000_0000_0042, true),
+    ] {
+        assert_eq!(
+            evaluate_cast(
+                MirPrimitiveCast::new(MirPrimitiveType::F64, MirPrimitiveType::Bool),
+                PrimitiveConstant::F64Bits(bits),
+            ),
+            folded(PrimitiveConstant::Bool(expected))
+        );
+    }
+
+    for bits in [
+        0x0000_0000_0000_0000,
+        0x8000_0000_0000_0000,
+        0x0000_0000_0000_0001,
+        0x7ff0_0000_0000_0042,
+        0xffff_ffff_ffff_ffff,
+    ] {
+        let to_f64 =
+            MirPrimitiveCast::bit_reinterpretation(MirPrimitiveType::U64, MirPrimitiveType::F64);
+        let to_u64 =
+            MirPrimitiveCast::bit_reinterpretation(MirPrimitiveType::F64, MirPrimitiveType::U64);
+        assert_eq!(
+            evaluate_cast(to_f64, PrimitiveConstant::U64(bits)),
+            folded(PrimitiveConstant::F64Bits(bits))
+        );
+        assert_eq!(
+            evaluate_cast(to_u64, PrimitiveConstant::F64Bits(bits)),
+            folded(PrimitiveConstant::U64(bits))
+        );
+    }
+}
+
+#[test]
+fn cast_type_mismatches_and_checked_floating_casts_are_unsupported() {
     assert_eq!(
         evaluate_cast(
             MirPrimitiveCast::new(MirPrimitiveType::I64, MirPrimitiveType::U64),
@@ -670,28 +906,28 @@ fn cast_type_mismatches_and_every_floating_cast_family_are_unsupported() {
     assert_eq!(
         evaluate_cast(
             MirPrimitiveCast::new(MirPrimitiveType::I64, MirPrimitiveType::F64),
-            PrimitiveConstant::I64(1),
+            PrimitiveConstant::U64(1),
         ),
         PrimitiveEvaluation::Unsupported
     );
     assert_eq!(
         evaluate_cast(
             MirPrimitiveCast::new(MirPrimitiveType::Bool, MirPrimitiveType::F64),
-            PrimitiveConstant::Bool(true),
+            PrimitiveConstant::I64(1),
         ),
         PrimitiveEvaluation::Unsupported
     );
     assert_eq!(
         evaluate_cast(
             MirPrimitiveCast::bit_reinterpretation(MirPrimitiveType::U64, MirPrimitiveType::F64,),
-            PrimitiveConstant::U64(1.0_f64.to_bits()),
+            PrimitiveConstant::F64Bits(0x3ff0_0000_0000_0000),
         ),
         PrimitiveEvaluation::Unsupported
     );
     assert_eq!(
         evaluate_cast(
             MirPrimitiveCast::new(MirPrimitiveType::F64, MirPrimitiveType::I64),
-            PrimitiveConstant::I64(1),
+            PrimitiveConstant::F64Bits(0x3ff0_0000_0000_0000),
         ),
         PrimitiveEvaluation::Unsupported
     );

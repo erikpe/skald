@@ -598,6 +598,7 @@ fn details_publish_productive_local_simplification_measurements() {
     let source = "
 fn removed_target() -> i64 { return 99; }
 fn identity(value: i64) -> i64 { return value + 0; }
+fn floating() -> bool { return -((f64) 3) == -3.0; }
 fn main() -> i64 {
     if (1 + 1 == 2) { return identity(6 * 7); }
     return removed_target();
@@ -623,6 +624,16 @@ fn main() -> i64 {
             "folded binary assignments"
         ) > 0
     );
+    for measurement in [
+        "folded unary assignments",
+        "folded comparison assignments",
+        "folded cast assignments",
+    ] {
+        assert!(
+            pass_count_metric(metrics, "primitive-constant-folding", measurement) > 0,
+            "missing productive floating measurement {measurement}"
+        );
+    }
     assert!(
         pass_count_metric(
             metrics,
@@ -633,7 +644,7 @@ fn main() -> i64 {
     assert!(pass_count_metric(metrics, "conservative-cfg-cleanup", "removed blocks") > 0);
     assert_eq!(
         pass_count_metric(metrics, "whole-world-reachability", "removed definitions"),
-        1
+        2
     );
 }
 

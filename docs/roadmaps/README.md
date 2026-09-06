@@ -11,9 +11,10 @@ The
 is in progress; BE0 established the isolated
 `skald-binary64`/`rustc_apfloat` dependency and raw-bit facade, BE1 completed
 exact arithmetic and comparison, BE2 completed conversions and decimal
-rounding, and BE3 migrated compiler source-literal rounding to that authority.
-BE4 is next. The roadmap continues with convergent primitive constant
-evaluation and a successful-only checked `f64`-to-integer folding pass. Its
+rounding, BE3 migrated compiler source-literal rounding to that authority, and
+BE4 extended convergent primitive evaluation and propagation with exact pure
+binary64 folds. BE5 is next. The roadmap continues with a successful-only
+checked `f64`-to-integer folding pass. Its
 compiler foundations are complete; no other active roadmap blocks it.
 
 ## Pending discoveries

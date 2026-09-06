@@ -48,7 +48,9 @@ optimization.
   `rustc_apfloat` dependency from compiler IR, passes, targets, and generated
   programs. Type checking now uses that authority for every validated source
   floating literal while preserving the existing HIR bits and range
-  diagnostic; optimizer use remains staged roadmap work.
+  diagnostic. Primitive constant evaluation and propagation also use the
+  facade for exact pure binary64 folds, while NaN-producing arithmetic and
+  checked floating-to-integer conversion remain deliberately staged.
 - `crates/skald-docs-check` validates the repository documentation structure;
   it is tooling, not a compiler phase.
 - `crates/skald-golden` owns strict golden-spec decoding, contained fixture

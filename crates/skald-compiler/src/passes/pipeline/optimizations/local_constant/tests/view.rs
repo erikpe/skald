@@ -50,3 +50,54 @@ fn block_view_exposes_only_constants_after_their_local_definition() {
     assert_eq!(view.constant(one.result), None);
     assert_eq!(view.constant(sum.result), None);
 }
+
+#[test]
+fn block_view_tracks_exact_floating_literals_and_rewrites() {
+    let program = lower_source_to_final_mir(concat!(
+        "fn value() -> f64 { return 1.0 + 2.0; } ",
+        "fn main() -> i64 { return 0; }",
+    ));
+    let definition = program
+        .definitions
+        .get(crate::identity::FunctionId::new(0))
+        .unwrap();
+    let assignments = definition.body.blocks[0]
+        .instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment) => Some(assignment),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let one = assignments
+        .iter()
+        .find(|assignment| {
+            assignment.rvalue.kind == MirRvalueKind::ConstantF64Bits(0x3ff0_0000_0000_0000)
+        })
+        .unwrap();
+    let sum = assignments
+        .iter()
+        .find(|assignment| matches!(assignment.rvalue.kind, MirRvalueKind::Binary { .. }))
+        .unwrap();
+    let solution = solve_local_constants(definition.into()).unwrap();
+    let mut view = BlockLocalConstantView::new(&solution);
+
+    view.observe_assignment(one);
+    assert_eq!(
+        view.constant(one.result),
+        Some(PrimitiveConstant::F64Bits(0x3ff0_0000_0000_0000))
+    );
+    view.observe_assignment(sum);
+    assert_eq!(
+        view.constant(sum.result),
+        Some(PrimitiveConstant::F64Bits(0x4008_0000_0000_0000))
+    );
+
+    let mut rewritten = (*sum).clone();
+    rewritten.rvalue.kind = MirRvalueKind::ConstantF64Bits(0x4022_0000_0000_0000);
+    view.observe_assignment(&rewritten);
+    assert_eq!(
+        view.constant(sum.result),
+        Some(PrimitiveConstant::F64Bits(0x4022_0000_0000_0000))
+    );
+}

@@ -1,0 +1,15 @@
+schema = 2
+
+[[test]]
+name = "profile_equivalence"
+mode = "run"
+source = "binary64_constant_folding.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "constant-folding-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "exact_bits_comparisons_casts_and_nan_retention"
+expect = { stdout = { inline = "18444492273895866368\n64\n" } }
