@@ -3,6 +3,7 @@ from std::f64 import BoxF64;
 from std::i64 import BoxI64;
 from std::str import Str;
 from std::u64 import BoxU64;
+from std::vec import Vec;
 import vm_benchmark::builtins as builtins;
 import vm_benchmark::instructions as instructions;
 import vm_benchmark::model as model;
@@ -689,208 +690,197 @@ fn build_fibonacci_recursive_case() -> model::BenchmarkCase {
     );
 }
 
-fn emit_instruction(
-    mut ref code: ((shared model::Instruction)?)[],
-    pc: i64,
-    instruction: shared model::Instruction
-) -> i64 {
-    code[pc] = instruction;
-    return pc + 1;
-}
-
 fn build_sha1_quick_brown_fox_program() -> shared model::Program {
     // Build the large guest stream sequentially, retaining patchable branches.
-    var code: ((shared model::Instruction)?)[] =
-        ((shared model::Instruction)?)[](512u);
-    var pc: i64 = 0;
+    var code: Vec<shared? model::Instruction> = Vec<shared? model::Instruction>();
 
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 1u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 2u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 4, 3u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 5, 4u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 6, 5u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 7, 6u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 8, 7u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 9, 8u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 10, 9u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 11, 10u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 12, 11u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 13, 12u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 14, 13u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 20, 14u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 21, 15u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 22, 16u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 23, 17u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 24, 18u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 25, 19u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 26, 20u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 27, 21u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 28, 22u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 29, 23u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 30, 24u));
-    pc = emit_instruction(code, pc, new instructions::LoadConstOp(opcodes::load_const_opcode(), 31, 25u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 0, 0u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 2, 1u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 3, 2u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 4, 3u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 5, 4u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 6, 5u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 7, 6u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 8, 7u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 9, 8u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 10, 9u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 11, 10u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 12, 11u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 13, 12u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 14, 13u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 20, 14u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 21, 15u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 22, 16u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 23, 17u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 24, 18u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 25, 19u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 26, 20u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 27, 21u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 28, 22u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 29, 23u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 30, 24u));
+    code.push(new instructions::LoadConstOp(opcodes::load_const_opcode(), 31, 25u));
 
     // Seed W[0..15] with the padded message block.
     for (word_slot in 0 .. 16) {
-        pc = emit_instruction(code, pc, new instructions::LoadConstOp(
+        code.push(new instructions::LoadConstOp(
             opcodes::load_const_opcode(), 34, (u64) (26 + word_slot)
         ));
-        pc = emit_instruction(code, pc, new instructions::StoreMemOp(
+        code.push(new instructions::StoreMemOp(
             opcodes::store_mem_opcode(), word_slot, 34
         ));
     }
 
     // Expand W[16..79] with SHA-1's rotate-left-by-one recurrence.
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 1, 8));
-    var schedule_loop_start: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 21));
-    var schedule_exit_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
-    pc = emit_instruction(code, pc, new instructions::SubOp(opcodes::sub_opcode(), 35, 1, 4));
-    pc = emit_instruction(code, pc, new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 35, 0, 35));
-    pc = emit_instruction(code, pc, new instructions::SubOp(opcodes::sub_opcode(), 36, 1, 6));
-    pc = emit_instruction(code, pc, new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 36, 0, 36));
-    pc = emit_instruction(code, pc, new instructions::SubOp(opcodes::sub_opcode(), 37, 1, 7));
-    pc = emit_instruction(code, pc, new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 37, 0, 37));
-    pc = emit_instruction(code, pc, new instructions::SubOp(opcodes::sub_opcode(), 38, 1, 8));
-    pc = emit_instruction(code, pc, new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 38, 0, 38));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 35, 35, 36));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 35, 35, 37));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 35, 35, 38));
-    pc = emit_instruction(code, pc, new instructions::ShlOp(opcodes::shl_opcode(), 36, 35, 2));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 36, 36, 22));
-    pc = emit_instruction(code, pc, new instructions::ShrOp(opcodes::shr_opcode(), 37, 35, 12));
-    pc = emit_instruction(code, pc, new instructions::OrOp(opcodes::or_opcode(), 35, 36, 37));
-    pc = emit_instruction(code, pc, new instructions::StoreMemIndexedOp(opcodes::store_mem_indexed_opcode(), 35, 0, 1));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 1, 1, 2));
-    pc = emit_instruction(code, pc, new instructions::JumpOp(opcodes::jump_opcode(), (u64) schedule_loop_start));
-    code[schedule_exit_jump_pc] = new instructions::JumpIfFalseOp(
-        opcodes::jump_if_false_opcode(), 39, (u64) pc
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 1, 8));
+    var schedule_loop_start: u64 = code.len();
+    code.push(new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 21));
+    var schedule_exit_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
+    code.push(new instructions::SubOp(opcodes::sub_opcode(), 35, 1, 4));
+    code.push(new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 35, 0, 35));
+    code.push(new instructions::SubOp(opcodes::sub_opcode(), 36, 1, 6));
+    code.push(new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 36, 0, 36));
+    code.push(new instructions::SubOp(opcodes::sub_opcode(), 37, 1, 7));
+    code.push(new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 37, 0, 37));
+    code.push(new instructions::SubOp(opcodes::sub_opcode(), 38, 1, 8));
+    code.push(new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 38, 0, 38));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 35, 35, 36));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 35, 35, 37));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 35, 35, 38));
+    code.push(new instructions::ShlOp(opcodes::shl_opcode(), 36, 35, 2));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 36, 36, 22));
+    code.push(new instructions::ShrOp(opcodes::shr_opcode(), 37, 35, 12));
+    code.push(new instructions::OrOp(opcodes::or_opcode(), 35, 36, 37));
+    code.push(new instructions::StoreMemIndexedOp(opcodes::store_mem_indexed_opcode(), 35, 0, 1));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 1, 1, 2));
+    code.push(new instructions::JumpOp(opcodes::jump_opcode(), schedule_loop_start));
+    code[schedule_exit_jump_index] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 39, code.len()
     );
 
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 15, 27));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 16, 28));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 17, 29));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 18, 30));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 19, 31));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 1, 0));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 15, 27));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 16, 28));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 17, 29));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 18, 30));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 19, 31));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 1, 0));
 
     // Execute the four SHA-1 round functions, patching their forward exits.
-    var round_loop_start: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 21));
-    var round_exit_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
-    pc = emit_instruction(code, pc, new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 34, 0, 1));
-    pc = emit_instruction(code, pc, new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 9));
-    var choose_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 35, 17, 18));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 35, 16, 35));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 32, 18, 35));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 23));
-    var fn_done_after_choose_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpOp(opcodes::jump_opcode(), 0u));
+    var round_loop_start: u64 = code.len();
+    code.push(new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 21));
+    var round_exit_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
+    code.push(new instructions::LoadMemIndexedOp(opcodes::load_mem_indexed_opcode(), 34, 0, 1));
+    code.push(new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 9));
+    var choose_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 35, 17, 18));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 35, 16, 35));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 32, 18, 35));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 23));
+    var fn_done_after_choose_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpOp(opcodes::jump_opcode(), 0u));
 
-    var parity_one_start: i64 = pc;
-    code[choose_jump_pc] = new instructions::JumpIfFalseOp(
-        opcodes::jump_if_false_opcode(), 39, (u64) parity_one_start
+    var parity_one_start: u64 = code.len();
+    code[choose_jump_index] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 39, parity_one_start
     );
-    pc = emit_instruction(code, pc, new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 14));
-    var parity_one_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 32, 16, 17));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 32, 32, 18));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 24));
-    var fn_done_after_parity_one_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpOp(opcodes::jump_opcode(), 0u));
+    code.push(new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 14));
+    var parity_one_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 32, 16, 17));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 32, 32, 18));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 24));
+    var fn_done_after_parity_one_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpOp(opcodes::jump_opcode(), 0u));
 
-    var majority_start: i64 = pc;
-    code[parity_one_jump_pc] = new instructions::JumpIfFalseOp(
-        opcodes::jump_if_false_opcode(), 39, (u64) majority_start
+    var majority_start: u64 = code.len();
+    code[parity_one_jump_index] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 39, majority_start
     );
-    pc = emit_instruction(code, pc, new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 20));
-    var majority_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 35, 16, 17));
-    pc = emit_instruction(code, pc, new instructions::OrOp(opcodes::or_opcode(), 36, 16, 17));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 36, 18, 36));
-    pc = emit_instruction(code, pc, new instructions::OrOp(opcodes::or_opcode(), 32, 35, 36));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 25));
-    var fn_done_after_majority_jump_pc: i64 = pc;
-    pc = emit_instruction(code, pc, new instructions::JumpOp(opcodes::jump_opcode(), 0u));
+    code.push(new instructions::CmpLtOp(opcodes::cmp_lt_opcode(), 39, 1, 20));
+    var majority_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpIfFalseOp(opcodes::jump_if_false_opcode(), 39, 0u));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 35, 16, 17));
+    code.push(new instructions::OrOp(opcodes::or_opcode(), 36, 16, 17));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 36, 18, 36));
+    code.push(new instructions::OrOp(opcodes::or_opcode(), 32, 35, 36));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 25));
+    var fn_done_after_majority_jump_index: i64 = (i64) code.len();
+    code.push(new instructions::JumpOp(opcodes::jump_opcode(), 0u));
 
-    var parity_two_start: i64 = pc;
-    code[majority_jump_pc] = new instructions::JumpIfFalseOp(
-        opcodes::jump_if_false_opcode(), 39, (u64) parity_two_start
+    var parity_two_start: u64 = code.len();
+    code[majority_jump_index] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 39, parity_two_start
     );
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 32, 16, 17));
-    pc = emit_instruction(code, pc, new instructions::XorOp(opcodes::xor_opcode(), 32, 32, 18));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 26));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 32, 16, 17));
+    code.push(new instructions::XorOp(opcodes::xor_opcode(), 32, 32, 18));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 33, 26));
 
-    var fn_done_start: i64 = pc;
-    code[fn_done_after_choose_jump_pc] = new instructions::JumpOp(
-        opcodes::jump_opcode(), (u64) fn_done_start
+    var fn_done_start: u64 = code.len();
+    code[fn_done_after_choose_jump_index] = new instructions::JumpOp(
+        opcodes::jump_opcode(), fn_done_start
     );
-    code[fn_done_after_parity_one_jump_pc] = new instructions::JumpOp(
-        opcodes::jump_opcode(), (u64) fn_done_start
+    code[fn_done_after_parity_one_jump_index] = new instructions::JumpOp(
+        opcodes::jump_opcode(), fn_done_start
     );
-    code[fn_done_after_majority_jump_pc] = new instructions::JumpOp(
-        opcodes::jump_opcode(), (u64) fn_done_start
+    code[fn_done_after_majority_jump_index] = new instructions::JumpOp(
+        opcodes::jump_opcode(), fn_done_start
     );
 
-    pc = emit_instruction(code, pc, new instructions::ShlOp(opcodes::shl_opcode(), 35, 15, 5));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 35, 35, 22));
-    pc = emit_instruction(code, pc, new instructions::ShrOp(opcodes::shr_opcode(), 36, 15, 10));
-    pc = emit_instruction(code, pc, new instructions::OrOp(opcodes::or_opcode(), 35, 35, 36));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 35, 35, 32));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 35, 35, 19));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 35, 35, 33));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 35, 35, 34));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 35, 35, 22));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 19, 18));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 18, 17));
-    pc = emit_instruction(code, pc, new instructions::ShlOp(opcodes::shl_opcode(), 36, 16, 11));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 36, 36, 22));
-    pc = emit_instruction(code, pc, new instructions::ShrOp(opcodes::shr_opcode(), 37, 16, 3));
-    pc = emit_instruction(code, pc, new instructions::OrOp(opcodes::or_opcode(), 17, 36, 37));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 17, 17, 22));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 16, 15));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 15, 35));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 1, 1, 2));
-    pc = emit_instruction(code, pc, new instructions::JumpOp(opcodes::jump_opcode(), (u64) round_loop_start));
-    code[round_exit_jump_pc] = new instructions::JumpIfFalseOp(
-        opcodes::jump_if_false_opcode(), 39, (u64) pc
+    code.push(new instructions::ShlOp(opcodes::shl_opcode(), 35, 15, 5));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 35, 35, 22));
+    code.push(new instructions::ShrOp(opcodes::shr_opcode(), 36, 15, 10));
+    code.push(new instructions::OrOp(opcodes::or_opcode(), 35, 35, 36));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 35, 35, 32));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 35, 35, 19));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 35, 35, 33));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 35, 35, 34));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 35, 35, 22));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 19, 18));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 18, 17));
+    code.push(new instructions::ShlOp(opcodes::shl_opcode(), 36, 16, 11));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 36, 36, 22));
+    code.push(new instructions::ShrOp(opcodes::shr_opcode(), 37, 16, 3));
+    code.push(new instructions::OrOp(opcodes::or_opcode(), 17, 36, 37));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 17, 17, 22));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 16, 15));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 15, 35));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 1, 1, 2));
+    code.push(new instructions::JumpOp(opcodes::jump_opcode(), round_loop_start));
+    code[round_exit_jump_index] = new instructions::JumpIfFalseOp(
+        opcodes::jump_if_false_opcode(), 39, code.len()
     );
 
     // Add the working words back into the digest and reconstruct its high 64 bits.
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 27, 27, 15));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 27, 27, 22));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 28, 28, 16));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 28, 28, 22));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 29, 29, 17));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 29, 29, 22));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 30, 30, 18));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 30, 30, 22));
-    pc = emit_instruction(code, pc, new instructions::AddOp(opcodes::add_opcode(), 31, 31, 19));
-    pc = emit_instruction(code, pc, new instructions::AndOp(opcodes::and_opcode(), 31, 31, 22));
-    pc = emit_instruction(code, pc, new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 27));
-    pc = emit_instruction(code, pc, new instructions::StoreMemOp(opcodes::store_mem_opcode(), 1, 28));
-    pc = emit_instruction(code, pc, new instructions::StoreMemOp(opcodes::store_mem_opcode(), 2, 29));
-    pc = emit_instruction(code, pc, new instructions::StoreMemOp(opcodes::store_mem_opcode(), 3, 30));
-    pc = emit_instruction(code, pc, new instructions::StoreMemOp(opcodes::store_mem_opcode(), 4, 31));
-    pc = emit_instruction(code, pc, new instructions::ShlOp(opcodes::shl_opcode(), 40, 27, 13));
-    pc = emit_instruction(code, pc, new instructions::OrOp(opcodes::or_opcode(), 40, 40, 28));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 27));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 1, 28));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 2, 29));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 3, 30));
-    pc = emit_instruction(code, pc, new instructions::RegisterCopyOp(opcodes::move_opcode(), 4, 31));
-    pc = emit_instruction(code, pc, new instructions::CallBuiltinOp(opcodes::call_builtin_opcode(), 0u, 5u));
-    pc = emit_instruction(code, pc, new instructions::HaltOp(opcodes::halt_opcode(), 40));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 27, 27, 15));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 27, 27, 22));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 28, 28, 16));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 28, 28, 22));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 29, 29, 17));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 29, 29, 22));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 30, 30, 18));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 30, 30, 22));
+    code.push(new instructions::AddOp(opcodes::add_opcode(), 31, 31, 19));
+    code.push(new instructions::AndOp(opcodes::and_opcode(), 31, 31, 22));
+    code.push(new instructions::StoreMemOp(opcodes::store_mem_opcode(), 0, 27));
+    code.push(new instructions::StoreMemOp(opcodes::store_mem_opcode(), 1, 28));
+    code.push(new instructions::StoreMemOp(opcodes::store_mem_opcode(), 2, 29));
+    code.push(new instructions::StoreMemOp(opcodes::store_mem_opcode(), 3, 30));
+    code.push(new instructions::StoreMemOp(opcodes::store_mem_opcode(), 4, 31));
+    code.push(new instructions::ShlOp(opcodes::shl_opcode(), 40, 27, 13));
+    code.push(new instructions::OrOp(opcodes::or_opcode(), 40, 40, 28));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 0, 27));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 1, 28));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 2, 29));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 3, 30));
+    code.push(new instructions::RegisterCopyOp(opcodes::move_opcode(), 4, 31));
+    code.push(new instructions::CallBuiltinOp(opcodes::call_builtin_opcode(), 0u, 5u));
+    code.push(new instructions::HaltOp(opcodes::halt_opcode(), 40));
 
     var functions: model::FunctionInfo[] = model::FunctionInfo[]{
-        model::FunctionInfo("main", 0u, 41u, code[:pc])
+        model::FunctionInfo("main", 0u, 41u, code.to_array())
     };
     // All SHA words are represented as non-negative i64 values and masked to
     // 32 bits; guest shift counts are fixed in-range register values.
