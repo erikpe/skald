@@ -780,10 +780,11 @@ status.
 
 The frozen indexed-construction extension retains this ownership split. Lexer,
 syntax, and resolution tests own `=>`, punctuation spans, binding scope,
-recovery, nesting, generic source traversal, deterministic dumps, and the
-explicit type-checking gate. Later type-checking tests own exact `u64` length,
-immutable `i64` index, destination plans, and generic requirements without
-false default/assignment capabilities. MIR tests will own dynamic-prefix CFG,
+recovery, nesting, generic source traversal, and deterministic dumps. Type-
+checking tests own exact `u64` length, immutable `i64` index, every stored-value
+destination plan, generic requirements without false default/assignment
+capabilities, deterministic HIR, and the explicit executable-lowering gate.
+MIR tests will own dynamic-prefix CFG,
 per-element cleanup, complete-exit proof, nested prefixes, and malformed
 transition rejection.
 Backend and golden tests will own every element family, inline/shared

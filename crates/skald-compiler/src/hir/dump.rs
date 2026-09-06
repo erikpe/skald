@@ -749,14 +749,18 @@ impl<'types> HirDumper<'types> {
         self.heading("Locals");
         self.indented(|dumper| {
             for local in locals {
-                dumper.write_indentation();
-                let _ = write!(dumper.output, "Local {} ", local.id);
-                write_quoted(&mut dumper.output, &local.name);
-                let _ = write!(dumper.output, " : {}", dumper.type_name(local.ty));
-                write_span(&mut dumper.output, local.span);
-                dumper.output.push('\n');
+                dumper.local(local, "Local");
             }
         });
+    }
+
+    fn local(&mut self, local: &HirLocal, label: &str) {
+        self.write_indentation();
+        let _ = write!(self.output, "{label} {} ", local.id);
+        write_quoted(&mut self.output, &local.name);
+        let _ = write!(self.output, " : {}", self.type_name(local.ty));
+        write_span(&mut self.output, local.span);
+        self.output.push('\n');
     }
 
     fn block(&mut self, block: &HirBlock) {
@@ -1728,6 +1732,21 @@ impl<'types> HirDumper<'types> {
             HirArrayConstructionMode::Copy { source, element } => {
                 dumper.raw_line(&format!("CopyElements {}", array_copy_name(*element)));
                 dumper.indented(|dumper| dumper.array_source(source));
+            }
+            HirArrayConstructionMode::Indexed(initializer) => {
+                dumper.raw_line("IndexedElements");
+                dumper.indented(|dumper| {
+                    dumper.heading("Length");
+                    dumper.indented(|dumper| dumper.expression(&initializer.length));
+                    dumper.local(&initializer.binding, "IndexBinding read-only");
+                    dumper.line(
+                        &format!("Element : {}", initializer.element.element.name()),
+                        initializer.element.span,
+                    );
+                    dumper.indented(|dumper| {
+                        dumper.stored_value_initialization(&initializer.element.value)
+                    });
+                });
             }
             HirArrayConstructionMode::Elements(list) => {
                 dumper.raw_line(&format!(

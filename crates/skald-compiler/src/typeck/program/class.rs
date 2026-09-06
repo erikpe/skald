@@ -30,6 +30,7 @@ pub(super) fn lower_class_declarations(
     copy_capabilities: &CopyCapabilities,
     conformances: &[Vec<HirInterfaceConformance>],
     diagnostics: &mut Diagnostics,
+    lowering_diagnostics: &mut Diagnostics,
 ) -> Vec<HirClassDeclaration> {
     program
         .classes
@@ -41,6 +42,7 @@ pub(super) fn lower_class_declarations(
                 copy_capabilities,
                 conformances[class.id.index()].clone(),
                 diagnostics,
+                lowering_diagnostics,
             )
         })
         .collect()
@@ -52,6 +54,7 @@ fn lower_class_declaration(
     copy_capabilities: &CopyCapabilities,
     conformances: Vec<HirInterfaceConformance>,
     diagnostics: &mut Diagnostics,
+    lowering_diagnostics: &mut Diagnostics,
 ) -> Option<HirClassDeclaration> {
     let mut valid = true;
     let fields: Vec<_> = class
@@ -89,6 +92,7 @@ fn lower_class_declaration(
         copy_capabilities,
         &class.static_fields,
         diagnostics,
+        lowering_diagnostics,
     );
     if static_fields.is_none() {
         valid = false;
@@ -248,6 +252,7 @@ pub(super) fn check_class_definitions(
     program: &ResolvedProgram,
     copy_capabilities: &CopyCapabilities,
     diagnostics: &mut Diagnostics,
+    lowering_diagnostics: &mut Diagnostics,
 ) -> Vec<HirClassDefinition> {
     program
         .classes
@@ -260,6 +265,7 @@ pub(super) fn check_class_definitions(
                 class,
                 definition,
                 diagnostics,
+                lowering_diagnostics,
             }
             .check()
         })
@@ -272,6 +278,7 @@ struct ClassDefinitionChecker<'program, 'diagnostics> {
     class: &'program ResolvedClassDeclaration,
     definition: &'program ResolvedClassDefinition,
     diagnostics: &'diagnostics mut Diagnostics,
+    lowering_diagnostics: &'diagnostics mut Diagnostics,
 }
 
 impl ClassDefinitionChecker<'_, '_> {
@@ -407,6 +414,7 @@ impl ClassDefinitionChecker<'_, '_> {
                 callable_name: context.callable_name,
             },
             self.diagnostics,
+            self.lowering_diagnostics,
         )
         .check_member()
     }
@@ -510,6 +518,7 @@ mod tests {
         assert!(resolved.diagnostics.is_empty());
 
         let mut diagnostics = Diagnostics::new();
+        let mut lowering_diagnostics = Diagnostics::new();
         let copy_capabilities = CopyCapabilities::compute(&resolved.program);
         let outer = lower_class_declaration(
             &resolved.program,
@@ -517,6 +526,7 @@ mod tests {
             &copy_capabilities,
             Vec::new(),
             &mut diagnostics,
+            &mut lowering_diagnostics,
         )
         .expect("class-typed fields should lower to HIR declarations");
 

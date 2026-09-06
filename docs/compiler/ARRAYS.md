@@ -15,9 +15,9 @@ call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 The separately frozen indexed-construction direction extends direct element
-initialization to a dynamic length and canonical prefix loop. Syntax and
-resolution are implemented behind an explicit type-checking availability
-gate; HIR and execution are not yet implemented.
+initialization to a dynamic length and canonical prefix loop. Syntax,
+resolution, and typed HIR are implemented behind an explicit executable-
+lowering availability gate; MIR and execution are not yet implemented.
 The separately frozen
 [structural bracket compiler contract](INDEXING_AND_SLICING.md) keeps these
 array operations on the intrinsic path and selects ordinary calls only after
@@ -295,20 +295,24 @@ one typed expression executed over a dynamic checked prefix. The implemented
 AST and resolved IR preserve the exact array type, outer ownership, length,
 punctuation, immutable `i64` binding identity, element expression, nesting,
 generic source requests, and deterministic dumps. The binding scope begins
-after the length and ends with the element expression. A deliberate diagnostic
-prevents this resolved form from entering HIR today.
+after the length and ends with the element expression.
 
-The future typed representation preserves one explicit `ArrayTypeId`, typed
-`u64` length expression, and destination-directed stored-value plan. Generic
-requirement collection selects only the operations used by the length,
-expression, and direct element initialization; it must not infer element
-default construction or assignment.
+The implemented typed representation preserves one explicit `ArrayTypeId`,
+typed exact-`u64` length expression, immutable exact-`i64` local, and one
+destination-directed stored-value plan. It reuses the same primitive, exact-
+class, optional, nested-array, shared-owner, and optional-owner selector as one
+element-list position, retaining initializer/copy identities, access, nested
+identities, shared targets, and source provenance. Generic requirement
+collection selects only operations used by the expression and destination
+initialization; it does not infer element default construction or assignment.
 
 HIR owns one indexed construction mode rather than desugaring to a source
 `while`, callable, `Vec`, or default-length array. The repeated plan may
 contain primitive, exact-class, optional, nested-array, shared-owner, or
 optional-owner initialization selected once during type checking. Lower phases
 must not recover its ownership or lifecycle meaning from expression shape.
+One structured lowering diagnostic currently stops this valid HIR before MIR
+construction.
 
 MIR retains one runtime `u64` length, one unpublished backing, one `u64`
 initialized prefix, and canonical CFG. The loop header proves `prefix <

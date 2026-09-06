@@ -562,6 +562,7 @@ impl BodyLowerer<'_> {
                 lower_array_copy_element(*element),
                 construction.span,
             ),
+            HirArrayConstructionMode::Indexed(_) => invalid_array_hir(),
             HirArrayConstructionMode::Elements(elements) => {
                 let produced = self.new_array_temporary(
                     construction.array,
@@ -640,6 +641,7 @@ impl BodyLowerer<'_> {
                     Some((source_place, lower_array_copy_element(*element))),
                 )
             }
+            HirArrayConstructionMode::Indexed(_) => invalid_array_hir(),
             HirArrayConstructionMode::Elements(_) => {
                 unreachable!("shared element-list construction returns after dedicated lowering")
             }

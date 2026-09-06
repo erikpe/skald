@@ -364,6 +364,7 @@ pub struct ResolvedStaticFieldDeclaration {
 pub struct ResolvedStaticFieldInitializer {
     pub id: StaticInitializerId,
     pub equal_span: Span,
+    pub locals: Vec<super::ResolvedLocal>,
     pub expression: super::ResolvedExpression,
     pub span: Span,
 }

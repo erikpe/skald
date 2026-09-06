@@ -78,6 +78,29 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 }
 
 #[test]
+fn indexed_array_hir_reports_a_structured_gate_before_mir_lowering() {
+    let error = compile_source_to_assembly(
+        "indexed-array-lowering-gate.ska",
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var values: i64[] = i64[](1u; index => index);\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap_err();
+    let CompilationError::Diagnostics(report) = error else {
+        panic!("indexed array staging must remain a source diagnostic");
+    };
+    assert_eq!(report.diagnostics.len(), 1);
+    assert_eq!(
+        report.diagnostics.iter().next().unwrap().code,
+        crate::typeck::INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE
+    );
+}
+
+#[test]
 fn request_selection_matrix_reaches_quiet_and_observed_pipelines() {
     let directory = TemporaryDirectory::new("request-optimization-profile").unwrap();
     let root = directory.join("modules");

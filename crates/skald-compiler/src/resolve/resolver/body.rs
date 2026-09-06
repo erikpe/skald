@@ -396,7 +396,7 @@ pub(super) fn resolve_static_initializer_expression(
     type_interner: &mut ResolvedTypeInterner,
     address_taken_callables: &mut ResolvedAddressTakenCallableTable,
     diagnostics: &mut Diagnostics,
-) -> Option<ResolvedExpression> {
+) -> Option<(Vec<ResolvedLocal>, ResolvedExpression)> {
     CallableResolver::new(
         context,
         &[],
@@ -566,14 +566,15 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
     fn resolve_declaration_expression(
         mut self,
         expression: &syntax::Expression,
-    ) -> Option<ResolvedExpression> {
+    ) -> Option<(Vec<ResolvedLocal>, ResolvedExpression)> {
         debug_assert_eq!(self.class_owner, self.callable.class());
         debug_assert!(self.receiver_class.is_none());
         debug_assert!(matches!(
             self.base_initialization,
             BaseInitializationPolicy::Forbidden
         ));
-        self.resolve_expression(expression)
+        let expression = self.resolve_expression(expression)?;
+        Some((self.locals, expression))
     }
 
     fn resolve_view_target(&mut self, named: &syntax::NamedTypeSyntax) -> Option<ResolvedType> {

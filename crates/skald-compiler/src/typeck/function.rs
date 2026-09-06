@@ -89,6 +89,8 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
     pub(super) read_only_locals: BTreeSet<crate::identity::LocalId>,
     pub(super) base_initialized: bool,
     pub(super) diagnostics: &'diagnostics mut Diagnostics,
+    /// Valid typed HIR constructs deliberately staged before executable MIR.
+    pub(super) lowering_diagnostics: &'diagnostics mut Diagnostics,
 }
 
 impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
@@ -161,6 +163,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         declaration: &'program ResolvedFunctionDeclaration,
         definition: &'program ResolvedFunctionDefinition,
         diagnostics: &'diagnostics mut Diagnostics,
+        lowering_diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
             program,
@@ -179,6 +182,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             read_only_locals: BTreeSet::new(),
             base_initialized: true,
             diagnostics,
+            lowering_diagnostics,
         }
     }
 
@@ -218,6 +222,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         copy_capabilities: &'program CopyCapabilities,
         context: MemberCheckContext<'program>,
         diagnostics: &'diagnostics mut Diagnostics,
+        lowering_diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         let base_initialized = context.body_kind != MemberBodyKind::OrdinaryInitializer
             || program
@@ -242,6 +247,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             read_only_locals: BTreeSet::new(),
             base_initialized,
             diagnostics,
+            lowering_diagnostics,
         }
     }
 
@@ -315,13 +321,14 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         copy_capabilities: &'program CopyCapabilities,
         initializer: &'program crate::resolve::ResolvedStaticFieldInitializer,
         diagnostics: &'diagnostics mut Diagnostics,
+        lowering_diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
             program,
             copy_capabilities,
             callable: initializer.id.into(),
             parameters: &[],
-            locals: &[],
+            locals: &initializer.locals,
             body: None,
             definition_span: initializer.span,
             callable_name: format!("static initializer `{}`", initializer.id),
@@ -333,6 +340,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             read_only_locals: BTreeSet::new(),
             base_initialized: true,
             diagnostics,
+            lowering_diagnostics,
         }
     }
 
@@ -342,7 +350,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         expression: &'program ResolvedExpression,
     ) -> Option<crate::hir::HirStoredValueInitialization> {
         debug_assert!(self.parameters.is_empty());
-        debug_assert!(self.locals.is_empty());
         debug_assert!(self.body.is_none());
         debug_assert!(self.receiver.is_none());
         debug_assert_eq!(self.class_owner, self.callable.class());
@@ -352,8 +359,10 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     fn lower_locals(&mut self) -> Vec<HirLocal> {
         self.locals
             .iter()
-            .map(|local| {
-                let ty = lower_type(self.program, &local.type_syntax);
+            .map(|resolved| {
+                let type_span = resolved.type_syntax.span;
+                let local = lower_local(self.program, resolved);
+                let ty = local.ty;
                 if matches!(ty, Type::Obj | Type::Interface(_)) {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -361,20 +370,25 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                             format!("local `{}` cannot store a non-owning view", local.name),
                         )
                         .with_primary_label(
-                            local.type_syntax.span,
+                            type_span,
                             "`Obj` and interfaces are available only as alias parameters",
                         ),
                     );
                 }
-                HirLocal {
-                    id: local.id,
-                    name: local.name.clone(),
-                    name_span: local.name_span,
-                    ty,
-                    span: local.span,
-                }
+                local
             })
             .collect()
     }
 }
+
+pub(super) fn lower_local(program: &ResolvedProgram, local: &ResolvedLocal) -> HirLocal {
+    HirLocal {
+        id: local.id,
+        name: local.name.clone(),
+        name_span: local.name_span,
+        ty: lower_type(program, &local.type_syntax),
+        span: local.span,
+    }
+}
+
 pub(in crate::typeck) use copy::lower_object_call;

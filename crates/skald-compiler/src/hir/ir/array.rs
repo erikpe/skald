@@ -7,7 +7,8 @@ use crate::{
 };
 
 use super::{
-    HirExpression, HirFieldPlace, HirSelectedCopyOperation, HirSharedTarget, HirStaticPlace, Type,
+    HirExpression, HirFieldPlace, HirLocal, HirSelectedCopyOperation, HirSharedTarget,
+    HirStaticPlace, Type,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -145,7 +146,25 @@ pub enum HirArrayConstructionMode {
         source: HirArraySource,
         element: HirArrayCopyElement,
     },
+    Indexed(Box<HirIndexedArrayInitialization>),
     Elements(HirArrayElementList),
+}
+
+/// One typed destination plan reused for every dynamic array position.
+///
+/// The binding is embedded beside its repeated initialization plan while its
+/// declaration is also retained in the enclosing callable or initializer
+/// local table. References inside `element.value` retain the same
+/// non-forgeable local identity.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirIndexedArrayInitialization {
+    pub left_paren_span: Span,
+    pub length: Box<HirExpression>,
+    pub semicolon_span: Span,
+    pub binding: HirLocal,
+    pub arrow_span: Span,
+    pub element: HirArrayElementInitialization,
+    pub right_paren_span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

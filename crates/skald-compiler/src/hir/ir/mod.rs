@@ -35,6 +35,7 @@ pub use array::{
     HirArrayProvenance, HirArrayReceiver, HirArrayReceiverOwnership, HirArrayReceiverSource,
     HirArrayRuntimeFailure, HirArraySlice, HirArraySliceAssignment, HirArraySliceBounds,
     HirArraySource, HirArrayTransfer, HirArrayType, HirArrayTypeTable,
+    HirIndexedArrayInitialization,
 };
 pub use body::{
     HirBlock, HirBreak, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,

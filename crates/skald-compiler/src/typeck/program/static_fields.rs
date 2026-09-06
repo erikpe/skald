@@ -4,7 +4,10 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{HirStaticFieldDeclaration, HirStaticFieldInitializer, Type},
     resolve::ResolvedStaticFieldDeclaration,
-    typeck::{capabilities::CopyCapabilities, function::CallableChecker},
+    typeck::{
+        capabilities::CopyCapabilities,
+        function::{lower_local, CallableChecker},
+    },
 };
 
 use super::{lower_type, FINAL_STATIC_INITIALIZER_REQUIRED, INVALID_STATIC_FIELD_TYPE};
@@ -14,6 +17,7 @@ pub(super) fn lower_static_fields(
     copy_capabilities: &CopyCapabilities,
     fields: &[ResolvedStaticFieldDeclaration],
     diagnostics: &mut Diagnostics,
+    lowering_diagnostics: &mut Diagnostics,
 ) -> Option<Vec<HirStaticFieldDeclaration>> {
     let mut valid = true;
     let fields = fields
@@ -31,6 +35,7 @@ pub(super) fn lower_static_fields(
                         copy_capabilities,
                         initializer,
                         diagnostics,
+                        lowering_diagnostics,
                     )
                     .check_static_initializer(ty, &initializer.expression);
                     if value.is_none() {
@@ -39,6 +44,11 @@ pub(super) fn lower_static_fields(
                     value.map(|value| HirStaticFieldInitializer {
                         id: initializer.id,
                         equal_span: initializer.equal_span,
+                        locals: initializer
+                            .locals
+                            .iter()
+                            .map(|local| lower_local(program, local))
+                            .collect(),
                         value,
                         span: initializer.span,
                     })

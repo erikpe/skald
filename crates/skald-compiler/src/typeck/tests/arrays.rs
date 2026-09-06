@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[test]
-fn indexed_array_construction_stops_at_the_explicit_semantic_gate() {
+fn indexed_array_construction_reaches_hir_and_stops_at_the_lowering_gate() {
     let output = check_text(concat!(
         "fn main() -> i64 {\n",
         "  var values: i64[] = i64[](3u; index => index);\n",
@@ -23,21 +23,304 @@ fn indexed_array_construction_stops_at_the_explicit_semantic_gate() {
         "}\n",
     ));
 
-    assert!(output.hir.is_none());
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert!(output.hir.is_some());
+    assert!(!output.has_errors());
+    assert!(output.has_lowering_errors());
+    assert!(!output.is_executable());
     assert_eq!(
         output
-            .diagnostics
+            .lowering_diagnostics
             .iter()
             .filter(|diagnostic| diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE)
             .count(),
         1
     );
-    assert!(output.diagnostics.iter().any(|diagnostic| {
+    assert!(output.lowering_diagnostics.iter().any(|diagnostic| {
         diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE
             && diagnostic
                 .message
                 .contains("indexed array construction is not executable yet")
     }));
+}
+
+#[test]
+fn indexed_hir_retains_exact_types_binding_identity_spans_and_evaluation_order() {
+    let source = concat!(
+        "fn length() -> u64 { return 2u; }\n",
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](length(); index => index + 1);\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let output = check_text(source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.lowering_diagnostics.len(), 1);
+    let hir = output.hir.unwrap();
+    let definition = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::Local(local) = &definition.body.statements[0] else {
+        panic!("expected array local");
+    };
+    let HirLocalInitializer::Array(initialization) = &local.initializer else {
+        panic!("expected array initialization");
+    };
+    let crate::hir::HirArrayReceiverSource::Inline(expression) =
+        &initialization.source.receiver.source
+    else {
+        panic!("expected inline array source");
+    };
+    let HirExpressionKind::ArrayConstruction(construction) = &expression.kind else {
+        panic!("expected indexed array construction");
+    };
+    let HirArrayConstructionMode::Indexed(indexed) = &construction.mode else {
+        panic!("expected indexed construction mode");
+    };
+
+    assert_eq!(construction.array, crate::identity::ArrayTypeId::new(0));
+    assert_eq!(
+        construction.ownership,
+        crate::hir::HirArrayOwnership::Inline
+    );
+    assert_eq!(indexed.length.ty, Type::U64);
+    assert_eq!(indexed.binding.ty, Type::I64);
+    assert!(definition
+        .locals
+        .iter()
+        .any(|local| local.id == indexed.binding.id && local.name == "index"));
+    assert_eq!(indexed.element.element, Type::I64);
+    assert!(matches!(
+        indexed.element.value,
+        HirStoredValueInitialization::Scalar(_)
+    ));
+    assert_eq!(
+        indexed.left_paren_span.range().start(),
+        source.find("(length()").unwrap()
+    );
+    assert_eq!(
+        indexed.semicolon_span.range().start(),
+        source.find("; index").unwrap()
+    );
+    assert_eq!(
+        indexed.arrow_span.range().start(),
+        source.find("=>").unwrap()
+    );
+    assert_eq!(
+        indexed.right_paren_span.range().start(),
+        source.find(");\n").unwrap()
+    );
+
+    let dump = dump_hir(&hir);
+    let length = dump.find("Length").unwrap();
+    let binding = dump.find("IndexBinding read-only").unwrap();
+    let element = dump.find("Element : i64").unwrap();
+    assert!(length < binding && binding < element, "{dump}");
+    assert_eq!(dump, dump_hir(&hir));
+}
+
+#[test]
+fn indexed_construction_requires_exact_u64_length_and_an_immutable_i64_index() {
+    let wrong_length =
+        check_text("fn main() -> i64 { var values: i64[] = i64[](1; index => index); return 0; }");
+    assert!(wrong_length.hir.is_none());
+    assert!(wrong_length
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+    assert!(wrong_length.lowering_diagnostics.is_empty());
+
+    let excessive = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](9223372036854775808u; index => index);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(excessive
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == ARRAY_LENGTH_OUT_OF_RANGE));
+
+    let mutation = check_text(concat!(
+        "fn mutate(mut ref value: i64) -> i64 { value = value + 1; return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](1u; index => mutate(index));\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(mutation.hir.is_none());
+    assert!(mutation
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INSUFFICIENT_ALIAS_ACCESS));
+}
+
+#[test]
+fn indexed_construction_selects_every_stored_value_family_without_default_or_assignment() {
+    let output = check_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn main() -> i64 {\n",
+        "  var item: Item = Item(1);\n",
+        "  var row: i64[] = i64[]{1};\n",
+        "  var owner: shared Item = new Item(2);\n",
+        "  var scalars: i64[] = i64[](1u; index => index);\n",
+        "  var objects: Item[] = Item[](1u; index => Item(index));\n",
+        "  var copied: Item[] = Item[](1u; index => item);\n",
+        "  var optional: Item?[] = Item?[](1u; index => Item(index));\n",
+        "  var rows: i64[][] = i64[][](1u; index => row);\n",
+        "  var owners: (shared Item)[] = (shared Item)[](1u; index => owner);\n",
+        "  var maybe: (shared? Item)[] = (shared? Item)[](1u; index => new Item(index));\n",
+        "  var shared_outer: shared i64[] = new i64[](1u; index => index);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.lowering_diagnostics.len(), 8);
+    let dump = dump_hir(output.hir.as_ref().unwrap());
+    for selected in [
+        "ScalarInitialization",
+        "ClassInitialization direct",
+        "ClassInitialization copy",
+        "ClassOptionalInitialization class c0? direct",
+        "ArrayInitialization deep-copy primitive",
+        "SharedTransfer Copy -> shared class c0",
+        "OptionalSharedInitialization shared? class c0",
+        "ArrayAllocation shared",
+    ] {
+        assert!(dump.contains(selected), "missing `{selected}`:\n{dump}");
+    }
+}
+
+#[test]
+fn indexed_direct_class_initialization_needs_no_default_or_copy_plan() {
+    let source = concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Item[] = Item[](1u; index => Item(index));\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut resolved = resolve_text(source);
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let output = crate::typeck::type_check(&resolved);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert!(output.hir.is_some());
+    let array = output
+        .hir
+        .as_ref()
+        .unwrap()
+        .array_types
+        .iter()
+        .next()
+        .unwrap();
+    assert!(array.lifecycle.default.is_none());
+    assert!(array.lifecycle.copy.is_none());
+    let dump = dump_hir(output.hir.as_ref().unwrap());
+    assert!(dump.contains("ClassInitialization direct"), "{dump}");
+
+    let grouped = source.replace("Item(index)", "(Item(index))");
+    let mut resolved = resolve_text(&grouped);
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let output = crate::typeck::type_check(&resolved);
+    assert!(output.hir.is_none());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
+}
+
+#[test]
+fn indexed_element_diagnostics_belong_to_the_element_source() {
+    let source = concat!(
+        "class Secret { private init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Secret[] = Secret[](1u; index => Secret());\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let output = check_text(source);
+    let diagnostic = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == PRIVATE_INITIALIZER_ACCESS)
+        .expect("private indexed initializer must be rejected");
+    assert_eq!(
+        diagnostic.labels[0].span.range().start(),
+        source.rfind("Secret()").unwrap()
+    );
+    assert!(output.lowering_diagnostics.is_empty());
+
+    let invalid_owner_source = concat!(
+        "class Item { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: (shared Item)[] = (shared Item)[](1u; index => 1);\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let invalid_owner = check_text(invalid_owner_source);
+    assert!(invalid_owner.hir.is_none());
+    assert!(invalid_owner
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.labels[0].span.range().start()
+            == invalid_owner_source.rfind("1);").unwrap()));
+}
+
+#[test]
+fn indexed_static_initializers_retain_their_implicit_local_table() {
+    let output = check_text(concat!(
+        "class State {\n",
+        "  static values: i64[] = i64[](1u; index => index);\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let initializer = hir.classes.iter().next().unwrap().static_fields[0]
+        .initializer
+        .as_ref()
+        .unwrap();
+    assert_eq!(initializer.locals.len(), 1);
+    assert_eq!(initializer.locals[0].ty, Type::I64);
+    let HirStoredValueInitialization::Array(array) = &initializer.value else {
+        panic!("expected array static initializer");
+    };
+    let crate::hir::HirArrayReceiverSource::Inline(expression) = &array.source.receiver.source
+    else {
+        panic!("expected inline indexed construction");
+    };
+    let HirExpressionKind::ArrayConstruction(construction) = &expression.kind else {
+        panic!("expected indexed construction");
+    };
+    let HirArrayConstructionMode::Indexed(indexed) = &construction.mode else {
+        panic!("expected indexed construction mode");
+    };
+    assert_eq!(indexed.binding.id, initializer.locals[0].id);
+}
+
+#[test]
+fn indexed_construction_specializes_generic_destination_requirements() {
+    let output = crate::test_support::type_check_generic_source(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Maker<T> {\n",
+        "  init() {}\n",
+        "  fn repeat(ref value: T) -> T[] {\n",
+        "    return T[](1u; index => value);\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var item: Item = Item(1);\n",
+        "  var maker: Maker<Item> = Maker<Item>();\n",
+        "  var values: Item[] = maker.repeat(item);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.lowering_diagnostics.len(), 1);
+    let dump = dump_hir(output.hir.as_ref().unwrap());
+    assert!(dump.contains("IndexedElements"), "{dump}");
+    assert!(dump.contains("ClassInitialization copy"), "{dump}");
 }
 
 #[test]

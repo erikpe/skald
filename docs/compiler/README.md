@@ -304,8 +304,9 @@ The frozen indexed construction extension adds a typed length, immutable
 complete-prefix publication proof without adding a `Vec` special case or
 runtime ABI. It is specified in the
 [array compiler contract](ARRAYS.md#frozen-indexed-construction-representation)
-and remains unavailable for type checking and execution. Lexer, syntax, and
-resolved representations are implemented behind that explicit gate.
+and remains unavailable for execution. Lexer, syntax, resolution, and HIR
+destination-plan selection are implemented; an explicit lowering diagnostic
+keeps the form out of MIR.
 
 Class-owned static fields pass through delayed initializer resolution,
 stored-value HIR, opaque structurally verified preliminary MIR, exhaustive

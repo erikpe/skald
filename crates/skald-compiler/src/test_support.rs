@@ -126,6 +126,7 @@ pub(crate) fn lower_generic_source_to_preliminary_mir(
 ) -> crate::mir::PreliminaryMirProgram {
     let checked = type_check_generic_source(text);
     assert_phase_succeeded("type checking", &checked.diagnostics);
+    assert_phase_succeeded("executable HIR availability", &checked.lowering_diagnostics);
     lower_preliminary_hir(
         &checked
             .hir
@@ -137,6 +138,7 @@ pub(crate) fn lower_generic_source_to_preliminary_mir(
 pub(crate) fn lower_generic_source_to_final_mir(text: impl Into<String>) -> MirProgram {
     let checked = type_check_generic_source(text);
     assert_phase_succeeded("type checking", &checked.diagnostics);
+    assert_phase_succeeded("executable HIR availability", &checked.lowering_diagnostics);
     lower_hir_to_final_mir(
         &checked
             .hir
@@ -147,6 +149,7 @@ pub(crate) fn lower_generic_source_to_final_mir(text: impl Into<String>) -> MirP
 pub(crate) fn lower_source_to_mir(text: impl Into<String>) -> MirProgram {
     let checked = type_check_source(text);
     assert_phase_succeeded("type checking", &checked.diagnostics);
+    assert_phase_succeeded("executable HIR availability", &checked.lowering_diagnostics);
     lower_hir(
         &checked
             .hir
@@ -159,6 +162,7 @@ pub(crate) fn lower_source_to_mir(text: impl Into<String>) -> MirProgram {
 pub(crate) fn lower_source_to_final_mir(text: impl Into<String>) -> MirProgram {
     let checked = type_check_source(text);
     assert_phase_succeeded("type checking", &checked.diagnostics);
+    assert_phase_succeeded("executable HIR availability", &checked.lowering_diagnostics);
     let hir = checked
         .hir
         .expect("successful type checking must produce typed HIR");
@@ -232,6 +236,7 @@ fn lower_source_to_final_mir_with_sources_using(
     assert_phase_succeeded("resolution", &resolved.diagnostics);
     let checked = type_check(&resolved.program);
     assert_phase_succeeded("type checking", &checked.diagnostics);
+    assert_phase_succeeded("executable HIR availability", &checked.lowering_diagnostics);
     let hir = checked
         .hir
         .expect("successful type checking must produce typed HIR");

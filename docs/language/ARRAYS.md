@@ -205,10 +205,10 @@ copying has no inheritance or dynamic-check relation.
 No fill-value, inferred array literal, or multi-dimensional shape constructor
 is implemented. Executable nonempty construction accepts the existing
 default-length and exact-copy modes plus explicit element lists for every
-supported stored element category. The frontend accepts and resolves the
-[frozen indexed direction](#frozen-indexed-array-construction), but a deliberate
-type-checking gate keeps that dynamic direct-initialization form
-non-executable.
+supported stored element category. The frontend accepts, resolves, and type-
+checks the [frozen indexed direction](#frozen-indexed-array-construction), but
+a deliberate executable-lowering gate keeps that dynamic direct-initialization
+form out of MIR.
 
 ## Explicit element-list construction
 
@@ -353,14 +353,16 @@ T[](length; index => expression)
 new T[](length; index => expression)
 ```
 
-The lexer, parser, and resolver accept this syntax. They retain both
-expressions, every delimiter, inline versus shared-outer ownership, and one
-stable binding identity scoped only to the element expression. Type checking
-currently emits the explicit indexed-construction availability diagnostic, so
-no HIR or executable behavior exists yet. Once that gate is replaced, the form
-will evaluate the exact-`u64` length once, validate and allocate unpublished
-backing once, then evaluate the element expression once for every increasing
-immutable `i64` index. A zero length evaluates no element expression.
+The lexer, parser, resolver, and type checker accept this syntax. HIR retains
+the exact `u64` length expression, inline versus shared-outer ownership, one
+immutable exact-`i64` local identity, and one destination-directed element
+initialization plan. The length is checked before the index local becomes
+active, and the local is in scope only while checking the element expression.
+An explicit executable-lowering diagnostic currently prevents this typed form
+from entering MIR. Once dynamic-prefix lowering replaces that gate, the form
+will evaluate the length once, validate and allocate unpublished backing once,
+then evaluate the element expression once for every increasing index. A zero
+length evaluates no element expression.
 
 Each dynamic position is a previously uninitialized owning destination of the
 explicit array element type. Primitive, exact-class, inline-optional, nested

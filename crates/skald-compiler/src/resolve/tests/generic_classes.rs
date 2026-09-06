@@ -631,6 +631,42 @@ fn copy_capabilities_are_inferred_only_for_operations_that_request_copying() {
 }
 
 #[test]
+fn indexed_array_templates_require_only_the_selected_destination_copy() {
+    let output = resolve_text(
+        "class Maker<T> {\n\
+           init() {}\n\
+           fn repeat(ref value: T) -> T[] {\n\
+             return T[](1u; index => value);\n\
+           }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let semantics = output
+        .program
+        .template_semantics
+        .get(ClassTemplateId::new(0))
+        .unwrap();
+    let copy_requirements = semantics
+        .requirements
+        .iter()
+        .filter(|requirement| requirement.capability == GenericCapability::CopyConstructible)
+        .collect::<Vec<_>>();
+    assert_eq!(copy_requirements.len(), 1, "{:?}", semantics.requirements);
+    assert!(matches!(
+        copy_requirements[0].reason,
+        GenericRequirementReason::StoredInitializationCopy { member: 1 }
+    ));
+    assert!(semantics.requirements.iter().all(|requirement| {
+        !matches!(
+            requirement.capability,
+            GenericCapability::DefaultConstructible | GenericCapability::Assignable
+        )
+    }));
+}
+
+#[test]
 fn definition_site_lookup_preserves_parameter_shadowing_and_qualified_identity() {
     let (_workspace, graph) = load_module_sources(
         "app",

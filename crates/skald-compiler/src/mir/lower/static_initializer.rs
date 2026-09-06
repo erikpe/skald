@@ -61,7 +61,7 @@ fn lower_static_initializer(
     let mut lowerer = BodyLowerer::new(BodyLoweringInput {
         callable: initializer.id.into(),
         parameters: &[],
-        locals: &[],
+        locals: &initializer.locals,
         source_body: &source_body,
         return_type: Type::Unit,
         receiver_class: None,

@@ -31,7 +31,7 @@ The target-independent compiler path is:
 | Lexing | `lexer::lex` | `LexOutput`: tokens and diagnostics |
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
 | Resolution | `resolve::resolve`, `resolve::resolve_module_graph` | `ResolveOutput`: resolved program and diagnostics |
-| Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
+| Type checking | `typeck::type_check` | `TypeCheckOutput`: semantic diagnostics, optional typed HIR, and any structured executable-lowering gates |
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
 | Preliminary MIR verification | `mir::verify_preliminary_mir` | opaque, read-only `VerifiedPreliminaryMirProgram` required by static-lifecycle analysis |
 | Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects from sealed `VerifiedPreliminaryMirProgram`, with witnesses for every callable and implicit lifecycle operation |
@@ -2589,20 +2589,22 @@ and shared-owner state verify independently, including nested shared-array
 owners. The detailed representation boundary is in
 [the array compiler contract](ARRAYS.md#element-list-representation).
 
-The implemented syntax and resolved phases retain indexed array construction
-as one length/binding/expression mode with exact punctuation, outer ownership,
-lexical binding identity, nested traversal, generic source requests, and
-deterministic dumps. Type checking emits one explicit availability diagnostic,
-so this form cannot enter HIR.
+The implemented syntax, resolved, and HIR phases retain indexed array
+construction as one length/binding/expression mode with exact punctuation,
+outer ownership, lexical binding identity, nested traversal, generic source
+requests, and deterministic dumps. Type checking requires an exact `u64`
+length, activates one read-only exact-`i64` local only for the element, and
+selects one reusable stored-value destination plan without requiring default
+construction or assignment. A separate executable-lowering diagnostic stops
+this valid HIR before MIR.
 
-The frozen next phase adds one typed repeated stored-value plan. Its MIR
-boundary is a dynamic initialized-prefix loop: checked `u64` length and
-unpublished backing dominate the header, the current prefix supplies one safe
-immutable `i64` binding epoch, the selected category-specific operation
-initializes only that slot, completion advances the prefix, and per-element
-cleanup precedes the backedge. Publication requires an explicit verified
-`prefix == length` exit fact. This form is not yet represented by HIR or MIR;
-its frozen phase ownership is detailed in the
+The next phase adds the dynamic initialized-prefix MIR loop: checked `u64`
+length and unpublished backing dominate the header, the current prefix
+supplies one safe immutable `i64` binding epoch, the selected category-specific
+operation initializes only that slot, completion advances the prefix, and
+per-element cleanup precedes the backedge. Publication requires an explicit verified
+`prefix == length` exit fact. This form is not yet represented by MIR; its
+frozen phase ownership is detailed in the
 [array compiler contract](ARRAYS.md#frozen-indexed-construction-representation).
 
 Optional types use deterministic interned identities rather than recursively

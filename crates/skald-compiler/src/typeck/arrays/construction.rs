@@ -5,7 +5,8 @@ use crate::{
     hir::{
         HirArrayConstruction, HirArrayConstructionMode, HirArrayElementInitialization,
         HirArrayElementList, HirArrayInitialize, HirArrayOwnership, HirArrayProvenance,
-        HirArraySource, HirArrayTransfer, HirExpression, HirExpressionKind, HirSharedTarget, Type,
+        HirArraySource, HirArrayTransfer, HirExpression, HirExpressionKind,
+        HirIndexedArrayInitialization, HirSharedTarget, Type,
     },
     resolve::{
         ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr, ResolvedExpression,
@@ -13,7 +14,10 @@ use crate::{
     },
 };
 
-use super::super::{expression::require_type, function::CallableChecker};
+use super::super::{
+    expression::require_type,
+    function::{lower_local, CallableChecker},
+};
 
 pub const ARRAY_CAPABILITY_UNAVAILABLE: &str = "TYP037";
 pub const ARRAY_LENGTH_OUT_OF_RANGE: &str = "TYP038";
@@ -31,32 +35,7 @@ impl CallableChecker<'_, '_> {
         let mode = match &construction.arguments {
             ResolvedArrayConstructionArguments::Empty { .. } => HirArrayConstructionMode::Empty,
             ResolvedArrayConstructionArguments::Length { length, .. } => {
-                let length = self.check_expression(length)?;
-                if !require_type(
-                    length.ty,
-                    Type::U64,
-                    length.span,
-                    "array length",
-                    self.diagnostics,
-                ) {
-                    return None;
-                }
-                if matches!(
-                    length.kind,
-                    HirExpressionKind::U64(value) if value > i64::MAX as u64
-                ) {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            ARRAY_LENGTH_OUT_OF_RANGE,
-                            "array length exceeds the supported maximum",
-                        )
-                        .with_primary_label(
-                            length.span,
-                            format!("length must not exceed {}", i64::MAX),
-                        ),
-                    );
-                    return None;
-                }
+                let length = self.check_array_construction_length(length)?;
                 let Some(element) = lifecycle.default else {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -107,17 +86,45 @@ impl CallableChecker<'_, '_> {
                 HirArrayConstructionMode::Copy { source, element }
             }
             ResolvedArrayConstructionArguments::Indexed(initializer) => {
-                self.diagnostics.push(
+                let length = self.check_array_construction_length(&initializer.length)?;
+                debug_assert_eq!(initializer.binding.type_syntax.kind, ResolvedTypeKind::I64);
+                let binding = lower_local(self.program, &initializer.binding);
+                debug_assert_eq!(binding.ty, Type::I64);
+
+                let inserted = self.read_only_locals.insert(binding.id);
+                debug_assert!(inserted, "an indexed binding is active only in its element");
+                let value = self.check_stored_value_initialization(
+                    self.copy_capabilities.array(array).element,
+                    &initializer.element,
+                    "indexed array element initializer",
+                );
+                let removed = self.read_only_locals.remove(&binding.id);
+                debug_assert!(removed);
+                let value = value?;
+                let element = HirArrayElementInitialization {
+                    element: self.copy_capabilities.array(array).element,
+                    span: initializer.element.span(),
+                    value,
+                };
+                self.lowering_diagnostics.push(
                     Diagnostic::error(
                         INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE,
                         "indexed array construction is not executable yet",
                     )
                     .with_primary_label(
                         initializer.arrow_span,
-                        "source and name resolution are implemented; typed initialization is pending",
+                        "typed initialization is complete; dynamic-prefix MIR lowering is pending",
                     ),
                 );
-                return None;
+                HirArrayConstructionMode::Indexed(Box::new(HirIndexedArrayInitialization {
+                    left_paren_span: initializer.left_paren_span,
+                    length: Box::new(length),
+                    semicolon_span: initializer.semicolon_span,
+                    binding,
+                    arrow_span: initializer.arrow_span,
+                    element,
+                    right_paren_span: initializer.right_paren_span,
+                }))
             }
             ResolvedArrayConstructionArguments::Elements(list) => {
                 let element = self.copy_capabilities.array(array).element;
@@ -166,6 +173,36 @@ impl CallableChecker<'_, '_> {
             },
             span: construction.span,
         })
+    }
+
+    fn check_array_construction_length(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<HirExpression> {
+        let length = self.check_expression(expression)?;
+        if !require_type(
+            length.ty,
+            Type::U64,
+            length.span,
+            "array length",
+            self.diagnostics,
+        ) {
+            return None;
+        }
+        if matches!(
+            length.kind,
+            HirExpressionKind::U64(value) if value > i64::MAX as u64
+        ) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    ARRAY_LENGTH_OUT_OF_RANGE,
+                    "array length exceeds the supported maximum",
+                )
+                .with_primary_label(length.span, format!("length must not exceed {}", i64::MAX)),
+            );
+            return None;
+        }
+        Some(length)
     }
 
     pub(crate) fn check_array_initialize(

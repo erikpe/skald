@@ -337,6 +337,10 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
+    diagnostics.append(checked.lowering_diagnostics);
+    if diagnostics.has_errors() {
+        return Err(diagnostic_failure(sources, diagnostics));
+    }
     let preliminary = observe_phase_with_metrics(
         observer,
         ReportPhase::PreliminaryMirLowering,

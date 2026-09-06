@@ -1,6 +1,6 @@
 # Indexed Array Construction Roadmap
 
-Status: in progress; IA0 is complete and IA1 is next.
+Status: in progress; IA0 and IA1 are complete and IA2 is next.
 
 This roadmap implements the frozen
 [indexed array construction contract](../language/ARRAYS.md#frozen-indexed-array-construction)
@@ -53,7 +53,7 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 ## Progress
 
 - [x] IA0 — Retain indexed construction through syntax and resolution
-- [ ] IA1 — Select typed repeated destination initialization
+- [x] IA1 — Select typed repeated destination initialization
 - [ ] IA2 — Execute verified primitive dynamic-prefix construction
 - [ ] IA3 — Execute exact-class destination placement and copying
 - [ ] IA4 — Compose optional and nested-array elements
@@ -116,28 +116,28 @@ construction reaches HIR except through the deliberate gate.
 **Purpose:** Resolve length, index, and element ownership semantics in HIR so
 lower layers need no type, capability, or provenance inference.
 
-- [ ] Add an indexed array construction HIR mode with exact array identity,
+- [x] Add an indexed array construction HIR mode with exact array identity,
       inline/shared outer ownership, length expression, immutable index local,
       element expression, and one reusable destination initialization plan.
-- [ ] Require the length expression to be exact `u64` and the generated index
+- [x] Require the length expression to be exact `u64` and the generated index
       local to be exact `i64`; reject conversions and index mutation through
       the ordinary local-assignment diagnostics.
-- [ ] Type-check the length outside the binding scope and the element under
+- [x] Type-check the length outside the binding scope and the element under
       the expected exact element destination type.
-- [ ] Reuse the stored-value destination initialization selector introduced by
+- [x] Reuse the stored-value destination initialization selector introduced by
       element-list construction for primitive, exact-class, optional,
       nested-array, shared-owner, and optional-owner sources.
-- [ ] Retain initializer/copy identities, access authorization, nested
+- [x] Retain initializer/copy identities, access authorization, nested
       `ArrayTypeId`, shared target, named-versus-produced provenance, and all
       spans required below HIR.
-- [ ] Require neither a default plan nor assignment merely because the length
+- [x] Require neither a default plan nor assignment merely because the length
       is dynamic; preserve the completed array type's independent lifecycle
       table.
-- [ ] Diagnose failures at the length, binding mutation, or element expression
+- [x] Diagnose failures at the length, binding mutation, or element expression
       that owns them, including unavailable copy and invalid owner target.
-- [ ] Extend HIR effect, reachability, storage-use, dependency, and
+- [x] Extend HIR effect, reachability, storage-use, dependency, and
       deterministic dump traversal in the specified evaluation order.
-- [ ] Replace the semantic gate with an explicit executable-lowering gate
+- [x] Replace the semantic gate with an explicit executable-lowering gate
       until IA2 supplies verified dynamic-prefix MIR.
 
 **Primary implementation areas:** resolved-to-HIR array lowering, local

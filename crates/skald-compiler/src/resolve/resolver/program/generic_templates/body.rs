@@ -452,7 +452,20 @@ impl TemplateBodyResolver<'_, '_, '_> {
                             );
                         }
                         syntax::ArrayConstructionArguments::Empty { .. } => {}
-                        syntax::ArrayConstructionArguments::Indexed(_) => {}
+                        syntax::ArrayConstructionArguments::Indexed(initializer) => {
+                            if let Some(copy_term) =
+                                stored_initialization_copy_term(element, &initializer.element)
+                            {
+                                self.record_requirement(
+                                    copy_term,
+                                    GenericCapability::CopyConstructible,
+                                    initializer.element.span(),
+                                    GenericRequirementReason::StoredInitializationCopy {
+                                        member: self.member,
+                                    },
+                                );
+                            }
+                        }
                         syntax::ArrayConstructionArguments::Elements(elements) => {
                             for source in &elements.elements {
                                 if let Some(copy_term) =

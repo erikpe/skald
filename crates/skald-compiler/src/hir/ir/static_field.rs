@@ -5,7 +5,7 @@ use crate::{
     source::Span,
 };
 
-use super::{HirStoredValueInitialization, Type};
+use super::{HirLocal, HirStoredValueInitialization, Type};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirStaticFieldDeclaration {
@@ -28,6 +28,7 @@ pub struct HirStaticFieldDeclaration {
 pub struct HirStaticFieldInitializer {
     pub id: StaticInitializerId,
     pub equal_span: Span,
+    pub locals: Vec<HirLocal>,
     pub value: HirStoredValueInitialization,
     pub span: Span,
 }

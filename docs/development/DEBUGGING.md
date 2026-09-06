@@ -423,12 +423,13 @@ strides; those first appear in x86-64 layout and instruction selection.
 For indexed construction, token and syntax dumps must retain `;` and `=>`, and
 the resolved dump must show one expression-local binding identity distinct
 from any shadowed outer binding. The length resolves before that scope opens;
-the binding must not resolve after the element expression. Today, a valid
-resolved form must stop at the dedicated type-checking availability diagnostic.
-Once later tasks activate HIR and MIR, inspect one more distinction: dynamic
-requested length and initialized prefix must remain separate. HIR should show
-one typed repeated destination plan rather than a default array plus assignment,
-and MIR should publish only on the verified `prefix == length` exit.
+the binding must not resolve after the element expression. HIR must show an
+exact `u64` length, a read-only `i64` local with the resolved identity, and one
+typed repeated destination plan rather than a default array plus assignment.
+Today, a valid HIR form must stop at the dedicated executable-lowering
+diagnostic. Once MIR is activated, inspect one more distinction: dynamic
+requested length and initialized prefix must remain separate, and publication
+must occur only on the verified `prefix == length` exit.
 
 The driver has four explicit target-independent verification products:
 

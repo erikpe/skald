@@ -1976,22 +1976,24 @@ fn indexed_array_frontend_phase_dump() -> String {
     let resolved = resolve(&parsed.ast);
     assert!(resolved.diagnostics.is_empty());
     let checked = type_check(&resolved.program);
-    assert!(checked.hir.is_none());
+    assert!(checked.diagnostics.is_empty());
     assert!(
         checked
-            .diagnostics
+            .lowering_diagnostics
             .iter()
             .all(|diagnostic| diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE),
         "{:?}",
-        checked.diagnostics
+        checked.lowering_diagnostics
     );
+    let hir = checked.hir.as_ref().unwrap();
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}DIAGNOSTICS\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}LOWERING DIAGNOSTICS\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
-        render_diagnostics(&sources, &checked.diagnostics),
+        dump_hir(hir),
+        render_diagnostics(&sources, &checked.lowering_diagnostics),
     )
 }
 

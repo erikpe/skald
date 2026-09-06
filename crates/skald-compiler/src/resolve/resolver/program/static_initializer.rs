@@ -37,7 +37,7 @@ pub(super) fn resolve_static_field_initializers(
                 .and_then(|class| class.static_field(field_id))
                 .is_some());
 
-            let Some(expression) = resolve_static_initializer_expression(
+            let Some((locals, expression)) = resolve_static_initializer_expression(
                 CallableResolutionContext::static_initializer(initializer_work.id.into(), work.id),
                 &source.expression,
                 environment,
@@ -52,6 +52,7 @@ pub(super) fn resolve_static_field_initializers(
                 initializer: ResolvedStaticFieldInitializer {
                     id: initializer_work.id,
                     equal_span: source.equal_span,
+                    locals,
                     expression,
                     span: source.span,
                 },
