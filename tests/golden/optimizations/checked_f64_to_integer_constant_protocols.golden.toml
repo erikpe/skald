@@ -1,0 +1,49 @@
+schema = 2
+
+[[test]]
+name = "successful_protocol_equivalence"
+mode = "run"
+source = "checked_f64_to_integer_constant_protocols.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "checked-f64-to-integer-folding-disabled",
+  "cfg-cleanup-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "targets_boundaries_truncation_propagation_static_and_effects"
+expect = { stdout = { inline = "700\n5\n-9223372036854775808\n9223372036854774784\n0\n18446744073709549568\n0\n255\n4\n42\n801\n7\n" } }
+
+[[test]]
+name = "failing_protocol_equivalence"
+mode = "run"
+source = "checked_f64_to_integer_constant_protocol_failures.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "checked-f64-to-integer-folding-disabled",
+  "cfg-cleanup-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "finite_out_of_range"
+args = ["range"]
+expect = { exit = "failure", stdout = { inline = "11\n" }, stderr = { inline = """panic: floating-point cast out of range
+stacktrace:
+  at checked_f64_to_integer_constant_protocol_failures::main (tests/golden/optimizations/checked_f64_to_integer_constant_protocol_failures.ska:9:16)
+""" } }
+[[test.run]]
+name = "infinity"
+args = ["infinity"]
+expect = { exit = "failure", stdout = { inline = "21\n" }, stderr = { inline = """panic: floating-point cast out of range
+stacktrace:
+  at checked_f64_to_integer_constant_protocol_failures::main (tests/golden/optimizations/checked_f64_to_integer_constant_protocol_failures.ska:13:16)
+""" } }
+[[test.run]]
+name = "nan"
+args = ["nan"]
+expect = { exit = "failure", stdout = { inline = "31\n" }, stderr = { inline = """panic: floating-point cast out of range
+stacktrace:
+  at checked_f64_to_integer_constant_protocol_failures::main (tests/golden/optimizations/checked_f64_to_integer_constant_protocol_failures.ska:16:12)
+""" } }

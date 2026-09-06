@@ -5,8 +5,9 @@ use crate::mir::{
 };
 
 use super::carrier::{
-    certify_checked_integer_carriers, CheckedCarrierCertificationObservation,
-    CheckedCarrierProtocolRole,
+    certify_checked_integer_carriers, certify_checked_scalar_carriers,
+    CheckedCarrierCertificationObservation, CheckedCarrierProtocolRole,
+    CheckedScalarProtocolFamily,
 };
 
 /// Carrier position owned by one checked protocol.
@@ -14,6 +15,7 @@ use super::carrier::{
 pub(in crate::passes::pipeline::optimizations) enum CheckedCarrierPlanRole {
     FirstOperand,
     SecondOperand,
+    Source,
     Result,
 }
 
@@ -29,6 +31,43 @@ pub(in crate::passes::pipeline::optimizations) struct CheckedCarrierPlanEvidence
     ty: MirType,
     check_block: BlockId,
     role: CheckedCarrierPlanRole,
+}
+
+/// Returns fully certified floating-cast carriers in protocol order.
+pub(in crate::passes::pipeline::optimizations) fn checked_f64_to_integer_carrier_plan_evidence(
+    definition: MirDefinitionRef<'_>,
+) -> Result<Vec<CheckedCarrierPlanEvidence>, MirRewriteError> {
+    certify_checked_scalar_carriers(definition)?
+        .into_iter()
+        .filter_map(|observation| match observation {
+            CheckedCarrierCertificationObservation::Certified(certificate) => {
+                let owner = certificate.protocol_owner();
+                if owner.family() != CheckedScalarProtocolFamily::F64ToInteger {
+                    return None;
+                }
+                Some(Ok(CheckedCarrierPlanEvidence {
+                    storage: certificate.storage(),
+                    source: certificate.store().source(),
+                    loads: certificate
+                        .loads()
+                        .iter()
+                        .map(|load| load.result())
+                        .collect(),
+                    ty: certificate.ty(),
+                    check_block: owner.check_block(),
+                    role: match owner.role() {
+                        CheckedCarrierProtocolRole::Source => CheckedCarrierPlanRole::Source,
+                        CheckedCarrierProtocolRole::Result => CheckedCarrierPlanRole::Result,
+                        CheckedCarrierProtocolRole::FirstOperand
+                        | CheckedCarrierProtocolRole::SecondOperand => {
+                            unreachable!("floating-cast evidence cannot contain integer operands")
+                        }
+                    },
+                }))
+            }
+            CheckedCarrierCertificationObservation::Rejected { .. } => None,
+        })
+        .collect()
 }
 
 impl CheckedCarrierPlanEvidence {

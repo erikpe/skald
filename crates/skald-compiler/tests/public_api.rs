@@ -106,31 +106,32 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(request.mir_optimization().profile().name(), "default");
     let passes: Vec<MirPassDescriptor> = available_mir_passes();
-    assert_eq!(passes.len(), 10);
-    assert_eq!(passes[0].name(), "checked-integer-constant-folding");
+    assert_eq!(passes.len(), 11);
+    assert_eq!(passes[0].name(), "checked-f64-to-integer-constant-folding");
     assert_eq!(passes[0].stage(), MirPassStage::ProofRich);
-    assert_eq!(passes[1].name(), "conservative-cfg-cleanup");
-    assert_eq!(passes[2].name(), "constant-short-circuit-folding");
-    assert_eq!(passes[2].stage(), MirPassStage::ProofTransition);
-    assert_eq!(passes[3].name(), "dead-pure-definition-elimination");
-    assert_eq!(passes[4].name(), "post-proof-basic-block-merging");
-    assert_eq!(passes[4].stage(), MirPassStage::Final);
-    assert_eq!(
-        passes[4].description(),
-        "Fuses maximal eligible single-incoming goto chains while preserving operation order."
-    );
-    assert_eq!(passes[5].name(), "post-proof-empty-block-forwarding");
+    assert_eq!(passes[1].name(), "checked-integer-constant-folding");
+    assert_eq!(passes[2].name(), "conservative-cfg-cleanup");
+    assert_eq!(passes[3].name(), "constant-short-circuit-folding");
+    assert_eq!(passes[3].stage(), MirPassStage::ProofTransition);
+    assert_eq!(passes[4].name(), "dead-pure-definition-elimination");
+    assert_eq!(passes[5].name(), "post-proof-basic-block-merging");
     assert_eq!(passes[5].stage(), MirPassStage::Final);
     assert_eq!(
         passes[5].description(),
+        "Fuses maximal eligible single-incoming goto chains while preserving operation order."
+    );
+    assert_eq!(passes[6].name(), "post-proof-empty-block-forwarding");
+    assert_eq!(passes[6].stage(), MirPassStage::Final);
+    assert_eq!(
+        passes[6].description(),
         "Forwards normalized MIR edges through instruction-free goto blocks."
     );
-    assert_eq!(passes[6].name(), "post-proof-unreachable-block-elimination");
-    assert_eq!(passes[6].stage(), MirPassStage::Final);
-    assert_eq!(passes[7].name(), "primitive-algebraic-simplification");
-    assert_eq!(passes[8].name(), "primitive-constant-folding");
-    assert_eq!(passes[9].name(), "whole-world-reachability");
-    assert_eq!(passes[9].stage(), MirPassStage::Final);
+    assert_eq!(passes[7].name(), "post-proof-unreachable-block-elimination");
+    assert_eq!(passes[7].stage(), MirPassStage::Final);
+    assert_eq!(passes[8].name(), "primitive-algebraic-simplification");
+    assert_eq!(passes[9].name(), "primitive-constant-folding");
+    assert_eq!(passes[10].name(), "whole-world-reachability");
+    assert_eq!(passes[10].stage(), MirPassStage::Final);
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent
@@ -400,42 +401,52 @@ fn intentional_phase_and_dump_paths_compose() {
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 5,
-                pass_name: "dead-pure-definition-elimination",
-                occurrence: 1,
+                pass_name: "checked-f64-to-integer-constant-folding",
+                occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 6,
-                pass_name: "conservative-cfg-cleanup",
-                occurrence: 0,
+                pass_name: "primitive-constant-folding",
+                occurrence: 2,
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 7,
                 pass_name: "dead-pure-definition-elimination",
+                occurrence: 1,
+            },
+            MirPipelineCheckpointLabel::AfterProofRichPass {
+                position: 8,
+                pass_name: "conservative-cfg-cleanup",
+                occurrence: 0,
+            },
+            MirPipelineCheckpointLabel::AfterProofRichPass {
+                position: 9,
+                pass_name: "dead-pure-definition-elimination",
                 occurrence: 2,
             },
             MirPipelineCheckpointLabel::AfterProofTransitionPass {
-                position: 8,
+                position: 10,
                 pass_name: "constant-short-circuit-folding",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterProofNormalization,
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 9,
+                position: 11,
                 pass_name: "post-proof-unreachable-block-elimination",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 10,
+                position: 12,
                 pass_name: "post-proof-empty-block-forwarding",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 11,
+                position: 13,
                 pass_name: "post-proof-basic-block-merging",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 12,
+                position: 14,
                 pass_name: "whole-world-reachability",
                 occurrence: 0,
             },
@@ -644,7 +655,7 @@ fn intentional_reporting_paths_compose() {
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
-    assert_eq!(mir_inspection_labels.len(), 16);
+    assert_eq!(mir_inspection_labels.len(), 18);
     assert_eq!(
         mir_inspection_labels.first(),
         Some(&MirPipelineCheckpointLabel::ProofRichInput)

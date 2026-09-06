@@ -55,7 +55,6 @@ impl CheckedCarrierProtocolOwner {
         self.check_block
     }
 
-    #[cfg(test)]
     pub(super) const fn family(self) -> CheckedScalarProtocolFamily {
         self.family
     }

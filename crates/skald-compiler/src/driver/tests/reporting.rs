@@ -56,7 +56,7 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
-fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 16] {
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 18] {
     [
         MirPipelineCheckpointLabel::ProofRichInput,
         MirPipelineCheckpointLabel::AfterProofRichPass {
@@ -86,42 +86,52 @@ fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 16] {
         },
         MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 5,
-            pass_name: "dead-pure-definition-elimination",
-            occurrence: 1,
+            pass_name: "checked-f64-to-integer-constant-folding",
+            occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 6,
-            pass_name: "conservative-cfg-cleanup",
-            occurrence: 0,
+            pass_name: "primitive-constant-folding",
+            occurrence: 2,
         },
         MirPipelineCheckpointLabel::AfterProofRichPass {
             position: 7,
             pass_name: "dead-pure-definition-elimination",
+            occurrence: 1,
+        },
+        MirPipelineCheckpointLabel::AfterProofRichPass {
+            position: 8,
+            pass_name: "conservative-cfg-cleanup",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::AfterProofRichPass {
+            position: 9,
+            pass_name: "dead-pure-definition-elimination",
             occurrence: 2,
         },
         MirPipelineCheckpointLabel::AfterProofTransitionPass {
-            position: 8,
+            position: 10,
             pass_name: "constant-short-circuit-folding",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterProofNormalization,
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 9,
+            position: 11,
             pass_name: "post-proof-unreachable-block-elimination",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 10,
+            position: 12,
             pass_name: "post-proof-empty-block-forwarding",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 11,
+            position: 13,
             pass_name: "post-proof-basic-block-merging",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
-            position: 12,
+            position: 14,
             pass_name: "whole-world-reachability",
             occurrence: 0,
         },
@@ -239,36 +249,43 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             (
                 5,
                 MirPassStage::ProofRich,
+                "checked-f64-to-integer-constant-folding",
+                0
+            ),
+            (6, MirPassStage::ProofRich, "primitive-constant-folding", 2),
+            (
+                7,
+                MirPassStage::ProofRich,
                 "dead-pure-definition-elimination",
                 1
             ),
-            (6, MirPassStage::ProofRich, "conservative-cfg-cleanup", 0),
+            (8, MirPassStage::ProofRich, "conservative-cfg-cleanup", 0),
             (
-                7,
+                9,
                 MirPassStage::ProofRich,
                 "dead-pure-definition-elimination",
                 2
             ),
             (
-                8,
+                10,
                 MirPassStage::ProofTransition,
                 "constant-short-circuit-folding",
                 0
             ),
             (
-                9,
+                11,
                 MirPassStage::Final,
                 "post-proof-unreachable-block-elimination",
                 0
             ),
             (
-                10,
+                12,
                 MirPassStage::Final,
                 "post-proof-empty-block-forwarding",
                 0
             ),
-            (11, MirPassStage::Final, "post-proof-basic-block-merging", 0),
-            (12, MirPassStage::Final, "whole-world-reachability", 0),
+            (13, MirPassStage::Final, "post-proof-basic-block-merging", 0),
+            (14, MirPassStage::Final, "whole-world-reachability", 0),
         ]
     );
     let descriptors = available_mir_passes();
@@ -440,8 +457,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             ReportMetric::count("activation storage declarations reclassified", 0),
             ReportMetric::count("normalization changed callables", 0),
             ReportMetric::count("proof-protected blocks released", 0),
-            ReportMetric::count("pass executions", 13),
-            ReportMetric::count("processed callables", 13),
+            ReportMetric::count("pass executions", 15),
+            ReportMetric::count("processed callables", 15),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -501,9 +518,44 @@ fn details_publish_deterministic_phase_owned_metrics() {
             checked("retained statically failing candidates"),
         ]
     );
+    assert_eq!(
+        pipeline[35..41],
+        [
+            ReportMetric::pass_count(
+                "checked-f64-to-integer-constant-folding",
+                "folded f64-to-i64 protocols",
+                0,
+            ),
+            ReportMetric::pass_count(
+                "checked-f64-to-integer-constant-folding",
+                "folded f64-to-u64 protocols",
+                0,
+            ),
+            ReportMetric::pass_count(
+                "checked-f64-to-integer-constant-folding",
+                "folded f64-to-u8 protocols",
+                0,
+            ),
+            ReportMetric::pass_count(
+                "checked-f64-to-integer-constant-folding",
+                "folded protocols with propagated sources",
+                0,
+            ),
+            ReportMetric::pass_count(
+                "checked-f64-to-integer-constant-folding",
+                "removed protocol values",
+                0,
+            ),
+            ReportMetric::pass_count(
+                "checked-f64-to-integer-constant-folding",
+                "retained statically failing candidates",
+                0,
+            ),
+        ]
+    );
     let cfg = |name| ReportMetric::pass_count("conservative-cfg-cleanup", name, 0);
     assert_eq!(
-        pipeline[35..40],
+        pipeline[41..46],
         [
             cfg("folded constant branches"),
             cfg("folded same-target branches"),
@@ -514,7 +566,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let logical = |name| ReportMetric::pass_count("constant-short-circuit-folding", name, 0);
     assert_eq!(
-        pipeline[40..45],
+        pipeline[46..51],
         [
             logical("selected && short paths"),
             logical("selected && right paths"),
@@ -526,7 +578,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let final_cfg =
         |name| ReportMetric::pass_count("post-proof-unreachable-block-elimination", name, 0);
     assert_eq!(
-        pipeline[45..48],
+        pipeline[51..54],
         [
             final_cfg("removed blocks"),
             final_cfg("removed value declarations"),
@@ -535,7 +587,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let forwarding = |name| ReportMetric::pass_count("post-proof-empty-block-forwarding", name, 0);
     assert_eq!(
-        pipeline[48..52],
+        pipeline[54..58],
         [
             forwarding("removed forwarding blocks"),
             forwarding("redirected successor occurrences"),
@@ -545,7 +597,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let merging = |name| ReportMetric::pass_count("post-proof-basic-block-merging", name, 0);
     assert_eq!(
-        pipeline[52..57],
+        pipeline[58..63],
         [
             merging("merged block pairs"),
             merging("moved instructions"),
@@ -557,7 +609,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[57..78],
+        pipeline[63..84],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -582,8 +634,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[78], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[79], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[84], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[85], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
@@ -670,7 +722,7 @@ fn main() -> i64 {
 
     assert!(artifact.report.diagnostics.is_empty());
     assert_eq!(count_metric(metrics, "normalization executions"), Some(1));
-    assert_eq!(count_metric(metrics, "pass executions"), Some(13));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(15));
     assert_eq!(
         pass_count_metric(
             metrics,
@@ -767,7 +819,7 @@ fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
     let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert_eq!(count_metric(metrics, "pass executions"), Some(13));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(15));
     assert_eq!(
         pass_count_metric(
             metrics,
@@ -783,6 +835,39 @@ fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
             "removed protocol-load values"
         ),
         2
+    );
+    assert!(pass_count_metric(metrics, "conservative-cfg-cleanup", "removed blocks") > 0);
+}
+
+#[test]
+fn details_attribute_checked_f64_to_integer_folding_and_followup_cleanup() {
+    let mut observer = RecordingObserver::new(ReportDetail::Details);
+    let artifact = compile_source_to_assembly_observed(
+        "checked-f64-to-integer-folding.ska",
+        "fn main() -> i64 { return (i64) 4.5; }",
+        Target::X86_64SysV,
+        &mut observer,
+    )
+    .unwrap();
+    let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(count_metric(metrics, "pass executions"), Some(15));
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "checked-f64-to-integer-constant-folding",
+            "folded f64-to-i64 protocols"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "checked-f64-to-integer-constant-folding",
+            "removed protocol values"
+        ),
+        1
     );
     assert!(pass_count_metric(metrics, "conservative-cfg-cleanup", "removed blocks") > 0);
 }
@@ -942,7 +1027,7 @@ fn mir_only_inspection_preserves_artifacts_reports_and_reporting() {
             ReportMetric::count("activation storage declarations reclassified", 1),
             ReportMetric::count("normalization changed callables", 1),
             ReportMetric::count("proof-protected blocks released", 6),
-            ReportMetric::count("pass executions", 13),
+            ReportMetric::count("pass executions", 15),
         ]
     );
     assert_eq!(

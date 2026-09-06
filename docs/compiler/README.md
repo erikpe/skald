@@ -49,10 +49,11 @@ optimization.
   programs. Type checking now uses that authority for every validated source
   floating literal while preserving the existing HIR bits and range
   diagnostic. Primitive constant evaluation and propagation also use the
-  facade for exact pure binary64 folds. Checked floating-to-integer topology,
-  carrier certification, exact evaluation, and convergent success/failure
-  facts are implemented read-only foundations; NaN-producing arithmetic and
-  checked-protocol mutation remain deliberately staged.
+  facade for exact pure binary64 folds. The independently selectable checked
+  floating-to-integer pass now uses exact topology, carrier certification,
+  evaluation, and convergent facts to fold fully proven successful protocols
+  atomically while retaining every static failure. NaN-producing arithmetic
+  remains deliberately executable.
 - `crates/skald-docs-check` validates the repository documentation structure;
   it is tooling, not a compiler phase.
 - `crates/skald-golden` owns strict golden-spec decoding, contained fixture

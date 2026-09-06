@@ -12,7 +12,8 @@ mod solve;
 mod view;
 
 pub(in crate::passes::pipeline::optimizations) use evidence::{
-    checked_carrier_plan_evidence, CheckedCarrierPlanEvidence, CheckedCarrierPlanRole,
+    checked_carrier_plan_evidence, checked_f64_to_integer_carrier_plan_evidence,
+    CheckedCarrierPlanEvidence, CheckedCarrierPlanRole,
 };
 pub(in crate::passes::pipeline::optimizations) use solve::{
     solve_local_constants, LocalConstantAnalysisError, LocalConstantFact, LocalConstantIdentity,

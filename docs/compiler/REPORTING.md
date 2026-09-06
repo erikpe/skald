@@ -289,7 +289,7 @@ adapter.
 
 The `none` MIR schedule performs proof verification, one mandatory
 normalization with normalized verification, and zero pass executions.
-The `default` schedule executes twelve pass occurrences in the exact optimization
+The `default` schedule executes fifteen pass occurrences in the exact optimization
 order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
@@ -308,7 +308,7 @@ Its
 [completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 records delivery. Registry, request/CLI schedule selection, the verified
 runner, and structured pass reporting are implemented. Ordinary production
-traces contain one pass-finished event for each of the twelve default schedule
+traces contain one pass-finished event for each of the fifteen default schedule
 occurrences; `none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
@@ -427,6 +427,18 @@ immediate verification. Its default occurrence follows the second primitive
 constant fold and precedes dead-pure and CFG cleanup, so aggregate metrics and
 trace occurrence records retain pipeline order without changing quiet,
 phases-only, or details-only timing-allocation boundaries.
+
+### Checked floating-to-integer protocol simplification observation
+
+The registered `checked-f64-to-integer-constant-folding` pass reports folded
+`f64`-to-`i64`, `f64`-to-`u64`, and `f64`-to-`u8` protocol counts, protocols
+whose source uses a propagated rather than direct fact, removed private source
+reload values, and retained statically failing candidates in that stable
+order. Generic structural totals remain owned by the atomic commit. An
+unchanged occurrence reuses its input seal; a successful whole-callable commit
+causes one immediate proof-rich verification. The pass has its own occurrence,
+checkpoint label, exclusion name, and metric owner between checked-integer
+folding and the third primitive-fold occurrence.
 
 ### Frozen convergent local constant propagation observation
 

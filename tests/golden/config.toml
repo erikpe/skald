@@ -46,11 +46,15 @@ compiler_args = ["--disable-mir-pass", "conservative-cfg-cleanup"]
 [variant.checked-integer-folding-disabled]
 compiler_args = ["--disable-mir-pass", "checked-integer-constant-folding"]
 
+[variant.checked-f64-to-integer-folding-disabled]
+compiler_args = ["--disable-mir-pass", "checked-f64-to-integer-constant-folding"]
+
 [variant.short-circuit-folding-disabled]
 compiler_args = ["--disable-mir-pass", "constant-short-circuit-folding"]
 
 [variant.all-mir-passes-disabled]
 compiler_args = [
+  "--disable-mir-pass", "checked-f64-to-integer-constant-folding",
   "--disable-mir-pass", "checked-integer-constant-folding",
   "--disable-mir-pass", "conservative-cfg-cleanup",
   "--disable-mir-pass", "constant-short-circuit-folding",

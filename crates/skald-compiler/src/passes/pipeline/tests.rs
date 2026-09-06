@@ -68,7 +68,8 @@ fn main() -> i64 {
     return 3;
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 10] = [
+const ALL_PRODUCTION_PASS_NAMES: [&str; 11] = [
+    "checked-f64-to-integer-constant-folding",
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "constant-short-circuit-folding",
@@ -368,7 +369,7 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
     );
     assert_ne!(dump_mir(optimized.program()), input_dump);
     assert_ne!(assembly(optimized), assembly(&none));
-    assert_eq!(measured.statistics.pass_executions(), 13);
+    assert_eq!(measured.statistics.pass_executions(), 15);
     assert!(
         measurement_total(
             &measured,
@@ -496,7 +497,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
         ),
         (1, 1, 1, 1, 1, 7)
     );
-    assert_eq!(default.statistics.pass_executions(), 13);
+    assert_eq!(default.statistics.pass_executions(), 15);
     assert_eq!(default.statistics.normalization_executions(), 1);
     assert_eq!(
         default_checkpoints
@@ -505,6 +506,8 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
             .map(|dump| stable_text_fingerprint(dump))
             .collect::<Vec<_>>(),
         [
+            10_498_604_232_714_687_378,
+            10_498_604_232_714_687_378,
             10_498_604_232_714_687_378,
             10_498_604_232_714_687_378,
             10_498_604_232_714_687_378,
@@ -748,21 +751,21 @@ fn pipeline_folds_pure_floating_casts_and_preserves_checked_casts() {
     );
     assert_eq!(
         output.matches("primitive-cast-range-check f64.i64").count(),
-        2,
+        1,
         "{output}"
     );
     assert_eq!(
         output
             .matches("checked-cast.f64.i64 trunc=toward-zero")
             .count(),
-        2,
+        1,
         "{output}"
     );
     assert_eq!(
         output
             .matches("terminate primitive-cast-out-of-range")
             .count(),
-        2,
+        1,
         "{output}"
     );
 }
@@ -1298,21 +1301,25 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             "after-proof-rich-2-primitive-algebraic-simplification-0",
             "after-proof-rich-3-primitive-constant-folding-1",
             "after-proof-rich-4-checked-integer-constant-folding-0",
-            "after-proof-rich-5-dead-pure-definition-elimination-1",
-            "after-proof-rich-6-conservative-cfg-cleanup-0",
-            "after-proof-rich-7-dead-pure-definition-elimination-2",
-            "after-proof-transition-8-constant-short-circuit-folding-0",
+            "after-proof-rich-5-checked-f64-to-integer-constant-folding-0",
+            "after-proof-rich-6-primitive-constant-folding-2",
+            "after-proof-rich-7-dead-pure-definition-elimination-1",
+            "after-proof-rich-8-conservative-cfg-cleanup-0",
+            "after-proof-rich-9-dead-pure-definition-elimination-2",
+            "after-proof-transition-10-constant-short-circuit-folding-0",
             "after-proof-normalization",
-            "after-final-9-post-proof-unreachable-block-elimination-0",
-            "after-final-10-post-proof-empty-block-forwarding-0",
-            "after-final-11-post-proof-basic-block-merging-0",
-            "after-final-12-whole-world-reachability-0",
+            "after-final-11-post-proof-unreachable-block-elimination-0",
+            "after-final-12-post-proof-empty-block-forwarding-0",
+            "after-final-13-post-proof-basic-block-merging-0",
+            "after-final-14-whole-world-reachability-0",
             "final",
         ]
     );
     assert_eq!(
         collector.stages,
         [
+            MirPassStage::ProofRich,
+            MirPassStage::ProofRich,
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,

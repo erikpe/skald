@@ -773,7 +773,7 @@ occurrence records at trace level. The `none` schedule
 runs zero selectable passes, one complete proof verification, mandatory
 normalization, and one normalized verification. Its proof-rich checkpoints
 remain byte-for-byte stable, while its returned product satisfies the
-normalized invariant. The default schedule runs twelve pass occurrences in the
+normalized invariant. The default schedule runs fifteen pass occurrences in the
 exact repeated order documented below.
 
 This boundary adds no SSA form, persistent instruction identity, public
@@ -802,7 +802,8 @@ name, description, implementation-declared identity and stage, and typed
 transformation entry point. Deterministic validation rejects
 duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity or stage before schedule selection. The production
-registry contains `checked-integer-constant-folding`,
+registry contains `checked-f64-to-integer-constant-folding`,
+`checked-integer-constant-folding`, `constant-short-circuit-folding`,
 `dead-pure-definition-elimination`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
 `conservative-cfg-cleanup`, `post-proof-unreachable-block-elimination`,
@@ -812,7 +813,7 @@ descriptors, including stage, are exposed in stable-name order for the public re
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
-twelve-occurrence optimization schedule documented below. Disabling all
+fifteen-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
 same schedule as `none`.
 
@@ -1051,9 +1052,12 @@ primitive-constant-folding
 primitive-algebraic-simplification
 primitive-constant-folding
 checked-integer-constant-folding
+checked-f64-to-integer-constant-folding
+primitive-constant-folding
 dead-pure-definition-elimination
 conservative-cfg-cleanup
 dead-pure-definition-elimination
+constant-short-circuit-folding
 -- mandatory proof-provenance normalization --
 post-proof-unreachable-block-elimination
 post-proof-empty-block-forwarding
@@ -1135,23 +1139,35 @@ optimization profile cannot select APFloat-specific result bits observable
 through `std::f64::to_bits`; floating algebraic identities remain separately
 excluded.
 
-Checked floating-to-integer analysis now has an exact immutable topology
+Checked floating-to-integer analysis has an exact immutable topology
 observer for the complete range-check diamond and shared conservative scalar-
 carrier certification with explicit protocol-family ownership. Its separate
 evaluator uses `skald-binary64` for exact truncation and range outcomes. The
 existing convergent solver publishes source-carrier and successful target-
 typed result facts, records NaN, infinity, and finite out-of-range failures,
-and publishes no result fact for those failures. These owners are read-only;
-they add no pass or MIR mutation.
+and publishes no result fact for those failures.
 
-Successful constant `f64`-to-integer protocol mutation remains assigned to a
-separate proof-rich `checked-f64-to-integer-constant-folding` pass. That pass
-will consume one fresh convergent solution and atomically replace only a
-proven successful protocol. Malformed and insufficiently proven protocols,
-along with every static failure, remain unchanged on their existing runtime
-path. Common checked-scalar site and carrier vocabulary is shared with checked
-integer operations, while floating-cast topology, evaluation, future mutation,
-pass identity, and measurements remain distinct owners.
+The independently selectable proof-rich
+`checked-f64-to-integer-constant-folding` pass consumes one fresh convergent
+solution per callable and atomically replaces only fully proven successful
+`f64`-to-`i64`, `f64`-to-`u64`, and `f64`-to-`u8` protocols. Its immutable
+whole-callable plan revalidates the program snapshot, exact topology,
+certified source/result carriers, constants, types, spans, identities, and
+edit disjointness before mutation. A successful rewrite preserves source
+evaluation, changes the checked terminator to ordinary success flow, replaces
+the checked success assignment with the exact target-typed integer constant,
+and removes only its obsolete protocol-private source reload. Result stores,
+carrier storage, and lifetime operations remain for independently owned
+cleanup. Malformed, unsupported, protected, insufficiently proven, NaN,
+infinity, and finite out-of-range protocols retain their original checked
+runtime path and failure timing.
+
+Common checked-scalar site and carrier vocabulary is shared with checked
+integer operations, while floating-cast topology, evaluation, mutation, pass
+identity, and measurements remain distinct owners. The default schedule runs
+the floating pass after the checked-integer consumer and before a third
+primitive fold plus dead/CFG cleanup; its exact target constant is therefore
+consumed through the ordinary evaluator rather than a second cast evaluator.
 
 This direction changes no source syntax, source-visible arithmetic or cast
 semantics, HIR/MIR value representation, floating exception visibility,

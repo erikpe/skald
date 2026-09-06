@@ -1,0 +1,17 @@
+import std::io;
+import std::process;
+from std::str import Str;
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    if (arguments[1].equals("range")) {
+        std::io::println_i64(11);
+        return (i64) 9223372036854775808.0;
+    }
+    if (arguments[1].equals("infinity")) {
+        std::io::println_i64(21);
+        return (i64) (1.0 / 0.0);
+    }
+    std::io::println_i64(31);
+    return (i64) (0.0 / 0.0);
+}

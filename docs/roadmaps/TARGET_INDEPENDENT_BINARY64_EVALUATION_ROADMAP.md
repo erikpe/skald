@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: in progress; BE0 through BE5 are complete, and BE6 is next.
+Status: in progress; BE0 through BE6 are complete, and BE7 is next.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -100,7 +100,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 - [x] BE3 — Migrate compiler literal rounding to the binary64 authority
 - [x] BE4 — Extend primitive constant evaluation and propagation
 - [x] BE5 — Generalize checked-scalar topology, carriers, and solved facts
-- [ ] BE6 — Fold successful checked floating-to-integer protocols
+- [x] BE6 — Fold successful checked floating-to-integer protocols
 - [ ] BE7 — Harden the complete boundary and close the roadmap
 
 ## PR-sized implementation sequence
@@ -351,31 +351,31 @@ fact; no MIR is yet mutated by the new family.
 remaining checked constant-conversion family and activate it only with full
 semantic evidence.
 
-- [ ] Implement a whole-callable immutable plan for successful constant
+- [x] Implement a whole-callable immutable plan for successful constant
       `f64`-to-`i64`, `f64`-to-`u64`, and `f64`-to-`u8` protocols using one
       fresh convergent solution and exact topology/certification evidence.
-- [ ] Revalidate the program, callable, topology, carriers, constants, types,
+- [x] Revalidate the program, callable, topology, carriers, constants, types,
       spans, and absence of conflicting edits before the first mutation.
-- [ ] Preserve operand evaluation and the target-typed result while replacing
+- [x] Preserve operand evaluation and the target-typed result while replacing
       the successful checked protocol atomically with its exact integer
       constant and ordinary successor flow.
-- [ ] Remove only obsolete protocol-private transient values proven by the
+- [x] Remove only obsolete protocol-private transient values proven by the
       plan; retain storage/lifetime work until independently eligible cleanup
       owns its removal.
-- [ ] Retain NaN, infinity, finite out-of-range, unsupported, malformed, and
+- [x] Retain NaN, infinity, finite out-of-range, unsupported, malformed, and
       insufficiently proven candidates unchanged with the exact existing
       runtime failure behavior.
-- [ ] Register the proof-rich pass as
+- [x] Register the proof-rich pass as
       `checked-f64-to-integer-constant-folding` with a unique identity,
       description, implementation-stage match, exclusions, inspection labels,
       and deterministic metrics.
-- [ ] Place it after primitive folding in the default proof-rich schedule and
+- [x] Place it after primitive folding in the default proof-rich schedule and
       before repeated primitive/dead/CFG cleanup needed to consume its result
       and unreachable failure region.
-- [ ] Preserve `none`, all-pass exclusion parity, independent selection,
+- [x] Preserve `none`, all-pass exclusion parity, independent selection,
       no-op seal reuse, atomic rollback, immediate reverification, and stable
       scheduling of every existing pass.
-- [ ] Update driver, reporting, testing, compiler phase, architecture, and
+- [x] Update driver, reporting, testing, compiler phase, architecture, and
       optimization-catalog documentation with the implemented behavior.
 
 **Tests:** All target boundaries and adjacent values; negative fractional

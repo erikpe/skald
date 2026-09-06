@@ -1,6 +1,8 @@
 //! Target-independent final-MIR optimization implementations.
 
 mod checked_f64_to_integer_evaluation;
+pub(in crate::passes::pipeline) mod checked_f64_to_integer_folding;
+mod checked_f64_to_integer_rewrite;
 mod checked_f64_to_integer_topology;
 mod checked_integer_evaluation;
 pub(in crate::passes::pipeline) mod checked_integer_folding;

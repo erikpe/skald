@@ -140,7 +140,7 @@ construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to zero
 selectable passes plus mandatory proof verification, normalization, and final
 verification, while `default` resolves to the exact repeated
-twelve-occurrence optimization schedule documented below. Disabling all nine
+fifteen-occurrence optimization schedule documented below. Disabling all eleven
 stable pass names from `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
 unoptimized mode and preserves behavior while still returning normalized
@@ -160,7 +160,9 @@ removes every occurrence of the named pass from the selected profile;
 duplicate disabling is idempotent. Unknown profile or pass names are usage
 errors before provider or source I/O, and unknown and known pass-name lists are
 sorted lexically. The current registry contains the stable
+`checked-f64-to-integer-constant-folding`,
 `checked-integer-constant-folding`, `conservative-cfg-cleanup`,
+`constant-short-circuit-folding`,
 `dead-pure-definition-elimination`,
 `post-proof-basic-block-merging`,
 `post-proof-empty-block-forwarding`,
@@ -228,8 +230,10 @@ private.
 
 The `default` profile contains dead-pure elimination, constant folding,
 algebraic simplification, repeated constant folding, checked-integer folding,
-repeated dead-pure cleanup, conservative CFG cleanup, and whole-world
-reachability in the exact order specified by the compiler phase contract.
+checked floating-to-integer folding, another primitive fold, repeated
+dead-pure cleanup, conservative CFG cleanup, the proof-transition
+short-circuit fold, and the final CFG/reachability suffix in the exact order
+specified by the compiler phase contract.
 `none` remains empty of selectable occurrences.
 `--disable-mir-pass <name>` removes every occurrence of a repeated pass, and
 disabling every pass selected by `default` equals `none`.
@@ -251,8 +255,9 @@ convergent solution, while `constant-short-circuit-folding` is registered as
 the single proof-transition occurrence and atomically composes its immutable
 logical selection plan with mandatory normalization.
 
-The registry retains `primitive-constant-folding` and
-`checked-integer-constant-folding` and includes
+The registry retains `primitive-constant-folding`,
+`checked-integer-constant-folding`, and
+`checked-f64-to-integer-constant-folding`, and includes
 `constant-short-circuit-folding`. The latter is independently discoverable and
 excludable, appears once at the proof-normalization boundary in `default`, and
 uses a new closed `ProofTransition` stage. Schedule validation accepts proof-

@@ -44,6 +44,12 @@ comparisons, signed zero, subnormals, infinities, and conservative arithmetic
 NaN retention across default, optimization-free, folding-disabled, and fully
 disabled profiles.
 
+The checked binary64-to-integer protocol fixture covers all three targets,
+boundary-adjacent values, signed and negative fractional zero, truncation,
+propagated constants, static startup, and dynamic effects. Its failure matrix
+keeps finite range failures, infinity, and NaN observable across default,
+optimization-free, pass-disabled, CFG-disabled, and fully disabled profiles.
+
 Use `make golden-filter GOLDEN_FILTER='optimizations/**'` for the ordinary
 focused suite. Use `scripts/golden.sh --determinism full --filter
 'optimizations/**'` to repeat both compiler and native processes.

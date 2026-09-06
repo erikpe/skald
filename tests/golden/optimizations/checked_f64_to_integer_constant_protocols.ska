@@ -1,0 +1,33 @@
+import std::io;
+
+fn publish(value: i64) -> i64 {
+    std::io::println_i64(700);
+    return value;
+}
+
+fn mark(value: f64, marker: i64) -> f64 {
+    std::io::println_i64(marker);
+    return value;
+}
+
+class State {
+    static converted: i64 = publish((i64) (20.0 / 4.0));
+
+    init() {}
+}
+
+fn main() -> i64 {
+    std::io::println_i64(State.converted);
+    std::io::println_i64((i64) -9223372036854775808.0);
+    std::io::println_i64((i64) 9223372036854774784.0);
+    std::io::println_u64((u64) -0.75);
+    std::io::println_u64((u64) 18446744073709549568.0);
+    std::io::println_u8((u8) -0.0);
+    std::io::println_u8((u8) 255.75);
+    std::io::println_i64((i64) (1.5 + 2.5));
+    std::io::println_i64((i64) (f64) 42u);
+
+    // A call-sourced value stays dynamic and preserves its visible effect.
+    std::io::println_i64((i64) mark(7.9, 801));
+    return 0;
+}
