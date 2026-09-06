@@ -4,6 +4,10 @@
 //! compiler-only abstraction: generated programs and the Skald runtime do not
 //! link this crate.
 //!
+//! Arithmetic always uses round-to-nearest, ties-to-even. Numeric comparison
+//! returns the explicit [`Binary64Comparison`] outcome, including unordered
+//! comparisons involving NaNs.
+//!
 //! The facade deliberately does not implement Rust's comparison traits. Bitwise
 //! identity and IEEE numeric comparisons answer different questions, so callers
 //! must select an explicit operation instead.
@@ -24,8 +28,11 @@
 //! let _ = one < two;
 //! ```
 
+mod arithmetic;
+mod comparison;
 mod value;
 
+pub use comparison::Binary64Comparison;
 pub use value::Binary64;
 
 #[cfg(test)]

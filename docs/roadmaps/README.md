@@ -9,11 +9,12 @@ progress. Completed roadmaps and resolved discovery records move to
 The
 [target-independent binary64 evaluation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
 is in progress; BE0 established the isolated
-`skald-binary64`/`rustc_apfloat` dependency and raw-bit facade, and BE1 is next.
-The roadmap continues with exact arithmetic and comparison, decimal and
-integer conversion, compiler literal migration, convergent primitive constant
-evaluation, and a successful-only checked `f64`-to-integer folding pass. Its
-compiler foundations are complete; no other active roadmap blocks it.
+`skald-binary64`/`rustc_apfloat` dependency and raw-bit facade, BE1 completed
+exact arithmetic and comparison, and BE2 is next. The roadmap continues with
+decimal and integer conversion, compiler literal migration, convergent
+primitive constant evaluation, and a successful-only checked
+`f64`-to-integer folding pass. Its compiler foundations are complete; no other
+active roadmap blocks it.
 
 ## Pending discoveries
 

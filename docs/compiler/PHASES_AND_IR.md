@@ -1079,21 +1079,25 @@ decisions are frozen in the
 [design record](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md),
 and the active
 [implementation roadmap](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
-owns delivery. The isolated crate and raw-bit value foundation are implemented.
-Current type checking still uses Rust host `f64` parsing for validated decimal
-literals, and the primitive evaluator still treats floating constants,
-arithmetic, comparisons, and numeric conversions as unsupported.
+owns delivery. The isolated crate, raw-bit value foundation, exact arithmetic,
+and four-way numeric comparison are implemented. Current type checking still
+uses Rust host `f64` parsing for validated decimal literals, and the primitive
+evaluator still treats floating constants, arithmetic, comparisons, and
+numeric conversions as unsupported.
 
 The implementation has established an unpublished `skald-binary64` workspace
 crate around one exactly pinned published `rustc_apfloat` release. Its opaque
 Skald-owned `Binary64` facade currently owns exact `u64` representation,
-bitwise identity, sign inversion, and classification. It will become the sole
-production compile-time authority for exact IEEE-754 binary64 arithmetic,
-numeric comparison, decimal rounding, and integer/boolean conversion as the
-remaining roadmap tasks land. No APFloat type, trait, status, rounding mode,
-category, or parser error crosses the crate boundary; the wrapper has no
-dependency on compiler phases, IR, diagnostics, source spans, passes, targets,
-runtime code, or generated programs.
+bitwise identity, sign inversion, classification, exact add/subtract/multiply/
+divide under round-to-nearest ties-to-even, and explicit less/equal/greater/
+unordered numeric comparison. APFloat exception statuses are consumed inside
+the wrapper because overflow, underflow, division by zero, inexactness, and
+invalid operations produce ordinary binary64 results rather than Skald
+failures. The crate will also own decimal rounding and integer/boolean
+conversion as the remaining roadmap tasks land. No APFloat type, trait,
+status, rounding mode, category, or parser error crosses the crate boundary;
+the wrapper has no dependency on compiler phases, IR, diagnostics, source
+spans, passes, targets, runtime code, or generated programs.
 
 Validated source decimal spellings will round through that authority before
 type checking stores their bits in HIR. Lexical grammar, unary-minus shape,

@@ -41,11 +41,11 @@ optimization.
 - The in-progress frozen
   [target-independent binary64 direction](PHASES_AND_IR.md#frozen-target-independent-binary64-evaluation-direction)
   has established the unpublished `crates/skald-binary64` compiler-support
-  crate. Its initial Skald-owned raw-bit facade owns exact representation,
-  sign inversion, and classification while isolating the pinned
-  `rustc_apfloat` dependency from compiler IR, passes, targets, and generated
-  programs. Arithmetic, conversions, literal migration, and optimizer use
-  remain staged roadmap work.
+  crate. Its Skald-owned raw-bit facade owns exact representation, sign
+  inversion, classification, nearest-ties-to-even arithmetic, and four-way
+  numeric comparison while isolating the pinned `rustc_apfloat` dependency
+  from compiler IR, passes, targets, and generated programs. Conversions,
+  literal migration, and optimizer use remain staged roadmap work.
 - `crates/skald-docs-check` validates the repository documentation structure;
   it is tooling, not a compiler phase.
 - `crates/skald-golden` owns strict golden-spec decoding, contained fixture

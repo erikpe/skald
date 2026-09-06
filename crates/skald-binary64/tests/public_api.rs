@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use skald_binary64::Binary64;
+use skald_binary64::{Binary64, Binary64Comparison};
 
 #[test]
 fn facade_is_usable_without_exposing_the_apfloat_implementation() {
@@ -11,6 +11,13 @@ fn facade_is_usable_without_exposing_the_apfloat_implementation() {
     assert!(copied.is_finite());
     assert!(copied.is_negative());
     assert!(copied.same_bits(value));
+
+    let sum = copied.add(Binary64::from_bits(0x4000_0000_0000_0000));
+    assert_eq!(sum.to_bits(), 0x3ff0_0000_0000_0000);
+    assert_eq!(
+        sum.compare(Binary64::from_bits(0x4000_0000_0000_0000)),
+        Binary64Comparison::Less
+    );
 }
 
 #[test]

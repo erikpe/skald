@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: in progress; BE0 is complete and BE1 is next.
+Status: in progress; BE0 and BE1 are complete, and BE2 is next.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -95,7 +95,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 ## Progress
 
 - [x] BE0 — Establish the isolated binary64 crate and dependency boundary
-- [ ] BE1 — Implement exact binary64 arithmetic and comparison
+- [x] BE1 — Implement exact binary64 arithmetic and comparison
 - [ ] BE2 — Implement conversions and decimal parsing
 - [ ] BE3 — Migrate compiler literal rounding to the binary64 authority
 - [ ] BE4 — Extend primitive constant evaluation and propagation
@@ -149,18 +149,18 @@ supported toolchain are explicit.
 **Purpose:** Complete the non-conversion numerical core and prove its exact
 bit behavior before compiler consumers can activate floating folds.
 
-- [ ] Implement binary64 add, subtract, multiply, and divide through
+- [x] Implement binary64 add, subtract, multiply, and divide through
       `rustc_apfloat::ieee::Double` with explicit nearest-ties-to-even
       rounding and exact bit conversion at the private boundary.
-- [ ] Consume APFloat status results deliberately while keeping overflow,
+- [x] Consume APFloat status results deliberately while keeping overflow,
       underflow, divide-by-zero, and inexact as ordinary binary64 outcomes.
-- [ ] Return calculated NaN representations from the crate without embedding
+- [x] Return calculated NaN representations from the crate without embedding
       the optimizer's conservative NaN-substitution policy in this layer.
-- [ ] Add the frozen four-way `Binary64Comparison::{Less, Equal, Greater,
+- [x] Add the frozen four-way `Binary64Comparison::{Less, Equal, Greater,
       Unordered}` operation, with both zeroes equal and either NaN unordered.
-- [ ] Keep numeric comparison distinct from `same_bits`; expose no host
+- [x] Keep numeric comparison distinct from `same_bits`; expose no host
       `f64`, standard comparison trait, or APFloat status/category type.
-- [ ] Split arithmetic or comparison into private implementation modules only
+- [x] Split arithmetic or comparison into private implementation modules only
       when the facade would otherwise mix substantial responsibilities.
 
 **Tests:** Exact and inexact arithmetic; cancellation; signed-zero results;
