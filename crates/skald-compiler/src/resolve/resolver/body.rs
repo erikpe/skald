@@ -7,7 +7,7 @@ use crate::{
     diagnostics::Diagnostic,
     identity::{
         BindingId, CallableId, ClassId, FieldId, FunctionTypeId, InterfaceId,
-        InterfaceRequirementId, LiteralDataId, LoopId, MethodId, ModuleId, StaticFieldId,
+        InterfaceRequirementId, LiteralDataId, LocalId, LoopId, MethodId, ModuleId, StaticFieldId,
     },
     source::{Span, TextRange},
 };
@@ -989,6 +989,25 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                         source: Box::new(self.resolve_expression(source)?),
                         right_paren_span: *right_paren_span,
                     },
+                    syntax::ArrayConstructionArguments::Indexed(initializer) => {
+                        let length = self.resolve_expression(&initializer.length);
+                        let binding = self.resolve_indexed_array_binding(initializer);
+                        let element = self.resolve_expression(&initializer.element);
+                        self.scopes
+                            .pop()
+                            .expect("an indexed array initializer owns one lexical scope");
+                        ResolvedArrayConstructionArguments::Indexed(
+                            ResolvedIndexedArrayInitializer {
+                                left_paren_span: initializer.left_paren_span,
+                                length: Box::new(length?),
+                                semicolon_span: initializer.semicolon_span,
+                                binding,
+                                arrow_span: initializer.arrow_span,
+                                element: Box::new(element?),
+                                right_paren_span: initializer.right_paren_span,
+                            },
+                        )
+                    }
                     syntax::ArrayConstructionArguments::Elements(list) => {
                         let mut elements = Vec::with_capacity(list.elements.len());
                         let mut valid = true;
@@ -1032,6 +1051,53 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 self.resolve_bracket_projection(projection)
             }
         }
+    }
+
+    fn resolve_indexed_array_binding(
+        &mut self,
+        initializer: &syntax::IndexedArrayInitializer,
+    ) -> ResolvedLocal {
+        self.begin_scoped_local_binding(
+            &initializer.binding,
+            ResolvedType {
+                kind: ResolvedTypeKind::I64,
+                span: initializer.binding.span,
+            },
+            "indexed array binding",
+        )
+    }
+
+    /// Declares an immutable-by-construction local in a fresh lexical scope.
+    ///
+    /// The owning construct decides when to leave the scope and, during type
+    /// checking, whether assignment is legal. Resolution only centralizes
+    /// identity allocation, source metadata, and lexical visibility here.
+    fn begin_scoped_local_binding(
+        &mut self,
+        name: &syntax::Name,
+        ty: ResolvedType,
+        binding_kind: &'static str,
+    ) -> ResolvedLocal {
+        let local = ResolvedLocal {
+            id: LocalId::new(self.callable, self.locals.len()),
+            name: name.text.to_string(),
+            name_span: name.span,
+            type_syntax: ty,
+            span: name.span,
+        };
+        self.scopes.push(HashMap::new());
+        let declared = self.declare_binding(
+            &local.name,
+            BindingSymbol {
+                id: BindingId::Local(local.id),
+                ty: local.type_syntax.kind,
+                name_span: local.name_span,
+            },
+            binding_kind,
+        );
+        debug_assert!(declared, "a fresh scoped-local scope has no bindings");
+        self.locals.push(local.clone());
+        local
     }
 
     fn resolve_identifier(

@@ -179,6 +179,7 @@ impl Parser<'_> {
             | ArrayConstructionArguments::Copy {
                 right_paren_span, ..
             } => *right_paren_span,
+            ArrayConstructionArguments::Indexed(initializer) => initializer.right_paren_span,
             ArrayConstructionArguments::Elements(list) => list.right_brace_span,
         };
         let start_span = new_span.unwrap_or(array_type.span);
@@ -222,8 +223,33 @@ impl Parser<'_> {
                 right_paren_span: right_paren.span,
             }
         } else {
-            let length = self.parse_expression()?;
-            let right_paren = self.expect(TokenKind::RightParen, "`)` after the array length")?;
+            if self.at(TokenKind::Semicolon) {
+                self.report(
+                    EXPECTED_EXPRESSION,
+                    "expected an indexed array length before `;`",
+                    self.peek().span,
+                    "expected an expression here",
+                );
+                self.advance();
+                self.synchronize_parenthesized_array_initializer(false);
+                return None;
+            }
+            let Some(length) = self.parse_expression() else {
+                if self.recovering_from_excessive_nesting {
+                    return None;
+                }
+                self.synchronize_parenthesized_array_initializer(true);
+                return None;
+            };
+            if let Some(semicolon) = self.consume(TokenKind::Semicolon) {
+                return self.parse_indexed_array_initializer(left_paren, length, semicolon);
+            }
+            let Some(right_paren) =
+                self.expect(TokenKind::RightParen, "`)` after the array length")
+            else {
+                self.synchronize_parenthesized_array_initializer(true);
+                return None;
+            };
             ArrayConstructionArguments::Length {
                 left_paren_span: left_paren.span,
                 length: Box::new(length),
@@ -231,6 +257,74 @@ impl Parser<'_> {
             }
         };
         Some(arguments)
+    }
+
+    fn parse_indexed_array_initializer(
+        &mut self,
+        left_paren: Token,
+        length: Expression,
+        semicolon: Token,
+    ) -> Option<ArrayConstructionArguments> {
+        let Some(binding) = self.parse_name("an index binding after `;`") else {
+            self.synchronize_parenthesized_array_initializer(true);
+            return None;
+        };
+        let Some(arrow) = self.expect(TokenKind::FatArrow, "`=>` after the index binding") else {
+            self.synchronize_parenthesized_array_initializer(true);
+            return None;
+        };
+        let Some(element) = self.parse_expression() else {
+            if self.recovering_from_excessive_nesting {
+                return None;
+            }
+            self.synchronize_parenthesized_array_initializer(true);
+            return None;
+        };
+        let Some(right_paren) = self.expect(
+            TokenKind::RightParen,
+            "`)` after the indexed array element expression",
+        ) else {
+            self.synchronize_parenthesized_array_initializer(true);
+            return None;
+        };
+        Some(ArrayConstructionArguments::Indexed(
+            IndexedArrayInitializer {
+                left_paren_span: left_paren.span,
+                length: Box::new(length),
+                semicolon_span: semicolon.span,
+                binding,
+                arrow_span: arrow.span,
+                element: Box::new(element),
+                right_paren_span: right_paren.span,
+            },
+        ))
+    }
+
+    /// Recovers one malformed parenthesized array initializer without
+    /// consuming the enclosing statement delimiter.
+    fn synchronize_parenthesized_array_initializer(&mut self, stop_at_semicolon: bool) {
+        let mut nested_parentheses = 0usize;
+        loop {
+            match self.peek().kind {
+                TokenKind::LeftParen => {
+                    nested_parentheses += 1;
+                    self.advance();
+                }
+                TokenKind::RightParen if nested_parentheses > 0 => {
+                    nested_parentheses -= 1;
+                    self.advance();
+                }
+                TokenKind::RightParen => {
+                    self.advance();
+                    return;
+                }
+                TokenKind::Semicolon if stop_at_semicolon && nested_parentheses == 0 => return,
+                TokenKind::RightBrace | TokenKind::Eof if nested_parentheses == 0 => return,
+                _ => {
+                    self.advance();
+                }
+            }
+        }
     }
 
     fn parse_array_element_list(&mut self) -> Option<ArrayConstructionArguments> {

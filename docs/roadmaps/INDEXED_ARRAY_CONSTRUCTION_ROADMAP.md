@@ -1,6 +1,6 @@
 # Indexed Array Construction Roadmap
 
-Status: planned; IA0 is the next implementation task.
+Status: in progress; IA0 is complete and IA1 is next.
 
 This roadmap implements the frozen
 [indexed array construction contract](../language/ARRAYS.md#frozen-indexed-array-construction)
@@ -52,7 +52,7 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 
 ## Progress
 
-- [ ] IA0 — Retain indexed construction through syntax and resolution
+- [x] IA0 — Retain indexed construction through syntax and resolution
 - [ ] IA1 — Select typed repeated destination initialization
 - [ ] IA2 — Execute verified primitive dynamic-prefix construction
 - [ ] IA3 — Execute exact-class destination placement and copying
@@ -67,30 +67,30 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 **Purpose:** Establish the complete source and name-binding contract before
 semantic or executable representations depend on it.
 
-- [ ] Tokenize `=>` by longest match without changing `=` or `>` behavior,
+- [x] Tokenize `=>` by longest match without changing `=` or `>` behavior,
       and include it in deterministic token dumps and implemented punctuation
       documentation.
-- [ ] Add distinct inline and shared-outer indexed construction syntax that
+- [x] Add distinct inline and shared-outer indexed construction syntax that
       retains `new`, exact array type, length, semicolon, binding name, arrow,
       element expression, parentheses, and complete spans.
-- [ ] Parse multiline and nested forms in every expression position without
+- [x] Parse multiline and nested forms in every expression position without
       confusing ordinary array construction, calls, indexing, generic
       punctuation, or explicit element lists.
-- [ ] Diagnose missing length, semicolon, binding, arrow, expression, and
+- [x] Diagnose missing length, semicolon, binding, arrow, expression, and
       closing parenthesis once, with recovery at stable expression, statement,
       argument, initializer, and body boundaries.
-- [ ] Include both expressions in syntax depth, dependency scanning, generic
+- [x] Include both expressions in syntax depth, dependency scanning, generic
       request discovery, visitors, and source-order traversal.
-- [ ] Resolve the length before introducing one local binding, resolve the
+- [x] Resolve the length before introducing one local binding, resolve the
       element expression under that binding, and retain a non-forgeable binding
       identity rather than matching later references by spelling.
-- [ ] Reject duplicate/conflicting source shapes structurally while deferring
+- [x] Reject duplicate/conflicting source shapes structurally while deferring
       index type, immutability, and destination compatibility to IA1.
-- [ ] Extend AST and resolved dumps and public phase accessors without exposing
+- [x] Extend AST and resolved dumps and public phase accessors without exposing
       parser-private representation.
-- [ ] Add one tested semantic availability gate so accepted source cannot
+- [x] Add one tested semantic availability gate so accepted source cannot
       panic or leak malformed HIR before IA1.
-- [ ] Promote only accepted syntax from the frozen grammar section; keep the
+- [x] Promote only accepted syntax from the frozen grammar section; keep the
       status matrix explicit that indexed construction is not executable yet.
 
 **Primary implementation areas:** lexer punctuation, expression parser and

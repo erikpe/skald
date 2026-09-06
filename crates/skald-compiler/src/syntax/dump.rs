@@ -884,6 +884,21 @@ impl AstDumper {
                             dumper.indented(|dumper| dumper.expression(source));
                             dumper.line("RightParen", *right_paren_span);
                         }
+                        ArrayConstructionArguments::Indexed(initializer) => {
+                            dumper.line("Arguments Indexed", initializer.left_paren_span);
+                            dumper.heading("Length");
+                            dumper.indented(|dumper| dumper.expression(&initializer.length));
+                            dumper.line("Semicolon", initializer.semicolon_span);
+                            dumper.named(
+                                "Binding",
+                                &initializer.binding.text,
+                                initializer.binding.span,
+                            );
+                            dumper.line("FatArrow", initializer.arrow_span);
+                            dumper.heading("Element");
+                            dumper.indented(|dumper| dumper.expression(&initializer.element));
+                            dumper.line("RightParen", initializer.right_paren_span);
+                        }
                         ArrayConstructionArguments::Elements(list) => {
                             dumper.line("Elements", list.left_brace_span);
                             dumper.indented(|dumper| {

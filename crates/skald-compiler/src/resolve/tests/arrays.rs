@@ -203,6 +203,153 @@ fn resolves_array_element_lists_in_source_order_with_exact_array_identity() {
 }
 
 #[test]
+fn resolves_indexed_array_bindings_with_expression_local_identity_and_scope() {
+    let text = concat!(
+        "fn main(index: u64) -> i64 {\n",
+        "  var values: i64[] = i64[](index; index => index + 1);\n",
+        "  return (i64) index;\n",
+        "}\n",
+    );
+    let output = resolve_text(text);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::ArrayConstruction(construction) =
+        local_initializer(&definition.body.statements[0])
+    else {
+        panic!("expected resolved array construction");
+    };
+    let ResolvedArrayConstructionArguments::Indexed(initializer) = &construction.arguments else {
+        panic!("expected resolved indexed initializer");
+    };
+    assert_eq!(initializer.binding.id, definition.locals[0].id);
+    assert_eq!(initializer.binding.name, "index");
+    assert_eq!(initializer.binding.type_syntax.kind, ResolvedTypeKind::I64);
+    assert!(matches!(
+        &*initializer.length,
+        ResolvedExpression::Binding(binding)
+            if binding.binding == BindingId::Parameter(ParameterId::new(FunctionId::new(0), 0))
+    ));
+    let ResolvedExpression::Binary(element) = &*initializer.element else {
+        panic!("expected resolved indexed element expression");
+    };
+    assert!(matches!(
+        &*element.left,
+        ResolvedExpression::Binding(binding)
+            if binding.binding == BindingId::Local(initializer.binding.id)
+    ));
+    assert!(matches!(
+        return_value(&definition.body.statements[1]),
+        ResolvedExpression::PrimitiveCast(cast)
+            if matches!(
+                &*cast.source,
+                ResolvedExpression::Binding(binding)
+                    if binding.binding
+                        == BindingId::Parameter(ParameterId::new(FunctionId::new(0), 0))
+            )
+    ));
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Indexed @"), "{dump}");
+    assert!(dump.contains("Binding f0:l0 \"index\""), "{dump}");
+    assert!(dump.contains("FatArrow @"), "{dump}");
+    assert_eq!(dump, dump_resolved(&output.program));
+}
+
+#[test]
+fn nested_indexed_array_bindings_are_distinct_and_do_not_escape() {
+    let output = resolve_text(concat!(
+        "fn build() -> i64[][] {\n",
+        "  return i64[][](2u; row => i64[](2u; column => row + column));\n",
+        "}\n",
+        "fn broken() -> i64 {\n",
+        "  var values: i64[] = i64[](1u; index => index);\n",
+        "  return index;\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNKNOWN_NAME)
+            .count(),
+        1
+    );
+    let build = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedStatement::Return(return_) = &build.body.statements[0] else {
+        panic!("expected return statement");
+    };
+    let ResolvedExpression::ArrayConstruction(outer) = return_.value.as_ref().unwrap() else {
+        panic!("expected outer indexed construction");
+    };
+    let ResolvedArrayConstructionArguments::Indexed(outer) = &outer.arguments else {
+        panic!("expected outer indexed initializer");
+    };
+    let ResolvedExpression::ArrayConstruction(inner) = &*outer.element else {
+        panic!("expected inner indexed construction");
+    };
+    let ResolvedArrayConstructionArguments::Indexed(inner) = &inner.arguments else {
+        panic!("expected inner indexed initializer");
+    };
+    assert_ne!(outer.binding.id, inner.binding.id);
+    let ResolvedExpression::Binary(sum) = &*inner.element else {
+        panic!("expected inner binding sum");
+    };
+    assert!(matches!(
+        &*sum.left,
+        ResolvedExpression::Binding(binding)
+            if binding.binding == BindingId::Local(outer.binding.id)
+    ));
+    assert!(matches!(
+        &*sum.right,
+        ResolvedExpression::Binding(binding)
+            if binding.binding == BindingId::Local(inner.binding.id)
+    ));
+}
+
+#[test]
+fn generic_template_traversal_scopes_indexed_array_bindings() {
+    let program = crate::test_support::resolve_generic_source(concat!(
+        "class Cell<T> {\n",
+        "  value: T;\n",
+        "  init(value: T) { self.value = value; }\n",
+        "}\n",
+        "class Factory<T> {\n",
+        "  init() {}\n",
+        "  fn build(value: T) -> Cell<T>[] {\n",
+        "    return Cell<T>[](2u; index => Cell<T>(value));\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 { var factory: Factory<i64> = Factory<i64>(); return 0; }\n",
+    ));
+    let dump = dump_resolved(&program);
+    assert!(dump.contains("Indexed @"), "{dump}");
+    assert!(dump.contains("Binding c0:method0:l0 \"index\""), "{dump}");
+    assert!(dump.contains("Cell<i64>"), "{dump}");
+}
+
+#[test]
+fn static_initializers_retain_their_indexed_array_binding_identity() {
+    let output = resolve_text(concat!(
+        "class State {\n",
+        "  static values: i64[] = i64[](2u; index => index);\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Indexed @"), "{dump}");
+    assert!(
+        dump.contains("Binding c0:static0:initializer:l0 \"index\""),
+        "{dump}"
+    );
+}
+
+#[test]
 fn resolves_empty_shared_outer_and_ownership_grouped_element_lists() {
     let output = resolve_text(concat!(
         "class Item { init() {} }\n",

@@ -29,7 +29,7 @@ use skald_compiler::{
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
     syntax::{dump_ast, parse, INVALID_RANGE_SYNTAX},
-    typeck::type_check,
+    typeck::{type_check, INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE},
 };
 
 #[path = "../test_support/standard_library.rs"]
@@ -59,6 +59,10 @@ const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_pro
 const ARRAY_ELEMENT_LIST_HELPER_OUTPUT: &str = "SKALD_ARRAY_ELEMENT_LIST_DETERMINISM_OUTPUT";
 const ARRAY_ELEMENT_LIST_TEST_NAME: &str =
     "array_element_list_phase_products_are_deterministic_across_processes";
+const INDEXED_ARRAY_FRONTEND_HELPER_OUTPUT: &str =
+    "SKALD_INDEXED_ARRAY_FRONTEND_DETERMINISM_OUTPUT";
+const INDEXED_ARRAY_FRONTEND_TEST_NAME: &str =
+    "indexed_array_frontend_products_are_deterministic_across_processes";
 const INTEGER_OPERATION_HELPER_OUTPUT: &str = "SKALD_INTEGER_OPERATION_DETERMINISM_OUTPUT";
 const INTEGER_OPERATION_TEST_NAME: &str =
     "integer_operation_phase_products_are_deterministic_across_processes";
@@ -296,6 +300,16 @@ fn array_element_list_phase_products_are_deterministic_across_processes() {
         ARRAY_ELEMENT_LIST_HELPER_OUTPUT,
         ARRAY_ELEMENT_LIST_TEST_NAME,
         array_element_list_phase_dump,
+    );
+}
+
+#[test]
+fn indexed_array_frontend_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "indexed-array-frontend",
+        INDEXED_ARRAY_FRONTEND_HELPER_OUTPUT,
+        INDEXED_ARRAY_FRONTEND_TEST_NAME,
+        indexed_array_frontend_phase_dump,
     );
 }
 
@@ -1938,6 +1952,46 @@ fn array_element_list_phase_dump() -> String {
         dump_resolved(&resolved.program),
         dump_hir(&hir),
         dump_mir(&mir),
+    )
+}
+
+fn indexed_array_frontend_phase_dump() -> String {
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add(
+        "indexed-array-frontend.ska",
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var length: u64 = 2u;\n",
+            "  var rows: i64[][] = i64[][](length; row =>\n",
+            "    i64[](2u; column => row + column));\n",
+            "  return i64[](1u; index => index)[0];\n",
+            "}\n",
+        ),
+    );
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+    assert!(
+        checked
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE),
+        "{:?}",
+        checked.diagnostics
+    );
+
+    format!(
+        "TOKENS\n{}AST\n{}RESOLVED\n{}DIAGNOSTICS\n{}",
+        dump_tokens(source, &lexed.tokens),
+        dump_ast(&parsed.ast),
+        dump_resolved(&resolved.program),
+        render_diagnostics(&sources, &checked.diagnostics),
     )
 }
 

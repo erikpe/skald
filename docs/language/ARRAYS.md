@@ -202,12 +202,13 @@ assigns these source-reachable failures their distinct reasons from the sole
 copy. The source must designate an exact `T[]` array place or value; array
 copying has no inheritance or dynamic-check relation.
 
-No fill-value, indexed construction, inferred array literal, or
-multi-dimensional shape constructor is implemented. Executable nonempty
-construction accepts the existing default-length and exact-copy modes plus
-explicit element lists for every supported stored element category. The
-[frozen indexed direction](#frozen-indexed-array-construction) settles a
-dynamic direct-initialization form without making it currently executable.
+No fill-value, inferred array literal, or multi-dimensional shape constructor
+is implemented. Executable nonempty construction accepts the existing
+default-length and exact-copy modes plus explicit element lists for every
+supported stored element category. The frontend accepts and resolves the
+[frozen indexed direction](#frozen-indexed-array-construction), but a deliberate
+type-checking gate keeps that dynamic direct-initialization form
+non-executable.
 
 ## Explicit element-list construction
 
@@ -352,11 +353,14 @@ T[](length; index => expression)
 new T[](length; index => expression)
 ```
 
-This syntax is not yet accepted by the compiler. When implemented, it will
-evaluate the exact-`u64` length once, validate and allocate unpublished backing
-once, then evaluate the element expression once for every increasing index.
-The index is one immutable `i64` binding scoped only to that expression. A zero
-length evaluates no element expression.
+The lexer, parser, and resolver accept this syntax. They retain both
+expressions, every delimiter, inline versus shared-outer ownership, and one
+stable binding identity scoped only to the element expression. Type checking
+currently emits the explicit indexed-construction availability diagnostic, so
+no HIR or executable behavior exists yet. Once that gate is replaced, the form
+will evaluate the exact-`u64` length once, validate and allocate unpublished
+backing once, then evaluate the element expression once for every increasing
+immutable `i64` index. A zero length evaluates no element expression.
 
 Each dynamic position is a previously uninitialized owning destination of the
 explicit array element type. Primitive, exact-class, inline-optional, nested

@@ -895,6 +895,22 @@ pub struct ArrayElementList {
     pub right_brace_span: Span,
 }
 
+/// Source structure for one length-driven array initializer.
+///
+/// The binding is declared only for `element`; retaining every delimiter lets
+/// resolution and diagnostics preserve that boundary without consulting
+/// parser-private tokens.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct IndexedArrayInitializer {
+    pub left_paren_span: Span,
+    pub length: Box<Expression>,
+    pub semicolon_span: Span,
+    pub binding: Name,
+    pub arrow_span: Span,
+    pub element: Box<Expression>,
+    pub right_paren_span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArrayConstructionArguments {
     Empty {
@@ -912,6 +928,7 @@ pub enum ArrayConstructionArguments {
         source: Box<Expression>,
         right_paren_span: Span,
     },
+    Indexed(IndexedArrayInitializer),
     Elements(ArrayElementList),
 }
 

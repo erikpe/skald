@@ -108,23 +108,9 @@ impl CallableResolver<'_, '_> {
         loop_id: LoopId,
         item: ResolvedTypeKind,
     ) -> (LocalId, ResolvedBlock) {
-        let local = LocalId::new(self.callable, self.locals.len());
-        self.scopes.push(HashMap::new());
-        let declared = self.declare_binding(
-            &statement.binding.text,
-            BindingSymbol {
-                id: BindingId::Local(local),
-                ty: item,
-                name_span: statement.binding.span,
-            },
-            "iteration binding",
-        );
-        debug_assert!(declared, "a fresh loop body scope has no bindings");
-        self.locals.push(ResolvedLocal {
-            id: local,
-            name: statement.binding.text.to_string(),
-            name_span: statement.binding.span,
-            type_syntax: ResolvedType {
+        let binding = self.begin_scoped_local_binding(
+            &statement.binding,
+            ResolvedType {
                 kind: item,
                 span: statement
                     .annotation
@@ -133,8 +119,8 @@ impl CallableResolver<'_, '_> {
                         annotation.type_syntax.span
                     }),
             },
-            span: statement.binding.span,
-        });
+            "iteration binding",
+        );
 
         self.active_loops.push(loop_id);
         let body = self.resolve_block_in_current_scope(&statement.body, false);
@@ -146,7 +132,7 @@ impl CallableResolver<'_, '_> {
         self.scopes
             .pop()
             .expect("an iteration body owns one lexical scope");
-        (local, body)
+        (binding.id, body)
     }
 
     fn select_iterable(

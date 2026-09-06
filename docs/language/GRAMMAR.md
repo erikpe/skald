@@ -113,7 +113,7 @@ contextual positions.
 The complete punctuation and operator token set outside literal delimiters is:
 
 ```text
-( ) { } [ ] , : :: ; . .. -> + - * / % = == != < <= > >= ? ! ~ & | ^ << >> && ||
+( ) { } [ ] , : :: ; . .. -> => + - * / % = == != < <= > >= ? ! ~ & | ^ << >> && ||
 ```
 
 Double quotes delimit one string-literal token. Single quotes delimit one
@@ -775,9 +775,9 @@ publication, ownership, and cleanup protocol. The complete semantics are
 defined by the
 [array element-list contract](ARRAYS.md#explicit-element-list-construction).
 
-### Frozen indexed array construction
+### Accepted indexed array construction syntax
 
-The frozen, not-yet-accepted indexed construction form is:
+The accepted, type-check-gated indexed construction form is:
 
 ```text
 indexed-array-initializer
@@ -789,16 +789,17 @@ array-construction-initializer
                  | indexed-array-initializer
 ```
 
-It will admit `T[](length; index => expression)` and the corresponding
+It admits `T[](length; index => expression)` and the corresponding
 shared-outer `new T[](length; index => expression)`. The first expression must
 produce `u64`; the identifier declares one immutable `i64` binding scoped to
 the final expression. `;` distinguishes the form from existing ordinary array
-construction arguments, and `=>` will become one longest-match punctuation
-token only when implementation activates this grammar.
+construction arguments, and `=>` is one longest-match punctuation token.
 
-The current lexer does not yet accept `=>`, and the implemented punctuation
-list above remains exact. The frozen source, ownership, evaluation, and
-availability boundary is defined by
+The parser and resolver retain exact punctuation, source order, outer
+ownership, and one non-forgeable binding identity. Type checking deliberately
+rejects the form until typed repeated destination initialization is
+implemented. The frozen ownership, evaluation, and availability boundary is
+defined by
 [indexed array construction](ARRAYS.md#frozen-indexed-array-construction).
 
 From tightest to loosest binding, precedence is:

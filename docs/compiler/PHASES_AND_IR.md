@@ -2589,15 +2589,20 @@ and shared-owner state verify independently, including nested shared-array
 owners. The detailed representation boundary is in
 [the array compiler contract](ARRAYS.md#element-list-representation).
 
-The frozen indexed array construction direction adds one source-retained
-length/binding/expression mode and one typed repeated stored-value plan. Its
-MIR boundary is a dynamic initialized-prefix loop: checked `u64` length and
+The implemented syntax and resolved phases retain indexed array construction
+as one length/binding/expression mode with exact punctuation, outer ownership,
+lexical binding identity, nested traversal, generic source requests, and
+deterministic dumps. Type checking emits one explicit availability diagnostic,
+so this form cannot enter HIR.
+
+The frozen next phase adds one typed repeated stored-value plan. Its MIR
+boundary is a dynamic initialized-prefix loop: checked `u64` length and
 unpublished backing dominate the header, the current prefix supplies one safe
 immutable `i64` binding epoch, the selected category-specific operation
 initializes only that slot, completion advances the prefix, and per-element
 cleanup precedes the backedge. Publication requires an explicit verified
-`prefix == length` exit fact. This form is not yet represented by current AST,
-HIR, or MIR; its frozen phase ownership is detailed in the
+`prefix == length` exit fact. This form is not yet represented by HIR or MIR;
+its frozen phase ownership is detailed in the
 [array compiler contract](ARRAYS.md#frozen-indexed-construction-representation).
 
 Optional types use deterministic interned identities rather than recursively

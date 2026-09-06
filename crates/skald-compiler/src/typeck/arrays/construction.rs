@@ -17,6 +17,7 @@ use super::super::{expression::require_type, function::CallableChecker};
 
 pub const ARRAY_CAPABILITY_UNAVAILABLE: &str = "TYP037";
 pub const ARRAY_LENGTH_OUT_OF_RANGE: &str = "TYP038";
+pub const INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE: &str = "TYP054";
 
 impl CallableChecker<'_, '_> {
     pub(crate) fn check_array_construction(
@@ -104,6 +105,19 @@ impl CallableChecker<'_, '_> {
                     return None;
                 };
                 HirArrayConstructionMode::Copy { source, element }
+            }
+            ResolvedArrayConstructionArguments::Indexed(initializer) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE,
+                        "indexed array construction is not executable yet",
+                    )
+                    .with_primary_label(
+                        initializer.arrow_span,
+                        "source and name resolution are implemented; typed initialization is pending",
+                    ),
+                );
+                return None;
             }
             ResolvedArrayConstructionArguments::Elements(list) => {
                 let element = self.copy_capabilities.array(array).element;

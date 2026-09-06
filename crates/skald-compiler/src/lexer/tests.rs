@@ -160,6 +160,45 @@ fn comparison_and_shift_punctuation_use_longest_match() {
 }
 
 #[test]
+fn indexed_array_arrow_uses_longest_match_without_disturbing_equals_or_greater() {
+    let text = "=> = > == >= ==>> =>>";
+    let (sources, source_id, output) = lex_text(text);
+    let source = sources.get(source_id).unwrap();
+
+    assert!(!output.has_errors());
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::FatArrow,
+            TokenKind::Equal,
+            TokenKind::Greater,
+            TokenKind::EqualEqual,
+            TokenKind::GreaterEqual,
+            TokenKind::EqualEqual,
+            TokenKind::ShiftRight,
+            TokenKind::FatArrow,
+            TokenKind::Greater,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["=>", "=", ">", "==", ">=", "==", ">>", "=>", ">", ""]
+    );
+    let dump = dump_tokens(source, &output.tokens);
+    assert!(dump.contains("FAT_ARROW"));
+    assert_eq!(dump, dump_tokens(source, &output.tokens));
+}
+
+#[test]
 fn range_punctuation_uses_longest_match_without_disturbing_dots_or_decimals() {
     let text = "1..3 1 .. 3 value.member 1.5..2.5";
     let (sources, source_id, output) = lex_text(text);

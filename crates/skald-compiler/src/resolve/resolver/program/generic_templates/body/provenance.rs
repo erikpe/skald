@@ -88,6 +88,10 @@ impl TemplateBodyResolver<'_, '_, '_> {
                         syntax::ArrayConstructionArguments::Copy { source, .. } => {
                             self.expression_depends_on_parameter(source)
                         }
+                        syntax::ArrayConstructionArguments::Indexed(initializer) => {
+                            self.expression_depends_on_parameter(&initializer.length)
+                                || self.expression_depends_on_parameter(&initializer.element)
+                        }
                         syntax::ArrayConstructionArguments::Elements(elements) => elements
                             .elements
                             .iter()

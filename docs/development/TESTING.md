@@ -778,12 +778,14 @@ Because array failures promise only non-return, their specs use
 `exit = "failure"`; tests must not depend on a particular signal or numeric
 status.
 
-The frozen indexed-construction extension retains this ownership split. Syntax
-and resolution will own `=>`, punctuation spans, binding scope, recovery, and
-source dumps; type checking will own exact `u64` length, immutable `i64` index,
-destination plans, and generic requirements without false default/assignment
-capabilities. MIR tests will own dynamic-prefix CFG, per-element cleanup,
-complete-exit proof, nested prefixes, and malformed transition rejection.
+The frozen indexed-construction extension retains this ownership split. Lexer,
+syntax, and resolution tests own `=>`, punctuation spans, binding scope,
+recovery, nesting, generic source traversal, deterministic dumps, and the
+explicit type-checking gate. Later type-checking tests own exact `u64` length,
+immutable `i64` index, destination plans, and generic requirements without
+false default/assignment capabilities. MIR tests will own dynamic-prefix CFG,
+per-element cleanup, complete-exit proof, nested prefixes, and malformed
+transition rejection.
 Backend and golden tests will own every element family, inline/shared
 publication, effect order, zero/dynamic lengths, and unchanged ABI. Standard
 vector goldens will finally prove logical-prefix `to_array()` independence for

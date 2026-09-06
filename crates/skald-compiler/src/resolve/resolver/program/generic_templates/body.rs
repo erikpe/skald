@@ -414,6 +414,9 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     syntax::ArrayConstructionArguments::Copy { source, .. } => {
                         self.visit_expression(source)
                     }
+                    syntax::ArrayConstructionArguments::Indexed(initializer) => {
+                        self.visit_indexed_array_initializer(initializer)
+                    }
                     syntax::ArrayConstructionArguments::Elements(elements) => {
                         self.visit_expressions(&elements.elements)
                     }
@@ -449,6 +452,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                             );
                         }
                         syntax::ArrayConstructionArguments::Empty { .. } => {}
+                        syntax::ArrayConstructionArguments::Indexed(_) => {}
                         syntax::ArrayConstructionArguments::Elements(elements) => {
                             for source in &elements.elements {
                                 if let Some(copy_term) =
@@ -526,6 +530,25 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 }
             }
         }
+    }
+
+    fn visit_indexed_array_initializer(&mut self, initializer: &syntax::IndexedArrayInitializer) {
+        self.visit_expression(&initializer.length);
+        self.scopes.push(HashMap::new());
+        let declared = self.declare_binding_with_type(
+            &initializer.binding,
+            Some(ResolvedTemplateType {
+                kind: ResolvedTemplateTypeKind::I64,
+                span: initializer.binding.span,
+            }),
+            false,
+            "indexed array binding",
+        );
+        debug_assert!(declared, "a fresh indexed array scope has no bindings");
+        self.visit_expression(&initializer.element);
+        self.scopes
+            .pop()
+            .expect("an indexed array initializer owns one template scope");
     }
 
     fn visit_member_access(&mut self, expression: &syntax::MemberAccessExpr) {

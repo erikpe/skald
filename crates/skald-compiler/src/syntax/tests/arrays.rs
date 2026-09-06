@@ -190,6 +190,108 @@ fn retains_ordered_array_element_lists_and_exact_punctuation_spans() {
 }
 
 #[test]
+fn retains_indexed_array_initializers_and_exact_punctuation_spans() {
+    let text = concat!(
+        "fn main() -> i64 {\n",
+        "  var squares: i64[] = i64[](3u; index => index * index);\n",
+        "  var shared_values: shared i64[] = new i64[](2u; index => index);\n",
+        "  var rows: i64[][] = i64[][](2u; row =>\n",
+        "    i64[](2u; column => row + column));\n",
+        "  return i64[](1u; index => index)[0];\n",
+        "}\n",
+    );
+    let (sources, output) = parse_text(text);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let main = function(&output.ast, 0);
+    let Expression::ArrayConstruction(squares) = &local(main, 0).initializer else {
+        panic!("expected indexed array construction");
+    };
+    let ArrayConstructionArguments::Indexed(initializer) = &squares.arguments else {
+        panic!("expected retained indexed initializer");
+    };
+    let source = sources
+        .get(initializer.left_paren_span.source_id())
+        .unwrap();
+    assert_eq!(source.slice(initializer.left_paren_span.range()), Some("("));
+    assert_eq!(source.slice(initializer.semicolon_span.range()), Some(";"));
+    assert_eq!(
+        source.slice(initializer.binding.span.range()),
+        Some("index")
+    );
+    assert_eq!(source.slice(initializer.arrow_span.range()), Some("=>"));
+    assert_eq!(
+        source.slice(initializer.right_paren_span.range()),
+        Some(")")
+    );
+    assert_eq!(
+        source.slice(squares.span.range()),
+        Some("i64[](3u; index => index * index)")
+    );
+
+    assert!(matches!(
+        &local(main, 1).initializer,
+        Expression::ArrayConstruction(construction)
+            if construction.new_span.is_some()
+                && matches!(construction.arguments, ArrayConstructionArguments::Indexed(_))
+    ));
+    assert!(matches!(
+        &local(main, 2).initializer,
+        Expression::ArrayConstruction(construction)
+            if matches!(
+                &construction.arguments,
+                ArrayConstructionArguments::Indexed(outer)
+                    if matches!(&*outer.element, Expression::ArrayConstruction(_))
+            )
+    ));
+    assert!(matches!(
+        return_value(main),
+        Expression::BracketProjection(projection)
+            if matches!(&*projection.receiver, Expression::ArrayConstruction(_))
+    ));
+
+    let dump = dump_ast(&output.ast);
+    assert_eq!(dump.matches("Arguments Indexed @").count(), 5);
+    assert_eq!(dump.matches("FatArrow @").count(), 5);
+    assert_eq!(dump, dump_ast(&output.ast));
+}
+
+#[test]
+fn malformed_indexed_array_initializers_recover_at_clear_boundaries() {
+    for malformed in [
+        "var values: i64[] = i64[](; index => index);",
+        "var values: i64[] = i64[](3u; => 1);",
+        "var values: i64[] = i64[](3u; index index);",
+        "var values: i64[] = i64[](3u; index => );",
+        "var values: i64[] = i64[](3u; index => index;",
+        "var values: i64[] = i64[](3u index => index);",
+        "var values: i64[] = i64[](3u; index => index, index);",
+    ] {
+        let source = format!(
+            "fn broken() -> i64 {{ {malformed} return 1; }}\n\
+             fn recovered() -> i64 {{ return 0; }}\n"
+        );
+        let (_, output) = parse_text(&source);
+
+        assert!(output.has_errors(), "{malformed} unexpectedly parsed");
+        assert_eq!(
+            output.diagnostics.len(),
+            1,
+            "{malformed} should produce one owning syntax diagnostic: {:?}",
+            output.diagnostics
+        );
+        assert!(
+            output.ast.declarations.iter().any(|declaration| matches!(
+                declaration,
+                TopLevelDeclaration::Function(function) if function.name.text == "recovered"
+            )),
+            "parser did not recover after {malformed}: {:?}",
+            output.diagnostics
+        );
+    }
+}
+
+#[test]
 fn malformed_array_element_lists_recover_at_clear_boundaries() {
     for malformed in [
         "var values: i64[] = i64[]{1,};",

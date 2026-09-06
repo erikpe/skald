@@ -70,6 +70,10 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
                 ArrayConstructionArguments::Copy { source, .. } => {
                     pending.push((source, depth));
                 }
+                ArrayConstructionArguments::Indexed(initializer) => {
+                    pending.push((&initializer.length, depth));
+                    pending.push((&initializer.element, depth));
+                }
                 ArrayConstructionArguments::Elements(list) => {
                     pending.extend(list.elements.iter().map(|element| (element, depth)));
                 }

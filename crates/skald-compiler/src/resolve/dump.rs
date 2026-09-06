@@ -2110,6 +2110,23 @@ impl<'program> ResolvedDumper<'program> {
                         dumper.line("Copy", *copy_span);
                         dumper.indented(|dumper| dumper.expression(source));
                     }
+                    ResolvedArrayConstructionArguments::Indexed(initializer) => {
+                        dumper.line("Indexed", initializer.left_paren_span);
+                        dumper.indented(|dumper| {
+                            dumper.heading("Length");
+                            dumper.indented(|dumper| dumper.expression(&initializer.length));
+                            dumper.line("Semicolon", initializer.semicolon_span);
+                            dumper.write_indentation();
+                            let _ = write!(dumper.output, "Binding {} ", initializer.binding.id);
+                            write_quoted(&mut dumper.output, &initializer.binding.name);
+                            write_span(&mut dumper.output, initializer.binding.name_span);
+                            dumper.output.push('\n');
+                            dumper.line("FatArrow", initializer.arrow_span);
+                            dumper.heading("Element");
+                            dumper.indented(|dumper| dumper.expression(&initializer.element));
+                            dumper.line("RightParen", initializer.right_paren_span);
+                        });
+                    }
                     ResolvedArrayConstructionArguments::Elements(list) => {
                         dumper.line("Elements", list.left_brace_span);
                         dumper.indented(|dumper| {

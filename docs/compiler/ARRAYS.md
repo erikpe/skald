@@ -15,8 +15,9 @@ call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 The separately frozen indexed-construction direction extends direct element
-initialization to a dynamic length and canonical prefix loop; it is not yet an
-accepted compiler operation.
+initialization to a dynamic length and canonical prefix loop. Syntax and
+resolution are implemented behind an explicit type-checking availability
+gate; HIR and execution are not yet implemented.
 The separately frozen
 [structural bracket compiler contract](INDEXING_AND_SLICING.md) keeps these
 array operations on the intrinsic path and selects ordinary calls only after
@@ -290,12 +291,18 @@ consumption, and storage lifetime. The
 The frozen
 [indexed array construction contract](../language/ARRAYS.md#frozen-indexed-array-construction)
 extends element-list destination initialization from a static source list to
-one typed expression executed over a dynamic checked prefix. It preserves one
-explicit `ArrayTypeId`, outer ownership, typed `u64` length expression,
-immutable `i64` binding identity, and destination-directed stored-value plan
-through syntax, resolution, and HIR. Generic requirement collection selects
-only the operations used by the length, expression, and direct element
-initialization; it must not infer element default construction or assignment.
+one typed expression executed over a dynamic checked prefix. The implemented
+AST and resolved IR preserve the exact array type, outer ownership, length,
+punctuation, immutable `i64` binding identity, element expression, nesting,
+generic source requests, and deterministic dumps. The binding scope begins
+after the length and ends with the element expression. A deliberate diagnostic
+prevents this resolved form from entering HIR today.
+
+The future typed representation preserves one explicit `ArrayTypeId`, typed
+`u64` length expression, and destination-directed stored-value plan. Generic
+requirement collection selects only the operations used by the length,
+expression, and direct element initialization; it must not infer element
+default construction or assignment.
 
 HIR owns one indexed construction mode rather than desugaring to a source
 `while`, callable, `Vec`, or default-length array. The repeated plan may

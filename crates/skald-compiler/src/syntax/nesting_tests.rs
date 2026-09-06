@@ -17,6 +17,12 @@ fn nested_array_element_lists(lists: usize) -> String {
     (0..lists).fold("1".to_owned(), |element, _| format!("i64[]{{{element}}}"))
 }
 
+fn nested_indexed_array_initializers(initializers: usize) -> String {
+    (0..initializers).fold("1".to_owned(), |element, _| {
+        format!("i64[](1u; index => {element})")
+    })
+}
+
 fn source_with_return(expression: &str) -> String {
     format!("fn main() -> i64 {{ return {expression}; }}")
 }
@@ -278,4 +284,34 @@ fn array_element_lists_use_the_common_nesting_budget() {
         panic!("expected recovered function");
     };
     assert_eq!(function.name.text, "recovered");
+}
+
+#[test]
+fn indexed_array_initializers_use_the_common_nesting_budget() {
+    let representative = nested_indexed_array_initializers(24);
+    let output = parse_text(source_with_return(&representative));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let allowed_groups = MAX_SYNTAX_NESTING - 2;
+    for expression in [
+        format!(
+            "i64[]({}; index => index)",
+            grouped_expression(allowed_groups)
+        ),
+        format!("i64[](1u; index => {})", grouped_expression(allowed_groups)),
+    ] {
+        let output = parse_text(source_with_return(&expression));
+        assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    }
+
+    let excessive = format!(
+        "i64[](1u; index => {})",
+        grouped_expression(MAX_SYNTAX_NESTING - 1)
+    );
+    let output = parse_text(format!(
+        "{} fn recovered() -> i64 {{ return 0; }}",
+        source_with_return(&excessive)
+    ));
+    assert_single_nesting_error(&output);
+    assert_eq!(output.ast.declarations.len(), 1);
 }

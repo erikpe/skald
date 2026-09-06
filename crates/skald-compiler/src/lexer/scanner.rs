@@ -14,6 +14,7 @@ use super::{
 const COMPOUND_PUNCTUATION: &[(&str, TokenKind)] = &[
     ("..", TokenKind::DotDot),
     ("->", TokenKind::Arrow),
+    ("=>", TokenKind::FatArrow),
     ("::", TokenKind::DoubleColon),
     ("==", TokenKind::EqualEqual),
     ("!=", TokenKind::BangEqual),

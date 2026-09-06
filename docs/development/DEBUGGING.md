@@ -420,15 +420,15 @@ live. Shared array access should show a stable, copied, adopted, or secured
 owner anchor before the checked projection. MIR contains no header offsets or
 strides; those first appear in x86-64 layout and instruction selection.
 
-When the frozen indexed construction form is implemented, inspect one more
-array distinction: its dynamic requested length and initialized prefix must
-remain separate. HIR should show one typed repeated destination plan rather
-than a default array plus assignment. MIR should show allocation dominating a
-canonical prefix loop, one current-slot initialization and per-element cleanup
-per epoch, and publication only on the verified `prefix == length` exit. A
-`Vec<T>.to_array()` failure that requests element default construction or
-mentions vector identity below source typing indicates the wrong lowering
-boundary.
+For indexed construction, token and syntax dumps must retain `;` and `=>`, and
+the resolved dump must show one expression-local binding identity distinct
+from any shadowed outer binding. The length resolves before that scope opens;
+the binding must not resolve after the element expression. Today, a valid
+resolved form must stop at the dedicated type-checking availability diagnostic.
+Once later tasks activate HIR and MIR, inspect one more distinction: dynamic
+requested length and initialized prefix must remain separate. HIR should show
+one typed repeated destination plan rather than a default array plus assignment,
+and MIR should publish only on the verified `prefix == length` exit.
 
 The driver has four explicit target-independent verification products:
 

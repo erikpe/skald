@@ -10,6 +10,7 @@ use crate::{
 };
 
 use super::object_place::ResolvedObjectReceiver;
+use super::ResolvedLocal;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedExpression {
@@ -125,6 +126,17 @@ pub struct ResolvedArrayElementList {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedIndexedArrayInitializer {
+    pub left_paren_span: Span,
+    pub length: Box<ResolvedExpression>,
+    pub semicolon_span: Span,
+    pub binding: ResolvedLocal,
+    pub arrow_span: Span,
+    pub element: Box<ResolvedExpression>,
+    pub right_paren_span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedArrayConstructionArguments {
     Empty {
         left_paren_span: Span,
@@ -141,6 +153,7 @@ pub enum ResolvedArrayConstructionArguments {
         source: Box<ResolvedExpression>,
         right_paren_span: Span,
     },
+    Indexed(ResolvedIndexedArrayInitializer),
     Elements(ResolvedArrayElementList),
 }
 

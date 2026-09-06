@@ -9,10 +9,36 @@ use crate::{
     resolve::ResolvedCopyOperation,
     typeck::{
         capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE,
-        COPY_OPERATION_UNAVAILABLE, INVALID_ARRAY_ELEMENT, INVALID_EXTERNAL_DECLARATION,
-        PRIVATE_INITIALIZER_ACCESS, TYPE_MISMATCH,
+        COPY_OPERATION_UNAVAILABLE, INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE, INVALID_ARRAY_ELEMENT,
+        INVALID_EXTERNAL_DECLARATION, PRIVATE_INITIALIZER_ACCESS, TYPE_MISMATCH,
     },
 };
+
+#[test]
+fn indexed_array_construction_stops_at_the_explicit_semantic_gate() {
+    let output = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](3u; index => index);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE)
+            .count(),
+        1
+    );
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE
+            && diagnostic
+                .message
+                .contains("indexed array construction is not executable yet")
+    }));
+}
 
 #[test]
 fn selects_ordered_primitive_element_plans_and_lowers_them_to_mir() {

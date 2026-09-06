@@ -248,6 +248,10 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
                     syntax::ArrayConstructionArguments::Copy { source, .. } => {
                         self.visit_expression(source)
                     }
+                    syntax::ArrayConstructionArguments::Indexed(initializer) => {
+                        self.visit_expression(&initializer.length);
+                        self.visit_expression(&initializer.element);
+                    }
                     syntax::ArrayConstructionArguments::Elements(elements) => {
                         self.visit_expressions(&elements.elements)
                     }
