@@ -8,7 +8,9 @@ syntax failures for inferred lists and invalid separators.
 zero, one, and many lengths, every primitive element type, both outer
 ownership modes, index-dependent effects, and postfix observation. It also
 owns exact-class direct placement, copying, grouping, call results, ordinary
-array consumers, shared outer backing, and reverse destruction.
+array consumers, shared outer backing, and reverse destruction, plus optional
+presence/payload completion, jagged nested indexed construction, exact row
+copy versus produced-backing adoption, and recursive reverse destruction.
 `views.golden.toml` owns array aliases and slices plus
 their rejected rebinding and whole-pointee operations, and the core
 optional-array function-value boundary.

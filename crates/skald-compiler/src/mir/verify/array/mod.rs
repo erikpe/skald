@@ -6,7 +6,18 @@ mod projection;
 mod storage;
 mod structural;
 
-use super::super::model::{BlockId, StorageId};
+use super::super::model::{BlockId, MirType, StorageId};
+
+pub(super) fn indexed_element_is_executable(element: MirType) -> bool {
+    element.is_scalar_value() || indexed_element_requires_advance(element)
+}
+
+pub(super) fn indexed_element_requires_advance(element: MirType) -> bool {
+    matches!(
+        element,
+        MirType::Class(_) | MirType::Optional(_) | MirType::Array(_)
+    )
+}
 
 pub(super) struct IndexedArrayLoopShape {
     pub header: BlockId,

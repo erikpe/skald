@@ -551,12 +551,12 @@ Fresh ungrouped exact construction into newly initialized `T?` uses the
 optional payload as the final construction destination. Other object sources
 retain the ordinary copy/materialization semantics selected by HIR.
 
-An inline-optional array element-list slot is another newly initialized
+An inline-optional explicit or indexed array slot is another newly initialized
 optional destination. Primitive and class absence, injection, conditional
 copying, direct payload placement, and optional call-result copying use these
 same operations against the current unpublished array slot. Class presence is
-published only after payload completion, and the array's initialized prefix
-advances only after the complete wrapper is live.
+published only after payload completion, and an indexed array's initialized
+prefix advances only after the complete wrapper is live.
 
 Construction, payload assignment, and destruction may execute user code. MIR
 must keep the optional in an internal transition-safe state or guard its live

@@ -830,28 +830,18 @@ impl BodyLowerer<'_> {
                     },
                 ));
             }
-            HirStoredValueInitialization::Class(initialization) => {
+            HirStoredValueInitialization::Class(_)
+            | HirStoredValueInitialization::OptionalPrimitive { .. }
+            | HirStoredValueInitialization::OptionalClass(_)
+            | HirStoredValueInitialization::Array(_)
+            | HirStoredValueInitialization::Optional(_) => {
                 let destination = MirPlace::base(backing).project_array_element(array, prefix);
-                match initialization {
-                    HirObjectDestinationInitialization::Direct { producer, .. } => {
-                        self.lower_object_producer(producer, destination);
-                    }
-                    HirObjectDestinationInitialization::Copy {
-                        source, operation, ..
-                    } => {
-                        let source = self.lower_object_source(source);
-                        let Type::Class(class) = element.element else {
-                            invalid_array_hir();
-                        };
-                        self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
-                            destination,
-                            source,
-                            class,
-                            operation: lower_selected_copy_operation(*operation),
-                            span: element.span,
-                        }));
-                    }
-                }
+                self.lower_stored_value_initialize_at(
+                    destination,
+                    element.element,
+                    &element.value,
+                    element.span,
+                );
                 self.emit(MirInstruction::Array(
                     MirArrayInstruction::AdvanceIndexedElement {
                         backing,

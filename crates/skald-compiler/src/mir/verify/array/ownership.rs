@@ -508,6 +508,7 @@ enum IndexedConstructionPhase {
     Element,
     Bound,
     ValueReady,
+    ClassOptionalPayloadReady,
     Initialized,
     Exit,
 }
@@ -1109,22 +1110,33 @@ impl ArrayOwnerState {
             return;
         };
         if let Some(state) = self.indexed.get_mut(&backing) {
-            let exact_slot = matches!(
+            let exact_slot = indexed_slot_matches(destination, state);
+            let optional_payload = matches!(
                 destination.projections.as_slice(),
-                [MirPlaceProjection::ArrayElement {
-                    array,
-                    normalized_index,
-                }] if *array == state.array && *normalized_index == state.prefix
+                [
+                    MirPlaceProjection::ArrayElement {
+                        array,
+                        normalized_index,
+                    },
+                    MirPlaceProjection::OptionalPayload(_),
+                ] if *array == state.array && *normalized_index == state.prefix
             );
-            if !exact_slot || state.phase != IndexedConstructionPhase::Bound {
+            let valid = if exact_slot && state.phase == IndexedConstructionPhase::Bound {
+                state.phase = IndexedConstructionPhase::ValueReady;
+                true
+            } else if optional_payload && state.phase == IndexedConstructionPhase::ValueReady {
+                state.phase = IndexedConstructionPhase::ClassOptionalPayloadReady;
+                true
+            } else {
+                false
+            };
+            if !valid {
                 verifier.block_error(
                     function.callable(),
                     block,
                     "indexed class construction must complete exactly once in the current prefix slot",
                 );
-                return;
             }
-            state.phase = IndexedConstructionPhase::ValueReady;
             return;
         }
         let Some(state) = self.element_lists.get_mut(&backing) else {
@@ -1203,6 +1215,20 @@ impl ArrayOwnerState {
         let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
             return;
         };
+        if let Some(state) = self.indexed.get_mut(&backing) {
+            if !indexed_slot_matches(destination, state)
+                || state.phase != IndexedConstructionPhase::Bound
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "indexed optional initialization must complete exactly once in the current prefix slot",
+                );
+                return;
+            }
+            state.phase = IndexedConstructionPhase::ValueReady;
+            return;
+        }
         let Some(state) = self.element_lists.get_mut(&backing) else {
             if function
                 .storage(backing)
@@ -1305,6 +1331,20 @@ impl ArrayOwnerState {
         let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
             return;
         };
+        if let Some(state) = self.indexed.get_mut(&backing) {
+            if !indexed_slot_matches(destination, state)
+                || state.phase != IndexedConstructionPhase::Bound
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "indexed nested-array transfer must complete exactly once in the current prefix slot",
+                );
+                return;
+            }
+            state.phase = IndexedConstructionPhase::ValueReady;
+            return;
+        }
         let Some(state) = self.element_lists.get_mut(&backing) else {
             if function
                 .storage(backing)
@@ -1349,6 +1389,20 @@ impl ArrayOwnerState {
         let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
             return;
         };
+        if let Some(state) = self.indexed.get_mut(&backing) {
+            if !indexed_slot_matches(destination, state)
+                || state.phase != IndexedConstructionPhase::ClassOptionalPayloadReady
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "indexed class optional publication requires a completed current payload",
+                );
+                return;
+            }
+            state.phase = IndexedConstructionPhase::ValueReady;
+            return;
+        }
         let Some(state) = self.element_lists.get_mut(&backing) else {
             if function
                 .storage(backing)
@@ -1401,6 +1455,16 @@ impl ArrayOwnerState {
         self.checked_range_offsets.remove(&storage);
         self.range_offset_owners.remove(&storage);
     }
+}
+
+fn indexed_slot_matches(destination: &MirPlace, state: &IndexedConstructionState) -> bool {
+    matches!(
+        destination.projections.as_slice(),
+        [MirPlaceProjection::ArrayElement {
+            array,
+            normalized_index,
+        }] if *array == state.array && *normalized_index == state.prefix
+    )
 }
 
 fn completed_class_destination(instruction: &MirInstruction) -> Option<&MirPlace> {

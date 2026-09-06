@@ -512,12 +512,14 @@ responsibilities. The runtime never receives an array type, source expression,
 prefix, lifecycle operation, or `Vec` identity. Current non-unwinding failure
 adds no runtime partial-prefix cleanup service.
 
-The implemented primitive and exact-class paths continue to call only `ska_rt_alloc`,
-`ska_rt_free`, the existing panic reporter on failure edges, and the unchanged
-`ska_rt_abi_v9` marker. Its requested length, initialized prefix, index binding,
-and completion proof are compiler-owned storage and emit no runtime metadata.
-Exact-class element construction reuses ordinary internal initializer,
-result-destination, copy-constructor, and destructor conventions.
+The implemented primitive, exact-class, inline-optional, and nested inline-
+array paths continue to call only `ska_rt_alloc`, `ska_rt_free`, the existing
+panic reporter on failure edges, and the unchanged `ska_rt_abi_v9` marker. The
+requested lengths, initialized prefixes, index bindings, and completion proofs
+are compiler-owned storage and emit no runtime metadata. Exact-class elements
+reuse ordinary internal lifecycle conventions; optionals and nested arrays
+reuse their existing layout, publication, transfer, copy, and destruction
+conventions.
 
 ## Implemented primitive operator ABI boundary
 

@@ -15,3 +15,11 @@ source = "indexed_class_arrays.ska"
 [[test.run]]
 name = "placement_copy_consumers_and_reverse_cleanup"
 expect = { stdout = { file = "data/indexed_class_arrays.stdout" } }
+
+[[test]]
+name = "optional-and-nested"
+mode = "run"
+source = "indexed_optional_nested_arrays.ska"
+[[test.run]]
+name = "presence_copy_jagged_nesting_and_recursive_cleanup"
+expect = { stdout = { file = "data/indexed_optional_nested_arrays.stdout" } }

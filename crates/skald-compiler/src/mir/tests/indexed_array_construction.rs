@@ -33,6 +33,18 @@ fn class_indexed_program() -> MirProgram {
     ))
 }
 
+fn composite_indexed_program() -> MirProgram {
+    lower_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn main() -> i64 {\n",
+        "  var optional: Item?[] = Item?[](2u; index => Item(index));\n",
+        "  var rows: i64[][] = i64[][](2u; row =>\n",
+        "    i64[]((u64) (row + 1); column => row * 10 + column));\n",
+        "  return optional[1]!.value + rows[1][1];\n",
+        "}\n",
+    ))
+}
+
 fn indexed_instruction_position(
     program: &MirProgram,
     function: FunctionId,
@@ -214,6 +226,146 @@ fn exact_class_indexed_construction_reuses_final_destination_operations() {
             }));
     }
     assert!(!dump.contains("array-initialize-next"), "{dump}");
+}
+
+#[test]
+fn optional_and_nested_indexed_construction_reuse_independent_prefix_protocols() {
+    let program = composite_indexed_program();
+    verify_mir(&program).expect("optional and nested indexed construction MIR must verify");
+    let main = program.definitions.get(program.entry_function).unwrap();
+    let dump = dump_mir(&program);
+    let protocols: Vec<_> = main
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Array(MirArrayInstruction::BeginIndexed {
+                backing,
+                prefix,
+                length,
+                ..
+            }) => Some((*backing, *prefix, *length)),
+            _ => None,
+        })
+        .collect();
+
+    assert!(
+        protocols.len() == 3,
+        "unexpected indexed protocols {protocols:?}:\n{dump}"
+    );
+    assert_eq!(dump.matches("array-indexed-advance-complete").count(), 2);
+    for (index, protocol) in protocols.iter().enumerate() {
+        assert!(protocols[index + 1..]
+            .iter()
+            .all(|other| protocol.0 != other.0 && protocol.1 != other.1 && protocol.2 != other.2));
+    }
+    assert!(dump.contains("class-optional-publish"), "{dump}");
+    assert!(dump.contains("array-adopt"), "{dump}");
+}
+
+#[test]
+fn verifier_rejects_optional_publication_and_nested_prefix_cross_consumption() {
+    let mut optional = lower_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Item?[] = Item?[](2u; index => Item(index));\n",
+        "  return values[1]!.value;\n",
+        "}\n",
+    ));
+    verify_mir(&optional).expect("baseline optional indexed MIR must verify");
+    let entry = optional.entry_function;
+    let function = optional.definitions.get_mut_for_test(entry).unwrap();
+    let (block, publish, advance) = function
+        .body
+        .blocks
+        .iter()
+        .enumerate()
+        .find_map(|(block_index, block)| {
+            let publish = block.instructions.iter().position(|instruction| {
+                matches!(instruction, MirInstruction::ClassOptionalPublish(_))
+            })?;
+            let advance = block.instructions.iter().position(|instruction| {
+                matches!(
+                    instruction,
+                    MirInstruction::Array(MirArrayInstruction::AdvanceIndexedElement { .. })
+                )
+            })?;
+            Some((block_index, publish, advance))
+        })
+        .unwrap();
+    function.body.blocks[block]
+        .instructions
+        .swap(publish, advance);
+    assert_rejected(
+        &optional,
+        "indexed array prefix may advance only after the current lifecycle-bearing slot is complete",
+    );
+
+    let mut nested = lower_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var rows: i64[][] = i64[][](2u; row =>\n",
+        "    i64[]((u64) (row + 1); column => row * 10 + column));\n",
+        "  return rows[1][1];\n",
+        "}\n",
+    ));
+    verify_mir(&nested).expect("baseline nested indexed MIR must verify");
+    let entry = nested.entry_function;
+    let function = nested.definitions.get(entry).unwrap();
+    let outer_backing = function
+        .storage
+        .iter()
+        .find_map(|storage| match storage.ty {
+            MirType::Array(array)
+                if storage.kind == MirStorageKind::ArrayBacking
+                    && nested
+                        .array_types
+                        .get(array)
+                        .is_some_and(|metadata| matches!(metadata.element, MirType::Array(_))) =>
+            {
+                Some(storage.id)
+            }
+            _ => None,
+        })
+        .unwrap();
+    let inner_prefix = function
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Array(MirArrayInstruction::BeginIndexed {
+                backing, prefix, ..
+            }) if *backing != outer_backing => Some(*prefix),
+            _ => None,
+        })
+        .unwrap();
+    let function = nested.definitions.get_mut_for_test(entry).unwrap();
+    let destination = function
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Array(MirArrayInstruction::Adopt { destination, .. })
+                if destination.base.local_storage() == Some(outer_backing) =>
+            {
+                Some(destination)
+            }
+            _ => None,
+        })
+        .unwrap();
+    let MirPlaceProjection::ArrayElement {
+        normalized_index, ..
+    } = &mut destination.projections[0]
+    else {
+        panic!("nested indexed destination must select the outer current slot");
+    };
+    *normalized_index = inner_prefix;
+    assert_rejected(
+        &nested,
+        "indexed nested-array transfer must complete exactly once in the current prefix slot",
+    );
 }
 
 #[test]

@@ -1,0 +1,63 @@
+import std::io;
+
+class Trace {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Trace) {
+        self.value = source.value + 10;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+
+    destroy {
+        std::io::println_i64(self.value + 100);
+    }
+}
+
+fn maybe_number(index: i64) -> i64? {
+    if (index == 1) {
+        return none;
+    }
+    return index + 20;
+}
+
+fn maybe_trace(index: i64) -> Trace? {
+    if (index == 0) {
+        return none;
+    }
+    return Trace(index + 20);
+}
+
+fn exercise() -> unit {
+    var seed: Trace = Trace(5);
+    var numbers: i64?[] = i64?[](3u; index => maybe_number(index));
+    var shared_numbers: shared i64?[] = new i64?[](2u; index => index);
+    var conditional: Trace?[] = Trace?[](3u; index => maybe_trace(index));
+    var grouped: Trace?[] = Trace?[](2u; index => (Trace(index + 1)));
+    var named: Trace?[] = Trace?[](2u; index => seed);
+    var rows: Trace[][] = Trace[][](3u; row =>
+        Trace[]((u64) (row + 1); column => Trace(row * 10 + column)));
+
+    std::io::println_bool(numbers[1] is none);
+    std::io::println_i64(numbers[0]!);
+    std::io::println_bool(shared_numbers->[0] is some);
+    std::io::println_i64(numbers[2]!);
+    std::io::println_bool(conditional[0] is none);
+    std::io::println_i64(conditional[1]!.read());
+    std::io::println_i64(grouped[1]!.read());
+    std::io::println_i64(named[0]!.read());
+    std::io::println_i64((i64) rows[2].len());
+    std::io::println_i64(rows[2][2].read());
+    return;
+}
+
+fn main() -> i64 {
+    exercise();
+    return 0;
+}

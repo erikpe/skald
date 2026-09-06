@@ -1,7 +1,8 @@
 # Array Compiler and Runtime Contract
 
 Status: **implemented contract on x86-64, including explicit element-list and
-primitive or exact-class indexed representation and execution**.
+primitive, exact-class, inline-optional, or nested inline-array indexed
+representation and execution**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler lowers all
@@ -15,9 +16,9 @@ call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 Indexed construction extends direct element initialization to a dynamic length
-and canonical prefix loop. Primitive and exact-class element plans execute
-through verified MIR and x86-64; composite plans remain behind the explicit
-executable-lowering availability gate.
+and canonical prefix loop. Primitive, exact-class, inline-optional, and nested
+inline-array element plans execute through verified MIR and x86-64; shared-
+owner plans remain behind the explicit executable-lowering availability gate.
 The separately frozen
 [structural bracket compiler contract](INDEXING_AND_SLICING.md) keeps these
 array operations on the intrinsic path and selects ordinary calls only after
@@ -311,8 +312,9 @@ HIR owns one indexed construction mode rather than desugaring to a source
 contain primitive, exact-class, optional, nested-array, shared-owner, or
 optional-owner initialization selected once during type checking. Lower phases
 must not recover its ownership or lifecycle meaning from expression shape.
-Primitive and exact-class plans proceed to MIR. One structured lowering
-diagnostic stops the remaining composite plans before MIR construction.
+Primitive, exact-class, inline-optional, and nested inline-array plans proceed
+to MIR. One structured lowering diagnostic stops shared-owner and optional-
+owner plans before MIR construction.
 
 MIR retains one runtime `u64` length, one unpublished backing, one `u64`
 initialized prefix, and canonical CFG. The loop header proves `prefix <
@@ -332,19 +334,23 @@ shared-owner state must become complete before the outer prefix advances.
 Verified MIR uses distinct requested-length and dynamic-prefix storage, a
 canonical `ArrayLoop` binding epoch, per-element full-expression cleanup, and
 a complete-prefix publication operation. Primitive initialization fuses the
-store and prefix advance. Exact-class initialization supplies the current slot
-as the ordinary producer or copy-construction destination, then advances
-through a distinct completion transition. Verification requires the checked
+store and prefix advance. Lifecycle-bearing initialization supplies the current
+slot or optional payload as its ordinary destination, then advances through a
+distinct completion transition. Optional publication must follow payload
+completion. Nested indexed constructions own independent backing, requested-
+length, prefix, and epoch state before their produced backing is adopted into
+the outer slot. Verification requires the checked
 allocation to use the exact value stored as the loop length and rejects any
 alternate entry, exit, backedge, destination, completion count, or backing
 consumption.
 
 The x86-64 backend consumes only this verified target-independent CFG and
 reuses checked allocation, primitive stores, exact-class initializer/result/
-copy destinations, prefix arithmetic, publication, and ordinary reverse
-destruction. The runtime receives no callback, expression, array type, prefix,
-lifecycle identity, or vector operation, and ABI version 9 remains unchanged.
-Composite destination lowering follows in later roadmap phases.
+copy destinations, optional layout and publication, nested-array copy/adoption,
+prefix arithmetic, publication, and ordinary recursive reverse destruction.
+The runtime receives no callback, expression, array type, prefix, lifecycle
+identity, or vector operation, and ABI version 9 remains unchanged. Shared-
+owner destination lowering follows in the next roadmap phase.
 
 The complete decisions and rejected alternatives are preserved in the
 [design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md), and

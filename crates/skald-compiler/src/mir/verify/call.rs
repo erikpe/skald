@@ -760,6 +760,24 @@ impl<'mir> Verifier<'mir> {
                             }))
                         || (place.projections.is_empty()
                             && matches!(place.base, MirPlaceBase::SharedAllocationPayload(_)))
+                        || (matches!(place.base, MirPlaceBase::Storage(_))
+                            && function
+                                .storage(place.base.expect_local_storage())
+                                .is_some_and(|storage| {
+                                    storage.kind == MirStorageKind::ArrayBacking
+                                        && matches!(
+                                            place.projections.split_first(),
+                                            Some((
+                                                crate::mir::MirPlaceProjection::ArrayElement {
+                                                    ..
+                                                },
+                                                remaining,
+                                            )) if remaining.iter().all(|projection| matches!(
+                                                projection,
+                                                crate::mir::MirPlaceProjection::AggregateOptionalPayload(_)
+                                            ))
+                                        )
+                                }))
                 });
                 if destination.map(|place| place.ty) != Some(MirType::Optional(optional))
                     || !complete_destination
@@ -767,7 +785,7 @@ impl<'mir> Verifier<'mir> {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "optional-returning call requires complete matching caller-owned destination storage",
+                        "optional-returning call requires complete matching caller-owned destination storage or an unpublished array-element destination",
                     );
                 }
             }

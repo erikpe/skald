@@ -85,10 +85,10 @@ The in-progress
 implements the frozen `T[](length; index => expression)` and shared-outer
 forms through verified dynamic-prefix MIR, then adds the ordinary generic
 `Vec<T>.to_array()` adopter. Frontend source retention, scoped resolution, and
-typed repeated destination selection plus verified primitive and exact-class
-dynamic-prefix execution are complete; optional and nested-array composition
-is next. The completed explicit element-list construction pipeline is its
-implementation foundation.
+typed repeated destination selection plus verified primitive, exact-class,
+optional, and nested-array dynamic-prefix execution are complete; shared-owner
+composition is next. The completed explicit element-list construction pipeline
+is its implementation foundation.
 
 ## Design proposals
 
@@ -100,7 +100,8 @@ shared-outer forms use direct destination initialization, per-element cleanup,
 a verified dynamic initialized prefix, and no runtime ABI or `Vec` compiler
 special case. The active
 [implementation roadmap](INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md) owns delivery;
-primitive and exact-class dynamic-prefix execution are complete.
+primitive, exact-class, optional, and nested-array dynamic-prefix execution are
+complete.
 
 The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)

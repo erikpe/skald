@@ -84,7 +84,8 @@ fn indexed_array_hir_reports_a_structured_gate_before_mir_lowering() {
         concat!(
             "class Item { init(value: i64) {} }\n",
             "fn main() -> i64 {\n",
-            "  var values: Item?[] = Item?[](1u; index => Item(index));\n",
+            "  var value: shared Item = new Item(1);\n",
+            "  var values: (shared Item)[] = (shared Item)[](1u; index => value);\n",
             "  return 0;\n",
             "}\n",
         ),

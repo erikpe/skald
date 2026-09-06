@@ -1,6 +1,6 @@
 # Indexed Array Construction Roadmap
 
-Status: in progress; IA0 through IA3 are complete and IA4 is next.
+Status: in progress; IA0 through IA4 are complete and IA5 is next.
 
 This roadmap implements the frozen
 [indexed array construction contract](../language/ARRAYS.md#indexed-array-construction)
@@ -56,7 +56,7 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 - [x] IA1 — Select typed repeated destination initialization
 - [x] IA2 — Execute verified primitive dynamic-prefix construction
 - [x] IA3 — Execute exact-class destination placement and copying
-- [ ] IA4 — Compose optional and nested-array elements
+- [x] IA4 — Compose optional and nested-array elements
 - [ ] IA5 — Compose shared and optional-shared owner elements
 - [ ] IA6 — Add `Vec<T>.to_array()`, harden, and publish
 
@@ -257,21 +257,21 @@ backedge, and no default or assignment operation is introduced.
 **Purpose:** Prove that the dynamic-prefix protocol composes with conditional
 payload lifetime and recursively owning array values.
 
-- [ ] Initialize optional primitive and exact-class slots from absence,
+- [x] Initialize optional primitive and exact-class slots from absence,
       injection, optional sources, and conditional expressions using existing
       payload destination plans.
-- [ ] Publish optional presence only after its payload is complete and advance
+- [x] Publish optional presence only after its payload is complete and advance
       the outer array prefix only after the complete optional value is live.
-- [ ] Direct eligible fresh class values into present payload destinations
+- [x] Direct eligible fresh class values into present payload destinations
       while preserving named/materialized copy and grouping behavior.
-- [ ] Initialize nested inline-array elements through exact array copy or
+- [x] Initialize nested inline-array elements through exact array copy or
       produced-backing adoption, including inner indexed construction with an
       independent requested length, prefix, loop, and cleanup epoch.
-- [ ] Preserve jagged lengths, nested source/effect order, backing ownership,
+- [x] Preserve jagged lengths, nested source/effect order, backing ownership,
       and reverse recursive cleanup without rectangular-shape inference.
-- [ ] Extend verifier nesting rules so optional state, inner prefixes, and
+- [x] Extend verifier nesting rules so optional state, inner prefixes, and
       outer prefix advancement cannot be confused or cross-consumed.
-- [ ] Reuse existing optional and nested-array x86-64 layout, guards, transfer,
+- [x] Reuse existing optional and nested-array x86-64 layout, guards, transfer,
       copy, destruction, and publication machinery.
 
 **Tests:** Absent/present primitive and class optionals; fresh/named/grouped

@@ -181,22 +181,22 @@ impl Verifier<'_> {
             MirArrayInstruction::AdvanceIndexedElement {
                 backing, prefix, ..
             } => {
-                let class_element = function.storage(*backing).is_some_and(|storage| {
+                let lifecycle_element = function.storage(*backing).is_some_and(|storage| {
                     storage.kind == MirStorageKind::ArrayBacking
                         && matches!(storage.ty, MirType::Array(array) if self
                             .program
                             .array_type(array)
-                            .is_some_and(|metadata| matches!(metadata.element, MirType::Class(_))))
+                            .is_some_and(|metadata| super::indexed_element_requires_advance(metadata.element)))
                 });
                 let prefix_matches = function
                     .storage(*prefix)
                     .map(|storage| (storage.kind, storage.ty))
                     == Some((MirStorageKind::ArrayPosition, MirType::U64));
-                if !class_element || !prefix_matches {
+                if !lifecycle_element || !prefix_matches {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "indexed class completion requires exact class backing and `u64` prefix storage",
+                        "indexed lifecycle-bearing completion requires exact backing and `u64` prefix storage",
                     );
                 }
             }
@@ -588,8 +588,7 @@ fn indexed_executable_storage_matches(
             .program
             .array_type(array)
             .is_some_and(|metadata| {
-                metadata.element.is_scalar_value()
-                    || matches!(metadata.element, MirType::Class(_))
+                super::indexed_element_is_executable(metadata.element)
             }))
     });
     backing_matches

@@ -9,7 +9,7 @@ use super::{
         },
         context::Verifier,
     },
-    IndexedArrayLoopShape,
+    indexed_element_requires_advance, IndexedArrayLoopShape,
 };
 
 impl Verifier<'_> {
@@ -197,7 +197,7 @@ impl Verifier<'_> {
             .is_some_and(|array| {
                 if array.element.is_scalar_value() {
                     initialization_count == 1 && advance_count == 0
-                } else if matches!(array.element, MirType::Class(_)) {
+                } else if indexed_element_requires_advance(array.element) {
                     initialization_count == 0 && advance_count == 1
                 } else {
                     false

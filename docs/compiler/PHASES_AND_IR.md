@@ -2595,18 +2595,20 @@ outer ownership, lexical binding identity, nested traversal, generic source
 requests, and deterministic dumps. Type checking requires an exact `u64`
 length, activates one read-only exact-`i64` local only for the element, and
 selects one reusable stored-value destination plan without requiring default
-construction or assignment. Primitive and exact-class plans continue through
-MIR and native execution; a separate executable-lowering diagnostic stops
-composite plans before MIR.
+construction or assignment. Primitive, exact-class, inline-optional, and
+nested inline-array plans continue through MIR and native execution; a
+separate executable-lowering diagnostic stops shared-owner plans before MIR.
 
-Primitive and exact-class indexed construction use a dynamic initialized-prefix MIR loop:
+Executable indexed construction uses a dynamic initialized-prefix MIR loop:
 checked `u64`
 length and unpublished backing dominate the header, the current prefix
 supplies one safe immutable `i64` binding epoch, the selected category-specific
 operation initializes only that slot, completion advances the prefix, and
 per-element cleanup precedes the backedge. Publication requires an explicit
-verified `prefix == length` exit fact. Exact-class and composite element
-composite families reuse this boundary in later phases. Its phase ownership is detailed in the
+verified `prefix == length` exit fact. Optional payload publication precedes
+outer advancement, while nested indexed arrays retain independent inner
+backing and prefix proof state before adoption into the outer slot. Its phase
+ownership is detailed in the
 [array compiler contract](ARRAYS.md#frozen-indexed-construction-representation).
 
 Optional types use deterministic interned identities rather than recursively

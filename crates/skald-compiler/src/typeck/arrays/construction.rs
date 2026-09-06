@@ -110,6 +110,10 @@ impl CallableChecker<'_, '_> {
                     &element.value,
                     HirStoredValueInitialization::Scalar(_)
                         | HirStoredValueInitialization::Class(_)
+                        | HirStoredValueInitialization::OptionalPrimitive { .. }
+                        | HirStoredValueInitialization::OptionalClass(_)
+                        | HirStoredValueInitialization::Array(_)
+                        | HirStoredValueInitialization::Optional(_)
                 ) {
                     self.lowering_diagnostics.push(
                         Diagnostic::error(
@@ -118,7 +122,7 @@ impl CallableChecker<'_, '_> {
                         )
                         .with_primary_label(
                             initializer.arrow_span,
-                            "primitive and exact-class elements are executable; composite lowering is pending",
+                            "primitive, exact-class, optional, and nested-array elements are executable; shared-owner lowering is pending",
                         ),
                     );
                 }

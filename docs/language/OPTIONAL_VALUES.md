@@ -483,11 +483,13 @@ temporary `Item`, invoke copy construction, or extend the existing optional
 copy-elision permission. Other source shapes retain their ordinary materialize,
 copy, assignment, and cleanup behavior.
 
-The same initialization rules apply to explicit inline-optional array element
-lists. For example, `Item?[]{none, Item(), existing}` initializes an absent
-slot, directly constructs one present payload, and conditionally copies the
-ordinary source into another present payload. It does not default-construct
-the array elements or assign over live placeholder values.
+The same initialization rules apply to explicit and indexed inline-optional
+array elements. For example, `Item?[]{none, Item(), existing}` initializes an
+absent slot, directly constructs one present payload, and conditionally copies
+the ordinary source into another present payload. `Item?[](length; index =>
+expression)` repeats the same operation at each unpublished dynamic slot and
+advances its array prefix only after the optional is complete. Neither form
+default-constructs the array elements or assigns over live placeholder values.
 
 ## Presence tests
 

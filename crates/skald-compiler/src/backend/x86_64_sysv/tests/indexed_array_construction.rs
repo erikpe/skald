@@ -174,3 +174,90 @@ fn class_local_indexed_construction_may_use_a_private_initializer() {
 
     assert_eq!(run_native_assembly(&output).code(), Some(21), "{output}");
 }
+
+#[test]
+fn optional_indexed_arrays_preserve_presence_payload_copy_and_cleanup() {
+    let source = concat!(
+        "class Item {\n",
+        "  static constructed: i64;\n",
+        "  static copied: i64;\n",
+        "  static destroyed: i64;\n",
+        "  value: i64;\n",
+        "  static fn construct_value(value: i64) -> i64 {\n",
+        "    Item.constructed = Item.constructed + 1; return value;\n",
+        "  }\n",
+        "  static fn copy_value(value: i64) -> i64 {\n",
+        "    Item.copied = Item.copied + 1; return value + 10;\n",
+        "  }\n",
+        "  init(value: i64) { self.value = Item.construct_value(value); }\n",
+        "  copy(ref source: Item) { self.value = Item.copy_value(source.value); }\n",
+        "  destroy { Item.destroyed = Item.destroyed + 1; }\n",
+        "}\n",
+        "fn maybe_number(index: i64) -> i64? {\n",
+        "  if (index == 1) { return none; }\n",
+        "  return index + 20;\n",
+        "}\n",
+        "fn maybe_item(index: i64) -> Item? {\n",
+        "  if (index == 0) { return none; }\n",
+        "  return Item(index + 4);\n",
+        "}\n",
+        "fn exercise() -> i64 {\n",
+        "  var seed: Item? = Item(7);\n",
+        "  var numbers: i64?[] = i64?[](3u; index => maybe_number(index));\n",
+        "  var shared_numbers: shared i64?[] = new i64?[](2u; index => index);\n",
+        "  var absent: Item?[] = Item?[](2u; index => none);\n",
+        "  var fresh: Item?[] = Item?[](2u; index => Item(index + 1));\n",
+        "  var copied: Item?[] = Item?[](2u; index => seed);\n",
+        "  var grouped: Item?[] = Item?[](2u; index => (Item(index + 3)));\n",
+        "  var conditional: Item?[] = Item?[](2u; index => maybe_item(index));\n",
+        "  if (numbers[0]! != 20 || numbers[1] is some || numbers[2]! != 22) { return 1; }\n",
+        "  if (shared_numbers->[1]! != 1 || absent[0] is some) { return 2; }\n",
+        "  if (fresh[1]!.value != 2 || copied[1]!.value != 17) { return 3; }\n",
+        "  if (grouped[1]!.value != 14 || conditional[0] is some || conditional[1]!.value != 15) { return 4; }\n",
+        "  if (Item.constructed != 6 || Item.copied != 5 || Item.destroyed != 3) { return 5; }\n",
+        "  return 0;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var result: i64 = exercise();\n",
+        "  if (result != 0) { return result; }\n",
+        "  if (Item.destroyed != 11) { return 91; }\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn nested_indexed_arrays_copy_adopt_and_keep_prefixes_independent() {
+    let source = concat!(
+        "fn make_row(row: i64) -> i64[] {\n",
+        "  return i64[]((u64) (row + 1); column => row * 10 + column);\n",
+        "}\n",
+        "fn maybe_row(row: i64) -> i64[]? {\n",
+        "  if (row == 0) { return none; }\n",
+        "  return make_row(row);\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var named: i64[] = i64[]{7, 8};\n",
+        "  var copies: i64[][] = i64[][](2u; row => named);\n",
+        "  var adopted: i64[][] = i64[][](3u; row => make_row(row));\n",
+        "  var nested: i64[][] = i64[][](3u; row =>\n",
+        "    i64[]((u64) (row + 1); column => row * 10 + column));\n",
+        "  var optional: i64[]?[] = i64[]?[](2u; row => maybe_row(row));\n",
+        "  var shared: shared i64[][] = new i64[][](2u; row => make_row(row + 3));\n",
+        "  if (copies[1].len() != 2u || copies[1][0] != 7) { return 1; }\n",
+        "  if (adopted[0].len() != 1u || adopted[2].len() != 3u || adopted[2][2] != 22) { return 2; }\n",
+        "  if (nested[1].len() != 2u || nested[1][1] != 11) { return 3; }\n",
+        "  if (optional[0] is some || optional[1]![1] != 11) { return 4; }\n",
+        "  if (shared->[0].len() != 4u || shared->[1][4] != 44) { return 5; }\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}

@@ -160,7 +160,7 @@ fn indexed_construction_selects_every_stored_value_family_without_default_or_ass
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert_eq!(output.lowering_diagnostics.len(), 4);
+    assert_eq!(output.lowering_diagnostics.len(), 2);
     let dump = dump_hir(output.hir.as_ref().unwrap());
     for selected in [
         "ScalarInitialization",
@@ -216,6 +216,29 @@ fn indexed_direct_class_initialization_needs_no_default_or_copy_plan() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
+}
+
+#[test]
+fn indexed_optional_call_results_require_only_the_selected_conditional_copy() {
+    let source = concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn maybe(value: i64) -> Item? { return Item(value); }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Item?[] = Item?[](1u; index => maybe(index));\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut resolved = resolve_text(source);
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let output = crate::typeck::type_check(&resolved);
+
+    assert!(output.hir.is_none());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
+    assert!(output.lowering_diagnostics.is_empty());
 }
 
 #[test]
