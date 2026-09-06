@@ -1,6 +1,9 @@
 use rustc_apfloat::{ieee::Double, Float, Round, Status, StatusAnd};
 
-use crate::Binary64;
+use crate::{
+    apfloat::{apfloat_to_binary64, binary64_to_apfloat},
+    Binary64,
+};
 
 const ROUNDING: Round = Round::NearestTiesToEven;
 
@@ -50,17 +53,9 @@ fn evaluate(
     right: Binary64,
     operation: impl FnOnce(Double, Double) -> StatusAnd<Double>,
 ) -> Binary64 {
-    let result = operation(to_apfloat(left), to_apfloat(right));
+    let result = operation(binary64_to_apfloat(left), binary64_to_apfloat(right));
     consume_arithmetic_status(result.status);
-
-    Binary64::from_bits(
-        u64::try_from(result.value.to_bits())
-            .expect("rustc_apfloat::ieee::Double produced more than 64 bits"),
-    )
-}
-
-fn to_apfloat(value: Binary64) -> Double {
-    Double::from_bits(u128::from(value.to_bits()))
+    apfloat_to_binary64(result.value)
 }
 
 fn consume_arithmetic_status(status: Status) {

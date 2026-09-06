@@ -1,8 +1,6 @@
 use core::cmp::Ordering;
 
-use rustc_apfloat::{ieee::Double, Float};
-
-use crate::Binary64;
+use crate::{apfloat::binary64_to_apfloat, Binary64};
 
 /// The result of an IEEE binary64 numeric comparison.
 ///
@@ -24,8 +22,8 @@ pub enum Binary64Comparison {
 impl Binary64 {
     /// Compares two values using IEEE binary64 numeric comparison semantics.
     pub fn compare(self, other: Self) -> Binary64Comparison {
-        let left = Double::from_bits(u128::from(self.to_bits()));
-        let right = Double::from_bits(u128::from(other.to_bits()));
+        let left = binary64_to_apfloat(self);
+        let right = binary64_to_apfloat(other);
 
         match left.partial_cmp(&right) {
             Some(Ordering::Less) => Binary64Comparison::Less,

@@ -43,9 +43,11 @@ optimization.
   has established the unpublished `crates/skald-binary64` compiler-support
   crate. Its Skald-owned raw-bit facade owns exact representation, sign
   inversion, classification, nearest-ties-to-even arithmetic, and four-way
-  numeric comparison while isolating the pinned `rustc_apfloat` dependency
-  from compiler IR, passes, targets, and generated programs. Conversions,
-  literal migration, and optimizer use remain staged roadmap work.
+  numeric comparison. It also owns exact integer/boolean conversion and
+  unsigned decimal-literal rounding while isolating the pinned
+  `rustc_apfloat` dependency from compiler IR, passes, targets, and generated
+  programs. Compiler literal migration and optimizer use remain staged roadmap
+  work.
 - `crates/skald-docs-check` validates the repository documentation structure;
   it is tooling, not a compiler phase.
 - `crates/skald-golden` owns strict golden-spec decoding, contained fixture

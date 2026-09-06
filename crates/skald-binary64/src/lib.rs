@@ -6,7 +6,9 @@
 //!
 //! Arithmetic always uses round-to-nearest, ties-to-even. Numeric comparison
 //! returns the explicit [`Binary64Comparison`] outcome, including unordered
-//! comparisons involving NaNs.
+//! comparisons involving NaNs. Integer conversions use explicit
+//! [`IntegerConversion`] results, and [`parse_decimal`] accepts exactly the
+//! unsigned shape of a Skald floating literal.
 //!
 //! The facade deliberately does not implement Rust's comparison traits. Bitwise
 //! identity and IEEE numeric comparisons answer different questions, so callers
@@ -28,11 +30,16 @@
 //! let _ = one < two;
 //! ```
 
+mod apfloat;
 mod arithmetic;
 mod comparison;
+mod conversion;
+mod decimal;
 mod value;
 
 pub use comparison::Binary64Comparison;
+pub use conversion::IntegerConversion;
+pub use decimal::{parse_decimal, DecimalConversion};
 pub use value::Binary64;
 
 #[cfg(test)]

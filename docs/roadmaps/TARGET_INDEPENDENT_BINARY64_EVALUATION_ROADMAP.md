@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: in progress; BE0 and BE1 are complete, and BE2 is next.
+Status: in progress; BE0 through BE2 are complete, and BE3 is next.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -96,7 +96,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 
 - [x] BE0 — Establish the isolated binary64 crate and dependency boundary
 - [x] BE1 — Implement exact binary64 arithmetic and comparison
-- [ ] BE2 — Implement conversions and decimal parsing
+- [x] BE2 — Implement conversions and decimal parsing
 - [ ] BE3 — Migrate compiler literal rounding to the binary64 authority
 - [ ] BE4 — Extend primitive constant evaluation and propagation
 - [ ] BE5 — Generalize checked-scalar topology, carriers, and solved facts
@@ -181,24 +181,24 @@ dependency exception state and API types remain private.
 **Purpose:** Complete the binary64 service required by primitive casts and
 source literals without importing compiler types or diagnostics.
 
-- [ ] Add exact nearest-ties-to-even conversion from `i64`, `u64`, `u8`, and
+- [x] Add exact nearest-ties-to-even conversion from `i64`, `u64`, `u8`, and
       `bool`, with boolean producing exact positive `0.0` or `1.0`.
-- [ ] Add exact `to_bool`, returning false for either zero and true for every
+- [x] Add exact `to_bool`, returning false for either zero and true for every
       other binary64 representation, including every NaN.
-- [ ] Add `truncating_to_i64`, `truncating_to_u64`, and
+- [x] Add `truncating_to_i64`, `truncating_to_u64`, and
       `truncating_to_u8` returning the frozen Skald-owned
       `IntegerConversion::{Value, OutOfRange}` outcome.
-- [ ] Validate finiteness, truncate toward zero, and validate the mathematical
+- [x] Validate finiteness, truncate toward zero, and validate the mathematical
       truncated value against the exact target range; accept negative finite
       fractions greater than `-1.0` for unsigned zero and never treat
       `INEXACT` alone as failure.
-- [ ] Add nearest-ties-to-even `parse_decimal` over a lexer-validated spelling
+- [x] Add nearest-ties-to-even `parse_decimal` over a lexer-validated spelling
       with exact `DecimalConversion::{Finite, Overflow, Invalid}` outcomes.
-- [ ] Treat subnormal results and underflow to positive zero as finite, and a
+- [x] Treat subnormal results and underflow to positive zero as finite, and a
       source spelling rounded to infinity as overflow.
-- [ ] Keep raw `f64`/`u64` reinterpretation as direct bit transfer rather than
+- [x] Keep raw `f64`/`u64` reinterpretation as direct bit transfer rather than
       an APFloat numeric conversion.
-- [ ] Keep dependency parser errors, integer widths, rounding enums, and
+- [x] Keep dependency parser errors, integer widths, rounding enums, and
       statuses behind the facade.
 
 **Tests:** Values around `2^53`, `2^63`, and `2^64`; integer extrema and
