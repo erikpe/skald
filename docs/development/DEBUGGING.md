@@ -426,9 +426,7 @@ from any shadowed outer binding. The length resolves before that scope opens;
 the binding must not resolve after the element expression. HIR must show an
 exact `u64` length, a read-only `i64` local with the resolved identity, and one
 typed repeated destination plan rather than a default array plus assignment.
-Primitive, exact-class, inline-optional, and nested inline-array plans proceed
-to MIR; shared-owner plans stop at the dedicated executable-lowering
-diagnostic. In MIR, dynamic requested length and
+Every supported stored element plan proceeds to MIR. In MIR, dynamic requested length and
 initialized prefix must remain separate, and publication must occur only on
 the verified `prefix == length` exit. Primitive dumps fuse current-slot store
 and advance. Exact-class dumps must show an ordinary initializer, result, or
@@ -437,6 +435,11 @@ copy destination at `backing[prefix]`, followed by
 Optional dumps must complete payload publication before that transition.
 Nested dumps must show distinct inner and outer requested-length, prefix, and
 publication state followed by ordinary backing adoption into the outer slot.
+Shared-owner dumps must show the ordinary copy, call, allocation, or cast into
+a temporary owner, consumption by `shared-field-initialize`, prefix advance,
+and epoch cleanup. Optional shared-owner initialization must likewise precede
+advance, and shared outer publication must not be mistaken for element-owner
+transfer.
 
 The driver has four explicit target-independent verification products:
 

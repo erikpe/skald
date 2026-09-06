@@ -78,9 +78,9 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 }
 
 #[test]
-fn indexed_array_hir_reports_a_structured_gate_before_mir_lowering() {
-    let error = compile_source_to_assembly(
-        "indexed-array-lowering-gate.ska",
+fn indexed_shared_owner_arrays_reach_backend_lowering() {
+    let output = compile_source_to_assembly(
+        "indexed-shared-owner-array.ska",
         concat!(
             "class Item { init(value: i64) {} }\n",
             "fn main() -> i64 {\n",
@@ -91,14 +91,11 @@ fn indexed_array_hir_reports_a_structured_gate_before_mir_lowering() {
         ),
         Target::X86_64SysV,
     )
-    .unwrap_err();
-    let CompilationError::Diagnostics(report) = error else {
-        panic!("indexed array staging must remain a source diagnostic");
-    };
-    assert_eq!(report.diagnostics.len(), 1);
-    assert_eq!(
-        report.diagnostics.iter().next().unwrap().code,
-        crate::typeck::INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE
+    .expect("indexed shared-owner construction must reach backend lowering");
+    assert!(
+        output.assembly.contains(".globl main"),
+        "{}",
+        output.assembly
     );
 }
 

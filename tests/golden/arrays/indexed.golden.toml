@@ -23,3 +23,11 @@ source = "indexed_optional_nested_arrays.ska"
 [[test.run]]
 name = "presence_copy_jagged_nesting_and_recursive_cleanup"
 expect = { stdout = { file = "data/indexed_optional_nested_arrays.stdout" } }
+
+[[test]]
+name = "shared-owners"
+mode = "run"
+source = "indexed_shared_owner_arrays.ska"
+[[test.run]]
+name = "polymorphic_retain_adopt_optional_anchor_and_outer_ownership"
+expect = { stdout = { file = "data/indexed_shared_owner_arrays.stdout" } }

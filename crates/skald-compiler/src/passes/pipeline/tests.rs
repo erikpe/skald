@@ -284,6 +284,39 @@ fn none_pipeline_preserves_valid_mir_and_reports_the_mandatory_boundary() {
 }
 
 #[test]
+fn default_pipeline_preserves_shared_indexed_owner_protocols() {
+    let input = lower_source_to_final_mir(concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn make(value: i64) -> shared Item { return new Item(value); }\n",
+        "fn maybe(index: i64) -> shared? Item {\n",
+        "  if (index == 0) { return none; }\n",
+        "  return make(index);\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var named: shared Item = new Item(7);\n",
+        "  var owners: (shared Item)[] = (shared Item)[](2u; index => named);\n",
+        "  var optional: (shared? Item)[] = (shared? Item)[](2u; index => maybe(index));\n",
+        "  return (i64) owners.len() + (i64) optional.len();\n",
+        "}\n",
+    ));
+    let schedule =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    let optimized = run_mir_pipeline_measured(input, &schedule)
+        .result
+        .expect("optimized shared indexed-owner MIR must remain verified");
+    let dump = dump_mir(optimized.program());
+
+    assert!(dump.contains("shared-field-initialize"), "{dump}");
+    assert!(dump.contains("optional-shared-initialize"), "{dump}");
+    assert_eq!(
+        dump.matches("array-indexed-advance-complete").count(),
+        2,
+        "{dump}"
+    );
+    assert!(assembly(&optimized).contains("call ska_rt_alloc"));
+}
+
+#[test]
 fn productive_default_profile_has_exact_reference_parity_and_structural_value() {
     let input = lower_source_to_final_mir(LOCAL_SIMPLIFICATION_PROFILE_SOURCE);
     let input_dump = dump_mir(&input);

@@ -283,16 +283,14 @@ impl SharedOwnershipAnalysis<'_, '_> {
                     prefix,
                     ..
                 }) => {
-                    state.initialized_fields.retain(|place| {
-                        place.base.local_storage() != Some(*backing)
-                            || !matches!(
-                                place.projections.as_slice(),
-                                [MirPlaceProjection::ArrayElement {
-                                    normalized_index,
-                                    ..
-                                }] if *normalized_index == *prefix
-                            )
-                    });
+                    forget_initialized_array_element(state, *backing, *prefix);
+                }
+                MirInstruction::Array(MirArrayInstruction::AdvanceIndexedElement {
+                    backing,
+                    prefix,
+                    ..
+                }) => {
+                    forget_initialized_array_element(state, *backing, *prefix);
                 }
                 MirInstruction::EndFullExpression(_) => {
                     if state.live_owners.iter().any(|owner| {
@@ -650,4 +648,21 @@ impl SharedOwnershipAnalysis<'_, '_> {
             }
         }
     }
+}
+
+fn forget_initialized_array_element(
+    state: &mut SharedState,
+    backing: StorageId,
+    prefix: StorageId,
+) {
+    state.initialized_fields.retain(|place| {
+        place.base.local_storage() != Some(backing)
+            || !matches!(
+                place.projections.as_slice(),
+                [MirPlaceProjection::ArrayElement {
+                    normalized_index,
+                    ..
+                }] if *normalized_index == prefix
+            )
+    });
 }

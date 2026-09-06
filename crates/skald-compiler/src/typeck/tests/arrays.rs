@@ -160,7 +160,12 @@ fn indexed_construction_selects_every_stored_value_family_without_default_or_ass
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert_eq!(output.lowering_diagnostics.len(), 2);
+    assert!(
+        output.lowering_diagnostics.is_empty(),
+        "{:?}",
+        output.lowering_diagnostics
+    );
+    assert!(output.is_executable());
     let dump = dump_hir(output.hir.as_ref().unwrap());
     for selected in [
         "ScalarInitialization",
@@ -1004,7 +1009,7 @@ fn types_shared_and_optional_shared_projection_with_owner_anchors() {
     let mir = crate::mir::lower_hir(hir);
     crate::mir::verify_mir(&mir).expect("shared array owners and projections must verify");
     let mir_dump = crate::mir::dump_mir(&mir);
-    assert!(mir_dump.contains("PublishShared"));
+    assert!(mir_dump.contains("array-publish-shared"));
     assert!(mir_dump.contains("shared-anchor"));
 }
 

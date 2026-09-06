@@ -304,9 +304,11 @@ The frozen indexed construction extension adds a typed length, immutable
 complete-prefix publication proof without adding a `Vec` special case or
 runtime ABI. It is specified in the
 [array compiler contract](ARRAYS.md#frozen-indexed-construction-representation).
-Primitive, exact-class, inline-optional, and nested inline-array elements
-execute through verified MIR and x86-64 using ordinary destination operations;
-an explicit lowering diagnostic retains shared-owner elements before MIR.
+Primitive, exact-class, inline-optional, nested inline-array, shared-owner, and
+optional shared-owner elements execute through verified MIR and x86-64 using
+ordinary destination operations. Named owners retain, produced owners transfer,
+and compatible base, interface, `Obj`, and shared-array targets require no
+default pointee.
 
 Class-owned static fields pass through delayed initializer resolution,
 stored-value HIR, opaque structurally verified preliminary MIR, exhaustive

@@ -834,6 +834,8 @@ impl BodyLowerer<'_> {
             | HirStoredValueInitialization::OptionalPrimitive { .. }
             | HirStoredValueInitialization::OptionalClass(_)
             | HirStoredValueInitialization::Array(_)
+            | HirStoredValueInitialization::Shared(_)
+            | HirStoredValueInitialization::OptionalShared(_)
             | HirStoredValueInitialization::Optional(_) => {
                 let destination = MirPlace::base(backing).project_array_element(array, prefix);
                 self.lower_stored_value_initialize_at(

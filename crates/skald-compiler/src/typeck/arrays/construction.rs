@@ -113,6 +113,8 @@ impl CallableChecker<'_, '_> {
                         | HirStoredValueInitialization::OptionalPrimitive { .. }
                         | HirStoredValueInitialization::OptionalClass(_)
                         | HirStoredValueInitialization::Array(_)
+                        | HirStoredValueInitialization::Shared(_)
+                        | HirStoredValueInitialization::OptionalShared(_)
                         | HirStoredValueInitialization::Optional(_)
                 ) {
                     self.lowering_diagnostics.push(
@@ -122,7 +124,7 @@ impl CallableChecker<'_, '_> {
                         )
                         .with_primary_label(
                             initializer.arrow_span,
-                            "primitive, exact-class, optional, and nested-array elements are executable; shared-owner lowering is pending",
+                            "this internal initialization plan is not an array element value",
                         ),
                     );
                 }

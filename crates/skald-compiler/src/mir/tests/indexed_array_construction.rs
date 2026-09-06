@@ -45,6 +45,31 @@ fn composite_indexed_program() -> MirProgram {
     ))
 }
 
+fn shared_indexed_program() -> MirProgram {
+    lower_text(concat!(
+        "interface Value { fn read() -> i64; }\n",
+        "class Item implements Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn make(value: i64) -> shared Item { return new Item(value); }\n",
+        "fn maybe(index: i64) -> shared? Item {\n",
+        "  if (index == 0) { return none; }\n",
+        "  return make(index);\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var named: shared Item = new Item(7);\n",
+        "  var exact: (shared Item)[] = (shared Item)[](2u; index => named);\n",
+        "  var views: shared (shared Value)[] = new (shared Value)[](2u; index => make(index));\n",
+        "  var optional: (shared? Item)[] = (shared? Item)[](2u; index => maybe(index));\n",
+        "  var rows: (shared i64[])[] = (shared i64[])[](2u; row =>\n",
+        "    new i64[]((u64) (row + 1); column => row + column));\n",
+        "  return exact[1]->read() + views->[1]->read() + optional[1]!->read() + rows[1]->[1];\n",
+        "}\n",
+    ))
+}
+
 fn indexed_instruction_position(
     program: &MirProgram,
     function: FunctionId,
@@ -262,6 +287,138 @@ fn optional_and_nested_indexed_construction_reuse_independent_prefix_protocols()
     }
     assert!(dump.contains("class-optional-publish"), "{dump}");
     assert!(dump.contains("array-adopt"), "{dump}");
+}
+
+#[test]
+fn shared_indexed_construction_reuses_owner_transfers_and_prefix_protocols() {
+    let program = shared_indexed_program();
+    verify_mir(&program).expect("shared-owner indexed construction MIR must verify");
+    let dump = dump_mir(&program);
+
+    for operation in [
+        "shared-copy",
+        "shared-field-initialize",
+        "optional-shared-initialize",
+        "array-publish-shared",
+        "array-indexed-advance-complete",
+    ] {
+        assert!(dump.contains(operation), "missing `{operation}`:\n{dump}");
+    }
+    assert_eq!(dump.matches("array-indexed-begin").count(), 5, "{dump}");
+    assert_eq!(
+        dump.matches("array-indexed-advance-complete").count(),
+        4,
+        "{dump}"
+    );
+}
+
+#[test]
+fn verifier_rejects_shared_owner_advance_and_slot_mutations() {
+    let original = lower_text(concat!(
+        "class Item { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var owner: shared Item = new Item();\n",
+        "  var values: (shared Item)[] = (shared Item)[](2u; index => owner);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    verify_mir(&original).expect("baseline shared-owner indexed MIR must verify");
+    let entry = original.entry_function;
+
+    let mut early_advance = original.clone();
+    let (block, advance) = indexed_instruction_position(&early_advance, entry, |operation| {
+        matches!(operation, MirArrayInstruction::AdvanceIndexedElement { .. })
+    });
+    let initialize = early_advance.definitions.get(entry).unwrap().body.blocks[block].instructions
+        [..advance]
+        .iter()
+        .rposition(|instruction| matches!(instruction, MirInstruction::SharedFieldInitialize(_)))
+        .unwrap();
+    early_advance
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap()
+        .body
+        .blocks[block]
+        .instructions
+        .swap(initialize, advance);
+    assert_rejected(
+        &early_advance,
+        "indexed array prefix may advance only after the current lifecycle-bearing slot is complete",
+    );
+
+    let mut wrong_slot = original;
+    let foreign_index = wrong_slot
+        .definitions
+        .get(entry)
+        .unwrap()
+        .storage
+        .iter()
+        .find(|storage| storage.kind == MirStorageKind::ScalarSpill)
+        .unwrap()
+        .id;
+    let destination = wrong_slot
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap()
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::SharedFieldInitialize(initialize) => Some(&mut initialize.destination),
+            _ => None,
+        })
+        .unwrap();
+    let MirPlaceProjection::ArrayElement {
+        normalized_index, ..
+    } = &mut destination.projections[0]
+    else {
+        panic!("shared-owner destination must select the current array slot");
+    };
+    *normalized_index = foreign_index;
+    assert_rejected(
+        &wrong_slot,
+        "indexed shared-owner initialization must complete exactly once in the current prefix slot",
+    );
+}
+
+#[test]
+fn verifier_rejects_optional_shared_advance_before_owner_initialization() {
+    let mut program = lower_text(concat!(
+        "class Item { init() {} }\n",
+        "fn maybe(index: i64) -> shared? Item {\n",
+        "  if (index == 0) { return none; }\n",
+        "  return new Item();\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var values: (shared? Item)[] = (shared? Item)[](2u; index => maybe(index));\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    verify_mir(&program).expect("baseline optional shared-owner indexed MIR must verify");
+    let entry = program.entry_function;
+    let (block, advance) = indexed_instruction_position(&program, entry, |operation| {
+        matches!(operation, MirArrayInstruction::AdvanceIndexedElement { .. })
+    });
+    let initialize = program.definitions.get(entry).unwrap().body.blocks[block].instructions
+        [..advance]
+        .iter()
+        .rposition(|instruction| matches!(instruction, MirInstruction::OptionalSharedInitialize(_)))
+        .unwrap();
+    program
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap()
+        .body
+        .blocks[block]
+        .instructions
+        .swap(initialize, advance);
+
+    assert_rejected(
+        &program,
+        "indexed array prefix may advance only after the current lifecycle-bearing slot is complete",
+    );
 }
 
 #[test]

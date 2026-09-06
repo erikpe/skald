@@ -261,3 +261,139 @@ fn nested_indexed_arrays_copy_adopt_and_keep_prefixes_independent() {
 
     assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
 }
+
+#[test]
+fn shared_owner_indexed_arrays_preserve_polymorphism_transfers_and_outer_ownership() {
+    let source = concat!(
+        "interface Value { fn read() -> i64; }\n",
+        "class Base implements Value {\n",
+        "  static destroyed: i64;\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn read() -> i64 { return self.value; }\n",
+        "  destroy { Base.destroyed = Base.destroyed + 1; }\n",
+        "}\n",
+        "class Leaf extends Base {\n",
+        "  init(value: i64) { super(value); }\n",
+        "  override fn read() -> i64 { return self.value + 1; }\n",
+        "}\n",
+        "class Holder {\n",
+        "  edge: shared Leaf;\n",
+        "  init(edge: shared Leaf) { self.edge = edge; }\n",
+        "}\n",
+        "fn make(value: i64) -> shared Leaf { return new Leaf(value); }\n",
+        "fn make_obj(value: i64) -> shared Obj { return new Leaf(value); }\n",
+        "fn make_box(value: i64) -> shared Leaf? { return new Leaf?(Leaf(value)); }\n",
+        "fn maybe(index: i64) -> shared? Leaf {\n",
+        "  if (index == 1) { return none; }\n",
+        "  return make(index + 30);\n",
+        "}\n",
+        "fn maybe_box(index: i64) -> shared? Leaf? {\n",
+        "  if (index == 0) { return none; }\n",
+        "  return make_box(index + 90);\n",
+        "}\n",
+        "fn exercise() -> i64 {\n",
+        "  var named: shared Leaf = new Leaf(10);\n",
+        "  var holder: shared Holder = new Holder(named);\n",
+        "  {\n",
+        "    var empty: (shared Leaf)[] = (shared Leaf)[](0u; index => make(index));\n",
+        "    var retained: (shared Leaf)[] = (shared Leaf)[](3u; index => named);\n",
+        "    var produced: (shared Leaf)[] = (shared Leaf)[](2u; index => make(index + 20));\n",
+        "    var bases: (shared Base)[] = (shared Base)[](2u; index => make(index + 40));\n",
+        "    var views: (shared Value)[] = (shared Value)[](2u; index => make(index + 50));\n",
+        "    var objects: (shared Obj)[] = (shared Obj)[](2u; index => make_obj(index + 60));\n",
+        "    var optional: (shared? Leaf)[] = (shared? Leaf)[](3u; index => maybe(index));\n",
+        "    var boxes: (shared Leaf?)[] = (shared Leaf?)[](2u; index => make_box(index + 80));\n",
+        "    var maybe_boxes: (shared? Leaf?)[] = (shared? Leaf?)[](2u; index => maybe_box(index));\n",
+        "    var anchored: (shared Leaf)[] = (shared Leaf)[](2u; index => holder->edge);\n",
+        "    var rows: (shared i64[])[] = (shared i64[])[](2u; row =>\n",
+        "      new i64[]((u64) (row + 1); column => row * 10 + column));\n",
+        "    var shared_outer: shared (shared Value)[] =\n",
+        "      new (shared Value)[](2u; index => make(index + 70));\n",
+        "    if (empty.len() != 0u || retained[2]->read() != 11) { return 1; }\n",
+        "    if (produced[1]->read() != 22 || bases[1]->read() != 42) { return 2; }\n",
+        "    if (views[1]->read() != 52 || !(*objects[1] is Leaf)) { return 3; }\n",
+        "    if (optional[0]!->read() != 31 || optional[1] is some || optional[2]!->read() != 33) { return 4; }\n",
+        "    var box: shared Leaf? = boxes[1];\n",
+        "    var maybe_box_owner: shared Leaf? = maybe_boxes[1]!;\n",
+        "    if ((*box)!.read() != 82 || (*maybe_box_owner)!.read() != 92) { return 7; }\n",
+        "    if (anchored[1]->read() != 11 || rows[1]->[1] != 11 || shared_outer->[1]->read() != 72) { return 5; }\n",
+        "  }\n",
+        "  if (Base.destroyed != 15 || named->read() != 11 || holder->edge->read() != 11) { return 6; }\n",
+        "  return 42;\n",
+        "}\n",
+        "fn main() -> i64 { return exercise(); }\n",
+    );
+    let mut output = assembly(source);
+    assert_eq!(output, assembly(source));
+    assert!(output.contains("ownership_retain_overflow"), "{output}");
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn shared_owner_indexed_arrays_release_every_allocation_after_normal_cleanup() {
+    let source = concat!(
+        "extern fn validate_allocations() -> i64;\n",
+        "class Item { init(value: i64) {} }\n",
+        "fn make(value: i64) -> shared Item { return new Item(value); }\n",
+        "fn make_box(value: i64) -> shared Item? { return new Item?(Item(value)); }\n",
+        "fn maybe(index: i64) -> shared? Item {\n",
+        "  if (index == 0) { return none; }\n",
+        "  return make(index);\n",
+        "}\n",
+        "fn build() -> unit {\n",
+        "  var named: shared Item = new Item(1);\n",
+        "  var retained: (shared Item)[] = (shared Item)[](3u; index => named);\n",
+        "  var produced: shared (shared Item)[] = new (shared Item)[](2u; index => make(index));\n",
+        "  var optional: (shared? Item)[] = (shared? Item)[](3u; index => maybe(index));\n",
+        "  var boxes: (shared Item?)[] = (shared Item?)[](2u; index => make_box(index));\n",
+        "  var maybe_boxes: (shared? Item?)[] = (shared? Item?)[](2u; index => make_box(index));\n",
+        "  var rows: (shared i64[])[] = (shared i64[])[](2u; row =>\n",
+        "    new i64[]((u64) (row + 1); column => row + column));\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return validate_allocations(); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(indexed_owner_allocation_probe());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+fn indexed_owner_allocation_probe() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lindexed_owner_allocations: .quad 0\n",
+        ".Lindexed_owner_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    add qword ptr [rip + .Lindexed_owner_allocations], 1\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    add qword ptr [rip + .Lindexed_owner_frees], 1\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl validate_allocations\n",
+        ".type validate_allocations, @function\n",
+        "validate_allocations:\n",
+        "    mov rax, qword ptr [rip + .Lindexed_owner_allocations]\n",
+        "    test rax, rax\n",
+        "    je .Lindexed_owner_allocation_failure\n",
+        "    cmp rax, qword ptr [rip + .Lindexed_owner_frees]\n",
+        "    jne .Lindexed_owner_allocation_failure\n",
+        "    mov rax, 42\n",
+        "    ret\n",
+        ".Lindexed_owner_allocation_failure:\n",
+        "    mov rax, 1\n",
+        "    ret\n",
+        ".size validate_allocations, .-validate_allocations\n",
+    )
+}

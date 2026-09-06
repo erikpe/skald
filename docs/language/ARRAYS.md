@@ -1,7 +1,7 @@
 # Arrays
 
 Status: **implemented contract on x86-64, including explicit element-list and
-primitive, exact-class, optional, or nested-array indexed construction**. This document is authoritative for the
+indexed construction for every supported element category**. This document is authoritative for the
 source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
@@ -206,10 +206,8 @@ No fill-value, inferred array literal, or multi-dimensional shape constructor
 is implemented. Executable nonempty construction accepts the existing
 default-length and exact-copy modes plus explicit element lists for every
 supported stored element category. The frontend accepts, resolves, and type-
-checks [indexed construction](#indexed-array-construction). Primitive,
-exact-class, inline-optional, and nested inline-array elements execute through
-verified dynamic-prefix MIR; a deliberate executable-lowering gate retains
-shared-owner element families for later implementation.
+checks [indexed construction](#indexed-array-construction). Every supported
+stored element category executes through verified dynamic-prefix MIR.
 
 ## Explicit element-list construction
 
@@ -359,8 +357,9 @@ the exact `u64` length expression, inline versus shared-outer ownership, one
 immutable exact-`i64` local identity, and one destination-directed element
 initialization plan. The length is checked before the index local becomes
 active, and the local is in scope only while checking the element expression.
-Primitive, exact-class, inline-optional, and nested inline-array element plans
-execute through verified MIR and x86-64. They evaluate
+Primitive, exact-class, inline-optional, nested inline-array, shared-owner,
+and optional shared-owner element plans execute through verified MIR and
+x86-64. They evaluate
 the length once, validate and allocate unpublished backing once, then evaluate
 the element expression once for every increasing index. A zero length evaluates
 no element expression. Exact-class construction initializes the current slot
@@ -369,8 +368,11 @@ producers retain their ordinary temporary and cleanup behavior. Optional
 presence is published only after its payload is complete. Nested arrays use
 exact deep copying for named sources and adopt produced backing, including
 jagged inner indexed construction with an independent prefix and cleanup
-epoch. Shared-owner and optional-owner plans remain accepted and typed behind
-one structured lowering gate.
+epoch. Shared-owner plans retain named sources or adopt produced owners into
+the slot, including compatible base-class, interface, `Obj`, and shared-array
+targets. Optional shared-owner plans preserve absence and transfer present
+owners through the same zero-niche initialization used by ordinary stored
+destinations.
 
 Each dynamic position is a previously uninitialized owning destination of the
 explicit array element type. Primitive, exact-class, inline-optional, nested

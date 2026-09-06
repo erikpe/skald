@@ -512,14 +512,16 @@ responsibilities. The runtime never receives an array type, source expression,
 prefix, lifecycle operation, or `Vec` identity. Current non-unwinding failure
 adds no runtime partial-prefix cleanup service.
 
-The implemented primitive, exact-class, inline-optional, and nested inline-
-array paths continue to call only `ska_rt_alloc`, `ska_rt_free`, the existing
-panic reporter on failure edges, and the unchanged `ska_rt_abi_v9` marker. The
+The implemented primitive, exact-class, inline-optional, nested inline-array,
+shared-owner, and optional shared-owner paths continue to call only
+`ska_rt_alloc`, `ska_rt_free`, the existing panic reporter on failure edges,
+and the unchanged `ska_rt_abi_v9` marker. The
 requested lengths, initialized prefixes, index bindings, and completion proofs
 are compiler-owned storage and emit no runtime metadata. Exact-class elements
 reuse ordinary internal lifecycle conventions; optionals and nested arrays
 reuse their existing layout, publication, transfer, copy, and destruction
-conventions.
+conventions. Shared elements reuse existing one-word retain, transfer, and
+release conventions; indexed construction adds no ownership runtime entry.
 
 ## Implemented primitive operator ABI boundary
 

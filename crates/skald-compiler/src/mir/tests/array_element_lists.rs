@@ -1046,7 +1046,7 @@ fn owner_element_lists_reuse_ordinary_copy_adopt_cast_and_optional_transfers() {
         dump.contains("optional-shared-initialize") && dump.contains("from absent"),
         "{dump}"
     );
-    assert!(dump.contains("PublishShared"), "{dump}");
+    assert!(dump.contains("array-publish-shared"), "{dump}");
     assert_eq!(dump, dump_mir(&owner_element_list_program()));
 }
 

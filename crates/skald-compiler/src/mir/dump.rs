@@ -1952,6 +1952,18 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             let _ = write!(output, "array-publish {backing} into {destination}");
             write_span(output, *span);
         }
+        MirArrayInstruction::PublishShared {
+            backing,
+            destination,
+            array,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-publish-shared {backing} into {destination} as {array}"
+            );
+            write_span(output, *span);
+        }
         MirArrayInstruction::Adopt {
             destination,
             source,

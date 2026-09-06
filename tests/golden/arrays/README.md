@@ -11,6 +11,9 @@ owns exact-class direct placement, copying, grouping, call results, ordinary
 array consumers, shared outer backing, and reverse destruction, plus optional
 presence/payload completion, jagged nested indexed construction, exact row
 copy versus produced-backing adoption, and recursive reverse destruction.
+It also owns shared exact, interface, `Obj`, and shared-array targets; named
+retention versus produced adoption; optional-owner absence and presence;
+receiver anchors; independent shared outer ownership; and last-owner cleanup.
 `views.golden.toml` owns array aliases and slices plus
 their rejected rebinding and whole-pointee operations, and the core
 optional-array function-value boundary.

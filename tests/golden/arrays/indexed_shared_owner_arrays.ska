@@ -1,0 +1,76 @@
+import std::io;
+
+interface Value {
+    fn read() -> i64;
+}
+
+class Item implements Value {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+
+    destroy {
+        std::io::println_i64(self.value + 100);
+    }
+}
+
+class Holder {
+    edge: shared Item;
+
+    init(edge: shared Item) {
+        self.edge = edge;
+    }
+}
+
+fn make(value: i64) -> shared Item {
+    return new Item(value);
+}
+
+fn make_obj(value: i64) -> shared Obj {
+    return new Item(value);
+}
+
+fn maybe(index: i64, named: shared Item) -> shared? Item {
+    if (index == 0) {
+        return none;
+    }
+    if (index == 1) {
+        return named;
+    }
+    return make(7);
+}
+
+fn exercise() -> unit {
+    var named: shared Item = new Item(1);
+    var holder: shared Holder = new Holder(named);
+    var retained: (shared Item)[] = (shared Item)[](2u; index => named);
+    var produced: (shared Item)[] = (shared Item)[](2u; index => make(index + 2));
+    var views: shared (shared Value)[] = new (shared Value)[](2u; index => make(index + 4));
+    var objects: (shared Obj)[] = (shared Obj)[](1u; index => make_obj(index + 6));
+    var optional: (shared? Item)[] = (shared? Item)[](3u; index => maybe(index, named));
+    var anchored: (shared Item)[] = (shared Item)[](2u; index => holder->edge);
+    var rows: (shared i64[])[] = (shared i64[])[](2u; row =>
+        new i64[]((u64) (row + 1); column => row * 10 + column));
+
+    std::io::println_i64(retained[1]->read());
+    std::io::println_i64(produced[1]->read());
+    std::io::println_i64(views->[1]->read());
+    std::io::println_bool(*objects[0] is Item);
+    std::io::println_bool(optional[0] is none);
+    std::io::println_i64(optional[1]!->read());
+    std::io::println_i64(optional[2]!->read());
+    std::io::println_i64(anchored[1]->read());
+    std::io::println_i64(rows[1]->[1]);
+    return;
+}
+
+fn main() -> i64 {
+    exercise();
+    return 0;
+}

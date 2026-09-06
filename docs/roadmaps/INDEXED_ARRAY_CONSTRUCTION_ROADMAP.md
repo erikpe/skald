@@ -1,6 +1,6 @@
 # Indexed Array Construction Roadmap
 
-Status: in progress; IA0 through IA4 are complete and IA5 is next.
+Status: in progress; IA0 through IA5 are complete and IA6 is next.
 
 This roadmap implements the frozen
 [indexed array construction contract](../language/ARRAYS.md#indexed-array-construction)
@@ -57,7 +57,7 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 - [x] IA2 — Execute verified primitive dynamic-prefix construction
 - [x] IA3 — Execute exact-class destination placement and copying
 - [x] IA4 — Compose optional and nested-array elements
-- [ ] IA5 — Compose shared and optional-shared owner elements
+- [x] IA5 — Compose shared and optional-shared owner elements
 - [ ] IA6 — Add `Vec<T>.to_array()`, harden, and publish
 
 ## PR-sized implementation sequence
@@ -294,19 +294,19 @@ entire element is live.
 **Purpose:** Complete the element matrix with polymorphic retained ownership,
 the category required by the motivating generic vector adopter.
 
-- [ ] Initialize shared exact-class, base-class, interface, `Obj`, shared-array,
+- [x] Initialize shared exact-class, base-class, interface, `Obj`, shared-array,
       and optional-shared element destinations through their selected retain,
       transfer, conversion, and absence plans.
-- [ ] Preserve named-source retention versus produced-owner adoption without
+- [x] Preserve named-source retention versus produced-owner adoption without
       allocating default pointees or requiring an exact polymorphic target.
-- [ ] Keep temporary owners and receiver anchors within the current element
+- [x] Keep temporary owners and receiver anchors within the current element
       epoch unless ownership is transferred into the slot.
-- [ ] Verify owner target compatibility, reference-count responsibility,
+- [x] Verify owner target compatibility, reference-count responsibility,
       optional presence, prefix advancement, publication, and cleanup on
       normal loop paths.
-- [ ] Exercise shared outer arrays independently from shared element values so
+- [x] Exercise shared outer arrays independently from shared element values so
       backing ownership and element-owner counts cannot be conflated.
-- [ ] Extend reachability, dependency, lifetime, ownership, optimizer, and
+- [x] Extend reachability, dependency, lifetime, ownership, optimizer, and
       backend handling without introducing a special shared indexed path.
 
 **Tests:** Exact/base/interface/`Obj` and array targets; named retention,

@@ -1280,6 +1280,20 @@ impl ArrayOwnerState {
         let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
             return;
         };
+        if let Some(state) = self.indexed.get_mut(&backing) {
+            if !indexed_slot_matches(destination, state)
+                || state.phase != IndexedConstructionPhase::Bound
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "indexed shared-owner initialization must complete exactly once in the current prefix slot",
+                );
+                return;
+            }
+            state.phase = IndexedConstructionPhase::ValueReady;
+            return;
+        }
         let Some(state) = self.element_lists.get_mut(&backing) else {
             if function
                 .storage(backing)

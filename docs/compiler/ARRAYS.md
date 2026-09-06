@@ -1,8 +1,7 @@
 # Array Compiler and Runtime Contract
 
 Status: **implemented contract on x86-64, including explicit element-list and
-primitive, exact-class, inline-optional, or nested inline-array indexed
-representation and execution**.
+indexed representation and execution for every supported element category**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler lowers all
@@ -16,9 +15,9 @@ call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 Indexed construction extends direct element initialization to a dynamic length
-and canonical prefix loop. Primitive, exact-class, inline-optional, and nested
-inline-array element plans execute through verified MIR and x86-64; shared-
-owner plans remain behind the explicit executable-lowering availability gate.
+and canonical prefix loop. Primitive, exact-class, inline-optional, nested
+inline-array, shared-owner, and optional shared-owner element plans execute
+through verified MIR and x86-64.
 The separately frozen
 [structural bracket compiler contract](INDEXING_AND_SLICING.md) keeps these
 array operations on the intrinsic path and selects ordinary calls only after
@@ -312,9 +311,9 @@ HIR owns one indexed construction mode rather than desugaring to a source
 contain primitive, exact-class, optional, nested-array, shared-owner, or
 optional-owner initialization selected once during type checking. Lower phases
 must not recover its ownership or lifecycle meaning from expression shape.
-Primitive, exact-class, inline-optional, and nested inline-array plans proceed
-to MIR. One structured lowering diagnostic stops shared-owner and optional-
-owner plans before MIR construction.
+Every supported stored element plan proceeds to MIR. The remaining structured
+gate rejects only internal initialization plans that are not array element
+values.
 
 MIR retains one runtime `u64` length, one unpublished backing, one `u64`
 initialized prefix, and canonical CFG. The loop header proves `prefix <
@@ -347,10 +346,12 @@ consumption.
 The x86-64 backend consumes only this verified target-independent CFG and
 reuses checked allocation, primitive stores, exact-class initializer/result/
 copy destinations, optional layout and publication, nested-array copy/adoption,
-prefix arithmetic, publication, and ordinary recursive reverse destruction.
+shared retain/adopt/release and zero-niche optional-owner operations, prefix
+arithmetic, publication, and ordinary recursive reverse destruction.
 The runtime receives no callback, expression, array type, prefix, lifecycle
-identity, or vector operation, and ABI version 9 remains unchanged. Shared-
-owner destination lowering follows in the next roadmap phase.
+identity, or vector operation, and ABI version 9 remains unchanged. Shared
+outer-array publication remains independent from ownership of shared element
+values.
 
 The complete decisions and rejected alternatives are preserved in the
 [design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md), and

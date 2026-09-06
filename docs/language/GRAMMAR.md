@@ -798,9 +798,8 @@ construction arguments, and `=>` is one longest-match punctuation token.
 The parser and resolver retain exact punctuation, source order, outer
 ownership, and one non-forgeable binding identity. Type checking selects one
 exact destination-initialization plan and preserves the immutable index local
-in HIR. Primitive, exact-class, inline-optional, and nested inline-array
-element plans execute through the implemented dynamic-prefix protocol. A
-structured gate currently retains shared-owner plans before MIR. The
+in HIR. Every supported stored element plan executes through the implemented
+dynamic-prefix protocol, including shared and optional shared owners. The
 ownership, evaluation, and availability boundary is defined by
 [indexed array construction](ARRAYS.md#indexed-array-construction).
 

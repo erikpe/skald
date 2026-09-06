@@ -15,7 +15,7 @@ pub(super) fn indexed_element_is_executable(element: MirType) -> bool {
 pub(super) fn indexed_element_requires_advance(element: MirType) -> bool {
     matches!(
         element,
-        MirType::Class(_) | MirType::Optional(_) | MirType::Array(_)
+        MirType::Class(_) | MirType::Optional(_) | MirType::Array(_) | MirType::Shared(_)
     )
 }
 
