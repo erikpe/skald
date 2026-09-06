@@ -84,6 +84,16 @@ No additional implementation roadmap is waiting to start.
 
 ## Design proposals
 
+The draft
+[indexed array construction design proposal](INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md)
+recommends explicit `T[](length; index => expression)` and shared-outer
+construction with direct destination initialization, per-element cleanup, a
+verified dynamic initialized prefix, and no runtime ABI or `Vec` compiler
+special case. Its motivating adopter is an ordinary generic
+`Vec<T>.to_array()` that remains valid for non-defaultable exact values and
+polymorphic shared owners. IAC1 through IAC11 and the contract audit must be
+confirmed before promotion or implementation-roadmap work.
+
 The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
 and [delivery record](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
