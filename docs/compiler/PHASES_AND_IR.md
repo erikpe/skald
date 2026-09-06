@@ -1081,10 +1081,11 @@ and the active
 [implementation roadmap](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
 owns delivery. The isolated crate now implements its complete frozen public
 facade: raw-bit values, exact arithmetic, four-way numeric comparison,
-integer/boolean conversion, and decimal rounding. Current type checking still
-uses Rust host `f64` parsing for validated decimal literals, and the primitive
-evaluator still treats floating constants, arithmetic, comparisons, and
-numeric conversions as unsupported.
+integer/boolean conversion, and decimal rounding. Type checking now routes
+every validated decimal floating literal through that facade and stores the
+resulting exact bits in HIR without consulting Rust host `f64` parsing. The
+primitive evaluator still treats floating constants, arithmetic, comparisons,
+and numeric conversions as unsupported.
 
 The implementation has established an unpublished `skald-binary64` workspace
 crate around one exactly pinned published `rustc_apfloat` release. Its opaque
@@ -1106,12 +1107,16 @@ the crate boundary; the wrapper has no dependency on compiler phases, IR,
 diagnostics, source spans, passes, targets, runtime code, or generated
 programs.
 
-Validated source decimal spellings will round through that authority before
-type checking stores their bits in HIR. Lexical grammar, unary-minus shape,
-finite-range diagnostics, spans, subnormal acceptance, and underflow to
-positive zero remain unchanged. The Skald-written runtime string parser and
-formatter remain ordinary standard-library code and do not depend on the
-compiler support crate.
+Validated source decimal spellings round through that authority before type
+checking stores their bits in HIR. `Finite` results become the existing
+raw-bit constant, while `Overflow` preserves the existing `TYP012` diagnostic.
+An `Invalid` result cannot arise from an ordinary resolved source program; a
+forged violation of that phase boundary produces the structured `TYP054`
+internal contract diagnostic instead of panicking or exposing dependency
+details. Lexical grammar, unary-minus shape, finite-range diagnostics, spans,
+subnormal acceptance, and underflow to positive zero remain unchanged. The
+Skald-written runtime string parser and formatter remain ordinary
+standard-library code and do not depend on the compiler support crate.
 
 The existing `PrimitiveConstant` domain will gain exact floating bits. The
 existing primitive evaluator and convergent callable-local solver remain the

@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: in progress; BE0 through BE2 are complete, and BE3 is next.
+Status: in progress; BE0 through BE3 are complete, and BE4 is next.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -97,7 +97,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 - [x] BE0 — Establish the isolated binary64 crate and dependency boundary
 - [x] BE1 — Implement exact binary64 arithmetic and comparison
 - [x] BE2 — Implement conversions and decimal parsing
-- [ ] BE3 — Migrate compiler literal rounding to the binary64 authority
+- [x] BE3 — Migrate compiler literal rounding to the binary64 authority
 - [ ] BE4 — Extend primitive constant evaluation and propagation
 - [ ] BE5 — Generalize checked-scalar topology, carriers, and solved facts
 - [ ] BE6 — Fold successful checked floating-to-integer protocols
@@ -221,22 +221,22 @@ into the crate.
 **Purpose:** Make source literals and later optimizer folds share one
 compile-time rounding implementation while preserving every source contract.
 
-- [ ] Add the path dependency from `skald-compiler` to `skald-binary64` and
+- [x] Add the path dependency from `skald-compiler` to `skald-binary64` and
       route validated decimal `f64` spellings through `parse_decimal`.
-- [ ] Map `Finite` to the existing `HirExpressionKind::F64Bits` representation
+- [x] Map `Finite` to the existing `HirExpressionKind::F64Bits` representation
       and `Overflow` to the unchanged `F64_LITERAL_OUT_OF_RANGE` diagnostic.
-- [ ] Treat `Invalid` after successful lexical/syntax validation as a
+- [x] Treat `Invalid` after successful lexical/syntax validation as a
       structured internal contract violation without exposing dependency text
       as a source diagnostic or allowing a compiler panic on ordinary input.
-- [ ] Preserve literal grammar, exact spans, positive-zero underflow, finite
+- [x] Preserve literal grammar, exact spans, positive-zero underflow, finite
       subnormals, source-order behavior, deterministic dumps, and unary-minus
       ownership of negative values.
-- [ ] Remove production `str::parse::<f64>()` from literal semantic selection;
+- [x] Remove production `str::parse::<f64>()` from literal semantic selection;
       retain host `f64` only in tests or tooling where it is not an expected-
       result oracle.
-- [ ] Replace host-computed literal expectations in focused tests with exact
+- [x] Replace host-computed literal expectations in focused tests with exact
       bit constants or `skald-binary64` results where necessary.
-- [ ] Update living compiler phase documentation to describe the implemented
+- [x] Update living compiler phase documentation to describe the implemented
       literal authority while retaining the existing language contract.
 
 **Tests:** Existing literal success/failure suites; minimum/maximum finite,

@@ -46,8 +46,9 @@ optimization.
   numeric comparison. It also owns exact integer/boolean conversion and
   unsigned decimal-literal rounding while isolating the pinned
   `rustc_apfloat` dependency from compiler IR, passes, targets, and generated
-  programs. Compiler literal migration and optimizer use remain staged roadmap
-  work.
+  programs. Type checking now uses that authority for every validated source
+  floating literal while preserving the existing HIR bits and range
+  diagnostic; optimizer use remains staged roadmap work.
 - `crates/skald-docs-check` validates the repository documentation structure;
   it is tooling, not a compiler phase.
 - `crates/skald-golden` owns strict golden-spec decoding, contained fixture

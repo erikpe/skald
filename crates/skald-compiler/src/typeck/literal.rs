@@ -1,5 +1,7 @@
 //! Numeric literal conversion and range diagnostics.
 
+use skald_binary64::{parse_decimal, DecimalConversion};
+
 use crate::{
     diagnostics::Diagnostic,
     hir::{HirExpression, HirExpressionKind, Type},
@@ -11,8 +13,8 @@ use crate::{
 use super::{
     function::CallableChecker,
     program::{
-        F64_LITERAL_OUT_OF_RANGE, INTEGER_LITERAL_OUT_OF_RANGE, U64_LITERAL_OUT_OF_RANGE,
-        U8_LITERAL_OUT_OF_RANGE,
+        F64_LITERAL_OUT_OF_RANGE, INTEGER_LITERAL_OUT_OF_RANGE, INVALID_RESOLVED_F64_LITERAL,
+        U64_LITERAL_OUT_OF_RANGE, U8_LITERAL_OUT_OF_RANGE,
     },
 };
 
@@ -98,29 +100,42 @@ impl CallableChecker<'_, '_> {
     }
 
     fn check_f64_literal(&mut self, literal: &ResolvedNumericLiteralExpr) -> Option<HirExpression> {
-        let value = literal
-            .spelling
-            .parse::<f64>()
-            .expect("validated decimal f64 literal must parse");
-        if value.is_finite() {
-            Some(HirExpression {
+        match parse_decimal(&literal.spelling) {
+            DecimalConversion::Finite(value) => Some(HirExpression {
                 kind: HirExpressionKind::F64Bits(value.to_bits()),
                 ty: Type::F64,
                 span: literal.span,
-            })
-        } else {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    F64_LITERAL_OUT_OF_RANGE,
-                    format!(
-                        "floating literal `{}` is out of range for `f64`",
-                        literal.spelling
+            }),
+            DecimalConversion::Overflow => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        F64_LITERAL_OUT_OF_RANGE,
+                        format!(
+                            "floating literal `{}` is out of range for `f64`",
+                            literal.spelling
+                        ),
+                    )
+                    .with_primary_label(literal.span, "value rounds to infinity")
+                    .with_note(
+                        "finite `f64` literals must round to a finite IEEE-754 binary64 value",
                     ),
-                )
-                .with_primary_label(literal.span, "value rounds to infinity")
-                .with_note("finite `f64` literals must round to a finite IEEE-754 binary64 value"),
-            );
-            None
+                );
+                None
+            }
+            DecimalConversion::Invalid => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_RESOLVED_F64_LITERAL,
+                        "invalid resolved floating literal",
+                    )
+                    .with_primary_label(
+                        literal.span,
+                        "literal violates the validated decimal `f64` contract",
+                    )
+                    .with_note("this indicates an internal compiler phase-contract violation"),
+                );
+                None
+            }
         }
     }
 

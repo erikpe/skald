@@ -25,12 +25,13 @@ Skald development currently requires:
 The optional performance benchmarks additionally require Python 3; neither
 normal builds nor repository validation use Python.
 
-`skac`, `skald-compiler`, and the documentation checker have no third-party
-crate dependencies. The compiler-only `skald-binary64` support crate is one
-deliberate exception: it isolates an exactly pinned `rustc_apfloat` dependency
-behind a Skald-owned raw-bit facade. Its local `THIRD_PARTY.md` records the
-selected release and license, and the crate is never linked into generated
-programs or the runtime. Repository tools are the other narrow exception:
+`skac`, `skald-compiler`, and the documentation checker have no direct
+third-party crate dependencies. The compiler depends on the internal
+`skald-binary64` support crate, which isolates one exactly pinned
+`rustc_apfloat` dependency behind a Skald-owned raw-bit facade. Its local
+`THIRD_PARTY.md` records the selected release and license, and the crate is
+never linked into generated programs or the runtime. Repository tools are the
+other narrow exception:
 `skald-golden` uses maintained TOML and Serde crates to decode the versioned
 golden-test schema and report precise field paths, Serde JSON for the machine
 report, plus the narrowly scoped `nix` process/signal API to terminate complete
@@ -40,10 +41,10 @@ dependencies. JUnit and human reports are rendered without another production
 dependency.
 Those dependencies and their complete transitive graph are recorded in
 `Cargo.lock`. Tooling dependencies do not flow into `skac`, `skald-compiler`,
-generated programs, or the runtime; `skald-binary64` will flow only into the
-host compiler when its staged integration begins. Native compilation and
-runtime tests require the host C tools even when a change touches only Rust
-code.
+generated programs, or the runtime. The `skald-binary64` dependency flows into
+the host compiler for source-literal evaluation, but never into generated
+programs or the runtime. Native compilation and runtime tests require the host
+C tools even when a change touches only Rust code.
 
 ## Makefile interface
 

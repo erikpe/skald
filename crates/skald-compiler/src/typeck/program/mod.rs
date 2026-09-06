@@ -78,6 +78,7 @@ pub const AMBIGUOUS_OPERATOR_APPLICATION: &str = "TYP048";
 pub const INCOMPATIBLE_OPERATOR_RHS: &str = "TYP049";
 pub const INVALID_OPERATOR_SELECTION: &str = "TYP050";
 pub const INVALID_RESOLVED_RANGE_SOURCE: &str = "TYP053";
+pub const INVALID_RESOLVED_F64_LITERAL: &str = "TYP054";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

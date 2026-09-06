@@ -116,12 +116,28 @@ fn diagnoses_u8_literal_overflow() {
 
 #[test]
 fn diagnoses_f64_literal_overflow() {
-    let output = check_text(
-        "fn value() -> f64 { return 1.7976931348623159e308; } fn main() -> i64 { return 0; }",
-    );
+    let spelling = "1.7976931348623159e308";
+    let source =
+        format!("fn value() -> f64 {{ return {spelling}; }} fn main() -> i64 {{ return 0; }}");
+    let output = check_text(&source);
 
     assert!(output.hir.is_none());
     let diagnostic = output.diagnostics.iter().next().unwrap();
     assert_eq!(diagnostic.code, F64_LITERAL_OUT_OF_RANGE);
-    assert!(diagnostic.message.contains("out of range for `f64`"));
+    assert_eq!(
+        diagnostic.message,
+        format!("floating literal `{spelling}` is out of range for `f64`")
+    );
+    assert_eq!(diagnostic.labels.len(), 1);
+    assert_eq!(diagnostic.labels[0].message, "value rounds to infinity");
+    let start = source.find(spelling).unwrap();
+    assert_eq!(diagnostic.labels[0].span.range().start(), start);
+    assert_eq!(
+        diagnostic.labels[0].span.range().end(),
+        start + spelling.len()
+    );
+    assert_eq!(
+        diagnostic.notes,
+        ["finite `f64` literals must round to a finite IEEE-754 binary64 value"]
+    );
 }

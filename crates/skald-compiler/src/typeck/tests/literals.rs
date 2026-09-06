@@ -364,14 +364,24 @@ fn checks_f64_raw_bits_signatures_and_typed_arithmetic() {
 #[test]
 fn converts_f64_boundaries_once_to_exact_raw_bits() {
     for (spelling, expected_bits) in [
-        ("0.0", 0_u64),
+        ("0.0", 0x0000_0000_0000_0000_u64),
         (
             "1.00000000000000011102230246251565404236316680908203125",
-            1.0_f64.to_bits(),
+            0x3ff0_0000_0000_0000,
         ),
-        ("4.9406564584124654e-324", 1_u64),
-        ("1e-400", 0_u64),
-        ("1.7976931348623157e308", f64::MAX.to_bits()),
+        (
+            "1.000000000000000111022302462515654042363166809082031251",
+            0x3ff0_0000_0000_0001,
+        ),
+        (
+            "1.00000000000000033306690738754696212708950042724609375",
+            0x3ff0_0000_0000_0002,
+        ),
+        ("4.9406564584124654e-324", 0x0000_0000_0000_0001),
+        ("2.225073858507201e-308", 0x000f_ffff_ffff_ffff),
+        ("2.2250738585072014e-308", 0x0010_0000_0000_0000),
+        ("1e-4000", 0x0000_0000_0000_0000),
+        ("1.7976931348623157e308", 0x7fef_ffff_ffff_ffff),
     ] {
         let output = check_text(&format!(
             "fn value() -> f64 {{ return {spelling}; }} fn main() -> i64 {{ return 0; }}"
@@ -383,6 +393,94 @@ fn converts_f64_boundaries_once_to_exact_raw_bits() {
             HirExpressionKind::F64Bits(bits) if bits == expected_bits
         ));
     }
+}
+
+#[test]
+fn f64_literal_dumps_are_exact_across_independent_compilations() {
+    let source = concat!(
+        "fn smallest() -> f64 { return 4.9406564584124654e-324; }\n",
+        "fn halfway() -> f64 { return 1.00000000000000011102230246251565404236316680908203125; }\n",
+        "fn underflow() -> f64 { return 1e-4000; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let compile = || {
+        let output = check_text(source);
+        let hir = output.hir.expect("finite f64 literals must type-check");
+        let hir_dump = dump_hir(&hir);
+        let mir_dump = crate::mir::dump_mir(&crate::mir::lower_hir(&hir));
+        (hir_dump, mir_dump)
+    };
+
+    let first = compile();
+    let second = compile();
+    assert_eq!(first, second);
+    for bits in [
+        "0x0000000000000001",
+        "0x3ff0000000000000",
+        "0x0000000000000000",
+    ] {
+        assert!(
+            first.0.contains(&format!("F64 {bits} : f64")),
+            "{}",
+            first.0
+        );
+        assert!(
+            first.1.contains(&format!("const.f64 {bits} : f64")),
+            "{}",
+            first.1
+        );
+    }
+}
+
+#[test]
+fn unary_minus_remains_an_operation_over_unsigned_literal_bits() {
+    let output = check_text("fn value() -> f64 { return -0.0; } fn main() -> i64 { return 0; }");
+    let hir = output.hir.expect("negative f64 literal must type-check");
+    let expression = returned_expression(hir.definitions.get(FunctionId::new(0)).unwrap());
+    let HirExpressionKind::Unary { operation, operand } = &expression.kind else {
+        panic!("expected unary negation around the floating literal");
+    };
+
+    assert_eq!(*operation, crate::hir::HirUnaryOperation::NegateF64);
+    assert!(matches!(operand.kind, HirExpressionKind::F64Bits(0)));
+    assert!(operand.span.range().start() > expression.span.range().start());
+}
+
+#[test]
+fn invalid_resolved_f64_literal_is_a_structured_contract_diagnostic() {
+    let mut program =
+        resolve_text("fn value() -> f64 { return 1.0; } fn main() -> i64 { return 0; }");
+    let definition = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let crate::resolve::ResolvedStatement::Return(returned) = &mut definition.body.statements[0]
+    else {
+        panic!("expected return statement");
+    };
+    let Some(crate::resolve::ResolvedExpression::NumericLiteral(literal)) = &mut returned.value
+    else {
+        panic!("expected numeric literal");
+    };
+    literal.spelling = "NaN".to_owned();
+    let literal_span = literal.span;
+
+    let output = type_check(&program);
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, INVALID_RESOLVED_F64_LITERAL);
+    assert_eq!(diagnostic.message, "invalid resolved floating literal");
+    assert_eq!(diagnostic.labels.len(), 1);
+    assert_eq!(diagnostic.labels[0].span, literal_span);
+    assert_eq!(
+        diagnostic.labels[0].message,
+        "literal violates the validated decimal `f64` contract"
+    );
+    assert_eq!(
+        diagnostic.notes,
+        ["this indicates an internal compiler phase-contract violation"]
+    );
 }
 
 #[test]
