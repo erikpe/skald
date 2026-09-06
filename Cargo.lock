@@ -100,6 +100,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc_apfloat"
+version = "0.2.3+llvm-462a31f5a5ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "486c2179b4796f65bfe2ee33679acf0927ac83ecf583ad6c91c3b4570911b9ad"
+dependencies = [
+ "bitflags",
+ "smallvec",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.229"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -170,6 +180,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "skald-binary64"
+version = "0.0.0"
+dependencies = [
+ "rustc_apfloat",
+]
+
+[[package]]
 name = "skald-compiler"
 version = "0.0.0"
 
@@ -200,6 +217,12 @@ dependencies = [
  "skald-golden",
  "toml",
 ]
+
+[[package]]
+name = "smallvec"
+version = "1.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9be42f50aa861c555654aa3a37f52f4b1074bacf4e48fe0ef7fa584e80f1f0f"
 
 [[package]]
 name = "syn"

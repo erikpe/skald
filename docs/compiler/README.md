@@ -38,12 +38,14 @@ optimization.
   compilation behavior to the compiler library.
 - `crates/skald-compiler` owns sources, diagnostics, phases, target selection,
   backend dispatch, and driver orchestration.
-- The frozen
+- The in-progress frozen
   [target-independent binary64 direction](PHASES_AND_IR.md#frozen-target-independent-binary64-evaluation-direction)
-  will add an unpublished `crates/skald-binary64` compiler-support crate. It
-  owns exact compile-time binary64 mechanics behind a Skald-owned raw-bit
-  facade and isolates the pinned `rustc_apfloat` dependency from compiler IR,
-  passes, targets, and generated programs. It is not implemented yet.
+  has established the unpublished `crates/skald-binary64` compiler-support
+  crate. Its initial Skald-owned raw-bit facade owns exact representation,
+  sign inversion, and classification while isolating the pinned
+  `rustc_apfloat` dependency from compiler IR, passes, targets, and generated
+  programs. Arithmetic, conversions, literal migration, and optimizer use
+  remain staged roadmap work.
 - `crates/skald-docs-check` validates the repository documentation structure;
   it is tooling, not a compiler phase.
 - `crates/skald-golden` owns strict golden-spec decoding, contained fixture

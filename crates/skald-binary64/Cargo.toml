@@ -1,0 +1,12 @@
+[package]
+name = "skald-binary64"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+rustc_apfloat = "=0.2.3"
+
+[lints]
+workspace = true

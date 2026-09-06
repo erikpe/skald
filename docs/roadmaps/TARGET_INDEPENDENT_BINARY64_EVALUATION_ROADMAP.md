@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: planned; BE0 is next.
+Status: in progress; BE0 is complete and BE1 is next.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -42,9 +42,9 @@ atomic rewrites; no APFloat type crosses into those owners.
   unordered comparison, decimal literal rounding, exact raw-bit operations,
   integer conversion, and checked failure semantics. This roadmap changes
   compile-time realization, not source-visible meaning.
-- No other active roadmap blocks BE0. Any new out-of-scope finding should be
-  recorded in a companion discoveries document and indexed only when the
-  first actionable finding exists.
+- No other active roadmap blocks the remaining work. Any new out-of-scope
+  finding should be recorded in a companion discoveries document and indexed
+  only when the first actionable finding exists.
 
 ## Scope and invariants
 
@@ -94,7 +94,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 
 ## Progress
 
-- [ ] BE0 — Establish the isolated binary64 crate and dependency boundary
+- [x] BE0 — Establish the isolated binary64 crate and dependency boundary
 - [ ] BE1 — Implement exact binary64 arithmetic and comparison
 - [ ] BE2 — Implement conversions and decimal parsing
 - [ ] BE3 — Migrate compiler literal rounding to the binary64 authority
@@ -110,25 +110,25 @@ atomic rewrites; no APFloat type crosses into those owners.
 **Purpose:** Create the stable dependency firewall and exact raw-bit value
 model before either compiler phase or optimizer behavior depends on it.
 
-- [ ] Add `crates/skald-binary64` to the workspace as an unpublished package
+- [x] Add `crates/skald-binary64` to the workspace as an unpublished package
       using workspace edition, lint, and toolchain policy.
-- [ ] Select and exactly pin one published `rustc_apfloat` release; commit the
+- [x] Select and exactly pin one published `rustc_apfloat` release; commit the
       lockfile update and record its Apache-2.0 WITH LLVM-exception license in
       the repository's appropriate third-party dependency notice.
-- [ ] Verify the dependency with the current workspace Rust version; if it is
+- [x] Verify the dependency with the current workspace Rust version; if it is
       incompatible, raise `workspace.package.rust-version` and update all
       affected development guidance and version-sensitive dependency notes.
-- [ ] Add a documented `Binary64` facade with private raw bits, `from_bits`,
+- [x] Add a documented `Binary64` facade with private raw bits, `from_bits`,
       `to_bits`, `same_bits`, exact sign negation, and the frozen `is_zero`,
       `is_finite`, `is_infinite`, `is_nan`, and `is_negative` predicates.
-- [ ] Do not implement `PartialEq`, `Eq`, `PartialOrd`, or `Ord`; require
+- [x] Do not implement `PartialEq`, `Eq`, `PartialOrd`, or `Ord`; require
       callers to select bit identity or numeric comparison explicitly.
-- [ ] Keep `rustc_apfloat` imports private to the new crate and add an
+- [x] Keep `rustc_apfloat` imports private to the new crate and add an
       auditable repository check or focused test that no other production
       source imports it.
-- [ ] Establish the facade-oriented module layout with small public ownership
+- [x] Establish the facade-oriented module layout with small public ownership
       in `lib.rs`, private responsibility modules, and crate-local tests.
-- [ ] Document the crate as a compiler-only semantic component that is never
+- [x] Document the crate as a compiler-only semantic component that is never
       linked into generated programs.
 
 **Tests:** Raw construction and round trip for arbitrary bits; positive and

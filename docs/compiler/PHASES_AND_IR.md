@@ -1074,24 +1074,26 @@ than replanning activation.
 
 ### Frozen target-independent binary64 evaluation direction
 
-Status: **frozen proposed contract; not implemented**. The complete decisions
-are frozen in the
+Status: **frozen contract; implementation in progress**. The complete
+decisions are frozen in the
 [design record](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md),
 and the active
 [implementation roadmap](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
-owns delivery. Current type checking still uses Rust host `f64` parsing for
-validated decimal literals, and the primitive evaluator still treats floating
-constants, arithmetic, comparisons, and numeric conversions as unsupported.
+owns delivery. The isolated crate and raw-bit value foundation are implemented.
+Current type checking still uses Rust host `f64` parsing for validated decimal
+literals, and the primitive evaluator still treats floating constants,
+arithmetic, comparisons, and numeric conversions as unsupported.
 
-The accepted direction adds an unpublished `skald-binary64` workspace crate
-around one exactly pinned published `rustc_apfloat` release. That crate is the
-sole production compile-time authority for exact IEEE-754 binary64 arithmetic,
-numeric comparison, classification, decimal rounding, and integer/boolean
-conversion. It exchanges only opaque Skald-owned values containing exact
-`u64` bits and closed Skald-owned outcomes. No APFloat type, trait, status,
-rounding mode, category, or parser error crosses into `skald-compiler`; the
-wrapper has no dependency on compiler phases, IR, diagnostics, source spans,
-passes, targets, runtime code, or generated programs.
+The implementation has established an unpublished `skald-binary64` workspace
+crate around one exactly pinned published `rustc_apfloat` release. Its opaque
+Skald-owned `Binary64` facade currently owns exact `u64` representation,
+bitwise identity, sign inversion, and classification. It will become the sole
+production compile-time authority for exact IEEE-754 binary64 arithmetic,
+numeric comparison, decimal rounding, and integer/boolean conversion as the
+remaining roadmap tasks land. No APFloat type, trait, status, rounding mode,
+category, or parser error crosses the crate boundary; the wrapper has no
+dependency on compiler phases, IR, diagnostics, source spans, passes, targets,
+runtime code, or generated programs.
 
 Validated source decimal spellings will round through that authority before
 type checking stores their bits in HIR. Lexical grammar, unary-minus shape,
@@ -1128,9 +1130,8 @@ backend instruction contract, runtime ABI, evaluation order, cleanup,
 ownership, static lifecycle, or failure reason. It adds no host-float fallback,
 floating remainder, new rounding mode, total ordering, static-failure rewrite,
 C/C++ implementation, FFI, system library, or generated-program dependency.
-The workspace MSRV may be raised deliberately if required by the selected
-dependency; the current arbitrary floor does not justify a custom binary64
-implementation.
+The selected dependency has been verified with the workspace's Rust 1.82.0
+MSRV, so no toolchain increase was required.
 
 ### Checked-integer constant protocol simplification
 

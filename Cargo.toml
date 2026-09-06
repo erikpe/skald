@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/skac",
+    "crates/skald-binary64",
     "crates/skald-compiler",
     "crates/skald-docs-check",
     "crates/skald-golden",
