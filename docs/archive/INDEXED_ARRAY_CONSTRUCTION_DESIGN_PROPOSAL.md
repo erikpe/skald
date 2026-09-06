@@ -1,11 +1,11 @@
 # Indexed Array Construction Design Proposal
 
-Status: draft design proposal. IAC1 through IAC11 record recommended
-directions that require confirmation before promotion or implementation-roadmap
-work. The living [array language contract](../language/ARRAYS.md),
-[compiler contract](../compiler/ARRAYS.md), and
-[implemented grammar](../language/GRAMMAR.md) remain authoritative for current
-behavior.
+Status: frozen, promoted, validated, and archived on 2026-09-06. IAC1 through
+IAC11 adopt the confirmed decisions below. Living language and compiler
+documentation own the frozen direction; this document preserves the decision
+record while the active
+[indexed array construction implementation roadmap](../roadmaps/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md)
+owns delivery.
 
 This proposal defines a destination-typed array construction form whose length
 is known before allocation and whose elements are initialized by repeatedly
@@ -31,7 +31,7 @@ construction followed by assignment.
 
 ## Intended outcome
 
-The proposed feature should provide:
+The frozen feature will provide:
 
 - explicit inline `T[](length; index => expression)` construction;
 - symmetric shared-outer `new T[](length; index => expression)` construction;
@@ -48,9 +48,10 @@ The proposed feature should provide:
   knowledge of `Vec`; and
 - no public runtime ABI addition.
 
-Confirmation of this proposal would freeze a language and compiler contract;
-it would not make the syntax executable. The status matrix and implemented
-grammar remain unchanged until a later implementation roadmap is completed.
+Confirmation freezes a language and compiler contract; it does not make the
+syntax executable. The status matrix distinguishes that frozen direction from
+current availability, and the implemented grammar remains unchanged until the
+implementation roadmap activates the syntax.
 
 ## Current boundary and motivating evidence
 
@@ -147,19 +148,19 @@ therefore authoritative here.
 
 | ID | Decision | Recommended direction | State |
 |---|---|---|---|
-| [IAC1](#iac1--source-form) | Source form | Add `T[](length; index => expression)` and its shared-outer counterpart | **Proposed** |
-| [IAC2](#iac2--grammar-and-punctuation) | Grammar | Use `;` to separate length from generation and add `=>` as one punctuation token | **Proposed** |
-| [IAC3](#iac3--index-binding) | Index binding | Introduce one immutable lexical `i64` binding scoped only to the element expression | **Proposed** |
-| [IAC4](#iac4--type-selection-and-compatibility) | Type checking | Select explicit `T` first and check the expression as direct owning initialization of `T` | **Proposed** |
-| [IAC5](#iac5--evaluation-order-and-observable-effects) | Evaluation order | Evaluate length once, allocate once, then evaluate indices in increasing order | **Proposed** |
-| [IAC6](#iac6--element-ownership-and-lifecycle) | Ownership | Reuse the complete element-list initialization categories without defaulting or assignment | **Proposed** |
-| [IAC7](#iac7--temporary-lifetime-and-control-flow) | Dynamic epoch | Clean each element's non-transferred temporaries before beginning the next element | **Proposed** |
-| [IAC8](#iac8--generic-requirements) | Generic requirements | Infer only requirements selected by length, expression, destination initialization, and completed-array use | **Proposed** |
-| [IAC9](#iac9--partial-construction-publication-and-failure) | Partial construction | Track a dynamic initialized prefix and publish only after it equals the checked length | **Proposed** |
-| [IAC10](#iac10--compiler-representation-and-runtime-boundary) | Compiler boundary | Preserve a typed indexed mode through HIR and verified MIR; add no runtime ABI service | **Proposed** |
-| [IAC11](#iac11--standard-vector-adoption-and-delivery) | Adoption | Implement and document `Vec<T>.to_array()` only after the general form is executable | **Proposed** |
+| [IAC1](#iac1--source-form) | Source form | Add `T[](length; index => expression)` and its shared-outer counterpart | **Confirmed** |
+| [IAC2](#iac2--grammar-and-punctuation) | Grammar | Use `;` to separate length from generation and add `=>` as one punctuation token | **Confirmed** |
+| [IAC3](#iac3--index-binding) | Index binding | Introduce one immutable lexical `i64` binding scoped only to the element expression | **Confirmed** |
+| [IAC4](#iac4--type-selection-and-compatibility) | Type checking | Select explicit `T` first and check the expression as direct owning initialization of `T` | **Confirmed** |
+| [IAC5](#iac5--evaluation-order-and-observable-effects) | Evaluation order | Evaluate length once, allocate once, then evaluate indices in increasing order | **Confirmed** |
+| [IAC6](#iac6--element-ownership-and-lifecycle) | Ownership | Reuse the complete element-list initialization categories without defaulting or assignment | **Confirmed** |
+| [IAC7](#iac7--temporary-lifetime-and-control-flow) | Dynamic epoch | Clean each element's non-transferred temporaries before beginning the next element | **Confirmed** |
+| [IAC8](#iac8--generic-requirements) | Generic requirements | Infer only requirements selected by length, expression, destination initialization, and completed-array use | **Confirmed** |
+| [IAC9](#iac9--partial-construction-publication-and-failure) | Partial construction | Track a dynamic initialized prefix and publish only after it equals the checked length | **Confirmed** |
+| [IAC10](#iac10--compiler-representation-and-runtime-boundary) | Compiler boundary | Preserve a typed indexed mode through HIR and verified MIR; add no runtime ABI service | **Confirmed** |
+| [IAC11](#iac11--standard-vector-adoption-and-delivery) | Adoption | Implement and document `Vec<T>.to_array()` only after the general form is executable | **Confirmed** |
 
-## Proposed source surface
+## Confirmed source surface
 
 ### Inline construction
 
@@ -232,7 +233,7 @@ An empty vector returns `T[]()`-equivalent empty backing. Static type checking
 still validates the element expression and its requirements; a runtime length
 of zero does not erase an invalid generic operation.
 
-## Proposed grammar
+## Confirmed grammar
 
 The punctuation set would gain `=>`. The focused grammar addition is:
 
@@ -477,7 +478,8 @@ The backend should lower only verified ordinary CFG, checked allocation,
 element destination operations, prefix advancement, and publication. The
 runtime remains a checked byte allocator and failure reporter; it receives no
 expression, callback, lifecycle function, prefix state, or vector identity.
-No public runtime entry point or ABI-version change is proposed.
+No public runtime entry point or ABI-version change is part of the frozen
+design.
 
 ### IAC11 — Standard-vector adoption and delivery
 
@@ -566,7 +568,7 @@ generation. No diagnostic wording is frozen by this proposal.
 
 ## Relationship to existing contracts
 
-If confirmed, promotion must update:
+Promotion updates:
 
 - [Grammar](../language/GRAMMAR.md) for `=>` and the indexed initializer;
 - [Arrays](../language/ARRAYS.md) for source behavior, ownership, evaluation,
@@ -609,9 +611,10 @@ This proposal does not define or reserve:
 These may build on indexed construction later, but none should be inferred from
 the initial syntax or representation.
 
-## Contract audit questions
+## Confirmed contract audit
 
-Before confirmation, audit the recommended direction against these contracts:
+The pre-freeze audit answered all of the following affirmatively against the
+promoted language and compiler contracts:
 
 1. Can every existing element-list stored-value initialization category be
    represented once and executed safely at a dynamic prefix place?
@@ -635,31 +638,31 @@ Before confirmation, audit the recommended direction against these contracts:
 10. Can all target backends consume the same verified dynamic-prefix MIR
     without learning the source syntax or vector identity?
 
-## Decisions required before roadmap work
+## Frozen decision checklist
 
-- [ ] Confirm the inline and shared-outer indexed source forms.
-- [ ] Confirm `;` and the new `=>` punctuation rather than an ordinary argument
+- [x] Confirm the inline and shared-outer indexed source forms.
+- [x] Confirm `;` and the new `=>` punctuation rather than an ordinary argument
       list or reused arrow.
-- [ ] Confirm one immutable `i64` index binding and its lexical scope.
-- [ ] Confirm explicit result typing and ordinary direct element
+- [x] Confirm one immutable `i64` index binding and its lexical scope.
+- [x] Confirm explicit result typing and ordinary direct element
       initialization compatibility.
-- [ ] Confirm length, allocation, increasing-index evaluation, and effect
+- [x] Confirm length, allocation, increasing-index evaluation, and effect
       order.
-- [ ] Confirm category-specific ownership and the absence of default or
+- [x] Confirm category-specific ownership and the absence of default or
       assignment requirements.
-- [ ] Confirm the per-element temporary cleanup epoch.
-- [ ] Confirm generic requirement attribution and complete-class validation
+- [x] Confirm the per-element temporary cleanup epoch.
+- [x] Confirm generic requirement attribution and complete-class validation
       behavior.
-- [ ] Confirm the dynamic prefix, completion, exit-proof, and publication
+- [x] Confirm the dynamic prefix, completion, exit-proof, and publication
       invariants.
-- [ ] Confirm typed HIR/MIR ownership and the unchanged runtime ABI boundary.
-- [ ] Confirm `Vec<T>.to_array()` as the first ordinary-library adopter.
-- [ ] Complete the contract audit and promote confirmed behavior into living
+- [x] Confirm typed HIR/MIR ownership and the unchanged runtime ABI boundary.
+- [x] Confirm `Vec<T>.to_array()` as the first ordinary-library adopter.
+- [x] Complete the contract audit and promote confirmed behavior into living
       documentation before creating an implementation roadmap.
 
-## Eventual test obligations
+## Delivery test obligations
 
-A later implementation roadmap should assign tests to their owning layers:
+The active implementation roadmap assigns these tests to their owning layers:
 
 - lexer/parser tests for `=>`, inline/shared forms, nesting, postfix use,
   malformed separators, missing components, and recovery;
@@ -688,12 +691,12 @@ A later implementation roadmap should assign tests to their owning layers:
 
 ## Promotion and delivery boundary
 
-When every design decision and audit question is resolved, promote only the
-confirmed current/frozen contract into living language and compiler
-documentation. Then archive this proposal and create a separate PR-sized
-implementation roadmap based on the inspected phase owners.
+Every design decision and audit question is resolved. The frozen contract is
+promoted into living language and compiler documentation, this proposal is
+archived, and the separate indexed array construction roadmap owns the
+PR-sized delivery sequence based on the inspected phase owners.
 
-Implementation must not begin by silently accepting provisional syntax in the
-living grammar. The roadmap should order representation and verification work
-before standard-vector adoption, and it should keep the runtime ABI unchanged
-unless a later confirmed design explicitly supersedes this boundary.
+Implementation must not begin by silently accepting syntax beyond its staged
+task boundary in the living grammar. The roadmap orders representation and
+verification work before standard-vector adoption and keeps the runtime ABI
+unchanged unless a later confirmed design explicitly supersedes this boundary.

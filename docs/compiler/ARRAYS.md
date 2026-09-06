@@ -14,6 +14,9 @@ element lifecycle, copied slices, checked equal-length slice assignment, and
 call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
+The separately frozen indexed-construction direction extends direct element
+initialization to a dynamic length and canonical prefix loop; it is not yet an
+accepted compiler operation.
 The separately frozen
 [structural bracket compiler contract](INDEXING_AND_SLICING.md) keeps these
 array operations on the intrinsic path and selects ordinary calls only after
@@ -281,6 +284,50 @@ named-versus-produced owner accounting, source-position order, normally
 completed construction before prefix advancement, publication, backing
 consumption, and storage lifetime. The
 [status matrix](../language/STATUS.md) remains the concise availability view.
+
+## Frozen indexed-construction representation
+
+The frozen
+[indexed array construction contract](../language/ARRAYS.md#frozen-indexed-array-construction)
+extends element-list destination initialization from a static source list to
+one typed expression executed over a dynamic checked prefix. It preserves one
+explicit `ArrayTypeId`, outer ownership, typed `u64` length expression,
+immutable `i64` binding identity, and destination-directed stored-value plan
+through syntax, resolution, and HIR. Generic requirement collection selects
+only the operations used by the length, expression, and direct element
+initialization; it must not infer element default construction or assignment.
+
+HIR owns one indexed construction mode rather than desugaring to a source
+`while`, callable, `Vec`, or default-length array. The repeated plan may
+contain primitive, exact-class, optional, nested-array, shared-owner, or
+optional-owner initialization selected once during type checking. Lower phases
+must not recover its ownership or lifecycle meaning from expression shape.
+
+MIR retains one runtime `u64` length, one unpublished backing, one `u64`
+initialized prefix, and canonical CFG. The loop header proves `prefix <
+length`, exposes the current prefix as the safe `i64` source binding,
+evaluates one element epoch, initializes exactly `backing[prefix]`, advances
+only after that operation completes, cleans non-transferred epoch resources,
+and returns to the header. The sole publication edge carries an explicit proof
+that `prefix == length`.
+
+Verification must prove exact array and element types, length dominance,
+binding epoch, one current-slot initialization, lifecycle completion before
+advancement, transferred-value exclusion from cleanup, backedge shape, no
+alternate early exit, complete publication, and single backing consumption.
+Nested constructions retain distinct prefix identities. Optional payload and
+shared-owner state must become complete before the outer prefix advances.
+
+The x86-64 backend will consume only this verified target-independent CFG and
+reuse checked allocation, array-element places, category-specific
+initialization, prefix advancement, publication, and reverse cleanup. The
+runtime receives no callback, expression, array type, prefix, lifecycle
+identity, or vector operation, and ABI version 9 remains unchanged.
+
+The complete decisions and rejected alternatives are preserved in the
+[design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md), and
+delivery belongs to the
+[implementation roadmap](../roadmaps/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md).
 
 ## Typed HIR
 
@@ -779,9 +826,10 @@ private:
 - optimization of empty arrays, bounds checks, copies, and slice temporaries.
 
 The compiler design also excludes the language extensions listed in
-[Arrays](../language/ARRAYS.md#deferred-extensions), including richer element
-initialization, slice views, resizing, iteration protocols, external ABI,
-recoverable failures, and concurrency. The separately frozen
+[Arrays](../language/ARRAYS.md#deferred-extensions), including unknown-length
+collection, slice views, resizing, iteration protocols, external ABI,
+recoverable failures, and concurrency. Indexed construction is frozen
+separately above. The separately frozen
 [optional-array direction](OPTIONAL_VALUES.md#array-composition-and-runtime-boundary)
 does not alter current availability; it will reuse canonical array identities,
 lifecycle plans, descriptors, and helpers rather than infer a second array

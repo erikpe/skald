@@ -202,12 +202,12 @@ assigns these source-reachable failures their distinct reasons from the sole
 copy. The source must designate an exact `T[]` array place or value; array
 copying has no inheritance or dynamic-check relation.
 
-No fill-value, per-index generator, inferred array literal, or
+No fill-value, indexed construction, inferred array literal, or
 multi-dimensional shape constructor is implemented. Executable nonempty
 construction accepts the existing default-length and exact-copy modes plus
-explicit element lists for every supported stored element category: primitive,
-exact-class, inline-optional, recursively nested inline-array, shared-owner,
-and optional shared-owner elements.
+explicit element lists for every supported stored element category. The
+[frozen indexed direction](#frozen-indexed-array-construction) settles a
+dynamic direct-initialization form without making it currently executable.
 
 ## Explicit element-list construction
 
@@ -342,6 +342,55 @@ as live.
 
 The compiler representation and unchanged runtime boundary are defined in the
 [array compiler contract](../compiler/ARRAYS.md#element-list-representation).
+
+## Frozen indexed array construction
+
+The frozen next array-construction form is:
+
+```ska
+T[](length; index => expression)
+new T[](length; index => expression)
+```
+
+This syntax is not yet accepted by the compiler. When implemented, it will
+evaluate the exact-`u64` length once, validate and allocate unpublished backing
+once, then evaluate the element expression once for every increasing index.
+The index is one immutable `i64` binding scoped only to that expression. A zero
+length evaluates no element expression.
+
+Each dynamic position is a previously uninitialized owning destination of the
+explicit array element type. Primitive, exact-class, inline-optional, nested
+inline-array, shared-owner, and optional-owner sources use the same
+destination-directed operations as one explicit element-list position. Named
+sources copy, eligible produced sources initialize or transfer directly, and
+no default construction or copy assignment occurs merely because the result
+has dynamic length.
+
+Each element has one bounded evaluation and cleanup epoch. After its selected
+initialization completes, the initialized prefix advances and non-transferred
+temporaries, anchors, guards, wrappers, and owners clean before the next index
+begins. Effects are therefore deterministic in increasing-index order without
+retaining an unbounded number of temporaries.
+
+Backing remains unpublished until the dynamic initialized prefix equals the
+checked requested length. Inline construction then publishes one owning array;
+leading `new` publishes one shared owner of the complete outer array. Normal
+completed arrays retain ordinary copy, assignment, destruction, parameter,
+result, and reverse-cleanup behavior. Current non-unwinding failure retains no
+new partial-prefix cleanup promise.
+
+The initial frozen form is not an iterable comprehension, fill constructor,
+statement block, closure, or mutable array builder. It adds no inference,
+filtering, flattening, spread, unknown-length collection, array covariance, or
+runtime callback. Its primary ordinary-library adopter will be
+`Vec<T>.to_array()`, whose result contains the logical live prefix rather than
+capacity storage.
+
+The compiler representation, dynamic-prefix proof, runtime boundary, rejected
+alternatives, and decision history are preserved in the
+[frozen design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md).
+Delivery is tracked by the
+[indexed array construction roadmap](../roadmaps/INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md).
 
 ## Inline array value semantics
 
@@ -776,9 +825,9 @@ initializer overloads, checked aliases, and array elements.
 
 The following are intentionally outside the implemented array profile:
 
-- inferred array literals, expected-type-only lists, fill-value, per-index
-  generator, comprehensions, spreads, repetition, and rectangular-shape
-  initialization syntax;
+- inferred array literals, expected-type-only lists, fill-value,
+  unknown-length comprehensions, spreads, repetition, and rectangular-shape
+  initialization syntax; indexed construction is frozen separately above;
 - capacity, resizing an existing allocation, append, insertion, removal, or
   other dynamic-buffer operations;
 - non-copying slice views, reverse ranges, and strides;

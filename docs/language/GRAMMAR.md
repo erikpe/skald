@@ -775,6 +775,32 @@ publication, ownership, and cleanup protocol. The complete semantics are
 defined by the
 [array element-list contract](ARRAYS.md#explicit-element-list-construction).
 
+### Frozen indexed array construction
+
+The frozen, not-yet-accepted indexed construction form is:
+
+```text
+indexed-array-initializer
+                 = "(" expression ";" identifier "=>" expression ")"
+
+array-construction-initializer
+                 = array-construction-arguments
+                 | array-element-list
+                 | indexed-array-initializer
+```
+
+It will admit `T[](length; index => expression)` and the corresponding
+shared-outer `new T[](length; index => expression)`. The first expression must
+produce `u64`; the identifier declares one immutable `i64` binding scoped to
+the final expression. `;` distinguishes the form from existing ordinary array
+construction arguments, and `=>` will become one longest-match punctuation
+token only when implementation activates this grammar.
+
+The current lexer does not yet accept `=>`, and the implemented punctuation
+list above remains exact. The frozen source, ownership, evaluation, and
+availability boundary is defined by
+[indexed array construction](ARRAYS.md#frozen-indexed-array-construction).
+
 From tightest to loosest binding, precedence is:
 
 1. postfix unwrap, member access, dereferencing member access, calls, indexing,

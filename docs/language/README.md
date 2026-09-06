@@ -200,7 +200,8 @@ makes a result source-observable.
 - [Vectors](VECTORS.md) defines the implemented generic `std::vec::Vec<T>`
   contract, including admitted element capabilities,
   capacity, growth, structural indexing and slicing, snapshot replacement,
-  structural copy independence, and prompt removal cleanup.
+  structural copy independence, and prompt removal cleanup. Its frozen next
+  adopter is `to_array()` after indexed array construction is implemented.
 - [Structural indexing and slicing](INDEXING_AND_SLICING.md) defines the
   implemented class/interface bracket protocol, exact method shapes, array
   precedence, receiver and evaluation rules, and `Vec<T>`/`Str` adoption
@@ -213,7 +214,9 @@ makes a result source-observable.
   lifetime, failure, and typed explicit element-list contract. Primitive,
   exact-class, inline-optional, recursively nested
   inline-array, shared-owner, and optional shared-owner families execute
-  through one verified initialized-prefix protocol.
+  through one verified initialized-prefix protocol. It also owns the frozen
+  `T[](length; index => expression)` direction for dynamic direct
+  initialization and complete-prefix publication.
 - [Static fields](STATIC_FIELDS.md) defines implemented class-owned zero-
   default and explicit initialization, dependency-ordered eager startup,
   replacement, exact-reverse normal-return shutdown, diagnostics, and the

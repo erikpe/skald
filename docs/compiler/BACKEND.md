@@ -233,6 +233,18 @@ full-expression lifetime. They do not default-construct then assign,
 aggregate-copy class bytes, recover source expressions, publish a partial
 prefix, or introduce a new runtime service or descriptor layout.
 
+The frozen indexed array construction direction keeps the same target
+boundary for a dynamic source count. Instruction selection will receive only
+verified ordinary CFG containing checked allocation, an unpublished dynamic
+prefix, the selected array-element destination operations, per-element
+cleanup, a complete-prefix exit fact, and inline or shared publication. It
+will not receive source `=>` syntax, a callback, generic requirement state, or
+`Vec` identity. Existing layout-specific stores, initializer/copy calls,
+optional and owner operations, prefix arithmetic, publication, and reverse
+release remain sufficient. No descriptor, calling convention, runtime symbol,
+or ABI revision is introduced, and ABI version 9 remains unchanged. Current
+backends do not yet accept this form.
+
 Verified string literal data is pooled by exact decoded bytes in first
 canonical identity order. The target emits one eight-aligned local object per
 unique byte sequence in relocation-read-only data: immortal count, exact

@@ -80,19 +80,25 @@ generic-interface roadmaps are preserved in the
 
 ## Planned
 
-No additional implementation roadmap is waiting to start.
+The planned
+[indexed array construction roadmap](INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md)
+implements the frozen `T[](length; index => expression)` and shared-outer
+forms through verified dynamic-prefix MIR, then adds the ordinary generic
+`Vec<T>.to_array()` adopter. IA0, frontend source retention and scoped
+resolution, is the next task. The completed explicit element-list construction
+pipeline is its implementation foundation; no other roadmap blocks IA0.
 
 ## Design proposals
 
-The draft
-[indexed array construction design proposal](INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md)
-recommends explicit `T[](length; index => expression)` and shared-outer
-construction with direct destination initialization, per-element cleanup, a
-verified dynamic initialized prefix, and no runtime ABI or `Vec` compiler
-special case. Its motivating adopter is an ordinary generic
-`Vec<T>.to_array()` that remains valid for non-defaultable exact values and
-polymorphic shared owners. IAC1 through IAC11 and the contract audit must be
-confirmed before promotion or implementation-roadmap work.
+The completed
+[indexed array construction design](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md)
+is frozen, promoted into the living language and compiler contracts, and
+preserved in the archive. Its explicit `T[](length; index => expression)` and
+shared-outer forms use direct destination initialization, per-element cleanup,
+a verified dynamic initialized prefix, and no runtime ABI or `Vec` compiler
+special case. The active
+[implementation roadmap](INDEXED_ARRAY_CONSTRUCTION_ROADMAP.md) owns delivery;
+IA0 is next.
 
 The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)

@@ -498,6 +498,20 @@ compiler, verifier, backend, and native execution tests. Class, nested-array,
 and shared-owner cleanup reuse ordinary generated lifecycle and one-word
 ownership operations.
 
+## Frozen indexed array construction ABI boundary
+
+The frozen indexed array construction contract adds no public C symbol,
+runtime-managed generator, callback ABI, metadata format, or version change.
+The marker remains `ska_rt_abi_v9`.
+
+Checked backing allocation and release continue through the existing raw-byte
+boundary. Length evaluation, dynamic initialized-prefix state, index binding,
+element expression execution, destination-typed initialization, per-element
+cleanup, completion proof, and publication remain compiler and backend
+responsibilities. The runtime never receives an array type, source expression,
+prefix, lifecycle operation, or `Vec` identity. Current non-unwinding failure
+adds no runtime partial-prefix cleanup service.
+
 ## Implemented primitive operator ABI boundary
 
 The

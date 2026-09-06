@@ -778,6 +778,17 @@ Because array failures promise only non-return, their specs use
 `exit = "failure"`; tests must not depend on a particular signal or numeric
 status.
 
+The frozen indexed-construction extension retains this ownership split. Syntax
+and resolution will own `=>`, punctuation spans, binding scope, recovery, and
+source dumps; type checking will own exact `u64` length, immutable `i64` index,
+destination plans, and generic requirements without false default/assignment
+capabilities. MIR tests will own dynamic-prefix CFG, per-element cleanup,
+complete-exit proof, nested prefixes, and malformed transition rejection.
+Backend and golden tests will own every element family, inline/shared
+publication, effect order, zero/dynamic lengths, and unchanged ABI. Standard
+vector goldens will finally prove logical-prefix `to_array()` independence for
+the existing specialization matrix.
+
 While-loop coverage follows the phase boundary that owns each invariant.
 Lexer tests keep `while`, `break`, and `continue` reserved without reserving
 identifier prefixes. Syntax tests own mandatory loop punctuation and
@@ -1360,6 +1371,13 @@ resolved/HIR selection. Full golden determinism repeats every successful
 compile and native run and every compile failure. The non-gating
 `make generic-vec-benchmark` procedure measures representative growth, copy,
 pop, and clear behavior without accepting or rejecting host timing.
+
+After indexed array construction becomes executable, this owner also gains
+empty, spare-capacity, grown, primitive, exact-class, optional, nested-array,
+nested-vector, shared-exact, shared-interface, and heterogeneous `shared Obj`
+`to_array()` cases. Those cases must prove exact logical length, independent
+backing, ordinary element copy/retain behavior, and no narrowing of valid
+`Vec<T>` applications.
 
 ## Optional-value coverage
 

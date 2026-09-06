@@ -299,6 +299,13 @@ recursive deep copy or produced-backing adoption, and shared-owner families
 reuse ordinary retain/adopt/release and zero-niche optional operations.
 Availability remains authoritative in the [status matrix](../language/STATUS.md).
 
+The frozen indexed construction extension adds a typed length, immutable
+`i64` binding, repeated destination plan, dynamic initialized-prefix CFG, and
+complete-prefix publication proof without adding a `Vec` special case or
+runtime ABI. It is specified in the
+[array compiler contract](ARRAYS.md#frozen-indexed-construction-representation)
+and remains unavailable until its implementation roadmap completes.
+
 Class-owned static fields pass through delayed initializer resolution,
 stored-value HIR, opaque structurally verified preliminary MIR, exhaustive
 whole-program effect inference, deterministic lifetime planning, and an

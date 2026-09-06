@@ -243,6 +243,16 @@ Copying an occupied payload, returning it by value, or replacing a possibly
 present slot adds the exact copy or assignment requirement used by that
 operation.
 
+The frozen indexed array construction form preserves the same requirement
+precision for dynamic output. `T[](length; index => expression)` requests the
+operations selected by the length expression, repeated element expression,
+and direct owning initialization into `T`; it does not request element default
+construction or copy assignment. Complete-class validation remains eager, so
+this distinction is required for an ordinary `Vec<T>.to_array()` member to
+preserve valid non-defaultable exact-class and polymorphic shared-owner
+specializations. The syntax remains unavailable until its implementation
+roadmap completes.
+
 Unavailable synthesized copy construction or assignment does not by itself
 make a closed class invalid. It becomes an error when some declaration or body
 operation requires that capability, following the ordinary
