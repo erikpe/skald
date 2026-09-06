@@ -1,14 +1,12 @@
 //! Exact instruction and terminator shapes for checked-integer protocols.
 
 use crate::{
-    mir::{
-        BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirPlace, MirRvalueKind,
-        MirTerminator, MirType, StorageId,
-    },
+    mir::{BlockId, MirBasicBlock, MirInstruction, MirPlace, MirRvalueKind, MirTerminator},
     source::Span,
 };
 
 use super::{CheckedIntegerInstructionSite, CheckedIntegerProtocolCheck, CheckedIntegerValueSite};
+use crate::passes::pipeline::optimizations::checked_scalar_topology::is_exact_load;
 
 #[derive(Clone, Copy)]
 pub(super) struct SuccessShape {
@@ -107,34 +105,6 @@ pub(super) fn success_shape(
     })
 }
 
-pub(in crate::passes::pipeline::optimizations) fn storage_write_sites(
-    definition: MirDefinitionRef<'_>,
-    storage: StorageId,
-) -> Vec<CheckedIntegerInstructionSite> {
-    definition
-        .body()
-        .blocks
-        .iter()
-        .flat_map(|block| {
-            block
-                .instructions
-                .iter()
-                .enumerate()
-                .filter_map(move |(instruction, value)| {
-                    matches!(
-                        value,
-                        MirInstruction::Store(store)
-                            if store.destination == MirPlace::base(storage)
-                    )
-                    .then_some(CheckedIntegerInstructionSite {
-                        block: block.id,
-                        instruction,
-                    })
-                })
-        })
-        .collect()
-}
-
 pub(super) fn checked_terminator(
     terminator: Option<&MirTerminator>,
 ) -> Option<(CheckedIntegerProtocolCheck, BlockId, BlockId, Span)> {
@@ -180,28 +150,4 @@ pub(super) fn checked_terminator(
         | MirTerminator::ArrayLoop { .. }
         | MirTerminator::Terminate { .. } => None,
     }
-}
-
-pub(super) fn exact_first_load(
-    block: &MirBasicBlock,
-    storage: StorageId,
-    ty: MirType,
-) -> Option<CheckedIntegerValueSite> {
-    let Some(MirInstruction::Assign(load)) = block.instructions.first() else {
-        return None;
-    };
-    (is_exact_load(&load.rvalue.kind, storage) && load.rvalue.ty == ty).then_some(
-        CheckedIntegerValueSite {
-            value: load.result,
-            site: CheckedIntegerInstructionSite {
-                block: block.id,
-                instruction: 0,
-            },
-            span: load.span,
-        },
-    )
-}
-
-fn is_exact_load(kind: &MirRvalueKind, storage: StorageId) -> bool {
-    matches!(kind, MirRvalueKind::Load(place) if *place == MirPlace::base(storage))
 }

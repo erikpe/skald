@@ -9,13 +9,16 @@ use crate::{
 
 use super::{
     super::{
+        checked_f64_to_integer_evaluation::{
+            evaluate_f64_to_integer, CheckedF64ToIntegerEvaluation,
+        },
         checked_integer_evaluation::{
             evaluate_integer_division, evaluate_shift, CheckedIntegerEvaluation,
         },
         checked_integer_topology::CheckedIntegerProtocolOperation,
         primitive_evaluation::{evaluate_rvalue, PrimitiveConstant, PrimitiveEvaluation},
     },
-    graph::{LocalConstantGraph, NodeIndex, Producer},
+    graph::{CheckedScalarProducer, LocalConstantGraph, NodeIndex, Producer},
     logical::{select_logical_path, LogicalTransferSelection},
 };
 
@@ -32,6 +35,7 @@ pub(in crate::passes::pipeline::optimizations) enum LocalConstantProvenanceCateg
     CarrierStore,
     CarrierLoad,
     CheckedInteger,
+    CheckedF64ToInteger,
     LogicalShort,
     LogicalRight,
 }
@@ -97,7 +101,11 @@ impl LocalConstantProvenance {
             LocalConstantProvenanceCategory::CarrierStore
                 | LocalConstantProvenanceCategory::CarrierLoad
         );
-        crossed_checked |= category == LocalConstantProvenanceCategory::CheckedInteger;
+        crossed_checked |= matches!(
+            category,
+            LocalConstantProvenanceCategory::CheckedInteger
+                | LocalConstantProvenanceCategory::CheckedF64ToInteger
+        );
         crossed_logical |= matches!(
             category,
             LocalConstantProvenanceCategory::LogicalShort
@@ -421,26 +429,21 @@ impl SolverState {
                     provenance: LocalConstantProvenance::derived(category, [source.provenance]),
                 })
             }
-            Producer::Checked {
-                operation,
-                operands,
-                ..
-            } => {
-                let (Some(first), Some(second)) =
-                    (self.constants[operands[0].0], self.constants[operands[1].0])
-                else {
+            Producer::Checked { protocol, .. } => {
+                let Some(evaluation) = evaluate_checked(&protocol, &self.constants) else {
                     return Ok(());
                 };
-                match evaluate_checked(operation, first.constant, second.constant) {
-                    CheckedIntegerEvaluation::Success(constant) => Some(SolvedConstant {
+                match evaluation.outcome {
+                    CheckedScalarEvaluation::Success(constant) => Some(SolvedConstant {
                         constant,
                         provenance: LocalConstantProvenance::derived(
-                            LocalConstantProvenanceCategory::CheckedInteger,
-                            [first.provenance, second.provenance],
+                            evaluation.category,
+                            evaluation.dependencies,
                         ),
                     }),
-                    CheckedIntegerEvaluation::Failure(_)
-                    | CheckedIntegerEvaluation::Unsupported => None,
+                    CheckedScalarEvaluation::Failure(_) | CheckedScalarEvaluation::Unsupported => {
+                        None
+                    }
                 }
             }
             Producer::Logical { transfer } => {
@@ -603,21 +606,16 @@ impl SolverState {
         for index in 0..graph.node_count() {
             let target = NodeIndex(index);
             let Some(Producer::Checked {
-                operation,
-                operands,
+                protocol,
                 check_block,
             }) = graph.producer(target)
             else {
                 continue;
             };
-            let (Some(first), Some(second)) =
-                (self.constants[operands[0].0], self.constants[operands[1].0])
-            else {
+            let Some(evaluation) = evaluate_checked(protocol, &self.constants) else {
                 continue;
             };
-            if let CheckedIntegerEvaluation::Failure(reason) =
-                evaluate_checked(*operation, first.constant, second.constant)
-            {
+            if let CheckedScalarEvaluation::Failure(reason) = evaluation.outcome {
                 let LocalConstantIdentity::Value(result) = graph.identity(target) else {
                     return Err(LocalConstantAnalysisError::InvalidProducer {
                         identity: graph.identity(target),
@@ -669,17 +667,71 @@ fn primitive_dependencies(rvalue: &crate::mir::MirRvalueKind) -> Vec<ValueId> {
     }
 }
 
+#[derive(Clone, Copy)]
+enum CheckedScalarEvaluation {
+    Success(PrimitiveConstant),
+    Failure(MirTerminationReason),
+    Unsupported,
+}
+
+struct SolvedCheckedEvaluation {
+    outcome: CheckedScalarEvaluation,
+    category: LocalConstantProvenanceCategory,
+    dependencies: Vec<LocalConstantProvenance>,
+}
+
 fn evaluate_checked(
-    operation: CheckedIntegerProtocolOperation,
-    first: PrimitiveConstant,
-    second: PrimitiveConstant,
-) -> CheckedIntegerEvaluation {
-    match operation {
-        CheckedIntegerProtocolOperation::Division(operation) => {
-            evaluate_integer_division(operation, first, second)
+    protocol: &CheckedScalarProducer,
+    constants: &[Option<SolvedConstant>],
+) -> Option<SolvedCheckedEvaluation> {
+    match protocol {
+        CheckedScalarProducer::Integer {
+            operation,
+            operands,
+        } => {
+            let (Some(first), Some(second)) = (constants[operands[0].0], constants[operands[1].0])
+            else {
+                return None;
+            };
+            let outcome = match operation {
+                CheckedIntegerProtocolOperation::Division(operation) => {
+                    evaluate_integer_division(*operation, first.constant, second.constant)
+                }
+                CheckedIntegerProtocolOperation::Shift(operation) => {
+                    evaluate_shift(*operation, first.constant, second.constant)
+                }
+            };
+            Some(SolvedCheckedEvaluation {
+                outcome: match outcome {
+                    CheckedIntegerEvaluation::Success(constant) => {
+                        CheckedScalarEvaluation::Success(constant)
+                    }
+                    CheckedIntegerEvaluation::Failure(reason) => {
+                        CheckedScalarEvaluation::Failure(reason)
+                    }
+                    CheckedIntegerEvaluation::Unsupported => CheckedScalarEvaluation::Unsupported,
+                },
+                category: LocalConstantProvenanceCategory::CheckedInteger,
+                dependencies: vec![first.provenance, second.provenance],
+            })
         }
-        CheckedIntegerProtocolOperation::Shift(operation) => {
-            evaluate_shift(operation, first, second)
+        CheckedScalarProducer::F64ToInteger { relation, source } => {
+            let source = constants[source.0]?;
+            Some(SolvedCheckedEvaluation {
+                outcome: match evaluate_f64_to_integer(*relation, source.constant) {
+                    CheckedF64ToIntegerEvaluation::Success(constant) => {
+                        CheckedScalarEvaluation::Success(constant)
+                    }
+                    CheckedF64ToIntegerEvaluation::Failure(reason) => {
+                        CheckedScalarEvaluation::Failure(reason)
+                    }
+                    CheckedF64ToIntegerEvaluation::Unsupported => {
+                        CheckedScalarEvaluation::Unsupported
+                    }
+                },
+                category: LocalConstantProvenanceCategory::CheckedF64ToInteger,
+                dependencies: vec![source.provenance],
+            })
         }
     }
 }

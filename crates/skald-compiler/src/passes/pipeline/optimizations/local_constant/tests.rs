@@ -4,16 +4,17 @@ use crate::{
             storage_use_census_for_definition, MirStoragePlaceUse, MirStorageUseRole,
             MirStorageWriteAuthorization,
         },
-        MirInstruction, MirPlace, MirPlaceBase, MirPlaceProjection, MirSharedRelease, MirStorage,
-        MirStorageKind, MirType, MirValue, StorageId, ValueId,
+        test_fixtures::checked_primitive_cast_program,
+        MirInstruction, MirIntegerType, MirPlace, MirPlaceBase, MirPlaceProjection,
+        MirSharedRelease, MirStorage, MirStorageKind, MirType, MirValue, StorageId, ValueId,
     },
     test_support::lower_source_to_final_mir,
 };
 
 use super::carrier::{
-    carrier_use_disposition, certify_checked_integer_carriers,
+    carrier_use_disposition, certify_checked_integer_carriers, certify_checked_scalar_carriers,
     CheckedCarrierCertificationObservation, CheckedCarrierProtocolRole,
-    CheckedCarrierRejectionReason, CheckedCarrierUseDisposition,
+    CheckedCarrierRejectionReason, CheckedCarrierUseDisposition, CheckedScalarProtocolFamily,
 };
 
 fn entry_definition(program: &crate::mir::MirProgram) -> &crate::mir::MirFunctionDefinition {
@@ -49,6 +50,19 @@ fn only_checked_storage(
 
 fn rejection_reasons(program: &crate::mir::MirProgram) -> Vec<CheckedCarrierRejectionReason> {
     certify_checked_integer_carriers(entry_definition(program).into())
+        .unwrap()
+        .into_iter()
+        .filter_map(|observation| match observation {
+            CheckedCarrierCertificationObservation::Rejected { reason, .. } => Some(reason),
+            CheckedCarrierCertificationObservation::Certified(_) => None,
+        })
+        .collect()
+}
+
+fn checked_scalar_rejection_reasons(
+    program: &crate::mir::MirProgram,
+) -> Vec<CheckedCarrierRejectionReason> {
+    certify_checked_scalar_carriers(entry_definition(program).into())
         .unwrap()
         .into_iter()
         .filter_map(|observation| match observation {
@@ -95,6 +109,107 @@ fn certifies_operand_and_result_carriers_with_exact_evidence() {
         let _ = certificate.loads()[0].site();
         let _ = certificate.loads()[0].span();
     }
+}
+
+#[test]
+fn certifies_floating_source_and_typed_result_carriers_for_every_target() {
+    for (target, result_type) in [
+        (MirIntegerType::I64, MirType::I64),
+        (MirIntegerType::U64, MirType::U64),
+        (MirIntegerType::U8, MirType::U8),
+    ] {
+        let program = checked_primitive_cast_program(0x400e_0000_0000_0000, target, 3);
+        let original = program.clone();
+        let observations =
+            certify_checked_scalar_carriers(entry_definition(&program).into()).unwrap();
+
+        assert_eq!(program, original, "certification must be read-only");
+        assert_eq!(observations.len(), 2);
+        for (observation, (role, ty)) in observations.iter().zip([
+            (CheckedCarrierProtocolRole::Source, MirType::F64),
+            (CheckedCarrierProtocolRole::Result, result_type),
+        ]) {
+            let CheckedCarrierCertificationObservation::Certified(certificate) = observation else {
+                panic!("canonical floating carrier must certify: {observation:?}");
+            };
+            assert_eq!(
+                certificate.protocol_owner().family(),
+                CheckedScalarProtocolFamily::F64ToInteger
+            );
+            assert_eq!(certificate.protocol_owner().role(), role);
+            assert_eq!(certificate.ty(), ty);
+            assert_eq!(certificate.loads().len(), 1);
+        }
+    }
+}
+
+#[test]
+fn floating_carriers_reuse_strict_access_and_lifetime_barriers() {
+    let base = checked_primitive_cast_program(0x400e_0000_0000_0000, MirIntegerType::I64, 3);
+    let observations = certify_checked_scalar_carriers(entry_definition(&base).into()).unwrap();
+    let source = observations
+        .iter()
+        .find_map(|observation| match observation {
+            CheckedCarrierCertificationObservation::Certified(certificate)
+                if certificate.protocol_owner().role() == CheckedCarrierProtocolRole::Source =>
+            {
+                Some(certificate.storage())
+            }
+            _ => None,
+        })
+        .unwrap();
+
+    let mut duplicate = base.clone();
+    let definition = entry_definition_mut(&mut duplicate);
+    let store = definition
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Store(store) if store.destination == MirPlace::base(source) => {
+                Some(store.clone())
+            }
+            _ => None,
+        })
+        .unwrap();
+    definition.body.blocks[0]
+        .instructions
+        .insert(1, MirInstruction::Store(store));
+    assert!(checked_scalar_rejection_reasons(&duplicate)
+        .contains(&CheckedCarrierRejectionReason::MissingOrMultipleStores));
+
+    let mut projected = base.clone();
+    let definition = entry_definition_mut(&mut projected);
+    let store = definition
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Store(store) if store.destination == MirPlace::base(source) => {
+                Some(store)
+            }
+            _ => None,
+        })
+        .unwrap();
+    let field = crate::identity::FieldId::new(crate::identity::ClassId::new(0), 0);
+    store
+        .destination
+        .projections
+        .push(MirPlaceProjection::Field(field));
+    assert!(checked_scalar_rejection_reasons(&projected)
+        .contains(&CheckedCarrierRejectionReason::InvalidAccess));
+
+    let mut no_dead = base;
+    let definition = entry_definition_mut(&mut no_dead);
+    for block in &mut definition.body.blocks {
+        block.instructions.retain(|instruction| {
+            !matches!(instruction, MirInstruction::StorageDead(dead) if dead.storage == source)
+        });
+    }
+    assert!(checked_scalar_rejection_reasons(&no_dead)
+        .contains(&CheckedCarrierRejectionReason::MissingOrMultipleLifetimeMarkers));
 }
 
 #[test]

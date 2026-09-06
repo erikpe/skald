@@ -1135,16 +1135,23 @@ optimization profile cannot select APFloat-specific result bits observable
 through `std::f64::to_bits`; floating algebraic identities remain separately
 excluded.
 
-Successful constant `f64`-to-integer casts will be owned by a separate
-proof-rich `checked-f64-to-integer-constant-folding` pass. It observes and
-certifies the complete range-check diamond, consumes one fresh convergent fact
-solution, and atomically replaces only a proven successful protocol with its
-exact target-typed integer result. NaN, infinity, finite out-of-range,
-malformed, and insufficiently proven protocols remain unchanged on their
-existing runtime failure path. Common checked-scalar site and carrier
-vocabulary may be shared with checked integer operations, but floating-cast
-topology, evaluation, mutation, pass identity, and measurements remain
-distinct owners.
+Checked floating-to-integer analysis now has an exact immutable topology
+observer for the complete range-check diamond and shared conservative scalar-
+carrier certification with explicit protocol-family ownership. Its separate
+evaluator uses `skald-binary64` for exact truncation and range outcomes. The
+existing convergent solver publishes source-carrier and successful target-
+typed result facts, records NaN, infinity, and finite out-of-range failures,
+and publishes no result fact for those failures. These owners are read-only;
+they add no pass or MIR mutation.
+
+Successful constant `f64`-to-integer protocol mutation remains assigned to a
+separate proof-rich `checked-f64-to-integer-constant-folding` pass. That pass
+will consume one fresh convergent solution and atomically replace only a
+proven successful protocol. Malformed and insufficiently proven protocols,
+along with every static failure, remain unchanged on their existing runtime
+path. Common checked-scalar site and carrier vocabulary is shared with checked
+integer operations, while floating-cast topology, evaluation, future mutation,
+pass identity, and measurements remain distinct owners.
 
 This direction changes no source syntax, source-visible arithmetic or cast
 semantics, HIR/MIR value representation, floating exception visibility,

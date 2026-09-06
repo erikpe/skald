@@ -4,20 +4,23 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{value_use_census_for_definition, MirRewriteError},
-        BlockId, MirDefinitionRef, MirInstruction, MirLogicalOperation, MirRvalueKind, MirType,
-        StorageId, ValueId,
+        BlockId, MirDefinitionRef, MirF64ToIntegerRange, MirInstruction, MirLogicalOperation,
+        MirRvalueKind, MirType, StorageId, ValueId,
     },
 };
 
 use super::{
     super::{
+        checked_f64_to_integer_topology::{
+            observe_checked_f64_to_integer_topologies, CheckedF64ToIntegerTopologyObservation,
+        },
         checked_integer_topology::{
             observe_checked_integer_topologies, CheckedIntegerProtocolOperation,
             CheckedIntegerTopologyObservation,
         },
         logical_topology::{observe_logical_topologies, LogicalTopologyObservation},
     },
-    carrier::{certify_checked_integer_carriers, CheckedCarrierCertificationObservation},
+    carrier::{certify_checked_scalar_carriers, CheckedCarrierCertificationObservation},
     LocalConstantAnalysisError, LocalConstantIdentity, LocalConstantProvenanceCategory,
 };
 
@@ -35,12 +38,23 @@ pub(super) enum Producer {
         category: LocalConstantProvenanceCategory,
     },
     Checked {
-        operation: CheckedIntegerProtocolOperation,
-        operands: [NodeIndex; 2],
+        protocol: CheckedScalarProducer,
         check_block: BlockId,
     },
     Logical {
         transfer: usize,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub(super) enum CheckedScalarProducer {
+    Integer {
+        operation: CheckedIntegerProtocolOperation,
+        operands: [NodeIndex; 2],
+    },
+    F64ToInteger {
+        relation: MirF64ToIntegerRange,
+        source: NodeIndex,
     },
 }
 
@@ -178,7 +192,7 @@ impl LocalConstantGraph {
         &mut self,
         definition: MirDefinitionRef<'_>,
     ) -> Result<(), LocalConstantAnalysisError> {
-        for observation in certify_checked_integer_carriers(definition)? {
+        for observation in certify_checked_scalar_carriers(definition)? {
             let CheckedCarrierCertificationObservation::Certified(certificate) = observation else {
                 continue;
             };
@@ -224,11 +238,28 @@ impl LocalConstantGraph {
             self.set_producer(
                 self.value_node(topology.result_assignment.value)?,
                 Producer::Checked {
-                    operation: topology.check.operation(),
-                    operands: [
-                        self.value_node(topology.operand_loads[0].value)?,
-                        self.value_node(topology.operand_loads[1].value)?,
-                    ],
+                    protocol: CheckedScalarProducer::Integer {
+                        operation: topology.check.operation(),
+                        operands: [
+                            self.value_node(topology.operand_loads[0].value)?,
+                            self.value_node(topology.operand_loads[1].value)?,
+                        ],
+                    },
+                    check_block: topology.check_block,
+                },
+            )?;
+        }
+        for observation in observe_checked_f64_to_integer_topologies(definition)? {
+            let CheckedF64ToIntegerTopologyObservation::Protocol(topology) = observation else {
+                continue;
+            };
+            self.set_producer(
+                self.value_node(topology.result_assignment.value)?,
+                Producer::Checked {
+                    protocol: CheckedScalarProducer::F64ToInteger {
+                        relation: topology.relation(),
+                        source: self.value_node(topology.source_load.value)?,
+                    },
                     check_block: topology.check_block,
                 },
             )?;
@@ -331,7 +362,10 @@ impl LocalConstantGraph {
                 }
             },
             Producer::Transfer { source, .. } => vec![*source],
-            Producer::Checked { operands, .. } => operands.to_vec(),
+            Producer::Checked { protocol, .. } => match protocol {
+                CheckedScalarProducer::Integer { operands, .. } => operands.to_vec(),
+                CheckedScalarProducer::F64ToInteger { source, .. } => vec![*source],
+            },
             Producer::Logical { transfer } => {
                 let transfer = self.logical_transfer(*transfer)?;
                 vec![transfer.left, transfer.right]

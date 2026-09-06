@@ -9,36 +9,24 @@ use std::collections::{HashMap, HashSet};
 use crate::{
     mir::{
         checked_scalar_predecessors,
-        rewrite::{
-            local_cfg_facts_for_definition, MirLocalIdentity, MirLocalIdentitySite,
-            MirReferenceFailure, MirRewriteError,
-        },
+        rewrite::{local_cfg_facts_for_definition, MirRewriteError},
         BlockId, MirDefinitionRef, MirIntegerDivisionOperation, MirIntegerDivisorCheck,
-        MirShiftCountCheck, MirShiftOperation, MirStorage, MirStorageKind, MirTerminationReason,
-        MirTerminator, MirType, StorageId, ValueId,
+        MirShiftCountCheck, MirShiftOperation, MirStorageKind, MirTerminationReason, MirTerminator,
+        MirType, StorageId,
     },
     source::Span,
 };
 
-use self::shape::{checked_terminator, exact_first_load, success_shape};
+use self::shape::{checked_terminator, success_shape};
+use super::checked_scalar_topology::{
+    exact_first_load, has_only_predecessor, invalid_block, required_storage, storage_write_sites,
+};
 
 mod shape;
-pub(super) use shape::storage_write_sites;
-
-/// One instruction's stable location in the current dense callable snapshot.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) struct CheckedIntegerInstructionSite {
-    pub(super) block: BlockId,
-    pub(super) instruction: usize,
-}
-
-/// One value definition and its exact location and source span.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) struct CheckedIntegerValueSite {
-    pub(super) value: ValueId,
-    pub(super) site: CheckedIntegerInstructionSite,
-    pub(super) span: Span,
-}
+pub(super) use super::checked_scalar_topology::{
+    CheckedScalarInstructionSite as CheckedIntegerInstructionSite,
+    CheckedScalarValueSite as CheckedIntegerValueSite,
+};
 
 /// The verifier-owned checked operation and its three scalar carriers.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -271,58 +259,6 @@ fn observe_topology(
             .iter()
             .any(|block| context.protected.contains(block)),
     }))
-}
-
-fn has_only_predecessor(
-    predecessors: &HashMap<BlockId, HashSet<BlockId>>,
-    block: BlockId,
-    expected: BlockId,
-) -> bool {
-    predecessors.get(&block) == Some(&HashSet::from([expected]))
-}
-
-fn required_storage(
-    definition: MirDefinitionRef<'_>,
-    storage: StorageId,
-    check_block: BlockId,
-) -> Result<&MirStorage, MirRewriteError> {
-    definition.storage(storage).ok_or_else(|| {
-        invalid_reference(
-            definition,
-            MirLocalIdentity::Storage(storage),
-            MirLocalIdentitySite::Terminator(check_block.index()),
-        )
-    })
-}
-
-fn invalid_block(
-    definition: MirDefinitionRef<'_>,
-    block: BlockId,
-    referencing_block: BlockId,
-) -> MirRewriteError {
-    invalid_reference(
-        definition,
-        MirLocalIdentity::Block(block),
-        MirLocalIdentitySite::Terminator(referencing_block.index()),
-    )
-}
-
-fn invalid_reference(
-    definition: MirDefinitionRef<'_>,
-    identity: MirLocalIdentity,
-    site: MirLocalIdentitySite,
-) -> MirRewriteError {
-    let failure = if identity.callable() == definition.callable() {
-        MirReferenceFailure::Unknown
-    } else {
-        MirReferenceFailure::Foreign
-    };
-    MirRewriteError::InvalidReference {
-        expected: definition.callable(),
-        identity,
-        site,
-        failure,
-    }
 }
 
 #[cfg(test)]

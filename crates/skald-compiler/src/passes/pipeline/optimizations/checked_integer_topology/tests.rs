@@ -1,8 +1,8 @@
 use crate::{
     identity::FunctionId,
     mir::{
-        BlockId, MirPathCondition, MirStorage, MirStorageKind, MirTerminator, MirType,
-        PathConditionId, StorageId,
+        rewrite::MirReferenceFailure, BlockId, MirPathCondition, MirStorage, MirStorageKind,
+        MirTerminator, MirType, PathConditionId, StorageId,
     },
     test_support::lower_source_to_final_mir,
 };

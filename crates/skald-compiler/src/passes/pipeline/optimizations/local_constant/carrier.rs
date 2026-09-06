@@ -14,16 +14,31 @@ use crate::mir::{
 };
 use crate::source::Span;
 
-use super::super::checked_integer_topology::{
-    observe_checked_integer_topologies, CheckedIntegerInstructionSite,
-    CheckedIntegerProtocolTopology, CheckedIntegerTopologyObservation,
+use super::super::{
+    checked_f64_to_integer_topology::{
+        observe_checked_f64_to_integer_topologies, CheckedF64ToIntegerTopologyObservation,
+    },
+    checked_integer_topology::{
+        observe_checked_integer_topologies, CheckedIntegerProtocolCheck,
+        CheckedIntegerTopologyObservation,
+    },
+    checked_scalar_topology::{CheckedScalarInstructionSite, CheckedScalarValueSite},
 };
 
-/// Carrier position owned by one checked-integer protocol.
+/// Checked-scalar protocol family which owns a certified carrier.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(super) enum CheckedScalarProtocolFamily {
+    IntegerDivision,
+    IntegerShift,
+    F64ToInteger,
+}
+
+/// Carrier position owned by one checked-scalar protocol.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(super) enum CheckedCarrierProtocolRole {
     FirstOperand,
     SecondOperand,
+    Source,
     Result,
 }
 
@@ -31,12 +46,18 @@ pub(super) enum CheckedCarrierProtocolRole {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(super) struct CheckedCarrierProtocolOwner {
     check_block: BlockId,
+    family: CheckedScalarProtocolFamily,
     role: CheckedCarrierProtocolRole,
 }
 
 impl CheckedCarrierProtocolOwner {
     pub(super) const fn check_block(self) -> BlockId {
         self.check_block
+    }
+
+    #[cfg(test)]
+    pub(super) const fn family(self) -> CheckedScalarProtocolFamily {
+        self.family
     }
 
     pub(super) const fn role(self) -> CheckedCarrierProtocolRole {
@@ -47,14 +68,14 @@ impl CheckedCarrierProtocolOwner {
 /// Exact ordinary store which seeds a certified carrier.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct CheckedCarrierStore {
-    site: CheckedIntegerInstructionSite,
+    site: CheckedScalarInstructionSite,
     source: ValueId,
     span: Span,
 }
 
 impl CheckedCarrierStore {
     #[cfg(test)]
-    pub(super) const fn site(self) -> CheckedIntegerInstructionSite {
+    pub(super) const fn site(self) -> CheckedScalarInstructionSite {
         self.site
     }
 
@@ -71,14 +92,14 @@ impl CheckedCarrierStore {
 /// Exact load eligible to receive a propagated carrier fact.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct CheckedCarrierLoad {
-    site: CheckedIntegerInstructionSite,
+    site: CheckedScalarInstructionSite,
     result: ValueId,
     span: Span,
 }
 
 impl CheckedCarrierLoad {
     #[cfg(test)]
-    pub(super) const fn site(self) -> CheckedIntegerInstructionSite {
+    pub(super) const fn site(self) -> CheckedScalarInstructionSite {
         self.site
     }
 
@@ -95,18 +116,18 @@ impl CheckedCarrierLoad {
 /// Concrete lifetime sites whose relative dominance was checked.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct CheckedCarrierLifetimeEvidence {
-    live: CheckedIntegerInstructionSite,
-    dead: CheckedIntegerInstructionSite,
+    live: CheckedScalarInstructionSite,
+    dead: CheckedScalarInstructionSite,
 }
 
 impl CheckedCarrierLifetimeEvidence {
     #[cfg(test)]
-    pub(super) const fn live(self) -> CheckedIntegerInstructionSite {
+    pub(super) const fn live(self) -> CheckedScalarInstructionSite {
         self.live
     }
 
     #[cfg(test)]
-    pub(super) const fn dead(self) -> CheckedIntegerInstructionSite {
+    pub(super) const fn dead(self) -> CheckedScalarInstructionSite {
         self.dead
     }
 }
@@ -247,84 +268,164 @@ pub(super) const fn carrier_use_disposition(
     }
 }
 
-/// Certifies only the three scalar carriers owned by canonical checked-
-/// integer protocols. Unrelated storage is intentionally never considered.
+/// Certifies only scalar carriers owned by canonical checked protocols.
+/// Unrelated storage is intentionally never considered.
+pub(super) fn certify_checked_scalar_carriers(
+    definition: MirDefinitionRef<'_>,
+) -> Result<Vec<CheckedCarrierCertificationObservation>, MirRewriteError> {
+    let mut candidates = checked_integer_carrier_candidates(definition)?;
+    candidates.extend(checked_f64_to_integer_carrier_candidates(definition)?);
+    certify_carrier_candidates(definition, candidates)
+}
+
+/// Existing integer rewrite consumers retain their original protocol scope.
+/// In particular, malformed floating-cast topology cannot affect an integer-
+/// only plan before the floating rewrite owner exists.
 pub(super) fn certify_checked_integer_carriers(
     definition: MirDefinitionRef<'_>,
 ) -> Result<Vec<CheckedCarrierCertificationObservation>, MirRewriteError> {
+    certify_carrier_candidates(definition, checked_integer_carrier_candidates(definition)?)
+}
+
+fn certify_carrier_candidates(
+    definition: MirDefinitionRef<'_>,
+    mut candidates: Vec<CheckedCarrierCandidate>,
+) -> Result<Vec<CheckedCarrierCertificationObservation>, MirRewriteError> {
     let census = storage_use_census_for_definition(definition)?;
-    let topologies = observe_checked_integer_topologies(definition)?;
     let mut claimed = HashSet::new();
     let mut observations = Vec::new();
 
-    for topology in topologies {
-        let CheckedIntegerTopologyObservation::Protocol(topology) = topology else {
-            continue;
+    candidates.sort_by_key(|candidate| (candidate.owner.check_block, candidate.owner.role));
+    for candidate in candidates {
+        let result = if !claimed.insert(candidate.storage) {
+            Err(CheckedCarrierRejectionReason::DuplicateProtocolOwner)
+        } else {
+            certify_one(
+                definition,
+                census.get(candidate.storage),
+                candidate.storage,
+                candidate.ty,
+                candidate.owner,
+                candidate.expected_load,
+            )
         };
-        let [(first, first_ty), (second, second_ty)] = topology.check.operands();
-        let (result, result_ty) = topology.check.result();
-        let candidates = [
-            (
-                first,
-                first_ty,
-                CheckedCarrierProtocolRole::FirstOperand,
-                topology.operand_loads[0],
-            ),
-            (
-                second,
-                second_ty,
-                CheckedCarrierProtocolRole::SecondOperand,
-                topology.operand_loads[1],
-            ),
-            (
-                result,
-                result_ty,
-                CheckedCarrierProtocolRole::Result,
-                topology.result_reload,
-            ),
-        ];
-
-        for (storage, ty, role, load) in candidates {
-            let owner = CheckedCarrierProtocolOwner {
-                check_block: topology.check_block,
-                role,
-            };
-            let result = if !claimed.insert(storage) {
-                Err(CheckedCarrierRejectionReason::DuplicateProtocolOwner)
-            } else {
-                certify_one(
-                    definition,
-                    &topology,
-                    census.get(storage),
-                    storage,
-                    ty,
-                    owner,
-                    load,
-                )
-            };
-            observations.push(match result {
-                Ok(certificate) => {
-                    CheckedCarrierCertificationObservation::Certified(Box::new(certificate))
-                }
-                Err(reason) => CheckedCarrierCertificationObservation::Rejected {
-                    storage,
-                    protocol_owner: owner,
-                    reason,
-                },
-            });
-        }
+        observations.push(match result {
+            Ok(certificate) => {
+                CheckedCarrierCertificationObservation::Certified(Box::new(certificate))
+            }
+            Err(reason) => CheckedCarrierCertificationObservation::Rejected {
+                storage: candidate.storage,
+                protocol_owner: candidate.owner,
+                reason,
+            },
+        });
     }
     Ok(observations)
 }
 
+#[derive(Clone, Copy)]
+struct CheckedCarrierCandidate {
+    storage: StorageId,
+    ty: MirType,
+    owner: CheckedCarrierProtocolOwner,
+    expected_load: CheckedScalarValueSite,
+}
+
+fn checked_integer_carrier_candidates(
+    definition: MirDefinitionRef<'_>,
+) -> Result<Vec<CheckedCarrierCandidate>, MirRewriteError> {
+    let mut candidates = Vec::new();
+    for observation in observe_checked_integer_topologies(definition)? {
+        let CheckedIntegerTopologyObservation::Protocol(topology) = observation else {
+            continue;
+        };
+        let family = match topology.check {
+            CheckedIntegerProtocolCheck::Division(_) => {
+                CheckedScalarProtocolFamily::IntegerDivision
+            }
+            CheckedIntegerProtocolCheck::Shift(_) => CheckedScalarProtocolFamily::IntegerShift,
+        };
+        let [(first, first_ty), (second, second_ty)] = topology.check.operands();
+        let (result, result_ty) = topology.check.result();
+        candidates.extend([
+            CheckedCarrierCandidate {
+                storage: first,
+                ty: first_ty,
+                owner: CheckedCarrierProtocolOwner {
+                    check_block: topology.check_block,
+                    family,
+                    role: CheckedCarrierProtocolRole::FirstOperand,
+                },
+                expected_load: topology.operand_loads[0],
+            },
+            CheckedCarrierCandidate {
+                storage: second,
+                ty: second_ty,
+                owner: CheckedCarrierProtocolOwner {
+                    check_block: topology.check_block,
+                    family,
+                    role: CheckedCarrierProtocolRole::SecondOperand,
+                },
+                expected_load: topology.operand_loads[1],
+            },
+            CheckedCarrierCandidate {
+                storage: result,
+                ty: result_ty,
+                owner: CheckedCarrierProtocolOwner {
+                    check_block: topology.check_block,
+                    family,
+                    role: CheckedCarrierProtocolRole::Result,
+                },
+                expected_load: topology.result_reload,
+            },
+        ]);
+    }
+    Ok(candidates)
+}
+
+fn checked_f64_to_integer_carrier_candidates(
+    definition: MirDefinitionRef<'_>,
+) -> Result<Vec<CheckedCarrierCandidate>, MirRewriteError> {
+    let mut candidates = Vec::new();
+    for observation in observe_checked_f64_to_integer_topologies(definition)? {
+        let CheckedF64ToIntegerTopologyObservation::Protocol(topology) = observation else {
+            continue;
+        };
+        let (source, source_ty) = topology.source();
+        let (result, result_ty) = topology.result();
+        candidates.extend([
+            CheckedCarrierCandidate {
+                storage: source,
+                ty: source_ty,
+                owner: CheckedCarrierProtocolOwner {
+                    check_block: topology.check_block,
+                    family: CheckedScalarProtocolFamily::F64ToInteger,
+                    role: CheckedCarrierProtocolRole::Source,
+                },
+                expected_load: topology.source_load,
+            },
+            CheckedCarrierCandidate {
+                storage: result,
+                ty: result_ty,
+                owner: CheckedCarrierProtocolOwner {
+                    check_block: topology.check_block,
+                    family: CheckedScalarProtocolFamily::F64ToInteger,
+                    role: CheckedCarrierProtocolRole::Result,
+                },
+                expected_load: topology.result_reload,
+            },
+        ]);
+    }
+    Ok(candidates)
+}
+
 fn certify_one(
     definition: MirDefinitionRef<'_>,
-    topology: &CheckedIntegerProtocolTopology,
     census: Option<&MirStorageUseCensusEntry>,
     storage: StorageId,
     ty: MirType,
     protocol_owner: CheckedCarrierProtocolOwner,
-    expected_load: super::super::checked_integer_topology::CheckedIntegerValueSite,
+    expected_load: CheckedScalarValueSite,
 ) -> Result<CheckedCarrierCertificate, CheckedCarrierRejectionReason> {
     let census = census.ok_or(CheckedCarrierRejectionReason::MissingDeclaration)?;
     let declaration = definition
@@ -370,7 +471,7 @@ fn certify_one(
     let [protocol_site] = protocol_uses.as_slice() else {
         return Err(CheckedCarrierRejectionReason::WrongProtocolUse);
     };
-    if *protocol_site != MirLocalIdentitySite::Terminator(topology.check_block.index()) {
+    if *protocol_site != MirLocalIdentitySite::Terminator(protocol_owner.check_block.index()) {
         return Err(CheckedCarrierRejectionReason::WrongProtocolUse);
     }
 
@@ -432,8 +533,8 @@ fn certify_one(
 /// only on one branch and `StorageDead` sits in the shared join.
 fn lifetime_ends_before_load(
     definition: MirDefinitionRef<'_>,
-    dead: CheckedIntegerInstructionSite,
-    load: CheckedIntegerInstructionSite,
+    dead: CheckedScalarInstructionSite,
+    load: CheckedScalarInstructionSite,
 ) -> bool {
     if dead.block == load.block {
         dead.instruction <= load.instruction
@@ -489,11 +590,11 @@ fn exact_load(
 fn instruction_site(
     definition: MirDefinitionRef<'_>,
     site: MirLocalIdentitySite,
-) -> Option<CheckedIntegerInstructionSite> {
+) -> Option<CheckedScalarInstructionSite> {
     let MirLocalIdentitySite::Instruction { block, instruction } = site else {
         return None;
     };
-    Some(CheckedIntegerInstructionSite {
+    Some(CheckedScalarInstructionSite {
         block: BlockId::new(definition.callable(), block),
         instruction,
     })
@@ -501,8 +602,8 @@ fn instruction_site(
 
 fn instruction_dominates(
     definition: MirDefinitionRef<'_>,
-    dominator: CheckedIntegerInstructionSite,
-    target: CheckedIntegerInstructionSite,
+    dominator: CheckedScalarInstructionSite,
+    target: CheckedScalarInstructionSite,
 ) -> bool {
     dominator.block == target.block && dominator.instruction <= target.instruction
         || dominator.block != target.block

@@ -215,6 +215,15 @@ Focused evaluator, solver, folding, dump, and reporting tests additionally pin
 malformed barriers, deep propagation, worklist-order independence, exact MIR
 rewrites, and deterministic generic operation-family measurements.
 
+Checked floating-to-integer foundation tests cover exact owned topology and
+spans for `i64`, `u64`, and `u8`, protected and malformed diamonds, strict
+source/result carrier access and lifetime evidence, target-independent success
+evaluation, and retained NaN, infinity, and range failures. Solver tests pin
+successful source/result propagation, absence of failing result facts,
+integer-protocol regression behavior, read-only analysis, and equal solutions
+under forward and reversed worklist seeds. No floating checked-protocol rewrite
+is active at this stage.
+
 ### Convergent local constant propagation coverage
 
 The frozen

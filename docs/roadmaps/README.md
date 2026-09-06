@@ -13,9 +13,11 @@ is in progress; BE0 established the isolated
 exact arithmetic and comparison, BE2 completed conversions and decimal
 rounding, BE3 migrated compiler source-literal rounding to that authority, and
 BE4 extended convergent primitive evaluation and propagation with exact pure
-binary64 folds. BE5 is next. The roadmap continues with a successful-only
-checked `f64`-to-integer folding pass. Its
-compiler foundations are complete; no other active roadmap blocks it.
+binary64 folds, and BE5 added exact checked floating-cast topology, shared
+strict scalar-carrier certification, target-independent evaluation, and
+convergent success/failure facts without mutation. BE6 is next: the
+successful-only checked `f64`-to-integer folding pass. Its compiler
+foundations are complete; no other active roadmap blocks it.
 
 ## Pending discoveries
 

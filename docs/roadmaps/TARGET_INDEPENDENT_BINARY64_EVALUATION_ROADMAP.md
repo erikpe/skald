@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: in progress; BE0 through BE4 are complete, and BE5 is next.
+Status: in progress; BE0 through BE5 are complete, and BE6 is next.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -99,7 +99,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 - [x] BE2 — Implement conversions and decimal parsing
 - [x] BE3 — Migrate compiler literal rounding to the binary64 authority
 - [x] BE4 — Extend primitive constant evaluation and propagation
-- [ ] BE5 — Generalize checked-scalar topology, carriers, and solved facts
+- [x] BE5 — Generalize checked-scalar topology, carriers, and solved facts
 - [ ] BE6 — Fold successful checked floating-to-integer protocols
 - [ ] BE7 — Harden the complete boundary and close the roadmap
 
@@ -305,29 +305,29 @@ floating algebraic identities remain conservative barriers.
 **Purpose:** Establish reusable proof-rich structural and fact foundations for
 checked floating casts before adding their mutation owner.
 
-- [ ] Add an immutable exact topology observation for the verified
+- [x] Add an immutable exact topology observation for the verified
       `PrimitiveCastRangeCheck` source carrier, success-only conversion,
       result carrier, failure terminator, join reload, spans, and blocks.
-- [ ] Keep floating-cast topology and evaluation separate from integer
+- [x] Keep floating-cast topology and evaluation separate from integer
       division/shift topology while sharing only genuinely common site,
       snapshot, and error vocabulary.
-- [ ] Generalize checked-carrier ownership and certification around explicit
+- [x] Generalize checked-carrier ownership and certification around explicit
       checked-scalar protocol families, preserving exhaustive storage-use,
       authorization, exact-base, unique-write, dominance, lifetime, type, and
       protocol-use requirements.
-- [ ] Add exact checked floating-to-integer evaluation using
+- [x] Add exact checked floating-to-integer evaluation using
       `skald-binary64`, distinguishing successful constants, retained static
       failures, and unsupported/mismatched inputs.
-- [ ] Extend the convergent graph and solver so certified floating source
+- [x] Extend the convergent graph and solver so certified floating source
       carriers and successful checked result carriers publish exact facts;
       failures publish no result fact and retain their observation.
-- [ ] Preserve all existing integer protocol certificates, solver facts,
+- [x] Preserve all existing integer protocol certificates, solver facts,
       metrics, topology order, and rejection behavior without weakening them
       through a permissive generic abstraction.
-- [ ] Return owned deterministic observations and structured malformed-shape
+- [x] Return owned deterministic observations and structured malformed-shape
       outcomes; retain no verified-MIR borrow or local identity across a
       commit.
-- [ ] Add no production rewrite or pass registration in this task.
+- [x] Add no production rewrite or pass registration in this task.
 
 **Tests:** Exact topology success for all three integer targets; every missing,
 duplicate, reordered, mismatched, protected, aliased, projected, unauthorized,

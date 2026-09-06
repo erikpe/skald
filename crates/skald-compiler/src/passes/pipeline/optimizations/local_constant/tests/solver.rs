@@ -1,8 +1,9 @@
 use crate::{
     identity::{CallableId, FunctionId},
     mir::{
-        MirAssignment, MirBinaryOperation, MirDefinitionRef, MirInstruction, MirRvalue,
-        MirRvalueKind, MirTerminationReason, MirTerminator, MirType, MirValue, ValueId,
+        test_fixtures::checked_primitive_cast_program, MirAssignment, MirBinaryOperation,
+        MirDefinitionRef, MirInstruction, MirIntegerType, MirRvalue, MirRvalueKind,
+        MirTerminationReason, MirTerminator, MirType, MirValue, ValueId,
     },
     source::Span,
     test_support::lower_source_to_final_mir,
@@ -12,6 +13,9 @@ use super::super::{
     solve::solve_local_constants_with_reversed_seeds, solve_local_constants,
     LocalConstantAnalysisError, LocalConstantIdentity, LocalConstantProvenanceCategory,
     LogicalSelectionKind,
+};
+use crate::passes::pipeline::optimizations::checked_f64_to_integer_topology::{
+    observe_checked_f64_to_integer_topologies, CheckedF64ToIntegerTopologyObservation,
 };
 use crate::passes::pipeline::optimizations::primitive_evaluation::PrimitiveConstant;
 
@@ -195,6 +199,124 @@ fn preserves_exact_integer_boundaries_and_records_static_failures() {
             .callable(),
         definition.callable()
     );
+}
+
+#[test]
+fn solves_checked_floating_casts_and_propagates_success_through_carriers() {
+    assert_eq!(
+        solved_return("fn main() -> i64 { return (i64) (1.5 + 2.5); }"),
+        PrimitiveConstant::I64(4)
+    );
+
+    for (target, expected) in [
+        (MirIntegerType::I64, PrimitiveConstant::I64(-9)),
+        (MirIntegerType::U64, PrimitiveConstant::U64(255)),
+        (MirIntegerType::U8, PrimitiveConstant::U8(255)),
+    ] {
+        let bits = match target {
+            MirIntegerType::I64 => 0xc022_6666_6666_6666,
+            MirIntegerType::U64 | MirIntegerType::U8 => 0x406f_ffff_ffff_ffff,
+        };
+        let expected_bits = match expected {
+            PrimitiveConstant::I64(value) => value as u64,
+            PrimitiveConstant::U64(value) => value,
+            PrimitiveConstant::U8(value) => u64::from(value),
+            PrimitiveConstant::F64Bits(_) | PrimitiveConstant::Bool(_) => unreachable!(),
+        };
+        let program = checked_primitive_cast_program(bits, target, expected_bits);
+        let original = program.clone();
+        let definition = entry_definition(&program);
+        let observations = observe_checked_f64_to_integer_topologies(definition.into()).unwrap();
+        let [CheckedF64ToIntegerTopologyObservation::Protocol(topology)] = observations.as_slice()
+        else {
+            panic!("expected canonical floating cast: {observations:?}");
+        };
+        let forward = solve_local_constants(definition.into()).unwrap();
+        let reversed = solve_local_constants_with_reversed_seeds(definition.into()).unwrap();
+
+        assert_eq!(forward, reversed);
+        assert_eq!(program, original, "solving must be read-only");
+        assert_eq!(
+            forward.constant(topology.source_load.value).unwrap(),
+            Some(PrimitiveConstant::F64Bits(bits))
+        );
+        assert_eq!(
+            forward.constant(topology.result_assignment.value).unwrap(),
+            Some(expected)
+        );
+        assert_eq!(
+            forward.constant(topology.result_reload.value).unwrap(),
+            Some(expected)
+        );
+        assert_eq!(
+            forward.carrier_constant(topology.check.source).unwrap(),
+            Some(PrimitiveConstant::F64Bits(bits))
+        );
+        assert_eq!(
+            forward.carrier_constant(topology.check.result).unwrap(),
+            Some(expected)
+        );
+        assert!(forward.retained_checked_failures().is_empty());
+        let result_fact = forward
+            .facts()
+            .iter()
+            .find(|fact| {
+                fact.identity() == LocalConstantIdentity::Value(topology.result_assignment.value)
+            })
+            .unwrap();
+        assert_eq!(
+            result_fact.provenance().category(),
+            LocalConstantProvenanceCategory::CheckedF64ToInteger
+        );
+        assert!(result_fact.provenance().crossed_checked());
+        assert!(result_fact.provenance().crossed_carrier());
+    }
+}
+
+#[test]
+fn retains_checked_floating_failures_without_publishing_result_facts() {
+    for (target, bits) in [
+        (MirIntegerType::I64, 0x7ff8_0000_0000_0042),
+        (MirIntegerType::I64, 0x7ff0_0000_0000_0000),
+        (MirIntegerType::I64, 0x43e0_0000_0000_0000),
+        (MirIntegerType::U64, 0xbff0_0000_0000_0000),
+        (MirIntegerType::U8, 0x4070_0000_0000_0000),
+    ] {
+        let program = checked_primitive_cast_program(bits, target, 0);
+        let definition = entry_definition(&program);
+        let observations = observe_checked_f64_to_integer_topologies(definition.into()).unwrap();
+        let [CheckedF64ToIntegerTopologyObservation::Protocol(topology)] = observations.as_slice()
+        else {
+            panic!("expected canonical floating cast: {observations:?}");
+        };
+        let solution = solve_local_constants(definition.into()).unwrap();
+
+        assert_eq!(
+            solution.constant(topology.source_load.value).unwrap(),
+            Some(PrimitiveConstant::F64Bits(bits))
+        );
+        assert_eq!(
+            solution.constant(topology.result_assignment.value).unwrap(),
+            None
+        );
+        assert_eq!(
+            solution.constant(topology.result_reload.value).unwrap(),
+            None
+        );
+        assert_eq!(
+            solution.carrier_constant(topology.check.result).unwrap(),
+            None
+        );
+        assert_eq!(solution.retained_checked_failures().len(), 1);
+        assert_eq!(
+            solution.retained_checked_failures()[0].reason(),
+            MirTerminationReason::PrimitiveCastOutOfRange
+        );
+        assert_eq!(
+            solution.retained_checked_failures()[0].result(),
+            topology.result_assignment.value
+        );
+    }
 }
 
 #[test]

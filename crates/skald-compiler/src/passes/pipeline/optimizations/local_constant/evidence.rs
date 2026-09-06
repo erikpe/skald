@@ -83,6 +83,9 @@ pub(in crate::passes::pipeline::optimizations) fn checked_carrier_plan_evidence(
                         CheckedCarrierProtocolRole::SecondOperand => {
                             CheckedCarrierPlanRole::SecondOperand
                         }
+                        CheckedCarrierProtocolRole::Source => {
+                            unreachable!("checked-integer evidence cannot contain a cast source")
+                        }
                         CheckedCarrierProtocolRole::Result => CheckedCarrierPlanRole::Result,
                     },
                 }))
