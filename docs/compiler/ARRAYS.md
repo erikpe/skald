@@ -1,7 +1,7 @@
 # Array Compiler and Runtime Contract
 
-Status: **implemented contract on x86-64, including explicit element-list
-representation and execution**.
+Status: **implemented contract on x86-64, including explicit element-list and
+primitive indexed representation and execution**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler lowers all
@@ -14,10 +14,10 @@ element lifecycle, copied slices, checked equal-length slice assignment, and
 call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
-The separately frozen indexed-construction direction extends direct element
-initialization to a dynamic length and canonical prefix loop. Syntax,
-resolution, and typed HIR are implemented behind an explicit executable-
-lowering availability gate; MIR and execution are not yet implemented.
+Indexed construction extends direct element initialization to a dynamic length
+and canonical prefix loop. Primitive element plans execute through verified
+MIR and x86-64; lifecycle-bearing plans remain behind the explicit executable-
+lowering availability gate.
 The separately frozen
 [structural bracket compiler contract](INDEXING_AND_SLICING.md) keeps these
 array operations on the intrinsic path and selects ordinary calls only after
@@ -289,7 +289,7 @@ consumption, and storage lifetime. The
 ## Frozen indexed-construction representation
 
 The frozen
-[indexed array construction contract](../language/ARRAYS.md#frozen-indexed-array-construction)
+[indexed array construction contract](../language/ARRAYS.md#indexed-array-construction)
 extends element-list destination initialization from a static source list to
 one typed expression executed over a dynamic checked prefix. The implemented
 AST and resolved IR preserve the exact array type, outer ownership, length,
@@ -311,8 +311,8 @@ HIR owns one indexed construction mode rather than desugaring to a source
 contain primitive, exact-class, optional, nested-array, shared-owner, or
 optional-owner initialization selected once during type checking. Lower phases
 must not recover its ownership or lifecycle meaning from expression shape.
-One structured lowering diagnostic currently stops this valid HIR before MIR
-construction.
+Primitive plans proceed to MIR. One structured lowering diagnostic stops the
+remaining lifecycle-bearing plans before MIR construction.
 
 MIR retains one runtime `u64` length, one unpublished backing, one `u64`
 initialized prefix, and canonical CFG. The loop header proves `prefix <
@@ -329,11 +329,19 @@ alternate early exit, complete publication, and single backing consumption.
 Nested constructions retain distinct prefix identities. Optional payload and
 shared-owner state must become complete before the outer prefix advances.
 
-The x86-64 backend will consume only this verified target-independent CFG and
-reuse checked allocation, array-element places, category-specific
-initialization, prefix advancement, publication, and reverse cleanup. The
-runtime receives no callback, expression, array type, prefix, lifecycle
-identity, or vector operation, and ABI version 9 remains unchanged.
+For primitive plans, verified MIR uses distinct requested-length and dynamic-
+prefix storage, a canonical `ArrayLoop` binding epoch, one fused primitive
+slot-initialize-and-advance operation, per-element full-expression cleanup,
+and a complete-prefix publication operation. Verification requires the checked
+allocation to use the exact value stored as the loop length and rejects any
+alternate entry, exit, backedge, store count, or backing consumption.
+
+The x86-64 backend consumes only this verified target-independent CFG and
+reuses checked allocation, primitive array-element stores, prefix arithmetic,
+publication, and release. The runtime receives no callback, expression, array
+type, prefix, lifecycle identity, or vector operation, and ABI version 9
+remains unchanged. Category-specific lifecycle-bearing lowering follows in
+later roadmap phases.
 
 The complete decisions and rejected alternatives are preserved in the
 [design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md), and

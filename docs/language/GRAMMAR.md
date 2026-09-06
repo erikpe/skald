@@ -801,7 +801,7 @@ exact destination-initialization plan and preserves the immutable index local
 in HIR. An executable-lowering gate prevents MIR construction until the
 dynamic-prefix protocol is implemented. The frozen ownership, evaluation, and
 availability boundary is defined by
-[indexed array construction](ARRAYS.md#frozen-indexed-array-construction).
+[indexed array construction](ARRAYS.md#indexed-array-construction).
 
 From tightest to loosest binding, precedence is:
 

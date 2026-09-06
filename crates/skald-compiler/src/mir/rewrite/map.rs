@@ -1567,6 +1567,50 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             )?;
             map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)
         }
+        MirArrayInstruction::BeginIndexed {
+            backing,
+            prefix,
+            length,
+            span: _,
+        }
+        | MirArrayInstruction::EndIndexedElement {
+            backing,
+            prefix,
+            length,
+            span: _,
+        }
+        | MirArrayInstruction::CompleteIndexed {
+            backing,
+            prefix,
+            length,
+            span: _,
+        } => {
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, backing)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, length)
+        }
+        MirArrayInstruction::BindIndexed {
+            backing,
+            prefix,
+            length,
+            binding,
+            span: _,
+        } => {
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, backing)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, length)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OtherExecutable, binding)
+        }
+        MirArrayInstruction::InitializeIndexedElement {
+            backing,
+            prefix,
+            value,
+            span: _,
+        } => {
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, backing)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)?;
+            map_value_use(mapper, site, MirValueUseRole::OwnershipOrLifecycle, value)
+        }
         MirArrayInstruction::InitializeElement {
             backing,
             prefix,
@@ -2113,6 +2157,7 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
             backing,
             index,
             length,
+            kind,
             body_target,
             complete_target,
             span: _,
@@ -2125,6 +2170,9 @@ pub(crate) fn map_terminator<M: MirLocalIdentityMapper>(
             )?;
             map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, index)?;
             map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, length)?;
+            if let crate::mir::MirArrayLoopKind::Indexed { binding } = kind {
+                map_storage_use(mapper, site, MirStorageUseRole::OtherExecutable, binding)?;
+            }
             map_block_pair(mapper, site, body_target, complete_target)
         }
         MirTerminator::Terminate { reason: _, span: _ } => Ok(()),

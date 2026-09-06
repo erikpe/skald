@@ -1375,7 +1375,8 @@ compile and native run and every compile failure. The non-gating
 `make generic-vec-benchmark` procedure measures representative growth, copy,
 pop, and clear behavior without accepting or rejecting host timing.
 
-After indexed array construction becomes executable, this owner also gains
+When the final indexed-array roadmap phase implements `Vec<T>.to_array()`, this
+owner also gains
 empty, spare-capacity, grown, primitive, exact-class, optional, nested-array,
 nested-vector, shared-exact, shared-interface, and heterogeneous `shared Obj`
 `to_array()` cases. Those cases must prove exact logical length, independent

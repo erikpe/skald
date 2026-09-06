@@ -1,14 +1,205 @@
 use std::collections::HashSet;
 
-use super::super::{
-    super::model::{
-        MirArrayAssignElement, MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement,
-        MirArrayInstruction, MirBasicBlock, MirDefinitionRef, MirType, ValueId,
+use super::{
+    super::{
+        super::model::{
+            MirArrayAssignElement, MirArrayCopyElement, MirArrayDefaultElement,
+            MirArrayDestroyElement, MirArrayInstruction, MirBasicBlock, MirDefinitionRef,
+            MirInstruction, MirPlace, MirTerminator, MirType, ValueId,
+        },
+        context::Verifier,
     },
-    context::Verifier,
+    IndexedArrayLoopShape,
 };
 
 impl Verifier<'_> {
+    pub(in crate::mir::verify) fn indexed_array_loop_shape_is_canonical(
+        &self,
+        function: MirDefinitionRef<'_>,
+        shape: IndexedArrayLoopShape,
+    ) -> bool {
+        let IndexedArrayLoopShape {
+            header,
+            backing,
+            prefix,
+            length,
+            binding,
+            body_target,
+            complete_target,
+        } = shape;
+        let mut begin_blocks = Vec::new();
+        let mut binding_count = 0;
+        let mut initialization_count = 0;
+        let mut end_blocks = Vec::new();
+        let mut completion_count = 0;
+
+        for block in &function.body().blocks {
+            for (index, instruction) in block.instructions.iter().enumerate() {
+                match instruction {
+                    MirInstruction::Array(MirArrayInstruction::BeginIndexed {
+                        backing: operation_backing,
+                        prefix: operation_prefix,
+                        length: operation_length,
+                        ..
+                    }) if (*operation_backing, *operation_prefix, *operation_length)
+                        == (backing, prefix, length) =>
+                    {
+                        begin_blocks.push(block.id)
+                    }
+                    MirInstruction::Array(MirArrayInstruction::BindIndexed {
+                        backing: operation_backing,
+                        prefix: operation_prefix,
+                        length: operation_length,
+                        binding: operation_binding,
+                        ..
+                    }) if (
+                        *operation_backing,
+                        *operation_prefix,
+                        *operation_length,
+                        *operation_binding,
+                    ) == (backing, prefix, length, binding) =>
+                    {
+                        binding_count += 1
+                    }
+                    MirInstruction::Array(MirArrayInstruction::InitializeIndexedElement {
+                        backing: operation_backing,
+                        prefix: operation_prefix,
+                        ..
+                    }) if (*operation_backing, *operation_prefix) == (backing, prefix) => {
+                        initialization_count += 1;
+                    }
+                    MirInstruction::Array(MirArrayInstruction::EndIndexedElement {
+                        backing: operation_backing,
+                        prefix: operation_prefix,
+                        length: operation_length,
+                        ..
+                    }) if (*operation_backing, *operation_prefix, *operation_length)
+                        == (backing, prefix, length) =>
+                    {
+                        if index > 0
+                            && matches!(
+                                &block.instructions[index - 1],
+                                MirInstruction::StorageDead(dead) if dead.storage == binding
+                            )
+                            && index + 1 == block.instructions.len()
+                            && matches!(block.terminator, Some(MirTerminator::Goto { target, .. }) if target == header)
+                        {
+                            end_blocks.push(block.id);
+                        }
+                    }
+                    MirInstruction::Array(MirArrayInstruction::CompleteIndexed {
+                        backing: operation_backing,
+                        prefix: operation_prefix,
+                        length: operation_length,
+                        ..
+                    }) if (*operation_backing, *operation_prefix, *operation_length)
+                        == (backing, prefix, length) =>
+                    {
+                        completion_count += 1
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let begin_is_canonical = matches!(begin_blocks.as_slice(), [begin]
+        if function.block(*begin).is_some_and(|block| matches!(
+            block.terminator,
+            Some(MirTerminator::Goto { target, .. }) if target == header
+        )));
+        let allocation_establishes_length = matches!(begin_blocks.as_slice(), [begin]
+        if function.body().blocks.iter().filter(|block| matches!(
+            block.terminator,
+            Some(MirTerminator::ArrayOperationCheck {
+                failure: crate::mir::MirArrayFailure::AllocationSize,
+                success_target,
+                ..
+            }) if success_target == *begin
+        )).count() == 1
+        && function.body().blocks.iter().any(|block| {
+            if !matches!(
+                block.terminator,
+                Some(MirTerminator::ArrayOperationCheck {
+                    failure: crate::mir::MirArrayFailure::AllocationSize,
+                    success_target,
+                    ..
+                }) if success_target == *begin
+            ) {
+                return false;
+            }
+            let Some(MirInstruction::Array(MirArrayInstruction::Allocate {
+                backing: allocated_backing,
+                length: allocated_length,
+                ..
+            })) = block.instructions.last()
+            else {
+                return false;
+            };
+            *allocated_backing == backing
+                && block.instructions[..block.instructions.len() - 1]
+                    .iter()
+                    .filter(|instruction| matches!(
+                        instruction,
+                        MirInstruction::Store(store)
+                            if store.destination == MirPlace::base(length)
+                                && store.value == *allocated_length
+                    ))
+                    .count()
+                    == 1
+        }));
+        let body_begins_epoch = function.block(body_target).is_some_and(|body| {
+            matches!(
+                body.instructions.as_slice(),
+                [
+                    MirInstruction::StorageLive(live),
+                    MirInstruction::Array(MirArrayInstruction::BindIndexed {
+                        backing: body_backing,
+                        prefix: body_prefix,
+                        length: body_length,
+                        binding: body_binding,
+                        ..
+                    }),
+                    ..
+                ] if live.storage == binding
+                    && *body_backing == backing
+                    && *body_prefix == prefix
+                    && *body_length == length
+                    && *body_binding == binding
+            )
+        });
+        let completion_is_canonical = function.block(complete_target).is_some_and(|complete| {
+            matches!(
+                complete.instructions.first(),
+                Some(MirInstruction::Array(MirArrayInstruction::CompleteIndexed {
+                    backing: complete_backing,
+                    prefix: complete_prefix,
+                    length: complete_length,
+                    ..
+                })) if *complete_backing == backing
+                    && *complete_prefix == prefix
+                    && *complete_length == length
+            )
+        });
+        let exclusive_targets = function.body().blocks.iter().all(|block| {
+            block.id == header
+                || block.terminator.as_ref().is_none_or(|terminator| {
+                    !terminator
+                        .successors()
+                        .any(|target| target == body_target || target == complete_target)
+                })
+        });
+
+        begin_is_canonical
+            && allocation_establishes_length
+            && body_begins_epoch
+            && binding_count == 1
+            && initialization_count == 1
+            && matches!(end_blocks.as_slice(), [_])
+            && completion_count == 1
+            && completion_is_canonical
+            && exclusive_targets
+    }
+
     pub(in crate::mir::verify) fn verify_array_declarations(&mut self) {
         let arrays: Vec<_> = self.program.array_types.iter().cloned().collect();
         let mut seen = HashSet::new();

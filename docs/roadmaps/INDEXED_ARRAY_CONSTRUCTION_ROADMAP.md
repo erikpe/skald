@@ -1,9 +1,9 @@
 # Indexed Array Construction Roadmap
 
-Status: in progress; IA0 and IA1 are complete and IA2 is next.
+Status: in progress; IA0 through IA2 are complete and IA3 is next.
 
 This roadmap implements the frozen
-[indexed array construction contract](../language/ARRAYS.md#frozen-indexed-array-construction)
+[indexed array construction contract](../language/ARRAYS.md#indexed-array-construction)
 and its archived
 [design record](../archive/INDEXED_ARRAY_CONSTRUCTION_DESIGN_PROPOSAL.md).
 It adds typed `T[](length; index => expression)` and
@@ -54,7 +54,7 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 
 - [x] IA0 — Retain indexed construction through syntax and resolution
 - [x] IA1 — Select typed repeated destination initialization
-- [ ] IA2 — Execute verified primitive dynamic-prefix construction
+- [x] IA2 — Execute verified primitive dynamic-prefix construction
 - [ ] IA3 — Execute exact-class destination placement and copying
 - [ ] IA4 — Compose optional and nested-array elements
 - [ ] IA5 — Compose shared and optional-shared owner elements
@@ -165,33 +165,33 @@ gate.
 initialized-prefix proof, and native vertical slice with trivial element
 lifecycle.
 
-- [ ] Extend target-independent MIR with the minimum array-construction state
+- [x] Extend target-independent MIR with the minimum array-construction state
       needed to retain requested length and dynamic initialized prefix without
       exposing target layout.
-- [ ] Lower length evaluation, checked allocation, zero-prefix initialization,
+- [x] Lower length evaluation, checked allocation, zero-prefix initialization,
       loop header, `i64` index materialization, element evaluation, direct slot
       initialization, prefix advance, cleanup, backedge, and publication in
       the frozen order.
-- [ ] Make the zero-length path publish without evaluating the element and
+- [x] Make the zero-length path publish without evaluating the element and
       prove allocation failure precedes every element effect.
-- [ ] Reuse existing full-expression machinery within a new per-element epoch
+- [x] Reuse existing full-expression machinery within a new per-element epoch
       so all non-adopted temporaries and anchors are cleaned before the
       backedge.
-- [ ] Verify canonical CFG shape, exact types, prefix monotonicity and bounds,
+- [x] Verify canonical CFG shape, exact types, prefix monotonicity and bounds,
       slot/prefix correspondence, no use before initialization, complete
       publication, and single backing consumption.
-- [ ] Add verifier mutations for skipped/duplicate/out-of-order stores,
+- [x] Add verifier mutations for skipped/duplicate/out-of-order stores,
       advance-before-initialize, missing/excess advance, escaped epoch values,
       invalid backedges, incomplete publication, and leaked/duplicated backing.
-- [ ] Extend storage/lifetime use accounting, cleanup verification, MIR dumps,
+- [x] Extend storage/lifetime use accounting, cleanup verification, MIR dumps,
       backend legality, reachability, and final-MIR transforms for the new
       state without weakening proof seals.
-- [ ] Execute inline and shared-outer arrays of every primitive element type on
+- [x] Execute inline and shared-outer arrays of every primitive element type on
       x86-64 using existing allocation, addressing, store, publication, and
       release machinery.
-- [ ] Remove the execution gate for primitive elements while retaining
+- [x] Remove the execution gate for primitive elements while retaining
       structured staging for lifecycle-bearing families.
-- [ ] Prove runtime headers, symbols, allocator/panic interfaces, and ABI
+- [x] Prove runtime headers, symbols, allocator/panic interfaces, and ABI
       version remain unchanged.
 
 **Primary implementation areas:** array HIR-to-MIR lowering, construction

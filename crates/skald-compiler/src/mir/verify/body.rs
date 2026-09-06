@@ -4,11 +4,12 @@ use std::collections::HashSet;
 
 use crate::identity::BindingId;
 
+use super::array::IndexedArrayLoopShape;
 use super::{
     super::model::{
-        BlockId, MirAliasAccess, MirArrayFailure, MirArrayInstruction, MirBasicBlock,
-        MirDefinitionRef, MirInstruction, MirParameter, MirParameterMode, MirStorageKind,
-        MirTerminationReason, MirTerminator, MirType, ValueId,
+        BlockId, MirAliasAccess, MirArrayFailure, MirArrayInstruction, MirArrayLoopKind,
+        MirBasicBlock, MirDefinitionRef, MirInstruction, MirParameter, MirParameterMode,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType, ValueId,
     },
     context::Verifier,
 };
@@ -962,6 +963,7 @@ impl<'mir> Verifier<'mir> {
                 backing,
                 index,
                 length,
+                kind,
                 body_target,
                 complete_target,
                 ..
@@ -995,37 +997,55 @@ impl<'mir> Verifier<'mir> {
                 }
                 self.verify_block_target(function, block, *body_target);
                 self.verify_block_target(function, block, *complete_target);
-                let valid_body = function.block(*body_target).is_some_and(|body| {
-                    (body.instructions.is_empty()
-                        || body.instructions.iter().any(|instruction| {
-                        matches!(
-                            instruction,
-                            crate::mir::MirInstruction::Array(
-                                crate::mir::MirArrayInstruction::InitializeNext { index: body_index, .. }
-                                    | crate::mir::MirArrayInstruction::CopyNext { index: body_index, .. }
-                            ) if body_index == index
+                let valid_body = match kind {
+                    MirArrayLoopKind::Ordinary => {
+                        function.block(*body_target).is_some_and(|body| {
+                            (body.instructions.is_empty()
+                                || body.instructions.iter().any(|instruction| {
+                                    matches!(
+                                        instruction,
+                                        MirInstruction::Array(
+                                            MirArrayInstruction::InitializeNext { index: body_index, .. }
+                                                | MirArrayInstruction::CopyNext { index: body_index, .. }
+                                        ) if body_index == index
+                                    )
+                                }))
+                                && body.instructions.iter().all(|instruction| {
+                                    !matches!(
+                                        instruction,
+                                        MirInstruction::Array(
+                                            MirArrayInstruction::InitializeNext {
+                                                backing: body_backing,
+                                                ..
+                                            }
+                                            | MirArrayInstruction::CopyNext {
+                                                backing: body_backing,
+                                                ..
+                                            }
+                                        ) if body_backing != backing
+                                    )
+                                })
+                                && matches!(
+                                    body.terminator,
+                                    Some(MirTerminator::Goto { target, .. }) if target == block.id
+                                )
+                        })
+                    }
+                    MirArrayLoopKind::Indexed { binding } => {
+                        self.indexed_array_loop_shape_is_canonical(
+                            function,
+                            IndexedArrayLoopShape {
+                                header: block.id,
+                                backing: *backing,
+                                prefix: *index,
+                                length: *length,
+                                binding: *binding,
+                                body_target: *body_target,
+                                complete_target: *complete_target,
+                            },
                         )
-                    }))
-                    && body.instructions.iter().all(|instruction| {
-                        !matches!(
-                            instruction,
-                            crate::mir::MirInstruction::Array(
-                                crate::mir::MirArrayInstruction::InitializeNext {
-                                    backing: body_backing,
-                                    ..
-                                }
-                                | crate::mir::MirArrayInstruction::CopyNext {
-                                    backing: body_backing,
-                                    ..
-                                }
-                            ) if body_backing != backing
-                        )
-                    })
-                    && matches!(
-                        body.terminator,
-                        Some(MirTerminator::Goto { target, .. }) if target == block.id
-                    )
-                });
+                    }
+                };
                 if !valid_body {
                     self.block_error(
                         function.callable(),

@@ -30,7 +30,8 @@ mod value;
 pub use array::{
     MirArrayAnchorKind, MirArrayAssignElement, MirArrayBoundary, MirArrayCopyElement,
     MirArrayDefaultElement, MirArrayDestroyElement, MirArrayFailure, MirArrayInstruction,
-    MirArrayLifecycle, MirArrayOwnership, MirArrayPositionKind, MirArrayType, MirArrayTypeTable,
+    MirArrayLifecycle, MirArrayLoopKind, MirArrayOwnership, MirArrayPositionKind, MirArrayType,
+    MirArrayTypeTable,
 };
 pub use cell_write::MirCellWriteAuthorization;
 pub use control_flow::{MirBasicBlock, MirBody, MirTerminationReason, MirTerminator};

@@ -138,6 +138,12 @@ pub enum MirArrayOwnership {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirArrayLoopKind {
+    Ordinary,
+    Indexed { binding: StorageId },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirArrayAnchorKind {
     InlineOwner,
     InlineBacking,
@@ -190,6 +196,44 @@ pub enum MirArrayInstruction {
         length: u64,
         ownership: MirArrayOwnership,
         failure: MirArrayFailure,
+        span: Span,
+    },
+    /// Starts a dynamic initialized-prefix protocol after checked allocation.
+    BeginIndexed {
+        backing: StorageId,
+        prefix: StorageId,
+        length: StorageId,
+        span: Span,
+    },
+    /// Materializes the proven current prefix as the immutable source `i64`
+    /// binding for exactly one element epoch.
+    BindIndexed {
+        backing: StorageId,
+        prefix: StorageId,
+        length: StorageId,
+        binding: StorageId,
+        span: Span,
+    },
+    /// Initializes the current primitive slot and advances the dynamic prefix.
+    InitializeIndexedElement {
+        backing: StorageId,
+        prefix: StorageId,
+        value: ValueId,
+        span: Span,
+    },
+    /// Proves that cleanup for the initialized element finished before the
+    /// canonical backedge.
+    EndIndexedElement {
+        backing: StorageId,
+        prefix: StorageId,
+        length: StorageId,
+        span: Span,
+    },
+    /// Converts the loop's `prefix == length` exit into publication authority.
+    CompleteIndexed {
+        backing: StorageId,
+        prefix: StorageId,
+        length: StorageId,
         span: Span,
     },
     /// Initializes the next primitive element in source order and advances
@@ -342,6 +386,11 @@ impl MirArrayInstruction {
         match self {
             Self::Allocate { span, .. }
             | Self::AllocateElements { span, .. }
+            | Self::BeginIndexed { span, .. }
+            | Self::BindIndexed { span, .. }
+            | Self::InitializeIndexedElement { span, .. }
+            | Self::EndIndexedElement { span, .. }
+            | Self::CompleteIndexed { span, .. }
             | Self::InitializeElement { span, .. }
             | Self::CompleteElement { span, .. }
             | Self::InitializeNext { span, .. }

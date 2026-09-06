@@ -148,6 +148,7 @@ pub enum MirTerminator {
         backing: super::ids::StorageId,
         index: super::ids::StorageId,
         length: super::ids::StorageId,
+        kind: super::array::MirArrayLoopKind,
         body_target: BlockId,
         complete_target: BlockId,
         span: Span,

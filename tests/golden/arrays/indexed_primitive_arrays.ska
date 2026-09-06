@@ -1,0 +1,39 @@
+import std::io;
+
+class Trace {
+    static order: i64;
+
+    init() {}
+}
+
+fn record(index: i64) -> i64 {
+    Trace.order = Trace.order * 10 + index + 1;
+    return index * 2;
+}
+
+fn length() -> u64 {
+    Trace.order = 9;
+    return 3u;
+}
+
+fn main() -> i64 {
+    var empty: i64[] = i64[](0u; index => record(index));
+    var one: i64[] = i64[](1u; index => index + 1);
+    var signed: i64[] = i64[](length(); index => record(index));
+    var unsigned: u64[] = u64[](3u; index => (u64) index + 10u);
+    var bytes: u8[] = u8[](3u; index => (u8) index + 1u8);
+    var floats: f64[] = f64[](3u; index => (f64) index + 0.5);
+    var flags: bool[] = bool[](3u; index => index == 2);
+    var shared: shared i64[] = new i64[](2u; index => index + 20);
+
+    std::io::println_u64(empty.len());
+    std::io::println_i64(Trace.order);
+    std::io::println_i64(signed[2]);
+    std::io::println_u64(unsigned[2]);
+    std::io::println_u8(bytes[2]);
+    std::io::println_f64(floats[2]);
+    std::io::println_bool(flags[2]);
+    std::io::println_i64(shared->[1]);
+    std::io::println_i64(one[0]);
+    return 0;
+}

@@ -562,7 +562,25 @@ impl BodyLowerer<'_> {
                 lower_array_copy_element(*element),
                 construction.span,
             ),
-            HirArrayConstructionMode::Indexed(_) => invalid_array_hir(),
+            HirArrayConstructionMode::Indexed(initializer) => {
+                let produced = self.new_array_temporary(
+                    construction.array,
+                    MirStorageKind::ArrayProduced,
+                    construction.span,
+                );
+                let backing = self.lower_indexed_primitive_array(
+                    construction.array,
+                    initializer,
+                    MirArrayOwnership::Inline,
+                    construction.span,
+                );
+                self.emit(MirInstruction::Array(MirArrayInstruction::Publish {
+                    backing,
+                    destination: produced,
+                    span: construction.span,
+                }));
+                produced
+            }
             HirArrayConstructionMode::Elements(elements) => {
                 let produced = self.new_array_temporary(
                     construction.array,
@@ -609,6 +627,21 @@ impl BodyLowerer<'_> {
             }));
             return;
         }
+        if let HirArrayConstructionMode::Indexed(initializer) = &construction.mode {
+            let backing = self.lower_indexed_primitive_array(
+                construction.array,
+                initializer,
+                MirArrayOwnership::Shared,
+                construction.span,
+            );
+            self.emit(MirInstruction::Array(MirArrayInstruction::PublishShared {
+                backing,
+                destination,
+                array: construction.array,
+                span: construction.span,
+            }));
+            return;
+        }
         let (length, default, copy) = match &construction.mode {
             HirArrayConstructionMode::Empty => (
                 self.assign(
@@ -641,7 +674,9 @@ impl BodyLowerer<'_> {
                     Some((source_place, lower_array_copy_element(*element))),
                 )
             }
-            HirArrayConstructionMode::Indexed(_) => invalid_array_hir(),
+            HirArrayConstructionMode::Indexed(_) => {
+                unreachable!("shared indexed construction returns after dedicated lowering")
+            }
             HirArrayConstructionMode::Elements(_) => {
                 unreachable!("shared element-list construction returns after dedicated lowering")
             }
@@ -660,6 +695,131 @@ impl BodyLowerer<'_> {
             array: construction.array,
             span: construction.span,
         }));
+    }
+
+    fn lower_indexed_primitive_array(
+        &mut self,
+        array: crate::identity::ArrayTypeId,
+        initializer: &crate::hir::HirIndexedArrayInitialization,
+        ownership: MirArrayOwnership,
+        span: crate::source::Span,
+    ) -> StorageId {
+        let HirStoredValueInitialization::Scalar(element) = &initializer.element.value else {
+            invalid_array_hir()
+        };
+        let length = self
+            .lower_expression(&initializer.length)
+            .expect("typed indexed array length must produce `u64`");
+        let length_storage =
+            self.new_array_storage(array, MirStorageKind::ScalarSpill, "length", span);
+        self.storage[length_storage.index()].ty = MirType::U64;
+        self.emit(MirInstruction::Store(MirStore {
+            destination: MirPlace::base(length_storage),
+            value: length,
+            authorization: None,
+            final_authorization: None,
+            span: initializer.length.span,
+        }));
+
+        let backing = self.new_array_storage(array, MirStorageKind::ArrayBacking, "backing", span);
+        self.emit(MirInstruction::Array(MirArrayInstruction::Allocate {
+            backing,
+            array,
+            length,
+            ownership,
+            failure: MirArrayFailure::AllocationSize,
+            span,
+        }));
+        self.emit_array_operation_check(MirArrayFailure::AllocationSize, span);
+
+        let prefix = self.new_array_storage(array, MirStorageKind::ArrayPosition, "prefix", span);
+        self.storage[prefix.index()].ty = MirType::U64;
+        self.emit(MirInstruction::Array(MirArrayInstruction::BeginIndexed {
+            backing,
+            prefix,
+            length: length_storage,
+            span,
+        }));
+
+        let header = self.body.allocate_block(span);
+        let body = self.body.allocate_block(initializer.element.span);
+        let complete = self.body.allocate_block(span);
+        self.terminate(MirTerminator::Goto {
+            target: header,
+            span,
+        });
+        self.body
+            .select_block(header)
+            .expect("indexed array loop header exists");
+        let binding = self.local_storage[initializer.binding.id.index()];
+        self.terminate(MirTerminator::ArrayLoop {
+            backing,
+            index: prefix,
+            length: length_storage,
+            kind: MirArrayLoopKind::Indexed { binding },
+            body_target: body,
+            complete_target: complete,
+            span,
+        });
+
+        self.body
+            .select_block(body)
+            .expect("indexed array loop body exists");
+        self.begin_storage_lifetime(binding, initializer.binding.span);
+        self.emit(MirInstruction::Array(MirArrayInstruction::BindIndexed {
+            backing,
+            prefix,
+            length: length_storage,
+            binding,
+            span: initializer.binding.span,
+        }));
+
+        let enclosing_full_expression = std::mem::take(&mut self.full_expression);
+        let enclosing_scalar_homes = std::mem::take(&mut self.scalar_result_homes);
+        let enclosing_optional_guards = std::mem::take(&mut self.active_optional_guards);
+        let value = self
+            .lower_expression(element)
+            .expect("typed primitive indexed element must produce a MIR value");
+        self.emit(MirInstruction::Array(
+            MirArrayInstruction::InitializeIndexedElement {
+                backing,
+                prefix,
+                value,
+                span: initializer.element.span,
+            },
+        ));
+        self.finish_full_expression(initializer.element.span);
+        debug_assert!(self.active_optional_guards.is_empty());
+        self.full_expression = enclosing_full_expression;
+        self.scalar_result_homes = enclosing_scalar_homes;
+        self.active_optional_guards = enclosing_optional_guards;
+
+        self.end_storage_lifetime(binding, initializer.binding.span);
+        self.emit(MirInstruction::Array(
+            MirArrayInstruction::EndIndexedElement {
+                backing,
+                prefix,
+                length: length_storage,
+                span: initializer.element.span,
+            },
+        ));
+        self.terminate(MirTerminator::Goto {
+            target: header,
+            span: initializer.element.span,
+        });
+
+        self.body
+            .select_block(complete)
+            .expect("indexed array completion exists");
+        self.emit(MirInstruction::Array(
+            MirArrayInstruction::CompleteIndexed {
+                backing,
+                prefix,
+                length: length_storage,
+                span,
+            },
+        ));
+        backing
     }
 
     fn lower_element_list(
@@ -942,6 +1102,7 @@ impl BodyLowerer<'_> {
             backing,
             index,
             length: length_storage,
+            kind: MirArrayLoopKind::Ordinary,
             body_target: body,
             complete_target: complete,
             span,

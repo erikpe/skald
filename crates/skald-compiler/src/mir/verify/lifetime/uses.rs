@@ -347,6 +347,46 @@ fn visit_array_instruction(instruction: &MirArrayInstruction, visit: &mut impl F
             visit(*backing);
             visit(*prefix);
         }
+        MirArrayInstruction::BeginIndexed {
+            backing,
+            prefix,
+            length,
+            ..
+        }
+        | MirArrayInstruction::EndIndexedElement {
+            backing,
+            prefix,
+            length,
+            ..
+        }
+        | MirArrayInstruction::CompleteIndexed {
+            backing,
+            prefix,
+            length,
+            ..
+        } => {
+            visit(*backing);
+            visit(*prefix);
+            visit(*length);
+        }
+        MirArrayInstruction::BindIndexed {
+            backing,
+            prefix,
+            length,
+            binding,
+            ..
+        } => {
+            visit(*backing);
+            visit(*prefix);
+            visit(*length);
+            visit(*binding);
+        }
+        MirArrayInstruction::InitializeIndexedElement {
+            backing, prefix, ..
+        } => {
+            visit(*backing);
+            visit(*prefix);
+        }
         MirArrayInstruction::InitializeNext { backing, index, .. } => {
             visit(*backing);
             visit(*index);

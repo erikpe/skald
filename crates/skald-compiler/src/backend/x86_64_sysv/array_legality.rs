@@ -118,6 +118,11 @@ fn check_instruction(
                 failure: MirArrayFailure::AllocationSize,
                 ..
             }
+            | MirArrayInstruction::BeginIndexed { .. }
+            | MirArrayInstruction::BindIndexed { .. }
+            | MirArrayInstruction::InitializeIndexedElement { .. }
+            | MirArrayInstruction::EndIndexedElement { .. }
+            | MirArrayInstruction::CompleteIndexed { .. }
             | MirArrayInstruction::InitializeElement { .. }
             | MirArrayInstruction::CompleteElement { .. }
             | MirArrayInstruction::Publish { .. }

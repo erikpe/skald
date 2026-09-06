@@ -64,6 +64,12 @@ impl Verifier<'_> {
                             initialized.insert(storage);
                         }
                     }
+                    MirInstruction::Array(crate::mir::MirArrayInstruction::BindIndexed {
+                        binding,
+                        ..
+                    }) => {
+                        initialized.insert(*binding);
+                    }
                     MirInstruction::Assign(assignment) => {
                         if let MirRvalueKind::Load(place) = &assignment.rvalue.kind {
                             if let Some(storage) = exact_primitive_place(function, place, contract)

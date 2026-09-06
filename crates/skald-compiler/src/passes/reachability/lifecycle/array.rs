@@ -331,6 +331,11 @@ impl MirDependencyExtractor<'_> {
                 span,
             ),
             MirArrayInstruction::InitializeElement { .. }
+            | MirArrayInstruction::BeginIndexed { .. }
+            | MirArrayInstruction::BindIndexed { .. }
+            | MirArrayInstruction::InitializeIndexedElement { .. }
+            | MirArrayInstruction::EndIndexedElement { .. }
+            | MirArrayInstruction::CompleteIndexed { .. }
             | MirArrayInstruction::CompleteElement { .. }
             | MirArrayInstruction::Publish { .. }
             | MirArrayInstruction::AnchorEnd { .. }

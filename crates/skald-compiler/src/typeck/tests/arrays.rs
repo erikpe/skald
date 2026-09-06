@@ -9,13 +9,13 @@ use crate::{
     resolve::ResolvedCopyOperation,
     typeck::{
         capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE,
-        COPY_OPERATION_UNAVAILABLE, INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE, INVALID_ARRAY_ELEMENT,
-        INVALID_EXTERNAL_DECLARATION, PRIVATE_INITIALIZER_ACCESS, TYPE_MISMATCH,
+        COPY_OPERATION_UNAVAILABLE, INVALID_ARRAY_ELEMENT, INVALID_EXTERNAL_DECLARATION,
+        PRIVATE_INITIALIZER_ACCESS, TYPE_MISMATCH,
     },
 };
 
 #[test]
-fn indexed_array_construction_reaches_hir_and_stops_at_the_lowering_gate() {
+fn primitive_indexed_array_construction_is_executable_hir() {
     let output = check_text(concat!(
         "fn main() -> i64 {\n",
         "  var values: i64[] = i64[](3u; index => index);\n",
@@ -26,22 +26,9 @@ fn indexed_array_construction_reaches_hir_and_stops_at_the_lowering_gate() {
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     assert!(output.hir.is_some());
     assert!(!output.has_errors());
-    assert!(output.has_lowering_errors());
-    assert!(!output.is_executable());
-    assert_eq!(
-        output
-            .lowering_diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE)
-            .count(),
-        1
-    );
-    assert!(output.lowering_diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE
-            && diagnostic
-                .message
-                .contains("indexed array construction is not executable yet")
-    }));
+    assert!(!output.has_lowering_errors());
+    assert!(output.is_executable());
+    assert!(output.lowering_diagnostics.is_empty());
 }
 
 #[test]
@@ -55,7 +42,7 @@ fn indexed_hir_retains_exact_types_binding_identity_spans_and_evaluation_order()
     );
     let output = check_text(source);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert_eq!(output.lowering_diagnostics.len(), 1);
+    assert!(output.lowering_diagnostics.is_empty());
     let hir = output.hir.unwrap();
     let definition = hir.definitions.get(hir.entry_function).unwrap();
     let HirStatement::Local(local) = &definition.body.statements[0] else {
@@ -173,7 +160,7 @@ fn indexed_construction_selects_every_stored_value_family_without_default_or_ass
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert_eq!(output.lowering_diagnostics.len(), 8);
+    assert_eq!(output.lowering_diagnostics.len(), 6);
     let dump = dump_hir(output.hir.as_ref().unwrap());
     for selected in [
         "ScalarInitialization",

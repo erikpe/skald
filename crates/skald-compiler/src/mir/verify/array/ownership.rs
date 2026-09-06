@@ -2,9 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use super::super::{
     super::model::{
-        BlockId, MirArgument, MirArrayFailure, MirArrayInstruction, MirArrayPositionKind, MirCall,
-        MirCallReceiver, MirDefinitionRef, MirInstruction, MirIoBuffer, MirIoOperation, MirPlace,
-        MirPlaceProjection, MirStorageKind, MirTerminator, MirType, StorageId,
+        BlockId, MirArgument, MirArrayFailure, MirArrayInstruction, MirArrayLoopKind,
+        MirArrayPositionKind, MirCall, MirCallReceiver, MirDefinitionRef, MirInstruction,
+        MirIoBuffer, MirIoOperation, MirPlace, MirPlaceProjection, MirStorageKind, MirTerminator,
+        MirType, StorageId,
     },
     context::Verifier,
     dataflow::ForwardDataflow,
@@ -161,6 +162,7 @@ impl Verifier<'_> {
                                     state.backings.remove(&backing);
                                     state.completed_backings.remove(&backing);
                                     state.element_lists.remove(&backing);
+                                    state.indexed.remove(&backing);
                                 });
                             }
                         }
@@ -175,22 +177,39 @@ impl Verifier<'_> {
                     }
                     MirTerminator::ArrayLoop {
                         backing,
+                        index,
+                        length,
+                        kind,
                         body_target,
                         complete_target,
                         ..
                     } => {
+                        let mut body_states = states.clone();
+                        let mut complete_states = states.clone();
+                        if matches!(kind, MirArrayLoopKind::Indexed { .. }) {
+                            body_states.update_states(|state| {
+                                state.enter_indexed_element(
+                                    self, function, block.id, *backing, *index, *length,
+                                );
+                            });
+                            complete_states.update_states(|state| {
+                                state.exit_indexed_loop(
+                                    self, function, block.id, *backing, *index, *length,
+                                );
+                            });
+                        } else {
+                            complete_states.update_states(|state| {
+                                state.completed_backings.insert(*backing);
+                            });
+                        }
                         self.merge_array_owner_state(
                             function,
                             block.id,
                             *body_target,
-                            &states,
+                            &body_states,
                             &mut flow,
                             &mut reported_joins,
                         );
-                        let mut complete_states = states.clone();
-                        complete_states.update_states(|state| {
-                            state.completed_backings.insert(*backing);
-                        });
                         self.merge_array_owner_state(
                             function,
                             block.id,
@@ -207,6 +226,7 @@ impl Verifier<'_> {
                             if !state.backings.is_empty()
                                 || !state.completed_backings.is_empty()
                                 || !state.element_lists.is_empty()
+                                || !state.indexed.is_empty()
                                 || !state.produced.is_empty()
                                 || !state.anchors.is_empty()
                                 || !state.aliases.is_empty()
@@ -455,6 +475,7 @@ struct ArrayOwnerState {
     backings: HashSet<StorageId>,
     completed_backings: HashSet<StorageId>,
     element_lists: HashMap<StorageId, ElementListState>,
+    indexed: HashMap<StorageId, IndexedConstructionState>,
     produced: HashSet<StorageId>,
     consumed: HashSet<StorageId>,
     anchors: HashSet<StorageId>,
@@ -471,6 +492,22 @@ struct ElementListState {
     length: u64,
     next: u64,
     element_state: ElementInitializationState,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct IndexedConstructionState {
+    prefix: StorageId,
+    length: StorageId,
+    phase: IndexedConstructionPhase,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum IndexedConstructionPhase {
+    Header,
+    Element,
+    Bound,
+    Initialized,
+    Exit,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -625,6 +662,123 @@ impl ArrayOwnerState {
                     self.completed_backings.insert(*backing);
                 }
             }
+            MirArrayInstruction::BeginIndexed {
+                backing,
+                prefix,
+                length,
+                ..
+            } => {
+                let valid = self.backings.contains(backing)
+                    && !self.completed_backings.contains(backing)
+                    && !self.element_lists.contains_key(backing)
+                    && self
+                        .indexed
+                        .values()
+                        .all(|state| state.prefix != *prefix && state.length != *length)
+                    && self
+                        .indexed
+                        .insert(
+                            *backing,
+                            IndexedConstructionState {
+                                prefix: *prefix,
+                                length: *length,
+                                phase: IndexedConstructionPhase::Header,
+                            },
+                        )
+                        .is_none();
+                if !valid {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "indexed array construction must begin once on a live unpublished backing",
+                    );
+                }
+            }
+            MirArrayInstruction::BindIndexed {
+                backing,
+                prefix,
+                length,
+                ..
+            } => {
+                let valid = self.indexed.get_mut(backing).is_some_and(|state| {
+                    state.prefix == *prefix
+                        && state.length == *length
+                        && state.phase == IndexedConstructionPhase::Element
+                        && {
+                            state.phase = IndexedConstructionPhase::Bound;
+                            true
+                        }
+                });
+                if !valid {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "indexed array binding requires the current canonical element epoch",
+                    );
+                }
+            }
+            MirArrayInstruction::InitializeIndexedElement {
+                backing, prefix, ..
+            } => {
+                let valid = self.indexed.get_mut(backing).is_some_and(|state| {
+                    state.prefix == *prefix && state.phase == IndexedConstructionPhase::Bound && {
+                        state.phase = IndexedConstructionPhase::Initialized;
+                        true
+                    }
+                });
+                if !valid {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "indexed array element must initialize and advance the exact current slot once",
+                    );
+                }
+            }
+            MirArrayInstruction::EndIndexedElement {
+                backing,
+                prefix,
+                length,
+                ..
+            } => {
+                let valid = self.indexed.get_mut(backing).is_some_and(|state| {
+                    state.prefix == *prefix
+                        && state.length == *length
+                        && state.phase == IndexedConstructionPhase::Initialized
+                        && {
+                            state.phase = IndexedConstructionPhase::Header;
+                            true
+                        }
+                });
+                if !valid {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "indexed array element epoch must end after initialization and cleanup",
+                    );
+                }
+            }
+            MirArrayInstruction::CompleteIndexed {
+                backing,
+                prefix,
+                length,
+                ..
+            } => {
+                let valid = self.indexed.get(backing).is_some_and(|state| {
+                    state.prefix == *prefix
+                        && state.length == *length
+                        && state.phase == IndexedConstructionPhase::Exit
+                });
+                if valid {
+                    self.indexed.remove(backing);
+                    self.completed_backings.insert(*backing);
+                } else {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "indexed array completion requires the canonical prefix-equals-length exit",
+                    );
+                }
+            }
             MirArrayInstruction::InitializeElement {
                 backing,
                 prefix,
@@ -706,6 +860,7 @@ impl ArrayOwnerState {
                 }
                 if !self.backings.contains(backing) {
                     self.element_lists.remove(backing);
+                    self.indexed.remove(backing);
                 }
             }
             MirArrayInstruction::PublishShared { backing, .. } => {
@@ -718,6 +873,7 @@ impl ArrayOwnerState {
                 }
                 if !self.backings.contains(backing) {
                     self.element_lists.remove(backing);
+                    self.indexed.remove(backing);
                 }
             }
             MirArrayInstruction::SliceCopy { destination, .. } => {
@@ -836,8 +992,67 @@ impl ArrayOwnerState {
                 .element_lists
                 .values()
                 .any(|state| state.prefix == storage)
+            || self.indexed.contains_key(&storage)
+            || self
+                .indexed
+                .values()
+                .any(|state| state.prefix == storage || state.length == storage)
             || self.produced.contains(&storage)
             || self.anchors.contains(&storage)
+    }
+
+    fn enter_indexed_element(
+        &mut self,
+        verifier: &mut Verifier<'_>,
+        function: MirDefinitionRef<'_>,
+        block: BlockId,
+        backing: StorageId,
+        prefix: StorageId,
+        length: StorageId,
+    ) {
+        let valid = self.indexed.get_mut(&backing).is_some_and(|state| {
+            state.prefix == prefix
+                && state.length == length
+                && state.phase == IndexedConstructionPhase::Header
+                && {
+                    state.phase = IndexedConstructionPhase::Element;
+                    true
+                }
+        });
+        if !valid {
+            verifier.block_error(
+                function.callable(),
+                block,
+                "indexed array loop body requires one active header-ready construction",
+            );
+        }
+    }
+
+    fn exit_indexed_loop(
+        &mut self,
+        verifier: &mut Verifier<'_>,
+        function: MirDefinitionRef<'_>,
+        block: BlockId,
+        backing: StorageId,
+        prefix: StorageId,
+        length: StorageId,
+    ) {
+        let valid = self.indexed.get_mut(&backing).is_some_and(|state| {
+            state.prefix == prefix
+                && state.length == length
+                && state.phase == IndexedConstructionPhase::Header
+                && {
+                    state.phase = IndexedConstructionPhase::Exit;
+                    true
+                }
+        });
+        if !valid {
+            verifier.block_error(
+                function.callable(),
+                block,
+                "indexed array loop exit requires one active header-ready construction",
+            );
+        }
     }
 
     fn record_completed_class_destination(
@@ -1118,6 +1333,9 @@ impl ArrayOwnerState {
         self.completed_backings.remove(&storage);
         self.element_lists
             .retain(|backing, state| *backing != storage && state.prefix != storage);
+        self.indexed.retain(|backing, state| {
+            *backing != storage && state.prefix != storage && state.length != storage
+        });
         self.produced.remove(&storage);
         self.consumed.remove(&storage);
         self.anchors.remove(&storage);

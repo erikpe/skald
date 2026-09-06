@@ -82,8 +82,9 @@ fn indexed_array_hir_reports_a_structured_gate_before_mir_lowering() {
     let error = compile_source_to_assembly(
         "indexed-array-lowering-gate.ska",
         concat!(
+            "class Item { init(value: i64) {} }\n",
             "fn main() -> i64 {\n",
-            "  var values: i64[] = i64[](1u; index => index);\n",
+            "  var values: Item[] = Item[](1u; index => Item(index));\n",
             "  return 0;\n",
             "}\n",
         ),

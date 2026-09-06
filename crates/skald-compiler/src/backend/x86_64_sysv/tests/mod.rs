@@ -70,6 +70,7 @@ mod floating_comparisons;
 mod floating_division;
 mod function_values;
 mod generic_classes;
+mod indexed_array_construction;
 mod instruction_selection;
 mod integer_division;
 mod interface_dispatch;

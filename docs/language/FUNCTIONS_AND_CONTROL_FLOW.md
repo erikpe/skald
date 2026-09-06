@@ -481,7 +481,7 @@ follows only after the prefix equals the requested length. This per-element
 cleanup boundary deliberately differs from a static element list's enclosing
 full-expression lifetime so dynamic construction retains bounded temporary
 storage. The complete frozen rule is in
-[Arrays](ARRAYS.md#frozen-indexed-array-construction).
+[Arrays](ARRAYS.md#indexed-array-construction).
 
 For a produced read-only alias, the producer runs exactly once at its
 argument position after any receiver and before every later argument. The

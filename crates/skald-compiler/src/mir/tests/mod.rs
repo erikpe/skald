@@ -33,6 +33,7 @@ mod expression_stabilization;
 mod final_fields;
 mod floating_division;
 mod function_values;
+mod indexed_array_construction;
 mod integer_division;
 mod interface_dispatch;
 mod interface_fixtures;

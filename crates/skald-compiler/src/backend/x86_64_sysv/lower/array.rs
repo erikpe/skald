@@ -118,6 +118,37 @@ impl InstructionSelector<'_, '_> {
                     *ownership,
                 )
             }
+            MirArrayInstruction::BeginIndexed { prefix, .. } => {
+                self.clear_storage(*prefix);
+                Ok(())
+            }
+            MirArrayInstruction::BindIndexed {
+                prefix, binding, ..
+            } => {
+                value::load_rax(value::frame_storage(self.frame, *prefix), self.output);
+                value::store_rax(value::frame_storage(self.frame, *binding), self.output);
+                Ok(())
+            }
+            MirArrayInstruction::InitializeIndexedElement {
+                backing,
+                prefix,
+                value,
+                span,
+            } => {
+                let array = self.array_for_storage(*backing)?;
+                let destination = array_element_place(MirPlace::base(*backing), array, *prefix);
+                self.select_store(&MirStore {
+                    destination,
+                    value: *value,
+                    authorization: None,
+                    final_authorization: None,
+                    span: *span,
+                })?;
+                self.advance_array_index(*prefix);
+                Ok(())
+            }
+            MirArrayInstruction::EndIndexedElement { .. }
+            | MirArrayInstruction::CompleteIndexed { .. } => Ok(()),
             MirArrayInstruction::InitializeElement {
                 backing,
                 prefix,

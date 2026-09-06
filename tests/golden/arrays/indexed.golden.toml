@@ -1,0 +1,9 @@
+schema = 1
+
+[[test]]
+name = "primitive"
+mode = "run"
+source = "indexed_primitive_arrays.ska"
+[[test.run]]
+name = "zero_one_many_inline_shared_and_every_primitive"
+expect = { stdout = { file = "data/indexed_primitive_arrays.stdout" } }

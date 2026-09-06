@@ -79,6 +79,11 @@ impl MirDependencyExtractor<'_> {
         match instruction {
             MirArrayInstruction::Allocate { .. }
             | MirArrayInstruction::AllocateElements { .. }
+            | MirArrayInstruction::BeginIndexed { .. }
+            | MirArrayInstruction::BindIndexed { .. }
+            | MirArrayInstruction::InitializeIndexedElement { .. }
+            | MirArrayInstruction::EndIndexedElement { .. }
+            | MirArrayInstruction::CompleteIndexed { .. }
             | MirArrayInstruction::InitializeElement { .. }
             | MirArrayInstruction::CompleteElement { .. }
             | MirArrayInstruction::Publish { .. }

@@ -1437,13 +1437,14 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             backing,
             index,
             length,
+            kind,
             body_target,
             complete_target,
             span,
         }) => {
             let _ = write!(
                 output,
-                "array-loop {backing}[{index}] < {length} -> {body_target} else {complete_target}"
+                "array-loop {kind:?} {backing}[{index}] < {length} -> {body_target} else {complete_target}"
             );
             write_span(output, *span);
         }
@@ -1822,6 +1823,67 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             let _ = write!(
                 output,
                 "array-allocate-elements {backing} {array} length {length} prefix {prefix} {ownership:?} failure {failure:?}"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::BeginIndexed {
+            backing,
+            prefix,
+            length,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-indexed-begin {backing} prefix {prefix} length {length}"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::BindIndexed {
+            backing,
+            prefix,
+            length,
+            binding,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-indexed-bind {binding} from {backing}[{prefix}] < {length}"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::InitializeIndexedElement {
+            backing,
+            prefix,
+            value,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-indexed-initialize {backing}[{prefix}] = {value} and advance"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::EndIndexedElement {
+            backing,
+            prefix,
+            length,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-indexed-end {backing} prefix {prefix} length {length}"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::CompleteIndexed {
+            backing,
+            prefix,
+            length,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-indexed-complete {backing} prefix {prefix} == {length}"
             );
             write_span(output, *span);
         }

@@ -100,6 +100,84 @@ impl Verifier<'_> {
                     );
                 }
             }
+            MirArrayInstruction::BeginIndexed {
+                backing,
+                prefix,
+                length,
+                ..
+            }
+            | MirArrayInstruction::EndIndexedElement {
+                backing,
+                prefix,
+                length,
+                ..
+            }
+            | MirArrayInstruction::CompleteIndexed {
+                backing,
+                prefix,
+                length,
+                ..
+            } => {
+                if !indexed_primitive_storage_matches(self, function, *backing, *prefix, *length) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "indexed primitive array protocol requires exact backing, prefix, and length storage",
+                    );
+                }
+            }
+            MirArrayInstruction::BindIndexed {
+                backing,
+                prefix,
+                length,
+                binding,
+                ..
+            } => {
+                let binding_matches = function.storage(*binding).is_some_and(|storage| {
+                    storage.kind == MirStorageKind::Local && storage.ty == MirType::I64
+                });
+                if !indexed_primitive_storage_matches(self, function, *backing, *prefix, *length)
+                    || !binding_matches
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "indexed array binding requires exact primitive protocol storage and an `i64` local",
+                    );
+                }
+            }
+            MirArrayInstruction::InitializeIndexedElement {
+                backing,
+                prefix,
+                value,
+                ..
+            } => {
+                let element = function.storage(*backing).and_then(|storage| {
+                    (storage.kind == MirStorageKind::ArrayBacking)
+                        .then_some(storage.ty)
+                        .and_then(|ty| match ty {
+                            MirType::Array(array) => {
+                                self.program.array_type(array).map(|entry| entry.element)
+                            }
+                            _ => None,
+                        })
+                });
+                let prefix_matches = function
+                    .storage(*prefix)
+                    .map(|storage| (storage.kind, storage.ty))
+                    == Some((MirStorageKind::ArrayPosition, MirType::U64));
+                let value_matches = element.is_some_and(|element| {
+                    element.is_scalar_value()
+                        && self.verify_value_use(function, block, *value, defined) == Some(element)
+                });
+                if !prefix_matches || !value_matches {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "indexed array element initialization requires an exact primitive value, backing, and prefix",
+                    );
+                }
+            }
             MirArrayInstruction::InitializeElement {
                 backing,
                 prefix,
@@ -473,6 +551,31 @@ impl Verifier<'_> {
             );
         }
     }
+}
+
+fn indexed_primitive_storage_matches(
+    verifier: &Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    backing: crate::mir::StorageId,
+    prefix: crate::mir::StorageId,
+    length: crate::mir::StorageId,
+) -> bool {
+    let backing_matches = function.storage(backing).is_some_and(|storage| {
+        storage.kind == MirStorageKind::ArrayBacking
+            && matches!(storage.ty, MirType::Array(array) if verifier
+                .program
+                .array_type(array)
+                .is_some_and(|metadata| metadata.element.is_scalar_value()))
+    });
+    backing_matches
+        && function
+            .storage(prefix)
+            .map(|storage| (storage.kind, storage.ty))
+            == Some((MirStorageKind::ArrayPosition, MirType::U64))
+        && function
+            .storage(length)
+            .map(|storage| (storage.kind, storage.ty))
+            == Some((MirStorageKind::ScalarSpill, MirType::U64))
 }
 
 fn positions_match(function: MirDefinitionRef<'_>, positions: [crate::mir::StorageId; 2]) -> bool {

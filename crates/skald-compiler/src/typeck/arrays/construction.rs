@@ -6,7 +6,7 @@ use crate::{
         HirArrayConstruction, HirArrayConstructionMode, HirArrayElementInitialization,
         HirArrayElementList, HirArrayInitialize, HirArrayOwnership, HirArrayProvenance,
         HirArraySource, HirArrayTransfer, HirExpression, HirExpressionKind,
-        HirIndexedArrayInitialization, HirSharedTarget, Type,
+        HirIndexedArrayInitialization, HirSharedTarget, HirStoredValueInitialization, Type,
     },
     resolve::{
         ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr, ResolvedExpression,
@@ -106,16 +106,18 @@ impl CallableChecker<'_, '_> {
                     span: initializer.element.span(),
                     value,
                 };
-                self.lowering_diagnostics.push(
-                    Diagnostic::error(
-                        INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE,
-                        "indexed array construction is not executable yet",
-                    )
-                    .with_primary_label(
-                        initializer.arrow_span,
-                        "typed initialization is complete; dynamic-prefix MIR lowering is pending",
-                    ),
-                );
+                if !matches!(&element.value, HirStoredValueInitialization::Scalar(_)) {
+                    self.lowering_diagnostics.push(
+                        Diagnostic::error(
+                            INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE,
+                            "indexed construction for this element type is not executable yet",
+                        )
+                        .with_primary_label(
+                            initializer.arrow_span,
+                            "primitive elements are executable; lifecycle-bearing lowering is pending",
+                        ),
+                    );
+                }
                 HirArrayConstructionMode::Indexed(Box::new(HirIndexedArrayInitialization {
                     left_paren_span: initializer.left_paren_span,
                     length: Box::new(length),
