@@ -80,6 +80,16 @@ generic-interface roadmaps are preserved in the
 
 ## Design proposals
 
+The draft
+[target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md)
+proposes an unpublished `skald-binary64` workspace crate that contains a
+pinned `rustc_apfloat` dependency behind a Skald-owned raw-bit facade. It
+would become the shared authority for decimal literal rounding, deterministic
+floating arithmetic, comparisons, primitive conversions, and successful
+checked `f64`-to-integer constant-protocol folding while conservatively
+retaining NaN-producing arithmetic and statically failing checked casts. The
+design is not yet frozen and has no implementation roadmap.
+
 The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
 and [delivery record](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
