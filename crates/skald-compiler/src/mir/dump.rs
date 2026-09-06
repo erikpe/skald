@@ -1863,6 +1863,14 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             );
             write_span(output, *span);
         }
+        MirArrayInstruction::AdvanceIndexedElement {
+            backing,
+            prefix,
+            span,
+        } => {
+            let _ = write!(output, "array-indexed-advance-complete {backing}[{prefix}]");
+            write_span(output, *span);
+        }
         MirArrayInstruction::EndIndexedElement {
             backing,
             prefix,

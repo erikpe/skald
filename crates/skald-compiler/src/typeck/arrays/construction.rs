@@ -106,7 +106,11 @@ impl CallableChecker<'_, '_> {
                     span: initializer.element.span(),
                     value,
                 };
-                if !matches!(&element.value, HirStoredValueInitialization::Scalar(_)) {
+                if !matches!(
+                    &element.value,
+                    HirStoredValueInitialization::Scalar(_)
+                        | HirStoredValueInitialization::Class(_)
+                ) {
                     self.lowering_diagnostics.push(
                         Diagnostic::error(
                             INDEXED_ARRAY_CONSTRUCTION_UNAVAILABLE,
@@ -114,7 +118,7 @@ impl CallableChecker<'_, '_> {
                         )
                         .with_primary_label(
                             initializer.arrow_span,
-                            "primitive elements are executable; lifecycle-bearing lowering is pending",
+                            "primitive and exact-class elements are executable; composite lowering is pending",
                         ),
                     );
                 }

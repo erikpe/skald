@@ -496,6 +496,7 @@ struct ElementListState {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct IndexedConstructionState {
+    array: crate::identity::ArrayTypeId,
     prefix: StorageId,
     length: StorageId,
     phase: IndexedConstructionPhase,
@@ -506,6 +507,7 @@ enum IndexedConstructionPhase {
     Header,
     Element,
     Bound,
+    ValueReady,
     Initialized,
     Exit,
 }
@@ -668,6 +670,20 @@ impl ArrayOwnerState {
                 length,
                 ..
             } => {
+                let Some(array) = function
+                    .storage(*backing)
+                    .and_then(|storage| match storage.ty {
+                        MirType::Array(array) => Some(array),
+                        _ => None,
+                    })
+                else {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "indexed array construction requires array backing storage",
+                    );
+                    return;
+                };
                 let valid = self.backings.contains(backing)
                     && !self.completed_backings.contains(backing)
                     && !self.element_lists.contains_key(backing)
@@ -680,6 +696,7 @@ impl ArrayOwnerState {
                         .insert(
                             *backing,
                             IndexedConstructionState {
+                                array,
                                 prefix: *prefix,
                                 length: *length,
                                 phase: IndexedConstructionPhase::Header,
@@ -731,6 +748,25 @@ impl ArrayOwnerState {
                         function.callable(),
                         block,
                         "indexed array element must initialize and advance the exact current slot once",
+                    );
+                }
+            }
+            MirArrayInstruction::AdvanceIndexedElement {
+                backing, prefix, ..
+            } => {
+                let valid = self.indexed.get_mut(backing).is_some_and(|state| {
+                    state.prefix == *prefix
+                        && state.phase == IndexedConstructionPhase::ValueReady
+                        && {
+                            state.phase = IndexedConstructionPhase::Initialized;
+                            true
+                        }
+                });
+                if !valid {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "indexed array prefix may advance only after the current lifecycle-bearing slot is complete",
                     );
                 }
             }
@@ -1072,6 +1108,25 @@ impl ArrayOwnerState {
         let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
             return;
         };
+        if let Some(state) = self.indexed.get_mut(&backing) {
+            let exact_slot = matches!(
+                destination.projections.as_slice(),
+                [MirPlaceProjection::ArrayElement {
+                    array,
+                    normalized_index,
+                }] if *array == state.array && *normalized_index == state.prefix
+            );
+            if !exact_slot || state.phase != IndexedConstructionPhase::Bound {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "indexed class construction must complete exactly once in the current prefix slot",
+                );
+                return;
+            }
+            state.phase = IndexedConstructionPhase::ValueReady;
+            return;
+        }
         let Some(state) = self.element_lists.get_mut(&backing) else {
             if function
                 .storage(backing)

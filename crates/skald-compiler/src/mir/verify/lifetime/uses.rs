@@ -383,6 +383,9 @@ fn visit_array_instruction(instruction: &MirArrayInstruction, visit: &mut impl F
         }
         MirArrayInstruction::InitializeIndexedElement {
             backing, prefix, ..
+        }
+        | MirArrayInstruction::AdvanceIndexedElement {
+            backing, prefix, ..
         } => {
             visit(*backing);
             visit(*prefix);

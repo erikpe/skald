@@ -334,6 +334,7 @@ impl MirDependencyExtractor<'_> {
             | MirArrayInstruction::BeginIndexed { .. }
             | MirArrayInstruction::BindIndexed { .. }
             | MirArrayInstruction::InitializeIndexedElement { .. }
+            | MirArrayInstruction::AdvanceIndexedElement { .. }
             | MirArrayInstruction::EndIndexedElement { .. }
             | MirArrayInstruction::CompleteIndexed { .. }
             | MirArrayInstruction::CompleteElement { .. }

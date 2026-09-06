@@ -1611,6 +1611,14 @@ fn map_array_instruction<M: MirLocalIdentityMapper>(
             map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)?;
             map_value_use(mapper, site, MirValueUseRole::OwnershipOrLifecycle, value)
         }
+        MirArrayInstruction::AdvanceIndexedElement {
+            backing,
+            prefix,
+            span: _,
+        } => {
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, backing)?;
+            map_storage_use(mapper, site, MirStorageUseRole::OwnershipOrLifecycle, prefix)
+        }
         MirArrayInstruction::InitializeElement {
             backing,
             prefix,

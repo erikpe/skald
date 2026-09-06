@@ -1,0 +1,67 @@
+import std::io;
+
+class Item {
+    static destroyed: i64;
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value + 100;
+    }
+
+    destroy {
+        Item.destroyed = Item.destroyed * 100 + self.value;
+    }
+}
+
+class Holder {
+    values: Item[];
+
+    init(values: Item[]) {
+        self.values = values;
+    }
+}
+
+fn make(value: i64) -> Item {
+    return Item(value);
+}
+
+fn returned() -> Item[] {
+    return Item[](2u; index => make(index + 6));
+}
+
+fn consume(values: Item[]) -> i64 {
+    return values[1].value;
+}
+
+fn record_reverse_destruction() -> unit {
+    var values: Item[] = Item[](3u; index => Item(index + 1));
+}
+
+fn main() -> i64 {
+    record_reverse_destruction();
+    std::io::println_i64(Item.destroyed);
+    Item.destroyed = 0;
+
+    var source: Item = Item(7);
+    var direct: Item[] = Item[](2u; index => Item(index + 1));
+    var copied: Item[] = Item[](2u; index => source);
+    var grouped: Item[] = Item[](1u; index => (Item(index + 4)));
+    var shared: shared Item[] = new Item[](2u; index => Item(index + 8));
+    var assigned: Item[] = direct;
+    assigned = copied;
+    var holder: Holder = Holder(direct);
+
+    std::io::println_i64(direct[1].value);
+    std::io::println_i64(copied[0].value);
+    std::io::println_i64(grouped[0].value);
+    std::io::println_i64(returned()[1].value);
+    std::io::println_i64(shared->[1].value);
+    std::io::println_i64(assigned[0].value);
+    std::io::println_i64(holder.values[1].value);
+    std::io::println_i64(consume(direct));
+    return 0;
+}

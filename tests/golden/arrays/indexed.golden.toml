@@ -7,3 +7,11 @@ source = "indexed_primitive_arrays.ska"
 [[test.run]]
 name = "zero_one_many_inline_shared_and_every_primitive"
 expect = { stdout = { file = "data/indexed_primitive_arrays.stdout" } }
+
+[[test]]
+name = "class"
+mode = "run"
+source = "indexed_class_arrays.ska"
+[[test.run]]
+name = "placement_copy_consumers_and_reverse_cleanup"
+expect = { stdout = { file = "data/indexed_class_arrays.stdout" } }

@@ -147,6 +147,10 @@ impl InstructionSelector<'_, '_> {
                 self.advance_array_index(*prefix);
                 Ok(())
             }
+            MirArrayInstruction::AdvanceIndexedElement { prefix, .. } => {
+                self.advance_array_index(*prefix);
+                Ok(())
+            }
             MirArrayInstruction::EndIndexedElement { .. }
             | MirArrayInstruction::CompleteIndexed { .. } => Ok(()),
             MirArrayInstruction::InitializeElement {

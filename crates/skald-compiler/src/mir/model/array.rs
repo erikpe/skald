@@ -221,6 +221,13 @@ pub enum MirArrayInstruction {
         value: ValueId,
         span: Span,
     },
+    /// Advances the dynamic prefix after a lifecycle-bearing value has
+    /// completed directly in the current slot.
+    AdvanceIndexedElement {
+        backing: StorageId,
+        prefix: StorageId,
+        span: Span,
+    },
     /// Proves that cleanup for the initialized element finished before the
     /// canonical backedge.
     EndIndexedElement {
@@ -389,6 +396,7 @@ impl MirArrayInstruction {
             | Self::BeginIndexed { span, .. }
             | Self::BindIndexed { span, .. }
             | Self::InitializeIndexedElement { span, .. }
+            | Self::AdvanceIndexedElement { span, .. }
             | Self::EndIndexedElement { span, .. }
             | Self::CompleteIndexed { span, .. }
             | Self::InitializeElement { span, .. }

@@ -160,7 +160,7 @@ fn indexed_construction_selects_every_stored_value_family_without_default_or_ass
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert_eq!(output.lowering_diagnostics.len(), 6);
+    assert_eq!(output.lowering_diagnostics.len(), 4);
     let dump = dump_hir(output.hir.as_ref().unwrap());
     for selected in [
         "ScalarInitialization",
@@ -191,6 +191,8 @@ fn indexed_direct_class_initialization_needs_no_default_or_copy_plan() {
     let output = crate::typeck::type_check(&resolved);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     assert!(output.hir.is_some());
+    assert!(output.lowering_diagnostics.is_empty());
+    assert!(output.is_executable());
     let array = output
         .hir
         .as_ref()
@@ -304,7 +306,7 @@ fn indexed_construction_specializes_generic_destination_requirements() {
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    assert_eq!(output.lowering_diagnostics.len(), 1);
+    assert!(output.lowering_diagnostics.is_empty());
     let dump = dump_hir(output.hir.as_ref().unwrap());
     assert!(dump.contains("IndexedElements"), "{dump}");
     assert!(dump.contains("ClassInitialization copy"), "{dump}");

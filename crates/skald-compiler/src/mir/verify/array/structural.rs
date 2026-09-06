@@ -30,6 +30,7 @@ impl Verifier<'_> {
         let mut begin_blocks = Vec::new();
         let mut binding_count = 0;
         let mut initialization_count = 0;
+        let mut advance_count = 0;
         let mut end_blocks = Vec::new();
         let mut completion_count = 0;
 
@@ -67,6 +68,13 @@ impl Verifier<'_> {
                         ..
                     }) if (*operation_backing, *operation_prefix) == (backing, prefix) => {
                         initialization_count += 1;
+                    }
+                    MirInstruction::Array(MirArrayInstruction::AdvanceIndexedElement {
+                        backing: operation_backing,
+                        prefix: operation_prefix,
+                        ..
+                    }) if (*operation_backing, *operation_prefix) == (backing, prefix) => {
+                        advance_count += 1;
                     }
                     MirInstruction::Array(MirArrayInstruction::EndIndexedElement {
                         backing: operation_backing,
@@ -180,6 +188,21 @@ impl Verifier<'_> {
                     && *complete_length == length
             )
         });
+        let element_transition_is_canonical = function
+            .storage(backing)
+            .and_then(|storage| match storage.ty {
+                MirType::Array(array) => self.program.array_type(array),
+                _ => None,
+            })
+            .is_some_and(|array| {
+                if array.element.is_scalar_value() {
+                    initialization_count == 1 && advance_count == 0
+                } else if matches!(array.element, MirType::Class(_)) {
+                    initialization_count == 0 && advance_count == 1
+                } else {
+                    false
+                }
+            });
         let exclusive_targets = function.body().blocks.iter().all(|block| {
             block.id == header
                 || block.terminator.as_ref().is_none_or(|terminator| {
@@ -193,7 +216,7 @@ impl Verifier<'_> {
             && allocation_establishes_length
             && body_begins_epoch
             && binding_count == 1
-            && initialization_count == 1
+            && element_transition_is_canonical
             && matches!(end_blocks.as_slice(), [_])
             && completion_count == 1
             && completion_is_canonical

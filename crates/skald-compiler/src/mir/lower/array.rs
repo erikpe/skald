@@ -568,7 +568,7 @@ impl BodyLowerer<'_> {
                     MirStorageKind::ArrayProduced,
                     construction.span,
                 );
-                let backing = self.lower_indexed_primitive_array(
+                let backing = self.lower_indexed_array(
                     construction.array,
                     initializer,
                     MirArrayOwnership::Inline,
@@ -628,7 +628,7 @@ impl BodyLowerer<'_> {
             return;
         }
         if let HirArrayConstructionMode::Indexed(initializer) = &construction.mode {
-            let backing = self.lower_indexed_primitive_array(
+            let backing = self.lower_indexed_array(
                 construction.array,
                 initializer,
                 MirArrayOwnership::Shared,
@@ -697,16 +697,13 @@ impl BodyLowerer<'_> {
         }));
     }
 
-    fn lower_indexed_primitive_array(
+    fn lower_indexed_array(
         &mut self,
         array: crate::identity::ArrayTypeId,
         initializer: &crate::hir::HirIndexedArrayInitialization,
         ownership: MirArrayOwnership,
         span: crate::source::Span,
     ) -> StorageId {
-        let HirStoredValueInitialization::Scalar(element) = &initializer.element.value else {
-            invalid_array_hir()
-        };
         let length = self
             .lower_expression(&initializer.length)
             .expect("typed indexed array length must produce `u64`");
@@ -777,17 +774,7 @@ impl BodyLowerer<'_> {
         let enclosing_full_expression = std::mem::take(&mut self.full_expression);
         let enclosing_scalar_homes = std::mem::take(&mut self.scalar_result_homes);
         let enclosing_optional_guards = std::mem::take(&mut self.active_optional_guards);
-        let value = self
-            .lower_expression(element)
-            .expect("typed primitive indexed element must produce a MIR value");
-        self.emit(MirInstruction::Array(
-            MirArrayInstruction::InitializeIndexedElement {
-                backing,
-                prefix,
-                value,
-                span: initializer.element.span,
-            },
-        ));
+        self.lower_indexed_element(array, backing, prefix, &initializer.element);
         self.finish_full_expression(initializer.element.span);
         debug_assert!(self.active_optional_guards.is_empty());
         self.full_expression = enclosing_full_expression;
@@ -820,6 +807,61 @@ impl BodyLowerer<'_> {
             },
         ));
         backing
+    }
+
+    fn lower_indexed_element(
+        &mut self,
+        array: crate::identity::ArrayTypeId,
+        backing: StorageId,
+        prefix: StorageId,
+        element: &crate::hir::HirArrayElementInitialization,
+    ) {
+        match &element.value {
+            HirStoredValueInitialization::Scalar(element) => {
+                let value = self
+                    .lower_expression(element)
+                    .expect("typed primitive indexed element must produce a MIR value");
+                self.emit(MirInstruction::Array(
+                    MirArrayInstruction::InitializeIndexedElement {
+                        backing,
+                        prefix,
+                        value,
+                        span: element.span,
+                    },
+                ));
+            }
+            HirStoredValueInitialization::Class(initialization) => {
+                let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                match initialization {
+                    HirObjectDestinationInitialization::Direct { producer, .. } => {
+                        self.lower_object_producer(producer, destination);
+                    }
+                    HirObjectDestinationInitialization::Copy {
+                        source, operation, ..
+                    } => {
+                        let source = self.lower_object_source(source);
+                        let Type::Class(class) = element.element else {
+                            invalid_array_hir();
+                        };
+                        self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                            destination,
+                            source,
+                            class,
+                            operation: lower_selected_copy_operation(*operation),
+                            span: element.span,
+                        }));
+                    }
+                }
+                self.emit(MirInstruction::Array(
+                    MirArrayInstruction::AdvanceIndexedElement {
+                        backing,
+                        prefix,
+                        span: element.span,
+                    },
+                ));
+            }
+            _ => invalid_array_hir(),
+        }
     }
 
     fn lower_element_list(

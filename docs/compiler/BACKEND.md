@@ -233,8 +233,8 @@ full-expression lifetime. They do not default-construct then assign,
 aggregate-copy class bytes, recover source expressions, publish a partial
 prefix, or introduce a new runtime service or descriptor layout.
 
-Primitive indexed array construction keeps the same target boundary for a
-dynamic source count. Instruction selection receives only
+Primitive and exact-class indexed array construction keep the same target
+boundary for a dynamic source count. Instruction selection receives only
 verified ordinary CFG containing checked allocation, an unpublished dynamic
 prefix, the selected array-element destination operations, per-element
 cleanup, a complete-prefix exit fact, and inline or shared publication. It
@@ -243,8 +243,10 @@ will not receive source `=>` syntax, a callback, generic requirement state, or
 optional and owner operations, prefix arithmetic, publication, and reverse
 release remain sufficient. No descriptor, calling convention, runtime symbol,
 or ABI revision is introduced, and ABI version 9 remains unchanged. The
-x86-64 backend accepts the verified primitive protocol; lifecycle-bearing
-element protocols remain staged.
+x86-64 backend accepts the verified primitive and exact-class protocols;
+composite element protocols remain staged. Exact classes reuse aligned element
+places and ordinary initializer, result-destination, copy-constructor, and
+destructor calls without aggregate byte copying.
 
 Verified string literal data is pooled by exact decoded bytes in first
 canonical identity order. The target emits one eight-aligned local object per

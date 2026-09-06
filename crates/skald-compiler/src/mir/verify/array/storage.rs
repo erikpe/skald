@@ -118,11 +118,11 @@ impl Verifier<'_> {
                 length,
                 ..
             } => {
-                if !indexed_primitive_storage_matches(self, function, *backing, *prefix, *length) {
+                if !indexed_executable_storage_matches(self, function, *backing, *prefix, *length) {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "indexed primitive array protocol requires exact backing, prefix, and length storage",
+                        "indexed array protocol requires executable backing and exact prefix and length storage",
                     );
                 }
             }
@@ -136,7 +136,7 @@ impl Verifier<'_> {
                 let binding_matches = function.storage(*binding).is_some_and(|storage| {
                     storage.kind == MirStorageKind::Local && storage.ty == MirType::I64
                 });
-                if !indexed_primitive_storage_matches(self, function, *backing, *prefix, *length)
+                if !indexed_executable_storage_matches(self, function, *backing, *prefix, *length)
                     || !binding_matches
                 {
                     self.block_error(
@@ -175,6 +175,28 @@ impl Verifier<'_> {
                         function.callable(),
                         block.id,
                         "indexed array element initialization requires an exact primitive value, backing, and prefix",
+                    );
+                }
+            }
+            MirArrayInstruction::AdvanceIndexedElement {
+                backing, prefix, ..
+            } => {
+                let class_element = function.storage(*backing).is_some_and(|storage| {
+                    storage.kind == MirStorageKind::ArrayBacking
+                        && matches!(storage.ty, MirType::Array(array) if self
+                            .program
+                            .array_type(array)
+                            .is_some_and(|metadata| matches!(metadata.element, MirType::Class(_))))
+                });
+                let prefix_matches = function
+                    .storage(*prefix)
+                    .map(|storage| (storage.kind, storage.ty))
+                    == Some((MirStorageKind::ArrayPosition, MirType::U64));
+                if !class_element || !prefix_matches {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "indexed class completion requires exact class backing and `u64` prefix storage",
                     );
                 }
             }
@@ -553,7 +575,7 @@ impl Verifier<'_> {
     }
 }
 
-fn indexed_primitive_storage_matches(
+fn indexed_executable_storage_matches(
     verifier: &Verifier<'_>,
     function: MirDefinitionRef<'_>,
     backing: crate::mir::StorageId,
@@ -563,9 +585,12 @@ fn indexed_primitive_storage_matches(
     let backing_matches = function.storage(backing).is_some_and(|storage| {
         storage.kind == MirStorageKind::ArrayBacking
             && matches!(storage.ty, MirType::Array(array) if verifier
-                .program
-                .array_type(array)
-                .is_some_and(|metadata| metadata.element.is_scalar_value()))
+            .program
+            .array_type(array)
+            .is_some_and(|metadata| {
+                metadata.element.is_scalar_value()
+                    || matches!(metadata.element, MirType::Class(_))
+            }))
     });
     backing_matches
         && function

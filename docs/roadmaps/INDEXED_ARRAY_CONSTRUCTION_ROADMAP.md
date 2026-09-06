@@ -1,6 +1,6 @@
 # Indexed Array Construction Roadmap
 
-Status: in progress; IA0 through IA2 are complete and IA3 is next.
+Status: in progress; IA0 through IA3 are complete and IA4 is next.
 
 This roadmap implements the frozen
 [indexed array construction contract](../language/ARRAYS.md#indexed-array-construction)
@@ -55,7 +55,7 @@ principal new compiler responsibility. No other roadmap blocks IA0.
 - [x] IA0 — Retain indexed construction through syntax and resolution
 - [x] IA1 — Select typed repeated destination initialization
 - [x] IA2 — Execute verified primitive dynamic-prefix construction
-- [ ] IA3 — Execute exact-class destination placement and copying
+- [x] IA3 — Execute exact-class destination placement and copying
 - [ ] IA4 — Compose optional and nested-array elements
 - [ ] IA5 — Compose shared and optional-shared owner elements
 - [ ] IA6 — Add `Vec<T>.to_array()`, harden, and publish
@@ -218,24 +218,24 @@ each iteration before the next, and adds no runtime ABI.
 **Purpose:** Apply the proven dynamic-prefix protocol to observable class
 construction, copying, adoption, and destruction.
 
-- [ ] Supply each slot as the final destination for eligible ungrouped exact-
+- [x] Supply each slot as the final destination for eligible ungrouped exact-
       class construction and exact-class-returning calls, with no default
       object, assignment, or unnecessary temporary.
-- [ ] Copy-construct from named places and otherwise materialized sources with
+- [x] Copy-construct from named places and otherwise materialized sources with
       the exact selected operation and existing checked-source rules.
-- [ ] Preserve grouping: grouped fresh construction materializes, requires the
+- [x] Preserve grouping: grouped fresh construction materializes, requires the
       applicable copy, initializes the slot from it, and destroys the
       temporary in the current per-element epoch.
-- [ ] Enforce initializer privacy at the indexed construction site and
+- [x] Enforce initializer privacy at the indexed construction site and
       diagnose unavailable copy only for source shapes that require it.
-- [ ] Advance the prefix only after initializer, result placement, or copy
+- [x] Advance the prefix only after initializer, result placement, or copy
       construction completes normally; clean all other iteration state before
       the backedge.
-- [ ] Extend MIR class-initialization, lifetime, path-state, and cleanup
+- [x] Extend MIR class-initialization, lifetime, path-state, and cleanup
       verification for one logical slot destination reused across epochs.
-- [ ] Reuse x86-64 initializer, result, copy, destructor, and aligned element-
+- [x] Reuse x86-64 initializer, result, copy, destructor, and aligned element-
       place machinery without aggregate byte copying.
-- [ ] Preserve constructor, copy-constructor, destructor, source effect, and
+- [x] Preserve constructor, copy-constructor, destructor, source effect, and
       reverse completed-array destruction order in all owning consumers.
 
 **Tests:** Fresh, named, grouped, call-result, private-initializer, explicit-
