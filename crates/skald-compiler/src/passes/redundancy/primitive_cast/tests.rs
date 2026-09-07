@@ -8,6 +8,7 @@ use crate::{
     passes::verify_final_mir,
     test_support::lower_source_to_final_mir,
 };
+use std::collections::BTreeSet;
 
 use super::*;
 
@@ -148,13 +149,84 @@ fn identities_and_safe_adjacent_chains_are_proven_and_deterministic() {
     assert!(counts.proven() >= 2);
     assert!(sites(counts.dispositions(), PrimitiveCastDisposition::Identity) >= 1);
     assert!(
-        sites(
-            counts.dispositions(),
-            PrimitiveCastDisposition::RemovableChain
-        ) >= 1
+        sites(counts.dispositions(), PrimitiveCastDisposition::Identity) >= 2,
+        "both explicit identities and identity-result chains use guarded forwarding"
     );
     assert!(sites(counts.consumers(), PrimitiveCastConsumer::Return) >= 1);
     assert!(counts.removable_instructions_upper_bound() >= 2);
+    assert!(counts.eliminated_cast_steps_upper_bound() >= 2);
+    assert!(counts.maximum_chain_depth() >= 2);
+}
+
+#[test]
+fn arbitrary_depth_integer_candidates_report_exact_step_and_support_bounds() {
+    let program = lower_source_to_final_mir(
+        "fn chain(value: i64) -> u64 {\n\
+             return (u64) (u8) (i64) (u8) (u64) value;\n\
+         }\n\
+         fn main() -> i64 { return 0; }",
+    );
+    let counts =
+        analyze_unverified_definition(program.definitions.get(FunctionId::new(0)).unwrap().into())
+            .unwrap();
+
+    assert_eq!(counts.inspected(), 5);
+    assert_eq!(counts.interesting(), 4);
+    assert_eq!(counts.proven(), 4);
+    assert_eq!(counts.blocked(), 0);
+    assert_eq!(counts.non_candidates(), 1);
+    assert_eq!(counts.supporting_values(), 6);
+    assert_eq!(counts.supporting_instructions(), 5);
+    assert_eq!(counts.removable_values_upper_bound(), 8);
+    assert_eq!(counts.removable_instructions_upper_bound(), 8);
+    assert_eq!(counts.eliminated_cast_steps_upper_bound(), 8);
+    assert_eq!(counts.maximum_chain_depth(), 5);
+    assert!(!counts.saturated());
+}
+
+#[test]
+fn chain_measurement_merge_saturates_step_totals_and_takes_maximum_depth() {
+    let mut total = Accumulator::default();
+    total.counts.eliminated_cast_steps_upper_bound = u64::MAX;
+    total.counts.maximum_chain_depth = 4;
+    let mut next = Accumulator::default();
+    next.counts.eliminated_cast_steps_upper_bound = 1;
+    next.counts.maximum_chain_depth = 19;
+
+    total.merge(&next);
+
+    assert_eq!(total.counts.eliminated_cast_steps_upper_bound(), u64::MAX);
+    assert_eq!(total.counts.maximum_chain_depth(), 19);
+    assert!(total.counts.saturated());
+}
+
+#[test]
+fn integer_chain_boundaries_have_stable_measurement_blockers() {
+    let cases = [
+        (
+            IntegerCastChainBoundary::ControlFlow,
+            Some(PrimitiveCastBlocker::ControlFlowBoundary),
+        ),
+        (
+            IntegerCastChainBoundary::InvalidPredecessor,
+            Some(PrimitiveCastBlocker::UnsupportedTypeOrOperation),
+        ),
+        (
+            IntegerCastChainBoundary::NonPrecedingDefinition,
+            Some(PrimitiveCastBlocker::NonPrecedingProvenance),
+        ),
+        (
+            IntegerCastChainBoundary::RepeatedIdentity,
+            Some(PrimitiveCastBlocker::RepeatedProvenance),
+        ),
+        (IntegerCastChainBoundary::UnsupportedCastFamily, None),
+    ];
+
+    for (boundary, expected) in cases {
+        let mut barriers = BTreeSet::new();
+        add_chain_boundary_barrier(&mut barriers, Some(boundary));
+        assert_eq!(barriers.into_iter().next(), expected);
+    }
 }
 
 #[test]
@@ -313,7 +385,7 @@ fn identity_replacement_does_not_cross_a_control_flow_boundary() {
 }
 
 #[test]
-fn nonadjacent_chains_and_multiple_intermediate_uses_are_not_overclaimed() {
+fn nonadjacent_chains_and_multiple_intermediate_uses_remain_candidates() {
     let source = "fn chain(value: u8) -> u64 { return (u64) (i64) value; }\n\
                   fn main() -> i64 { return (i64) chain(7u8); }";
 
@@ -368,16 +440,17 @@ fn nonadjacent_chains_and_multiple_intermediate_uses_are_not_overclaimed() {
             counts.barriers(),
             PrimitiveCastBlocker::NonAdjacentProvenance
         ),
-        1
+        0
     );
+    assert!(counts.proven() >= 1);
 
     let mut multiple = lower_source_to_final_mir(source);
     let definition = multiple
         .definitions
         .get_mut_for_test(FunctionId::new(0))
         .unwrap();
-    let casts = cast_sites((&*definition).into());
-    let first = casts[0];
+    let chains = analyze_integer_cast_chains((&*definition).into()).unwrap();
+    let first = chains.entries()[0].site().clone();
     let extra = ValueId::new(
         CallableId::Function(definition.function),
         definition.values.len(),
@@ -388,14 +461,14 @@ fn nonadjacent_chains_and_multiple_intermediate_uses_are_not_overclaimed() {
         ty: MirType::I64,
         span,
     });
-    definition.body.blocks[first.block]
+    definition.body.blocks[first.block()]
         .instructions
         .push(MirInstruction::Assign(MirAssignment {
             result: extra,
             rvalue: MirRvalue {
                 kind: MirRvalueKind::PrimitiveCast {
                     operation: MirPrimitiveCast::new(MirPrimitiveType::I64, MirPrimitiveType::I64),
-                    operand: first.result,
+                    operand: first.result(),
                 },
                 ty: MirType::I64,
             },
@@ -405,8 +478,9 @@ fn nonadjacent_chains_and_multiple_intermediate_uses_are_not_overclaimed() {
         analyze_unverified_definition(multiple.executable_definitions().next().unwrap()).unwrap();
     assert_eq!(
         sites(counts.barriers(), PrimitiveCastBlocker::MultipleUses),
-        1
+        0
     );
+    assert!(counts.proven() >= 1);
 }
 
 #[test]
@@ -419,7 +493,11 @@ fn malformed_value_declarations_are_reported_as_blockers() {
         .definitions
         .get_mut_for_test(FunctionId::new(0))
         .unwrap();
-    let result = cast_sites((&*definition).into())[0].result;
+    let result = analyze_integer_cast_chains((&*definition).into())
+        .unwrap()
+        .entries()[0]
+        .site()
+        .result();
     definition.values[result.index()].id = ValueId::new(result.callable(), result.index() + 99);
     let counts =
         analyze_unverified_definition(program.executable_definitions().next().unwrap()).unwrap();

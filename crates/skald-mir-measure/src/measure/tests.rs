@@ -71,6 +71,16 @@ fn focused_real_driver_measurement_is_deterministic_and_has_semantic_checkpoints
         first.workloads()[0].snapshots()[2].scalar_spill().proven(),
         first.totals().snapshots()[2].scalar_spill().proven()
     );
+    for snapshot in first.workloads()[0].snapshots() {
+        let detail_names = snapshot
+            .redundant_casts()
+            .details
+            .iter()
+            .map(|detail| detail.name.as_str())
+            .collect::<BTreeSet<_>>();
+        assert!(detail_names.contains("eliminated-cast-steps-upper-bound"));
+        assert!(detail_names.contains("maximum-chain-depth"));
+    }
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # Integer Cast-Chain Canonicalization Roadmap
 
-Status: in progress; ICC0 is complete and ICC1 is next.
+Status: in progress; ICC0 through ICC1 are complete and ICC2 is next.
 
 This roadmap implements the integer-only part of FMV-02. It adds one exact,
 target-independent final-MIR optimization for arbitrary-length cast chains over
@@ -86,7 +86,7 @@ completely without range analysis, floating-point reasoning, or a new MIR.
 ## Progress
 
 - [x] ICC0 — Establish the complete integer-cast algebra
-- [ ] ICC1 — Analyze arbitrary-length same-block chains
+- [x] ICC1 — Analyze arbitrary-length same-block chains
 - [ ] ICC2 — Implement the selectable guarded rewrite pass
 - [ ] ICC3 — Activate and observe canonicalization end to end
 - [ ] ICC4 — Harden the boundary and close the roadmap
@@ -130,27 +130,27 @@ MIR behavior is unchanged.
 **Purpose:** Turn the algebra into one immutable, deterministic candidate plan
 without yet changing compiler output.
 
-- [ ] Build a callable-local index of ordinary primitive-cast assignments from
+- [x] Build a callable-local index of ordinary primitive-cast assignments from
   one verified snapshot, recording exact block/instruction sites, result and
   operand identities, operation, type, and span.
-- [ ] Trace each integer-cast endpoint backward through preceding same-block
+- [x] Trace each integer-cast endpoint backward through preceding same-block
   cast definitions with no depth limit, tolerating unrelated intervening
   instructions and shared intermediate uses.
-- [ ] Stop exactly at non-integer casts, non-cast definitions, block
+- [x] Stop exactly at non-integer casts, non-cast definitions, block
   boundaries, unavailable or later definitions, malformed identities/types,
   and repeated identities; return structured failures only for invalid
   verified-state assumptions.
-- [ ] Produce a candidate only when the shared canonical recipe is shorter,
+- [x] Produce a candidate only when the shared canonical recipe is shorter,
   naming the root, endpoint, existing reusable `u8` narrowing where required,
   original depth, canonical depth, and exact expected instruction.
-- [ ] Classify identity endpoints separately because deletion requires guarded
+- [x] Classify identity endpoints separately because deletion requires guarded
   same-typed value forwarding; ordinary endpoint retargeting must not depend on
   intermediate single-use status.
-- [ ] Migrate the live redundancy census to the arbitrary-depth analysis and
+- [x] Migrate the live redundancy census to the arbitrary-depth analysis and
   update its stable counts, blockers, supporting-entity bounds, examples, and
   measurement-tool projections where the old adjacent-pair model is no longer
   accurate.
-- [ ] Keep candidate and example order deterministic by callable, block,
+- [x] Keep candidate and example order deterministic by callable, block,
   instruction, and value identity.
 
 **Tests:** Chains of canonical lengths zero, one, and two; redundant chains of

@@ -1,6 +1,6 @@
 //! Read-only census of redundant ordinary primitive casts.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use crate::{
     identity::CallableId,
@@ -8,13 +8,16 @@ use crate::{
         rewrite::{
             value_use_sites_for_definition, MirLocalIdentitySite, MirRewriteError, MirValueUseRole,
         },
-        BlockId, MirDefinitionRef, MirInstruction, MirPrimitiveCast, MirPrimitiveCastKind,
-        MirPrimitiveType, MirRvalueKind, MirTerminator, ValueId,
+        MirDefinitionRef, MirInstruction, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveType,
+        MirRvalueKind, MirTerminator, ValueId,
     },
     passes::{VerifiedFinalMirProgram, VerifiedProofMirProgram},
 };
 
-use super::super::integer_cast::{IntegerCastRecipe, IntegerCastTransform};
+use super::super::integer_cast::{
+    analyze_integer_cast_chains, IntegerCastChainBoundary, IntegerCastRecipe, IntegerCastSite,
+    IntegerCastSiteInvalidity, IntegerCastTransform,
+};
 use super::cast_model::{
     PrimitiveCastBlocker, PrimitiveCastCallableObservation, PrimitiveCastConsumer,
     PrimitiveCastCount, PrimitiveCastDisposition, PrimitiveCastObservation,
@@ -31,17 +34,6 @@ enum Composition {
     CheckedFailure,
     FloatingPayload,
     Unsupported,
-}
-
-#[derive(Clone, Copy)]
-struct CastSite {
-    callable: CallableId,
-    block: usize,
-    block_id: BlockId,
-    instruction: usize,
-    result: ValueId,
-    operation: MirPrimitiveCast,
-    operand: ValueId,
 }
 
 /// Measures ordinary primitive-cast redundancy without cloning or mutating
@@ -86,11 +78,7 @@ fn analyze_program(program: &crate::mir::MirProgram) -> PrimitiveCastObservation
 }
 
 fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, MirRewriteError> {
-    let casts = cast_sites(definition);
-    let by_result = casts
-        .iter()
-        .map(|site| (site.result, *site))
-        .collect::<BTreeMap<_, _>>();
+    let chains = analyze_integer_cast_chains(definition)?;
     let mut observed = Accumulator::default();
 
     for block in definition.body().blocks.iter() {
@@ -111,23 +99,30 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
         }
     }
 
-    for site in casts {
+    for entry in chains.entries() {
+        let site = entry.site();
         observed.increment_inspected();
         observed.increment_shape(PrimitiveCastShape::new(
-            site.operation.kind(),
-            site.operation.source,
-            site.operation.target,
+            site.operation().kind(),
+            site.operation().source,
+            site.operation().target,
         ));
-        let mut barriers = validation_barriers(definition, site);
-        let uses = match value_use_sites_for_definition(definition, site.result) {
+        let mut barriers = invalidity_barriers(entry.invalidities());
+        let uses = match value_use_sites_for_definition(definition, site.result()) {
             Ok(uses) => uses,
             Err(_) if barriers.contains(&PrimitiveCastBlocker::MalformedIdentity) => {
                 observed.increment_consumer(PrimitiveCastConsumer::Other);
-                if site.operation.kind() == MirPrimitiveCastKind::Identity {
+                if site.operation().kind() == MirPrimitiveCastKind::Identity {
                     observed.increment_disposition(PrimitiveCastDisposition::Identity);
-                    observed.record_interesting(site, None, barriers, true);
+                    observed.record_interesting(
+                        site,
+                        std::slice::from_ref(site),
+                        Some(site.operand()),
+                        barriers,
+                        1,
+                    );
                 } else {
-                    observed.increment_disposition(disposition(site.operation));
+                    observed.increment_disposition(disposition(site.operation()));
                     observed.increment_barrier(PrimitiveCastBlocker::MalformedIdentity);
                     observed.increment_non_candidate();
                 }
@@ -143,79 +138,178 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
             }
         }
 
-        let is_identity = site.operation.kind() == MirPrimitiveCastKind::Identity;
-        let predecessor = by_result.get(&site.operand).copied();
+        if !entry.invalidities().is_empty() {
+            if site.operation().kind() == MirPrimitiveCastKind::Identity {
+                observed.increment_disposition(PrimitiveCastDisposition::Identity);
+                add_replacement_barriers(&mut barriers, &uses, site.block());
+                observed.record_interesting(
+                    site,
+                    std::slice::from_ref(site),
+                    Some(site.operand()),
+                    barriers,
+                    1,
+                );
+            } else {
+                observed.increment_disposition(disposition(site.operation()));
+                for barrier in barriers {
+                    observed.increment_barrier(barrier);
+                }
+                observed.increment_non_candidate();
+            }
+            continue;
+        }
+
+        if let Some(chain) = entry.chain().filter(|chain| chain.is_candidate()) {
+            let identity_recipe = matches!(chain.recipe(), IntegerCastRecipe::Identity);
+            observed.increment_disposition(if identity_recipe {
+                PrimitiveCastDisposition::Identity
+            } else {
+                PrimitiveCastDisposition::RemovableChain
+            });
+            add_chain_boundary_barrier(&mut barriers, chain.boundary());
+            if identity_recipe {
+                add_replacement_barriers(&mut barriers, &uses, site.block());
+            }
+            observed.record_interesting(
+                site,
+                chain.sites(),
+                Some(chain.root()),
+                barriers,
+                chain.eliminated_steps(),
+            );
+            continue;
+        }
+
+        let is_integer =
+            site.operation().source.is_integer() && site.operation().target.is_integer();
+        if is_integer && entry.boundary() != Some(IntegerCastChainBoundary::UnsupportedCastFamily) {
+            observed.increment_disposition(disposition(site.operation()));
+            if let Some(boundary) = entry.boundary() {
+                add_chain_boundary_barrier(&mut barriers, Some(boundary));
+                for barrier in barriers {
+                    observed.increment_barrier(barrier);
+                }
+            }
+            observed.increment_non_candidate();
+            continue;
+        }
+
+        let is_identity = site.operation().kind() == MirPrimitiveCastKind::Identity;
+        let predecessor = chains.entry_for_result(site.operand());
 
         if is_identity {
             observed.increment_disposition(PrimitiveCastDisposition::Identity);
-            add_replacement_barriers(&mut barriers, &uses, site.block);
-            observed.record_interesting(site, predecessor, barriers, true);
+            add_replacement_barriers(&mut barriers, &uses, site.block());
+            observed.record_interesting(
+                site,
+                std::slice::from_ref(site),
+                Some(site.operand()),
+                barriers,
+                1,
+            );
             continue;
         }
 
         let Some(first) = predecessor else {
-            observed.increment_disposition(disposition(site.operation));
+            observed.increment_disposition(disposition(site.operation()));
             observed.increment_non_candidate();
             continue;
         };
-        if first.block != site.block {
-            observed.increment_disposition(disposition(site.operation));
+        if first.site().block() != site.block() {
+            observed.increment_disposition(disposition(site.operation()));
             barriers.insert(PrimitiveCastBlocker::ControlFlowBoundary);
             observed.increment_barrier(PrimitiveCastBlocker::ControlFlowBoundary);
             observed.increment_non_candidate();
             continue;
         }
-        if first.instruction + 1 != site.instruction {
-            observed.increment_disposition(disposition(site.operation));
+        if first.site().instruction() + 1 != site.instruction() {
+            observed.increment_disposition(disposition(site.operation()));
             barriers.insert(PrimitiveCastBlocker::NonAdjacentProvenance);
             observed.increment_barrier(PrimitiveCastBlocker::NonAdjacentProvenance);
             observed.increment_non_candidate();
             continue;
         }
-        if first.operation.kind() == MirPrimitiveCastKind::Identity {
-            observed.increment_disposition(disposition(site.operation));
+        if first.site().operation().kind() == MirPrimitiveCastKind::Identity {
+            observed.increment_disposition(disposition(site.operation()));
             // The earlier identity is already the unique attributable site.
             observed.increment_non_candidate();
             continue;
         }
 
-        match compose(first.operation, site.operation) {
+        let supporting_sites = [first.site().clone(), site.clone()];
+        match compose(first.site().operation(), site.operation()) {
             Composition::OriginalInput => {
                 observed.increment_disposition(PrimitiveCastDisposition::RemovableChain);
-                add_replacement_barriers(&mut barriers, &uses, site.block);
-                observed.record_interesting(site, Some(first), barriers, true);
+                add_replacement_barriers(&mut barriers, &uses, site.block());
+                observed.record_interesting(
+                    site,
+                    &supporting_sites,
+                    Some(first.site().operand()),
+                    barriers,
+                    1,
+                );
             }
             Composition::DirectCast => {
                 observed.increment_disposition(PrimitiveCastDisposition::RemovableChain);
-                let first_uses = value_use_sites_for_definition(definition, first.result)?;
+                let first_uses = value_use_sites_for_definition(definition, first.site().result())?;
                 if first_uses.uses().len() != 1 {
                     barriers.insert(PrimitiveCastBlocker::MultipleUses);
                 }
-                observed.record_interesting(site, Some(first), barriers, true);
+                observed.record_interesting(
+                    site,
+                    &supporting_sites,
+                    Some(first.site().operand()),
+                    barriers,
+                    1,
+                );
             }
             Composition::RequiredIntegerSequence => {
-                observed.increment_disposition(disposition(site.operation));
+                observed.increment_disposition(disposition(site.operation()));
                 observed.increment_non_candidate();
             }
             Composition::MissingValueDomain => {
-                observed.increment_disposition(disposition(site.operation));
+                observed.increment_disposition(disposition(site.operation()));
                 barriers.insert(PrimitiveCastBlocker::MissingValueDomainFact);
-                observed.record_interesting(site, Some(first), barriers, false);
+                observed.record_interesting(
+                    site,
+                    &supporting_sites,
+                    Some(first.site().operand()),
+                    barriers,
+                    0,
+                );
             }
             Composition::CheckedFailure => {
                 observed.increment_disposition(PrimitiveCastDisposition::CheckedFloatingToInteger);
                 barriers.insert(PrimitiveCastBlocker::CheckedFailure);
-                observed.record_interesting(site, Some(first), barriers, false);
+                observed.record_interesting(
+                    site,
+                    &supporting_sites,
+                    Some(first.site().operand()),
+                    barriers,
+                    0,
+                );
             }
             Composition::FloatingPayload => {
-                observed.increment_disposition(disposition(site.operation));
+                observed.increment_disposition(disposition(site.operation()));
                 barriers.insert(PrimitiveCastBlocker::FloatingPayload);
-                observed.record_interesting(site, Some(first), barriers, false);
+                observed.record_interesting(
+                    site,
+                    &supporting_sites,
+                    Some(first.site().operand()),
+                    barriers,
+                    0,
+                );
             }
             Composition::Unsupported => {
                 observed.increment_disposition(PrimitiveCastDisposition::Unsupported);
                 barriers.insert(PrimitiveCastBlocker::UnsupportedComposition);
-                observed.record_interesting(site, Some(first), barriers, false);
+                observed.record_interesting(
+                    site,
+                    &supporting_sites,
+                    Some(first.site().operand()),
+                    barriers,
+                    0,
+                );
             }
         }
     }
@@ -229,59 +323,41 @@ pub(super) fn analyze_unverified_definition(
     analyze_definition(definition).map(|observed| observed.finish(1))
 }
 
-fn cast_sites(definition: MirDefinitionRef<'_>) -> Vec<CastSite> {
-    definition
-        .body()
-        .blocks
-        .iter()
-        .enumerate()
-        .flat_map(|(block, body)| {
-            body.instructions
-                .iter()
-                .enumerate()
-                .filter_map(move |(instruction, item)| {
-                    let MirInstruction::Assign(assignment) = item else {
-                        return None;
-                    };
-                    let MirRvalueKind::PrimitiveCast { operation, operand } =
-                        assignment.rvalue.kind
-                    else {
-                        return None;
-                    };
-                    Some(CastSite {
-                        callable: definition.callable(),
-                        block,
-                        block_id: body.id,
-                        instruction,
-                        result: assignment.result,
-                        operation,
-                        operand,
-                    })
-                })
-        })
-        .collect()
-}
-
-fn validation_barriers(
-    definition: MirDefinitionRef<'_>,
-    site: CastSite,
+fn invalidity_barriers(
+    invalidities: &[IntegerCastSiteInvalidity],
 ) -> BTreeSet<PrimitiveCastBlocker> {
     let mut barriers = BTreeSet::new();
-    if site.result.callable() != definition.callable()
-        || site.operand.callable() != definition.callable()
-        || definition.value(site.result).is_none()
-        || definition.value(site.operand).is_none()
-    {
-        barriers.insert(PrimitiveCastBlocker::MalformedIdentity);
-    }
-    if !site.operation.is_semantically_consistent()
-        || definition.value(site.operand).map(|value| value.ty)
-            != Some(site.operation.source_type())
-        || definition.value(site.result).map(|value| value.ty) != Some(site.operation.result_type())
-    {
-        barriers.insert(PrimitiveCastBlocker::UnsupportedTypeOrOperation);
+    for invalidity in invalidities {
+        barriers.insert(match invalidity {
+            IntegerCastSiteInvalidity::MalformedIdentity => PrimitiveCastBlocker::MalformedIdentity,
+            IntegerCastSiteInvalidity::UnsupportedTypeOrOperation => {
+                PrimitiveCastBlocker::UnsupportedTypeOrOperation
+            }
+        });
     }
     barriers
+}
+
+fn add_chain_boundary_barrier(
+    barriers: &mut BTreeSet<PrimitiveCastBlocker>,
+    boundary: Option<IntegerCastChainBoundary>,
+) {
+    let Some(blocker) = boundary.and_then(|boundary| match boundary {
+        IntegerCastChainBoundary::ControlFlow => Some(PrimitiveCastBlocker::ControlFlowBoundary),
+        IntegerCastChainBoundary::NonPrecedingDefinition => {
+            Some(PrimitiveCastBlocker::NonPrecedingProvenance)
+        }
+        IntegerCastChainBoundary::RepeatedIdentity => {
+            Some(PrimitiveCastBlocker::RepeatedProvenance)
+        }
+        IntegerCastChainBoundary::InvalidPredecessor => {
+            Some(PrimitiveCastBlocker::UnsupportedTypeOrOperation)
+        }
+        IntegerCastChainBoundary::UnsupportedCastFamily => None,
+    }) else {
+        return;
+    };
+    barriers.insert(blocker);
 }
 
 fn add_replacement_barriers(
@@ -456,33 +532,45 @@ impl Accumulator {
 
     fn record_interesting(
         &mut self,
-        site: CastSite,
-        predecessor: Option<CastSite>,
+        site: &IntegerCastSite,
+        supporting_sites: &[IntegerCastSite],
+        root: Option<ValueId>,
         barriers: BTreeSet<PrimitiveCastBlocker>,
-        removable: bool,
+        eliminated_steps: usize,
     ) {
         add(&mut self.counts.interesting, 1, &mut self.counts.saturated);
-        self.supporting_values.insert(site.result);
-        self.supporting_instructions
-            .insert((site.callable, site.block, site.instruction));
-        if let Some(first) = predecessor {
-            self.supporting_values.insert(first.result);
-            self.supporting_instructions
-                .insert((first.callable, first.block, first.instruction));
+        if let Some(root) = root {
+            self.supporting_values.insert(root);
         }
+        for supporting in supporting_sites {
+            self.supporting_values.insert(supporting.result());
+            self.supporting_instructions.insert((
+                supporting.callable(),
+                supporting.block(),
+                supporting.instruction(),
+            ));
+        }
+        let depth = u64::try_from(supporting_sites.len()).unwrap_or(u64::MAX);
+        self.counts.maximum_chain_depth = self.counts.maximum_chain_depth.max(depth);
         for barrier in barriers.iter().copied() {
             self.increment_barrier(barrier);
         }
-        let classification = if barriers.is_empty() && removable {
+        let classification = if barriers.is_empty() && eliminated_steps != 0 {
+            let eliminated_steps = u64::try_from(eliminated_steps).unwrap_or(u64::MAX);
             add(&mut self.counts.proven, 1, &mut self.counts.saturated);
             add(
                 &mut self.counts.removable_values_upper_bound,
-                1,
+                eliminated_steps,
                 &mut self.counts.saturated,
             );
             add(
                 &mut self.counts.removable_instructions_upper_bound,
-                1,
+                eliminated_steps,
+                &mut self.counts.saturated,
+            );
+            add(
+                &mut self.counts.eliminated_cast_steps_upper_bound,
+                eliminated_steps,
                 &mut self.counts.saturated,
             );
             RedundancySiteClassification::Proven
@@ -503,10 +591,10 @@ impl Accumulator {
         merge_examples(
             &mut self.examples,
             &[RedundancySiteExample::new(
-                site.callable,
-                site.block_id,
-                site.instruction,
-                Some(site.result),
+                site.callable(),
+                site.block_id(),
+                site.instruction(),
+                Some(site.result()),
                 classification,
                 barriers.into_iter().collect(),
             )],
@@ -530,6 +618,11 @@ impl Accumulator {
         merge_field!(non_candidates);
         merge_field!(removable_values_upper_bound);
         merge_field!(removable_instructions_upper_bound);
+        merge_field!(eliminated_cast_steps_upper_bound);
+        self.counts.maximum_chain_depth = self
+            .counts
+            .maximum_chain_depth
+            .max(other.counts.maximum_chain_depth);
         merge_field!(excluded_checked_conversions);
         merge_field!(excluded_checked_range_checks);
         merge_counts(

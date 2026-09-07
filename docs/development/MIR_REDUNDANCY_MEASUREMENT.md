@@ -37,6 +37,16 @@ MIR borrow or requiring a second traversal. Dense identities are audit aids
 within one compiler result and are not stable across unrelated rewrites or
 compiler revisions.
 
+The redundant-cast category uses the compiler's shared integer-cast-chain
+analysis. It follows arbitrary-length `u8`/`i64`/`u64` chains within one basic
+block even when instructions intervene or intermediate results have other
+uses. Its details include the conservative eliminated-cast-step upper bound
+and maximum observed chain depth; maximum-valued details retain their maximum
+rather than being summed when workload reports are aggregated. Identity-result
+chains remain subject to the ordinary-use and same-block forwarding boundary;
+non-integer families and cross-block provenance retain explicit conservative
+blockers.
+
 Run the complete reviewed corpus with:
 
 ```text

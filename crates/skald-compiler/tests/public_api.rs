@@ -467,10 +467,13 @@ fn intentional_phase_and_dump_paths_compose() {
     let _consumer = ScalarSpillConsumer::TotalPrimitive;
     let _unlock = ScalarSpillUnlock::PrimitiveFolding;
     let casts = analyze_redundant_primitive_casts(&mir);
-    let _cast_counts = casts.counts();
+    let cast_counts = casts.counts();
+    let _eliminated_cast_steps = cast_counts.eliminated_cast_steps_upper_bound();
+    let _maximum_cast_chain_depth = cast_counts.maximum_chain_depth();
     let _cast_callables = casts.callables();
     let _cast_disposition = PrimitiveCastDisposition::Identity;
     let _cast_blocker = PrimitiveCastBlocker::MissingValueDomainFact;
+    let _cast_provenance_blocker = PrimitiveCastBlocker::NonPrecedingProvenance;
     let _cast_consumer = PrimitiveCastConsumer::PrimitiveCast;
     let common_subexpressions = analyze_local_primitive_common_subexpressions(&mir);
     let _cse_counts = common_subexpressions.counts();

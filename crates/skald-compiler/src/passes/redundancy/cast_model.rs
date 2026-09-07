@@ -64,6 +64,8 @@ pub enum PrimitiveCastBlocker {
     CheckedFailure,
     FloatingPayload,
     NonAdjacentProvenance,
+    NonPrecedingProvenance,
+    RepeatedProvenance,
     UnsupportedComposition,
 }
 
@@ -95,6 +97,8 @@ pub struct PrimitiveCastObservationCounts {
     pub(super) supporting_instructions: u64,
     pub(super) removable_values_upper_bound: u64,
     pub(super) removable_instructions_upper_bound: u64,
+    pub(super) eliminated_cast_steps_upper_bound: u64,
+    pub(super) maximum_chain_depth: u64,
     pub(super) excluded_checked_conversions: u64,
     pub(super) excluded_checked_range_checks: u64,
     pub(super) saturated: bool,
@@ -135,6 +139,12 @@ impl PrimitiveCastObservationCounts {
     }
     pub const fn removable_instructions_upper_bound(&self) -> u64 {
         self.removable_instructions_upper_bound
+    }
+    pub const fn eliminated_cast_steps_upper_bound(&self) -> u64 {
+        self.eliminated_cast_steps_upper_bound
+    }
+    pub const fn maximum_chain_depth(&self) -> u64 {
+        self.maximum_chain_depth
     }
     pub const fn excluded_checked_conversions(&self) -> u64 {
         self.excluded_checked_conversions

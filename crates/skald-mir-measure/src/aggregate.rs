@@ -121,8 +121,31 @@ fn merge_candidate(target: &mut CandidateCounts, source: &CandidateCounts) {
     target.barriers = merge_named(&target.barriers, &source.barriers, &mut target.saturated);
     target.consumers = merge_named(&target.consumers, &source.consumers, &mut target.saturated);
     target.unlocks = merge_named(&target.unlocks, &source.unlocks, &mut target.saturated);
-    target.details = merge_named(&target.details, &source.details, &mut target.saturated);
+    target.details = merge_details(&target.details, &source.details, &mut target.saturated);
     target.saturated |= source.saturated;
+}
+
+fn merge_details(
+    left: &[NamedCount],
+    right: &[NamedCount],
+    saturated: &mut bool,
+) -> Vec<NamedCount> {
+    let mut counts = BTreeMap::<String, u64>::new();
+    for count in left.iter().chain(right) {
+        let target = counts.entry(count.name.clone()).or_default();
+        if matches!(
+            count.name.as_str(),
+            "maximum-chain-depth" | "maximum-repetitions-per-key"
+        ) {
+            *target = (*target).max(count.sites);
+        } else {
+            add(target, count.sites, saturated);
+        }
+    }
+    counts
+        .into_iter()
+        .map(|(name, sites)| NamedCount { name, sites })
+        .collect()
 }
 
 fn merge_named(left: &[NamedCount], right: &[NamedCount], saturated: &mut bool) -> Vec<NamedCount> {
@@ -193,6 +216,10 @@ mod tests {
                 name: "zeta".to_owned(),
                 sites: 1,
             }],
+            details: vec![NamedCount {
+                name: "maximum-chain-depth".to_owned(),
+                sites: 5,
+            }],
             ..CandidateCounts::default()
         };
         let source = CandidateCounts {
@@ -200,6 +227,10 @@ mod tests {
             outcomes: vec![NamedCount {
                 name: "alpha".to_owned(),
                 sites: 2,
+            }],
+            details: vec![NamedCount {
+                name: "maximum-chain-depth".to_owned(),
+                sites: 3,
             }],
             ..CandidateCounts::default()
         };
@@ -214,5 +245,6 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["alpha", "zeta"]
         );
+        assert_eq!(target.details[0].sites, 5);
     }
 }

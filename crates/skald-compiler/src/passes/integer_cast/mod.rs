@@ -4,6 +4,13 @@
 //! integer cast-chain optimization. It deliberately models language-level bits
 //! rather than target registers or host integer conversions.
 
+mod chain;
+
+pub(in crate::passes) use chain::{
+    analyze_integer_cast_chains, IntegerCastChainBoundary, IntegerCastSite,
+    IntegerCastSiteInvalidity,
+};
+
 use crate::mir::{MirIntegerType, MirPrimitiveCast};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

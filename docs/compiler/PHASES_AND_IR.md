@@ -3762,20 +3762,26 @@ does not clone or rewrite MIR.
 The complete-domain composition authority proves identity casts, lossless
 integer bit-conversion chains, and `bool`-through-integer canonical round
 trips. It does not infer from host register widths. Integer composition uses
-the shared closed algebra over `u8`, `i64`, and `u64`: a narrow-then-widen pair
-whose shortest recipe still contains both casts is a required sequence rather
-than a blocked candidate. Integer values round-tripped through `bool` still
-require a missing value-domain fact; floating numeric conversions, raw-bit
-reinterpretation and NaN payloads, and checked conversions remain explicit
-barriers. The current census attributes adjacent pairs; arbitrary-depth chain
-analysis remains planned. Replacement additionally obeys the existing
-semantic value-use boundary, block locality, and single-use requirement when
-collapsing two casts to one.
+the shared closed algebra over `u8`, `i64`, and `u64`. One immutable analysis
+indexes exact cast sites and follows arbitrary-length integer-only provenance
+through preceding definitions in the same block; intervening instructions and
+shared intermediate uses do not stop discovery. Each endpoint records its
+root, exact supporting sites, shortest zero-, one-, or two-cast recipe, an
+existing reusable `u8` narrowing when required, and any boundary encountered.
+A chain is a candidate only when that recipe is shorter. Identity-result
+chains additionally obey the existing semantic value-use and block-locality
+boundary because their eventual rewrite requires forwarding. Integer values
+round-tripped through `bool` still require a missing value-domain fact;
+floating numeric conversions, raw-bit reinterpretation and NaN payloads,
+checked conversions, malformed or nonpreceding provenance, cycles, and
+cross-block provenance remain explicit barriers. Conservative adjacent-pair
+classification remains only for non-integer cast-family interactions.
 
 Results are deterministic program and per-callable aggregates with exact
 shape, disposition, consumer, primary-blocker, full-barrier, supporting-value,
-supporting-instruction, conservative removal-upper-bound counts, and the same
-bounded owned site examples used by the scalar-spill census. Creation origin
+supporting-instruction, conservative removal-upper-bound and eliminated-cast-
+step counts, maximum observed chain depth, and the same bounded owned site
+examples used by the scalar-spill census. Creation origin
 is intentionally absent from a single-snapshot result: only the later corpus
 reporter may attribute initial lowering or an earlier pass when direct
 checkpoint comparison proves that origin. This opt-in census is not a MIR

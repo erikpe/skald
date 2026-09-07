@@ -278,6 +278,14 @@ fn cast_counts(counts: &PrimitiveCastObservationCounts) -> CandidateCounts {
         name: "excluded-checked-range-checks".to_owned(),
         sites: counts.excluded_checked_range_checks(),
     });
+    details.push(NamedCount {
+        name: "eliminated-cast-steps-upper-bound".to_owned(),
+        sites: counts.eliminated_cast_steps_upper_bound(),
+    });
+    details.push(NamedCount {
+        name: "maximum-chain-depth".to_owned(),
+        sites: counts.maximum_chain_depth(),
+    });
     details.sort_by(|left, right| left.name.cmp(&right.name));
     CandidateCounts {
         inspected: counts.inspected(),
