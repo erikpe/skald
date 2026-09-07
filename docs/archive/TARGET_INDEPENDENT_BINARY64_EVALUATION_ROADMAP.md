@@ -1,6 +1,6 @@
 # Target-Independent Binary64 Evaluation Roadmap
 
-Status: in progress; BE0 through BE6 are complete, and BE7 is next.
+Status: complete. BE0 through BE7 are complete.
 
 This roadmap implements the frozen
 [target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md).
@@ -101,7 +101,7 @@ atomic rewrites; no APFloat type crosses into those owners.
 - [x] BE4 — Extend primitive constant evaluation and propagation
 - [x] BE5 — Generalize checked-scalar topology, carriers, and solved facts
 - [x] BE6 — Fold successful checked floating-to-integer protocols
-- [ ] BE7 — Harden the complete boundary and close the roadmap
+- [x] BE7 — Harden the complete boundary and close the roadmap
 
 ## PR-sized implementation sequence
 
@@ -400,35 +400,35 @@ passes consume the exact result without a second evaluator.
 **Purpose:** Finish with one maintainable dependency owner, exhaustive
 behavioral evidence, current living documentation, and no rollout residue.
 
-- [ ] Audit the binary64 facade, private modules, primitive evaluator, solver,
+- [x] Audit the binary64 facade, private modules, primitive evaluator, solver,
       topology, carrier, plan, pass, policy, and reporting owners by
       responsibility; split substantial mixed modules and avoid needless tiny
       files.
-- [ ] Prove by repository search that only `skald-binary64` imports
+- [x] Prove by repository search that only `skald-binary64` imports
       `rustc_apfloat` and production compile-time binary64 semantics no longer
       use host `f64` arithmetic, parsing, comparisons, or casts.
-- [ ] Audit the wrapper API for accidental APFloat, MIR, diagnostic, target,
+- [x] Audit the wrapper API for accidental APFloat, MIR, diagnostic, target,
       or runtime vocabulary and remove unused generality or compatibility
       paths.
-- [ ] Recheck fixed vectors against the selected APFloat release and native
+- [x] Recheck fixed vectors against the selected APFloat release and native
       x86-64 behavior, treating native comparison as target evidence rather
       than the semantic definition.
-- [ ] Recheck raw-bit equality across `none`, `default`, exclusions, debug,
+- [x] Recheck raw-bit equality across `none`, `default`, exclusions, debug,
       release, repeated processes, and deterministic compilation, especially
       every retained NaN-producing expression.
-- [ ] Verify unchanged language grammar, diagnostics, runtime string
+- [x] Verify unchanged language grammar, diagnostics, runtime string
       conversion, runtime ABI, ownership/lifecycle behavior, proof
       normalization, backend legality, and whole-world retention.
-- [ ] Resolve small maintainability issues directly; put larger unrelated
+- [x] Resolve small maintainability issues directly; put larger unrelated
       findings in an indexed discoveries record with evidence, likely owner,
       priority, and bounded later direction.
-- [ ] Remove roadmap codes and rollout wording from living code and docs;
+- [x] Remove roadmap codes and rollout wording from living code and docs;
       promote implemented details into their authoritative compiler,
       reporting, testing, development, and catalog locations.
-- [ ] Complete every roadmap checkbox, archive the design and roadmap, update
+- [x] Complete every roadmap checkbox, archive the design and roadmap, update
       active/archive indexes and incoming links, and retain a discoveries
       record only while actionable work remains.
-- [ ] Run the complete ordinary and extended repository gates from an
+- [x] Run the complete ordinary and extended repository gates from an
       artifact-free snapshot and record their evidence before closure.
 
 **Tests:** Every focused suite from earlier tasks; complete wrapper and compiler
@@ -445,6 +445,30 @@ compile-time binary64 calculation; all pure and successful checked folds are
 implemented and independently evidenced; conservative exclusions remain
 explicit; living documentation is authoritative; the completed records are
 archived with no unresolved high-priority roadmap finding.
+
+## Closure evidence
+
+Focused validation ran first. The complete repository gate on 2026-09-07
+started after removing Cargo and runtime build artifacts.
+
+- `cargo test --locked -p skald-binary64` passed 29 unit/integration tests and
+  two compile-fail documentation tests, including dependency isolation, fixed
+  APFloat vectors, conversion boundaries, decimal rounding, and the production
+  host-float API audit.
+- `make check-long` passed the complete ordinary and extended repository gate:
+  3,026 compiler unit tests, all ordinary auxiliary suites, 615 ordinary
+  goldens, 615 cross-process determinism goldens, 615 release goldens, the
+  Rust 1.82 all-target check, six 10,000-case robustness families, and all
+  runtime-trace, generic-Vec, and range-loop benchmark targets.
+- Each golden mode included all 39 configured VM benchmark runs. The binary64
+  fixture passed `none`, `default`, primitive-fold exclusion, and all-pass
+  exclusion with identical raw-bit observations, including its deliberately
+  retained NaN-producing arithmetic.
+- Repository searches found no `rustc_apfloat` import outside
+  `skald-binary64` and no production compile-time use of the audited Rust
+  host-`f64` parsing, bit-conversion, or cast APIs.
+- The final archived tree passed documentation-link validation, Rust
+  formatting, and `git diff --check`.
 
 ## Ordering and dependencies
 

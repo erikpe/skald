@@ -7,7 +7,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::mir::{
-    rewrite::{MirLocalIdentity, MirLocalIdentitySite, MirReferenceFailure, MirRewriteError},
+    rewrite::{
+        MirCallableEdit, MirLocalCfgFacts, MirLocalIdentity, MirLocalIdentitySite,
+        MirReferenceFailure, MirRewriteError,
+    },
     BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirPlace, MirRvalueKind, MirStorage,
     MirType, StorageId, ValueId,
 };
@@ -54,6 +57,46 @@ pub(super) fn storage_write_sites(
                 })
         })
         .collect()
+}
+
+pub(super) fn edit_storage_write_sites(
+    edit: &MirCallableEdit,
+    storage: StorageId,
+) -> Vec<CheckedScalarInstructionSite> {
+    edit.block_order()
+        .iter()
+        .flat_map(|block| {
+            edit.block(*block)
+                .expect("block order contains only live blocks")
+                .instructions
+                .iter()
+                .enumerate()
+                .filter_map(move |(instruction, value)| {
+                    matches!(
+                        value,
+                        MirInstruction::Store(store)
+                            if store.destination == MirPlace::base(storage)
+                    )
+                    .then_some(CheckedScalarInstructionSite {
+                        block: *block,
+                        instruction,
+                    })
+                })
+        })
+        .collect()
+}
+
+pub(super) fn cfg_predecessors(cfg: &MirLocalCfgFacts) -> HashMap<BlockId, HashSet<BlockId>> {
+    let mut predecessors = HashMap::<_, HashSet<_>>::new();
+    for block in cfg.blocks() {
+        for successor in block.successors() {
+            predecessors
+                .entry(*successor)
+                .or_default()
+                .insert(block.block());
+        }
+    }
+    predecessors
 }
 
 pub(super) fn exact_first_load(

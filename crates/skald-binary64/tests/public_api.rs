@@ -38,6 +38,17 @@ fn rustc_apfloat_is_confined_to_this_crate() {
     }
 }
 
+#[test]
+fn production_compile_time_binary64_avoids_host_float_apis() {
+    let crate_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let crates_dir = crate_dir
+        .parent()
+        .expect("crate has a workspace crates directory");
+
+    assert_tree_does_not_use_host_float_apis(&crate_dir.join("src"));
+    assert_tree_does_not_use_host_float_apis(&crates_dir.join("skald-compiler/src"));
+}
+
 fn assert_crate_tree_does_not_name_apfloat(directory: &Path) {
     for entry in fs::read_dir(directory).expect("source directory is readable") {
         let entry = entry.expect("source entry is readable");
@@ -59,4 +70,41 @@ fn assert_file_does_not_name_apfloat(path: &Path) {
         "{} bypasses the skald-binary64 dependency boundary",
         path.display()
     );
+}
+
+fn assert_tree_does_not_use_host_float_apis(directory: &Path) {
+    for entry in fs::read_dir(directory).expect("source directory is readable") {
+        let entry = entry.expect("source entry is readable");
+        let path = entry.path();
+        if path.is_dir() {
+            if path.file_name().is_none_or(|name| name != "tests") {
+                assert_tree_does_not_use_host_float_apis(&path);
+            }
+        } else if path.extension().is_some_and(|extension| extension == "rs")
+            && path.file_name().is_none_or(|name| name != "tests.rs")
+        {
+            assert_file_does_not_use_host_float_apis(&path);
+        }
+    }
+}
+
+fn assert_file_does_not_use_host_float_apis(path: &Path) {
+    const FORBIDDEN: &[&str] = &[
+        "parse::<f64",
+        "parse::< f64",
+        "f64::from_bits(",
+        "f64::to_bits(",
+        " as f64",
+        "std::primitive::f64",
+        "core::primitive::f64",
+    ];
+
+    let source = fs::read_to_string(path).expect("source file is readable as UTF-8");
+    for pattern in FORBIDDEN {
+        assert!(
+            !source.contains(pattern),
+            "{} uses forbidden host-float API pattern {pattern:?}",
+            path.display()
+        );
+    }
 }

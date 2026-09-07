@@ -110,6 +110,7 @@ Archived plans:
 - [Normalization-stable path-activation provenance](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
 - [VM benchmark correctness workload](VM_BENCHMARK_ROADMAP.md)
 - [VM benchmark resolved discoveries](VM_BENCHMARK_DISCOVERIES.md)
+- [Target-independent binary64 evaluation](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -215,6 +216,11 @@ Resolved checked integer constant protocol simplification inputs:
 
 - [Checked integer constant protocol simplification roadmap](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_ROADMAP.md)
 - [Checked integer constant protocol simplification discoveries](CHECKED_INTEGER_CONSTANT_PROTOCOL_SIMPLIFICATION_DISCOVERIES.md)
+
+Resolved target-independent binary64 evaluation inputs:
+
+- [Target-independent binary64 evaluation design proposal](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md)
+- [Target-independent binary64 evaluation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
 
 Resolved local final-MIR redundancy measurement inputs:
 

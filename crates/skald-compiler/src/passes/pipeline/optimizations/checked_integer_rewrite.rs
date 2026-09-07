@@ -1,9 +1,9 @@
 //! Atomic rewriting of one revalidated checked-integer protocol.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::mir::{
-    rewrite::{MirCallableEdit, MirLocalCfgFacts, MirRewriteError},
+    rewrite::{MirCallableEdit, MirRewriteError},
     BlockId, MirInstruction, MirPlace, MirRvalueKind, MirTerminator, StorageId, ValueId,
 };
 
@@ -14,6 +14,9 @@ use super::{
     checked_integer_topology::{
         CheckedIntegerInstructionSite, CheckedIntegerProtocolCheck,
         CheckedIntegerProtocolOperation, CheckedIntegerProtocolTopology, CheckedIntegerValueSite,
+    },
+    checked_scalar_topology::{
+        cfg_predecessors, edit_storage_write_sites, has_only_predecessor, is_exact_load,
     },
     local_constant::{
         CheckedCarrierPlanEvidence, CheckedCarrierPlanRole, LocalConstantFact,
@@ -187,7 +190,7 @@ fn revalidate(
 ) -> Result<(), MirRewriteError> {
     validate_live_identities(edit, candidate)?;
     let cfg = edit.local_cfg_facts()?;
-    let predecessors = predecessors(&cfg);
+    let predecessors = cfg_predecessors(&cfg);
     let protected = cfg
         .protected_roots()
         .iter()
@@ -211,7 +214,7 @@ fn revalidate(
         || !has_only_predecessor(&predecessors, candidate.join_block, candidate.success_block)
         || !candidate_carriers_match(edit, candidate)
         || !candidate_evaluation_matches(candidate)
-        || storage_write_sites(edit, candidate.result_storage).as_slice()
+        || edit_storage_write_sites(edit, candidate.result_storage).as_slice()
             != [candidate.result_store]
         || [
             candidate.check_block,
@@ -484,58 +487,6 @@ fn value_site_matches(
     expected.value == value
         && expected.span == span
         && expected.site == CheckedIntegerInstructionSite { block, instruction }
-}
-
-fn storage_write_sites(
-    edit: &MirCallableEdit,
-    storage: StorageId,
-) -> Vec<CheckedIntegerInstructionSite> {
-    edit.block_order()
-        .iter()
-        .flat_map(|block| {
-            edit.block(*block)
-                .expect("block order contains only live blocks")
-                .instructions
-                .iter()
-                .enumerate()
-                .filter_map(move |(instruction, value)| {
-                    matches!(
-                        value,
-                        MirInstruction::Store(store)
-                            if store.destination == MirPlace::base(storage)
-                    )
-                    .then_some(CheckedIntegerInstructionSite {
-                        block: *block,
-                        instruction,
-                    })
-                })
-        })
-        .collect()
-}
-
-fn predecessors(cfg: &MirLocalCfgFacts) -> HashMap<BlockId, HashSet<BlockId>> {
-    let mut predecessors = HashMap::<_, HashSet<_>>::new();
-    for block in cfg.blocks() {
-        for successor in block.successors() {
-            predecessors
-                .entry(*successor)
-                .or_default()
-                .insert(block.block());
-        }
-    }
-    predecessors
-}
-
-fn has_only_predecessor(
-    predecessors: &HashMap<BlockId, HashSet<BlockId>>,
-    block: BlockId,
-    expected: BlockId,
-) -> bool {
-    predecessors.get(&block) == Some(&HashSet::from([expected]))
-}
-
-fn is_exact_load(kind: &MirRvalueKind, storage: StorageId) -> bool {
-    matches!(kind, MirRvalueKind::Load(place) if *place == MirPlace::base(storage))
 }
 
 fn stale(edit: &MirCallableEdit) -> MirRewriteError {

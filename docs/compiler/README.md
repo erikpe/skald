@@ -38,9 +38,9 @@ optimization.
   compilation behavior to the compiler library.
 - `crates/skald-compiler` owns sources, diagnostics, phases, target selection,
   backend dispatch, and driver orchestration.
-- The in-progress frozen
-  [target-independent binary64 direction](PHASES_AND_IR.md#frozen-target-independent-binary64-evaluation-direction)
-  has established the unpublished `crates/skald-binary64` compiler-support
+- The implemented
+  [target-independent binary64 evaluation](PHASES_AND_IR.md#target-independent-binary64-evaluation)
+  uses the unpublished `crates/skald-binary64` compiler-support
   crate. Its Skald-owned raw-bit facade owns exact representation, sign
   inversion, classification, nearest-ties-to-even arithmetic, and four-way
   numeric comparison. It also owns exact integer/boolean conversion and

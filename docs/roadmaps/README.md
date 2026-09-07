@@ -6,19 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## Implementation roadmaps
 
-The
-[target-independent binary64 evaluation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
-is in progress; BE0 established the isolated
-`skald-binary64`/`rustc_apfloat` dependency and raw-bit facade, BE1 completed
-exact arithmetic and comparison, BE2 completed conversions and decimal
-rounding, BE3 migrated compiler source-literal rounding to that authority, and
-BE4 extended convergent primitive evaluation and propagation with exact pure
-binary64 folds, BE5 added exact checked floating-cast topology, shared
-strict scalar-carrier certification, target-independent evaluation, and
-convergent success/failure facts, and BE6 implemented the independently
-selectable atomic successful-only checked `f64`-to-integer folding pass with
-failure-preserving native coverage. BE7 is next: hardening the complete
-boundary and closing the roadmap. No other active roadmap blocks it.
+No implementation roadmap is currently active.
 
 ## Pending discoveries
 
@@ -95,18 +83,6 @@ generic-interface roadmaps are preserved in the
 [archive](../archive/README.md).
 
 ## Design proposals
-
-The frozen
-[target-independent binary64 evaluation design](TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md)
-defines an unpublished `skald-binary64` workspace crate that contains a
-pinned `rustc_apfloat` dependency behind a Skald-owned raw-bit facade. It
-will become the shared authority for decimal literal rounding, deterministic
-floating arithmetic, comparisons, primitive conversions, and successful
-checked `f64`-to-integer constant-protocol folding while conservatively
-retaining NaN-producing arithmetic and statically failing checked casts. The
-active
-[implementation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
-owns delivery; BE0 is next.
 
 The completed
 [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)

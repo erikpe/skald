@@ -1081,25 +1081,24 @@ or backend observes the product. Preliminary-MIR static activation and baseline 
 remain immutable; final verification rechecks realization against them rather
 than replanning activation.
 
-### Frozen target-independent binary64 evaluation direction
+### Target-independent binary64 evaluation
 
-Status: **frozen contract; implementation in progress**. The complete
-decisions are frozen in the
-[design record](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md),
-and the active
-[implementation roadmap](../roadmaps/TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
-owns delivery. The isolated crate now implements its complete frozen public
-facade: raw-bit values, exact arithmetic, four-way numeric comparison,
-integer/boolean conversion, and decimal rounding. Type checking routes every
-validated decimal floating literal through that facade and stores the
-resulting exact bits in HIR without consulting Rust host `f64` parsing. The
-primitive evaluator and convergent local solver now carry exact raw-bit
-binary64 facts and fold the supported pure floating matrix through the same
-authority.
+Status: **implemented contract**. The historical
+[design](../archive/TARGET_INDEPENDENT_BINARY64_EVALUATION_DESIGN_PROPOSAL.md)
+and
+[implementation roadmap](../archive/TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
+preserve the decisions and delivery evidence. The isolated crate
+implements the complete public facade: raw-bit values, exact arithmetic,
+four-way numeric comparison, integer/boolean conversion, and decimal rounding.
+Type checking routes every validated decimal floating literal through that
+facade and stores the resulting exact bits in HIR without consulting Rust host
+`f64` parsing. The primitive evaluator and convergent local solver carry exact
+raw-bit binary64 facts and fold the supported pure floating matrix through the
+same authority.
 
 The implementation has established an unpublished `skald-binary64` workspace
 crate around one exactly pinned published `rustc_apfloat` release. Its opaque
-Skald-owned `Binary64` facade currently owns exact `u64` representation,
+Skald-owned `Binary64` facade owns exact `u64` representation,
 bitwise identity, sign inversion, classification, exact add/subtract/multiply/
 divide under round-to-nearest ties-to-even, and explicit less/equal/greater/
 unordered numeric comparison. APFloat exception statuses are consumed inside

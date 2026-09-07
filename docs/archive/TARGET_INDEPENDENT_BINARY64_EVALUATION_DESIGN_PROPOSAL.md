@@ -1,12 +1,11 @@
 # Target-Independent Binary64 Evaluation Design Proposal
 
-Status: frozen design. B64E1 through B64E12 were confirmed together on
-2026-09-06. The durable crate and compiler-phase boundaries are promoted into
-the living [compiler architecture](../compiler/README.md) and
-[phase contract](../compiler/PHASES_AND_IR.md#frozen-target-independent-binary64-evaluation-direction).
-The active
-[implementation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
-owns delivery.
+Status: frozen design; implemented and archived. B64E1 through B64E12 were
+confirmed together on 2026-09-06 and delivered by the completed
+[implementation roadmap](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md).
+The durable crate and compiler-phase boundaries are authoritative in the
+living [compiler architecture](../compiler/README.md) and
+[phase contract](../compiler/PHASES_AND_IR.md#target-independent-binary64-evaluation).
 
 This proposal defines one target-independent IEEE-754 binary64 evaluation
 boundary for the Skald compiler. An unpublished workspace crate wraps
