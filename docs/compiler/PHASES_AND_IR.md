@@ -3759,14 +3759,18 @@ checked floating-to-integer rvalues and range checks as excluded protocol
 counts, and deterministic interesting/proven/blocked accounting. The analysis
 does not clone or rewrite MIR.
 
-The complete-domain composition table proves identity casts, lossless integer
-bit-conversion chains, and `bool`-through-integer canonical round trips. It
-does not infer from host register widths. Narrow-then-widen chains and integer
-values round-tripped through `bool` require a missing value-domain fact;
-floating numeric conversions, raw-bit reinterpretation and NaN payloads, and
-checked conversions remain explicit barriers. Replacement additionally obeys
-the existing semantic value-use boundary, block locality, and single-use
-requirement when collapsing two casts to one.
+The complete-domain composition authority proves identity casts, lossless
+integer bit-conversion chains, and `bool`-through-integer canonical round
+trips. It does not infer from host register widths. Integer composition uses
+the shared closed algebra over `u8`, `i64`, and `u64`: a narrow-then-widen pair
+whose shortest recipe still contains both casts is a required sequence rather
+than a blocked candidate. Integer values round-tripped through `bool` still
+require a missing value-domain fact; floating numeric conversions, raw-bit
+reinterpretation and NaN payloads, and checked conversions remain explicit
+barriers. The current census attributes adjacent pairs; arbitrary-depth chain
+analysis remains planned. Replacement additionally obeys the existing
+semantic value-use boundary, block locality, and single-use requirement when
+collapsing two casts to one.
 
 Results are deterministic program and per-callable aggregates with exact
 shape, disposition, consumer, primary-blocker, full-barrier, supporting-value,

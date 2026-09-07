@@ -79,7 +79,7 @@ fn composition_table_proves_only_complete_domain_equivalences() {
             cast(MirPrimitiveType::I64, MirPrimitiveType::U8),
             cast(MirPrimitiveType::U8, MirPrimitiveType::I64),
         ),
-        Composition::MissingValueDomain
+        Composition::RequiredIntegerSequence
     );
     assert_eq!(
         compose(
@@ -158,18 +158,19 @@ fn identities_and_safe_adjacent_chains_are_proven_and_deterministic() {
 }
 
 #[test]
-fn narrowing_widening_and_boolean_canonicalization_need_domain_facts() {
+fn narrowing_widening_is_required_while_boolean_canonicalization_needs_domain_facts() {
     let (_, observation) = analyze(
         "fn narrow(value: i64) -> i64 { return (i64) (u8) value; }\n\
          fn boolean(value: u64) -> u64 { return (u64) (bool) value; }\n\
          fn main() -> i64 { return narrow((i64) boolean(256u)); }",
     );
     let counts = observation.counts();
-    assert!(
+    assert_eq!(
         sites(
             counts.barriers(),
             PrimitiveCastBlocker::MissingValueDomainFact
-        ) >= 2
+        ),
+        1
     );
     assert!(
         sites(

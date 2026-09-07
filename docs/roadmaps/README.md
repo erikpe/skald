@@ -10,10 +10,10 @@ The planned
 [integer cast-chain canonicalization roadmap](INTEGER_CAST_CHAIN_CANONICALIZATION_ROADMAP.md)
 implements the integer-only slice of FMV-02: one shared exact algebra and an
 independently selectable proof-rich pass for arbitrary-length same-block chains
-over `u8`, `i64`, and `u64`. Status: planned; ICC0, the complete integer-cast
-algebra, is next. It depends on the completed selectable final-MIR pipeline,
-dense identity rewriting, local simplification, and redundancy measurement
-work.
+over `u8`, `i64`, and `u64`. Status: in progress; the complete integer-cast
+algebra is implemented and ICC1, arbitrary-length same-block analysis, is
+next. It depends on the completed selectable final-MIR pipeline, dense identity
+rewriting, local simplification, and redundancy measurement work.
 
 ## Pending discoveries
 

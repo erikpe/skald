@@ -1,6 +1,6 @@
 # Integer Cast-Chain Canonicalization Roadmap
 
-Status: planned; ICC0 is next.
+Status: in progress; ICC0 is complete and ICC1 is next.
 
 This roadmap implements the integer-only part of FMV-02. It adds one exact,
 target-independent final-MIR optimization for arbitrary-length cast chains over
@@ -85,7 +85,7 @@ completely without range analysis, floating-point reasoning, or a new MIR.
 
 ## Progress
 
-- [ ] ICC0 — Establish the complete integer-cast algebra
+- [x] ICC0 — Establish the complete integer-cast algebra
 - [ ] ICC1 — Analyze arbitrary-length same-block chains
 - [ ] ICC2 — Implement the selectable guarded rewrite pass
 - [ ] ICC3 — Activate and observe canonicalization end to end
@@ -99,19 +99,19 @@ completely without range analysis, floating-point reasoning, or a new MIR.
 casts and selecting a provably shortest recipe before any production mutation
 depends on it.
 
-- [ ] Add a private pass-level integer-cast algebra shared by the redundancy
+- [x] Add a private pass-level integer-cast algebra shared by the redundancy
   observer and optimizer, using explicit source/result types and a closed
   `all bits` versus `low eight bits` transformation state.
-- [ ] Define deterministic composition and canonical-recipe APIs for all nine
+- [x] Define deterministic composition and canonical-recipe APIs for all nine
   direct integer cast pairs, including same-type identities.
-- [ ] Encode the zero-, one-, and two-cast recipe selection rules and expose
+- [x] Encode the zero-, one-, and two-cast recipe selection rules and expose
   the canonical length without exposing mutable analysis state.
-- [ ] Prove closure under every next integer cast and prove that no zero- or
+- [x] Prove closure under every next integer cast and prove that no zero- or
   one-cast recipe represents either narrowed-and-widened 64-bit transformation.
-- [ ] Replace the redundancy census's private pairwise integer rules with the
+- [x] Replace the redundancy census's private pairwise integer rules with the
   shared authority while retaining conservative barriers for every other cast
   family.
-- [ ] Keep the module independent of pipeline registration, MIR mutation,
+- [x] Keep the module independent of pipeline registration, MIR mutation,
   reporting, drivers, and target lowering.
 
 **Tests:** Exhaustive root/current/next-type transition tables; all canonical

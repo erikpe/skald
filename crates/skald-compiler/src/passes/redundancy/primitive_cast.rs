@@ -14,6 +14,7 @@ use crate::{
     passes::{VerifiedFinalMirProgram, VerifiedProofMirProgram},
 };
 
+use super::super::integer_cast::{IntegerCastRecipe, IntegerCastTransform};
 use super::cast_model::{
     PrimitiveCastBlocker, PrimitiveCastCallableObservation, PrimitiveCastConsumer,
     PrimitiveCastCount, PrimitiveCastDisposition, PrimitiveCastObservation,
@@ -25,6 +26,7 @@ use super::site::{merge_examples, RedundancySiteClassification, RedundancySiteEx
 enum Composition {
     OriginalInput,
     DirectCast,
+    RequiredIntegerSequence,
     MissingValueDomain,
     CheckedFailure,
     FloatingPayload,
@@ -191,6 +193,10 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                 }
                 observed.record_interesting(site, Some(first), barriers, true);
             }
+            Composition::RequiredIntegerSequence => {
+                observed.increment_disposition(disposition(site.operation));
+                observed.increment_non_candidate();
+            }
             Composition::MissingValueDomain => {
                 observed.increment_disposition(disposition(site.operation));
                 barriers.insert(PrimitiveCastBlocker::MissingValueDomainFact);
@@ -322,17 +328,15 @@ fn compose(first: MirPrimitiveCast, second: MirPrimitiveCast) -> Composition {
         return Composition::FloatingPayload;
     }
 
-    if first.source.is_integer() && first.target.is_integer() && second.target.is_integer() {
-        let loses_high_bits = first.target == MirPrimitiveType::U8
-            && first.source != MirPrimitiveType::U8
-            && second.target != MirPrimitiveType::U8;
-        if loses_high_bits {
-            return Composition::MissingValueDomain;
-        }
-        return if first.source == second.target {
-            Composition::OriginalInput
-        } else {
-            Composition::DirectCast
+    if let Some(transform) =
+        IntegerCastTransform::from_operation(first).and_then(|transform| transform.then(second))
+    {
+        let recipe = transform.canonical_recipe();
+        debug_assert!(recipe.length() <= 2);
+        return match recipe {
+            IntegerCastRecipe::Identity => Composition::OriginalInput,
+            IntegerCastRecipe::Direct(_) => Composition::DirectCast,
+            IntegerCastRecipe::NarrowThenWiden { .. } => Composition::RequiredIntegerSequence,
         };
     }
 

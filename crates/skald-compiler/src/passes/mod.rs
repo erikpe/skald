@@ -6,6 +6,7 @@
 pub mod static_lifecycle;
 
 mod graph;
+mod integer_cast;
 mod pipeline;
 mod redundancy;
 // Reachability is seal-bound but remains compiler-internal until its first
