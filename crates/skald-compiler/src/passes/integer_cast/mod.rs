@@ -7,7 +7,7 @@
 mod chain;
 
 pub(in crate::passes) use chain::{
-    analyze_integer_cast_chains, IntegerCastChainBoundary, IntegerCastSite,
+    analyze_integer_cast_chains, IntegerCastChain, IntegerCastChainBoundary, IntegerCastSite,
     IntegerCastSiteInvalidity,
 };
 

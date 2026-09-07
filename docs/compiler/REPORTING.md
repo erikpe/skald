@@ -337,6 +337,15 @@ nondeterministic observations, so correctness and determinism tests assert
 identity, order, outcome, and integer measurements rather than live duration
 values.
 
+The independently selectable `integer-cast-chain-canonicalization` occurrence
+reports, in stable order, retargeted endpoints, forwarded identity endpoints,
+forwarded value uses, removed assignments, removed value declarations,
+eliminated cast steps, protected rejections, and maximum rewritten chain
+depth. Generic occurrence data supplies processed and changed callable counts
+and structural commit totals. An occurrence with no safe shortening reports
+zero changes and performs no output verification; the pass is registered but
+does not yet occur in the `default` profile.
+
 Pass timers and the occurrence vector are enabled only after a trace-detail
 query succeeds. Off, phases-only, and details-only observation therefore runs
 the aggregate coordinator without occurrence timing or report-record

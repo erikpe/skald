@@ -68,12 +68,13 @@ fn main() -> i64 {
     return 3;
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 11] = [
+const ALL_PRODUCTION_PASS_NAMES: [&str; 12] = [
     "checked-f64-to-integer-constant-folding",
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "constant-short-circuit-folding",
     "dead-pure-definition-elimination",
+    "integer-cast-chain-canonicalization",
     "post-proof-basic-block-merging",
     "post-proof-empty-block-forwarding",
     "post-proof-unreachable-block-elimination",

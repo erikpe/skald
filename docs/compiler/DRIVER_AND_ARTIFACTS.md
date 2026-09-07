@@ -141,7 +141,7 @@ supported profiles are `none` and `default`: `none` resolves to zero
 selectable passes plus mandatory proof verification, normalization, and final
 verification, while `default` resolves to the exact repeated
 fifteen-occurrence optimization schedule documented below. Disabling all eleven
-stable pass names from `default`, including duplicate disabling, resolves
+pass names selected by `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
 unoptimized mode and preserves behavior while still returning normalized
 sealed MIR.
@@ -164,6 +164,7 @@ sorted lexically. The current registry contains the stable
 `checked-integer-constant-folding`, `conservative-cfg-cleanup`,
 `constant-short-circuit-folding`,
 `dead-pure-definition-elimination`,
+`integer-cast-chain-canonicalization`,
 `post-proof-basic-block-merging`,
 `post-proof-empty-block-forwarding`,
 `post-proof-unreachable-block-elimination`,
@@ -227,6 +228,13 @@ default profile. The local passes appear through the same
 `passes::available_mir_passes` query, `--list-mir-passes` output, lexical known-
 name diagnostics, and pass-attributed errors. Numeric pass identities remain
 private.
+
+`integer-cast-chain-canonicalization` is also registered and independently
+selectable by exact compiler-internal schedules. It is intentionally absent
+from `default` until activation work is complete, so disabling it from either
+public profile is currently a valid no-op. The pass shortens same-block
+integer-only cast chains over `u8`, `i64`, and `u64`; broader primitive casts
+remain outside its selection boundary.
 
 The `default` profile contains dead-pure elimination, constant folding,
 algebraic simplification, repeated constant folding, checked-integer folding,

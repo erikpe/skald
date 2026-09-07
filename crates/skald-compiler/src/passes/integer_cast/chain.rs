@@ -58,22 +58,19 @@ impl IntegerCastSite {
         self.operand
     }
 
-    #[allow(dead_code)] // The guarded rewrite validates this analyzed candidate field.
     pub(in crate::passes) const fn result_type(&self) -> MirType {
         self.result_type
     }
 
-    #[allow(dead_code)] // The guarded rewrite preserves this analyzed candidate field.
     pub(in crate::passes) const fn span(&self) -> Span {
         self.span
     }
 
-    #[allow(dead_code)] // The guarded rewrite uses this immutable snapshot.
     pub(in crate::passes) fn expected(&self) -> &MirInstruction {
         &self.expected
     }
 
-    const fn definition_site(&self) -> MirLocalIdentitySite {
+    pub(in crate::passes) const fn definition_site(&self) -> MirLocalIdentitySite {
         MirLocalIdentitySite::Instruction {
             block: self.block,
             instruction: self.instruction,
@@ -149,7 +146,6 @@ impl IntegerCastChain {
         &self.sites
     }
 
-    #[allow(dead_code)] // The guarded rewrite consumes the endpoint directly.
     pub(in crate::passes) fn endpoint(&self) -> &IntegerCastSite {
         self.sites
             .last()
@@ -183,18 +179,19 @@ impl IntegerCastChain {
 
     /// Existing result of the first information-losing `64-bit -> u8` cast.
     /// It is present exactly when the canonical recipe needs two casts.
-    #[allow(dead_code)] // The two-cast rewrite consumes this existing value.
     pub(in crate::passes) fn reusable_narrowing(&self) -> Option<ValueId> {
+        self.reusable_narrowing_site().map(IntegerCastSite::result)
+    }
+
+    /// Exact existing assignment which owns the reusable low-byte value.
+    pub(in crate::passes) fn reusable_narrowing_site(&self) -> Option<&IntegerCastSite> {
         if !matches!(self.recipe, IntegerCastRecipe::NarrowThenWiden { .. }) {
             return None;
         }
-        self.sites
-            .iter()
-            .find(|site| {
-                site.operation.target == crate::mir::MirPrimitiveType::U8
-                    && site.operation.source != crate::mir::MirPrimitiveType::U8
-            })
-            .map(|site| site.result)
+        self.sites.iter().find(|site| {
+            site.operation.target == crate::mir::MirPrimitiveType::U8
+                && site.operation.source != crate::mir::MirPrimitiveType::U8
+        })
     }
 }
 
@@ -250,7 +247,6 @@ impl IntegerCastChainAnalysis {
     /// Shorter canonical recipes in the same deterministic order as their
     /// endpoint instructions. Boundary-bearing candidates remain visible so
     /// a consumer can report why it cannot rewrite them.
-    #[allow(dead_code)] // The guarded rewrite consumes this candidate stream.
     pub(in crate::passes) fn candidates(&self) -> impl Iterator<Item = &IntegerCastChain> {
         self.entries
             .iter()

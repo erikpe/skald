@@ -11,8 +11,9 @@ The planned
 implements the integer-only slice of FMV-02: one shared exact algebra and an
 independently selectable proof-rich pass for arbitrary-length same-block chains
 over `u8`, `i64`, and `u64`. Status: in progress; the complete integer-cast
-algebra is implemented and ICC1, arbitrary-length same-block analysis, is
-next. It depends on the completed selectable final-MIR pipeline, dense identity
+algebra, arbitrary-length same-block analysis, and guarded selectable rewrite
+are implemented; ICC3 default-profile activation is next. It depends on the
+completed selectable final-MIR pipeline, dense identity
 rewriting, local simplification, and redundancy measurement work.
 
 ## Pending discoveries

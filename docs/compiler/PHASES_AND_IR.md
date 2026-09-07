@@ -3787,6 +3787,32 @@ reporter may attribute initial lowering or an earlier pass when direct
 checkpoint comparison proves that origin. This opt-in census is not a MIR
 pass, compiler option, report event, or backend input.
 
+### Selectable integer cast-chain canonicalization
+
+The proof-rich `integer-cast-chain-canonicalization` pass is registered for
+independent exact-schedule use but is not yet part of the `default` profile.
+It consumes the same immutable integer-chain analysis as the redundancy
+census. Every selected callable captures and revalidates its complete source
+snapshot, endpoint instruction, value types, definition order, reusable `u8`
+narrowing, and forwarding-use classification before the first edit.
+
+One-cast recipes retarget the existing endpoint assignment to the analyzed
+root. Two-cast recipes retain the first existing low-byte value and retarget
+the endpoint to the required `u8` widening. Identity recipes additionally
+require a same-typed dominating root and exclusively ordinary same-block uses;
+they forward those uses and remove only the endpoint assignment and value
+declaration. Other intermediate definitions remain for the independently
+selectable dead-pure cleanup pass. The canonicalizer inserts no MIR entities.
+
+All in-place endpoint edits precede identity deletion, and overlapping
+identity endpoints are forwarded from later to earlier sites. Consequently,
+planning never depends on mutation-time rediscovery or shifting instruction
+positions. Candidate-free and wholly protected programs reuse their verified
+input seal; every changed occurrence commits atomically and is immediately
+proof-rich verified. Cross-block provenance, unsupported primitive families,
+checked protocols, proof metadata, ownership/lifecycle roles, I/O, and unknown
+uses remain conservative barriers.
+
 ### Read-only local primitive common-subexpression census
 
 `passes::analyze_local_primitive_common_subexpressions` measures exact repeated

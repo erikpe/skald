@@ -106,7 +106,7 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(request.mir_optimization().profile().name(), "default");
     let passes: Vec<MirPassDescriptor> = available_mir_passes();
-    assert_eq!(passes.len(), 11);
+    assert_eq!(passes.len(), 12);
     assert_eq!(passes[0].name(), "checked-f64-to-integer-constant-folding");
     assert_eq!(passes[0].stage(), MirPassStage::ProofRich);
     assert_eq!(passes[1].name(), "checked-integer-constant-folding");
@@ -114,24 +114,26 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(passes[3].name(), "constant-short-circuit-folding");
     assert_eq!(passes[3].stage(), MirPassStage::ProofTransition);
     assert_eq!(passes[4].name(), "dead-pure-definition-elimination");
-    assert_eq!(passes[5].name(), "post-proof-basic-block-merging");
-    assert_eq!(passes[5].stage(), MirPassStage::Final);
-    assert_eq!(
-        passes[5].description(),
-        "Fuses maximal eligible single-incoming goto chains while preserving operation order."
-    );
-    assert_eq!(passes[6].name(), "post-proof-empty-block-forwarding");
+    assert_eq!(passes[5].name(), "integer-cast-chain-canonicalization");
+    assert_eq!(passes[5].stage(), MirPassStage::ProofRich);
+    assert_eq!(passes[6].name(), "post-proof-basic-block-merging");
     assert_eq!(passes[6].stage(), MirPassStage::Final);
     assert_eq!(
         passes[6].description(),
+        "Fuses maximal eligible single-incoming goto chains while preserving operation order."
+    );
+    assert_eq!(passes[7].name(), "post-proof-empty-block-forwarding");
+    assert_eq!(passes[7].stage(), MirPassStage::Final);
+    assert_eq!(
+        passes[7].description(),
         "Forwards normalized MIR edges through instruction-free goto blocks."
     );
-    assert_eq!(passes[7].name(), "post-proof-unreachable-block-elimination");
-    assert_eq!(passes[7].stage(), MirPassStage::Final);
-    assert_eq!(passes[8].name(), "primitive-algebraic-simplification");
-    assert_eq!(passes[9].name(), "primitive-constant-folding");
-    assert_eq!(passes[10].name(), "whole-world-reachability");
-    assert_eq!(passes[10].stage(), MirPassStage::Final);
+    assert_eq!(passes[8].name(), "post-proof-unreachable-block-elimination");
+    assert_eq!(passes[8].stage(), MirPassStage::Final);
+    assert_eq!(passes[9].name(), "primitive-algebraic-simplification");
+    assert_eq!(passes[10].name(), "primitive-constant-folding");
+    assert_eq!(passes[11].name(), "whole-world-reachability");
+    assert_eq!(passes[11].stage(), MirPassStage::Final);
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent

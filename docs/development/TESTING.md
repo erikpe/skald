@@ -215,6 +215,15 @@ Focused evaluator, solver, folding, dump, and reporting tests additionally pin
 malformed barriers, deep propagation, worklist-order independence, exact MIR
 rewrites, and deterministic generic operation-family measurements.
 
+Integer cast-chain canonicalization currently has focused exact-schedule unit
+coverage rather than a default-profile golden variant. Tests cover direct and
+two-cast recipes, reuse of an existing `u8` narrowing, identity forwarding,
+overlapping endpoints, retained shared intermediates, I/O forwarding barriers,
+snapshot and type staleness, absence of inserted MIR, exact metrics, immediate
+proof-rich verification, unchanged seal reuse, pass repetition, and dump
+determinism. Default-profile and source-to-native golden activation remain the
+next roadmap stage.
+
 ### Checked floating-to-integer protocol simplification coverage
 
 Checked floating-to-integer tests cover exact owned topology and

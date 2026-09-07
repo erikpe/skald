@@ -1,6 +1,6 @@
 # Integer Cast-Chain Canonicalization Roadmap
 
-Status: in progress; ICC0 through ICC1 are complete and ICC2 is next.
+Status: in progress; ICC0 through ICC2 are complete and ICC3 is next.
 
 This roadmap implements the integer-only part of FMV-02. It adds one exact,
 target-independent final-MIR optimization for arbitrary-length cast chains over
@@ -87,7 +87,7 @@ completely without range analysis, floating-point reasoning, or a new MIR.
 
 - [x] ICC0 — Establish the complete integer-cast algebra
 - [x] ICC1 — Analyze arbitrary-length same-block chains
-- [ ] ICC2 — Implement the selectable guarded rewrite pass
+- [x] ICC2 — Implement the selectable guarded rewrite pass
 - [ ] ICC3 — Activate and observe canonicalization end to end
 - [ ] ICC4 — Harden the boundary and close the roadmap
 
@@ -170,26 +170,26 @@ surface describes exactly the production candidate boundary.
 **Purpose:** Materialize analyzed recipes through existing verified editing
 infrastructure while keeping activation and failure ownership explicit.
 
-- [ ] Add a proof-rich `integer-cast-chain-canonicalization` pass with a unique
+- [x] Add a proof-rich `integer-cast-chain-canonicalization` pass with a unique
   private identity, stable descriptor, private plan/rewrite implementation, and
   registration outside the default profile until focused behavior is complete.
-- [ ] Rewrite one-cast endpoints in place to reference the analyzed root and
+- [x] Rewrite one-cast endpoints in place to reference the analyzed root and
   exact direct `MirPrimitiveCast`, preserving result identity, type, span, and
   instruction site.
-- [ ] Rewrite two-cast endpoints to consume the deterministic existing `u8`
+- [x] Rewrite two-cast endpoints to consume the deterministic existing `u8`
   narrowing result and perform only the required final widening cast.
-- [ ] For zero-cast recipes, require same-block dominance and exclusively
+- [x] For zero-cast recipes, require same-block dominance and exclusively
   forwarding-safe result uses, substitute the root, then remove only the
   endpoint assignment and value declaration.
-- [ ] Revalidate every expected instruction, value type, definition order,
+- [x] Revalidate every expected instruction, value type, definition order,
   reusable intermediate, and use-role decision before the first edit; surface
   stale or malformed plans as structured pass failures.
-- [ ] Handle overlapping candidates deterministically without depending on
+- [x] Handle overlapping candidates deterministically without depending on
   instruction-index stability or mutation-time rediscovery.
-- [ ] Report processed/changed callables, retargeted endpoints, forwarded
+- [x] Report processed/changed callables, retargeted endpoints, forwarded
   endpoints and uses, removed assignments/values, eliminated cast steps,
   protected rejections, and maximum rewritten chain depth in stable order.
-- [ ] Return unchanged without commit or output verification when no safe
+- [x] Return unchanged without commit or output verification when no safe
   shortening exists; a repeated occurrence over canonical output must be
   unchanged.
 
