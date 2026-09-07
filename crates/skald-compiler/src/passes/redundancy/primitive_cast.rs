@@ -6,7 +6,9 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{
-            value_use_sites_for_definition, MirLocalIdentitySite, MirRewriteError, MirValueUseRole,
+            value_use_site_index_for_definition, value_use_sites_for_definition,
+            MirLocalIdentitySite, MirRewriteError, MirValueUseRole, MirValueUseSiteIndex,
+            MirValueUseSites,
         },
         MirDefinitionRef, MirInstruction, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveType,
         MirRvalueKind, MirTerminator, ValueId,
@@ -79,6 +81,7 @@ fn analyze_program(program: &crate::mir::MirProgram) -> PrimitiveCastObservation
 
 fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, MirRewriteError> {
     let chains = analyze_integer_cast_chains(definition)?;
+    let indexed_uses = value_use_site_index_for_definition(definition);
     let mut observed = Accumulator::default();
 
     for block in definition.body().blocks.iter() {
@@ -108,7 +111,7 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
             site.operation().target,
         ));
         let mut barriers = invalidity_barriers(entry.invalidities());
-        let uses = match value_use_sites_for_definition(definition, site.result()) {
+        let uses = match indexed_or_selected_uses(&indexed_uses, definition, site.result()) {
             Ok(uses) => uses,
             Err(_) if barriers.contains(&PrimitiveCastBlocker::MalformedIdentity) => {
                 observed.increment_consumer(PrimitiveCastConsumer::Other);
@@ -116,7 +119,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                     observed.increment_disposition(PrimitiveCastDisposition::Identity);
                     observed.record_interesting(
                         site,
-                        std::slice::from_ref(site),
+                        std::iter::once(site),
+                        1,
                         Some(site.operand()),
                         barriers,
                         1,
@@ -144,7 +148,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                 add_replacement_barriers(&mut barriers, &uses, site.block());
                 observed.record_interesting(
                     site,
-                    std::slice::from_ref(site),
+                    std::iter::once(site),
+                    1,
                     Some(site.operand()),
                     barriers,
                     1,
@@ -172,7 +177,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
             }
             observed.record_interesting(
                 site,
-                chain.sites(),
+                chains.sites(chain),
+                chain.original_length(),
                 Some(chain.root()),
                 barriers,
                 chain.eliminated_steps(),
@@ -202,7 +208,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
             add_replacement_barriers(&mut barriers, &uses, site.block());
             observed.record_interesting(
                 site,
-                std::slice::from_ref(site),
+                std::iter::once(site),
+                1,
                 Some(site.operand()),
                 barriers,
                 1,
@@ -243,7 +250,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                 add_replacement_barriers(&mut barriers, &uses, site.block());
                 observed.record_interesting(
                     site,
-                    &supporting_sites,
+                    supporting_sites.iter(),
+                    supporting_sites.len(),
                     Some(first.site().operand()),
                     barriers,
                     1,
@@ -251,13 +259,15 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
             }
             Composition::DirectCast => {
                 observed.increment_disposition(PrimitiveCastDisposition::RemovableChain);
-                let first_uses = value_use_sites_for_definition(definition, first.site().result())?;
+                let first_uses =
+                    indexed_or_selected_uses(&indexed_uses, definition, first.site().result())?;
                 if first_uses.uses().len() != 1 {
                     barriers.insert(PrimitiveCastBlocker::MultipleUses);
                 }
                 observed.record_interesting(
                     site,
-                    &supporting_sites,
+                    supporting_sites.iter(),
+                    supporting_sites.len(),
                     Some(first.site().operand()),
                     barriers,
                     1,
@@ -272,7 +282,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                 barriers.insert(PrimitiveCastBlocker::MissingValueDomainFact);
                 observed.record_interesting(
                     site,
-                    &supporting_sites,
+                    supporting_sites.iter(),
+                    supporting_sites.len(),
                     Some(first.site().operand()),
                     barriers,
                     0,
@@ -283,7 +294,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                 barriers.insert(PrimitiveCastBlocker::CheckedFailure);
                 observed.record_interesting(
                     site,
-                    &supporting_sites,
+                    supporting_sites.iter(),
+                    supporting_sites.len(),
                     Some(first.site().operand()),
                     barriers,
                     0,
@@ -294,7 +306,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                 barriers.insert(PrimitiveCastBlocker::FloatingPayload);
                 observed.record_interesting(
                     site,
-                    &supporting_sites,
+                    supporting_sites.iter(),
+                    supporting_sites.len(),
                     Some(first.site().operand()),
                     barriers,
                     0,
@@ -305,7 +318,8 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
                 barriers.insert(PrimitiveCastBlocker::UnsupportedComposition);
                 observed.record_interesting(
                     site,
-                    &supporting_sites,
+                    supporting_sites.iter(),
+                    supporting_sites.len(),
                     Some(first.site().operand()),
                     barriers,
                     0,
@@ -314,6 +328,19 @@ fn analyze_definition(definition: MirDefinitionRef<'_>) -> Result<Accumulator, M
         }
     }
     Ok(observed)
+}
+
+fn indexed_or_selected_uses(
+    index: &Result<MirValueUseSiteIndex, MirRewriteError>,
+    definition: MirDefinitionRef<'_>,
+    value: ValueId,
+) -> Result<MirValueUseSites, MirRewriteError> {
+    if let Ok(index) = index {
+        if let Some(uses) = index.get(value) {
+            return Ok(uses.clone());
+        }
+    }
+    value_use_sites_for_definition(definition, value)
 }
 
 #[cfg(test)]
@@ -530,10 +557,11 @@ impl Accumulator {
         increment(&mut self.counts.consumers, key, &mut self.counts.saturated);
     }
 
-    fn record_interesting(
+    fn record_interesting<'a>(
         &mut self,
         site: &IntegerCastSite,
-        supporting_sites: &[IntegerCastSite],
+        supporting_sites: impl IntoIterator<Item = &'a IntegerCastSite>,
+        supporting_depth: usize,
         root: Option<ValueId>,
         barriers: BTreeSet<PrimitiveCastBlocker>,
         eliminated_steps: usize,
@@ -550,7 +578,7 @@ impl Accumulator {
                 supporting.instruction(),
             ));
         }
-        let depth = u64::try_from(supporting_sites.len()).unwrap_or(u64::MAX);
+        let depth = u64::try_from(supporting_depth).unwrap_or(u64::MAX);
         self.counts.maximum_chain_depth = self.counts.maximum_chain_depth.max(depth);
         for barrier in barriers.iter().copied() {
             self.increment_barrier(barrier);

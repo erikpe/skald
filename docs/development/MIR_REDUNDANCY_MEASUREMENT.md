@@ -97,8 +97,9 @@ later explicitly requested measurement produces them.
 
 ## Integer cast-chain activation observation
 
-ICC3 reran the frozen corpus immediately before and after adding the single
-default `integer-cast-chain-canonicalization` occurrence. Both runs used
+The integer cast-chain activation review reran the frozen corpus immediately
+before and after adding the single default
+`integer-cast-chain-canonicalization` occurrence. Both runs used
 compiler revision `d3d6630e35df6fcde431d32f8c8b75a00ab68b93`; the before tree
 was clean with 15 selected occurrences, while the after tree contained the
 reviewed activation changes and 16 selected occurrences. The structural and

@@ -111,6 +111,7 @@ Archived plans:
 - [VM benchmark correctness workload](VM_BENCHMARK_ROADMAP.md)
 - [VM benchmark resolved discoveries](VM_BENCHMARK_DISCOVERIES.md)
 - [Target-independent binary64 evaluation](TARGET_INDEPENDENT_BINARY64_EVALUATION_ROADMAP.md)
+- [Integer cast-chain canonicalization](INTEGER_CAST_CHAIN_CANONICALIZATION_ROADMAP.md)
 
 Resolved string-design inputs:
 

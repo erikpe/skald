@@ -243,7 +243,7 @@ fn two_cast_recipe_reuses_the_first_existing_narrowing_value() {
 }
 
 #[test]
-fn overlapping_identity_endpoints_forward_in_reverse_and_remove_only_endpoints() {
+fn overlapping_identity_endpoints_batch_forwarding_and_remove_only_endpoints() {
     let (mut input, root, function) = definition_with_root(MirPrimitiveType::I64);
     let definition = input.definitions.get_mut_for_test(function).unwrap();
     let first = append_cast(
@@ -402,6 +402,43 @@ fn repeated_runs_produce_identical_canonical_dumps() {
             .iter()
             .map(|record| (record.outcome(), record.measurements()))
             .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn long_chain_rewrite_batches_forwarding_and_removal_without_recursive_work() {
+    const DEPTH: usize = 4_096;
+
+    let (mut input, root, function) = definition_with_root(MirPrimitiveType::I64);
+    let definition = input.definitions.get_mut_for_test(function).unwrap();
+    let mut operand = root;
+    let mut source = MirPrimitiveType::I64;
+    for index in 0..DEPTH {
+        let target = if index % 2 == 0 {
+            MirPrimitiveType::U64
+        } else {
+            MirPrimitiveType::I64
+        };
+        operand = append_cast(definition, operand, source, target);
+        source = target;
+    }
+    set_return(definition, operand);
+
+    let measured = run_mir_pipeline_with_occurrences(input, &exact_schedule(1));
+    let output = measured.result.as_ref().unwrap().program();
+    let analysis = crate::passes::integer_cast::analyze_integer_cast_chains(
+        output.definitions.get(function).unwrap().into(),
+    )
+    .unwrap();
+    assert_eq!(analysis.candidates().count(), 0);
+    assert_eq!(
+        measured.occurrences()[0]
+            .measurements()
+            .iter()
+            .find(|measurement| measurement.name() == MAXIMUM_DEPTH)
+            .unwrap()
+            .value(),
+        DEPTH as u64
     );
 }
 

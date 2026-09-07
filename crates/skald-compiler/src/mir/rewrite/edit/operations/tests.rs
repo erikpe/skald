@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     identity::{CallableId, FunctionId},
     mir::{
@@ -101,6 +103,29 @@ fn value_use_substitution_preserves_definitions_and_allows_explicit_deletion() {
     .unwrap();
     edit.remove_value(from).unwrap();
     commit(edit).expect("explicit use, definition, and declaration edits commit together");
+}
+
+#[test]
+fn bulk_value_use_substitution_maps_all_sources_in_one_semantic_operation() {
+    let mut edit = edit();
+    let owner = edit.callable();
+    let first = ValueId::new(owner, 0);
+    let target = ValueId::new(owner, 1);
+    let second = ValueId::new(owner, 2);
+    let before = edit.value_use_census().unwrap();
+    let expected = before.get(first).unwrap().uses() + before.get(second).unwrap().uses();
+    let target_before = before.get(target).unwrap().uses();
+
+    let substitutions = BTreeMap::from([(first, target), (second, target)]);
+    assert_eq!(
+        edit.replace_value_uses_many(&substitutions).unwrap(),
+        expected
+    );
+
+    let after = edit.value_use_census().unwrap();
+    assert_eq!(after.get(first).unwrap().uses(), 0);
+    assert_eq!(after.get(second).unwrap().uses(), 0);
+    assert_eq!(after.get(target).unwrap().uses(), target_before + expected);
 }
 
 #[test]

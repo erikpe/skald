@@ -70,8 +70,8 @@ pub(crate) use storage_use::{
     MirStorageUseCensusEntry, MirStorageUseRole, MirStorageUseSite, MirStorageWriteAuthorization,
 };
 pub(crate) use value_use::{
-    value_use_sites_for_definition, MirCallValueUse, MirScalarValueUse, MirValueUseRole,
-    MirValueUseSite, MirValueUseSites,
+    value_use_site_index_for_definition, value_use_sites_for_definition, MirCallValueUse,
+    MirScalarValueUse, MirValueUseRole, MirValueUseSite, MirValueUseSiteIndex, MirValueUseSites,
 };
 
 #[cfg(test)]

@@ -101,6 +101,31 @@ pub(crate) struct MirValueUseSites {
     uses: Vec<MirValueUseSite>,
 }
 
+/// Complete value-use sites indexed once for one callable snapshot.
+///
+/// Like each contained observation, the index becomes stale after mutation.
+/// Building it performs one census and one semantic-use traversal regardless
+/// of how many values a pass subsequently inspects.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct MirValueUseSiteIndex {
+    callable: CallableId,
+    entries: Vec<Option<MirValueUseSites>>,
+}
+
+impl MirValueUseSiteIndex {
+    pub(crate) const fn callable(&self) -> CallableId {
+        self.callable
+    }
+
+    pub(crate) fn get(&self, value: ValueId) -> Option<&MirValueUseSites> {
+        (value.callable() == self.callable)
+            .then(|| self.entries.get(value.index()))
+            .flatten()
+            .and_then(Option::as_ref)
+            .filter(|entry| entry.value == value)
+    }
+}
+
 impl MirValueUseSites {
     pub(crate) const fn callable(&self) -> CallableId {
         self.callable
@@ -165,6 +190,15 @@ impl MirCallableEdit {
         infallible(self.observe_live_references(&mut collector));
         build_result(value, definition, collector.uses)
     }
+
+    /// Indexes semantic use sites for every live value in the current edit.
+    pub(crate) fn value_use_site_index(&self) -> Result<MirValueUseSiteIndex, MirRewriteError> {
+        let census = self.value_use_census()?;
+        let mut collector =
+            AllValueUseCollector::new(self.callable(), self.allocated_value_slots());
+        self.observe_live_references(&mut collector)?;
+        build_index(census, collector.uses)
+    }
 }
 
 /// Enumerates semantic use sites from one dense, read-only definition.
@@ -191,6 +225,34 @@ pub(crate) fn value_use_sites_for_definition(
         &mut collector,
     ));
     build_result(value, definition_site, collector.uses)
+}
+
+/// Indexes semantic use sites for every value in one dense definition.
+pub(crate) fn value_use_site_index_for_definition(
+    definition: MirDefinitionRef<'_>,
+) -> Result<MirValueUseSiteIndex, MirRewriteError> {
+    let census = value_use_census_for_definition(definition)?;
+    let mut collector = AllValueUseCollector::new(definition.callable(), definition.values().len());
+    observe_body_local_identities(definition.body(), &mut collector)?;
+    build_index(census, collector.uses)
+}
+
+fn build_index(
+    census: super::MirValueUseCensus,
+    mut uses: Vec<Vec<MirValueUseSite>>,
+) -> Result<MirValueUseSiteIndex, MirRewriteError> {
+    let callable = census.callable();
+    let mut entries = vec![None; uses.len()];
+    for entry in census.iter() {
+        let value = entry.value();
+        let definition = required_definition(Some(entry), value)?;
+        entries[value.index()] = Some(build_result(
+            value,
+            definition,
+            std::mem::take(&mut uses[value.index()]),
+        )?);
+    }
+    Ok(MirValueUseSiteIndex { callable, entries })
 }
 
 fn required_definition(
@@ -229,6 +291,50 @@ fn build_result(
 struct SelectedValueUseCollector {
     selected: ValueId,
     uses: Vec<MirValueUseSite>,
+}
+
+struct AllValueUseCollector {
+    callable: CallableId,
+    uses: Vec<Vec<MirValueUseSite>>,
+}
+
+impl AllValueUseCollector {
+    fn new(callable: CallableId, slots: usize) -> Self {
+        Self {
+            callable,
+            uses: vec![Vec::new(); slots],
+        }
+    }
+}
+
+impl MirLocalIdentityObserver for AllValueUseCollector {
+    type Error = MirRewriteError;
+
+    fn observe_value_use(
+        &mut self,
+        site: MirLocalIdentitySite,
+        role: MirValueUseRole,
+        value: ValueId,
+    ) -> Result<(), Self::Error> {
+        if value.callable() != self.callable {
+            return Err(MirRewriteError::InvalidReference {
+                expected: self.callable,
+                identity: MirLocalIdentity::Value(value),
+                site,
+                failure: super::MirReferenceFailure::Foreign,
+            });
+        }
+        let Some(uses) = self.uses.get_mut(value.index()) else {
+            return Err(MirRewriteError::InvalidReference {
+                expected: self.callable,
+                identity: MirLocalIdentity::Value(value),
+                site,
+                failure: super::MirReferenceFailure::Unknown,
+            });
+        };
+        uses.push(MirValueUseSite { site, role });
+        Ok(())
+    }
 }
 
 impl SelectedValueUseCollector {

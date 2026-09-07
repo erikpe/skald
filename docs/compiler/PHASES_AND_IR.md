@@ -3807,14 +3807,18 @@ they forward those uses and remove only the endpoint assignment and value
 declaration. Other intermediate definitions remain for the independently
 selectable dead-pure cleanup pass. The canonicalizer inserts no MIR entities.
 
-All in-place endpoint edits precede identity deletion, and overlapping
-identity endpoints are forwarded from later to earlier sites. Consequently,
-planning never depends on mutation-time rediscovery or shifting instruction
-positions. Candidate-free and wholly protected programs reuse their verified
-input seal; every changed occurrence commits atomically and is immediately
-proof-rich verified. Cross-block provenance, unsupported primitive families,
-checked protocols, proof metadata, ownership/lifecycle roles, I/O, and unknown
-uses remain conservative barriers.
+Chain summaries retain compact predecessor indices rather than copying every
+prefix, so discovery and support traversal are iterative at arbitrary depth.
+Planning indexes semantic value uses once per immutable callable snapshot.
+All in-place endpoint edits precede identity deletion; identity assignments
+are then removed once per block and their remaining uses are forwarded in one
+body traversal. Planning therefore does not depend on mutation-time
+rediscovery or shifting instruction positions and does not repeatedly scan a
+long chain or callable for each endpoint. Candidate-free and wholly protected
+programs reuse their verified input seal; every changed occurrence commits
+atomically and is immediately proof-rich verified. Cross-block provenance,
+unsupported primitive families, checked protocols, proof metadata,
+ownership/lifecycle roles, I/O, and unknown uses remain conservative barriers.
 
 Disabling the canonicalizer retains eligible dynamic chains. Disabling only
 dead-pure cleanup still canonicalizes their endpoints but may retain harmless

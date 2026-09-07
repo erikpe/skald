@@ -1,6 +1,6 @@
 //! Supported structural operations over sparse callable edit state.
 
-use std::convert::Infallible;
+use std::{collections::BTreeMap, convert::Infallible};
 
 use super::{super::error::MirRewriteError, MirCallableEdit};
 use crate::mir::{BlockId, MirInstruction, MirStorageKind, MirTerminator, StorageId, ValueId};
@@ -162,6 +162,36 @@ impl MirCallableEdit {
         let mut mapper = ValueUseSubstitution {
             from,
             to,
+            replacements: 0,
+        };
+        infallible(self.map_live_references(&mut mapper));
+        Ok(mapper.replacements)
+    }
+
+    /// Applies independent value-use substitutions in one body traversal.
+    ///
+    /// Every source and target must be live, callable-local, and have the same
+    /// MIR type. Definitions are preserved. Mappings are simultaneous rather
+    /// than transitive: callers deleting substituted sources must therefore
+    /// map each source directly to a retained target.
+    pub(crate) fn replace_value_uses_many(
+        &mut self,
+        substitutions: &BTreeMap<ValueId, ValueId>,
+    ) -> Result<usize, MirRewriteError> {
+        for (&from, &to) in substitutions {
+            let from_type = self.value(from)?.ty;
+            let to_type = self.value(to)?.ty;
+            if from_type != to_type {
+                return Err(MirRewriteError::ValueTypeMismatch {
+                    from,
+                    from_type,
+                    to,
+                    to_type,
+                });
+            }
+        }
+        let mut mapper = ValueUseSubstitutions {
+            substitutions,
             replacements: 0,
         };
         infallible(self.map_live_references(&mut mapper));
@@ -381,6 +411,37 @@ struct ValueUseSubstitution {
     from: ValueId,
     to: ValueId,
     replacements: usize,
+}
+
+struct ValueUseSubstitutions<'a> {
+    substitutions: &'a BTreeMap<ValueId, ValueId>,
+    replacements: usize,
+}
+
+impl MirLocalIdentityMapper for ValueUseSubstitutions<'_> {
+    type Error = Infallible;
+
+    fn map_value(
+        &mut self,
+        _site: MirLocalIdentitySite,
+        identity: ValueId,
+    ) -> Result<ValueId, Self::Error> {
+        let Some(&replacement) = self.substitutions.get(&identity) else {
+            return Ok(identity);
+        };
+        if replacement != identity {
+            self.replacements += 1;
+        }
+        Ok(replacement)
+    }
+
+    fn map_value_definition(
+        &mut self,
+        _site: MirLocalIdentitySite,
+        identity: ValueId,
+    ) -> Result<ValueId, Self::Error> {
+        Ok(identity)
+    }
 }
 
 impl MirLocalIdentityMapper for ValueUseSubstitution {

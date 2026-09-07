@@ -159,12 +159,11 @@ fn arbitrary_depth_chain_records_exact_sites_root_recipe_and_reusable_narrowing(
         MirInstruction::Assign(assignment) if assignment.result == endpoint
     ));
     assert_eq!(
-        chain
-            .sites()
-            .iter()
+        analysis
+            .sites(chain)
             .map(IntegerCastSite::result)
             .collect::<Vec<_>>(),
-        vec![first, narrowed, widened, renarrowed, endpoint]
+        vec![endpoint, renarrowed, widened, narrowed, first]
     );
 }
 
@@ -530,11 +529,13 @@ fn duplicate_cast_definitions_are_structured_failures() {
 
 #[test]
 fn analysis_is_deterministic_and_long_chains_do_not_use_recursive_discovery() {
+    const DEPTH: usize = 16_384;
+
     let (mut program, root, function) = definition_with_root(MirPrimitiveType::I64);
     let definition = program.definitions.get_mut_for_test(function).unwrap();
     let mut current = root;
     let mut current_type = MirPrimitiveType::I64;
-    for index in 0..256 {
+    for index in 0..DEPTH {
         let target = match index % 3 {
             0 => MirPrimitiveType::U64,
             1 => MirPrimitiveType::U8,
@@ -549,6 +550,9 @@ fn analysis_is_deterministic_and_long_chains_do_not_use_recursive_discovery() {
     let second = analysis(&program, function);
     assert_eq!(first, second);
     let chain = first.entry_for_result(current).unwrap().chain().unwrap();
-    assert_eq!(chain.original_length(), 256);
+    assert_eq!(first.entries().len(), DEPTH);
+    assert_eq!(chain.original_length(), DEPTH);
+    assert_eq!(first.sites(chain).len(), DEPTH);
+    assert_eq!(first.sites(chain).next().unwrap().result(), current);
     assert!(chain.is_candidate());
 }

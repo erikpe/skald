@@ -230,7 +230,12 @@ MIR shapes, exact occurrence metrics, pass position, retained chains when the
 canonicalizer is disabled, and retained harmless intermediates when only
 dead-pure cleanup is disabled. Constructed-MIR tests retain the interleaved-
 instruction and shared-intermediate cases that source locals lower through
-storage rather than as direct transient chains.
+storage rather than as direct transient chains. Generated semantic
+differential tests compare original chains with their shortest recipes for
+every `u8` input and a boundary-rich deterministic `i64`/`u64` set. Separate
+16,384-cast analysis and 4,096-cast rewrite cases pin allocation-free iterative
+chain traversal, compact per-cast analysis state, one-shot value-use indexing,
+and batched identity forwarding and removal.
 
 ### Checked floating-to-integer protocol simplification coverage
 

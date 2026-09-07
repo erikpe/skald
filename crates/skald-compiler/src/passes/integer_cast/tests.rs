@@ -5,18 +5,29 @@ use super::*;
 const INTEGER_TYPES: [MirIntegerType; 3] =
     [MirIntegerType::I64, MirIntegerType::U64, MirIntegerType::U8];
 
-const BOUNDARY_BITS: [u64; 12] = [
+const BOUNDARY_BITS: [u64; 23] = [
     0,
     1,
+    2,
+    0x7e,
     0x7f,
     0x80,
+    0x81,
+    0xfe,
     0xff,
     0x100,
     0x101,
+    0x0123_4567_89ab_cdef,
+    0x5555_5555_5555_5555,
+    0x7fff_ffff_ffff_fffe,
     0x7fff_ffff_ffff_ffff,
     0x8000_0000_0000_0000,
+    0x8000_0000_0000_0001,
+    0xaaaa_aaaa_aaaa_aaaa,
+    0xfedc_ba98_7654_3210,
     0xffff_ffff_ffff_ff00,
     0xffff_ffff_ffff_ff01,
+    0xffff_ffff_ffff_fffe,
     u64::MAX,
 ];
 
@@ -156,46 +167,43 @@ fn narrowed_and_widened_64_bit_transforms_require_two_casts() {
     }
 }
 
-#[test]
-fn generated_chains_match_their_recipes_for_complete_u8_and_boundary_64_bit_inputs() {
-    fn visit(
-        transform: IntegerCastTransform,
-        depth: usize,
-        maximum_depth: usize,
-        original_bits: u64,
-        current_bits: u64,
-    ) {
+fn assert_generated_chains_match_recipes(
+    source: MirIntegerType,
+    original_bits: u64,
+    maximum_depth: usize,
+) {
+    let mut pending = vec![(
+        IntegerCastTransform::identity(source),
+        0usize,
+        original_bits,
+    )];
+    while let Some((transform, depth, current_bits)) = pending.pop() {
         let recipe = transform.canonical_recipe();
         assert_eq!(
             evaluate_recipe(original_bits, transform.source, recipe),
             (current_bits, transform.target)
         );
         if depth == maximum_depth {
-            return;
+            continue;
         }
         for target in INTEGER_TYPES {
-            visit(
+            pending.push((
                 append(transform, target),
                 depth + 1,
-                maximum_depth,
-                original_bits,
                 cast_bits(current_bits, transform.target, target),
-            );
+            ));
         }
     }
+}
 
+#[test]
+fn generated_semantic_differential_covers_complete_u8_and_boundary_rich_64_bit_inputs() {
     for bits in 0..=u64::from(u8::MAX) {
-        visit(
-            IntegerCastTransform::identity(MirIntegerType::U8),
-            0,
-            6,
-            bits,
-            bits,
-        );
+        assert_generated_chains_match_recipes(MirIntegerType::U8, bits, 6);
     }
     for source in [MirIntegerType::I64, MirIntegerType::U64] {
         for bits in BOUNDARY_BITS {
-            visit(IntegerCastTransform::identity(source), 0, 8, bits, bits);
+            assert_generated_chains_match_recipes(source, bits, 8);
         }
     }
 }

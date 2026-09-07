@@ -6,8 +6,8 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{
-            value_use_sites_for_definition, MirCallableEdit, MirCallableEditSnapshot,
-            MirLocalIdentitySite, MirRewriteError, MirValueUseSites,
+            value_use_site_index_for_definition, MirCallableEdit, MirCallableEditSnapshot,
+            MirLocalIdentitySite, MirRewriteError, MirValueUseSiteIndex, MirValueUseSites,
         },
         MirAssignment, MirDefinitionRef, MirInstruction, MirPrimitiveCast, MirProgram, MirRvalue,
         MirRvalueKind, MirType, ValueId,
@@ -54,6 +54,7 @@ impl EndpointPlan {
     fn prepare(
         definition: MirDefinitionRef<'_>,
         chain: &IntegerCastChain,
+        value_uses: &MirValueUseSiteIndex,
     ) -> Result<Option<Self>, MirRewriteError> {
         if matches!(
             chain.boundary(),
@@ -64,14 +65,26 @@ impl EndpointPlan {
 
         let endpoint = chain.endpoint().clone();
         let root = chain.root();
-        let root_definition = value_use_sites_for_definition(definition, root)?.definition();
+        let root_definition = indexed_uses(
+            value_uses,
+            root,
+            definition.callable(),
+            "integer cast-chain root uses",
+        )?
+        .definition();
         if !definition_precedes(root_definition, endpoint.definition_site()) {
             return Ok(None);
         }
 
         let replacement = match chain.recipe() {
             IntegerCastRecipe::Identity => {
-                let expected_uses = value_use_sites_for_definition(definition, endpoint.result())?;
+                let expected_uses = indexed_uses(
+                    value_uses,
+                    endpoint.result(),
+                    definition.callable(),
+                    "integer cast-chain endpoint uses",
+                )?
+                .clone();
                 if definition.value(root).map(|value| value.ty) != Some(endpoint.result_type())
                     || !expected_uses.is_forwarding_safe()
                 {
@@ -120,7 +133,11 @@ impl EndpointPlan {
         }))
     }
 
-    fn validate(&self, edit: &MirCallableEdit) -> Result<(), MirRewriteError> {
+    fn validate(
+        &self,
+        edit: &MirCallableEdit,
+        value_uses: &MirValueUseSiteIndex,
+    ) -> Result<(), MirRewriteError> {
         validate_site(edit, &self.endpoint)?;
         let root_type = match self.replacement {
             EndpointReplacement::Direct(operation) => operation.source_type(),
@@ -134,7 +151,12 @@ impl EndpointPlan {
             self.endpoint.result_type(),
             "integer cast-chain endpoint type",
         )?;
-        let root_sites = edit.value_use_sites(self.root)?;
+        let root_sites = indexed_uses(
+            value_uses,
+            self.root,
+            edit.callable(),
+            "integer cast-chain root uses",
+        )?;
         if root_sites.definition() != self.root_definition
             || !definition_precedes(self.root_definition, self.endpoint.definition_site())
         {
@@ -174,8 +196,13 @@ impl EndpointPlan {
                 }
             }
             EndpointReplacement::Forward { expected_uses } => {
-                let actual_uses = edit.value_use_sites(self.endpoint.result())?;
-                if &actual_uses != expected_uses || !actual_uses.is_forwarding_safe() {
+                let actual_uses = indexed_uses(
+                    value_uses,
+                    self.endpoint.result(),
+                    edit.callable(),
+                    "integer cast-chain endpoint uses",
+                )?;
+                if actual_uses != expected_uses || !actual_uses.is_forwarding_safe() {
                     return Err(stale(edit.callable(), "integer cast-chain forwarding uses"));
                 }
             }
@@ -226,9 +253,10 @@ impl IntegerCastCanonicalizationPlan {
         for definition in program.executable_definitions() {
             plan.processed_callables = plan.processed_callables.saturating_add(1);
             let analysis = analyze_integer_cast_chains(definition)?;
+            let value_uses = value_use_site_index_for_definition(definition)?;
             let mut endpoints = Vec::new();
             for chain in analysis.candidates() {
-                let Some(endpoint) = EndpointPlan::prepare(definition, chain)? else {
+                let Some(endpoint) = EndpointPlan::prepare(definition, chain, &value_uses)? else {
                     plan.counts.protected_rejections =
                         plan.counts.protected_rejections.saturating_add(1);
                     continue;
@@ -291,8 +319,9 @@ impl IntegerCastCanonicalizationPlan {
         };
         plan.snapshot
             .validate(edit, "integer cast-chain canonicalization plan")?;
+        let value_uses = edit.value_use_site_index()?;
         for endpoint in &plan.endpoints {
-            endpoint.validate(edit)?;
+            endpoint.validate(edit, &value_uses)?;
         }
 
         // Retargeting preserves instruction positions. Perform every such edit
@@ -309,20 +338,33 @@ impl IntegerCastCanonicalizationPlan {
             )?;
         }
 
-        // Later identity endpoints are removed first. Their soon-to-be-dead
-        // operands therefore do not inflate forwarding counts or perturb an
-        // earlier overlapping endpoint's decision.
-        let mut forwarded_uses = 0usize;
-        for endpoint in plan
+        // Remove identity definitions in one block-local batch before mapping
+        // their remaining uses. Uses inside another removed endpoint are not
+        // observable work and therefore do not inflate forwarding metrics.
+        let forwarding = plan
             .endpoints
             .iter()
-            .rev()
             .filter(|plan| plan.is_forwarding())
+            .map(|endpoint| (endpoint.endpoint.result(), endpoint.root))
+            .collect::<BTreeMap<_, _>>();
+        if forwarding
+            .values()
+            .any(|target| forwarding.contains_key(target))
         {
-            forwarded_uses = forwarded_uses.saturating_add(
-                edit.replace_value_uses(endpoint.endpoint.result(), endpoint.root)?,
-            );
-            remove_assignment(edit, &endpoint.endpoint)?;
+            return Err(stale(
+                callable,
+                "integer cast-chain retained forwarding target",
+            ));
+        }
+        remove_assignments(
+            edit,
+            plan.endpoints
+                .iter()
+                .filter(|endpoint| endpoint.is_forwarding())
+                .map(|endpoint| &endpoint.endpoint),
+        )?;
+        let forwarded_uses = edit.replace_value_uses_many(&forwarding)?;
+        for endpoint in plan.endpoints.iter().filter(|plan| plan.is_forwarding()) {
             edit.remove_value(endpoint.endpoint.result())?;
         }
         Ok(forwarded_uses)
@@ -410,19 +452,38 @@ const fn definition_precedes(
     }
 }
 
-fn remove_assignment(
+fn indexed_uses<'a>(
+    index: &'a MirValueUseSiteIndex,
+    value: ValueId,
+    callable: CallableId,
+    subject: &'static str,
+) -> Result<&'a MirValueUseSites, MirRewriteError> {
+    index.get(value).ok_or_else(|| stale(callable, subject))
+}
+
+fn remove_assignments<'a>(
     edit: &mut MirCallableEdit,
-    endpoint: &IntegerCastSite,
+    endpoints: impl IntoIterator<Item = &'a IntegerCastSite>,
 ) -> Result<(), MirRewriteError> {
-    edit.rewrite_block_instructions(endpoint.block_id(), |instructions| {
-        instructions
-            .iter()
-            .filter(|instruction| {
-                !matches!(instruction, MirInstruction::Assign(assignment) if assignment.result == endpoint.result())
-            })
-            .cloned()
-            .collect()
-    })
+    let mut removals = BTreeMap::<_, BTreeSet<_>>::new();
+    for endpoint in endpoints {
+        removals
+            .entry(endpoint.block_id())
+            .or_default()
+            .insert(endpoint.result());
+    }
+    for (block, results) in removals {
+        edit.rewrite_block_instructions(block, |instructions| {
+            instructions
+                .iter()
+                .filter(|instruction| {
+                    !matches!(instruction, MirInstruction::Assign(assignment) if results.contains(&assignment.result))
+                })
+                .cloned()
+                .collect()
+        })?;
+    }
+    Ok(())
 }
 
 const fn stale(callable: CallableId, subject: &'static str) -> MirRewriteError {

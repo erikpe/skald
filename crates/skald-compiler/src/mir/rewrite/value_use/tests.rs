@@ -233,6 +233,23 @@ fn dense_and_sparse_queries_return_the_same_snapshot() {
 }
 
 #[test]
+fn dense_and_sparse_indexes_match_every_individual_value_query() {
+    let (definition, _, _) = ordinary_use_fixture();
+    let edit = edit_for(&definition);
+    let dense = value_use_site_index_for_definition((&definition).into()).unwrap();
+    let sparse = edit.value_use_site_index().unwrap();
+
+    assert_eq!(dense.callable(), definition.callable());
+    assert_eq!(sparse, dense);
+    for declaration in &definition.values {
+        assert_eq!(
+            dense.get(declaration.id),
+            Some(&value_use_sites_for_definition((&definition).into(), declaration.id).unwrap())
+        );
+    }
+}
+
+#[test]
 fn position_snapshots_must_be_recomputed_after_a_rewrite() {
     let (definition, selected, _) = ordinary_use_fixture();
     let mut edit = edit_for(&definition);

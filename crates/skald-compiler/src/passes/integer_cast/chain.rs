@@ -101,37 +101,61 @@ pub(in crate::passes) enum IntegerCastChainBoundary {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(in crate::passes) struct IntegerCastChain {
     root: ValueId,
-    sites: Vec<IntegerCastSite>,
+    endpoint: IntegerCastSite,
+    entry_index: usize,
+    predecessor: Option<usize>,
+    original_length: usize,
+    reusable_narrowing: Option<IntegerCastSite>,
     transform: IntegerCastTransform,
     recipe: IntegerCastRecipe,
     boundary: Option<IntegerCastChainBoundary>,
 }
 
 impl IntegerCastChain {
-    fn start(site: IntegerCastSite, boundary: Option<IntegerCastChainBoundary>) -> Self {
+    fn start(
+        site: IntegerCastSite,
+        entry_index: usize,
+        boundary: Option<IntegerCastChainBoundary>,
+    ) -> Self {
         let transform = IntegerCastTransform::from_operation(site.operation)
             .expect("a validated integer cast starts an integer transform");
         let recipe = transform.canonical_recipe();
+        let reusable_narrowing = is_information_losing_narrowing(&site).then(|| site.clone());
         Self {
             root: site.operand,
-            sites: vec![site],
+            endpoint: site,
+            entry_index,
+            predecessor: None,
+            original_length: 1,
+            reusable_narrowing,
             transform,
             recipe,
             boundary,
         }
     }
 
-    fn extend(&self, site: IntegerCastSite) -> Option<Self> {
-        if self.root == site.result || self.sites.iter().any(|known| known.result == site.result) {
+    fn extend(
+        &self,
+        site: IntegerCastSite,
+        entry_index: usize,
+        predecessor: usize,
+    ) -> Option<Self> {
+        if self.root == site.result {
             return None;
         }
         let transform = self.transform.then(site.operation)?;
         let recipe = transform.canonical_recipe();
-        let mut sites = self.sites.clone();
-        sites.push(site);
+        let reusable_narrowing = self
+            .reusable_narrowing
+            .clone()
+            .or_else(|| is_information_losing_narrowing(&site).then(|| site.clone()));
         Some(Self {
             root: self.root,
-            sites,
+            endpoint: site,
+            entry_index,
+            predecessor: Some(predecessor),
+            original_length: self.original_length.saturating_add(1),
+            reusable_narrowing,
             transform,
             recipe,
             boundary: self.boundary,
@@ -142,14 +166,8 @@ impl IntegerCastChain {
         self.root
     }
 
-    pub(in crate::passes) fn sites(&self) -> &[IntegerCastSite] {
-        &self.sites
-    }
-
     pub(in crate::passes) fn endpoint(&self) -> &IntegerCastSite {
-        self.sites
-            .last()
-            .expect("an integer cast chain contains its endpoint")
+        &self.endpoint
     }
 
     pub(in crate::passes) const fn recipe(&self) -> IntegerCastRecipe {
@@ -161,7 +179,7 @@ impl IntegerCastChain {
     }
 
     pub(in crate::passes) fn original_length(&self) -> usize {
-        self.sites.len()
+        self.original_length
     }
 
     pub(in crate::passes) const fn canonical_length(&self) -> usize {
@@ -188,11 +206,13 @@ impl IntegerCastChain {
         if !matches!(self.recipe, IntegerCastRecipe::NarrowThenWiden { .. }) {
             return None;
         }
-        self.sites.iter().find(|site| {
-            site.operation.target == crate::mir::MirPrimitiveType::U8
-                && site.operation.source != crate::mir::MirPrimitiveType::U8
-        })
+        self.reusable_narrowing.as_ref()
     }
+}
+
+fn is_information_losing_narrowing(site: &IntegerCastSite) -> bool {
+    site.operation.target == crate::mir::MirPrimitiveType::U8
+        && site.operation.source != crate::mir::MirPrimitiveType::U8
 }
 
 /// Analysis of one ordinary primitive-cast assignment.
@@ -253,7 +273,47 @@ impl IntegerCastChainAnalysis {
             .filter_map(IntegerCastChainEntry::chain)
             .filter(|chain| chain.is_candidate())
     }
+
+    /// Visits one chain's exact supporting sites from endpoint toward root.
+    ///
+    /// The predecessor indices make traversal iterative and allocation-free;
+    /// callers which need source order can reverse their collected projection.
+    pub(in crate::passes) fn sites<'a>(
+        &'a self,
+        chain: &'a IntegerCastChain,
+    ) -> IntegerCastChainSites<'a> {
+        IntegerCastChainSites {
+            analysis: self,
+            next: Some(chain.entry_index),
+            remaining: chain.original_length,
+        }
+    }
 }
+
+pub(in crate::passes) struct IntegerCastChainSites<'a> {
+    analysis: &'a IntegerCastChainAnalysis,
+    next: Option<usize>,
+    remaining: usize,
+}
+
+impl<'a> Iterator for IntegerCastChainSites<'a> {
+    type Item = &'a IntegerCastSite;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index = self.next?;
+        let entry = self.analysis.entries.get(index)?;
+        let chain = entry.chain.as_ref()?;
+        self.next = chain.predecessor;
+        self.remaining = self.remaining.saturating_sub(1);
+        Some(&entry.site)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+impl ExactSizeIterator for IntegerCastChainSites<'_> {}
 
 /// Builds arbitrary-depth same-block chain summaries without cloning or
 /// mutating the definition itself.
@@ -274,6 +334,7 @@ pub(in crate::passes) fn analyze_integer_cast_chains(
 
     let mut analysis = IntegerCastChainAnalysis::default();
     for site in sites.iter().cloned() {
+        let entry_index = analysis.entries.len();
         let invalidities = site_invalidities(definition, &site);
         let is_supported_integer = site.operation.source.is_integer()
             && site.operation.target.is_integer()
@@ -281,9 +342,8 @@ pub(in crate::passes) fn analyze_integer_cast_chains(
         let (chain, boundary) = if !is_supported_integer {
             (None, None)
         } else {
-            analyze_integer_site(&analysis, &sites, &indexed_sites, &site)
+            analyze_integer_site(&analysis, &sites, &indexed_sites, &site, entry_index)
         };
-        let entry_index = analysis.entries.len();
         analysis.by_result.insert(site.result, entry_index);
         analysis.entries.push(IntegerCastChainEntry {
             site,
@@ -300,9 +360,13 @@ fn analyze_integer_site(
     sites: &[IntegerCastSite],
     indexed_sites: &BTreeMap<ValueId, usize>,
     site: &IntegerCastSite,
+    entry_index: usize,
 ) -> (Option<IntegerCastChain>, Option<IntegerCastChainBoundary>) {
     let Some(predecessor_index) = indexed_sites.get(&site.operand).copied() else {
-        return (Some(IntegerCastChain::start(site.clone(), None)), None);
+        return (
+            Some(IntegerCastChain::start(site.clone(), entry_index, None)),
+            None,
+        );
     };
     let Some(predecessor) = analysis.entries.get(predecessor_index) else {
         let boundary = if reaches_result(indexed_sites, sites, site.operand, site.result) {
@@ -316,7 +380,11 @@ fn analyze_integer_site(
     if predecessor.site.block != site.block {
         let boundary = IntegerCastChainBoundary::ControlFlow;
         return (
-            Some(IntegerCastChain::start(site.clone(), Some(boundary))),
+            Some(IntegerCastChain::start(
+                site.clone(),
+                entry_index,
+                Some(boundary),
+            )),
             Some(boundary),
         );
     }
@@ -340,11 +408,15 @@ fn analyze_integer_site(
         }
         let boundary = IntegerCastChainBoundary::UnsupportedCastFamily;
         return (
-            Some(IntegerCastChain::start(site.clone(), Some(boundary))),
+            Some(IntegerCastChain::start(
+                site.clone(),
+                entry_index,
+                Some(boundary),
+            )),
             Some(boundary),
         );
     };
-    match predecessor_chain.extend(site.clone()) {
+    match predecessor_chain.extend(site.clone(), entry_index, predecessor_index) {
         Some(chain) => {
             let boundary = chain.boundary;
             (Some(chain), boundary)

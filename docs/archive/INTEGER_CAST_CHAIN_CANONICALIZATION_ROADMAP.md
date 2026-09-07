@@ -1,6 +1,6 @@
 # Integer Cast-Chain Canonicalization Roadmap
 
-Status: in progress; ICC0 through ICC3 are complete and ICC4 is next.
+Status: complete; ICC0 through ICC4 are implemented and verified.
 
 This roadmap implements the integer-only part of FMV-02. It adds one exact,
 target-independent final-MIR optimization for arbitrary-length cast chains over
@@ -89,7 +89,7 @@ completely without range analysis, floating-point reasoning, or a new MIR.
 - [x] ICC1 — Analyze arbitrary-length same-block chains
 - [x] ICC2 — Implement the selectable guarded rewrite pass
 - [x] ICC3 — Activate and observe canonicalization end to end
-- [ ] ICC4 — Harden the boundary and close the roadmap
+- [x] ICC4 — Harden the boundary and close the roadmap
 
 ## PR-sized implementation sequence
 
@@ -252,18 +252,18 @@ integer slice from deferred primitive families.
 **Purpose:** Audit completeness and maintainability after integration, resolve
 roadmap-local gaps, and publish the implementation as stable current behavior.
 
-- [ ] Add generated semantic differential tests comparing every supported
+- [x] Add generated semantic differential tests comparing every supported
   chain's direct evaluation with its canonical recipe over exhaustive `u8` and
   boundary-rich deterministic `i64`/`u64` values.
-- [ ] Audit chain analysis and rewriting for excessive scans, accidental
+- [x] Audit chain analysis and rewriting for excessive scans, accidental
   quadratic behavior on long chains, recursion depth, nondeterministic maps,
   duplicated cast semantics, large-file ownership, and unclear facades;
   resolve small roadmap-local issues and record unrelated findings separately.
-- [ ] Confirm no task codes or rollout language remain in living code, tests,
+- [x] Confirm no task codes or rollout language remain in living code, tests,
   language/compiler documentation, pass names, metrics, or diagnostics.
-- [ ] Run the full repository gate from an artifact-free snapshot, the
+- [x] Run the full repository gate from an artifact-free snapshot, the
   supported-toolchain gate, full golden determinism, and release goldens.
-- [ ] Mark every completed item, set the roadmap status to complete, move it to
+- [x] Mark every completed item, set the roadmap status to complete, move it to
   `docs/archive/`, update active/archive indexes and incoming links, and leave
   only current behavior in living documentation.
 
