@@ -1,0 +1,65 @@
+import std::io;
+
+fn identity_i64(value: i64) -> i64 {
+    return (i64) (u64) value;
+}
+
+fn identity_u64(value: u64) -> u64 {
+    return (u64) (i64) value;
+}
+
+fn identity_u8(value: u8) -> u8 {
+    return (u8) (i64) value;
+}
+
+fn preserve_i64_to_u64(value: i64) -> u64 {
+    return (u64) (i64) (u64) value;
+}
+
+fn narrow_i64_to_u8(value: i64) -> u8 {
+    return (u8) (i64) (u8) (u64) value;
+}
+
+fn preserve_u64_to_i64(value: u64) -> i64 {
+    return (i64) (u64) (i64) value;
+}
+
+fn narrow_u64_to_u8(value: u64) -> u8 {
+    return (u8) (u64) (i64) value;
+}
+
+fn widen_u8_to_i64(value: u8) -> i64 {
+    return (i64) (u8) (u64) value;
+}
+
+fn widen_u8_to_u64(value: u8) -> u64 {
+    return (u64) (i64) (u64) (i64) value;
+}
+
+fn narrow_then_widen_i64(value: i64) -> u64 {
+    return (u64) (i64) (u8) (u64) value;
+}
+
+fn narrow_then_widen_u64(value: u64) -> i64 {
+    return (i64) (u64) (u8) (i64) value;
+}
+
+fn long_preserving_chain(value: i64) -> u64 {
+    return (u64) (i64) (u64) (i64) (u64) (i64) (u64) value;
+}
+
+fn main() -> i64 {
+    std::io::println_i64(identity_i64(-1));
+    std::io::println_u64(identity_u64(0xffffffffffffffffu));
+    std::io::println_u8(identity_u8(0xa5u8));
+    std::io::println_u64(preserve_i64_to_u64(-2));
+    std::io::println_u8(narrow_i64_to_u8(-2));
+    std::io::println_i64(preserve_u64_to_i64(0xffffffffffffffffu));
+    std::io::println_u8(narrow_u64_to_u8(0x1234u));
+    std::io::println_i64(widen_u8_to_i64(0xfeu8));
+    std::io::println_u64(widen_u8_to_u64(0xfeu8));
+    std::io::println_u64(narrow_then_widen_i64(-2));
+    std::io::println_i64(narrow_then_widen_u64(0xffffffffffffff80u));
+    std::io::println_u64(long_preserving_chain(-7));
+    return 0;
+}

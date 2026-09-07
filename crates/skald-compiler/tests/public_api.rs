@@ -398,57 +398,62 @@ fn intentional_phase_and_dump_paths_compose() {
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 4,
-                pass_name: "checked-integer-constant-folding",
+                pass_name: "integer-cast-chain-canonicalization",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 5,
-                pass_name: "checked-f64-to-integer-constant-folding",
+                pass_name: "checked-integer-constant-folding",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
                 position: 6,
+                pass_name: "checked-f64-to-integer-constant-folding",
+                occurrence: 0,
+            },
+            MirPipelineCheckpointLabel::AfterProofRichPass {
+                position: 7,
                 pass_name: "primitive-constant-folding",
                 occurrence: 2,
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
-                position: 7,
+                position: 8,
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 1,
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
-                position: 8,
+                position: 9,
                 pass_name: "conservative-cfg-cleanup",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterProofRichPass {
-                position: 9,
+                position: 10,
                 pass_name: "dead-pure-definition-elimination",
                 occurrence: 2,
             },
             MirPipelineCheckpointLabel::AfterProofTransitionPass {
-                position: 10,
+                position: 11,
                 pass_name: "constant-short-circuit-folding",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterProofNormalization,
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 11,
+                position: 12,
                 pass_name: "post-proof-unreachable-block-elimination",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 12,
+                position: 13,
                 pass_name: "post-proof-empty-block-forwarding",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 13,
+                position: 14,
                 pass_name: "post-proof-basic-block-merging",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
-                position: 14,
+                position: 15,
                 pass_name: "whole-world-reachability",
                 occurrence: 0,
             },
@@ -660,7 +665,7 @@ fn intentional_reporting_paths_compose() {
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
-    assert_eq!(mir_inspection_labels.len(), 18);
+    assert_eq!(mir_inspection_labels.len(), 19);
     assert_eq!(
         mir_inspection_labels.first(),
         Some(&MirPipelineCheckpointLabel::ProofRichInput)

@@ -289,7 +289,7 @@ adapter.
 
 The `none` MIR schedule performs proof verification, one mandatory
 normalization with normalized verification, and zero pass executions.
-The `default` schedule executes fifteen pass occurrences in the exact optimization
+The `default` schedule executes sixteen pass occurrences in the exact optimization
 order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
@@ -308,7 +308,7 @@ Its
 [completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 records delivery. Registry, request/CLI schedule selection, the verified
 runner, and structured pass reporting are implemented. Ordinary production
-traces contain one pass-finished event for each of the fifteen default schedule
+traces contain one pass-finished event for each of the sixteen default schedule
 occurrences; `none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
@@ -343,8 +343,9 @@ forwarded value uses, removed assignments, removed value declarations,
 eliminated cast steps, protected rejections, and maximum rewritten chain
 depth. Generic occurrence data supplies processed and changed callable counts
 and structural commit totals. An occurrence with no safe shortening reports
-zero changes and performs no output verification; the pass is registered but
-does not yet occur in the `default` profile.
+zero changes and performs no output verification. Its single default occurrence
+appears after the second primitive fold and before checked-protocol folding;
+its counters occupy that same deterministic aggregate-owner position.
 
 Pass timers and the occurrence vector are enabled only after a trace-detail
 query succeeds. Off, phases-only, and details-only observation therefore runs

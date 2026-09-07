@@ -1,0 +1,16 @@
+schema = 2
+
+[[test]]
+name = "integer_cast_chain_equivalence"
+mode = "run"
+source = "integer_cast_chain_canonicalization.ska"
+variants = [
+  "default",
+  "optimization-none",
+  "integer-cast-chain-canonicalization-disabled",
+  "dead-pure-disabled",
+  "all-mir-passes-disabled",
+]
+[[test.run]]
+name = "dynamic_integer_domain"
+expect = { stdout = { inline = "-1\n18446744073709551615\n165\n18446744073709551614\n254\n-1\n52\n254\n254\n254\n128\n18446744073709551609\n" } }

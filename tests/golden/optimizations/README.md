@@ -50,6 +50,15 @@ propagated constants, static startup, and dynamic effects. Its failure matrix
 keeps finite range failures, infinity, and NaN observable across default,
 optimization-free, pass-disabled, CFG-disabled, and fully disabled profiles.
 
+The integer cast-chain fixture uses dynamic parameters to prevent constant
+folding while covering every `u8`/`i64`/`u64` root/result pair, bit-preserving
+round trips, narrowing then widening, repeated narrowing, and a seven-cast
+chain. It compares default execution with `none`, canonicalizer-disabled,
+dead-pure-disabled, and fully disabled profiles. Focused pipeline tests pin the
+MIR distinction: disabling the canonicalizer retains chains, while disabling
+dead-pure cleanup retains only harmless intermediates after endpoint
+canonicalization.
+
 Use `make golden-filter GOLDEN_FILTER='optimizations/**'` for the ordinary
 focused suite. Use `scripts/golden.sh --determinism full --filter
 'optimizations/**'` to repeat both compiler and native processes.

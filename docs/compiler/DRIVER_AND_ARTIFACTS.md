@@ -140,7 +140,7 @@ construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to zero
 selectable passes plus mandatory proof verification, normalization, and final
 verification, while `default` resolves to the exact repeated
-fifteen-occurrence optimization schedule documented below. Disabling all eleven
+sixteen-occurrence optimization schedule documented below. Disabling all twelve
 pass names selected by `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
 unoptimized mode and preserves behavior while still returning normalized
@@ -229,16 +229,17 @@ default profile. The local passes appear through the same
 name diagnostics, and pass-attributed errors. Numeric pass identities remain
 private.
 
-`integer-cast-chain-canonicalization` is also registered and independently
-selectable by exact compiler-internal schedules. It is intentionally absent
-from `default` until activation work is complete, so disabling it from either
-public profile is currently a valid no-op. The pass shortens same-block
+`integer-cast-chain-canonicalization` is registered, independently
+selectable, and occurs once in `default`. Disabling it retains eligible
+same-block integer chains while leaving every other default occurrence active.
+The pass shortens same-block
 integer-only cast chains over `u8`, `i64`, and `u64`; broader primitive casts
 remain outside its selection boundary.
 
 The `default` profile contains dead-pure elimination, constant folding,
-algebraic simplification, repeated constant folding, checked-integer folding,
-checked floating-to-integer folding, another primitive fold, repeated
+algebraic simplification, repeated constant folding, integer cast-chain
+canonicalization, checked-integer folding, checked floating-to-integer
+folding, another primitive fold, repeated
 dead-pure cleanup, conservative CFG cleanup, the proof-transition
 short-circuit fold, and the final CFG/reachability suffix in the exact order
 specified by the compiler phase contract.

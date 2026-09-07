@@ -215,14 +215,22 @@ Focused evaluator, solver, folding, dump, and reporting tests additionally pin
 malformed barriers, deep propagation, worklist-order independence, exact MIR
 rewrites, and deterministic generic operation-family measurements.
 
-Integer cast-chain canonicalization currently has focused exact-schedule unit
-coverage rather than a default-profile golden variant. Tests cover direct and
+Integer cast-chain canonicalization has focused exact-schedule and
+default-profile source-to-native coverage. Unit tests cover direct and
 two-cast recipes, reuse of an existing `u8` narrowing, identity forwarding,
 overlapping endpoints, retained shared intermediates, I/O forwarding barriers,
 snapshot and type staleness, absence of inserted MIR, exact metrics, immediate
 proof-rich verification, unchanged seal reuse, pass repetition, and dump
-determinism. Default-profile and source-to-native golden activation remain the
-next roadmap stage.
+determinism. The dynamic source fixture covers every `u8`/`i64`/`u64`
+root/result pair, preserved-bit round trips, narrowing and widening, repeated
+narrowing, and a seven-cast chain. Its golden matrix compares `default`,
+`none`, canonicalizer-disabled, dead-pure-disabled, and all-pass-disabled
+native observations. A source-lowering pipeline test pins the corresponding
+MIR shapes, exact occurrence metrics, pass position, retained chains when the
+canonicalizer is disabled, and retained harmless intermediates when only
+dead-pure cleanup is disabled. Constructed-MIR tests retain the interleaved-
+instruction and shared-intermediate cases that source locals lower through
+storage rather than as direct transient chains.
 
 ### Checked floating-to-integer protocol simplification coverage
 

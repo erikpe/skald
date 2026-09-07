@@ -94,3 +94,27 @@ for structural determinism or correctness assertions. The tool records native
 run inputs for reproducibility but does not execute programs during this
 structural census, so native timing and executable size remain absent unless a
 later explicitly requested measurement produces them.
+
+## Integer cast-chain activation observation
+
+ICC3 reran the frozen corpus immediately before and after adding the single
+default `integer-cast-chain-canonicalization` occurrence. Both runs used
+compiler revision `d3d6630e35df6fcde431d32f8c8b75a00ab68b93`; the before tree
+was clean with 15 selected occurrences, while the after tree contained the
+reviewed activation changes and 16 selected occurrences. The structural and
+cast-census observations were identical:
+
+| Checkpoint | Instructions | Values | Interesting/proven/blocked casts | Eliminated-step bound | Maximum chain depth |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| input, before and after | 119147 | 46813 | 6 / 5 / 1 | 5 | 2 |
+| pre-reachability, before and after | 118563 | 46363 | 0 / 0 / 0 | 0 | 0 |
+| final, before and after | 20204 | 6818 | 0 / 0 / 0 | 0 | 0 |
+
+The new default occurrence is therefore a no-op on corpus version one: the
+preceding simplification occurrences already remove its initial
+constant-shaped candidates. This preserves the archived study's conclusion
+and is not evidence for broader primitive-chain work. The dedicated dynamic
+source fixture supplies the activation evidence that this corpus cannot: its
+default occurrence rewrites arbitrary integer chains, its pass-disabled form
+retains a candidate, and its dead-pure-disabled form retains an orphan without
+undoing endpoint canonicalization.

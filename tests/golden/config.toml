@@ -34,6 +34,9 @@ compiler_args = ["--disable-mir-pass", "post-proof-unreachable-block-elimination
 [variant.dead-pure-disabled]
 compiler_args = ["--disable-mir-pass", "dead-pure-definition-elimination"]
 
+[variant.integer-cast-chain-canonicalization-disabled]
+compiler_args = ["--disable-mir-pass", "integer-cast-chain-canonicalization"]
+
 [variant.constant-folding-disabled]
 compiler_args = ["--disable-mir-pass", "primitive-constant-folding"]
 
@@ -59,6 +62,7 @@ compiler_args = [
   "--disable-mir-pass", "conservative-cfg-cleanup",
   "--disable-mir-pass", "constant-short-circuit-folding",
   "--disable-mir-pass", "dead-pure-definition-elimination",
+  "--disable-mir-pass", "integer-cast-chain-canonicalization",
   "--disable-mir-pass", "post-proof-basic-block-merging",
   "--disable-mir-pass", "post-proof-empty-block-forwarding",
   "--disable-mir-pass", "post-proof-unreachable-block-elimination",

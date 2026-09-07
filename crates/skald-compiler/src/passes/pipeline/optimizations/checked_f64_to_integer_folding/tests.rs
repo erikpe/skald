@@ -381,7 +381,7 @@ fn default_and_disabled_profiles_preserve_selection_and_cleanup_contracts() {
         .iter()
         .find(|record| record.identity() == IDENTITY)
         .unwrap();
-    assert_eq!(record.position(), 5);
+    assert_eq!(record.position(), 6);
     assert_eq!(record.outcome(), MirPassOccurrenceOutcome::Changed);
     assert_eq!(
         record.measurements()[3],

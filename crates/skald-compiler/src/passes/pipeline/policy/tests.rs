@@ -144,66 +144,72 @@ fn production_profiles_select_the_supported_default_order() {
             ),
             (
                 4,
+                integer_cast_chain_canonicalization::IDENTITY,
+                "integer-cast-chain-canonicalization",
+                0,
+            ),
+            (
+                5,
                 checked_integer_folding::IDENTITY,
                 "checked-integer-constant-folding",
                 0,
             ),
             (
-                5,
+                6,
                 checked_f64_to_integer_folding::IDENTITY,
                 "checked-f64-to-integer-constant-folding",
                 0,
             ),
             (
-                6,
+                7,
                 primitive_constant_folding::IDENTITY,
                 "primitive-constant-folding",
                 2,
             ),
             (
-                7,
+                8,
                 dead_pure_definition_elimination::IDENTITY,
                 "dead-pure-definition-elimination",
                 1,
             ),
             (
-                8,
+                9,
                 conservative_cfg_cleanup::IDENTITY,
                 "conservative-cfg-cleanup",
                 0,
             ),
             (
-                9,
+                10,
                 dead_pure_definition_elimination::IDENTITY,
                 "dead-pure-definition-elimination",
                 2,
             ),
             (
-                10,
+                11,
                 constant_short_circuit_folding::IDENTITY,
                 "constant-short-circuit-folding",
                 0,
             ),
             (
-                11,
+                12,
                 post_proof_unreachable_block_elimination::IDENTITY,
                 "post-proof-unreachable-block-elimination",
                 0,
             ),
             (
-                12,
+                13,
                 post_proof_empty_block_forwarding::IDENTITY,
                 "post-proof-empty-block-forwarding",
                 0,
             ),
             (
-                13,
+                14,
                 post_proof_basic_block_merging::IDENTITY,
                 "post-proof-basic-block-merging",
                 0,
             ),
             (
-                14,
+                15,
                 whole_world_reachability::IDENTITY,
                 "whole-world-reachability",
                 0,
@@ -216,7 +222,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["whole-world-reachability"],
     )
     .unwrap();
-    assert_eq!(reachability_disabled.len(), 14);
+    assert_eq!(reachability_disabled.len(), 15);
     assert!(reachability_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != whole_world_reachability::IDENTITY));
@@ -229,6 +235,7 @@ fn production_profiles_select_the_supported_default_order() {
             "conservative-cfg-cleanup",
             "constant-short-circuit-folding",
             "dead-pure-definition-elimination",
+            "integer-cast-chain-canonicalization",
             "post-proof-basic-block-merging",
             "post-proof-empty-block-forwarding",
             "post-proof-unreachable-block-elimination",
@@ -245,7 +252,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["checked-integer-constant-folding"],
     )
     .unwrap();
-    assert_eq!(checked_integer_disabled.len(), 14);
+    assert_eq!(checked_integer_disabled.len(), 15);
     assert!(checked_integer_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != checked_integer_folding::IDENTITY));
@@ -309,6 +316,7 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
             .collect::<Vec<_>>(),
         [
             "primitive-algebraic-simplification",
+            "integer-cast-chain-canonicalization",
             "checked-integer-constant-folding",
             "checked-f64-to-integer-constant-folding",
             "conservative-cfg-cleanup",
@@ -357,7 +365,7 @@ fn production_final_suffix_is_frozen_and_independently_selectable() {
             .iter()
             .enumerate()
             .map(|(offset, (identity, name))| {
-                (11 + offset, *identity, *name, MirPassStage::Final)
+                (12 + offset, *identity, *name, MirPassStage::Final)
             })
             .collect::<Vec<_>>()
     );
@@ -439,10 +447,10 @@ fn production_final_suffix_is_frozen_and_independently_selectable() {
     )
     .unwrap();
     assert_eq!(all_final_disabled.final_stage().count(), 0);
-    assert_eq!(all_final_disabled.normalization_position(), 10);
+    assert_eq!(all_final_disabled.normalization_position(), 11);
     assert_eq!(
         all_final_disabled.proof_transition().unwrap().position(),
-        10
+        11
     );
     assert_eq!(
         all_final_disabled

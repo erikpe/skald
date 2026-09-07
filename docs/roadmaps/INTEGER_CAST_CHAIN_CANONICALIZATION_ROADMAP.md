@@ -1,6 +1,6 @@
 # Integer Cast-Chain Canonicalization Roadmap
 
-Status: in progress; ICC0 through ICC2 are complete and ICC3 is next.
+Status: in progress; ICC0 through ICC3 are complete and ICC4 is next.
 
 This roadmap implements the integer-only part of FMV-02. It adds one exact,
 target-independent final-MIR optimization for arbitrary-length cast chains over
@@ -88,7 +88,7 @@ completely without range analysis, floating-point reasoning, or a new MIR.
 - [x] ICC0 — Establish the complete integer-cast algebra
 - [x] ICC1 — Analyze arbitrary-length same-block chains
 - [x] ICC2 — Implement the selectable guarded rewrite pass
-- [ ] ICC3 — Activate and observe canonicalization end to end
+- [x] ICC3 — Activate and observe canonicalization end to end
 - [ ] ICC4 — Harden the boundary and close the roadmap
 
 ## PR-sized implementation sequence
@@ -211,27 +211,28 @@ changed occurrence.
 after its local contract is proven, then demonstrate source-to-native parity
 and useful dynamic coverage.
 
-- [ ] Insert one default-profile occurrence after the algebraic simplification
+- [x] Insert one default-profile occurrence after the algebraic simplification
   and its following primitive constant fold, and before checked-protocol
   folding and the later dead-pure cleanup which removes orphaned cast
   definitions.
-- [ ] Update registry, default/all-disabled schedules, pass discovery,
+- [x] Update registry, default/all-disabled schedules, pass discovery,
   exclusions, known-name diagnostics, checkpoint numbering, schedule
   fingerprints, and aggregate measurement ordering.
-- [ ] Add dynamic source fixtures whose parameters prevent constant folding and
+- [x] Add dynamic source fixtures whose parameters prevent constant folding and
   cover every root/result type pair, preserved-bit round trips, narrowing then
-  widening, repeated narrowing, long chains, interleaved instructions, and
-  shared intermediates.
-- [ ] Add focused optimization golden variants for `default`, `none`, this pass
+  widening, repeated narrowing, and long chains, with companion constructed-MIR
+  coverage for interleaved instructions and shared intermediates which source
+  locals lower through storage.
+- [x] Add focused optimization golden variants for `default`, `none`, this pass
   disabled, dead-pure cleanup disabled, and all passes disabled; pin native
   stdout/stderr/status/runtime-trace equivalence and relevant MIR/report shape.
-- [ ] Demonstrate that disabling only this pass retains the original chains,
+- [x] Demonstrate that disabling only this pass retains the original chains,
   while disabling dead-pure cleanup retains harmless orphaned intermediates
   without undoing endpoint canonicalization.
-- [ ] Update compiler phase, driver/selection, reporting, testing, debugging if
+- [x] Update compiler phase, driver/selection, reporting, testing, debugging if
   useful, pass-list, and optimization-catalog documentation with the current
   behavior and the remaining non-integer FMV-02 boundary.
-- [ ] Rerun the reviewed redundancy corpus and record current before/after
+- [x] Rerun the reviewed redundancy corpus and record current before/after
   evidence without rewriting the historical archived study.
 
 **Tests:** Registry and policy tests; exact default schedule and all exclusion

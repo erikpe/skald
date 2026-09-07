@@ -124,7 +124,7 @@ fn disabling_the_complete_final_suffix_retains_the_proof_prefix_and_boundary() {
     );
 
     assert!(measured.result.is_ok());
-    assert_eq!(measured.statistics.pass_executions(), 11);
+    assert_eq!(measured.statistics.pass_executions(), 12);
     assert_eq!(measured.statistics.normalization_executions(), 1);
     assert!(measured
         .occurrences()

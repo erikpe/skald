@@ -1018,7 +1018,7 @@ fn default_schedule_folds_solver_exposed_and_cleans_checked_protocols() {
         .iter()
         .find(|record| record.identity() == IDENTITY)
         .unwrap();
-    assert_eq!(checked_record.position(), 4);
+    assert_eq!(checked_record.position(), 5);
     assert_eq!(checked_record.outcome(), MirPassOccurrenceOutcome::Changed);
     assert_eq!(
         checked_record.measurements()[0],

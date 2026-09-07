@@ -223,14 +223,14 @@ fn default_registration_is_selectable_between_forwarding_and_reachability() {
         .iter()
         .find(|occurrence| occurrence.identity() == IDENTITY)
         .unwrap();
-    assert_eq!(occurrence.position(), 13);
+    assert_eq!(occurrence.position(), 14);
     assert_eq!(occurrence.stage(), MirPassStage::Final);
     assert_eq!(
-        default.as_slice()[12].identity(),
+        default.as_slice()[13].identity(),
         post_proof_empty_block_forwarding::IDENTITY
     );
     assert_eq!(
-        default.as_slice()[14].identity(),
+        default.as_slice()[15].identity(),
         whole_world_reachability::IDENTITY
     );
 

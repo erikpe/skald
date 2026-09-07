@@ -773,7 +773,7 @@ occurrence records at trace level. The `none` schedule
 runs zero selectable passes, one complete proof verification, mandatory
 normalization, and one normalized verification. Its proof-rich checkpoints
 remain byte-for-byte stable, while its returned product satisfies the
-normalized invariant. The default schedule runs fifteen pass occurrences in the
+normalized invariant. The default schedule runs sixteen pass occurrences in the
 exact repeated order documented below.
 
 This boundary adds no SSA form, persistent instruction identity, public
@@ -805,6 +805,7 @@ mismatched implementation identity or stage before schedule selection. The produ
 registry contains `checked-f64-to-integer-constant-folding`,
 `checked-integer-constant-folding`, `constant-short-circuit-folding`,
 `dead-pure-definition-elimination`,
+`integer-cast-chain-canonicalization`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
 `conservative-cfg-cleanup`, `post-proof-unreachable-block-elimination`,
 `post-proof-empty-block-forwarding`, `post-proof-basic-block-merging`, and
@@ -813,7 +814,7 @@ descriptors, including stage, are exposed in stable-name order for the public re
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
-fifteen-occurrence optimization schedule documented below. Disabling all
+sixteen-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
 same schedule as `none`.
 
@@ -1051,6 +1052,7 @@ dead-pure-definition-elimination
 primitive-constant-folding
 primitive-algebraic-simplification
 primitive-constant-folding
+integer-cast-chain-canonicalization
 checked-integer-constant-folding
 checked-f64-to-integer-constant-folding
 primitive-constant-folding
@@ -3790,9 +3792,10 @@ pass, compiler option, report event, or backend input.
 ### Selectable integer cast-chain canonicalization
 
 The proof-rich `integer-cast-chain-canonicalization` pass is registered for
-independent exact-schedule use but is not yet part of the `default` profile.
-It consumes the same immutable integer-chain analysis as the redundancy
-census. Every selected callable captures and revalidates its complete source
+independent selection and runs once in the `default` profile, after algebraic
+simplification and its following primitive fold and before checked-protocol
+folding. It consumes the same immutable integer-chain analysis as the
+redundancy census. Every selected callable captures and revalidates its complete source
 snapshot, endpoint instruction, value types, definition order, reusable `u8`
 narrowing, and forwarding-use classification before the first edit.
 
@@ -3812,6 +3815,14 @@ input seal; every changed occurrence commits atomically and is immediately
 proof-rich verified. Cross-block provenance, unsupported primitive families,
 checked protocols, proof metadata, ownership/lifecycle roles, I/O, and unknown
 uses remain conservative barriers.
+
+Disabling the canonicalizer retains eligible dynamic chains. Disabling only
+dead-pure cleanup still canonicalizes their endpoints but may retain harmless
+orphaned intermediate casts; cleanup does not own or reverse the endpoint
+rewrite. The source-to-native optimization matrix covers all nine integer
+root/result type pairs, preserved-bit and narrowing/widening recipes, repeated
+narrowing, and a seven-cast chain. Non-integer cast families remain outside
+this pass.
 
 ### Read-only local primitive common-subexpression census
 
