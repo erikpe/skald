@@ -201,7 +201,7 @@ precision, but do not themselves prove two aliases distinct or a load stable.
 | FMM-10 | Copy-to-move or copy-elision transformation | After exact source-death and ownership analysis; before cleanup simplification | Foundation needed / **Large** | High runtime for class/shared values | User copy operations may be observable, moved-from state is not a general language concept, and destructor/copy failure behavior must remain identical |
 | FMM-11 | Stack allocation or complete elimination of non-escaping shared allocations | After escape and ownership analysis | Contract decision / **Extra large** | Potentially very high runtime | Removing heap allocation also removes language-observable allocation failure and may change object identity, destruction, runtime traces, and ABI expectations |
 | FMM-12 | Runtime alias-versioned call-site specialization | After points-to/effect facts and cloning infrastructure; before inlining | Research / **Extra large** | High runtime where actual aliases are usually distinct | Requires a sound overlap check, two equivalent paths, code-size policy, cleanup duplication, and exact handling of projected/array ranges |
-| FMM-13 | [Dead normalized condition-carrier storage cleanup](../archive/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md#reclassified-path-activations-lose-their-scalar-spill-origin) | After post-proof block/value elimination; before backend frame planning | **Follow-up; unimplemented / Medium to large** — its provenance foundation is implemented through the [frozen design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md) and [completed roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md), but no carrier deletion pass exists | Medium MIR/frame-size and compile-time value | The final-only activation kind supplies stable provenance, but safe deletion still needs exact load/store/lifetime and attachment analysis |
+| FMM-13 | [Dead normalized condition-carrier storage cleanup](../archive/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md#reclassified-path-activations-lose-their-scalar-spill-origin) | After post-proof block/value elimination; before empty-block forwarding, merging, and backend frame planning | **Planned / Medium to large** — the [implementation roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md) owns exact analysis, narrow final storage-deletion authority, an independently selectable pass, activation, and evidence; its provenance foundation is complete | Likely small runtime and small-to-medium MIR/frame-size value; medium architectural value as the first final-stage storage deletion | Target only complete dead `NormalizedPathActivation` protocols; preserve store-source evaluation and reject material loads, attachments, aliases, projections, authorization, calls, ownership, I/O, malformed shapes, and stale plans |
 
 ## Whole-world execution and call graph
 
@@ -312,9 +312,10 @@ default-profile occurrence now exist. This is an
 architectural completeness decision and does not supply new performance
 evidence for broader primitive chains or FMV-03.
 
-1. Treat the implemented normalization-stable path-activation provenance as a
-   prerequisite for any final-stage storage mutation; FMM-13 itself remains
-   unimplemented and independently selectable future work.
+1. Implement the planned
+   [dead normalized path-activation cleanup](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
+   through a narrow final-stage storage-deletion capability; do not generalize
+   that authority into unrestricted storage mutation.
 2. Build conservative callable effect summaries before attempting memory,
    ownership, pure-call, or aggressive inlining transformations.
 3. Improve reachable-type/target precision, then devirtualize before designing

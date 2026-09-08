@@ -6,7 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## Implementation roadmaps
 
-There are no active implementation roadmaps.
+The planned
+[dead normalized path-activation cleanup roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
+implements FMM-13 as a narrow final-MIR cleanup for complete, semantically dead
+`NormalizedPathActivation` protocols. NAC0 is next: establish the shared exact
+analysis and record the current corpus opportunity baseline. The completed
+proof-normalization, normalization-stable activation provenance, dense MIR
+rewriting, selectable pipeline, post-proof CFG, and redundancy-measurement work
+supply its material dependencies.
 
 ## Pending discoveries
 
@@ -75,8 +82,8 @@ and target/observation parity. Its
 [resolved companion record](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md),
 and the resolved original
 [proof-normalization discovery](../archive/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
-are preserved in the archive. FMM-13 remains explicitly unimplemented in the
-living optimization candidate catalog.
+are preserved in the archive. The planned dead normalized path-activation
+cleanup roadmap now owns FMM-13.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -90,8 +97,9 @@ and [delivery record](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE
 are preserved in the archive. Their dedicated final-only activation storage
 kind, normalizer-exclusive construction, explicit proof/final phase legality,
 and exact normalized definite-initialization authority are authoritative in
-the living compiler documentation. Dead condition-carrier deletion remains a
-separate optimization candidate.
+the living compiler documentation. The
+[planned cleanup roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
+owns dead condition-carrier deletion separately from mandatory normalization.
 
 The completed convergent local constant propagation
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),
