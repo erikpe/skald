@@ -289,7 +289,7 @@ adapter.
 
 The `none` MIR schedule performs proof verification, one mandatory
 normalization with normalized verification, and zero pass executions.
-The `default` schedule executes sixteen pass occurrences in the exact optimization
+The `default` schedule executes seventeen pass occurrences in the exact optimization
 order documented by the compiler phase contract; an
 unchanged result retains the input seal, while a changed result performs one
 additional immediate verification. The runner owns verified execution, atomic
@@ -308,7 +308,7 @@ Its
 [completed implementation roadmap](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 records delivery. Registry, request/CLI schedule selection, the verified
 runner, and structured pass reporting are implemented. Ordinary production
-traces contain one pass-finished event for each of the sixteen default schedule
+traces contain one pass-finished event for each of the seventeen default schedule
 occurrences; `none` contains none.
 
 Every attempted selected occurrence produces one pipeline-owned record in
@@ -440,16 +440,18 @@ phases-only, or details-only timing-allocation boundaries.
 
 ### Dead normalized path-activation cleanup observation
 
-The registered, opt-in `dead-normalized-path-activation-cleanup` final pass
+The registered `dead-normalized-path-activation-cleanup` final pass
 reports inspected, removable, and protected normalized activation carriers;
 removed storage declarations, loads, stores, lifetime markers, and value
 declarations; and maximum removable protocol size in that stable order.
 Generic structural totals remain owned by the atomic commit. An unchanged
 occurrence reports every processed executable callable and reuses its verified
 seal; a changed transaction reports changed callables and performs one
-immediate normalized verification. The pass is available to exact internal
-schedules and pass discovery but does not yet add an occurrence or metrics to
-the default profile.
+immediate normalized verification. Its one default occurrence follows
+post-proof unreachable-block elimination and precedes empty-block forwarding,
+so its nine pass-owned metrics appear between those final-pass owners in
+details and trace reporting. Excluding its stable name removes that occurrence
+without removing mandatory normalization or later CFG metrics.
 
 ### Checked floating-to-integer protocol simplification observation
 
@@ -540,11 +542,12 @@ final-stage occurrence, backend phase, and final checkpoint. The
 final-stage pass with processed/changed callable counts and deterministic
 removed-block, removed-value-declaration, and permanent-root-retention
 measurements. It runs immediately after mandatory normalization in the
-default profile.
+default profile. The dead normalized path-activation cleanup occurrence runs
+next and owns the protocol-removal metrics documented above.
 
 ### Post-proof CFG canonicalization observation
 
-The following selectable `post-proof-empty-block-forwarding` occurrence
+The subsequent selectable `post-proof-empty-block-forwarding` occurrence
 reports removed forwarding blocks, redirected successor occurrences, retained
 cyclic forwarding blocks, and retained permanent-attachment barriers.
 Productive changes are normalized-reverified and receive fresh seal-bound

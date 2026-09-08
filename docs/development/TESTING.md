@@ -167,13 +167,15 @@ shutdown, ownership, destruction, panic, and runtime traces. Full golden
 determinism repeats every variant in independent compiler and native
 processes.
 
-Post-proof CFG composition tests freeze unreachable deletion, empty-block
-forwarding, basic-block merging, and whole-world reachability as the ordered
-final suffix. They run every final pass alone, cover individual, paired,
-duplicate, and complete exclusions, and use an unreachable empty predecessor
-to prove that forwarding exposes a merge from freshly rebuilt facts. Repeating
-the forwarding/merging pair must be unchanged without another verification,
-and the whole-world occurrence must consume the canonicalized call graph last.
+Post-proof composition tests freeze unreachable deletion, dead normalized
+path-activation cleanup, empty-block forwarding, basic-block merging, and
+whole-world reachability as the ordered final suffix. They run every final
+pass alone, cover individual, paired, duplicate, and complete exclusions, and
+use constructed normalized MIR to prove both adjacent compositions:
+unreachable deletion exposes a dead carrier, then carrier deletion exposes an
+empty block consumed by forwarding and merging. Repeating the
+forwarding/merging pair must be unchanged without another verification, and
+the whole-world occurrence must consume the canonicalized call graph last.
 
 ### Checked-integer constant protocol simplification coverage
 
@@ -242,8 +244,10 @@ and place-shape matrix, exact owned protocol snapshots, declaration-only and
 multi-candidate ordering, dead and material load results, wrong source/type/
 kind declarations, projected places, malformed identities, snapshot
 recomputation, and saturating bounds. Measurement tests separately pin schema,
-aggregation, human/JSON rendering, and real-driver checkpoint projection. No
-default-profile MIR behavior changes while the cleanup pass remains opt-in.
+aggregation, human/JSON rendering, and real-driver checkpoint projection. The
+default-profile occurrence is pinned after unreachable deletion and before
+empty-block forwarding; exclusion tests retain the removable protocol without
+disabling normalization or later final passes.
 
 ### Checked floating-to-integer protocol simplification coverage
 
@@ -466,8 +470,8 @@ multiple blocks, alongside a materially used activation. They pin producer and
 span preservation, byte-for-byte retention of the protected protocol, dense
 entity counts, stable per-role metrics, changed-result verification, no-op seal
 reuse, repeated-occurrence idempotence, deterministic MIR dumps, registration,
-and exclusion from the default schedule. The pass deliberately reuses the
-analysis matrix above instead of maintaining a second blocker classifier.
+default placement, and independent exclusion. The pass deliberately reuses
+the analysis matrix above instead of maintaining a second blocker classifier.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without

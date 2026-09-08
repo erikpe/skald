@@ -1,10 +1,5 @@
 use crate::{
-    mir::{
-        dump_mir,
-        test_fixtures::{assign, storage_dead, storage_live, store, value},
-        MirInstruction, MirPlace, MirRvalueKind, MirStorage, MirStorageKind, MirType, StorageId,
-        ValueId,
-    },
+    mir::{dump_mir, MirInstruction, MirPlace, MirRvalueKind, MirStorageKind, StorageId},
     passes::{
         reachability::analyze_reachability, resolve_exact_mir_pass_schedule,
         run_mir_pipeline_with_occurrences, MirPassMeasurement, MirPassOccurrenceOutcome,
@@ -14,7 +9,10 @@ use crate::{
 
 use super::*;
 use crate::passes::pipeline::{
-    execution::SINGLE_DEAD_ACTIVATION_SOURCE,
+    execution::{
+        append_complete_dead_activation, append_declaration_only_dead_activation,
+        SINGLE_DEAD_ACTIVATION_SOURCE,
+    },
     normalization::{MirProofNormalizationStatistics, MirProofTransitionPlan},
     run_mir_pipeline_with_transition_and_occurrences_for_test,
     seal::{
@@ -37,64 +35,12 @@ fn transition_with_mixed_candidates(
         .definitions
         .get_mut_for_test(program.entry_function)
         .unwrap();
-    append_complete_candidate(definition, 0, false);
-    append_complete_candidate(definition, 1, true);
-    append_declaration_only_candidate(definition);
+    append_complete_dead_activation(definition, 0, false);
+    append_complete_dead_activation(definition, 1, true);
+    append_declaration_only_dead_activation(definition);
     let verified = reseal_final_mir(UnverifiedFinalMirProgram::from_parts(program, authority))
         .map_err(MirProofTransitionError::FinalVerification)?;
     Ok((verified, statistics))
-}
-
-fn append_complete_candidate(
-    definition: &mut crate::mir::MirFunctionDefinition,
-    block_index: usize,
-    source_value: bool,
-) {
-    let storage = StorageId::new(definition.callable(), definition.storage.len());
-    let source = ValueId::new(definition.callable(), definition.values.len());
-    let result = ValueId::new(definition.callable(), definition.values.len() + 1);
-    let span = definition.body.blocks[block_index].span;
-    definition.storage.push(MirStorage {
-        id: storage,
-        source: None,
-        name: format!("dead activation in block {block_index}"),
-        kind: MirStorageKind::NormalizedPathActivation,
-        ty: MirType::Bool,
-        span,
-    });
-    definition.values.extend([
-        value(source, MirType::Bool, span),
-        value(result, MirType::Bool, span),
-    ]);
-    definition.body.blocks[block_index].instructions.extend([
-        assign(
-            source,
-            MirRvalueKind::ConstantBool(source_value),
-            MirType::Bool,
-            span,
-        ),
-        storage_live(storage, span),
-        store(MirPlace::base(storage), source, span),
-        assign(
-            result,
-            MirRvalueKind::Load(MirPlace::base(storage)),
-            MirType::Bool,
-            span,
-        ),
-        storage_dead(storage, span),
-    ]);
-}
-
-fn append_declaration_only_candidate(definition: &mut crate::mir::MirFunctionDefinition) {
-    let id = StorageId::new(definition.callable(), definition.storage.len());
-    definition.storage.push(MirStorage {
-        id,
-        source: None,
-        name: "declaration-only dead activation".to_owned(),
-        kind: MirStorageKind::NormalizedPathActivation,
-        ty: MirType::Bool,
-        span: definition.span,
-    });
 }
 
 fn run_mixed(identities: &[crate::passes::MirPassIdentity]) -> crate::passes::MeasuredMirPipeline {
@@ -286,7 +232,7 @@ fn no_candidate_returns_the_existing_verified_program_unchanged() {
 }
 
 #[test]
-fn registration_is_exactly_selectable_but_absent_from_default() {
+fn registration_is_exactly_selectable_and_has_the_frozen_default_position() {
     let exact = exact_schedule(&[IDENTITY]);
     assert_eq!(exact.normalization_position(), 0);
     assert_eq!(exact.len(), 1);
@@ -299,7 +245,28 @@ fn registration_is_exactly_selectable_but_absent_from_default() {
         std::iter::empty(),
     )
     .unwrap();
-    assert!(default
+    let occurrence = default
+        .iter()
+        .find(|occurrence| occurrence.identity() == IDENTITY)
+        .unwrap();
+    assert_eq!(occurrence.position(), 13);
+    assert_eq!(occurrence.stage(), MirPassStage::Final);
+    assert_eq!(
+        default.as_slice()[12].identity(),
+        super::super::post_proof_unreachable_block_elimination::IDENTITY
+    );
+    assert_eq!(
+        default.as_slice()[14].identity(),
+        super::super::post_proof_empty_block_forwarding::IDENTITY
+    );
+
+    let excluded = crate::passes::resolve_mir_pass_schedule(
+        crate::passes::MirOptimizationProfile::Default,
+        [NAME],
+    )
+    .unwrap();
+    assert_eq!(excluded.len(), default.len() - 1);
+    assert!(excluded
         .iter()
         .all(|occurrence| occurrence.identity() != IDENTITY));
 }

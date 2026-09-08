@@ -56,7 +56,7 @@ const REQUEST_SUCCESS_PHASES: [ReportPhase; 11] = [
     ReportPhase::BackendEmission,
 ];
 
-fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 19] {
+fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 20] {
     [
         MirPipelineCheckpointLabel::ProofRichInput,
         MirPipelineCheckpointLabel::AfterProofRichPass {
@@ -127,16 +127,21 @@ fn default_mir_checkpoint_labels() -> [MirPipelineCheckpointLabel; 19] {
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
             position: 13,
-            pass_name: "post-proof-empty-block-forwarding",
+            pass_name: "dead-normalized-path-activation-cleanup",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
             position: 14,
-            pass_name: "post-proof-basic-block-merging",
+            pass_name: "post-proof-empty-block-forwarding",
             occurrence: 0,
         },
         MirPipelineCheckpointLabel::AfterFinalPass {
             position: 15,
+            pass_name: "post-proof-basic-block-merging",
+            occurrence: 0,
+        },
+        MirPipelineCheckpointLabel::AfterFinalPass {
+            position: 16,
             pass_name: "whole-world-reachability",
             occurrence: 0,
         },
@@ -292,11 +297,17 @@ fn request_success_observes_loading_and_the_shared_compiler_pipeline() {
             (
                 13,
                 MirPassStage::Final,
+                "dead-normalized-path-activation-cleanup",
+                0
+            ),
+            (
+                14,
+                MirPassStage::Final,
                 "post-proof-empty-block-forwarding",
                 0
             ),
-            (14, MirPassStage::Final, "post-proof-basic-block-merging", 0),
-            (15, MirPassStage::Final, "whole-world-reachability", 0),
+            (15, MirPassStage::Final, "post-proof-basic-block-merging", 0),
+            (16, MirPassStage::Final, "whole-world-reachability", 0),
         ]
     );
     let descriptors = available_mir_passes();
@@ -468,8 +479,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             ReportMetric::count("activation storage declarations reclassified", 0),
             ReportMetric::count("normalization changed callables", 0),
             ReportMetric::count("proof-protected blocks released", 0),
-            ReportMetric::count("pass executions", 16),
-            ReportMetric::count("processed callables", 16),
+            ReportMetric::count("pass executions", 17),
+            ReportMetric::count("processed callables", 17),
             ReportMetric::count("changed callables", 0),
             ReportMetric::count("retained MIR entities", 0),
             ReportMetric::count("inserted MIR entities", 0),
@@ -611,9 +622,25 @@ fn details_publish_deterministic_phase_owned_metrics() {
             final_cfg("retained permanent unreachable roots"),
         ]
     );
+    let activation_cleanup =
+        |name| ReportMetric::pass_count("dead-normalized-path-activation-cleanup", name, 0);
+    assert_eq!(
+        pipeline[62..71],
+        [
+            activation_cleanup("inspected normalized activation carriers"),
+            activation_cleanup("removable normalized activation carriers"),
+            activation_cleanup("protected normalized activation carriers"),
+            activation_cleanup("removed storage declarations"),
+            activation_cleanup("removed load instructions"),
+            activation_cleanup("removed store instructions"),
+            activation_cleanup("removed lifetime markers"),
+            activation_cleanup("removed value declarations"),
+            activation_cleanup("maximum removable protocol size"),
+        ]
+    );
     let forwarding = |name| ReportMetric::pass_count("post-proof-empty-block-forwarding", name, 0);
     assert_eq!(
-        pipeline[62..66],
+        pipeline[71..75],
         [
             forwarding("removed forwarding blocks"),
             forwarding("redirected successor occurrences"),
@@ -623,7 +650,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     );
     let merging = |name| ReportMetric::pass_count("post-proof-basic-block-merging", name, 0);
     assert_eq!(
-        pipeline[66..71],
+        pipeline[75..80],
         [
             merging("merged block pairs"),
             merging("moved instructions"),
@@ -635,7 +662,7 @@ fn details_publish_deterministic_phase_owned_metrics() {
     let reachability =
         |name, value| ReportMetric::pass_count("whole-world-reachability", name, value);
     assert_eq!(
-        pipeline[71..92],
+        pipeline[80..101],
         [
             reachability("examined definitions", 1),
             reachability("examined function definitions", 1),
@@ -660,8 +687,8 @@ fn details_publish_deterministic_phase_owned_metrics() {
             reachability("function-value targets", 0),
         ]
     );
-    assert_eq!(pipeline[92], ReportMetric::count("definitions", 1));
-    assert_eq!(pipeline[93], ReportMetric::count("blocks", 1));
+    assert_eq!(pipeline[101], ReportMetric::count("definitions", 1));
+    assert_eq!(pipeline[102], ReportMetric::count("blocks", 1));
     assert_eq!(
         phase_metrics(observer.events(), ReportPhase::BackendEmission),
         &[
@@ -748,7 +775,7 @@ fn main() -> i64 {
 
     assert!(artifact.report.diagnostics.is_empty());
     assert_eq!(count_metric(metrics, "normalization executions"), Some(1));
-    assert_eq!(count_metric(metrics, "pass executions"), Some(16));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(17));
     assert_eq!(
         pass_count_metric(
             metrics,
@@ -792,6 +819,30 @@ fn main() -> i64 {
     assert_eq!(
         pass_count_metric(
             metrics,
+            "dead-normalized-path-activation-cleanup",
+            "inspected normalized activation carriers"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "dead-normalized-path-activation-cleanup",
+            "removable normalized activation carriers"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
+            "dead-normalized-path-activation-cleanup",
+            "removed storage declarations"
+        ),
+        1
+    );
+    assert_eq!(
+        pass_count_metric(
+            metrics,
             "post-proof-empty-block-forwarding",
             "removed forwarding blocks"
         ),
@@ -825,7 +876,7 @@ fn main() -> i64 {
         pass_count_metric(metrics, "post-proof-basic-block-merging", "removed blocks"),
         1
     );
-    assert_eq!(count_metric(metrics, "removed MIR entities"), Some(21));
+    assert_eq!(count_metric(metrics, "removed MIR entities"), Some(22));
     assert_eq!(
         pass_count_metric(metrics, "whole-world-reachability", "removed definitions"),
         1
@@ -845,7 +896,7 @@ fn details_attribute_checked_integer_folding_and_followup_cfg_cleanup() {
     let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert_eq!(count_metric(metrics, "pass executions"), Some(16));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(17));
     assert_eq!(
         pass_count_metric(
             metrics,
@@ -878,7 +929,7 @@ fn details_attribute_checked_f64_to_integer_folding_and_followup_cleanup() {
     let metrics = phase_metrics(observer.events(), ReportPhase::MirPipeline);
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert_eq!(count_metric(metrics, "pass executions"), Some(16));
+    assert_eq!(count_metric(metrics, "pass executions"), Some(17));
     assert_eq!(
         pass_count_metric(
             metrics,
@@ -1053,7 +1104,7 @@ fn mir_only_inspection_preserves_artifacts_reports_and_reporting() {
             ReportMetric::count("activation storage declarations reclassified", 1),
             ReportMetric::count("normalization changed callables", 1),
             ReportMetric::count("proof-protected blocks released", 6),
-            ReportMetric::count("pass executions", 16),
+            ReportMetric::count("pass executions", 17),
         ]
     );
     assert_eq!(

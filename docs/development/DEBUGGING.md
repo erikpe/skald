@@ -89,9 +89,13 @@ events, and the compiler has no CLI activation-dump destination.
 
 Use `--mir-optimization none` to inspect the complete normalized reference
 final MIR. Disable `post-proof-unreachable-block-elimination` to retain
-proof-only dead CFG after normalization. Disable
+proof-only dead CFG after normalization; uses in that CFG may conservatively
+keep normalized activation carriers live. Disable
+`dead-normalized-path-activation-cleanup` to retain removable activation
+protocols while still deleting unreachable blocks and running later CFG
+canonicalization. Disable
 `post-proof-empty-block-forwarding` to preserve empty goto chains while still
-running unreachable-block elimination. Disable
+running unreachable-block elimination and activation cleanup. Disable
 `post-proof-basic-block-merging` to retain linear goto boundaries after
 forwarding, or disable
 `whole-world-reachability` to keep the post-proof CFG passes while retaining

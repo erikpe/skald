@@ -13,9 +13,7 @@ use crate::{
 };
 
 use super::*;
-use crate::passes::pipeline::optimizations::{
-    post_proof_basic_block_merging, post_proof_unreachable_block_elimination,
-};
+use crate::passes::pipeline::optimizations::post_proof_basic_block_merging;
 use crate::passes::pipeline::run_mir_pipeline_measured_inspected;
 
 #[test]
@@ -210,21 +208,21 @@ fn forwarding_operates_on_entry_unreachable_regions_without_the_unreachable_cana
 }
 
 #[test]
-fn default_registration_is_selectable_between_unreachable_cleanup_and_merging() {
+fn default_registration_is_selectable_between_activation_cleanup_and_merging() {
     let default =
         resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
     let occurrence = default
         .iter()
         .find(|occurrence| occurrence.identity() == IDENTITY)
         .unwrap();
-    assert_eq!(occurrence.position(), 13);
+    assert_eq!(occurrence.position(), 14);
     assert_eq!(occurrence.stage(), MirPassStage::Final);
     assert_eq!(
-        default.as_slice()[12].identity(),
-        post_proof_unreachable_block_elimination::IDENTITY
+        default.as_slice()[13].identity(),
+        super::super::dead_normalized_path_activation_cleanup::IDENTITY
     );
     assert_eq!(
-        default.as_slice()[14].identity(),
+        default.as_slice()[15].identity(),
         post_proof_basic_block_merging::IDENTITY
     );
 

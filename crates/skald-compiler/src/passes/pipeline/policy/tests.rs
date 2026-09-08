@@ -199,18 +199,24 @@ fn production_profiles_select_the_supported_default_order() {
             ),
             (
                 13,
+                dead_normalized_path_activation_cleanup::IDENTITY,
+                "dead-normalized-path-activation-cleanup",
+                0,
+            ),
+            (
+                14,
                 post_proof_empty_block_forwarding::IDENTITY,
                 "post-proof-empty-block-forwarding",
                 0,
             ),
             (
-                14,
+                15,
                 post_proof_basic_block_merging::IDENTITY,
                 "post-proof-basic-block-merging",
                 0,
             ),
             (
-                15,
+                16,
                 whole_world_reachability::IDENTITY,
                 "whole-world-reachability",
                 0,
@@ -223,7 +229,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["whole-world-reachability"],
     )
     .unwrap();
-    assert_eq!(reachability_disabled.len(), 15);
+    assert_eq!(reachability_disabled.len(), 16);
     assert!(reachability_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != whole_world_reachability::IDENTITY));
@@ -235,6 +241,7 @@ fn production_profiles_select_the_supported_default_order() {
             "checked-integer-constant-folding",
             "conservative-cfg-cleanup",
             "constant-short-circuit-folding",
+            "dead-normalized-path-activation-cleanup",
             "dead-pure-definition-elimination",
             "integer-cast-chain-canonicalization",
             "post-proof-basic-block-merging",
@@ -253,7 +260,7 @@ fn production_profiles_select_the_supported_default_order() {
         ["checked-integer-constant-folding"],
     )
     .unwrap();
-    assert_eq!(checked_integer_disabled.len(), 15);
+    assert_eq!(checked_integer_disabled.len(), 16);
     assert!(checked_integer_disabled
         .iter()
         .all(|occurrence| occurrence.identity() != checked_integer_folding::IDENTITY));
@@ -323,6 +330,7 @@ fn production_exclusions_remove_every_repeated_occurrence_and_compose() {
             "conservative-cfg-cleanup",
             "constant-short-circuit-folding",
             "post-proof-unreachable-block-elimination",
+            "dead-normalized-path-activation-cleanup",
             "post-proof-empty-block-forwarding",
             "post-proof-basic-block-merging",
             "whole-world-reachability",
@@ -336,6 +344,10 @@ fn production_final_suffix_is_frozen_and_independently_selectable() {
         (
             post_proof_unreachable_block_elimination::IDENTITY,
             "post-proof-unreachable-block-elimination",
+        ),
+        (
+            dead_normalized_path_activation_cleanup::IDENTITY,
+            "dead-normalized-path-activation-cleanup",
         ),
         (
             post_proof_empty_block_forwarding::IDENTITY,
@@ -408,7 +420,7 @@ fn production_final_suffix_is_frozen_and_independently_selectable() {
                 .map(|occurrence| occurrence.name())
                 .collect::<Vec<_>>(),
             expected,
-            "final-pass exclusion mask {disabled_mask:04b}"
+            "final-pass exclusion mask {disabled_mask:05b}"
         );
         assert_eq!(
             selected

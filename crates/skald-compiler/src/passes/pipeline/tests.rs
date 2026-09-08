@@ -68,11 +68,12 @@ fn main() -> i64 {
     return 3;
 }
 ";
-const ALL_PRODUCTION_PASS_NAMES: [&str; 12] = [
+const ALL_PRODUCTION_PASS_NAMES: [&str; 13] = [
     "checked-f64-to-integer-constant-folding",
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "constant-short-circuit-folding",
+    "dead-normalized-path-activation-cleanup",
     "dead-pure-definition-elimination",
     "integer-cast-chain-canonicalization",
     "post-proof-basic-block-merging",
@@ -370,7 +371,7 @@ fn productive_default_profile_has_exact_reference_parity_and_structural_value() 
     );
     assert_ne!(dump_mir(optimized.program()), input_dump);
     assert_ne!(assembly(optimized), assembly(&none));
-    assert_eq!(measured.statistics.pass_executions(), 16);
+    assert_eq!(measured.statistics.pass_executions(), 17);
     assert!(
         measurement_total(
             &measured,
@@ -498,7 +499,7 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
         ),
         (1, 1, 1, 1, 1, 7)
     );
-    assert_eq!(default.statistics.pass_executions(), 16);
+    assert_eq!(default.statistics.pass_executions(), 17);
     assert_eq!(default.statistics.normalization_executions(), 1);
     assert_eq!(
         default_checkpoints
@@ -522,10 +523,11 @@ fn production_boundary_selection_matrix_is_normalized_and_compositional() {
             529_661_416_656_553_642,
             529_661_416_656_553_642,
             17_120_109_253_232_500_399,
-            17_120_109_253_232_500_399,
-            17_858_798_538_504_078_573,
-            1_616_807_206_188_728_749,
-            1_616_807_206_188_728_749,
+            12_593_903_038_934_416_155,
+            12_593_903_038_934_416_155,
+            12_806_308_209_682_325_425,
+            8_151_533_879_899_296_625,
+            8_151_533_879_899_296_625,
         ]
     );
     assert_eq!(
@@ -1312,9 +1314,10 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             "after-proof-transition-11-constant-short-circuit-folding-0",
             "after-proof-normalization",
             "after-final-12-post-proof-unreachable-block-elimination-0",
-            "after-final-13-post-proof-empty-block-forwarding-0",
-            "after-final-14-post-proof-basic-block-merging-0",
-            "after-final-15-whole-world-reachability-0",
+            "after-final-13-dead-normalized-path-activation-cleanup-0",
+            "after-final-14-post-proof-empty-block-forwarding-0",
+            "after-final-15-post-proof-basic-block-merging-0",
+            "after-final-16-whole-world-reachability-0",
             "final",
         ]
     );
@@ -1334,6 +1337,7 @@ fn checkpoint_api_identifies_every_stage_and_occurrence() {
             MirPassStage::ProofRich,
             MirPassStage::ProofRich,
             MirPassStage::ProofTransition,
+            MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,
             MirPassStage::Final,

@@ -773,7 +773,7 @@ occurrence records at trace level. The `none` schedule
 runs zero selectable passes, one complete proof verification, mandatory
 normalization, and one normalized verification. Its proof-rich checkpoints
 remain byte-for-byte stable, while its returned product satisfies the
-normalized invariant. The default schedule runs sixteen pass occurrences in the
+normalized invariant. The default schedule runs seventeen pass occurrences in the
 exact repeated order documented below.
 
 This boundary adds no SSA form, persistent instruction identity, public
@@ -815,7 +815,7 @@ descriptors, including stage, are exposed in stable-name order for the public re
 and the input-free `--list-mir-passes` CLI command; discovery therefore reads
 the same metadata used by schedule resolution. The `none` profile
 expands to an empty explicit ordered schedule. `default` contains the exact
-sixteen-occurrence optimization schedule documented below. Disabling all
+seventeen-occurrence optimization schedule documented below. Disabling all
 pass names selected by `default`, including duplicate disabling, produces the
 same schedule as `none`.
 
@@ -852,6 +852,7 @@ editor. Each final occurrence uses the distinct final
 capability; unchanged outcomes retain the normalized seal, while changed
 outcomes are normalized-reverified and rebound to fresh reachability before
 the next final pass. The production `post-proof-unreachable-block-elimination`,
+`dead-normalized-path-activation-cleanup`,
 `post-proof-empty-block-forwarding`, `post-proof-basic-block-merging`, and
 `whole-world-reachability`
 occurrences are the current final-stage passes.
@@ -1063,6 +1064,7 @@ dead-pure-definition-elimination
 constant-short-circuit-folding
 -- mandatory proof-provenance normalization --
 post-proof-unreachable-block-elimination
+dead-normalized-path-activation-cleanup
 post-proof-empty-block-forwarding
 post-proof-basic-block-merging
 whole-world-reachability
@@ -1072,7 +1074,7 @@ whole-world-reachability
 every repeated occurrence, and whole-world retention remains last in the
 final region so it can observe calls, callable-
 address formations, and other executable dependencies removed by CFG cleanup.
-The four-occurrence final suffix is frozen in this order. Each occurrence is
+The five-occurrence final suffix is frozen in this order. Each occurrence is
 independently selectable, and exact schedules prove that forwarding followed
 by merging reaches a fixed point without a hidden cross-pass loop. Disabling
 all registered default names remains identical to `none` while still crossing
@@ -1477,7 +1479,8 @@ proof verification preceded the exact normalizer. Later transformations still
 own semantic-equivalence correctness and receive an explicitly final-stage
 rewrite capability rather than raw mutable MIR.
 
-Every pass descriptor states `ProofRich` or `Final`. Proof-rich passes run
+Every pass descriptor states `ProofRich`, `ProofTransition`, or `Final`.
+Proof-rich passes run
 with complete reverification, normalization runs exactly once and is neither
 registered nor selectable, and final passes run with normalized
 reverification. The `none` profile contains zero selectable passes while
@@ -1498,8 +1501,9 @@ storage, instructions, terminators, proof records, or lifecycle authority.
 The unreachable-block pass reports removed blocks, removed value declarations,
 and permanent roots retained outside entry reachability. It is registered,
 listed, and runs immediately after normalization in the current `default`
-profile.
-`post-proof-empty-block-forwarding` follows it and redirects all executable
+profile. `dead-normalized-path-activation-cleanup` follows it, so references
+in deleted blocks cannot unnecessarily protect a carrier.
+`post-proof-empty-block-forwarding` then redirects all executable
 successor occurrences through complete transitive chains of instruction-free
 goto blocks. It retains body entry, permanent attachments, incoming permanent-
 attachment edges, array-loop body attachments, self-loops, cycles, and chains
@@ -3910,7 +3914,11 @@ removes the complete protocols through one dense commit. A changed occurrence
 is resealed and reverified; a no-candidate occurrence reuses the existing seal.
 The pass reports inspected, removable, and protected carriers, every removed
 protocol entity family, and maximum removable protocol size in stable order.
-It is registered for exact opt-in schedules but remains outside `default`.
+It occurs once in `default`, after post-proof unreachable-block elimination
+has discarded blockers in dead CFG and before empty-block forwarding and
+basic-block merging can consume structure exposed by protocol deletion. It
+remains independently selectable: excluding it retains removable protocols
+without disabling mandatory normalization or any CFG pass.
 
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests

@@ -12,8 +12,9 @@ implements FMM-13 as a narrow final-MIR cleanup for complete, semantically dead
 `NormalizedPathActivation` protocols. NAC0 established the shared exact
 analysis and corpus opportunity baseline; NAC1 introduced narrow final-stage
 storage deletion authority; NAC2 added the independently selectable cleanup
-pass without changing the default schedule; NAC3 is next to activate and
-compose it in the final pipeline. The completed
+pass; NAC3 activated it between unreachable deletion and later CFG
+canonicalization; NAC4 is next to prove end-to-end value and observable
+equivalence. The completed
 proof-normalization, normalization-stable activation provenance, dense MIR
 rewriting, selectable pipeline, post-proof CFG, and redundancy-measurement work
 supply its material dependencies.

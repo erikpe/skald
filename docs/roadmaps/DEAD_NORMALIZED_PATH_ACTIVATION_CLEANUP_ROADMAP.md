@@ -1,6 +1,6 @@
 # Dead Normalized Path-Activation Cleanup Roadmap
 
-Status: in progress; NAC0 through NAC2 are complete and NAC3 is next.
+Status: in progress; NAC0 through NAC3 are complete and NAC4 is next.
 
 This roadmap implements FMM-13 as one exact, target-independent final-MIR
 cleanup. It removes a `NormalizedPathActivation` declaration only when every
@@ -104,7 +104,7 @@ general alias, effect, escape, or ownership analysis prematurely.
 - [x] NAC0 — Establish exact dead-carrier analysis and evidence
 - [x] NAC1 — Add narrow final-stage storage deletion authority
 - [x] NAC2 — Implement the selectable cleanup pass
-- [ ] NAC3 — Activate and compose cleanup in the final pipeline
+- [x] NAC3 — Activate and compose cleanup in the final pipeline
 - [ ] NAC4 — Prove end-to-end value and observable equivalence
 - [ ] NAC5 — Harden the boundary and close the roadmap
 
@@ -217,22 +217,22 @@ deterministic outcomes, and verifies after each changed occurrence.
 **Purpose:** Enable the proven pass where unreachable uses have disappeared and
 its instruction deletion can expose additional CFG canonicalization.
 
-- [ ] Insert exactly one default-profile occurrence after
+- [x] Insert exactly one default-profile occurrence after
   `post-proof-unreachable-block-elimination` and before
   `post-proof-empty-block-forwarding`, basic-block merging, and final
   whole-world retention.
-- [ ] Update default/all-disabled schedules, exclusions, pass discovery,
+- [x] Update default/all-disabled schedules, exclusions, pass discovery,
   known-name diagnostics, checkpoint numbering, schedule fingerprints,
   reporting order, and stable pass lists.
-- [ ] Add constructed-MIR composition cases where unreachable deletion exposes
+- [x] Add constructed-MIR composition cases where unreachable deletion exposes
   a dead carrier and carrier cleanup in turn exposes an empty or mergeable
   block.
-- [ ] Prove that disabling unreachable deletion can conservatively retain a
+- [x] Prove that disabling unreachable deletion can conservatively retain a
   carrier, disabling cleanup retains only the removable protocol, and
   disabling later CFG passes does not undo carrier deletion.
-- [ ] Confirm that the `none` profile still performs mandatory normalization
+- [x] Confirm that the `none` profile still performs mandatory normalization
   but never performs carrier cleanup.
-- [ ] Update living phase, driver/selection, reporting, testing, and debugging
+- [x] Update living phase, driver/selection, reporting, testing, and debugging
   documentation with current scheduling, safety boundaries, metrics, and
   exclusions.
 

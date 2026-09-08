@@ -447,16 +447,21 @@ fn intentional_phase_and_dump_paths_compose() {
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
                 position: 13,
-                pass_name: "post-proof-empty-block-forwarding",
+                pass_name: "dead-normalized-path-activation-cleanup",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
                 position: 14,
-                pass_name: "post-proof-basic-block-merging",
+                pass_name: "post-proof-empty-block-forwarding",
                 occurrence: 0,
             },
             MirPipelineCheckpointLabel::AfterFinalPass {
                 position: 15,
+                pass_name: "post-proof-basic-block-merging",
+                occurrence: 0,
+            },
+            MirPipelineCheckpointLabel::AfterFinalPass {
+                position: 16,
                 pass_name: "whole-world-reachability",
                 occurrence: 0,
             },
@@ -675,7 +680,7 @@ fn intentional_reporting_paths_compose() {
         inspection_labels,
         [StaticActivationInspectionLabel::VerifiedPlanning]
     );
-    assert_eq!(mir_inspection_labels.len(), 19);
+    assert_eq!(mir_inspection_labels.len(), 20);
     assert_eq!(
         mir_inspection_labels.first(),
         Some(&MirPipelineCheckpointLabel::ProofRichInput)

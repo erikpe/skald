@@ -61,6 +61,7 @@ compiler_args = [
   "--disable-mir-pass", "checked-integer-constant-folding",
   "--disable-mir-pass", "conservative-cfg-cleanup",
   "--disable-mir-pass", "constant-short-circuit-folding",
+  "--disable-mir-pass", "dead-normalized-path-activation-cleanup",
   "--disable-mir-pass", "dead-pure-definition-elimination",
   "--disable-mir-pass", "integer-cast-chain-canonicalization",
   "--disable-mir-pass", "post-proof-basic-block-merging",

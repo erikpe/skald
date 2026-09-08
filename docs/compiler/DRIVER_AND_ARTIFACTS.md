@@ -140,7 +140,7 @@ construction and singleton compilation helpers select `default`. The
 supported profiles are `none` and `default`: `none` resolves to zero
 selectable passes plus mandatory proof verification, normalization, and final
 verification, while `default` resolves to the exact repeated
-sixteen-occurrence optimization schedule documented below. Disabling all twelve
+seventeen-occurrence optimization schedule documented below. Disabling all thirteen
 pass names selected by `default`, including duplicate disabling, resolves
 to the same schedule and product as `none`. `none` remains the reference
 unoptimized mode and preserves behavior while still returning normalized
@@ -238,11 +238,12 @@ integer-only cast chains over `u8`, `i64`, and `u64`; broader primitive casts
 remain outside its selection boundary.
 
 `dead-normalized-path-activation-cleanup` is registered as an independently
-selectable final-stage pass but is not yet part of `default`. An exact internal
-schedule may use it after mandatory proof normalization to remove complete,
-semantically dead `NormalizedPathActivation` protocols. Pass discovery and
-known-name diagnostics include it; ordinary compilation remains unchanged
-until its default placement is activated separately.
+selectable final-stage pass and occurs once in `default`, immediately after
+post-proof unreachable-block elimination and before empty-block forwarding.
+It removes only complete, semantically dead `NormalizedPathActivation`
+protocols. Pass discovery and known-name diagnostics include it, and excluding
+its stable name retains those protocols while leaving normalization and later
+CFG passes enabled.
 
 The `default` profile contains dead-pure elimination, constant folding,
 algebraic simplification, repeated constant folding, integer cast-chain
@@ -345,12 +346,14 @@ registered, selected, or repeated. Registry descriptors and
 three-region contract and at most one transition, and typed callbacks cannot
 accept another stage's capability. Current local scalar passes are proof-rich;
 `post-proof-unreachable-block-elimination`,
+`dead-normalized-path-activation-cleanup`,
 `post-proof-empty-block-forwarding`, `post-proof-basic-block-merging`, and
 `whole-world-reachability` run in the final region. The default schedule
-deletes post-proof unreachable blocks, forwards eligible empty goto chains,
-merges eligible single-incoming goto chains to a local fixed point, and then
-runs whole-world reachability last, so definition retention observes call
-sites removed with dead CFG. This final suffix order is frozen. Every pass can
+deletes post-proof unreachable blocks, removes newly dead normalized
+activation protocols, forwards eligible empty goto chains, merges eligible
+single-incoming goto chains to a local fixed point, and then runs whole-world
+reachability last, so definition retention observes call sites removed with
+dead CFG. This final suffix order is frozen. Every pass can
 be disabled independently, duplicate exclusions are idempotent, and disabling
 all final-stage names leaves the proof-rich prefix intact before mandatory
 normalization. Disabling every registered default name remains equivalent to
