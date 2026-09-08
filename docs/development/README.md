@@ -69,13 +69,19 @@ Commands should remain independently runnable through the Makefile. A helper
 script may implement a repeated workflow, but it must not become the only way
 to invoke a compiler or validation responsibility.
 
-`make golden-test` builds `skac` and `skald-golden` and runs the complete suite
-in the default determinism-off mode. Use `make golden-filter` or
-`make golden-exact` for common focused runs and
-`make golden-determinism-test` for the complete repeated-process audit. The
-extended `make golden-release-test` target builds both tools with Cargo's
-release profile and runs the complete suite once; it is part of `make
-check-long`. The
+`make golden-test` builds `skac` and `skald-golden` with the optimized
+assertion-enabled Cargo `golden` profile and runs the complete suite in the
+default determinism-off mode. The profile retains debug assertions and
+overflow checks while avoiding debug-codegen cost across hundreds of compiler
+processes. Use `make golden-filter` or `make golden-exact` for common focused
+runs; they use the same profile. `make golden-determinism-test` performs the
+complete repeated-process audit with that profile. The extended
+`make golden-release-test` target builds both tools with Cargo's unmodified
+release profile and runs the complete suite once, covering the exact
+release-profile configuration. It is part of `make check-long`. The long gate
+uses the shared non-corpus portion of `make check`, then runs full determinism
+and release compatibility; it does not first repeat the ordinary single-run
+golden corpus. The
 [`scripts/golden.sh`](../../scripts/README.md) convenience wrapper exposes the
 runner's full filtering and reporting surface while preserving those Makefile
 validation entry points.

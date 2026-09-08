@@ -6,9 +6,10 @@ through `skac`, and validation must remain available through the Makefile
 rather than existing only in shell scripts. See the
 [development workflow](../docs/development/README.md).
 
-`golden.sh` builds `skac` and `skald-golden`, changes to the repository root,
-and forwards every argument unchanged to the Rust golden runner. It is useful
-for inspection and combinations of filters that do not need a dedicated Make
+`golden.sh` builds `skac` and `skald-golden` with the repository's optimized
+assertion-enabled `golden` profile, changes to the repository root, and
+forwards every argument unchanged to the Rust golden runner. It is useful for
+inspection and combinations of filters that do not need a dedicated Make
 target:
 
 ```text

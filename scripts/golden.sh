@@ -6,6 +6,6 @@ repository=$(cd -- "$script_directory/.." && pwd)
 
 make -C "$repository" golden-tools
 cd -- "$repository"
-exec "$repository/target/debug/skald-golden" \
-    --compiler "$repository/target/debug/skac" \
+exec "$repository/target/golden/skald-golden" \
+    --compiler "$repository/target/golden/skac" \
     "$@"

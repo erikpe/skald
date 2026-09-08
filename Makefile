@@ -1,6 +1,7 @@
 MSRV := $(shell sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
-GOLDEN_RUNNER := target/debug/skald-golden
-GOLDEN_COMPILER := target/debug/skac
+GOLDEN_PROFILE := golden
+GOLDEN_RUNNER := target/$(GOLDEN_PROFILE)/skald-golden
+GOLDEN_COMPILER := target/$(GOLDEN_PROFILE)/skac
 GOLDEN_RELEASE_RUNNER := target/release/skald-golden
 GOLDEN_RELEASE_COMPILER := target/release/skac
 
@@ -8,9 +9,9 @@ GOLDEN_RELEASE_COMPILER := target/release/skac
 	compiler-test cli-test docs-test golden-runner-test mir-measure-test golden-tools \
 	golden-release-tools golden-expectations-test golden-test \
 	golden-release-test golden-filter golden-exact \
-	golden-determinism-test runtime-test runtime-trace-benchmark test \
+	golden-determinism-test runtime-test runtime-trace-benchmark test-core test \
 	generic-vec-benchmark range-loop-benchmark mir-redundancy-measure \
-	msrv-check robustness-long check check-long
+	msrv-check robustness-long check-core check check-long
 
 help:
 	@echo "Skald repository commands:"
@@ -33,7 +34,7 @@ help:
 	@echo "  make docs-test        Run skald-docs-check unit and documentation tests"
 	@echo "  make golden-runner-test Run skald-golden schema and runner-library tests"
 	@echo "  make mir-measure-test Run local final-MIR measurement tool tests"
-	@echo "  make golden-test      Run all goldens in default determinism-off mode"
+	@echo "  make golden-test      Run all goldens once with optimized assertion-enabled tools"
 	@echo "  make golden-expectations-test Run focused byte, ownership, and report tests"
 	@echo "  make golden-filter GOLDEN_FILTER='syntax/**'  Run matching golden leaves"
 	@echo "  make golden-exact GOLDEN_ID='calls/functions::direct_call::default::return_value'  Run one leaf"
@@ -41,7 +42,7 @@ help:
 	@echo ""
 	@echo "Extended validation:"
 	@echo "  make golden-release-test Run all goldens with release-built tools"
-	@echo "  make golden-determinism-test Run all goldens in full determinism mode"
+	@echo "  make golden-determinism-test Run all goldens twice with optimized assertion-enabled tools"
 	@echo "  make runtime-trace-benchmark Compare enabled and omitted panic trace overhead"
 	@echo "  make generic-vec-benchmark Measure representative generic Vec growth"
 	@echo "  make range-loop-benchmark Compare fused ranges with matched while loops"
@@ -51,7 +52,7 @@ help:
 	@echo ""
 	@echo "Complete validation:"
 	@echo "  make check            Run the complete repository validation suite"
-	@echo "  make check-long       Run ordinary and extended validation"
+	@echo "  make check-long       Run shared validation plus extended golden and robustness gates"
 
 # Developer commands and shared build prerequisites.
 fmt:
@@ -76,7 +77,9 @@ docs-check:
 	cargo run --quiet --locked -p skald-docs-check -- .
 
 # Ordinary behavioral suites included in test.
-test: cli-test golden-runner-test mir-measure-test golden-test runtime-test docs-test compiler-test
+test-core: cli-test golden-runner-test mir-measure-test runtime-test docs-test compiler-test
+
+test: test-core golden-test
 
 compiler-test:
 	cargo test --locked -p skald-compiler
@@ -97,10 +100,9 @@ golden-expectations-test:
 	cargo test --locked -p skald-golden --test planning --test process_execution --test reporting
 
 golden-tools:
-	cargo build --locked -p skac -p skald-golden
+	cargo build --locked --profile $(GOLDEN_PROFILE) -p skac -p skald-golden
 
 golden-release-tools:
-	cargo clippy --locked --release -p skac -p skald-golden -- -D warnings
 	cargo build --locked --release -p skac -p skald-golden
 
 golden-test: golden-tools
@@ -147,8 +149,13 @@ msrv-check:
 robustness-long:
 	SKALD_ROBUSTNESS_CASES=10000 cargo test --locked -p skald-compiler --test generative_robustness
 
+# Validation shared by the ordinary and extended gates. Golden corpus
+# execution is selected by each public gate so the extended gate does not
+# repeat the ordinary corpus before its stronger determinism audit.
+check-core: static-check test-core
+
 # Complete ordinary validation gate.
-check: static-check test
+check: check-core golden-test
 
 # Complete ordinary and extended validation gate.
-check-long: check golden-determinism-test golden-release-test runtime-trace-benchmark msrv-check robustness-long generic-vec-benchmark range-loop-benchmark
+check-long: check-core golden-determinism-test golden-release-test runtime-trace-benchmark msrv-check robustness-long generic-vec-benchmark range-loop-benchmark

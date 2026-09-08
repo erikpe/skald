@@ -19,3 +19,12 @@ unsafe_code = "deny"
 
 [workspace.lints.clippy]
 dbg_macro = "deny"
+
+# Golden tests compile hundreds of independent source programs. Keep the
+# compiler's internal assertions and overflow checks while optimizing the host
+# tools used by that workload.
+[profile.golden]
+inherits = "release"
+incremental = true
+debug-assertions = true
+overflow-checks = true

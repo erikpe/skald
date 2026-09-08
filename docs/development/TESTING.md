@@ -1346,12 +1346,16 @@ option order, equivalent root spellings, source creation order, import
 declaration order, and logical versus positional selection of the same rooted
 entry, then compare canonical graph, resolved, HIR, MIR, assembly, and
 diagnostic products. The ordinary golden target invokes each compiler and
-native process once. `make golden-determinism-test` invokes `skac` twice for
-every successful assembly and compile failure, comparing assembly or
-diagnostic bytes, and executes every native case twice before evaluating the
-checked-in expectations. `make golden-release-test` instead runs every leaf
-once with release-built `skac` and `skald-golden`, covering profile-sensitive
-compiler behavior without duplicating the full determinism audit.
+native process once using the optimized assertion-enabled Cargo `golden`
+profile. That profile retains debug assertions and overflow checks while
+reducing the host compiler cost. `make golden-determinism-test` invokes the
+same `skac` profile twice for every successful assembly and compile failure,
+comparing assembly or diagnostic bytes, and executes every native case twice
+before evaluating the checked-in expectations. `make golden-release-test`
+instead runs every leaf once with release-built `skac` and `skald-golden`,
+covering the exact release profile. `make check-long` runs the determinism and
+release corpora but omits the redundant ordinary single-run corpus; all shared
+non-corpus checks from `make check` still run through their common prerequisite.
 External stdout and stderr files are exact byte expectations unless their spec
 selects a reviewed partial matcher; an omitted stream expectation requires
 empty output. `argv_file` records become byte-preserving Unix arguments and are
