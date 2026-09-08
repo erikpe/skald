@@ -11,7 +11,7 @@ use super::*;
 use crate::passes::pipeline::{
     execution::{
         append_complete_dead_activation, append_declaration_only_dead_activation,
-        SINGLE_DEAD_ACTIVATION_SOURCE,
+        append_materially_used_activation, SINGLE_DEAD_ACTIVATION_SOURCE,
     },
     normalization::{MirProofNormalizationStatistics, MirProofTransitionPlan},
     run_mir_pipeline_with_transition_and_occurrences_for_test,
@@ -214,6 +214,127 @@ fn repeated_occurrence_changes_once_then_is_a_deterministic_no_op() {
             MirPassMeasurement::count(MAXIMUM_PROTOCOL_SIZE, 0),
         ]
     );
+}
+
+const LARGE_PROTOCOL_PAIRS: usize = 128;
+const LARGE_DECLARATION_INTERVAL: usize = 8;
+
+fn transition_with_large_interleaved_protocols(
+    verified: VerifiedProofMirProgram,
+    optional_plan: Option<MirProofTransitionPlan>,
+) -> Result<(VerifiedFinalMirProgram, MirProofNormalizationStatistics), MirProofTransitionError> {
+    let (verified, statistics) = transition_proof_mir(verified, optional_plan)?;
+    let (mut program, authority) = verified.invalidate_for_final_transformation().into_parts();
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let block_count = definition.body.blocks.len();
+    for index in 0..LARGE_PROTOCOL_PAIRS {
+        let block = index % block_count;
+        append_complete_dead_activation(definition, block, index % 2 == 0);
+        append_materially_used_activation(definition, block, index % 2 != 0);
+        if index % LARGE_DECLARATION_INTERVAL == 0 {
+            append_declaration_only_dead_activation(definition);
+        }
+    }
+    let verified = reseal_final_mir(UnverifiedFinalMirProgram::from_parts(program, authority))
+        .map_err(MirProofTransitionError::FinalVerification)?;
+    Ok((verified, statistics))
+}
+
+fn run_large_interleaved() -> crate::passes::MeasuredMirPipeline {
+    run_mir_pipeline_with_transition_and_occurrences_for_test(
+        lower_source_to_final_mir(SINGLE_DEAD_ACTIVATION_SOURCE),
+        &exact_schedule(&[IDENTITY, IDENTITY]),
+        None,
+        transition_with_large_interleaved_protocols,
+    )
+}
+
+#[test]
+fn large_interleaved_protocol_set_is_batched_deterministic_and_idempotent() {
+    let first = run_large_interleaved();
+    let second = run_large_interleaved();
+    let first_output = first.result.as_ref().unwrap();
+    let second_output = second.result.as_ref().unwrap();
+    let declaration_only = LARGE_PROTOCOL_PAIRS / LARGE_DECLARATION_INTERVAL;
+    let removable = LARGE_PROTOCOL_PAIRS + declaration_only;
+    let protected = LARGE_PROTOCOL_PAIRS + 1;
+    let protocol_pair_count = u64::try_from(LARGE_PROTOCOL_PAIRS).unwrap();
+    let removable_count = u64::try_from(removable).unwrap();
+    let protected_count = u64::try_from(protected).unwrap();
+
+    assert_eq!(
+        dump_mir(first_output.program()),
+        dump_mir(second_output.program())
+    );
+    assert_eq!(
+        first
+            .occurrences()
+            .iter()
+            .map(|record| (
+                record.outcome(),
+                record.processed_callables(),
+                record.changed_callables(),
+                record.verification_executions(),
+                record.measurements(),
+            ))
+            .collect::<Vec<_>>(),
+        second
+            .occurrences()
+            .iter()
+            .map(|record| (
+                record.outcome(),
+                record.processed_callables(),
+                record.changed_callables(),
+                record.verification_executions(),
+                record.measurements(),
+            ))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(first.occurrences().len(), 2);
+    let changed = &first.occurrences()[0];
+    assert_eq!(changed.outcome(), MirPassOccurrenceOutcome::Changed);
+    assert_eq!(changed.processed_callables(), Some(1));
+    assert_eq!(changed.changed_callables(), Some(1));
+    assert_eq!(changed.verification_executions(), 1);
+    assert_eq!(
+        changed.measurements(),
+        [
+            MirPassMeasurement::count(INSPECTED_CARRIERS, removable_count + protected_count,),
+            MirPassMeasurement::count(REMOVABLE_CARRIERS, removable_count),
+            MirPassMeasurement::count(PROTECTED_CARRIERS, protected_count),
+            MirPassMeasurement::count(REMOVED_STORAGES, removable_count),
+            MirPassMeasurement::count(REMOVED_LOADS, protocol_pair_count),
+            MirPassMeasurement::count(REMOVED_STORES, protocol_pair_count),
+            MirPassMeasurement::count(REMOVED_LIFETIME_MARKERS, protocol_pair_count * 2,),
+            MirPassMeasurement::count(REMOVED_VALUES, protocol_pair_count),
+            MirPassMeasurement::count(MAXIMUM_PROTOCOL_SIZE, 4),
+        ]
+    );
+
+    let unchanged = &first.occurrences()[1];
+    assert_eq!(unchanged.outcome(), MirPassOccurrenceOutcome::Unchanged);
+    assert_eq!(unchanged.changed_callables(), Some(0));
+    assert_eq!(unchanged.verification_executions(), 0);
+    assert_eq!(
+        unchanged.measurements()[0],
+        MirPassMeasurement::count(INSPECTED_CARRIERS, protected_count)
+    );
+    assert_eq!(
+        unchanged.measurements()[2],
+        MirPassMeasurement::count(PROTECTED_CARRIERS, protected_count)
+    );
+    let remaining_activations = first_output
+        .definitions
+        .get(first_output.entry_function)
+        .unwrap()
+        .storage
+        .iter()
+        .filter(|storage| storage.kind == MirStorageKind::NormalizedPathActivation)
+        .count();
+    assert_eq!(remaining_activations, protected);
 }
 
 #[test]

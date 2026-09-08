@@ -3,8 +3,8 @@
 use crate::{
     mir::{
         test_fixtures::{assign, storage_dead, storage_live, store, value},
-        MirInstruction, MirPlace, MirRvalueKind, MirStorage, MirStorageKind, MirType, StorageId,
-        ValueId,
+        MirInstruction, MirPlace, MirRvalueKind, MirStorage, MirStorageKind, MirType,
+        MirUnaryOperation, StorageId, ValueId,
     },
     passes::{run_mir_pipeline_measured, MirOptimizationProfile, VerifiedFinalMirProgram},
     test_support::lower_source_to_final_mir,
@@ -127,6 +127,36 @@ pub(in crate::passes::pipeline) fn append_complete_dead_activation(
         ),
         storage_dead(storage, span),
     ]);
+    storage
+}
+
+pub(in crate::passes::pipeline) fn append_materially_used_activation(
+    definition: &mut crate::mir::MirFunctionDefinition,
+    block_index: usize,
+    source_value: bool,
+) -> StorageId {
+    let storage = append_complete_dead_activation(definition, block_index, source_value);
+    let loaded = definition
+        .values
+        .last()
+        .expect("complete activation fixture must declare its load result")
+        .id;
+    let material_result = ValueId::new(definition.callable(), definition.values.len());
+    let span = definition.body.blocks[block_index].span;
+    definition
+        .values
+        .push(value(material_result, MirType::Bool, span));
+    definition.body.blocks[block_index]
+        .instructions
+        .push(assign(
+            material_result,
+            MirRvalueKind::Unary {
+                operation: MirUnaryOperation::LogicalNotBool,
+                operand: loaded,
+            },
+            MirType::Bool,
+            span,
+        ));
     storage
 }
 

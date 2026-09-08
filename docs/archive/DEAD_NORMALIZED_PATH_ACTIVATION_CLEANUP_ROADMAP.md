@@ -1,6 +1,6 @@
 # Dead Normalized Path-Activation Cleanup Roadmap
 
-Status: in progress; NAC0 through NAC4 are complete and NAC5 is next.
+Status: complete; NAC0 through NAC5 are implemented and verified.
 
 This roadmap implements FMM-13 as one exact, target-independent final-MIR
 cleanup. It removes a `NormalizedPathActivation` declaration only when every
@@ -19,28 +19,28 @@ general alias, effect, escape, or ownership analysis prematurely.
 ## Dependencies
 
 - The completed
-  [proof-provenance normalization](../archive/PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
+  [proof-provenance normalization](PROOF_PROVENANCE_NORMALIZATION_ROADMAP.md)
   supplies the proof-rich/final seal transition and normalized verification.
 - The frozen
-  [normalization-stable path-activation provenance design](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
+  [normalization-stable path-activation provenance design](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DESIGN_PROPOSAL.md)
   and completed
-  [roadmap](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
+  [roadmap](NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_ROADMAP.md)
   supply the final-only `NormalizedPathActivation` role, its structural
   contract, current CFG mutation guard, backend equivalence, and test matrix.
 - The completed
-  [dense callable-local MIR identity rewriting](../archive/DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+  [dense callable-local MIR identity rewriting](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
   supplies sparse storage/value/block edits, exhaustive identity traversal,
   deterministic dense commit, and structured stale-plan failures.
 - The completed
-  [selectable final-MIR pipeline](../archive/SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
+  [selectable final-MIR pipeline](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
   supplies pass registration, exact schedules, exclusions, metrics,
   checkpoints, and changed-result reverification.
 - The completed
-  [post-proof CFG canonicalization](../archive/POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
+  [post-proof CFG canonicalization](POST_PROOF_CFG_CANONICALIZATION_ROADMAP.md)
   supplies final CFG facts and the empty-block and merge consumers which may
   benefit when carrier instructions disappear.
 - The completed
-  [local redundancy measurement](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
+  [local redundancy measurement](LOCAL_MIR_REDUNDANCY_MEASUREMENT_ROADMAP.md)
   supplies the reviewed corpus and stable human/JSON opportunity projections.
 
 ## Scope and invariants
@@ -106,7 +106,7 @@ general alias, effect, escape, or ownership analysis prematurely.
 - [x] NAC2 — Implement the selectable cleanup pass
 - [x] NAC3 — Activate and compose cleanup in the final pipeline
 - [x] NAC4 — Prove end-to-end value and observable equivalence
-- [ ] NAC5 — Harden the boundary and close the roadmap
+- [x] NAC5 — Harden the boundary and close the roadmap
 
 ## PR-sized implementation sequence
 
@@ -285,23 +285,23 @@ pass observations.
 **Purpose:** Audit completeness, scaling, and ownership after activation, then
 publish the implementation as stable current behavior.
 
-- [ ] Add generated large-callable tests with many interleaved dead/live
+- [x] Add generated large-callable tests with many interleaved dead/live
   activations, loads, stores, lifetime markers, and blockers; require bounded
   iterative analysis and batched rewrite behavior.
-- [ ] Audit analysis, capability, rewriting, verification, measurement, and
+- [x] Audit analysis, capability, rewriting, verification, measurement, and
   reporting for repeated scans, quadratic block edits, recursion,
   nondeterministic maps, duplicated role semantics, stale snapshots, large-file
   ownership, and unclear facades; resolve small roadmap-local issues and record
   unrelated findings separately.
-- [ ] Confirm the pass cannot delete an activation through material use,
+- [x] Confirm the pass cannot delete an activation through material use,
   aliasing, attachment, authorization, malformed topology, or an out-of-date
   census, and that no broader memory optimization entered scope.
-- [ ] Confirm no task codes or rollout language remain in living code, tests,
+- [x] Confirm no task codes or rollout language remain in living code, tests,
   compiler/development documentation, pass names, metrics, or diagnostics.
-- [ ] Run the full repository gate from an artifact-free snapshot, the
+- [x] Run the full repository gate from an artifact-free snapshot, the
   supported-toolchain and long robustness gates, full golden determinism, and
   release goldens.
-- [ ] Mark every completed item, set the roadmap status to complete, move it to
+- [x] Mark every completed item, set the roadmap status to complete, move it to
   `docs/archive/`, update active/archive indexes and incoming links, and leave
   only current behavior in living documentation.
 

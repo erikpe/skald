@@ -6,20 +6,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## Implementation roadmaps
 
-The in-progress
-[dead normalized path-activation cleanup roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
-implements FMM-13 as a narrow final-MIR cleanup for complete, semantically dead
-`NormalizedPathActivation` protocols. NAC0 established the shared exact
-analysis and corpus opportunity baseline; NAC1 introduced narrow final-stage
-storage deletion authority; NAC2 added the independently selectable cleanup
-pass; NAC3 activated it between unreachable deletion and later CFG
-canonicalization; NAC4 pinned source/profile equivalence, complete protocol and
-report deltas, backend frame and memory-reference reductions, and refreshed
-corpus evidence. NAC5 is next for scaling, boundary hardening, and closure.
-The completed
-proof-normalization, normalization-stable activation provenance, dense MIR
-rewriting, selectable pipeline, post-proof CFG, and redundancy-measurement work
-supply its material dependencies.
+There are no implementation roadmaps currently in progress. Completed delivery
+records are preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
@@ -88,8 +76,9 @@ and target/observation parity. Its
 [resolved companion record](../archive/NORMALIZATION_STABLE_PATH_ACTIVATION_PROVENANCE_DISCOVERIES.md),
 and the resolved original
 [proof-normalization discovery](../archive/PROOF_PROVENANCE_NORMALIZATION_DISCOVERIES.md)
-are preserved in the archive. The planned dead normalized path-activation
-cleanup roadmap now owns FMM-13.
+are preserved in the archive. The completed
+[dead normalized path-activation cleanup roadmap](../archive/DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
+records the narrow final-stage storage deletion that implements FMM-13.
 
 The completed interface-based operator-overloading, general-iteration, and
 generic-interface roadmaps are preserved in the
@@ -104,8 +93,9 @@ are preserved in the archive. Their dedicated final-only activation storage
 kind, normalizer-exclusive construction, explicit proof/final phase legality,
 and exact normalized definite-initialization authority are authoritative in
 the living compiler documentation. The
-[planned cleanup roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
-owns dead condition-carrier deletion separately from mandatory normalization.
+[completed cleanup roadmap](../archive/DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
+records dead condition-carrier deletion separately from mandatory
+normalization.
 
 The completed convergent local constant propagation
 [design](../archive/CONVERGENT_LOCAL_CONSTANT_PROPAGATION_DESIGN_PROPOSAL.md),

@@ -472,6 +472,11 @@ entity counts, stable per-role metrics, changed-result verification, no-op seal
 reuse, repeated-occurrence idempotence, deterministic MIR dumps, registration,
 default placement, and independent exclusion. The pass deliberately reuses
 the analysis matrix above instead of maintaining a second blocker classifier.
+A generated large-callable case interleaves 128 removable protocols, 128
+materially used protocols, and declaration-only carriers across blocks. It
+pins exact batched removal metrics, one changed-result verification, stable MIR
+across independent runs, and an unchanged second occurrence without using a
+timing-sensitive assertion.
 
 End-to-end cleanup evidence reuses the broad proof-normalization sources,
 which cover conditionals, short-circuit selection, loops, optional and array

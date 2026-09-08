@@ -201,7 +201,7 @@ precision, but do not themselves prove two aliases distinct or a load stable.
 | FMM-10 | Copy-to-move or copy-elision transformation | After exact source-death and ownership analysis; before cleanup simplification | Foundation needed / **Large** | High runtime for class/shared values | User copy operations may be observable, moved-from state is not a general language concept, and destructor/copy failure behavior must remain identical |
 | FMM-11 | Stack allocation or complete elimination of non-escaping shared allocations | After escape and ownership analysis | Contract decision / **Extra large** | Potentially very high runtime | Removing heap allocation also removes language-observable allocation failure and may change object identity, destruction, runtime traces, and ABI expectations |
 | FMM-12 | Runtime alias-versioned call-site specialization | After points-to/effect facts and cloning infrastructure; before inlining | Research / **Extra large** | High runtime where actual aliases are usually distinct | Requires a sound overlap check, two equivalent paths, code-size policy, cleanup duplication, and exact handling of projected/array ranges |
-| FMM-13 | [Dead normalized condition-carrier storage cleanup](../compiler/PHASES_AND_IR.md#normalization-stable-path-activation-provenance) | After post-proof block/value elimination; before empty-block forwarding, merging, and backend frame planning | **Implemented / Medium to large** — one independently selectable default pass uses exact shared analysis and narrow final storage-deletion authority; the active [delivery roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md) retains final hardening work | Measured small direct value: corpus version one removes 3 storage homes, 3 unused values, and 12 protocol instructions; focused target evidence removes 16 frame bytes and 4 frame-memory references; medium architectural value as the first final-stage storage deletion | Targets only complete dead `NormalizedPathActivation` protocols; preserves store-source evaluation and rejects material loads, attachments, aliases, projections, authorization, calls, ownership, I/O, malformed shapes, and stale plans |
+| FMM-13 | [Dead normalized condition-carrier storage cleanup](../compiler/PHASES_AND_IR.md#normalization-stable-path-activation-provenance) | After post-proof block/value elimination; before empty-block forwarding, merging, and backend frame planning | **Implemented / Medium to large** — one independently selectable default pass uses exact shared analysis and narrow final storage-deletion authority; the completed [delivery roadmap](../archive/DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md) records its verification | Measured small direct value: corpus version one removes 3 storage homes, 3 unused values, and 12 protocol instructions; focused target evidence removes 16 frame bytes and 4 frame-memory references; medium architectural value as the first final-stage storage deletion | Targets only complete dead `NormalizedPathActivation` protocols; preserves store-source evaluation and rejects material loads, attachments, aliases, projections, authorization, calls, ownership, I/O, malformed shapes, and stale plans |
 
 ## Whole-world execution and call graph
 
@@ -312,17 +312,13 @@ default-profile occurrence now exist. This is an
 architectural completeness decision and does not supply new performance
 evidence for broader primitive chains or FMV-03.
 
-1. Implement the planned
-   [dead normalized path-activation cleanup](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
-   through a narrow final-stage storage-deletion capability; do not generalize
-   that authority into unrestricted storage mutation.
-2. Build conservative callable effect summaries before attempting memory,
+1. Build conservative callable effect summaries before attempting memory,
    ownership, pure-call, or aggressive inlining transformations.
-3. Improve reachable-type/target precision, then devirtualize before designing
+2. Improve reachable-type/target precision, then devirtualize before designing
    general inlining.
-4. Treat the target virtual-register LIR and register allocator as a separate
+3. Treat the target virtual-register LIR and register allocator as a separate
    major performance program once target-independent simplification is stable.
-5. Introduce scalar SSA or a normalized optimization IR only after measurements
+4. Introduce scalar SSA or a normalized optimization IR only after measurements
    show that storage boundaries, rather than backend stack homes, are the next
    dominant ceiling.
 

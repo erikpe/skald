@@ -14,7 +14,7 @@ pub use error::{MirPipelineError, MirPipelineFailureStage};
 #[cfg(test)]
 pub(in crate::passes::pipeline) use final_storage_cleanup::test_support::{
     append_complete_dead_activation, append_declaration_only_dead_activation,
-    SINGLE_DEAD_ACTIVATION_SOURCE,
+    append_materially_used_activation, SINGLE_DEAD_ACTIVATION_SOURCE,
 };
 pub(in crate::passes::pipeline) use final_storage_cleanup::MirFinalStorageCleanupPlan;
 pub use inspection::{
