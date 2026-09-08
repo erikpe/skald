@@ -8,13 +8,13 @@ The durable corpus-version-one result and recommendation are recorded in the
 [measurement report](../archive/LOCAL_MIR_REDUNDANCY_MEASUREMENT_REPORT.md).
 
 The `skald-mir-measure` repository tool measures scalar-spill constant
-provenance, redundant primitive casts, and exact same-block primitive common
-subexpressions. It invokes the real whole-world compiler driver with the
-current `default` final-MIR schedule and omitted runtime traces. The trace
-occurrence stream records the complete proof-rich and final-stage schedule. A
-borrowed pipeline inspector analyzes verified products in memory; it does not
-parse MIR dumps, register a pass, alter backend input, or add work to ordinary
-compilation.
+provenance, redundant primitive casts, exact same-block primitive common
+subexpressions, and dead normalized path-activation protocols. It invokes the
+real whole-world compiler driver with the current `default` final-MIR schedule
+and omitted runtime traces. The trace occurrence stream records the complete
+proof-rich and final-stage schedule. A borrowed pipeline inspector analyzes
+verified products in memory; it does not parse MIR dumps, register a pass,
+alter backend input, or add work to ordinary compilation.
 
 The stage-aware inspector provides distinct proof-rich and normalized views.
 The `input` report slot uses `proof-rich-input`; `pre-reachability` uses the
@@ -33,9 +33,24 @@ observations and does not maintain a second optimization model. Each analyzer
 retains at most eight proven and eight blocked examples per observation. These
 owned examples identify the callable, block, instruction position, optional
 result value, classification, and ordered blocker reasons without retaining a
-MIR borrow or requiring a second traversal. Dense identities are audit aids
-within one compiler result and are not stable across unrelated rewrites or
-compiler revisions.
+MIR borrow or requiring a second traversal. Value-centered examples identify
+a value and executable position. Storage-centered activation examples identify
+the storage and include an executable position when the protocol has one;
+declaration-only candidates never receive a fabricated instruction location.
+Dense identities are audit aids within one compiler result and are not stable
+across unrelated rewrites or compiler revisions.
+
+The dead-path-activation category exists only at normalized checkpoints. Its
+proof-rich `input` counts are therefore zero by construction. At normalized
+checkpoints it inspects only source-free boolean
+`NormalizedPathActivation` declarations. Complete candidates contain only
+exact base loads with unused boolean results, exact unauthorized base stores,
+and storage lifetime markers. Projected or alias places, authorized stores,
+material load results, attachments, checked/proof roles, calls,
+ownership/lifecycle operations, I/O, and other executable uses are explicit
+barriers. The analysis retains exact owned declaration, instruction, and load-
+result snapshots for later revalidation, but remains read-only and is not a
+registered optimization pass.
 
 The redundant-cast category uses the compiler's shared integer-cast-chain
 analysis. It follows arbitrary-length `u8`/`i64`/`u64` chains within one basic
@@ -80,13 +95,19 @@ is written to standard output. Explicit output paths must remain below
 `build/measurements/`. Human and JSON output are projections of the same typed
 report; JSON object fields and identity-bearing arrays have canonical order.
 
-Every report records the corpus identity, compiler revision and dirty state,
-fixed target/runtime-trace/profile configuration, exact resolved pass schedule,
-canonical compilation and native-run context, assembly size, per-workload and
-per-checkpoint counts, callable breakdowns, directed overlap counts, category
-breadth, bounded site examples, and saturating totals. Native stdin is
-represented by origin, optional repository-relative path, byte count, and
-SHA-256 rather than embedded content.
+Every schema-version-two report records the corpus identity, compiler revision
+and dirty state, fixed target/runtime-trace/profile configuration, exact
+resolved pass schedule, canonical compilation and native-run context,
+assembly size, per-workload and per-checkpoint counts, callable breakdowns,
+directed overlap counts, category breadth, bounded site examples, and
+saturating totals. Native stdin is represented by origin, optional repository-
+relative path, byte count, and SHA-256 rather than embedded content.
+
+Schema version two extends the archived version-one contract with the
+`dead_path_activations` family, a common
+`removable_storages_upper_bound`, and storage-centered examples whose block and
+instruction are absent for declaration-only candidates. Existing value-
+centered examples retain their block, instruction, and optional value fields.
 
 Pass `--operational` to include compile duration. Operational durations are
 nondeterministic context and are excluded by default; they must never be used
@@ -119,3 +140,25 @@ source fixture supplies the activation evidence that this corpus cannot: its
 default occurrence rewrites arbitrary integer chains, its pass-disabled form
 retains a candidate, and its dead-pure-disabled form retains an orphan without
 undoing endpoint canonicalization.
+
+## Dead normalized path-activation baseline
+
+The initial cleanup baseline was generated from corpus version one at revision
+`32f5210390694e3766b1c5a6ef719f787bf6b228` with the dead-activation analysis
+changes present in the working tree. All three manually reviewed final
+candidates are complete four-instruction protocols: one load and its unused
+boolean result, one store, one `StorageLive`, and one `StorageDead`. The store
+source producers remain outside the removal bound.
+
+| Checkpoint | Inspected | Proven | Blocked | Storage bound | Value bound | Instruction bound | Dominant blocker |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| input | 0 | 0 | 0 | 0 | 0 | 0 | none; activations are normalized-only |
+| pre-reachability | 804 | 3 | 801 | 3 | 3 | 12 | material load result (801) |
+| final | 57 | 3 | 54 | 3 | 3 | 12 | material load result (54) |
+
+One final candidate is `proof_protected` in
+`focused/local-simplification`. Two are in `main` in
+`primitives/cast-matrix`. The same three candidates exist before and after
+whole-world reachability; all other reviewed workloads have no proven final
+candidate. This baseline records incidence before any cleanup pass exists and
+does not revise the archived local-redundancy study.

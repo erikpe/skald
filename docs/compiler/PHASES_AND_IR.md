@@ -3859,6 +3859,33 @@ adding it to direct CSE candidates. This is an opt-in analysis, not a
 registered pass, compiler option, report event, persistent fact table, or
 backend input.
 
+### Read-only dead normalized path-activation analysis
+
+`passes::analyze_dead_normalized_path_activations` examines one borrowed,
+verified normalized final-MIR product. It considers only source-free boolean
+storage whose snapshot kind is `NormalizedPathActivation`; it has no proof-
+rich entry point because that role is legal only after proof normalization.
+The analysis consumes the exhaustive semantic storage-use census and one
+callable-wide value-use index rather than inferring provenance from names,
+spans, types alone, control-flow shapes, or lowering history.
+
+A complete removable protocol may contain exact base-place unauthorized
+ordinary stores, exact base-place ordinary loads whose declared boolean result
+has no semantic use, and `StorageLive`/`StorageDead` markers. Attachments,
+projected or alias places, write authorization, material load results, checked
+or proof roles, calls, ownership/lifecycle roles other than storage lifetime,
+I/O, other executable roles, malformed identities, and stale snapshots fail
+closed. Store source values and their producers are deliberately outside the
+candidate; the analysis grants no producer dead-code elimination.
+
+Each candidate owns its exact storage declaration, instruction locations and
+instruction snapshots, and load-result declarations in deterministic dense
+identity and structural order. Blocked activations retain a sorted typed
+barrier set and bounded storage-centered examples. Counts include removable
+storage, value, load, store, lifetime-marker, and total-instruction upper
+bounds plus maximum protocol size. This is a read-only analysis and
+measurement authority, not a registered MIR pass or mutation capability.
+
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests
 compare those products and assembly both for a complete source pipeline and

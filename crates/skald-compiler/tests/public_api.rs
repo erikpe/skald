@@ -48,9 +48,9 @@ use skald_compiler::{
         ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::{
-        analyze_local_primitive_common_subexpressions, analyze_redundant_primitive_casts,
-        analyze_scalar_spill_provenance, available_mir_passes, run_mir_pipeline,
-        run_mir_pipeline_inspected,
+        analyze_dead_normalized_path_activations, analyze_local_primitive_common_subexpressions,
+        analyze_redundant_primitive_casts, analyze_scalar_spill_provenance, available_mir_passes,
+        run_mir_pipeline, run_mir_pipeline_inspected,
         static_lifecycle::{
             dump_planned_mir, dump_static_effects, plan_static_lifetimes,
             synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
@@ -58,12 +58,13 @@ use skald_compiler::{
             StaticActivationStatistics, StaticEffectAnalysis, StaticLifecyclePlan,
             StaticLifecyclePlanningReport, StaticLifetimeDependency, VerifiedPlannedMirProgram,
         },
-        LocalCseBlocker, LocalCseConsumer, LocalCseExcludedFamily, LocalCseOperationFamily,
-        LocalCseOutcome, MirFinalPipelineCheckpoint, MirPassDescriptor, MirPassStage,
-        MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError,
-        MirPipelineFailureStage, MirProofPipelineCheckpoint, PrimitiveCastBlocker,
-        PrimitiveCastConsumer, PrimitiveCastDisposition, RedundancySiteClassification,
-        RedundancySiteExample, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
+        DeadPathActivationBlocker, DeadPathActivationInstructionKind, LocalCseBlocker,
+        LocalCseConsumer, LocalCseExcludedFamily, LocalCseOperationFamily, LocalCseOutcome,
+        MirFinalPipelineCheckpoint, MirPassDescriptor, MirPassStage, MirPipelineCheckpoint,
+        MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage,
+        MirProofPipelineCheckpoint, PrimitiveCastBlocker, PrimitiveCastConsumer,
+        PrimitiveCastDisposition, RedundancySiteClassification, RedundancySiteExample,
+        RedundancyStorageExample, ScalarSpillBlocker, ScalarSpillConsumer, ScalarSpillDepth,
         ScalarSpillUnlock, VerifiedFinalMirProgram, REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
     },
     resolve::{
@@ -490,6 +491,13 @@ fn intentional_phase_and_dump_paths_compose() {
     let _cse_blocker = LocalCseBlocker::ProtectedMetadataOrUse;
     let _cse_consumer = LocalCseConsumer::TotalPrimitive;
     let _cse_exclusion = LocalCseExcludedFamily::FloatingOperation;
+    let activations = analyze_dead_normalized_path_activations(&mir);
+    let activation_counts = activations.counts();
+    let _removable_storages = activation_counts.removable_storages_upper_bound();
+    let _activation_callables = activations.callables();
+    let _activation_blocker = DeadPathActivationBlocker::MaterialLoadResult;
+    let _activation_instruction = DeadPathActivationInstructionKind::Load;
+    let _activation_example: Option<RedundancyStorageExample<DeadPathActivationBlocker>> = None;
     let target = target_by_name("x86_64-sysv").unwrap();
     let omitted = emit_assembly(target, BackendInput::without_runtime_trace(&mir)).unwrap();
     let enabled = emit_assembly(target, BackendInput::with_runtime_trace(&mir, &sources)).unwrap();

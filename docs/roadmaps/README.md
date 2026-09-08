@@ -6,11 +6,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## Implementation roadmaps
 
-The planned
+The in-progress
 [dead normalized path-activation cleanup roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
 implements FMM-13 as a narrow final-MIR cleanup for complete, semantically dead
-`NormalizedPathActivation` protocols. NAC0 is next: establish the shared exact
-analysis and record the current corpus opportunity baseline. The completed
+`NormalizedPathActivation` protocols. NAC0 established the shared exact
+analysis and corpus opportunity baseline; NAC1 is next to introduce narrow
+final-stage storage deletion authority. The completed
 proof-normalization, normalization-stable activation provenance, dense MIR
 rewriting, selectable pipeline, post-proof CFG, and redundancy-measurement work
 supply its material dependencies.

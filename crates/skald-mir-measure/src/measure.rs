@@ -99,7 +99,7 @@ pub fn measure_corpus(
     }
     let totals = aggregate::totals(&workloads);
     Ok(MeasurementReport {
-        schema: 1,
+        schema: 2,
         corpus: CorpusIdentity {
             name: corpus.name().to_owned(),
             version: corpus.version(),

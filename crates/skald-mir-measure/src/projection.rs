@@ -4,13 +4,14 @@ use skald_compiler::{
     identity::CallableId,
     mir::{MirPrimitiveCastKind, MirProgram},
     passes::{
-        analyze_local_primitive_common_subexpressions,
+        analyze_dead_normalized_path_activations, analyze_local_primitive_common_subexpressions,
         analyze_proof_local_primitive_common_subexpressions,
         analyze_proof_redundant_primitive_casts, analyze_proof_scalar_spill_provenance,
-        analyze_redundant_primitive_casts, analyze_scalar_spill_provenance, LocalCseObservation,
+        analyze_redundant_primitive_casts, analyze_scalar_spill_provenance,
+        DeadPathActivationCounts, DeadPathActivationObservation, LocalCseObservation,
         LocalCseObservationCounts, MirPipelineCheckpoint, PrimitiveCastObservation,
-        PrimitiveCastObservationCounts, RedundancySiteExample, ScalarSpillProvenanceCounts,
-        ScalarSpillProvenanceObservation, ScalarSpillUnlock,
+        PrimitiveCastObservationCounts, RedundancySiteExample, RedundancyStorageExample,
+        ScalarSpillProvenanceCounts, ScalarSpillProvenanceObservation, ScalarSpillUnlock,
     },
 };
 use std::{collections::BTreeMap, fmt};
@@ -31,6 +32,7 @@ pub(super) fn snapshot(name: &str, checkpoint: MirPipelineCheckpoint<'_>) -> Sna
             analyze_proof_scalar_spill_provenance(checkpoint.verified()),
             analyze_proof_redundant_primitive_casts(checkpoint.verified()),
             analyze_proof_local_primitive_common_subexpressions(checkpoint.verified()),
+            DeadPathActivationObservation::default(),
         ),
         MirPipelineCheckpoint::Final(checkpoint) => snapshot_from_observations(
             name,
@@ -38,6 +40,7 @@ pub(super) fn snapshot(name: &str, checkpoint: MirPipelineCheckpoint<'_>) -> Sna
             analyze_scalar_spill_provenance(checkpoint.verified()),
             analyze_redundant_primitive_casts(checkpoint.verified()),
             analyze_local_primitive_common_subexpressions(checkpoint.verified()),
+            analyze_dead_normalized_path_activations(checkpoint.verified()),
         ),
     }
 }
@@ -48,13 +51,16 @@ fn snapshot_from_observations(
     spill: ScalarSpillProvenanceObservation,
     casts: PrimitiveCastObservation,
     cse: LocalCseObservation,
+    activations: DeadPathActivationObservation,
 ) -> SnapshotReport {
     let mut scalar_spill = spill_counts(spill.counts());
     let mut redundant_casts = cast_counts(casts.counts());
     let mut local_cse = cse_counts(cse.counts());
+    let mut dead_path_activations = activation_counts(activations.counts());
     scalar_spill.examples = site_examples(spill.examples());
     redundant_casts.examples = site_examples(casts.examples());
     local_cse.examples = site_examples(cse.examples());
+    dead_path_activations.examples = storage_examples(activations.examples());
     let overlaps = spill
         .counts()
         .unlocks()
@@ -65,18 +71,20 @@ fn snapshot_from_observations(
             sites: count.sites(),
         })
         .collect();
-    let callables = callable_counts(program, &spill, &casts, &cse);
+    let callables = callable_counts(program, &spill, &casts, &cse, &activations);
     let structure = structure_counts(program);
     let saturated = structure.saturated
         || scalar_spill.saturated
         || redundant_casts.saturated
         || local_cse.saturated;
+    let saturated = saturated || dead_path_activations.saturated;
     SnapshotReport {
         name: name.to_owned(),
         structure,
         scalar_spill,
         redundant_casts,
         local_cse,
+        dead_path_activations,
         overlaps,
         callables,
         saturated,
@@ -147,6 +155,7 @@ fn callable_counts(
     spill: &skald_compiler::passes::ScalarSpillProvenanceObservation,
     casts: &skald_compiler::passes::PrimitiveCastObservation,
     cse: &skald_compiler::passes::LocalCseObservation,
+    activations: &skald_compiler::passes::DeadPathActivationObservation,
 ) -> Vec<CallableCounts> {
     let mut callables = BTreeMap::<CallableId, CallableCounts>::new();
     for observation in spill.callables() {
@@ -164,10 +173,16 @@ fn callable_counts(
         entry.local_cse = cse_counts(observation.counts());
         entry.local_cse.examples = site_examples(observation.examples());
     }
+    for observation in activations.callables() {
+        let entry = callable_entry(program, &mut callables, observation.callable());
+        entry.dead_path_activations = activation_counts(observation.counts());
+        entry.dead_path_activations.examples = storage_examples(observation.examples());
+    }
     for entry in callables.values_mut() {
         entry.saturated = entry.scalar_spill.saturated
             || entry.redundant_casts.saturated
             || entry.local_cse.saturated;
+        entry.saturated |= entry.dead_path_activations.saturated;
     }
     callables.into_values().collect()
 }
@@ -243,6 +258,7 @@ fn spill_counts(counts: &ScalarSpillProvenanceCounts) -> CandidateCounts {
         affected_callables: counts.affected_callables(),
         supporting_values: counts.supporting_values(),
         supporting_instructions: counts.supporting_instructions(),
+        removable_storages_upper_bound: 0,
         removable_values_upper_bound: counts.removable_values_upper_bound(),
         removable_instructions_upper_bound: counts.removable_instructions_upper_bound(),
         outcomes: named_counts(counts.depths()),
@@ -296,6 +312,7 @@ fn cast_counts(counts: &PrimitiveCastObservationCounts) -> CandidateCounts {
         affected_callables: counts.affected_callables(),
         supporting_values: counts.supporting_values(),
         supporting_instructions: counts.supporting_instructions(),
+        removable_storages_upper_bound: 0,
         removable_values_upper_bound: counts.removable_values_upper_bound(),
         removable_instructions_upper_bound: counts.removable_instructions_upper_bound(),
         outcomes: named_counts(counts.dispositions()),
@@ -333,6 +350,7 @@ fn cse_counts(counts: &LocalCseObservationCounts) -> CandidateCounts {
         affected_callables: counts.affected_callables(),
         supporting_values: counts.supporting_values(),
         supporting_instructions: counts.supporting_instructions(),
+        removable_storages_upper_bound: 0,
         removable_values_upper_bound: counts.removable_values_upper_bound(),
         removable_instructions_upper_bound: counts.removable_instructions_upper_bound(),
         outcomes: named_counts(counts.outcomes()),
@@ -343,6 +361,49 @@ fn cse_counts(counts: &LocalCseObservationCounts) -> CandidateCounts {
             name: "scalar-spill-constant-equivalence".to_owned(),
             sites: counts.scalar_spill_unlocks(),
         }],
+        details,
+        examples: Vec::new(),
+        saturated: counts.saturated(),
+    }
+}
+
+fn activation_counts(counts: &DeadPathActivationCounts) -> CandidateCounts {
+    let mut details = vec![
+        NamedCount {
+            name: "maximum-protocol-size".to_owned(),
+            sites: counts.maximum_protocol_size(),
+        },
+        NamedCount {
+            name: "removable-lifetime-markers-upper-bound".to_owned(),
+            sites: counts.removable_lifetime_markers_upper_bound(),
+        },
+        NamedCount {
+            name: "removable-loads-upper-bound".to_owned(),
+            sites: counts.removable_loads_upper_bound(),
+        },
+        NamedCount {
+            name: "removable-stores-upper-bound".to_owned(),
+            sites: counts.removable_stores_upper_bound(),
+        },
+    ];
+    details.sort_by(|left, right| left.name.cmp(&right.name));
+    CandidateCounts {
+        inspected: counts.inspected(),
+        interesting: counts.interesting(),
+        proven: counts.proven(),
+        blocked: counts.blocked(),
+        non_candidates: counts.non_candidates(),
+        affected_callables: counts.affected_callables(),
+        supporting_values: counts.supporting_values(),
+        supporting_instructions: counts.supporting_instructions(),
+        removable_storages_upper_bound: counts.removable_storages_upper_bound(),
+        removable_values_upper_bound: counts.removable_values_upper_bound(),
+        removable_instructions_upper_bound: counts.removable_instructions_upper_bound(),
+        outcomes: Vec::new(),
+        primary_blockers: named_counts(counts.primary_blockers()),
+        barriers: named_counts(counts.barriers()),
+        consumers: Vec::new(),
+        unlocks: Vec::new(),
         details,
         examples: Vec::new(),
         saturated: counts.saturated(),
@@ -403,9 +464,27 @@ fn site_examples<R: Copy + fmt::Debug>(examples: &[RedundancySiteExample<R>]) ->
         .iter()
         .map(|example| Example {
             callable: example.callable().to_string(),
-            block: example.block().to_string(),
-            instruction: example.instruction(),
+            storage: None,
+            block: Some(example.block().to_string()),
+            instruction: Some(example.instruction()),
             value: example.value().map(|value| value.to_string()),
+            classification: debug_name(example.classification()),
+            reasons: example.reasons().iter().copied().map(debug_name).collect(),
+        })
+        .collect()
+}
+
+fn storage_examples<R: Copy + fmt::Debug>(
+    examples: &[RedundancyStorageExample<R>],
+) -> Vec<Example> {
+    examples
+        .iter()
+        .map(|example| Example {
+            callable: example.callable().to_string(),
+            storage: Some(example.storage().to_string()),
+            block: example.block().map(|block| block.to_string()),
+            instruction: example.instruction(),
+            value: None,
             classification: debug_name(example.classification()),
             reasons: example.reasons().iter().copied().map(debug_name).collect(),
         })

@@ -10,6 +10,8 @@ mod count;
 mod cse_model;
 mod local_cse;
 mod model;
+mod path_activation;
+mod path_activation_model;
 mod primitive_cast;
 mod scalar_spill;
 mod site;
@@ -33,12 +35,19 @@ pub use model::{
     ScalarSpillDepth, ScalarSpillProvenanceCounts, ScalarSpillProvenanceObservation,
     ScalarSpillUnlock,
 };
+pub use path_activation::analyze_dead_normalized_path_activations;
+pub use path_activation_model::{
+    BlockedPathActivation, DeadPathActivationBlocker, DeadPathActivationCallableObservation,
+    DeadPathActivationCandidate, DeadPathActivationCount, DeadPathActivationCounts,
+    DeadPathActivationInstruction, DeadPathActivationInstructionKind,
+    DeadPathActivationObservation,
+};
 pub use primitive_cast::{
     analyze_proof_redundant_primitive_casts, analyze_redundant_primitive_casts,
 };
 pub use scalar_spill::{analyze_proof_scalar_spill_provenance, analyze_scalar_spill_provenance};
 pub use site::{
-    RedundancySiteClassification, RedundancySiteExample,
+    RedundancySiteClassification, RedundancySiteExample, RedundancyStorageExample,
     REDUNDANCY_SITE_EXAMPLES_PER_CLASSIFICATION,
 };
 

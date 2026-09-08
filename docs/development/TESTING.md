@@ -237,6 +237,14 @@ every `u8` input and a boundary-rich deterministic `i64`/`u64` set. Separate
 chain traversal, compact per-cast analysis state, one-shot value-use indexing,
 and batched identity forwarding and removal.
 
+Dead normalized path-activation analysis tests cover the closed storage-role
+and place-shape matrix, exact owned protocol snapshots, declaration-only and
+multi-candidate ordering, dead and material load results, wrong source/type/
+kind declarations, projected places, malformed identities, snapshot
+recomputation, and saturating bounds. Measurement tests separately pin schema,
+aggregation, human/JSON rendering, and real-driver checkpoint projection. No
+production MIR behavior changes while this remains observation-only.
+
 ### Checked floating-to-integer protocol simplification coverage
 
 Checked floating-to-integer tests cover exact owned topology and

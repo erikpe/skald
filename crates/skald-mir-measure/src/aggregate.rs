@@ -19,6 +19,7 @@ pub(super) fn totals(workloads: &[WorkloadReport]) -> Totals {
                 snapshot.scalar_spill.proven > 0
                     || snapshot.redundant_casts.proven > 0
                     || snapshot.local_cse.proven > 0
+                    || snapshot.dead_path_activations.proven > 0
             });
         if has_proven {
             categories
@@ -66,11 +67,16 @@ fn merge_snapshot(target: &mut SnapshotReport, source: &SnapshotReport) {
     merge_candidate(&mut target.scalar_spill, &source.scalar_spill);
     merge_candidate(&mut target.redundant_casts, &source.redundant_casts);
     merge_candidate(&mut target.local_cse, &source.local_cse);
+    merge_candidate(
+        &mut target.dead_path_activations,
+        &source.dead_path_activations,
+    );
     target.overlaps = merge_named_pairs(&target.overlaps, &source.overlaps, &mut target.saturated);
     target.saturated = target.structure.saturated
         || target.scalar_spill.saturated
         || target.redundant_casts.saturated
         || target.local_cse.saturated
+        || target.dead_path_activations.saturated
         || source.saturated;
 }
 
@@ -110,6 +116,7 @@ fn merge_candidate(target: &mut CandidateCounts, source: &CandidateCounts) {
     add_field!(affected_callables);
     add_field!(supporting_values);
     add_field!(supporting_instructions);
+    add_field!(removable_storages_upper_bound);
     add_field!(removable_values_upper_bound);
     add_field!(removable_instructions_upper_bound);
     target.outcomes = merge_named(&target.outcomes, &source.outcomes, &mut target.saturated);
@@ -135,7 +142,7 @@ fn merge_details(
         let target = counts.entry(count.name.clone()).or_default();
         if matches!(
             count.name.as_str(),
-            "maximum-chain-depth" | "maximum-repetitions-per-key"
+            "maximum-chain-depth" | "maximum-repetitions-per-key" | "maximum-protocol-size"
         ) {
             *target = (*target).max(count.sites);
         } else {
@@ -212,31 +219,46 @@ mod tests {
     fn candidate_aggregation_preserves_sorted_detail_and_saturation() {
         let mut target = CandidateCounts {
             inspected: u64::MAX,
+            removable_storages_upper_bound: 2,
             outcomes: vec![NamedCount {
                 name: "zeta".to_owned(),
                 sites: 1,
             }],
-            details: vec![NamedCount {
-                name: "maximum-chain-depth".to_owned(),
-                sites: 5,
-            }],
+            details: vec![
+                NamedCount {
+                    name: "maximum-chain-depth".to_owned(),
+                    sites: 5,
+                },
+                NamedCount {
+                    name: "maximum-protocol-size".to_owned(),
+                    sites: 4,
+                },
+            ],
             ..CandidateCounts::default()
         };
         let source = CandidateCounts {
             inspected: 1,
+            removable_storages_upper_bound: 3,
             outcomes: vec![NamedCount {
                 name: "alpha".to_owned(),
                 sites: 2,
             }],
-            details: vec![NamedCount {
-                name: "maximum-chain-depth".to_owned(),
-                sites: 3,
-            }],
+            details: vec![
+                NamedCount {
+                    name: "maximum-chain-depth".to_owned(),
+                    sites: 3,
+                },
+                NamedCount {
+                    name: "maximum-protocol-size".to_owned(),
+                    sites: 9,
+                },
+            ],
             ..CandidateCounts::default()
         };
         merge_candidate(&mut target, &source);
         assert_eq!(target.inspected, u64::MAX);
         assert!(target.saturated);
+        assert_eq!(target.removable_storages_upper_bound, 5);
         assert_eq!(
             target
                 .outcomes
@@ -246,5 +268,6 @@ mod tests {
             ["alpha", "zeta"]
         );
         assert_eq!(target.details[0].sites, 5);
+        assert_eq!(target.details[1].sites, 9);
     }
 }

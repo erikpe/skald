@@ -134,6 +134,7 @@ pub struct SnapshotReport {
     pub(crate) scalar_spill: CandidateCounts,
     pub(crate) redundant_casts: CandidateCounts,
     pub(crate) local_cse: CandidateCounts,
+    pub(crate) dead_path_activations: CandidateCounts,
     pub(crate) overlaps: Vec<OverlapCount>,
     pub(crate) callables: Vec<CallableCounts>,
     pub(crate) saturated: bool,
@@ -154,6 +155,10 @@ impl SnapshotReport {
 
     pub const fn local_cse(&self) -> &CandidateCounts {
         &self.local_cse
+    }
+
+    pub const fn dead_path_activations(&self) -> &CandidateCounts {
+        &self.dead_path_activations
     }
 }
 
@@ -178,6 +183,7 @@ pub struct CandidateCounts {
     pub(crate) affected_callables: u64,
     pub(crate) supporting_values: u64,
     pub(crate) supporting_instructions: u64,
+    pub(crate) removable_storages_upper_bound: u64,
     pub(crate) removable_values_upper_bound: u64,
     pub(crate) removable_instructions_upper_bound: u64,
     pub(crate) outcomes: Vec<NamedCount>,
@@ -216,8 +222,12 @@ pub(crate) struct OverlapCount {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub(crate) struct Example {
     pub(crate) callable: String,
-    pub(crate) block: String,
-    pub(crate) instruction: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) storage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) block: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) instruction: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) value: Option<String>,
     pub(crate) classification: String,
@@ -232,6 +242,7 @@ pub(crate) struct CallableCounts {
     pub(crate) scalar_spill: CandidateCounts,
     pub(crate) redundant_casts: CandidateCounts,
     pub(crate) local_cse: CandidateCounts,
+    pub(crate) dead_path_activations: CandidateCounts,
     pub(crate) saturated: bool,
 }
 

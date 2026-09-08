@@ -1,7 +1,7 @@
 use super::{measure_corpus, MeasurementOptions, REACHABILITY_PASS};
 use crate::{
     corpus::{Corpus, Workload, WorkloadKind},
-    load_corpus,
+    load_corpus, render_report, ReportFormat,
 };
 use std::{collections::BTreeSet, fs, path::Path};
 
@@ -52,7 +52,7 @@ fn focused_real_driver_measurement_is_deterministic_and_has_semantic_checkpoints
     )
     .unwrap();
     corpus
-        .retain_ids(&BTreeSet::from(["benchmark/range-i64".to_owned()]))
+        .retain_ids(&BTreeSet::from(["focused/local-simplification".to_owned()]))
         .unwrap();
     let first = measure_corpus(&root, &corpus, MeasurementOptions::default()).unwrap();
     let second = measure_corpus(&root, &corpus, MeasurementOptions::default()).unwrap();
@@ -80,7 +80,34 @@ fn focused_real_driver_measurement_is_deterministic_and_has_semantic_checkpoints
             .collect::<BTreeSet<_>>();
         assert!(detail_names.contains("eliminated-cast-steps-upper-bound"));
         assert!(detail_names.contains("maximum-chain-depth"));
+        let activation_detail_names = snapshot
+            .dead_path_activations()
+            .details
+            .iter()
+            .map(|detail| detail.name.as_str())
+            .collect::<BTreeSet<_>>();
+        assert!(activation_detail_names.contains("maximum-protocol-size"));
+        assert!(activation_detail_names.contains("removable-loads-upper-bound"));
     }
+    assert_eq!(
+        first.workloads()[0].snapshots()[2]
+            .dead_path_activations()
+            .proven(),
+        first.totals().snapshots()[2]
+            .dead_path_activations()
+            .proven()
+    );
+    assert_eq!(
+        first.workloads()[0].snapshots()[2]
+            .dead_path_activations()
+            .proven(),
+        1
+    );
+    let human = render_report(&first, ReportFormat::Human).unwrap();
+    let json = render_report(&first, ReportFormat::Json).unwrap();
+    assert!(human.contains("activations 0/0"));
+    assert!(json.contains("\"dead_path_activations\""));
+    assert!(json.contains("\"removable_storages_upper_bound\""));
 }
 
 #[test]
@@ -108,7 +135,11 @@ fn report_examples_retain_owned_site_locations_and_classification() {
         .expect("focused checked protocols retain scalar-spill examples");
 
     assert!(example.callable.starts_with('f'));
-    assert!(example.block.contains(":b"));
+    assert!(example
+        .block
+        .as_deref()
+        .is_some_and(|block| block.contains(":b")));
+    assert!(example.instruction.is_some());
     assert!(example
         .value
         .as_deref()
@@ -117,4 +148,14 @@ fn report_examples_retain_owned_site_locations_and_classification() {
         example.classification.as_str(),
         "proven" | "blocked"
     ));
+    let activation = final_snapshot
+        .dead_path_activations
+        .examples
+        .first()
+        .expect("normalized activations retain storage-centered examples");
+    assert!(activation
+        .storage
+        .as_deref()
+        .is_some_and(|value| value.contains(":s")));
+    assert_eq!(activation.value, None);
 }

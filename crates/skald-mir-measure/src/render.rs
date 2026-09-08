@@ -46,11 +46,12 @@ fn render_human(report: &MeasurementReport) -> String {
         for snapshot in &workload.snapshots {
             let _ = writeln!(
                 output,
-                "  {:<16} spill {}  casts {}  cse {}  instructions {}",
+                "  {:<16} spill {}  casts {}  cse {}  activations {}  instructions {}",
                 snapshot.name,
                 compact(&snapshot.scalar_spill),
                 compact(&snapshot.redundant_casts),
                 compact(&snapshot.local_cse),
+                compact(&snapshot.dead_path_activations),
                 snapshot.structure.instructions
             );
         }
@@ -60,11 +61,12 @@ fn render_human(report: &MeasurementReport) -> String {
         for snapshot in &report.totals.snapshots {
             let _ = writeln!(
                 output,
-                "  {:<16} spill {}  casts {}  cse {}  instructions {}",
+                "  {:<16} spill {}  casts {}  cse {}  activations {}  instructions {}",
                 snapshot.name,
                 compact(&snapshot.scalar_spill),
                 compact(&snapshot.redundant_casts),
                 compact(&snapshot.local_cse),
+                compact(&snapshot.dead_path_activations),
                 snapshot.structure.instructions
             );
         }
@@ -85,7 +87,7 @@ mod tests {
 
     fn empty_report() -> MeasurementReport {
         MeasurementReport {
-            schema: 1,
+            schema: 2,
             corpus: CorpusIdentity {
                 name: "test".to_owned(),
                 version: 1,
@@ -114,7 +116,7 @@ mod tests {
         assert!(human.contains("test v1"));
         assert!(human.contains("compiler: abc"));
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(value["schema"], 1);
+        assert_eq!(value["schema"], 2);
         assert_eq!(value["corpus"]["name"], "test");
         assert!(json.find("\"schema\"").unwrap() < json.find("\"corpus\"").unwrap());
         assert!(json.find("\"corpus\"").unwrap() < json.find("\"compiler\"").unwrap());

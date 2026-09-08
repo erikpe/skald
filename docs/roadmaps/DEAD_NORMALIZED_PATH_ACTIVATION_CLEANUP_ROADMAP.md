@@ -1,6 +1,6 @@
 # Dead Normalized Path-Activation Cleanup Roadmap
 
-Status: planned; NAC0 is next.
+Status: in progress; NAC0 is complete and NAC1 is next.
 
 This roadmap implements FMM-13 as one exact, target-independent final-MIR
 cleanup. It removes a `NormalizedPathActivation` declaration only when every
@@ -101,7 +101,7 @@ general alias, effect, escape, or ownership analysis prematurely.
 
 ## Progress
 
-- [ ] NAC0 — Establish exact dead-carrier analysis and evidence
+- [x] NAC0 — Establish exact dead-carrier analysis and evidence
 - [ ] NAC1 — Add narrow final-stage storage deletion authority
 - [ ] NAC2 — Implement the selectable cleanup pass
 - [ ] NAC3 — Activate and compose cleanup in the final pipeline
@@ -115,21 +115,21 @@ general alias, effect, escape, or ownership analysis prematurely.
 **Purpose:** Define one auditable candidate boundary and establish its corpus
 incidence before any production mutation depends on it.
 
-- [ ] Add one read-only callable analysis over verified MIR which selects only
+- [x] Add one read-only callable analysis over verified MIR which selects only
   `NormalizedPathActivation` declarations and consumes the existing exhaustive
   storage-use census plus value-use index.
-- [ ] Classify exact base loads, exact unauthorized base stores, lifetime
+- [x] Classify exact base loads, exact unauthorized base stores, lifetime
   markers, declarations, and every barrier role without inferring from names,
   spans, boolean type, CFG shape, or lowering history.
-- [ ] Require each removable load to be an exact ordinary load assignment with
+- [x] Require each removable load to be an exact ordinary load assignment with
   the expected boolean result declaration and no semantic result uses.
-- [ ] Produce an immutable deterministic candidate containing the exact
+- [x] Produce an immutable deterministic candidate containing the exact
   declaration, removable instruction sites, removable load-result values, and
   stable removal bounds; retain structured blockers for non-candidates.
-- [ ] Extend the local redundancy observation and measurement projections with
+- [x] Extend the local redundancy observation and measurement projections with
   dead normalized path activations, including stable human/JSON fields,
   aggregate counts, bounded examples, blockers, and saturation behavior.
-- [ ] Record the frozen corpus baseline in living measurement documentation
+- [x] Record the frozen corpus baseline in living measurement documentation
   without rewriting the archived historical study.
 
 **Tests:** Complete storage-use-role and place-shape matrix; zero, one, and
