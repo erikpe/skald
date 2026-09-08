@@ -19,11 +19,12 @@ alter backend input, or add work to ordinary compilation.
 The stage-aware inspector provides distinct proof-rich and normalized views.
 The `input` report slot uses `proof-rich-input`; `pre-reachability` uses the
 last final checkpoint before `whole-world-reachability`, currently
-`after-proof-normalization`; and `final` uses the normalized product-final
-checkpoint after reachability. Proof-rich observations call the proof-sealed
-analyzer entry points, while final observations call the normalized-seal entry
-points. The tool never forges either seal, and the pre-to-final delta therefore
-measures the final reachability occurrence again.
+the checkpoint after post-proof basic-block merging; and `final` uses the
+normalized product-final checkpoint after reachability. Proof-rich
+observations call the proof-sealed analyzer entry points, while final
+observations call the normalized-seal entry points. The tool never forges
+either seal, and the pre-to-final delta therefore measures the final
+reachability occurrence again.
 
 The tool keeps corpus resolution, real-driver checkpoint collection, stable
 report projection, aggregation, and rendering in separate internal owners.
@@ -155,6 +156,10 @@ source producers remain outside the removal bound.
 | input | 0 | 0 | 0 | 0 | 0 | 0 | none; activations are normalized-only |
 | pre-reachability | 804 | 3 | 801 | 3 | 3 | 12 | material load result (801) |
 | final | 57 | 3 | 54 | 3 | 3 | 12 | material load result (54) |
+
+This is deliberately a pre-activation baseline. The current default cleanup
+occurs before the `pre-reachability` checkpoint, so current reports have no
+proven dead activation remaining at either normalized checkpoint.
 
 One final candidate is `proof_protected` in
 `focused/local-simplification`. Two are in `main` in

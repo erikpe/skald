@@ -101,7 +101,13 @@ fn focused_real_driver_measurement_is_deterministic_and_has_semantic_checkpoints
         first.workloads()[0].snapshots()[2]
             .dead_path_activations()
             .proven(),
-        1
+        0
+    );
+    assert_eq!(
+        first.workloads()[0].snapshots()[1]
+            .dead_path_activations()
+            .proven(),
+        0
     );
     let human = render_report(&first, ReportFormat::Human).unwrap();
     let json = render_report(&first, ReportFormat::Json).unwrap();
