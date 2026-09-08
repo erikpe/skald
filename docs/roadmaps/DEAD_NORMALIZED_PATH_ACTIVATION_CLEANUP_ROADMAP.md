@@ -1,6 +1,6 @@
 # Dead Normalized Path-Activation Cleanup Roadmap
 
-Status: in progress; NAC0 and NAC1 are complete and NAC2 is next.
+Status: in progress; NAC0 through NAC2 are complete and NAC3 is next.
 
 This roadmap implements FMM-13 as one exact, target-independent final-MIR
 cleanup. It removes a `NormalizedPathActivation` declaration only when every
@@ -103,7 +103,7 @@ general alias, effect, escape, or ownership analysis prematurely.
 
 - [x] NAC0 — Establish exact dead-carrier analysis and evidence
 - [x] NAC1 — Add narrow final-stage storage deletion authority
-- [ ] NAC2 — Implement the selectable cleanup pass
+- [x] NAC2 — Implement the selectable cleanup pass
 - [ ] NAC3 — Activate and compose cleanup in the final pipeline
 - [ ] NAC4 — Prove end-to-end value and observable equivalence
 - [ ] NAC5 — Harden the boundary and close the roadmap
@@ -185,20 +185,20 @@ existing final CFG passes retain their narrower authority unchanged.
 **Purpose:** Materialize the shared analysis through the narrow capability
 while leaving normal compilation unchanged until focused behavior is proven.
 
-- [ ] Add a proof-normalized final-MIR pass with a unique private identity,
+- [x] Add a proof-normalized final-MIR pass with a unique private identity,
   stable name and description, private plan/rewrite ownership, and registry
   entry outside the default schedule.
-- [ ] Prepare all callable candidates from one verified seal, revalidate every
+- [x] Prepare all callable candidates from one verified seal, revalidate every
   expected declaration, instruction, value, and use decision, and apply the
   complete program transaction through the dedicated cleanup capability.
-- [ ] Batch overlapping block edits and storage/value removals without repeated
+- [x] Batch overlapping block edits and storage/value removals without repeated
   whole-callable scans, mutation-time rediscovery, or index-shift dependence.
-- [ ] Report processed/changed callables, inspected/removable/protected
+- [x] Report processed/changed callables, inspected/removable/protected
   carriers, removed storages, loads, stores, lifetime markers and values, and
   maximum protocol size in stable order.
-- [ ] Return unchanged with the existing seal when no candidate exists. A
+- [x] Return unchanged with the existing seal when no candidate exists. A
   repeated occurrence over cleaned MIR must be a deterministic no-op.
-- [ ] Keep the production pass and measurement observer on the same semantic
+- [x] Keep the production pass and measurement observer on the same semantic
   analysis so blocker and candidate decisions cannot drift.
 
 **Tests:** Exact opt-in schedules; every removable protocol shape; mixed live

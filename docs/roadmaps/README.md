@@ -10,8 +10,10 @@ The in-progress
 [dead normalized path-activation cleanup roadmap](DEAD_NORMALIZED_PATH_ACTIVATION_CLEANUP_ROADMAP.md)
 implements FMM-13 as a narrow final-MIR cleanup for complete, semantically dead
 `NormalizedPathActivation` protocols. NAC0 established the shared exact
-analysis and corpus opportunity baseline; NAC1 is next to introduce narrow
-final-stage storage deletion authority. The completed
+analysis and corpus opportunity baseline; NAC1 introduced narrow final-stage
+storage deletion authority; NAC2 added the independently selectable cleanup
+pass without changing the default schedule; NAC3 is next to activate and
+compose it in the final pipeline. The completed
 proof-normalization, normalization-stable activation provenance, dense MIR
 rewriting, selectable pipeline, post-proof CFG, and redundancy-measurement work
 supply its material dependencies.

@@ -163,6 +163,7 @@ sorted lexically. The current registry contains the stable
 `checked-f64-to-integer-constant-folding`,
 `checked-integer-constant-folding`, `conservative-cfg-cleanup`,
 `constant-short-circuit-folding`,
+`dead-normalized-path-activation-cleanup`,
 `dead-pure-definition-elimination`,
 `integer-cast-chain-canonicalization`,
 `post-proof-basic-block-merging`,
@@ -235,6 +236,13 @@ same-block integer chains while leaving every other default occurrence active.
 The pass shortens same-block
 integer-only cast chains over `u8`, `i64`, and `u64`; broader primitive casts
 remain outside its selection boundary.
+
+`dead-normalized-path-activation-cleanup` is registered as an independently
+selectable final-stage pass but is not yet part of `default`. An exact internal
+schedule may use it after mandatory proof normalization to remove complete,
+semantically dead `NormalizedPathActivation` protocols. Pass discovery and
+known-name diagnostics include it; ordinary compilation remains unchanged
+until its default placement is activated separately.
 
 The `default` profile contains dead-pure elimination, constant folding,
 algebraic simplification, repeated constant folding, integer cast-chain

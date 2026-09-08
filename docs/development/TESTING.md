@@ -243,7 +243,7 @@ multi-candidate ordering, dead and material load results, wrong source/type/
 kind declarations, projected places, malformed identities, snapshot
 recomputation, and saturating bounds. Measurement tests separately pin schema,
 aggregation, human/JSON rendering, and real-driver checkpoint projection. No
-production MIR behavior changes while this remains observation-only.
+default-profile MIR behavior changes while the cleanup pass remains opt-in.
 
 ### Checked floating-to-integer protocol simplification coverage
 
@@ -459,6 +459,15 @@ also rejects the complete multi-callable transaction before seal invalidation,
 while successful cleanup must pass normalized verification and reproduce fresh
 reachability facts. The CFG-only and storage-cleanup edit surfaces remain
 distinct private types.
+
+The selectable dead normalized path-activation cleanup tests run the pass in
+exact final-stage schedules over declaration-only and complete protocols in
+multiple blocks, alongside a materially used activation. They pin producer and
+span preservation, byte-for-byte retention of the protected protocol, dense
+entity counts, stable per-role metrics, changed-result verification, no-op seal
+reuse, repeated-occurrence idempotence, deterministic MIR dumps, registration,
+and exclusion from the default schedule. The pass deliberately reuses the
+analysis matrix above instead of maintaining a second blocker classifier.
 
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without

@@ -804,6 +804,7 @@ duplicate identities or names, invalid names, empty descriptions, and
 mismatched implementation identity or stage before schedule selection. The production
 registry contains `checked-f64-to-integer-constant-folding`,
 `checked-integer-constant-folding`, `constant-short-circuit-folding`,
+`dead-normalized-path-activation-cleanup`,
 `dead-pure-definition-elimination`,
 `integer-cast-chain-canonicalization`,
 `primitive-constant-folding`, `primitive-algebraic-simplification`,
@@ -3898,8 +3899,18 @@ instruction snapshots, and load-result declarations in deterministic dense
 identity and structural order. Blocked activations retain a sorted typed
 barrier set and bounded storage-centered examples. Counts include removable
 storage, value, load, store, lifetime-marker, and total-instruction upper
-bounds plus maximum protocol size. This is a read-only analysis and
-measurement authority, not a registered MIR pass or mutation capability.
+bounds plus maximum protocol size.
+
+The independently selectable final-stage
+`dead-normalized-path-activation-cleanup` pass consumes this same analysis
+through the private final storage-cleanup capability. It prepares one exact
+program transaction from a verified normalized seal, validates all planned
+declarations, instructions, values, and use decisions before mutation, then
+removes the complete protocols through one dense commit. A changed occurrence
+is resealed and reverified; a no-candidate occurrence reuses the existing seal.
+The pass reports inspected, removable, and protected carriers, every removed
+protocol entity family, and maximum removable protocol size in stable order.
+It is registered for exact opt-in schedules but remains outside `default`.
 
 Static-field dumps retain declaration identity and type in resolved IR and
 HIR, and show the same identity on every MIR static root. Cross-process tests

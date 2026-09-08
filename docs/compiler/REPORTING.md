@@ -438,6 +438,19 @@ constant fold and precedes dead-pure and CFG cleanup, so aggregate metrics and
 trace occurrence records retain pipeline order without changing quiet,
 phases-only, or details-only timing-allocation boundaries.
 
+### Dead normalized path-activation cleanup observation
+
+The registered, opt-in `dead-normalized-path-activation-cleanup` final pass
+reports inspected, removable, and protected normalized activation carriers;
+removed storage declarations, loads, stores, lifetime markers, and value
+declarations; and maximum removable protocol size in that stable order.
+Generic structural totals remain owned by the atomic commit. An unchanged
+occurrence reports every processed executable callable and reuses its verified
+seal; a changed transaction reports changed callables and performs one
+immediate normalized verification. The pass is available to exact internal
+schedules and pass discovery but does not yet add an occurrence or metrics to
+the default profile.
+
 ### Checked floating-to-integer protocol simplification observation
 
 The registered `checked-f64-to-integer-constant-folding` pass reports folded

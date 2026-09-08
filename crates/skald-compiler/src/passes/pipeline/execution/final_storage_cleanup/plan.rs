@@ -30,6 +30,10 @@ pub(in crate::passes::pipeline) struct MirFinalStorageCleanupPlan {
     callables: BTreeMap<CallableId, CallablePlan>,
     processed_callables: usize,
     summary: MirFinalStorageCleanupSummary,
+    inspected_carriers: u64,
+    removable_carriers: u64,
+    protected_carriers: u64,
+    maximum_protocol_size: u64,
 }
 
 impl MirFinalStorageCleanupPlan {
@@ -37,13 +41,20 @@ impl MirFinalStorageCleanupPlan {
         verified: &VerifiedFinalMirProgram,
     ) -> Result<Self, MirRewriteError> {
         let observation = analyze_dead_normalized_path_activations(verified);
+        let counts = observation.counts();
         let selected = observation
             .callables()
             .iter()
             .filter(|callable| !callable.candidates().is_empty())
             .map(|callable| (callable.callable(), callable.candidates()))
             .collect::<BTreeMap<_, _>>();
-        let mut plan = Self::default();
+        let mut plan = Self {
+            inspected_carriers: counts.inspected(),
+            removable_carriers: counts.proven(),
+            protected_carriers: counts.blocked(),
+            maximum_protocol_size: counts.maximum_protocol_size(),
+            ..Self::default()
+        };
 
         for definition in verified.program().executable_definitions() {
             plan.processed_callables = plan.processed_callables.saturating_add(1);
@@ -127,6 +138,22 @@ impl MirFinalStorageCleanupPlan {
 
     pub(in crate::passes::pipeline) const fn summary(&self) -> MirFinalStorageCleanupSummary {
         self.summary
+    }
+
+    pub(in crate::passes::pipeline) const fn inspected_carriers(&self) -> u64 {
+        self.inspected_carriers
+    }
+
+    pub(in crate::passes::pipeline) const fn removable_carriers(&self) -> u64 {
+        self.removable_carriers
+    }
+
+    pub(in crate::passes::pipeline) const fn protected_carriers(&self) -> u64 {
+        self.protected_carriers
+    }
+
+    pub(in crate::passes::pipeline) const fn maximum_protocol_size(&self) -> u64 {
+        self.maximum_protocol_size
     }
 
     pub(in crate::passes::pipeline) fn is_empty(&self) -> bool {

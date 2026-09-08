@@ -275,8 +275,6 @@ impl MirFinalPassCapability {
     /// The plan owns every exact declaration, instruction, and load-result
     /// deletion. Pass implementations receive no raw final-storage edit
     /// surface, and the existing CFG-only capability remains unchanged.
-    // The selectable cleanup pass is the first production caller.
-    #[allow(dead_code)]
     pub(in crate::passes::pipeline) fn cleanup_dead_path_activations(
         self,
         plan: MirFinalStorageCleanupPlan,

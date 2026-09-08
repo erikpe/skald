@@ -5,6 +5,8 @@
 //! The existing CFG-only capability remains a separate concrete surface.
 
 mod plan;
+#[cfg(test)]
+pub(in crate::passes::pipeline) mod test_support;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -25,6 +27,9 @@ pub(in crate::passes::pipeline) struct MirFinalStorageCleanupSummary {
     storages: usize,
     values: usize,
     instructions: usize,
+    loads: usize,
+    stores: usize,
+    lifetime_markers: usize,
 }
 
 impl MirFinalStorageCleanupSummary {
@@ -36,8 +41,21 @@ impl MirFinalStorageCleanupSummary {
         self.values
     }
 
+    #[cfg(test)]
     pub(in crate::passes::pipeline) const fn instructions(self) -> usize {
         self.instructions
+    }
+
+    pub(in crate::passes::pipeline) const fn loads(self) -> usize {
+        self.loads
+    }
+
+    pub(in crate::passes::pipeline) const fn stores(self) -> usize {
+        self.stores
+    }
+
+    pub(in crate::passes::pipeline) const fn lifetime_markers(self) -> usize {
+        self.lifetime_markers
     }
 
     fn accumulate_candidate(&mut self, candidate: &DeadPathActivationCandidate) {
@@ -46,6 +64,20 @@ impl MirFinalStorageCleanupSummary {
         self.instructions = self
             .instructions
             .saturating_add(candidate.instructions().len());
+        for instruction in candidate.instructions() {
+            match instruction.kind() {
+                DeadPathActivationInstructionKind::Load => {
+                    self.loads = self.loads.saturating_add(1);
+                }
+                DeadPathActivationInstructionKind::Store => {
+                    self.stores = self.stores.saturating_add(1);
+                }
+                DeadPathActivationInstructionKind::LifetimeLive
+                | DeadPathActivationInstructionKind::LifetimeDead => {
+                    self.lifetime_markers = self.lifetime_markers.saturating_add(1);
+                }
+            }
+        }
     }
 }
 

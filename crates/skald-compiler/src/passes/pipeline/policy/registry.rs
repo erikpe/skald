@@ -5,10 +5,11 @@ use super::{
 };
 use crate::passes::pipeline::optimizations::{
     checked_f64_to_integer_folding, checked_integer_folding, conservative_cfg_cleanup,
-    constant_short_circuit_folding, dead_pure_definition_elimination,
-    integer_cast_chain_canonicalization, post_proof_basic_block_merging,
-    post_proof_empty_block_forwarding, post_proof_unreachable_block_elimination,
-    primitive_algebraic_simplification, primitive_constant_folding, whole_world_reachability,
+    constant_short_circuit_folding, dead_normalized_path_activation_cleanup,
+    dead_pure_definition_elimination, integer_cast_chain_canonicalization,
+    post_proof_basic_block_merging, post_proof_empty_block_forwarding,
+    post_proof_unreachable_block_elimination, primitive_algebraic_simplification,
+    primitive_constant_folding, whole_world_reachability,
 };
 
 pub(super) const NORMALIZATION_NAME: &str = "proof-provenance-normalization";
@@ -138,7 +139,7 @@ fn is_stable_pass_name(name: &str) -> bool {
     !previous_was_separator
 }
 
-static PRODUCTION_REGISTRATIONS: [MirPassRegistration; 12] = [
+static PRODUCTION_REGISTRATIONS: [MirPassRegistration; 13] = [
     dead_pure_definition_elimination::REGISTRATION,
     whole_world_reachability::REGISTRATION,
     primitive_constant_folding::REGISTRATION,
@@ -151,6 +152,7 @@ static PRODUCTION_REGISTRATIONS: [MirPassRegistration; 12] = [
     post_proof_basic_block_merging::REGISTRATION,
     constant_short_circuit_folding::REGISTRATION,
     integer_cast_chain_canonicalization::REGISTRATION,
+    dead_normalized_path_activation_cleanup::REGISTRATION,
 ];
 
 pub(super) fn production_registry() -> MirPassRegistry {

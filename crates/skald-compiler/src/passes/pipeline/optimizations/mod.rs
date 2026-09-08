@@ -11,6 +11,7 @@ mod checked_integer_topology;
 mod checked_scalar_topology;
 pub(in crate::passes::pipeline) mod conservative_cfg_cleanup;
 pub(in crate::passes::pipeline) mod constant_short_circuit_folding;
+pub(in crate::passes::pipeline) mod dead_normalized_path_activation_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 pub(in crate::passes::pipeline) mod integer_cast_chain_canonicalization;
 mod local_constant;
