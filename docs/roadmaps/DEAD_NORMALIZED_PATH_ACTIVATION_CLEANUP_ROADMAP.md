@@ -1,6 +1,6 @@
 # Dead Normalized Path-Activation Cleanup Roadmap
 
-Status: in progress; NAC0 through NAC3 are complete and NAC4 is next.
+Status: in progress; NAC0 through NAC4 are complete and NAC5 is next.
 
 This roadmap implements FMM-13 as one exact, target-independent final-MIR
 cleanup. It removes a `NormalizedPathActivation` declaration only when every
@@ -105,7 +105,7 @@ general alias, effect, escape, or ownership analysis prematurely.
 - [x] NAC1 — Add narrow final-stage storage deletion authority
 - [x] NAC2 — Implement the selectable cleanup pass
 - [x] NAC3 — Activate and compose cleanup in the final pipeline
-- [ ] NAC4 — Prove end-to-end value and observable equivalence
+- [x] NAC4 — Prove end-to-end value and observable equivalence
 - [ ] NAC5 — Harden the boundary and close the roadmap
 
 ## PR-sized implementation sequence
@@ -251,23 +251,23 @@ authority.
 **Purpose:** Demonstrate what the pass removes in real source programs while
 pinning all semantic and target-facing invariants.
 
-- [ ] Add focused source fixtures with removable and live activations across
+- [x] Add focused source fixtures with removable and live activations across
   conditionals, short-circuit selection, loops, optional/array/shared cleanup,
   methods, initializers, destructors, static lifecycle, selected/skipped
   failures, and runtime-trace attribution.
-- [ ] Add golden variants for `default`, `none`, cleanup disabled, unreachable
+- [x] Add golden variants for `default`, `none`, cleanup disabled, unreachable
   deletion disabled, later CFG cleanup disabled, reachability disabled, and all
   passes disabled; require exact stdout/stderr/status and runtime-trace
   equivalence.
-- [ ] Pin final-MIR and structured-report differences to the intended complete
+- [x] Pin final-MIR and structured-report differences to the intended complete
   protocol deletions and stable metrics, with no partial carrier remnants.
-- [ ] Add backend tests proving removed candidates no longer receive frame
+- [x] Add backend tests proving removed candidates no longer receive frame
   slots or load/store instructions, live activations remain identical, and
   assembly remains deterministic and accepted by the system assembler.
-- [ ] Rerun the reviewed redundancy corpus after default activation, record
+- [x] Rerun the reviewed redundancy corpus after default activation, record
   before/after candidate and entity evidence in living measurement
   documentation, and keep the archived study historical.
-- [ ] Update FMM-13 in the optimization catalog from planned to implemented,
+- [x] Update FMM-13 in the optimization catalog from planned to implemented,
   stating measured value without generalizing to FMM-03 through FMM-05.
 
 **Tests:** Focused debug and release goldens; native backend and frame-layout

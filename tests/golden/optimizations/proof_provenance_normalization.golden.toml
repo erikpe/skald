@@ -7,8 +7,10 @@ source = "proof_provenance_normalization.ska"
 variants = [
   "default",
   "optimization-none",
+  "dead-normalized-path-activation-cleanup-disabled",
   "short-circuit-folding-disabled",
   "post-proof-unreachable-disabled",
+  "post-proof-forwarding-and-merging-disabled",
   "post-proof-forwarding-disabled",
   "post-proof-merging-disabled",
   "reachability-disabled",
@@ -25,8 +27,10 @@ source = "proof_provenance_normalization_panic.ska"
 variants = [
   "default",
   "optimization-none",
+  "dead-normalized-path-activation-cleanup-disabled",
   "short-circuit-folding-disabled",
   "post-proof-unreachable-disabled",
+  "post-proof-forwarding-and-merging-disabled",
   "post-proof-forwarding-disabled",
   "post-proof-merging-disabled",
   "reachability-disabled",
@@ -47,8 +51,10 @@ source = "proof_provenance_normalization_checked_failure.ska"
 variants = [
   "default",
   "optimization-none",
+  "dead-normalized-path-activation-cleanup-disabled",
   "short-circuit-folding-disabled",
   "post-proof-unreachable-disabled",
+  "post-proof-forwarding-and-merging-disabled",
   "post-proof-forwarding-disabled",
   "post-proof-merging-disabled",
   "reachability-disabled",

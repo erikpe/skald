@@ -1132,9 +1132,11 @@ fresh final-seal reachability are active for every pipeline profile. Explicit
 final-stage reachability ownership and the normalized-only backend boundary are
 implemented. The post-proof unreachable-block pass runs immediately after
 normalization in the default profile and exercises normalized block/value
-deletion and fresh resealing. Empty-block forwarding follows through its
-narrow normalized CFG capability, basic-block merging consumes the resulting
-single-incoming linear chains, and whole-world reachability remains last.
+deletion and fresh resealing. Dead normalized path-activation cleanup then
+removes complete unused carrier protocols before frame planning. Empty-block
+forwarding follows through its narrow normalized CFG capability, basic-block
+merging consumes the resulting single-incoming linear chains, and whole-world
+reachability remains last.
 Their selection and parity matrices preserve the backend contract. Source-level
 backend tests additionally compare default, `none`, each canonicalization pass
 disabled, both disabled, and post-proof unreachable deletion disabled. They
@@ -1168,6 +1170,14 @@ while the proof-only role fails closed if it reaches this boundary. Backend
 tests compare normalized activations directly with the former scalar-spill
 representation and require identical frame plans and assembly in both complete
 and reachable-artifacts-only emission.
+
+The cleanup pass changes this target input only when the final-MIR analysis has
+certified a complete dead protocol. Focused backend coverage pins the target
+effect independently of semantic safety: deleting one storage home and its
+unused load-result home reduces the owning frame by 16 bytes and removes the
+four corresponding frame-memory references. A materially consumed activation
+in another callable remains byte-for-byte identical. Both forms produce
+deterministic, assembler-accepted output and the same native result.
 
 Final-seal reachability facts are recomputed from the exact normalized
 program and after every changed final-stage pass. Whole-world definition

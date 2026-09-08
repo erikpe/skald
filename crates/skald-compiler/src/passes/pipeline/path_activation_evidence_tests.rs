@@ -3,12 +3,13 @@ use crate::{
     mir::{dump_mir, MirInstruction, MirPlaceBase, MirStorageKind, StorageId},
     test_support::{
         assert_system_assembler_accepts, lower_source_to_final_mir, run_native_assembly,
+        DEAD_PATH_ACTIVATION_CLEANUP_SOURCE,
     },
 };
 
 use super::{
-    resolve_mir_pass_schedule, run_mir_pipeline_measured, MeasuredMirPipeline,
-    MirOptimizationProfile, MirPassSchedule,
+    resolve_mir_pass_schedule, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,
+    MeasuredMirPipeline, MirOptimizationProfile, MirPassSchedule,
 };
 
 const SOURCE: &str = r#"
@@ -55,11 +56,14 @@ fn main() -> i64 {
 }
 "#;
 
-const ALL_PASS_NAMES: [&str; 10] = [
+const ALL_PASS_NAMES: [&str; 13] = [
+    "checked-f64-to-integer-constant-folding",
     "checked-integer-constant-folding",
     "conservative-cfg-cleanup",
     "constant-short-circuit-folding",
+    "dead-normalized-path-activation-cleanup",
     "dead-pure-definition-elimination",
+    "integer-cast-chain-canonicalization",
     "post-proof-basic-block-merging",
     "post-proof-empty-block-forwarding",
     "post-proof-unreachable-block-elimination",
@@ -83,12 +87,23 @@ fn source_activation_provenance_is_stable_across_the_complete_profile_matrix() {
             default_without(["post-proof-unreachable-block-elimination"]),
         ),
         (
+            "activation-cleanup-disabled",
+            default_without(["dead-normalized-path-activation-cleanup"]),
+        ),
+        (
             "post-proof-forwarding-disabled",
             default_without(["post-proof-empty-block-forwarding"]),
         ),
         (
             "post-proof-merging-disabled",
             default_without(["post-proof-basic-block-merging"]),
+        ),
+        (
+            "later-cfg-cleanup-disabled",
+            default_without([
+                "post-proof-empty-block-forwarding",
+                "post-proof-basic-block-merging",
+            ]),
         ),
         (
             "reachability-disabled",
@@ -144,6 +159,97 @@ fn source_activation_provenance_is_stable_across_the_complete_profile_matrix() {
         .unwrap();
     assert_eq!(none.1, all_disabled.1);
     assert_eq!(none.2, all_disabled.2);
+}
+
+#[test]
+fn source_cleanup_removes_one_complete_protocol_and_preserves_live_mir() {
+    let input = lower_source_to_final_mir(DEAD_PATH_ACTIVATION_CLEANUP_SOURCE);
+    let first = run_mir_pipeline_with_occurrences(input.clone(), &default_without([]));
+    let second = run_mir_pipeline_with_occurrences(input.clone(), &default_without([]));
+    let retained = run_mir_pipeline_with_occurrences(
+        input,
+        &default_without(["dead-normalized-path-activation-cleanup"]),
+    );
+
+    assert_eq!(first.result, second.result);
+    assert_eq!(first.statistics, second.statistics);
+    let cleaned = first.result.as_ref().unwrap();
+    let retained = retained.result.as_ref().unwrap();
+    let record = first
+        .occurrences()
+        .iter()
+        .find(|record| record.name() == "dead-normalized-path-activation-cleanup")
+        .unwrap_or_else(|| {
+            panic!(
+                "the default schedule must run activation cleanup; observed {:?}",
+                first
+                    .occurrences()
+                    .iter()
+                    .map(|record| record.name())
+                    .collect::<Vec<_>>()
+            )
+        });
+    let repeated_record = second
+        .occurrences()
+        .iter()
+        .find(|record| record.name() == "dead-normalized-path-activation-cleanup")
+        .unwrap();
+    assert_eq!(record.outcome(), repeated_record.outcome());
+    assert_eq!(record.outcome(), super::MirPassOccurrenceOutcome::Changed);
+    assert_eq!(
+        record.processed_callables(),
+        repeated_record.processed_callables()
+    );
+    assert_eq!(
+        record.changed_callables(),
+        repeated_record.changed_callables()
+    );
+    assert_eq!(
+        record.removed_mir_entities(),
+        repeated_record.removed_mir_entities()
+    );
+    assert_eq!(record.measurements(), repeated_record.measurements());
+    assert_eq!(record.changed_callables(), Some(1));
+    assert_eq!(record.removed_mir_entities(), Some(2));
+    assert_eq!(record.verification_executions(), 1);
+    assert_eq!(
+        record
+            .measurements()
+            .iter()
+            .map(|measurement| (measurement.name(), measurement.value()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("inspected normalized activation carriers", 3),
+            ("removable normalized activation carriers", 1),
+            ("protected normalized activation carriers", 2),
+            ("removed storage declarations", 1),
+            ("removed load instructions", 1),
+            ("removed store instructions", 1),
+            ("removed lifetime markers", 2),
+            ("removed value declarations", 1),
+            ("maximum removable protocol size", 4),
+        ]
+    );
+
+    let cleaned_removable = definition_named(cleaned, "removable");
+    let retained_removable = definition_named(retained, "removable");
+    assert_eq!(
+        retained_removable.storage.len(),
+        cleaned_removable.storage.len() + 1
+    );
+    assert_eq!(
+        retained_removable.values.len(),
+        cleaned_removable.values.len() + 1
+    );
+    assert_eq!(
+        instruction_count(retained_removable),
+        instruction_count(cleaned_removable) + 4
+    );
+    assert_eq!(
+        definition_named(cleaned, "live"),
+        definition_named(retained, "live"),
+        "cleanup must leave a callable with a materially consumed activation byte-for-byte unchanged"
+    );
 }
 
 #[test]
@@ -245,4 +351,26 @@ fn assembly(measured: &MeasuredMirPipeline) -> String {
         BackendInput::without_runtime_trace(measured.result.as_ref().unwrap()),
     )
     .unwrap()
+}
+
+fn definition_named<'program>(
+    program: &'program super::VerifiedFinalMirProgram,
+    name: &str,
+) -> &'program crate::mir::MirFunctionDefinition {
+    let id = program
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == name)
+        .map(|declaration| declaration.id)
+        .unwrap_or_else(|| panic!("missing `{name}` declaration"));
+    program.definitions.get(id).unwrap()
+}
+
+fn instruction_count(definition: &crate::mir::MirFunctionDefinition) -> usize {
+    definition
+        .body
+        .blocks
+        .iter()
+        .map(|block| block.instructions.len())
+        .sum()
 }

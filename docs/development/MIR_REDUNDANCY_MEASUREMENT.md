@@ -161,9 +161,26 @@ This is deliberately a pre-activation baseline. The current default cleanup
 occurs before the `pre-reachability` checkpoint, so current reports have no
 proven dead activation remaining at either normalized checkpoint.
 
-One final candidate is `proof_protected` in
-`focused/local-simplification`. Two are in `main` in
-`primitives/cast-matrix`. The same three candidates exist before and after
-whole-world reachability; all other reviewed workloads have no proven final
+The activation review reran corpus version one at revision
+`ddbcd3d2f838288be262dc4bd33f1d0e92297258` after enabling the default cleanup.
+The three former candidates disappear exactly: the protected count is
+unchanged, while the inspected count falls by three because removed storage is
+no longer present at either later checkpoint.
+
+| Checkpoint | Before inspected / proven / blocked | Current inspected / proven / blocked | Removed storage / value / instruction bounds |
+| --- | ---: | ---: | ---: |
+| input | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+| pre-reachability | 804 / 3 / 801 | 801 / 0 / 801 | 3 / 3 / 12 |
+| final | 57 / 3 / 54 | 54 / 0 / 54 | 3 / 3 / 12 |
+
+This is deliberately an entity census rather than a runtime benchmark. It
+demonstrates removal of three storage declarations, three unused load-result
+values, and twelve protocol instructions without claiming the broader value of
+general load, store, or producer elimination.
+
+In the baseline, one final candidate was `proof_protected` in
+`focused/local-simplification`, and two were in `main` in
+`primitives/cast-matrix`. The same three candidates existed before and after
+whole-world reachability; all other reviewed workloads had no proven final
 candidate. This baseline records incidence before any cleanup pass exists and
 does not revise the archived local-redundancy study.

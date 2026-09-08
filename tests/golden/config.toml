@@ -31,6 +31,9 @@ compiler_args = [
 [variant.post-proof-unreachable-disabled]
 compiler_args = ["--disable-mir-pass", "post-proof-unreachable-block-elimination"]
 
+[variant.dead-normalized-path-activation-cleanup-disabled]
+compiler_args = ["--disable-mir-pass", "dead-normalized-path-activation-cleanup"]
+
 [variant.dead-pure-disabled]
 compiler_args = ["--disable-mir-pass", "dead-pure-definition-elimination"]
 

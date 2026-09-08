@@ -473,6 +473,17 @@ reuse, repeated-occurrence idempotence, deterministic MIR dumps, registration,
 default placement, and independent exclusion. The pass deliberately reuses
 the analysis matrix above instead of maintaining a second blocker classifier.
 
+End-to-end cleanup evidence reuses the broad proof-normalization sources,
+which cover conditionals, short-circuit selection, loops, optional and array
+paths, shared cleanup, methods, initializers, destructors, static lifecycle,
+skipped effects, selected failures, and runtime-trace attribution. Their
+golden matrix compares `default`, `none`, cleanup-disabled,
+unreachable-disabled, later-CFG-disabled, reachability-disabled, and fully
+disabled schedules with exact status and output. A smaller source fixture
+pins one complete four-instruction deletion and one untouched live activation;
+its backend test requires a 16-byte frame reduction, four fewer frame-memory
+references, deterministic assembler acceptance, and identical native results.
+
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
 weakening path-sensitive optional, array, shared-ownership, cleanup, or

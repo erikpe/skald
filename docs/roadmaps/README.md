@@ -13,8 +13,10 @@ implements FMM-13 as a narrow final-MIR cleanup for complete, semantically dead
 analysis and corpus opportunity baseline; NAC1 introduced narrow final-stage
 storage deletion authority; NAC2 added the independently selectable cleanup
 pass; NAC3 activated it between unreachable deletion and later CFG
-canonicalization; NAC4 is next to prove end-to-end value and observable
-equivalence. The completed
+canonicalization; NAC4 pinned source/profile equivalence, complete protocol and
+report deltas, backend frame and memory-reference reductions, and refreshed
+corpus evidence. NAC5 is next for scaling, boundary hardening, and closure.
+The completed
 proof-normalization, normalization-stable activation provenance, dense MIR
 rewriting, selectable pipeline, post-proof CFG, and redundancy-measurement work
 supply its material dependencies.

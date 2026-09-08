@@ -12,8 +12,12 @@ registered passes disabled together.
 It combines nested logical conditions, optional/array/shared path-sensitive
 uses, static initialization and shutdown, and ownership destruction. Its
 companion panic fixture pins the selected failure span and runtime trace across
-default, `none`, post-proof-canary-disabled, reachability-disabled, and
-all-pass-disabled variants.
+default, `none`, activation-cleanup-disabled, post-proof-unreachable-disabled,
+later-CFG-disabled, reachability-disabled, and all-pass-disabled variants.
+The sources contain both removable and materially consumed normalized
+activations, selected and skipped effects, methods, initializers, destructors,
+loops, and static lifecycle, so the same matrix is the end-to-end value and
+observable-equivalence evidence for dead activation cleanup.
 
 `post_proof_cfg_shape.ska` is shared by the focused source-lowering test and
 the golden matrix, pinning a transitive forwarding chain and instruction-

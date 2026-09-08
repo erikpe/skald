@@ -42,6 +42,94 @@ fn logical_activation_frame_baseline_is_stable_across_pipeline_profiles() {
 }
 
 #[test]
+fn dead_path_activation_cleanup_reduces_frame_and_memory_traffic() {
+    use crate::{
+        passes::{
+            resolve_mir_pass_schedule, run_mir_pipeline_with_occurrences, MirOptimizationProfile,
+        },
+        test_support::DEAD_PATH_ACTIVATION_CLEANUP_SOURCE,
+    };
+
+    let input = lower_source_to_final_mir(DEAD_PATH_ACTIVATION_CLEANUP_SOURCE);
+    let default_schedule =
+        resolve_mir_pass_schedule(MirOptimizationProfile::Default, std::iter::empty()).unwrap();
+    let retained_schedule = resolve_mir_pass_schedule(
+        MirOptimizationProfile::Default,
+        ["dead-normalized-path-activation-cleanup"],
+    )
+    .unwrap();
+    let cleaned = run_mir_pipeline_with_occurrences(input.clone(), &default_schedule)
+        .result
+        .unwrap();
+    let retained = run_mir_pipeline_with_occurrences(input, &retained_schedule)
+        .result
+        .unwrap();
+    let cleaned_function = definition_named(&cleaned, "removable");
+    let retained_function = definition_named(&retained, "removable");
+
+    assert_eq!(
+        cleaned_function
+            .storage
+            .iter()
+            .filter(|storage| storage.kind == MirStorageKind::NormalizedPathActivation)
+            .count(),
+        0
+    );
+    assert_eq!(
+        retained_function
+            .storage
+            .iter()
+            .filter(|storage| storage.kind == MirStorageKind::NormalizedPathActivation)
+            .count(),
+        1
+    );
+
+    let cleaned_data = super::super::layout::DataLayout::compute(cleaned.program()).unwrap();
+    let retained_data = super::super::layout::DataLayout::compute(retained.program()).unwrap();
+    let cleaned_frame =
+        super::super::frame::FrameLayout::plan(cleaned_function.into(), &cleaned_data).unwrap();
+    let retained_frame =
+        super::super::frame::FrameLayout::plan(retained_function.into(), &retained_data).unwrap();
+    assert_eq!(retained_frame.size(), cleaned_frame.size() + 16);
+
+    let cleaned_assembly = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&cleaned),
+    )
+    .unwrap();
+    let retained_assembly = crate::backend::emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&retained),
+    )
+    .unwrap();
+    assert_eq!(
+        cleaned_assembly,
+        crate::backend::emit_assembly(
+            Target::X86_64SysV,
+            BackendInput::without_runtime_trace(&cleaned),
+        )
+        .unwrap()
+    );
+    assert_ne!(cleaned_assembly, retained_assembly);
+
+    let symbol = ".Lska.fn.main.removable.f0";
+    let cleaned_body = function_assembly(&cleaned_assembly, symbol);
+    let retained_body = function_assembly(&retained_assembly, symbol);
+    assert_eq!(
+        retained_body.lines().count(),
+        cleaned_body.lines().count() + 4
+    );
+    assert_eq!(
+        retained_body.matches("qword ptr [rbp -").count(),
+        cleaned_body.matches("qword ptr [rbp -").count() + 4
+    );
+    assert_system_assembler_accepts(&cleaned_assembly);
+    assert_system_assembler_accepts(&retained_assembly);
+    assert_eq!(run_native_assembly(&cleaned_assembly).code(), Some(42));
+    assert_eq!(run_native_assembly(&retained_assembly).code(), Some(42));
+}
+
+#[test]
 fn normalized_path_activation_is_a_representation_only_backend_refinement() {
     let source = concat!(
         "fn dead(left: bool, right: bool) -> bool { return left || right; }\n",
@@ -140,6 +228,19 @@ fn normalized_path_activation_is_a_representation_only_backend_refinement() {
     assert_system_assembler_accepts(&normalized_retained);
     assert_eq!(run_native_assembly(&normalized_complete).code(), Some(42));
     assert_eq!(run_native_assembly(&normalized_retained).code(), Some(42));
+}
+
+fn definition_named<'program>(
+    program: &'program crate::passes::VerifiedFinalMirProgram,
+    name: &str,
+) -> &'program MirFunctionDefinition {
+    let id = program
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == name)
+        .map(|declaration| declaration.id)
+        .unwrap_or_else(|| panic!("missing `{name}` declaration"));
+    program.definitions.get(id).unwrap()
 }
 
 #[test]

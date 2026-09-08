@@ -74,6 +74,17 @@ pub(crate) const INLINE_FIELD_SOURCE: &str = concat!(
     "}\n",
 );
 
+/// Small source fixture with one simplification-orphaned path activation and
+/// one materially consumed path activation in separate callables.
+pub(crate) const DEAD_PATH_ACTIVATION_CLEANUP_SOURCE: &str = concat!(
+    "fn removable(value: bool) -> bool { return true && value; }\n",
+    "fn live(left: bool, right: bool) -> bool { return left && right; }\n",
+    "fn main() -> i64 {\n",
+    "  if (removable(true) && live(true, true)) { return 42; }\n",
+    "  return 0;\n",
+    "}\n",
+);
+
 pub(crate) fn lex_source(text: impl Into<String>) -> (SourceDatabase, SourceId, LexOutput) {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("test.ska", text);

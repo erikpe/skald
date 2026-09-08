@@ -1450,8 +1450,10 @@ mutate a surviving declaration, or remove an unrelated instruction, value, or
 storage. The CFG capability and its exact declaration guard are unchanged.
 Every successful cleanup carries the consumed-proof authority into the
 ordinary normalized verification and fresh reachability reseal path. No
-selectable or default cleanup pass uses this authority yet; FMM-13 activation
-remains separate roadmap work.
+other pass uses this authority. The independently selectable
+`dead-normalized-path-activation-cleanup` pass uses it once in the default
+schedule, after unreachable-block elimination and before later CFG
+canonicalization.
 
 The storage-use census carries each declaration's semantic kind from the same
 immutable callable snapshot as its use sites and must be recomputed after a
