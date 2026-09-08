@@ -448,6 +448,18 @@ phase-illegal activation kind and require structural verification failure.
 Changed final outcomes reverify once, while no-op outcomes retain the existing
 verified product.
 
+Final storage-cleanup capability tests build exact dead normalized-activation
+plans and cover single and multiple carriers, candidates sharing a block,
+dense storage/value remapping, and exact removal summaries. Stale declaration,
+instruction, and load-use snapshots fail before mutation; every other storage
+kind is excluded. The fail-closed post-edit invariant is exercised against
+partial protocol deletion, storage insertion/reclassification/unrelated
+deletion, and unplanned instruction/value deletion. A stale later callable
+also rejects the complete multi-callable transaction before seal invalidation,
+while successful cleanup must pass normalized verification and reproduce fresh
+reachability facts. The CFG-only and storage-cleanup edit surfaces remain
+distinct private types.
+
 Focused verifier tests classify every proof-bearing identity site and
 separate shared structural, proof-rich, and normalized checks without
 weakening path-sensitive optional, array, shared-ownership, cleanup, or

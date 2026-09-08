@@ -1432,8 +1432,23 @@ an individual retained activation access. Whole-world retention removes only
 complete unreachable definitions. Every changed final result is resealed,
 repeating normalized activation structure and fresh reachability validation;
 unchanged passes retain their existing seal. A future storage-mutating
-capability must replace this fail-closed guard with an explicit disposition
-for the role. FMM-13 dead-carrier deletion remains a separate optimization.
+operation must use a separate reviewed authority with an explicit disposition
+for the role.
+
+The pipeline now has one such private authority specifically for complete dead
+`NormalizedPathActivation` protocols. It prepares immutable plans from the
+shared exhaustive storage/value-use analysis, validates every selected dense
+callable before invalidation, and exposes only one compound deletion operation
+to final passes. That operation batches instruction removal per block, removes
+only the certified unused load-result values and activation declarations, and
+checks the complete post-edit callable against an independently constructed
+expected state before dense commit. It cannot create or reclassify storage,
+mutate a surviving declaration, or remove an unrelated instruction, value, or
+storage. The CFG capability and its exact declaration guard are unchanged.
+Every successful cleanup carries the consumed-proof authority into the
+ordinary normalized verification and fresh reachability reseal path. No
+selectable or default cleanup pass uses this authority yet; FMM-13 activation
+remains separate roadmap work.
 
 The storage-use census carries each declaration's semantic kind from the same
 immutable callable snapshot as its use sites and must be recomputed after a

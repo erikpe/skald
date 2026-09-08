@@ -1,6 +1,6 @@
 # Dead Normalized Path-Activation Cleanup Roadmap
 
-Status: in progress; NAC0 is complete and NAC1 is next.
+Status: in progress; NAC0 and NAC1 are complete and NAC2 is next.
 
 This roadmap implements FMM-13 as one exact, target-independent final-MIR
 cleanup. It removes a `NormalizedPathActivation` declaration only when every
@@ -102,7 +102,7 @@ general alias, effect, escape, or ownership analysis prematurely.
 ## Progress
 
 - [x] NAC0 — Establish exact dead-carrier analysis and evidence
-- [ ] NAC1 — Add narrow final-stage storage deletion authority
+- [x] NAC1 — Add narrow final-stage storage deletion authority
 - [ ] NAC2 — Implement the selectable cleanup pass
 - [ ] NAC3 — Activate and compose cleanup in the final pipeline
 - [ ] NAC4 — Prove end-to-end value and observable equivalence
@@ -149,23 +149,23 @@ are recorded, and no executable MIR behavior has changed.
 **Purpose:** Make complete certified carrier deletion possible without
 weakening the existing final CFG-only mutation boundary.
 
-- [ ] Add a private final-stage cleanup capability which consumes a prepared
+- [x] Add a private final-stage cleanup capability which consumes a prepared
   exact carrier-deletion plan and exposes no raw storage or instruction edits
   to optimization implementations.
-- [ ] Validate that every removed storage is a live
+- [x] Validate that every removed storage is a live
   `NormalizedPathActivation`, every removed instruction/value belongs to its
   certified protocol, and every expected site still matches before the first
   mutation.
-- [ ] Remove planned instructions once per block, then remove their load-result
+- [x] Remove planned instructions once per block, then remove their load-result
   values and storage declarations through the existing sparse edit owner so
   dense commit remaps surviving identities once.
-- [ ] Add a capability invariant which rejects storage creation,
+- [x] Add a capability invariant which rejects storage creation,
   reclassification, surviving-declaration mutation, deletion of unrelated
   storage, unplanned instruction/value changes, and partial protocol deletion.
-- [ ] Preserve consumed-proof authority through invalidation and require the
+- [x] Preserve consumed-proof authority through invalidation and require the
   ordinary normalized verifier and fresh reachability analysis to reseal every
   changed transaction.
-- [ ] Keep `MirFinalCfgEdit` and its exact storage-declaration invariant
+- [x] Keep `MirFinalCfgEdit` and its exact storage-declaration invariant
   unchanged.
 
 **Tests:** Successful single/multiple carrier deletion; candidates sharing a

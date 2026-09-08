@@ -73,6 +73,9 @@ pub(crate) enum MirRewriteError {
     UnsupportedFinalCfgStorageMutation {
         callable: CallableId,
     },
+    UnsupportedFinalStorageCleanupMutation {
+        callable: CallableId,
+    },
     PathParentNotEarlier {
         condition: super::super::PathConditionId,
         parent: super::super::PathConditionId,
@@ -216,6 +219,10 @@ impl fmt::Display for MirRewriteError {
             Self::UnsupportedFinalCfgStorageMutation { callable } => write!(
                 formatter,
                 "normalized CFG capability changed storage declarations in callable {callable}"
+            ),
+            Self::UnsupportedFinalStorageCleanupMutation { callable } => write!(
+                formatter,
+                "final storage-cleanup capability made an uncertified mutation in callable {callable}"
             ),
             Self::PathParentNotEarlier { condition, parent } => write!(
                 formatter,

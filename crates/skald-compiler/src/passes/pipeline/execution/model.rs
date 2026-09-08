@@ -19,6 +19,7 @@ use super::super::{
 };
 use super::final_cfg::{MirFinalCfgEdit, MirFinalCfgStorageInvariant};
 use super::measurement::MirPassMeasurement;
+use super::MirFinalStorageCleanupPlan;
 
 /// Deterministic internal failure reported by a pass outside dense commit.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -258,6 +259,34 @@ impl MirFinalPassCapability {
             let storage = MirFinalCfgStorageInvariant::capture(edit)?;
             rewrite(callable, &mut MirFinalCfgEdit::new(edit))?;
             storage.verify(edit)
+        })
+        .map_err(MirPassFailure::Rewrite)?;
+        let MirProgramRewriteResult { program, callables } = rewrite;
+        Ok(MirFinalChangedProgram {
+            rewrite: MirFinalRewriteChange {
+                unverified: UnverifiedFinalMirProgram::from_parts(program, authority),
+                callables,
+            },
+        })
+    }
+
+    /// Applies one certified normalized path-activation cleanup transaction.
+    ///
+    /// The plan owns every exact declaration, instruction, and load-result
+    /// deletion. Pass implementations receive no raw final-storage edit
+    /// surface, and the existing CFG-only capability remains unchanged.
+    // The selectable cleanup pass is the first production caller.
+    #[allow(dead_code)]
+    pub(in crate::passes::pipeline) fn cleanup_dead_path_activations(
+        self,
+        plan: MirFinalStorageCleanupPlan,
+    ) -> Result<MirFinalChangedProgram, MirPassFailure> {
+        plan.validate_program(self.verified.program())
+            .map_err(MirPassFailure::Rewrite)?;
+        let invalidated = self.verified.invalidate_for_final_transformation();
+        let (program, authority) = invalidated.into_parts();
+        let rewrite = rewrite_program(program, |callable, edit| {
+            plan.rewrite_callable(callable, edit).map(|_| ())
         })
         .map_err(MirPassFailure::Rewrite)?;
         let MirProgramRewriteResult { program, callables } = rewrite;

@@ -2,6 +2,9 @@
 
 mod error;
 mod final_cfg;
+// The selectable cleanup pass is the first production consumer of this closed capability.
+#[allow(dead_code)]
+mod final_storage_cleanup;
 mod inspection;
 mod measurement;
 mod model;
@@ -10,6 +13,7 @@ mod statistics;
 mod transition;
 
 pub use error::{MirPipelineError, MirPipelineFailureStage};
+pub(in crate::passes::pipeline) use final_storage_cleanup::MirFinalStorageCleanupPlan;
 pub use inspection::{
     MirFinalPipelineCheckpoint, MirPipelineCheckpoint, MirPipelineCheckpointLabel,
     MirPipelineInspector, MirProofPipelineCheckpoint,
