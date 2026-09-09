@@ -72,7 +72,7 @@ fn merge_snapshot(target: &mut SnapshotReport, source: &SnapshotReport) {
         &source.dead_path_activations,
     );
     target.overlaps = merge_named_pairs(&target.overlaps, &source.overlaps, &mut target.saturated);
-    target.saturated = target.structure.saturated
+    target.saturated |= target.structure.saturated
         || target.scalar_spill.saturated
         || target.redundant_casts.saturated
         || target.local_cse.saturated
@@ -201,8 +201,42 @@ pub(super) fn add(target: &mut u64, value: u64, saturated: &mut bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{add, merge_candidate};
-    use crate::model::{CandidateCounts, NamedCount};
+    use super::{add, merge_candidate, totals};
+    use crate::model::{
+        ArtifactContext, CandidateCounts, CompilationContext, NamedCount, OverlapCount,
+        SnapshotReport, WorkloadReport,
+    };
+
+    fn workload_with_overlap(id: &str, sites: u64) -> WorkloadReport {
+        WorkloadReport {
+            id: id.to_owned(),
+            category: "test".to_owned(),
+            compilation: CompilationContext {
+                kind: "explicit",
+                identity: id.to_owned(),
+                entry: "test.ska".to_owned(),
+                provider_roots: Vec::new(),
+                standard_library: "repository",
+                compiler_arguments: Vec::new(),
+                golden_build: None,
+                artifacts: ArtifactContext {
+                    assembly_bytes: 0,
+                    executable_bytes: None,
+                },
+            },
+            native_runs: Vec::new(),
+            snapshots: vec![SnapshotReport {
+                name: "final".to_owned(),
+                overlaps: vec![OverlapCount {
+                    enabler: "scalar-spill",
+                    consumer: "local-cse".to_owned(),
+                    sites,
+                }],
+                ..SnapshotReport::default()
+            }],
+            operational: None,
+        }
+    }
 
     #[test]
     fn saturation_is_sticky_and_explicit() {
@@ -269,5 +303,23 @@ mod tests {
         );
         assert_eq!(target.details[0].sites, 5);
         assert_eq!(target.details[1].sites, 9);
+    }
+
+    #[test]
+    fn snapshot_overlap_saturation_reaches_and_survives_totals() {
+        let report = totals(&[
+            workload_with_overlap("maximum", u64::MAX),
+            workload_with_overlap("overflow", 1),
+            workload_with_overlap("zero-after-overflow", 0),
+        ]);
+
+        let snapshot = report
+            .snapshots
+            .iter()
+            .find(|snapshot| snapshot.name == "final")
+            .unwrap();
+        assert_eq!(snapshot.overlaps[0].sites, u64::MAX);
+        assert!(snapshot.saturated);
+        assert!(report.saturated);
     }
 }

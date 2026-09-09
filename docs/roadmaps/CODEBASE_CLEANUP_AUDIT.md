@@ -1,8 +1,8 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A06 completed on 2026-09-09. Turn the chosen
-architectural findings into separate PR-sized implementation roadmaps. No
-implementation roadmap depends on this document yet.
+Status: actionable audit; A01–A06 and A35 completed on 2026-09-09. Turn the
+chosen architectural findings into separate PR-sized implementation roadmaps.
+No implementation roadmap depends on this document yet.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -132,7 +132,7 @@ work and its validation; findings without that record remain `Open`.
 | [A32](#a32--measure-and-reduce-mapvec-copy-traffic) | Measure and reduce Map/Vec copy traffic | Open | P2 | 4 | L | High | C | N |
 | [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | Open | P2 | 4 | M | Medium | O | M, R, C |
 | [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | Open | P1 | 4 | M | Low | O | C, N, R |
-| [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Open | P2 | 2 | XS | Low | O | R |
+| [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Complete | P2 | 2 | XS | Low | O | R |
 | [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Open | P2 | 3 | S–M | Medium | O | R, M |
 | [A37](#a37--simplify-literal-selection-and-bound-glob-matching) | Simplify literal selection and bound glob matching | Open | P3 | 2 | S | Low | O | C, R |
 | [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | Open | P1 | 4 | S–M | Low | O | M, E |
@@ -935,6 +935,8 @@ A17, A19, A22, A24, A31, or A32.
 
 ### A35 — Preserve snapshot aggregation's saturation flag
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** [`merge_snapshot`](../../crates/skald-mir-measure/src/aggregate.rs)
 passes `&mut target.saturated` to `merge_named_pairs`, then overwrites the flag
 with an OR of child-category and source flags. Overlap-only overflow can thus
@@ -947,6 +949,14 @@ counts `u64::MAX` and `1` with otherwise unsaturated inputs, then merge zero;
 both the snapshot and total report must retain the flag. This is a directly
 observed arithmetic-reporting defect, not a claim that normal corpora approach
 this count.
+
+**Delivered:** snapshot aggregation now accumulates the existing saturation
+state when folding structure, candidate, overlap, and source flags. An overlap
+regression drives the complete workload-to-totals path with `u64::MAX`, then
+`1`, then `0`; the count remains clamped, and both the checkpoint snapshot and
+top-level totals remain marked saturated. The measurement contract documents
+that sticky behavior. The focused measurement suite, full `make check` gate,
+Rust 1.82.0 check, and all 628 golden leaves pass.
 
 ### A36 — Preserve raw compiler stderr in golden observations
 

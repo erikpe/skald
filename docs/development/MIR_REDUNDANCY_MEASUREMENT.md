@@ -103,6 +103,9 @@ assembly size, per-workload and per-checkpoint counts, callable breakdowns,
 directed overlap counts, category breadth, bounded site examples, and
 saturating totals. Native stdin is represented by origin, optional repository-
 relative path, byte count, and SHA-256 rather than embedded content.
+Saturation is sticky across workload aggregation: overflow in any structure,
+candidate, or overlap count marks its checkpoint and the top-level totals even
+when later workloads contribute zero to that count.
 
 Schema version two extends the archived version-one contract with the
 `dead_path_activations` family, a common
