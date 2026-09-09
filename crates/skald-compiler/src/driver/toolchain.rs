@@ -3,13 +3,15 @@
 use std::{
     env,
     ffi::{OsStr, OsString},
-    fmt,
-    io::{self, Write},
+    fmt, io,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
 };
 
 use super::artifact::PendingArtifact;
+
+mod process;
+
+use process::execute_link;
 
 pub const C_COMPILER_ENV: &str = "CC";
 pub const RUNTIME_ARCHIVE_ENV: &str = "SKALD_RUNTIME_ARCHIVE";
@@ -164,56 +166,6 @@ impl LinkObservation {
             stderr,
         }
     }
-}
-
-fn execute_link(invocation: &LinkInvocation) -> Result<LinkObservation, ToolchainError> {
-    let mut child = Command::new(invocation.program())
-        .args(invocation.arguments())
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|source| ToolchainError::Start {
-            tool: invocation.program().to_owned(),
-            source,
-        })?;
-
-    let write_result = child
-        .stdin
-        .take()
-        .expect("piped toolchain stdin must be available")
-        .write_all(invocation.stdin());
-    let result = child
-        .wait_with_output()
-        .map_err(|source| ToolchainError::Wait {
-            tool: invocation.program().to_owned(),
-            source,
-        })?;
-
-    // A tool may reject its invocation and close stdin before consuming all
-    // assembly. In that case the pipe write and process failure describe the
-    // same failed invocation, and scheduling alone determines whether the
-    // writer observes `EPIPE`. Prefer the completed process status so the
-    // diagnostic is stable and retains the tool's captured output. A process
-    // that reports success must still have consumed the complete input.
-    if !result.status.success() {
-        return Ok(LinkObservation::new(
-            result.status.code(),
-            result.stdout,
-            result.stderr,
-        ));
-    }
-    if let Err(source) = write_result {
-        return Err(ToolchainError::WriteAssembly {
-            tool: invocation.program().to_owned(),
-            source,
-        });
-    }
-    Ok(LinkObservation::new(
-        result.status.code(),
-        result.stdout,
-        result.stderr,
-    ))
 }
 
 #[derive(Debug)]

@@ -1,9 +1,9 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01 completed on 2026-09-09. Select the remaining
-robustness fixes, then turn the chosen architectural findings into separate
-PR-sized implementation roadmaps. No implementation roadmap depends on this
-document yet.
+Status: actionable audit; A01 and A02 completed on 2026-09-09. Select the
+remaining robustness fixes, then turn the chosen architectural findings into
+separate PR-sized implementation roadmaps. No implementation roadmap depends
+on this document yet.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -188,10 +188,13 @@ The full golden suite remains unchanged and passes all 626 leaves.
 
 ### A02 — Drain linker pipes concurrently
 
-**Evidence:** [`execute_link`](../../crates/skald-compiler/src/driver/toolchain.rs)
-writes all assembly to child stdin before calling `wait_with_output` to drain
-stdout and stderr. A child that fills stderr before consuming stdin can block
-against the parent, which is blocked writing stdin.
+**Status:** Complete (2026-09-09).
+
+**Evidence:** the former inline
+[`execute_link`](../../crates/skald-compiler/src/driver/toolchain.rs) wrote all
+assembly to child stdin before calling `wait_with_output` to drain stdout and
+stderr. A child that filled stderr before consuming stdin could block against
+the parent, which was blocked writing stdin.
 
 **Observed failure:** a fake linker that writes 1 MiB to stderr, then reads
 stdin, deadlocks when passed 1 MiB of assembly. The audit's external two-second
@@ -206,6 +209,17 @@ status takes precedence over a coincident broken stdin pipe. The existing
 rejection, successful early stdin closure, spawn failure, and output
 publication failure. Share process mechanics only through a lower-level
 utility if warranted; never make the compiler depend on `skald-golden`.
+
+**Delivered:** host-linker process mechanics now live in a private toolchain
+submodule. Scoped workers write assembly and drain stdout and stderr
+concurrently while the owner waits for the child. Wait failures kill and reap
+before worker collection, worker startup and I/O failures remain structured,
+and a failed process status still takes precedence over a coincident broken
+stdin pipe. Real-process tests cover 1 MiB in both output directions before
+reading 1 MiB of input under an external watchdog, early rejection with
+captured stderr, successful early stdin closure, spawn failure, and cleanup
+after output publication failure. The full compiler suite, workspace static
+checks, Rust 1.82.0 check, and all 626 golden leaves pass.
 
 ### A03 — Enforce process deadlines through pipe completion
 

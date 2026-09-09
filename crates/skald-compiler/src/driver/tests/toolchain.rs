@@ -2,6 +2,9 @@ use std::{ffi::OsStr, process::Command};
 
 use super::*;
 
+#[cfg(unix)]
+mod process;
+
 #[test]
 fn standard_library_installation_is_explicitly_injectable() {
     let toolchain =

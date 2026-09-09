@@ -507,10 +507,16 @@ of flags. The runtime path must identify an existing regular file before the
 tool is started. Runtime ABI compatibility is then enforced by the
 [version-specific link marker](RUNTIME_ABI.md#version-and-link-compatibility).
 
-The driver captures tool stdout and stderr. Start, input-write, wait, nonzero
-termination, and publication failures are returned as structured
-`ToolchainError` categories. A nonzero tool result includes its exit status or
-signal state and captured details in the user-facing error.
+The driver writes assembly and drains tool stdout and stderr concurrently, so
+a tool can emit full output pipes before consuming its full input without
+deadlocking the compiler. It waits for the child and collects every pipe worker
+before interpreting the result; a wait failure kills and reaps the child first.
+Start, pipe-worker, input-write, wait, nonzero termination, and publication
+failures are returned as structured `ToolchainError` categories. A nonzero tool
+result includes its exit status or signal state and captured details in the
+user-facing error. If a rejecting tool also closes stdin early, its failed
+status takes precedence over the scheduling-dependent broken-pipe observation.
+A successful tool must accept the complete assembly input.
 
 The golden runner uses the bounded executor form so compiler, linker, and
 generated-program timeouts share one process-group policy. `Toolchain` still
@@ -577,8 +583,9 @@ Driver tests are divided by responsibility:
   trace policy/source handoff, and structured failures;
 - artifact tests cover assembly output, source alias rejection, preservation,
   and temporary cleanup;
-- toolchain tests cover missing archives, process failures, unresolved
-  externals, version-8/version-9 ABI mismatch, captured status, and executable
+- toolchain tests cover missing archives, process failures, full pipes in both
+  directions, early stdin closure, unresolved externals, version-8/version-9
+  ABI mismatch, captured status, publication failure cleanup, and executable
   preservation; and
 - CLI reporting tests cover compiler/link/publication phase order, separate
   totals, failures, diagnostic filtering, default-off byte stability,
