@@ -13,10 +13,11 @@ records are preserved in the [archive](../archive/README.md).
 
 The [codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) is an actionable,
 repository-wide review with 43 improvements graded by impact, effort, risk,
-and evidence. Implementation has not started; the next step is to select the
-reproduced robustness fixes and test-gate repair, then plan the phase-boundary
-refactorings. Larger performance candidates depend on measurement and the
-existing optimization foundations/catalog below.
+and evidence. A01, the expression-tree depth and stack-safety fix, is complete;
+the next step is to select the remaining reproduced robustness fixes and
+test-gate repair, then plan the phase-boundary refactorings. Larger performance
+candidates depend on measurement and the existing optimization
+foundations/catalog below.
 
 The living
 [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) inventories

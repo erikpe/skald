@@ -60,15 +60,7 @@ impl Parser<'_> {
 
         let right_bracket = self.expect(TokenKind::RightBracket, "`]` after the index or slice")?;
         let span = self.cover(receiver.span(), right_bracket.span);
-        Some(Expression::BracketProjection(Box::new(
-            BracketProjectionExpr {
-                receiver: Box::new(receiver),
-                operator,
-                bounds,
-                right_bracket_span: right_bracket.span,
-                span,
-            },
-        )))
+        self.finish_bracket_projection_node(receiver, operator, bounds, right_bracket.span, span)
     }
 
     pub(super) fn starts_array_construction(&self, after_new: bool) -> bool {

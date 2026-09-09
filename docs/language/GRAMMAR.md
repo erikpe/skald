@@ -965,7 +965,9 @@ The current compiler limits simultaneously active recursive syntax constructs
 to 128 levels. Class bodies, function and class-member bodies, nested blocks,
 grouped expressions, unary expressions, primitive and object casts, nested
 calls, and postfix chains share this budget. Recursive array type grouping and
-postfix array dimensions use the same budget.
+postfix array dimensions use the same budget. Every path through an accepted
+expression tree is independently limited to 128 expression nodes, including
+trees formed by otherwise iterative operator parsing.
 
 Separately, one expression-tree path may contain at most 10 nested
 short-circuit operations. A flat left-associated chain can therefore contain

@@ -2580,10 +2580,13 @@ spans and spellings needed by later diagnostics, including exact private field
 and method modifier spans, but contain no selected declaration identities,
 inferred types, access decisions, or target details.
 
-Grammar nesting uses a shared finite budget. Exceeding it is a source
-diagnostic with recovery rather than unbounded recursion. The precise accepted
-source shape, recursive nesting limit, and separate logical-expression limit
-are owned by the
+Grammar nesting and the depth of every accepted expression-tree path use a
+shared finite budget. Expression depth is measured iteratively, and iterative
+operator parsing checks each reduction so it never first constructs an
+unbounded tree and then tries to reject or destroy it. Exceeding either limit
+is a source diagnostic with declaration-level recovery rather than unbounded
+recursion. The precise accepted source shape, common syntax/expression limit,
+and separate logical-expression limit are owned by the
 [implemented grammar](../language/GRAMMAR.md).
 
 Optional AST nodes retain separate payload, `shared`, `?`, `!`, `is`, and

@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; implementation has not started. Select the first
+Status: actionable audit; A01 completed on 2026-09-09. Select the remaining
 robustness fixes, then turn the chosen architectural findings into separate
 PR-sized implementation roadmaps. No implementation roadmap depends on this
 document yet.
@@ -145,13 +145,14 @@ Identifiers are finding references within this audit, not implementation tasks.
 
 ### A01 — Bound actual expression-tree depth and stack usage
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** [expression parsing](../../crates/skald-compiler/src/syntax/parser/expression.rs)
-builds nested expression trees from operator chains.
-[Parser limits](../../crates/skald-compiler/src/syntax/parser.rs) bound recursive
-grammar nesting, while the separate
-[logical-depth walk](../../crates/skald-compiler/src/syntax/parser/logical_depth.rs)
-counts logical operations rather than all expression-tree edges. These limits
-do not establish a bound on every tree consumed downstream.
+previously built unbounded nested expression trees from flat operator chains.
+[Parser limits](../../crates/skald-compiler/src/syntax/parser.rs) bounded
+recursive grammar nesting, while the former logical-depth walk counted logical
+operations rather than all expression-tree edges. Those limits did not
+establish a bound on every tree consumed downstream.
 
 **Observed failure:** the current debug `skac` aborts with stack overflow on
 `fn main() -> i64 { return 1 + 1 + ...; }` with 1,000 terms. A 10,000-term case
@@ -171,6 +172,19 @@ subprocess robustness tests with an external watchdog. Test just below and
 above the selected limit, malformed partial trees, and debug/golden/release
 builds. `catch_unwind` cannot turn a stack-overflow abort into a diagnostic.
 Preserve evaluation order and existing precedence.
+
+**Delivered:** the parser now uses an exhaustive iterative expression walk for
+both actual tree depth and logical depth. Binary and logical reductions plus
+repeated unary and postfix wrappers are checked as they are constructed, so
+even rejected temporary trees remain bounded; completed outer expressions
+receive a defensive whole-tree check before leaving syntax. The existing
+`PAR005` recovery omits the complete declaration, keeping partial trees out of
+later phases. Unit tests fix the accepted/rejected boundary for additive,
+multiplicative, bitwise, grouped, and postfix trees. A process-isolated
+public-pipeline regression test gives 10,000-term arithmetic and postfix
+chains, a nested mixed postfix shape, and malformed arithmetic a 15-second
+external watchdog. The regression passes in debug and release profiles.
+The full golden suite remains unchanged and passes all 626 leaves.
 
 ### A02 — Drain linker pipes concurrently
 
@@ -407,7 +421,7 @@ plans, never canonical source-name lookup.
 
 **Evidence:**
 [compiler dependency collection](../../crates/skald-compiler/src/module/graph/compiler_dependencies.rs),
-[logical-depth validation](../../crates/skald-compiler/src/syntax/parser/logical_depth.rs),
+[expression-depth validation](../../crates/skald-compiler/src/syntax/parser/expression_depth.rs),
 and the specialization
 [source request scanner](../../crates/skald-compiler/src/resolve/resolver/program/specialization/requests/source_request_scanner.rs)
 each traverse source structure. Every new statement/expression form expands

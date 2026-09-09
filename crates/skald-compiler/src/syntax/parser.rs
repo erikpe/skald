@@ -12,10 +12,10 @@ mod array;
 mod class;
 mod declaration;
 mod expression;
+mod expression_depth;
 mod for_in;
 mod generic;
 mod interface;
-mod logical_depth;
 mod module;
 mod recovery;
 mod statement;
@@ -38,10 +38,11 @@ pub const INVALID_OPTIONAL_BOX_INITIALIZER: &str = "PAR015";
 pub const INVALID_GENERIC_SYNTAX: &str = "PAR016";
 pub const INVALID_RANGE_SYNTAX: &str = "PAR017";
 
-/// Maximum recursive grammar depth.
+/// Maximum recursive grammar and accepted expression-tree depth.
 ///
 /// A function body consumes one level. Grouped and unary expressions, calls,
 /// and nested blocks consume another level while their contents are parsed.
+/// Every accepted expression path contains at most this many expression nodes.
 pub const MAX_SYNTAX_NESTING: usize = 128;
 
 /// Maximum number of nested short-circuit operations on one expression path.

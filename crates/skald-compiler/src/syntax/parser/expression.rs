@@ -27,20 +27,55 @@ impl Parser<'_> {
         }
         self.expression_parse_depth -= 1;
 
-        if outermost
-            && expression
-                .as_ref()
-                .is_some_and(super::logical_depth::exceeds_limit)
-        {
-            let span = expression
-                .as_ref()
-                .expect("depth check requires an expression")
-                .span();
-            self.report_excessive_logical_depth(span);
+        if outermost {
+            if let Some(expression) = expression {
+                let span = expression.span();
+                return self.enforce_expression_limits(expression, span);
+            }
+        }
+        expression
+    }
+
+    /// Checks the complete tree iteratively before it can cross the parser
+    /// boundary. Iterative operator reductions also call this while building
+    /// left-associated trees, so a rejected temporary tree is bounded too.
+    fn enforce_expression_limits(
+        &mut self,
+        expression: Expression,
+        boundary_span: Span,
+    ) -> Option<Expression> {
+        let depths = super::expression_depth::measure(&expression);
+        if depths.logical > MAX_LOGICAL_EXPRESSION_DEPTH {
+            self.report_excessive_logical_depth(boundary_span);
             self.recover_from_excessive_nesting();
             return None;
         }
-        expression
+        if depths.expression > MAX_SYNTAX_NESTING {
+            self.report_excessive_nesting(boundary_span);
+            self.recover_from_excessive_nesting();
+            return None;
+        }
+        Some(expression)
+    }
+
+    fn combine_binary(
+        &mut self,
+        left: Expression,
+        operator: BinaryOperator,
+        operator_span: Span,
+        right: Expression,
+    ) -> Option<Expression> {
+        let span = self.cover(left.span(), right.span());
+        self.enforce_expression_limits(
+            Expression::Binary(BinaryExpr {
+                left: Box::new(left),
+                operator,
+                operator_span,
+                right: Box::new(right),
+                span,
+            }),
+            operator_span,
+        )
     }
 
     fn parse_expression_tail(&mut self, source: Expression) -> Option<Expression> {
@@ -79,23 +114,23 @@ impl Parser<'_> {
             while operators.last().is_some_and(|(pending, _)| {
                 logical_precedence(*pending) >= logical_precedence(operator)
             }) {
-                self.reduce_logical_expression(&mut operands, operators.pop().unwrap());
+                self.reduce_logical_expression(&mut operands, operators.pop().unwrap())?;
             }
             operators.push((operator, token.span));
             operands.push(right);
         }
 
         while let Some(operator) = operators.pop() {
-            self.reduce_logical_expression(&mut operands, operator);
+            self.reduce_logical_expression(&mut operands, operator)?;
         }
         operands.pop()
     }
 
     fn reduce_logical_expression(
-        &self,
+        &mut self,
         operands: &mut Vec<Expression>,
         (operator, operator_span): (LogicalOperator, Span),
-    ) {
+    ) -> Option<()> {
         let right = operands
             .pop()
             .expect("logical operator must have a right operand");
@@ -103,13 +138,15 @@ impl Parser<'_> {
             .pop()
             .expect("logical operator must have a left operand");
         let span = self.cover(left.span(), right.span());
-        operands.push(Expression::Logical(LogicalExpr {
+        let expression = Expression::Logical(LogicalExpr {
             left: Box::new(left),
             operator,
             operator_span,
             right: Box::new(right),
             span,
-        }));
+        });
+        operands.push(self.enforce_expression_limits(expression, operator_span)?);
+        Some(())
     }
 
     fn parse_expression_suffix(&mut self, mut source: Expression) -> Option<Expression> {
@@ -165,7 +202,8 @@ impl Parser<'_> {
             }
             return None;
         }
-        Some(expression)
+        let span = expression.span();
+        self.enforce_expression_limits(expression, span)
     }
 
     fn parse_comparison_suffix(&mut self, left: Expression) -> Option<Expression> {
@@ -174,14 +212,7 @@ impl Parser<'_> {
         let operator_token = self.advance();
         let right = self.parse_shift()?;
         let right = self.parse_bitwise_tail(right)?;
-        let span = self.cover(left.span(), right.span());
-        let expression = Expression::Binary(BinaryExpr {
-            left: Box::new(left),
-            operator,
-            operator_span: operator_token.span,
-            right: Box::new(right),
-            span,
-        });
+        let expression = self.combine_binary(left, operator, operator_token.span, right)?;
 
         let Some(_) = comparison_operator(self.peek().kind) else {
             return Some(expression);
@@ -218,37 +249,31 @@ impl Parser<'_> {
             while operators.last().is_some_and(|(pending, _)| {
                 bitwise_precedence(*pending) >= bitwise_precedence(operator)
             }) {
-                self.reduce_bitwise_expression(&mut operands, operators.pop().unwrap());
+                self.reduce_bitwise_expression(&mut operands, operators.pop().unwrap())?;
             }
             operators.push((operator, token.span));
             operands.push(right);
         }
 
         while let Some(operator) = operators.pop() {
-            self.reduce_bitwise_expression(&mut operands, operator);
+            self.reduce_bitwise_expression(&mut operands, operator)?;
         }
         operands.pop()
     }
 
     fn reduce_bitwise_expression(
-        &self,
+        &mut self,
         operands: &mut Vec<Expression>,
         (operator, operator_span): (BinaryOperator, Span),
-    ) {
+    ) -> Option<()> {
         let right = operands
             .pop()
             .expect("bitwise operator must have a right operand");
         let left = operands
             .pop()
             .expect("bitwise operator must have a left operand");
-        let span = self.cover(left.span(), right.span());
-        operands.push(Expression::Binary(BinaryExpr {
-            left: Box::new(left),
-            operator,
-            operator_span,
-            right: Box::new(right),
-            span,
-        }));
+        operands.push(self.combine_binary(left, operator, operator_span, right)?);
+        Some(())
     }
 
     fn parse_shift(&mut self) -> Option<Expression> {
@@ -265,14 +290,7 @@ impl Parser<'_> {
                 TokenKind::Minus => BinaryOperator::Subtract,
                 _ => unreachable!("additive parser accepted a non-additive operator"),
             };
-            let span = self.cover(expression.span(), right.span());
-            expression = Expression::Binary(BinaryExpr {
-                left: Box::new(expression),
-                operator: kind,
-                operator_span: operator.span,
-                right: Box::new(right),
-                span,
-            });
+            expression = self.combine_binary(expression, kind, operator.span, right)?;
         }
 
         while self.at_any(&[TokenKind::ShiftLeft, TokenKind::ShiftRight]) {
@@ -283,14 +301,7 @@ impl Parser<'_> {
                 TokenKind::ShiftRight => BinaryOperator::ShiftRight,
                 _ => unreachable!("shift parser accepted a non-shift operator"),
             };
-            let span = self.cover(expression.span(), right.span());
-            expression = Expression::Binary(BinaryExpr {
-                left: Box::new(expression),
-                operator: kind,
-                operator_span: operator.span,
-                right: Box::new(right),
-                span,
-            });
+            expression = self.combine_binary(expression, kind, operator.span, right)?;
         }
 
         Some(expression)
@@ -307,14 +318,7 @@ impl Parser<'_> {
                 TokenKind::Minus => BinaryOperator::Subtract,
                 _ => unreachable!("additive parser accepted a non-additive operator"),
             };
-            let span = self.cover(expression.span(), right.span());
-            expression = Expression::Binary(BinaryExpr {
-                left: Box::new(expression),
-                operator: kind,
-                operator_span: operator.span,
-                right: Box::new(right),
-                span,
-            });
+            expression = self.combine_binary(expression, kind, operator.span, right)?;
         }
 
         Some(expression)
@@ -332,14 +336,7 @@ impl Parser<'_> {
                 TokenKind::Percent => BinaryOperator::Remainder,
                 _ => unreachable!("multiplicative parser accepted another operator"),
             };
-            let span = self.cover(expression.span(), right.span());
-            expression = Expression::Binary(BinaryExpr {
-                left: Box::new(expression),
-                operator: kind,
-                operator_span: operator.span,
-                right: Box::new(right),
-                span,
-            });
+            expression = self.combine_binary(expression, kind, operator.span, right)?;
         }
 
         Some(expression)
@@ -383,15 +380,27 @@ impl Parser<'_> {
 
         let mut expression = operand?;
         for (operator, operator_span) in prefixes.into_iter().rev() {
-            let span = self.cover(operator_span, expression.span());
-            expression = Expression::Unary(UnaryExpr {
-                operator,
-                operator_span,
-                operand: Box::new(expression),
-                span,
-            });
+            expression = self.finish_unary(expression, operator, operator_span)?;
         }
         Some(expression)
+    }
+
+    fn finish_unary(
+        &mut self,
+        operand: Expression,
+        operator: UnaryOperator,
+        operator_span: Span,
+    ) -> Option<Expression> {
+        let span = self.cover(operator_span, operand.span());
+        self.enforce_expression_limits(
+            Expression::Unary(UnaryExpr {
+                operator,
+                operator_span,
+                operand: Box::new(operand),
+                span,
+            }),
+            operator_span,
+        )
     }
 
     fn starts_primitive_cast(&self) -> bool {
@@ -519,12 +528,7 @@ impl Parser<'_> {
                 })?;
             } else if self.at(TokenKind::Bang) {
                 let bang = self.advance();
-                let span = self.cover(expression.span(), bang.span);
-                expression = Expression::Unwrap(UnwrapExpr {
-                    source: Box::new(expression),
-                    bang_span: bang.span,
-                    span,
-                });
+                expression = self.finish_unwrap(expression, bang.span)?;
             } else if self.at(TokenKind::LeftBracket)
                 || (self.at(TokenKind::Arrow) && self.peek_ahead(1).kind == TokenKind::LeftBracket)
             {
@@ -540,6 +544,38 @@ impl Parser<'_> {
         Some(expression)
     }
 
+    fn finish_unwrap(&mut self, source: Expression, bang_span: Span) -> Option<Expression> {
+        let span = self.cover(source.span(), bang_span);
+        self.enforce_expression_limits(
+            Expression::Unwrap(UnwrapExpr {
+                source: Box::new(source),
+                bang_span,
+                span,
+            }),
+            bang_span,
+        )
+    }
+
+    pub(super) fn finish_bracket_projection_node(
+        &mut self,
+        receiver: Expression,
+        operator: BracketProjectionOperator,
+        bounds: BracketProjectionBounds,
+        right_bracket_span: Span,
+        span: Span,
+    ) -> Option<Expression> {
+        self.enforce_expression_limits(
+            Expression::BracketProjection(Box::new(BracketProjectionExpr {
+                receiver: Box::new(receiver),
+                operator,
+                bounds,
+                right_bracket_span,
+                span,
+            })),
+            span,
+        )
+    }
+
     fn finish_member_access(&mut self, receiver: Expression) -> Option<Expression> {
         let operator = self.advance();
         let member = self.parse_name(match operator.kind {
@@ -548,29 +584,36 @@ impl Parser<'_> {
             _ => unreachable!("member parser accepted a non-member operator"),
         })?;
         let span = self.cover(receiver.span(), member.span);
-        Some(Expression::MemberAccess(MemberAccessExpr {
-            receiver: Box::new(receiver),
-            operator: match operator.kind {
-                TokenKind::Dot => MemberAccessOperator::Dot {
-                    span: operator.span,
+        self.enforce_expression_limits(
+            Expression::MemberAccess(MemberAccessExpr {
+                receiver: Box::new(receiver),
+                operator: match operator.kind {
+                    TokenKind::Dot => MemberAccessOperator::Dot {
+                        span: operator.span,
+                    },
+                    TokenKind::Arrow => MemberAccessOperator::Arrow {
+                        span: operator.span,
+                    },
+                    _ => unreachable!("member parser accepted a non-member operator"),
                 },
-                TokenKind::Arrow => MemberAccessOperator::Arrow {
-                    span: operator.span,
-                },
-                _ => unreachable!("member parser accepted a non-member operator"),
-            },
-            member,
-            span,
-        }))
+                member,
+                span,
+            }),
+            operator.span,
+        )
     }
 
     fn finish_call(&mut self, callee: Expression) -> Option<Expression> {
         let (arguments, end_span) = self.parse_construction_arguments()?;
-        Some(Expression::Call(CallExpr {
-            span: self.cover(callee.span(), end_span),
-            callee: Box::new(callee),
-            arguments,
-        }))
+        let span = self.cover(callee.span(), end_span);
+        self.enforce_expression_limits(
+            Expression::Call(CallExpr {
+                span,
+                callee: Box::new(callee),
+                arguments,
+            }),
+            span,
+        )
     }
 
     fn parse_construction_arguments(&mut self) -> Option<(CallArguments, Span)> {

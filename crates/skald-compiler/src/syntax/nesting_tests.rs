@@ -27,6 +27,12 @@ fn source_with_return(expression: &str) -> String {
     format!("fn main() -> i64 {{ return {expression}; }}")
 }
 
+fn repeated_infix_expression(operands: usize, operator: &str) -> String {
+    std::iter::repeat_n("1", operands)
+        .collect::<Vec<_>>()
+        .join(operator)
+}
+
 fn assert_single_nesting_error(output: &ParseOutput) {
     assert_eq!(output.diagnostics.len(), 1);
     let diagnostic = output.diagnostics.iter().next().unwrap();
@@ -50,6 +56,47 @@ fn expressions_immediately_below_and_at_the_nesting_limit_parse() {
         assert!(output.diagnostics.is_empty(), "failed with {groups} groups");
         assert_eq!(output.ast.declarations.len(), 1);
     }
+}
+
+#[test]
+fn flat_infix_trees_use_the_actual_expression_depth_budget() {
+    for operator in [" + ", " * ", " & "] {
+        let allowed = repeated_infix_expression(MAX_SYNTAX_NESTING, operator);
+        let output = parse_text(source_with_return(&allowed));
+        assert!(
+            output.diagnostics.is_empty(),
+            "operator {operator:?} failed at the expression-tree limit"
+        );
+
+        let excessive = repeated_infix_expression(MAX_SYNTAX_NESTING + 1, operator);
+        assert_single_nesting_error(&parse_text(source_with_return(&excessive)));
+    }
+}
+
+#[test]
+fn grouping_and_flat_operators_share_one_expression_depth_budget() {
+    let allowed = format!(
+        "(({}))",
+        repeated_infix_expression(MAX_SYNTAX_NESTING - 2, " + ")
+    );
+    let output = parse_text(source_with_return(&allowed));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let excessive = format!(
+        "(({}))",
+        repeated_infix_expression(MAX_SYNTAX_NESTING - 1, " + ")
+    );
+    assert_single_nesting_error(&parse_text(source_with_return(&excessive)));
+}
+
+#[test]
+fn grouped_postfix_trees_use_the_actual_expression_depth_budget() {
+    let allowed = format!("((value)){}", ".member".repeat(MAX_SYNTAX_NESTING - 3));
+    let output = parse_text(source_with_return(&allowed));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let excessive = format!("((value)){}", ".member".repeat(MAX_SYNTAX_NESTING - 2));
+    assert_single_nesting_error(&parse_text(source_with_return(&excessive)));
 }
 
 #[test]
