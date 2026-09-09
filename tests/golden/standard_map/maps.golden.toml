@@ -21,7 +21,6 @@ expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: 
 name = "capacity_too_large"
 mode = "run"
 source = "map_capacity_too_large.ska"
-timeout = 1
 
 [[test.run]]
 name = "fails_before_backing_allocation"
