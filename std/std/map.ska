@@ -19,17 +19,17 @@ public class Map<K, V> where K: Equatable, K: Hashable
         self._states = u8[](Map<K, V>._default_capacity());
     }
 
-    private init(capacity: u64) {
+    private init(normalized_capacity: u64) {
         self._length = 0u;
         self._used = 0u;
-        self._hashes = u64[](Map<K, V>._normalized_capacity(capacity));
-        self._keys = K?[](Map<K, V>._normalized_capacity(capacity));
-        self._values = V?[](Map<K, V>._normalized_capacity(capacity));
-        self._states = u8[](Map<K, V>._normalized_capacity(capacity));
+        self._hashes = u64[](normalized_capacity);
+        self._keys = K?[](normalized_capacity);
+        self._values = V?[](normalized_capacity);
+        self._states = u8[](normalized_capacity);
     }
 
     static fn with_capacity(capacity: u64) -> Map<K, V> {
-        return Map<K, V>(capacity);
+        return Map<K, V>(Map<K, V>._normalized_capacity(capacity));
     }
 
     fn len() -> u64 {
@@ -86,7 +86,7 @@ public class Map<K, V> where K: Equatable, K: Hashable
                     added_used = 0u;
                 }
 
-                if ((self._used + added_used) * 4u >= capacity * 3u) {
+                if (self._used + added_used >= capacity - capacity / 4u) {
                     self._prepare_insert();
                     self._insert_new(key, value, hash);
                     return;
@@ -149,11 +149,11 @@ public class Map<K, V> where K: Equatable, K: Hashable
 
     private mut fn _prepare_insert() -> unit {
         var capacity: u64 = self._states.len();
-        if ((self._length + 1u) * 2u < capacity) {
+        if (self._length + 1u < capacity / 2u) {
             self._rehash(capacity);
         }
         else {
-            self._rehash(capacity * 2u);
+            self._rehash(Map<K, V>._next_capacity(capacity));
         }
     }
 
@@ -194,11 +194,25 @@ public class Map<K, V> where K: Equatable, K: Hashable
     }
 
     private static fn _normalized_capacity(capacity: u64) -> u64 {
+        if (capacity > Map<K, V>._maximum_capacity()) {
+            panic("Map: capacity too large");
+        }
         var normalized: u64 = Map<K, V>._default_capacity();
         while (normalized < capacity) {
             normalized = normalized * 2u;
         }
         return normalized;
+    }
+
+    private static fn _next_capacity(capacity: u64) -> u64 {
+        if (capacity >= Map<K, V>._maximum_capacity()) {
+            panic("Map: capacity too large");
+        }
+        return capacity * 2u;
+    }
+
+    private static fn _maximum_capacity() -> u64 {
+        return 4611686018427387904u;
     }
 
     private static fn _default_capacity() -> u64 {

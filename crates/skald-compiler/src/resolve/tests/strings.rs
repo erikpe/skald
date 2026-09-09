@@ -260,9 +260,9 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         dump.lines()
             .filter(|line| line.trim_start().starts_with("Panic @"))
             .count(),
-        // Three Str checks plus the seven checks in the Vec<Str>
+        // Three Str checks plus the nine checks in the Vec<Str>
         // specialization required by splitlines and split.
-        10,
+        12,
         "{dump}"
     );
     assert_eq!(

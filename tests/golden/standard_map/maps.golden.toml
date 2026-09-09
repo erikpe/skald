@@ -18,6 +18,16 @@ name = "checked_structural_lookup"
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Map.index_get: key not found\n" } }
 
 [[test]]
+name = "capacity_too_large"
+mode = "run"
+source = "map_capacity_too_large.ska"
+timeout = 1
+
+[[test.run]]
+name = "fails_before_backing_allocation"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Map: capacity too large\n" } }
+
+[[test]]
 name = "key_bounds"
 mode = "compile-fail"
 source = "map_key_bounds_failure.ska"

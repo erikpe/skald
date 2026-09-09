@@ -62,6 +62,13 @@ fn exercise_primitives() -> unit {
     values.clear();
     assert_true(values.is_empty());
     assert_eq_u64(values.capacity(), 8u);
+
+    var one: Vec<i64> = Vec<i64>.with_capacity(1u);
+    var four: Vec<i64> = Vec<i64>.with_capacity(4u);
+    var five: Vec<i64> = Vec<i64>.with_capacity(5u);
+    assert_eq_u64(one.capacity(), 1u);
+    assert_eq_u64(four.capacity(), 4u);
+    assert_eq_u64(five.capacity(), 5u);
 }
 
 fn exercise_strings_and_optionals() -> unit {

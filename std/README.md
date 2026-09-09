@@ -103,19 +103,23 @@ The `std::vec` module provides the implemented generic
 [`Vec<T>` vector](../docs/language/VECTORS.md). It owns independent `T?[]`
 capacity storage and infers its element lifecycle requirements from ordinary
 method operations. Heterogeneous shared-object code uses `Vec<shared Obj>`.
-The vector provides capacity, geometric growth, checked positive and negative
-indexing through compatibility methods and structural brackets, independent
-logical-length slices, equal-length snapshot slice replacement, push, pop,
-last, replacement, clear, and ordinary allocation-free-state
+The vector provides checked requested capacity and geometric growth, positive
+and negative indexing through compatibility methods and structural brackets,
+independent logical-length slices, equal-length snapshot slice replacement,
+push, pop, last, replacement, clear, and ordinary allocation-free-state
 `Iterable<T, u64>` traversal without Vec-specific compiler or runtime
-machinery.
+machinery. Capacity counts above `i64::MAX` fail before backing allocation.
 
 The `std::map` module provides a generic `Map<K, V>` whose keys implement both
 `Equatable` and `Hashable`. It uses power-of-two open-addressed storage, cached
 hashes, linear probing, tombstones, and geometric growth. The map supports
 membership testing, checked lookup, insertion and replacement, removal,
 clearing, requested capacity, and structural bracket reads and writes without
-compiler or runtime machinery.
+compiler or runtime machinery. Requested capacity is normalized once to at
+least eight and the next power of two. Counts above `2^62`, and growth beyond
+that largest `i64`-representable power of two, terminate with
+`Map: capacity too large` before backing allocation. Load-factor comparisons
+avoid overflowing multiplication.
 
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`

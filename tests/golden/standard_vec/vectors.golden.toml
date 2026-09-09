@@ -9,6 +9,16 @@ source = "vec_generic.ska"
 name = "complete_element_and_lifecycle_profile"
 
 [[test]]
+name = "capacity_too_large"
+mode = "run"
+source = "vec_capacity_too_large.ska"
+timeout = 1
+
+[[test.run]]
+name = "fails_before_backing_allocation"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec: capacity too large\n" } }
+
+[[test]]
 name = "iteration"
 mode = "run"
 source = "vec_iteration.ska"

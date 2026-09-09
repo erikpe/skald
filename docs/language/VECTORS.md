@@ -46,8 +46,10 @@ var owners: Vec<shared Readable> = Vec<shared Readable>();
 
 The default initializer creates an empty vector with capacity four.
 `with_capacity` creates an empty vector with exactly the requested capacity,
-including zero. Capacity is retained by `pop` and `clear`; there is no
-automatic shrinking operation.
+including zero, when that count is at most `9223372036854775807`. A larger
+request terminates with `Vec: capacity too large` before backing allocation.
+Capacity is retained by `pop` and `clear`; there is no automatic shrinking
+operation.
 
 ## Representation and admitted element types
 
@@ -79,8 +81,11 @@ storable through `T?`; `Vec<shared Readable>` is.
 
 `push` appends one element, growing before insertion when necessary. Growth
 starts at capacity four when the old capacity is smaller, then doubles until
-the requested length fits. Allocation limits and failures inherit the built-in
-array contract.
+the requested length fits. Checked growth saturates at the maximum `i64`
+element count instead of wrapping; attempting to grow beyond it terminates
+with `Vec: capacity too large`. Element-layout overflow and host allocation
+failure within that element-count limit retain the distinct built-in array
+failures.
 
 `index_get`, `index_set`, and bracket indexing accept non-negative indices
 from the beginning and negative indices relative to the current logical

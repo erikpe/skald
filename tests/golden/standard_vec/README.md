@@ -19,7 +19,9 @@ overlap snapshots, prompt replacement cleanup, growth after slicing, and
 primitive, class, shared-owner, optional, and nested-vector elements. The
 positive generic type-shape matrix keeps every specialization in its own
 function within one compilation unit and forces each vector through geometric
-growth.
+growth. Requested-capacity coverage preserves exact zero and small capacities
+and verifies that a count above `i64::MAX` fails before allocation under a
+one-second process deadline.
 
 Iteration coverage exercises empty, singleton, and multi-element vectors;
 optional, exact-class, array, nested-vector, shared-owner, optional-owner, and

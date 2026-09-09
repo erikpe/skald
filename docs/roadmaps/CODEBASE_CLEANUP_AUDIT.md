@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A03 completed on 2026-09-09. Select the
+Status: actionable audit; A01–A03 and A05 completed on 2026-09-09. Select the
 remaining robustness fixes, then turn the chosen architectural findings into
 separate PR-sized implementation roadmaps. No implementation roadmap depends
 on this document yet.
@@ -103,7 +103,7 @@ work and its validation; findings without that record remain `Open`.
 | [A02](#a02--drain-linker-pipes-concurrently) | Drain linker pipes concurrently | Complete | P1 | 4 | M | Medium | R | R, M |
 | [A03](#a03--enforce-process-deadlines-through-pipe-completion) | Enforce process deadlines through pipe completion | Complete | P1 | 4 | M | Medium | R | R |
 | [A04](#a04--bound-captured-process-and-output-file-bytes) | Bound captured process and output-file bytes | Open | P1 | 4 | M | Medium | O | R, C |
-| [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | Open | P1 | 4 | S | Low | R | R |
+| [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | Complete | P1 | 4 | S | Low | R | R |
 | [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Open | P1 | 4 | XS | Low | O | R |
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Open | P1 | 3 | S | Low | O | M, E |
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Open | P1 | 5 | L | High | O | M, E, R |
@@ -282,6 +282,8 @@ existing corpus before making them part of the runner contract.
 
 ### A05 — Check container capacity arithmetic
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** [`Map._normalized_capacity`](../../std/std/map.ska) doubles a
 `u64` until it reaches the request. For a request above `2^63`, doubling wraps
 to zero and never terminates. The audit compiled and ran
@@ -304,6 +306,24 @@ failure.
 allocations; retain zero/small capacity and power-of-two boundary behavior.
 Extract arithmetic-only helpers if needed to test otherwise unreachable
 growth boundaries. Do not alter Skald's wrapping integer language semantics.
+
+**Delivered:** `Map` now accepts only capacities that normalize to an
+`i64`-representable power of two: its largest table capacity is `2^62`, and a
+larger request or growth step terminates with `Map: capacity too large` before
+allocation. Capacity normalization is evaluated once by `with_capacity` and
+passed into the private initializer. The three-quarter load check and
+tombstone rehash check use subtraction/division comparisons instead of
+overflow-prone multiplication. `Vec` accepts exact requested capacities
+through `i64::MAX`, rejects larger counts with `Vec: capacity too large`,
+checks before incrementing a full logical length, and saturates its final
+geometric growth step at the representable maximum rather than wrapping.
+Representable requests still reach the built-in array byte-layout and host
+allocation checks, preserving their separate failures. Golden tests retain
+zero and small exact Vec capacities, Map's minimum-eight and next-power-of-two
+behavior, and ordinary growth. Maximum-`u64` Map and Vec requests now fail with
+the container-specific panic under one-second process deadlines. The full
+`make check` gate passes, including 3,089 compiler tests and all 628 golden
+leaves.
 
 ### A06 — Include binary64 tests in repository gates
 

@@ -71,6 +71,13 @@ fn main() -> i64 {
     reserved[Key(1u)] = 42u;
     assert_eq_u64(reserved[Key(1u)], 42u);
 
+    var zero_capacity: Map<Key, u64> = Map<Key, u64>.with_capacity(0u);
+    var exact_capacity: Map<Key, u64> = Map<Key, u64>.with_capacity(8u);
+    var next_capacity: Map<Key, u64> = Map<Key, u64>.with_capacity(9u);
+    assert_eq_u64(zero_capacity.capacity(), 8u);
+    assert_eq_u64(exact_capacity.capacity(), 8u);
+    assert_eq_u64(next_capacity.capacity(), 16u);
+
     var optional_values: Map<Key, Str?> = Map<Key, Str?>();
     optional_values[Key(2u)] = none;
     assert_true(optional_values.contains(Key(2u)));
