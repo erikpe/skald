@@ -11,6 +11,13 @@ records are preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
+The [codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) is an actionable,
+repository-wide review with 43 improvements graded by impact, effort, risk,
+and evidence. Implementation has not started; the next step is to select the
+reproduced robustness fixes and test-gate repair, then plan the phase-boundary
+refactorings. Larger performance candidates depend on measurement and the
+existing optimization foundations/catalog below.
+
 The living
 [optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) inventories
 implemented and possible later optimizations by HIR/lowering, final-MIR value,
