@@ -519,13 +519,17 @@ status takes precedence over the scheduling-dependent broken-pipe observation.
 A successful tool must accept the complete assembly input.
 
 The golden runner uses the bounded executor form so compiler, linker, and
-generated-program timeouts share one process-group policy. `Toolchain` still
-constructs the exact host command, owns its pending output, interprets the
-captured result, and publishes the executable atomically; the runner does not
-reimplement those driver responsibilities. Native selections prepare one
-runtime archive, compile each selected build to checked assembly, and ask the
-same `Toolchain` API to link each assembly into its independently owned golden
-artifact directory.
+generated-program timeouts share one process-group policy. Its deadline covers
+the direct child and all three pipe workers. On Linux, descendants that retain
+inherited pipes after the direct child exits keep the operation incomplete and
+are terminated with the process group at the deadline. Cleanup still reaps the
+direct child and collects the pipe workers, and cleanup failures accompany the
+primary process error. `Toolchain` still constructs the exact host command,
+owns its pending output, interprets the captured result, and publishes the
+executable atomically; the runner does not reimplement those driver
+responsibilities. Native selections prepare one runtime archive, compile each
+selected build to checked assembly, and ask the same `Toolchain` API to link
+each assembly into its independently owned golden artifact directory.
 
 ## Input protection and artifact publication
 

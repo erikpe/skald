@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01 and A02 completed on 2026-09-09. Select the
+Status: actionable audit; A01–A03 completed on 2026-09-09. Select the
 remaining robustness fixes, then turn the chosen architectural findings into
 separate PR-sized implementation roadmaps. No implementation roadmap depends
 on this document yet.
@@ -94,52 +94,54 @@ Skald's cleanup.
 ## Ranked inventory
 
 Identifiers are finding references within this audit, not implementation tasks.
+Status is `Complete` only after the corresponding section records delivered
+work and its validation; findings without that record remain `Open`.
 
-| ID | Improvement | Priority | Impact | Effort | Risk | Evidence | Benefits |
-| --- | --- | --- | ---: | --- | --- | --- | --- |
-| [A01](#a01--bound-actual-expression-tree-depth-and-stack-usage) | Bound actual expression-tree depth and stack usage | P0 | 5 | M–L | Medium | R | R, E |
-| [A02](#a02--drain-linker-pipes-concurrently) | Drain linker pipes concurrently | P1 | 4 | M | Medium | R | R, M |
-| [A03](#a03--enforce-process-deadlines-through-pipe-completion) | Enforce process deadlines through pipe completion | P1 | 4 | M | Medium | R | R |
-| [A04](#a04--bound-captured-process-and-output-file-bytes) | Bound captured process and output-file bytes | P1 | 4 | M | Medium | O | R, C |
-| [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | P1 | 4 | S | Low | R | R |
-| [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | P1 | 4 | XS | Low | O | R |
-| [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | P1 | 3 | S | Low | O | M, E |
-| [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | P1 | 5 | L | High | O | M, E, R |
-| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | P1 | 5 | L | High | O | M, E, R |
-| [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | P2 | 4 | M–L | High | C | M, C |
-| [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | P2 | 4 | M | Medium | O | M, E, R, C |
-| [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | P2 | 4 | M | Medium | O | M, E |
-| [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | P2 | 3 | M | Medium | O | M, E, R |
-| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | P1 | 4 | M–L | Medium | O | M, E, R |
-| [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | P2 | 5 | XL | High | C | M, E, R |
-| [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | P2 | 3 | M | Medium | C | M, E |
-| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | P2 | 4 | M–L | Medium | C | C, M |
-| [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | P1 | 4 | M | Medium | O | M, C, R |
-| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | P2 | 4 | L | High | C | C, M |
-| [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | P2 | 3 | M | Medium | O | M, R |
-| [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | P2 | 3 | M | Medium | O | M, E, R |
-| [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | P3 | 5 | XL | High | C | N, E |
-| [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | P3 | 5 | XL | High | C | N, E, R |
-| [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | P2 | 3 | M | Medium | C | C, M |
-| [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | P2 | 3 | S–M | Low | O | C, M |
-| [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | P2 | 3 | M | Low | O | M, E |
-| [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | P3 | 2 | S | Low | O | C, M |
-| [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | P2 | 3 | M | Low | O | M, E |
-| [A29](#a29--remove-obsolete-rollout-comments-and-broad-allowances) | Remove obsolete rollout comments and broad allowances | P2 | 2 | S | Low | O | M, R |
-| [A30](#a30--share-standard-library-bounds-normalization) | Share standard-library bounds normalization | P2 | 3 | S–M | Medium | O | M, R |
-| [A31](#a31--avoid-mandatory-string-to-array-copies-for-output) | Avoid mandatory string-to-array copies for output | P2 | 4 | L | High | C | N, M |
-| [A32](#a32--measure-and-reduce-mapvec-copy-traffic) | Measure and reduce Map/Vec copy traffic | P2 | 4 | L | High | C | N |
-| [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | P2 | 4 | M | Medium | O | M, R, C |
-| [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | P1 | 4 | M | Low | O | C, N, R |
-| [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | P2 | 2 | XS | Low | O | R |
-| [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | P2 | 3 | S–M | Medium | O | R, M |
-| [A37](#a37--simplify-literal-selection-and-bound-glob-matching) | Simplify literal selection and bound glob matching | P3 | 2 | S | Low | O | C, R |
-| [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | P1 | 4 | S–M | Low | O | M, E |
-| [A39](#a39--define-and-test-the-documentation-checkers-markdown-subset) | Define and test the documentation checker's Markdown subset | P2 | 3 | S–M | Low | O | R, M |
-| [A40](#a40--reconsider-the-measurement-tools-private-sha-256) | Reconsider the measurement tool's private SHA-256 | P3 | 2 | S | Low | C | M, R |
-| [A41](#a41--make-runtime-build-configuration-visible-in-artifacts) | Make runtime build configuration visible in artifacts | P2 | 3 | S–M | Low | O | R, M |
-| [A42](#a42--rename-sequential-execution-products-used-by-both-schedulers) | Rename sequential execution products used by both schedulers | P3 | 2 | S | Low | O | M |
-| [A43](#a43--add-narrow-automated-phase-dependency-checks) | Add narrow automated phase-dependency checks | P1 | 4 | M | Low | C | M, E, R |
+| ID | Improvement | Status | Priority | Impact | Effort | Risk | Evidence | Benefits |
+| --- | --- | --- | --- | ---: | --- | --- | --- | --- |
+| [A01](#a01--bound-actual-expression-tree-depth-and-stack-usage) | Bound actual expression-tree depth and stack usage | Complete | P0 | 5 | M–L | Medium | R | R, E |
+| [A02](#a02--drain-linker-pipes-concurrently) | Drain linker pipes concurrently | Complete | P1 | 4 | M | Medium | R | R, M |
+| [A03](#a03--enforce-process-deadlines-through-pipe-completion) | Enforce process deadlines through pipe completion | Complete | P1 | 4 | M | Medium | R | R |
+| [A04](#a04--bound-captured-process-and-output-file-bytes) | Bound captured process and output-file bytes | Open | P1 | 4 | M | Medium | O | R, C |
+| [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | Open | P1 | 4 | S | Low | R | R |
+| [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Open | P1 | 4 | XS | Low | O | R |
+| [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Open | P1 | 3 | S | Low | O | M, E |
+| [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Open | P1 | 5 | L | High | O | M, E, R |
+| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Open | P1 | 5 | L | High | O | M, E, R |
+| [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Open | P2 | 4 | M–L | High | C | M, C |
+| [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Open | P2 | 4 | M | Medium | O | M, E, R, C |
+| [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Open | P2 | 4 | M | Medium | O | M, E |
+| [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
+| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Open | P1 | 4 | M–L | Medium | O | M, E, R |
+| [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
+| [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
+| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
+| [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Open | P1 | 4 | M | Medium | O | M, C, R |
+| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Open | P2 | 4 | L | High | C | C, M |
+| [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Open | P2 | 3 | M | Medium | O | M, R |
+| [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Open | P2 | 3 | M | Medium | O | M, E, R |
+| [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Open | P3 | 5 | XL | High | C | N, E |
+| [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | Open | P3 | 5 | XL | High | C | N, E, R |
+| [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | Open | P2 | 3 | M | Medium | C | C, M |
+| [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Open | P2 | 3 | S–M | Low | O | C, M |
+| [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | Open | P2 | 3 | M | Low | O | M, E |
+| [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | Open | P3 | 2 | S | Low | O | C, M |
+| [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | Open | P2 | 3 | M | Low | O | M, E |
+| [A29](#a29--remove-obsolete-rollout-comments-and-broad-allowances) | Remove obsolete rollout comments and broad allowances | Open | P2 | 2 | S | Low | O | M, R |
+| [A30](#a30--share-standard-library-bounds-normalization) | Share standard-library bounds normalization | Open | P2 | 3 | S–M | Medium | O | M, R |
+| [A31](#a31--avoid-mandatory-string-to-array-copies-for-output) | Avoid mandatory string-to-array copies for output | Open | P2 | 4 | L | High | C | N, M |
+| [A32](#a32--measure-and-reduce-mapvec-copy-traffic) | Measure and reduce Map/Vec copy traffic | Open | P2 | 4 | L | High | C | N |
+| [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | Open | P2 | 4 | M | Medium | O | M, R, C |
+| [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | Open | P1 | 4 | M | Low | O | C, N, R |
+| [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Open | P2 | 2 | XS | Low | O | R |
+| [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Open | P2 | 3 | S–M | Medium | O | R, M |
+| [A37](#a37--simplify-literal-selection-and-bound-glob-matching) | Simplify literal selection and bound glob matching | Open | P3 | 2 | S | Low | O | C, R |
+| [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | Open | P1 | 4 | S–M | Low | O | M, E |
+| [A39](#a39--define-and-test-the-documentation-checkers-markdown-subset) | Define and test the documentation checker's Markdown subset | Open | P2 | 3 | S–M | Low | O | R, M |
+| [A40](#a40--reconsider-the-measurement-tools-private-sha-256) | Reconsider the measurement tool's private SHA-256 | Open | P3 | 2 | S | Low | C | M, R |
+| [A41](#a41--make-runtime-build-configuration-visible-in-artifacts) | Make runtime build configuration visible in artifacts | Open | P2 | 3 | S–M | Low | O | R, M |
+| [A42](#a42--rename-sequential-execution-products-used-by-both-schedulers) | Rename sequential execution products used by both schedulers | Open | P3 | 2 | S | Low | O | M |
+| [A43](#a43--add-narrow-automated-phase-dependency-checks) | Add narrow automated phase-dependency checks | Open | P1 | 4 | M | Low | C | M, E, R |
 
 ## Immediate robustness and validation
 
@@ -223,6 +225,8 @@ checks, Rust 1.82.0 check, and all 626 golden leaves pass.
 
 ### A03 — Enforce process deadlines through pipe completion
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** [`run_process`](../../crates/skald-golden/src/process/runner.rs)
 times out the direct child, then joins blocking stdin/stdout/stderr threads.
 Once the child exits normally, the deadline is no longer enforced. Descendants
@@ -242,6 +246,21 @@ direct child times out is insufficient.
 **First PR / validation:** descendants retaining each output pipe, descendants
 retaining stdin, large input, a child exiting before timeout, a real timeout,
 and failure paths. Verify completion and cleanup, not only the exit enum.
+
+**Delivered:** the golden process owner now treats direct-child termination and
+all three pipe workers as one bounded operation. If any part remains incomplete
+at the deadline, the observation is `TimedOut` even when the direct child
+already exited successfully. On Linux, cleanup targets the saved process group,
+then reaps the direct child and collects every worker; wait, termination, and
+reap errors take the same cleanup path, with secondary cleanup failures retained
+on `ProcessError`. Real-process regressions cover descendants retaining stdin,
+stdout, and stderr, including 2 MiB of blocked input. Each descendant has a
+finite two-second lifetime to bound the regression itself, while the fixed
+runner returns within one second of a 100 ms deadline and verifies that the
+descendant was removed. Existing tests continue to cover successful 2 MiB
+bidirectional pipe traffic, ordinary early child exit, direct-child timeout,
+signals, and process-group termination. The full runner suite, workspace static
+checks, Rust 1.82.0 check, and all 626 golden leaves pass.
 
 ### A04 — Bound captured process and output-file bytes
 

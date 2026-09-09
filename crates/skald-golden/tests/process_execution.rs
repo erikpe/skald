@@ -561,6 +561,49 @@ fn timeout_terminates_descendants_in_the_child_process_group() {
         .trim()
         .parse::<u32>()
         .unwrap();
+    assert_process_exits(pid);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn deadline_includes_pipe_completion_after_the_direct_child_exits() {
+    let fixture = Fixture::new();
+    for pipe in ["stdin", "stdout", "stderr"] {
+        let request = process(
+            &[
+                OsString::from("retain-pipe"),
+                OsString::from(pipe),
+                OsString::from("2000"),
+            ],
+            vec![b'i'; 2 * 1024 * 1024],
+            &fixture.root,
+        )
+        .with_timeout(Duration::from_millis(100));
+        let observation = run_process(&request).unwrap();
+        assert_eq!(
+            observation.termination(),
+            ProcessTermination::TimedOut {
+                limit: Duration::from_millis(100)
+            },
+            "retained {pipe}"
+        );
+        assert!(
+            observation.elapsed() < Duration::from_secs(1),
+            "retained {pipe} completed after {:?}",
+            observation.elapsed()
+        );
+        assert!(observation.pipe_failures().is_empty(), "retained {pipe}");
+        let pid = std::str::from_utf8(observation.stdout())
+            .unwrap()
+            .trim()
+            .parse::<u32>()
+            .unwrap();
+        assert_process_exits(pid);
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn assert_process_exits(pid: u32) {
     for _ in 0..100 {
         if !Path::new(&format!("/proc/{pid}")).exists() {
             return;

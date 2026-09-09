@@ -6,6 +6,7 @@ pub struct ProcessError {
     program: PathBuf,
     action: &'static str,
     source: io::Error,
+    cleanup_failures: Vec<String>,
 }
 
 impl ProcessError {
@@ -14,7 +15,13 @@ impl ProcessError {
             program,
             action,
             source,
+            cleanup_failures: Vec::new(),
         }
+    }
+
+    pub(super) fn with_cleanup_failures(mut self, failures: Vec<String>) -> Self {
+        self.cleanup_failures = failures;
+        self
     }
 
     pub fn program(&self) -> &std::path::Path {
@@ -23,6 +30,10 @@ impl ProcessError {
 
     pub fn action(&self) -> &str {
         self.action
+    }
+
+    pub fn cleanup_failures(&self) -> &[String] {
+        &self.cleanup_failures
     }
 }
 
@@ -34,7 +45,15 @@ impl fmt::Display for ProcessError {
             self.action,
             self.program.display(),
             self.source
-        )
+        )?;
+        if !self.cleanup_failures.is_empty() {
+            write!(
+                formatter,
+                "; cleanup also failed: {}",
+                self.cleanup_failures.join("; ")
+            )?;
+        }
+        Ok(())
     }
 }
 

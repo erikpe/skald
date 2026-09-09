@@ -711,7 +711,8 @@ non-normative compile, link, execution, and assembly-size observations.
 The runner's compiler-independent process tests use its Rust fake-process
 binary to cover exact and partial byte expectations, non-UTF-8 Unix arguments,
 temporary files, environment isolation, large simultaneous pipes, signals,
-timeouts, and Linux descendant termination:
+timeouts, and Linux process-group cleanup when descendants retain stdin,
+stdout, or stderr after the direct child exits:
 
 ```text
 cargo test --locked -p skald-golden --test process_execution
@@ -728,7 +729,11 @@ stop starting unrelated work after an observed failure, and spec `serial` or
 named `resources` for explicit exclusion. Results remain in canonical ID order.
 Compiler, linker, and native processes default to a 60-second timeout.
 `--timeout SECONDS` changes that bound; an explicit per-test timeout remains
-authoritative. Human output is the default, while `--format json` and
+authoritative. The deadline covers both the direct child and completion of its
+three owned pipes. On Linux, a descendant in the child's process group that
+keeps an inherited pipe open therefore makes the observation time out; the
+runner kills that group, reaps the direct child, and collects every pipe worker
+before returning. Human output is the default, while `--format json` and
 `--format junit` emit single
 machine-readable documents with the same canonical leaf IDs, stages, statuses,
 durations, and failures. `--show-output` includes passing streams in human

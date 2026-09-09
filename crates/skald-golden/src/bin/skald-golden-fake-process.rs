@@ -7,7 +7,7 @@ use std::{
     ffi::OsString,
     fs,
     io::{self, Read, Write},
-    process::{self, Command},
+    process::{self, Command, Stdio},
     thread,
     time::Duration,
 };
@@ -42,6 +42,7 @@ fn run(mut arguments: Vec<OsString>) -> Result<(), String> {
         Some("sleep") => sleep(&arguments),
         Some("signal") => signal(),
         Some("descendant") => descendant(),
+        Some("retain-pipe") => retain_pipe(&arguments),
         Some("fail") => controlled_failure(),
         _ => Err(format!("unknown mode {mode:?}")),
     }
@@ -176,6 +177,31 @@ fn descendant() -> Result<(), String> {
     io::stdout().flush().map_err(display)?;
     thread::sleep(Duration::from_secs(60));
     Ok(())
+}
+
+fn retain_pipe(arguments: &[OsString]) -> Result<(), String> {
+    let pipe = required_utf8(arguments, 0, "pipe")?;
+    let milliseconds = required_utf8(arguments, 1, "milliseconds")?;
+    let mut command = Command::new(env::current_exe().map_err(display)?);
+    command
+        .args(["sleep", milliseconds])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    match pipe {
+        "stdin" => {
+            command.stdin(Stdio::inherit());
+        }
+        "stdout" => {
+            command.stdout(Stdio::inherit());
+        }
+        "stderr" => {
+            command.stderr(Stdio::inherit());
+        }
+        _ => return Err(format!("unknown retained pipe {pipe:?}")),
+    }
+    let child = command.spawn().map_err(display)?;
+    writeln!(io::stdout(), "{}", child.id()).map_err(display)
 }
 
 fn controlled_failure() -> Result<(), String> {
