@@ -6,7 +6,8 @@ GOLDEN_RELEASE_RUNNER := target/release/skald-golden
 GOLDEN_RELEASE_COMPILER := target/release/skac
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
-	compiler-test cli-test docs-test golden-runner-test mir-measure-test golden-tools \
+	workspace-test compiler-test binary64-test cli-test docs-test golden-runner-test \
+	mir-measure-test golden-tools \
 	golden-release-tools golden-expectations-test golden-test \
 	golden-release-test golden-filter golden-exact \
 	golden-determinism-test runtime-test runtime-trace-benchmark test-core test \
@@ -29,7 +30,9 @@ help:
 	@echo ""
 	@echo "Ordinary behavioral test suites:"
 	@echo "  make test             Run all ordinary behavioral test suites"
+	@echo "  make workspace-test   Run every Rust workspace member's tests"
 	@echo "  make compiler-test    Run all skald-compiler tests"
+	@echo "  make binary64-test    Run all skald-binary64 tests"
 	@echo "  make cli-test         Run skac binary and CLI tests"
 	@echo "  make docs-test        Run skald-docs-check unit and documentation tests"
 	@echo "  make golden-runner-test Run skald-golden schema and runner-library tests"
@@ -76,13 +79,21 @@ lint:
 docs-check:
 	cargo run --quiet --locked -p skald-docs-check -- .
 
-# Ordinary behavioral suites included in test.
-test-core: cli-test golden-runner-test mir-measure-test runtime-test docs-test compiler-test
+# Ordinary behavioral suites included in test. Cargo discovers workspace
+# members from the manifest so newly added Rust crates join the complete gate
+# without another manually maintained package list.
+test-core: workspace-test runtime-test
 
 test: test-core golden-test
 
+workspace-test:
+	cargo test --locked --workspace
+
 compiler-test:
 	cargo test --locked -p skald-compiler
+
+binary64-test:
+	cargo test --locked -p skald-binary64
 
 cli-test:
 	cargo test --locked -p skac --bin skac --test cli

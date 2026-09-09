@@ -1,9 +1,9 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A03 and A05 completed on 2026-09-09. Select the
-remaining robustness fixes, then turn the chosen architectural findings into
-separate PR-sized implementation roadmaps. No implementation roadmap depends
-on this document yet.
+Status: actionable audit; A01–A03 and A05–A06 completed on 2026-09-09. Select
+the remaining robustness fixes, then turn the chosen architectural findings
+into separate PR-sized implementation roadmaps. No implementation roadmap
+depends on this document yet.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -104,7 +104,7 @@ work and its validation; findings without that record remain `Open`.
 | [A03](#a03--enforce-process-deadlines-through-pipe-completion) | Enforce process deadlines through pipe completion | Complete | P1 | 4 | M | Medium | R | R |
 | [A04](#a04--bound-captured-process-and-output-file-bytes) | Bound captured process and output-file bytes | Open | P1 | 4 | M | Medium | O | R, C |
 | [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | Complete | P1 | 4 | S | Low | R | R |
-| [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Open | P1 | 4 | XS | Low | O | R |
+| [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Complete | P1 | 4 | XS | Low | O | R |
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Open | P1 | 3 | S | Low | O | M, E |
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Open | P1 | 5 | L | High | O | M, E, R |
 | [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Open | P1 | 5 | L | High | O | M, E, R |
@@ -341,6 +341,17 @@ without duplicate runs.
 unit/integration tests and two compile-fail documentation tests. Inspect the
 complete gate's command expansion to verify inclusion; compiling test targets
 with `cargo check --all-targets` does not execute them.
+
+**Delivered:** `test-core` now runs a single `cargo test --locked --workspace`
+target plus the C runtime suite. Cargo therefore derives complete Rust test
+coverage from the workspace manifest, including future members, without a
+second package inventory or duplicate package runs. The existing focused
+package targets remain independently runnable, and `make binary64-test` is now
+listed in `make help` and the testing guidance. A dry run of `test-core`
+confirmed the workspace-wide command, the focused binary64 target passed all
+29 unit/integration tests and both compile-fail documentation tests, and the
+full `make check` gate passed with all six workspace members, 3,089 compiler
+unit tests, the direct runtime suite, and all 628 golden leaves.
 
 ## Frontend and semantic ownership
 

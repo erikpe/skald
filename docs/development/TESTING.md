@@ -130,6 +130,7 @@ over-budget syntax diagnostics.
 |---|---|---|
 | Compiler unit tests | `crates/skald-compiler/src/` beside the owner | Private algorithms, diagnostics, exact phase dumps, MIR verification, target legality, and lowering |
 | Compiler integration tests | `crates/skald-compiler/tests/` | Public paths, cross-phase composition, cross-process determinism, and frontend robustness |
+| Binary64 support tests | `crates/skald-binary64/src/` and `crates/skald-binary64/tests/` | Exact host-side binary64 arithmetic, conversion, decimal parsing, public API behavior, and compile-fail contracts |
 | Binary integration tests | `crates/skac/tests/` | The real `skac` entry point and process-visible CLI behavior |
 | Golden tests | `tests/golden/` | Complete source-to-diagnostic or source-to-native-observation behavior |
 | Runtime tests | `tests/runtime/` | The C runtime contract independently of compiler code generation |
@@ -647,6 +648,8 @@ tests and require no compiler-specific box fixture.
 cargo test --locked -p skald-compiler lexer::tests
 cargo test --locked -p skald-compiler mir::verify
 cargo test --locked -p skald-compiler --test public_api
+make workspace-test
+make binary64-test
 make golden-runner-test
 make cli-test
 make golden-test
