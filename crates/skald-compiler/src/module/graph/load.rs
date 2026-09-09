@@ -2,7 +2,6 @@ use std::{collections::BTreeMap, fs, path::Path};
 
 use crate::{
     diagnostics::Diagnostics,
-    driver::EntrySelector,
     identity::ModuleId,
     lexer::lex,
     source::{SourceDatabase, SourceId, Span, TextRange},
@@ -25,7 +24,7 @@ use super::{
     },
 };
 use crate::module::{
-    ModuleCandidate, ModulePath, ModuleProvenance, ModuleSourceLocation, ProviderSet,
+    EntrySelector, ModuleCandidate, ModulePath, ModuleProvenance, ModuleSourceLocation, ProviderSet,
 };
 
 /// Selects an entry and loads exactly its reachable parsed module graph.

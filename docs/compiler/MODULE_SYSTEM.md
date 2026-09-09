@@ -334,6 +334,14 @@ Resolution is the only import-aware declaration-selection phase. Type checking
 and lower phases consume selected identities rather than repeat path or name
 lookup.
 
+The `module` facade owns `EntrySelector` and `EntrySelectionError` alongside
+logical paths, providers, and graph loading. Constructing a selector validates
+that exactly one file or logical module form was supplied without touching the
+filesystem; graph loading later resolves that selection against the captured
+working directory and normalized providers. The `driver` facade re-exports
+both types so existing request-building code can retain its public import path,
+but module loading has no dependency on driver orchestration.
+
 `SourceDatabase` remains request-local and stores every loaded source. The
 module graph records the selected entry, canonical path and provenance of each
 module, its possibly cyclic direct imports and local bindings, and

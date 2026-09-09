@@ -37,10 +37,12 @@ compose the compiler:
 is unpublished and does not promise a version-stable API outside this
 repository; see the [compiler crate API policy](README.md#compiler-crate-api-policy).
 
-The facade exposes the typed `CompilationRequest` contract:
+The facade exposes the typed `CompilationRequest` contract: the module-owned
 `EntrySelector`, repeatable module-root paths, `StandardLibrarySelection`,
 `Target`, `ArtifactOptions`, `MirOptimizationOptions`, and an explicit
-`CompilationEnvironment`.
+`CompilationEnvironment`. `driver` re-exports the entry selector and its
+construction error for compatibility; entry vocabulary and validation are
+owned by the `module` facade.
 Construction resolves mutually exclusive entry and standard-library option
 forms but performs no filesystem access. Request compilation normalizes the
 selected ordinary and standard-library roots, loads only the reachable parsed

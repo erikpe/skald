@@ -81,11 +81,12 @@ defined by the
 behavior is defined by
 [driver and artifacts](DRIVER_AND_ARTIFACTS.md). The frozen multiple-file
 request, provider, loading, identity, and linkage design is defined by the
-[module-system compiler contract](MODULE_SYSTEM.md). Typed logical paths,
-request-local module/provider/package identities, provenance records, and the
-driver request model are implemented foundations. Deterministic filesystem
-provider normalization and exact candidate lookup are available behind the
-`module` facade. The facade also provides positional/logical entry selection,
+[module-system compiler contract](MODULE_SYSTEM.md). Typed logical paths, the
+file/logical entry selector, request-local module/provider/package identities,
+provenance records, and the driver request model are implemented foundations.
+Deterministic filesystem provider normalization and exact candidate lookup are
+available behind the `module` facade. The facade also provides entry
+validation and resolution,
 reachable parsed graph loading, deterministic graph identities and dumps, and
 multi-module cycles with focused direct self-import rejection. The resolver
 can collect a loaded graph into deterministic

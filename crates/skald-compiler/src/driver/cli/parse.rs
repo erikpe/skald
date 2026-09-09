@@ -4,13 +4,13 @@ use std::{ffi::OsString, path::PathBuf};
 
 use crate::{
     backend::{RuntimeTracePolicy, DEFAULT_TARGET_NAME},
-    module::ModulePath,
+    module::{EntrySelector, ModulePath},
     passes::MirOptimizationProfile,
     reporting::ReportDetail,
 };
 
 use super::super::request::{
-    ArtifactKind, ArtifactOptions, EntrySelector, MirOptimizationOptions, StandardLibrarySelection,
+    ArtifactKind, ArtifactOptions, MirOptimizationOptions, StandardLibrarySelection,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]

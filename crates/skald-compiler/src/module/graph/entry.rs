@@ -6,14 +6,13 @@ use std::{
 };
 
 use crate::{
-    driver::EntrySelector,
     identity::{PackageId, ProviderId},
     lexical_policy::is_source_identifier,
 };
 
 use super::super::{
-    provider::lexical_normalize, CandidateLookupError, CandidateResolution, ModuleCandidate,
-    ModulePath, ProviderSet,
+    provider::lexical_normalize, CandidateLookupError, CandidateResolution, EntrySelector,
+    ModuleCandidate, ModulePath, ProviderSet,
 };
 
 pub(super) struct SelectedEntry {

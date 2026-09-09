@@ -4,8 +4,7 @@ use std::{
 };
 
 use crate::{
-    driver::EntrySelector,
-    module::{normalize_provider_roots, ProviderRootConfiguration},
+    module::{normalize_provider_roots, EntrySelector, ProviderRootConfiguration},
     test_support::TemporaryDirectory,
 };
 

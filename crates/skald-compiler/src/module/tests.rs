@@ -8,6 +8,29 @@ use crate::{
 use super::*;
 
 #[test]
+fn entry_selection_requires_exactly_one_form_without_filesystem_access() {
+    assert_eq!(
+        EntrySelector::from_options(Some("app/main.ska".into()), None).unwrap(),
+        EntrySelector::File("app/main.ska".into())
+    );
+    assert_eq!(
+        EntrySelector::from_options(None, Some("app::main".parse().unwrap())).unwrap(),
+        EntrySelector::Module("app::main".parse().unwrap())
+    );
+    assert_eq!(
+        EntrySelector::from_options(None, None),
+        Err(EntrySelectionError::Missing)
+    );
+    assert_eq!(
+        EntrySelector::from_options(
+            Some("app/main.ska".into()),
+            Some("app::main".parse().unwrap())
+        ),
+        Err(EntrySelectionError::Conflicting)
+    );
+}
+
+#[test]
 fn logical_paths_parse_render_and_order_without_case_normalization() {
     let path: ModulePath = "std::Str".parse().unwrap();
 

@@ -6,11 +6,8 @@ use std::{
     path::PathBuf,
 };
 
-use super::{
-    request::{ArtifactKind, EntrySelector},
-    Toolchain,
-};
-use crate::passes::available_mir_passes;
+use super::{request::ArtifactKind, Toolchain};
+use crate::{module::EntrySelector, passes::available_mir_passes};
 
 mod compile;
 mod parse;

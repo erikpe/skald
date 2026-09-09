@@ -3,12 +3,14 @@
 //! Physical paths support provider lookup and diagnostics but never replace
 //! logical paths or typed identities as semantic identity.
 
+mod entry;
 mod graph;
 mod metadata;
 mod path;
 mod provenance;
 mod provider;
 
+pub use entry::{EntrySelectionError, EntrySelector};
 pub use graph::{
     dump_module_graph, load_module_graph, CompilerDependencyEvidence, CompilerDependencyKind,
     LoadedModule, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge,

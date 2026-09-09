@@ -104,7 +104,7 @@ work and its validation; findings without that record remain `Open`.
 | [A04](#a04--bound-captured-process-and-output-file-bytes) | Bound captured process and output-file bytes | Complete | P1 | 4 | M | Medium | O | R, C |
 | [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | Complete | P1 | 4 | S | Low | R | R |
 | [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Complete | P1 | 4 | XS | Low | O | R |
-| [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Open | P1 | 3 | S | Low | O | M, E |
+| [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Complete | P1 | 3 | S | Low | O | M, E |
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Open | P1 | 5 | L | High | O | M, E, R |
 | [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Open | P1 | 5 | L | High | O | M, E, R |
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Open | P2 | 4 | M–L | High | C | M, C |
@@ -375,6 +375,8 @@ unit tests, the direct runtime suite, and all 628 golden leaves.
 
 ### A07 — Move module entry selection out of the driver layer
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** module graph
 [`load.rs`](../../crates/skald-compiler/src/module/graph/load.rs) and
 [`entry.rs`](../../crates/skald-compiler/src/module/graph/entry.rs) import
@@ -390,6 +392,23 @@ are useful. Keep artifact policy and optimization options in the driver.
 **First PR / validation:** move the type and imports without semantic changes;
 exercise positional, logical, singleton, ambiguous, and invalid entries.
 This is a small, low-risk boundary improvement independent of A08.
+
+**Delivered:** the `module` facade now owns `EntrySelector` and
+`EntrySelectionError` in a focused entry model beside logical paths, providers,
+and graph loading. Module graph implementation and test support import the
+module-owned vocabulary directly, leaving the complete `module` tree free of
+driver dependencies. `CompilationRequest` consumes that selector while the
+`driver` facade re-exports both types so existing workspace callers retain
+their public paths. The selector's option-validation test moved to its module
+owner, and public API coverage verifies that the module and compatibility
+driver paths are the same types. Living architecture and driver documentation
+now state the ownership and compatibility boundary.
+
+All 34 module graph tests pass, including positional/logical equivalence,
+outside-root singleton behavior, singleton ambiguity, overlapping-root
+ambiguity, and invalid positional entries. The public API suite,
+documentation validation, full `make check` gate with all 628 golden leaves,
+and the Rust 1.82.0 workspace check pass.
 
 ### A08 — Remove resolution's dependency on type checking
 

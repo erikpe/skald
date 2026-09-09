@@ -6,29 +6,6 @@ use crate::backend::RuntimeTracePolicy;
 use crate::module::{ModulePath, ProviderRootKind};
 
 #[test]
-fn entry_selection_requires_exactly_one_form_without_filesystem_access() {
-    assert_eq!(
-        EntrySelector::from_options(Some("app/main.ska".into()), None).unwrap(),
-        EntrySelector::File("app/main.ska".into())
-    );
-    assert_eq!(
-        EntrySelector::from_options(None, Some("app::main".parse().unwrap())).unwrap(),
-        EntrySelector::Module("app::main".parse().unwrap())
-    );
-    assert_eq!(
-        EntrySelector::from_options(None, None),
-        Err(EntrySelectionError::Missing)
-    );
-    assert_eq!(
-        EntrySelector::from_options(
-            Some("app/main.ska".into()),
-            Some("app::main".parse().unwrap())
-        ),
-        Err(EntrySelectionError::Conflicting)
-    );
-}
-
-#[test]
 fn standard_library_options_are_typed_and_mutually_exclusive() {
     assert_eq!(
         StandardLibrarySelection::from_options(None, false).unwrap(),

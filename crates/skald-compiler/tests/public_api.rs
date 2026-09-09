@@ -10,7 +10,8 @@ use skald_compiler::{
         compile_source_to_assembly, compile_source_to_assembly_observed,
         compile_source_to_assembly_observed_inspected, run_cli, ArtifactKind, ArtifactOptions,
         AssemblyArtifact, CompilationEnvironment, CompilationError, CompilationInspectors,
-        CompilationRequest, EntrySelector, MirOptimizationOptions, MirOptimizationProfile,
+        CompilationRequest, EntrySelectionError as DriverEntrySelectionError,
+        EntrySelector as DriverEntrySelector, MirOptimizationOptions, MirOptimizationProfile,
         StandardLibrarySelection, Toolchain,
     },
     external::{ExternalLink, ExternalLinkTable},
@@ -42,10 +43,11 @@ use skald_compiler::{
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
-        LoadedModule, ModuleCandidate, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge,
-        ModulePath, ModulePathErrorKind, ModuleProvenance, ModuleSourceLocation,
-        NormalizedProvider, ProgramModuleTable, ProgramModuleTableError,
-        ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
+        EntrySelectionError, EntrySelector, LoadedModule, ModuleCandidate, ModuleGraph,
+        ModuleGraphLoadFailure, ModuleImportEdge, ModulePath, ModulePathErrorKind,
+        ModuleProvenance, ModuleSourceLocation, NormalizedProvider, ProgramModuleTable,
+        ProgramModuleTableError, ProviderNormalizationError, ProviderRootConfiguration,
+        ProviderSet,
     },
     passes::{
         analyze_dead_normalized_path_activations, analyze_local_primitive_common_subexpressions,
@@ -102,6 +104,11 @@ fn intentional_module_and_request_paths_compose() {
 
     assert_eq!(entry.to_string(), "app::main");
     assert_eq!(request.entry(), &EntrySelector::Module(entry));
+    let driver_compatibility: DriverEntrySelector = request.entry().clone();
+    assert_eq!(&driver_compatibility, request.entry());
+    let module_error = EntrySelectionError::Missing;
+    let driver_error: DriverEntrySelectionError = module_error;
+    assert_eq!(driver_error, module_error);
     assert_eq!(request.module_roots().len(), 2);
     assert_eq!(request.artifact().output(), Some(Path::new("main.s")));
     assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);

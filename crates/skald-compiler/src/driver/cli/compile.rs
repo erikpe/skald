@@ -11,6 +11,7 @@ use std::{
 use crate::{
     backend::target_by_name,
     diagnostics::{render_diagnostic, Diagnostics, Severity},
+    module::EntrySelector,
     reporting::{
         ReportArtifactKind, ReportDetail, ReportEvent, ReportObserver, ReportOutcome, ReportPhase,
         ReportScope, TextObserver,
@@ -22,7 +23,7 @@ use super::{
         artifact::PendingArtifact,
         compile_request_to_assembly_observed,
         observation::{observe_phase, observe_run},
-        request::{ArtifactKind, CompilationEnvironment, CompilationRequest, EntrySelector},
+        request::{ArtifactKind, CompilationEnvironment, CompilationRequest},
         CompilationError, CompilationReport, Toolchain, ToolchainError,
     },
     default_output_path,
