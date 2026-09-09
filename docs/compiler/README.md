@@ -334,11 +334,11 @@ private slots and dependency-ordered initializer/finalizer coordinators around
 entry without changing runtime ABI version 9. The authoritative boundaries are
 [Static Fields](../language/STATIC_FIELDS.md) and
 [Compiler Phases and Intermediate Representations](PHASES_AND_IR.md#pipeline-contract).
-The frozen next phase boundary computes an exact entry-rooted active-field set
-from the `VerifiedPreliminaryMirProgram` seal before planning, binds it into the
+The compiler computes an exact entry-rooted active-field set from the
+`VerifiedPreliminaryMirProgram` seal before planning, binds it into the
 lifecycle certificate, and requires final reachable static accesses and
-backend coordinators to agree without making activation profile- or
-target-dependent.
+backend coordinators to agree. Activation is independent of optimization
+profile and target selection.
 
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64

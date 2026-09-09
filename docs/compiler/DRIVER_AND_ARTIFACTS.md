@@ -385,12 +385,12 @@ barrier counters in stable owner/counter order. Profile selection, source
 loading, static activation, target choice, artifact paths, diagnostics,
 runtime-trace policy, and host-toolchain behavior remain unchanged.
 
-## Frozen static activation orchestration
+## Static activation orchestration
 
 Status: **implemented**. After successful preliminary-MIR verification, the
 static-lifecycle planning boundary extracts shared dependencies and computes
 the exact activation closure. Under the accepted
-[reachability-gated contract](PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction),
+[reachability-gated contract](PHASES_AND_IR.md#reachability-gated-static-lifecycle),
 the driver runs exact static activation once after verified preliminary MIR
 and before the eager plan is built. That analysis is mandatory compiler semantics and
 is not represented by `MirOptimizationProfile`, `--mir-optimization`, or

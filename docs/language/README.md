@@ -221,9 +221,8 @@ makes a result source-observable.
 - [Static fields](STATIC_FIELDS.md) defines implemented class-owned zero-
   default and explicit initialization, dependency-ordered eager startup,
   replacement, exact-reverse normal-return shutdown, diagnostics, and the
-  unchanged runtime-ABI contract. It also owns the frozen next contract that
-  gates runtime lifecycle on exact entry-rooted field reachability while
-  retaining complete whole-world declaration checking.
+  unchanged runtime-ABI contract. Runtime lifecycle is gated on exact entry-
+  rooted field reachability while declaration checking remains whole-world.
 - [Optional values](OPTIONAL_VALUES.md) defines the explicit `T?` and
   canonical `(shared T)?` and shorthand `shared? T` source contract, including presence, checked
   access, lifecycle, failure, and the remaining aliasing exclusions.

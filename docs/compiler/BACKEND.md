@@ -1194,13 +1194,13 @@ boundary changes no
 layout, ABI, calling convention, symbol, failure, runtime trace, artifact
 retention, or target error contract.
 
-## Frozen reachability-gated static lifecycle boundary
+## Reachability-gated static lifecycle boundary
 
 Status: **implemented**. Current backend input contains lifecycle work and
 certified storage authority only for active statics. The source semantics are defined by
-[Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
+[Static Fields](../language/STATIC_FIELDS.md#reachability-gated-activation),
 and phase ownership is defined by
-[Phases and IR](PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction).
+[Phases and IR](PHASES_AND_IR.md#reachability-gated-static-lifecycle).
 
 The backend accepts only verified final MIR and does not infer, narrow, or
 replan static activation. `BackendInput` exposes one immutable, canonically

@@ -616,7 +616,7 @@ pass outcomes do not recompute it, and changed outcomes count the immediate
 reverification that rebuilds program and facts. Reachability adds no separate
 analysis event, timing, cache statistic, or preservation record.
 
-## Frozen static activation observation
+## Static activation observation
 
 Status: **implemented**. Exact activation is a mandatory semantic phase rather
 than a pass occurrence. Its immutable planning product exposes deterministic,

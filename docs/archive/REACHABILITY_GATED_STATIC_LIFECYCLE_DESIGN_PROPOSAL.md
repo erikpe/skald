@@ -831,11 +831,11 @@ phase placement, certificate authority, lifecycle diagnostics, optimization
 independence, and backend consumption are one observable correctness boundary.
 
 The direction is promoted into the authoritative
-[static-field](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction),
-[backend](../compiler/BACKEND.md#frozen-reachability-gated-static-lifecycle-boundary),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-static-activation-orchestration),
-[reporting](../compiler/REPORTING.md#frozen-static-activation-observation),
+[static-field](../language/STATIC_FIELDS.md#reachability-gated-activation),
+[compiler phase](../compiler/PHASES_AND_IR.md#reachability-gated-static-lifecycle),
+[backend](../compiler/BACKEND.md#reachability-gated-static-lifecycle-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#static-activation-orchestration),
+[reporting](../compiler/REPORTING.md#static-activation-observation),
 [debugging](../development/DEBUGGING.md), and
 [testing](../development/TESTING.md#static-field-coverage) documentation.
 Implementation history is preserved in the

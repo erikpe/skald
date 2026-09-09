@@ -5,11 +5,11 @@ Status: complete. RSR0 through RSR8 were delivered on 2026-09-01.
 This roadmap implements the frozen
 [reachability-gated static lifecycle design](REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md)
 and its promoted
-[language](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
-[compiler phase](../compiler/PHASES_AND_IR.md#frozen-reachability-gated-static-lifecycle-direction),
-[backend](../compiler/BACKEND.md#frozen-reachability-gated-static-lifecycle-boundary),
-[driver](../compiler/DRIVER_AND_ARTIFACTS.md#frozen-static-activation-orchestration),
-and [reporting](../compiler/REPORTING.md#frozen-static-activation-observation)
+[language](../language/STATIC_FIELDS.md#reachability-gated-activation),
+[compiler phase](../compiler/PHASES_AND_IR.md#reachability-gated-static-lifecycle),
+[backend](../compiler/BACKEND.md#reachability-gated-static-lifecycle-boundary),
+[driver](../compiler/DRIVER_AND_ARTIFACTS.md#static-activation-orchestration),
+and [reporting](../compiler/REPORTING.md#static-activation-observation)
 contracts. It changes static lifetime from declaration-wide eager execution to
 one exact field-grained activation closure while preserving complete
 whole-world checking, eager-before-entry execution for active fields, and

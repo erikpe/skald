@@ -401,7 +401,7 @@ typed HIR and verified lifecycle MIR.
 The implemented reachability-gated lifetime contract changes no production
 above. It adds no eager, lazy, module-initializer, registration, or retention
 syntax; the semantic distinction between a declared and active static remains
-owned by [Static Fields](STATIC_FIELDS.md#frozen-reachability-gated-activation-direction).
+owned by [Static Fields](STATIC_FIELDS.md#reachability-gated-activation).
 
 ### Private-cell field declarations
 

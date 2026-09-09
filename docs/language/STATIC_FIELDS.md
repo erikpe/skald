@@ -379,7 +379,7 @@ that point. Ordinary replacement effects during execution and cleanup of
 locals, parameters, results, temporaries, instance fields, or full-expression
 anchors remain unchanged.
 
-## Frozen reachability-gated activation direction
+## Reachability-gated activation
 
 Status: **implemented contract**. The delivery history is preserved in the
 [completed implementation roadmap](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md),

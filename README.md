@@ -9,7 +9,10 @@ The compiler is named `skac`, and Skald source files use the `.ska` suffix.
 
 ## Current compiler
 
-The current implementation accepts one UTF-8 source file and supports
+The current implementation selects one entry module, either from a positional
+`.ska` file or a logical module path, and loads its reachable import closure
+from the configured module roots and standard library. Every loaded source
+must be valid UTF-8. The compiler supports
 primitive values, functions, lexical control flow, exact nominal inline
 classes, deterministic copying and destruction, owning class parameters and
 results, non-null reference-counted shared objects, owning shared fields,
@@ -29,13 +32,11 @@ operations rather than compiler-selected method names. A `shared T`
 expression is an owner handle: `*owner` selects its bounded non-owning pointee
 place and `owner->member` crosses exactly one shared edge. Raw shared handles
 are not implicitly treated as inline objects. The
-[static-field profile](docs/language/STATIC_FIELDS.md) supports class-owned
-zero-default or explicitly initialized stored values, conservative
-whole-program dependency ordering, eager startup before entry, and exact-
-reverse cleanup after normal entry return. Its frozen next contract keeps
-whole-world declaration checking while gating that runtime lifecycle on exact
-entry-rooted field reachability; the current compiler remains declaration-wide
-eager until its implementation roadmap reaches the semantic cutover. The
+[static-field profile](docs/language/STATIC_FIELDS.md) keeps declaration
+checking whole-world while computing the exact entry-rooted active-field
+closure before optimization. Only active fields participate in dependency-
+ordered eager startup before entry and exact-reverse cleanup after normal
+entry return. The
 [language status matrix](docs/language/STATUS.md) is the authoritative support
 summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
 accepted syntax.

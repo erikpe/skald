@@ -484,14 +484,14 @@ dominance, destination non-escape, exact-reverse destruction over the
 certified set, deterministic dumps, and the existing `STA001` and `STA002`
 diagnostic behavior.
 
-### Frozen reachability-gated static lifecycle direction
+### Reachability-gated static lifecycle
 
 Status: **semantic cutover implemented**. The compiler computes and
 independently re-solves the exact activation closure at the accepted
 preliminary-MIR boundary. Its proof, planner, synthesis, dumps, and verifiers
 carry the exact active subset, and central final verification rejects reachable
 accesses outside that certified subset. The source-visible contract is owned by
-[Static Fields](../language/STATIC_FIELDS.md#frozen-reachability-gated-activation-direction),
+[Static Fields](../language/STATIC_FIELDS.md#reachability-gated-activation),
 the complete decisions by the
 [frozen design record](../archive/REACHABILITY_GATED_STATIC_LIFECYCLE_DESIGN_PROPOSAL.md),
 and delivery by the

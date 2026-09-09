@@ -1,8 +1,8 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A06 and A35 completed on 2026-09-09. Turn the
-chosen architectural findings into separate PR-sized implementation roadmaps.
-No implementation roadmap depends on this document yet.
+Status: actionable audit; A01–A06, A35, and A38 completed on 2026-09-09. Turn
+the chosen architectural findings into separate PR-sized implementation
+roadmaps. No implementation roadmap depends on this document yet.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -135,7 +135,7 @@ work and its validation; findings without that record remain `Open`.
 | [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Complete | P2 | 2 | XS | Low | O | R |
 | [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Open | P2 | 3 | S–M | Medium | O | R, M |
 | [A37](#a37--simplify-literal-selection-and-bound-glob-matching) | Simplify literal selection and bound glob matching | Open | P3 | 2 | S | Low | O | C, R |
-| [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | Open | P1 | 4 | S–M | Low | O | M, E |
+| [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | Complete | P1 | 4 | S–M | Low | O | M, E |
 | [A39](#a39--define-and-test-the-documentation-checkers-markdown-subset) | Define and test the documentation checker's Markdown subset | Open | P2 | 3 | S–M | Low | O | R, M |
 | [A40](#a40--reconsider-the-measurement-tools-private-sha-256) | Reconsider the measurement tool's private SHA-256 | Open | P3 | 2 | S | Low | C | M, R |
 | [A41](#a41--make-runtime-build-configuration-visible-in-artifacts) | Make runtime build configuration visible in artifacts | Open | P2 | 3 | S–M | Low | O | R, M |
@@ -994,6 +994,8 @@ large selection framework for a small local optimization.
 
 ### A38 — Refresh current behavior and shorten active indexes
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** the root [README](../../README.md) says the compiler accepts one
 UTF-8 file and still describes declaration-wide eager statics awaiting a
 reachability cutover. The [static-field contract](../language/STATIC_FIELDS.md)
@@ -1013,6 +1015,20 @@ then tackle living documents by owner. Preserve archive history and incoming
 anchors or provide compatible anchors during moves. Run `make docs-check` and
 manually compare behavior claims with source: a passing link checker does not
 detect stale semantics.
+
+**Delivered:** the root overview now describes selection of one positional or
+logical entry module, reachable import-closure loading, whole-world declaration
+checking, and the implemented entry-rooted active-static lifecycle. The active
+roadmap index is reduced from 256 lines of repeated completed-delivery history
+to a 26-line index of the three actionable records, each with status, purpose,
+next step, and dependencies; the archive remains the history owner. Related
+language, phase, driver, reporting, and backend summaries no longer present
+the delivered static-activation cutover as future work. Their current-contract
+headings and all incoming links, including links from archived records, were
+updated together. The claims were compared with the request, module-graph, and
+static-activation owners and their existing tests. No product behavior changed,
+so no new behavior test was added. `make docs-check` and the full `make check`
+gate pass, including all 628 golden leaves.
 
 ### A39 — Define and test the documentation checker's Markdown subset
 

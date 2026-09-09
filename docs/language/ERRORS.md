@@ -64,7 +64,7 @@ through a static place retain their existing failures, such as optional
 unwrap, array bounds, allocation, and ownership-count failure.
 
 The implemented
-[reachability-gated activation contract](STATIC_FIELDS.md#frozen-reachability-gated-activation-direction)
+[reachability-gated activation contract](STATIC_FIELDS.md#reachability-gated-activation)
 changes only the lifecycle-diagnostic domain. `STA001` and `STA002` apply
 to the exact active static graph, so a wholly inactive self-dependency or cycle
 will not be rejected. Making any member activation-reachable brings its
