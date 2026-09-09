@@ -1,9 +1,10 @@
 use super::{diff, escape_bytes, escape_command, escape_path};
 use crate::{
     BuildExecution, CompilationIssue, Determinism, ExitExpectation, LeafExecution, MatchMode,
-    MatcherLoadFailure, MatcherMismatch, MatcherOutcome, OutputFileMismatch, PlanExecution,
-    PlannedLeafKind, ProcessObservation, ProcessTermination, RunExecution, RunMismatch,
-    SelectedPlan, StageStatus, StreamComparison,
+    MatcherLoadFailure, MatcherMismatch, MatcherOutcome, OutputFileMismatch, OutputFileOverflow,
+    OutputFileOverflowKind, PlanExecution, PlannedLeafKind, ProcessCaptureOverflow,
+    ProcessObservation, ProcessTermination, RunExecution, RunMismatch, SelectedPlan, StageStatus,
+    StreamComparison,
 };
 use serde::Serialize;
 use std::{collections::BTreeSet, fmt, num::NonZeroUsize, time::Duration};
@@ -548,6 +549,7 @@ fn compilation_failure(
             "compiler-pipe",
             format!("{:?} pipe failed: {}", failure.pipe(), failure.message()),
         ),
+        CompilationIssue::CaptureOverflow(overflow) => capture_overflow_failure(overflow),
         CompilationIssue::StdoutExpectation(mismatch) => matcher_mismatch_failure(
             "stdout",
             mismatch,
@@ -581,6 +583,13 @@ fn compilation_failure(
         CompilationIssue::AssemblyRead { path, message } => plain_failure(
             "assembly-read",
             format!("could not read {}: {message}", path.display()),
+        ),
+        CompilationIssue::AssemblyOverflow { path, limit } => plain_failure(
+            "assembly-limit",
+            format!(
+                "assembly {} exceeded the {limit}-byte artifact limit",
+                path.display()
+            ),
         ),
         CompilationIssue::NonUtf8Assembly(path) => plain_failure(
             "assembly-encoding",
@@ -622,12 +631,43 @@ fn run_failure(run: &RunExecution, mismatch: &RunMismatch) -> FailureReport {
         }
         RunMismatch::StdoutLoad(failure) => matcher_load_failure("stdout", failure),
         RunMismatch::StderrLoad(failure) => matcher_load_failure("stderr", failure),
+        RunMismatch::CaptureOverflow(overflow) => capture_overflow_failure(overflow),
         RunMismatch::OutputFile(mismatch) => output_file_failure(mismatch),
+        RunMismatch::OutputFileOverflow(overflow) => output_file_overflow_failure(overflow),
         RunMismatch::Pipe(failure) => plain_failure(
             "pipe",
             format!("{:?} pipe failed: {}", failure.pipe(), failure.message()),
         ),
     }
+}
+
+fn capture_overflow_failure(overflow: &ProcessCaptureOverflow) -> FailureReport {
+    plain_failure(
+        "capture-limit",
+        format!(
+            "{:?} produced {} bytes, exceeding the {}-byte capture limit; retained the first {} bytes",
+            overflow.pipe(),
+            overflow.observed(),
+            overflow.limit(),
+            overflow.limit()
+        ),
+    )
+}
+
+fn output_file_overflow_failure(overflow: &OutputFileOverflow) -> FailureReport {
+    let side = match overflow.kind() {
+        OutputFileOverflowKind::Expectation => "expectation",
+        OutputFileOverflowKind::Observation => "observation",
+    };
+    plain_failure(
+        "output-file-limit",
+        format!(
+            "output file {:?} {side} exceeded the {}-byte limit; compared at most {} bytes",
+            overflow.name(),
+            overflow.limit(),
+            overflow.limit()
+        ),
+    )
 }
 
 fn output_file_failure(mismatch: &OutputFileMismatch) -> FailureReport {

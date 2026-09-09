@@ -55,6 +55,14 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
 
     match mode {
         "success" => write_assembly(&output, ""),
+        "large-assembly" => {
+            let size = option(&arguments, "--fake-size")
+                .and_then(OsStr::to_str)
+                .ok_or_else(|| "large-assembly requires --fake-size".to_owned())?
+                .parse::<usize>()
+                .map_err(display)?;
+            write_large_assembly(&output, size)
+        }
         "unexpected-output" => {
             print!("unexpected compiler stdout");
             eprint!("unexpected compiler stderr");
@@ -119,6 +127,18 @@ fn write_assembly(path: &Path, prefix: &str) -> Result<(), String> {
         format!("{prefix}.text\n.globl main\n.type main,@function\nmain:\n  mov $0, %eax\n  ret\n"),
     )
     .map_err(display)
+}
+
+fn write_large_assembly(path: &Path, size: usize) -> Result<(), String> {
+    let mut output = fs::File::create(path).map_err(display)?;
+    let buffer = [b'\n'; 8 * 1024];
+    let mut remaining = size;
+    while remaining != 0 {
+        let count = remaining.min(buffer.len());
+        output.write_all(&buffer[..count]).map_err(display)?;
+        remaining -= count;
+    }
+    Ok(())
 }
 
 fn display(error: impl std::fmt::Display) -> String {

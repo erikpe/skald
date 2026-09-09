@@ -1,7 +1,7 @@
 use skald_golden::{
     allowlisted_environment, build_plan, decode_arguments, execute_run, run_process,
-    ExecutionOptions, MatcherOutcome, PlannedLeafKind, PlannedRun, ProcessCommand,
-    ProcessTermination, RunMismatch, SandboxRetention,
+    ExecutionOptions, MatcherOutcome, OutputFileOverflowKind, PlannedLeafKind, PlannedRun,
+    ProcessCommand, ProcessPipe, ProcessTermination, RunMismatch, SandboxRetention,
 };
 use std::{
     ffi::OsString,
@@ -239,6 +239,125 @@ expect = { stdout = { matches = [{ inline = "wrong" }, { match = "contains", inl
             .filter(|mismatch| matches!(mismatch, RunMismatch::Stderr(_)))
             .count(),
         2
+    );
+}
+
+#[test]
+fn capture_overflow_cannot_pass_an_exact_prefix_expectation() {
+    let fixture = Fixture::new();
+    let limit = 256;
+    let prefix = (0u8..=255).collect::<Vec<_>>();
+    let inverted = prefix.iter().map(|byte| !byte).collect::<Vec<_>>();
+    fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write("prefix.bin", &prefix);
+    fixture.write("inverted.bin", &inverted);
+    fixture.write(
+        "capture-limit.golden.toml",
+        r#"schema=1
+[[test]]
+name="capture-limit"
+mode="run"
+source="program.ska"
+[[test.run]]
+name="overflow"
+args=["binary-pipes", "257"]
+expect={stdout={file="prefix.bin"},stderr={file="inverted.bin"}}
+"#,
+    );
+    let plan = fixture.plan();
+    let execution = execute_run(
+        fake_process(),
+        run(&plan, "overflow"),
+        &execution_options(&fixture).with_capture_limit(limit),
+    )
+    .unwrap();
+
+    assert!(execution.stdout_comparison().passed());
+    assert!(execution.stderr_comparison().passed());
+    assert!(!execution.passed());
+    assert!(execution.retained());
+    assert_eq!(
+        execution
+            .mismatches()
+            .iter()
+            .filter(|mismatch| matches!(mismatch, RunMismatch::CaptureOverflow(_)))
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn bounds_expected_and_observed_output_files_independently() {
+    let fixture = Fixture::new();
+    let limit = 256;
+    let exact = (0u8..=255).collect::<Vec<_>>();
+    let oversized = exact.iter().copied().chain([0]).collect::<Vec<_>>();
+    fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write("exact.bin", &exact);
+    fixture.write("oversized.bin", &oversized);
+    fixture.write(
+        "output-limit.golden.toml",
+        r#"schema=1
+[[test]]
+name="output-limit"
+mode="run"
+source="program.ska"
+
+[[test.run]]
+name="exact"
+args=["write-file", "{tmp:output}"]
+stdin={file="exact.bin"}
+expect={output_files=[{name="output",contents={file="exact.bin"}}]}
+
+[[test.run]]
+name="observed-overflow"
+args=["write-file", "{tmp:output}"]
+stdin={file="oversized.bin"}
+expect={output_files=[{name="output",contents={file="exact.bin"}}]}
+
+[[test.run]]
+name="expected-overflow"
+args=["write-file", "{tmp:output}"]
+stdin={file="exact.bin"}
+expect={output_files=[{name="output",contents={file="oversized.bin"}}]}
+"#,
+    );
+    let plan = fixture.plan();
+    let options = execution_options(&fixture).with_output_file_limit(limit);
+
+    let exact_execution = execute_run(fake_process(), run(&plan, "exact"), &options).unwrap();
+    assert!(exact_execution.passed());
+    assert_eq!(
+        exact_execution.output_files()[0].contents(),
+        Some(exact.as_slice())
+    );
+    assert!(exact_execution.output_files()[0].overflow().is_none());
+
+    for (name, kind) in [
+        ("observed-overflow", OutputFileOverflowKind::Observation),
+        ("expected-overflow", OutputFileOverflowKind::Expectation),
+    ] {
+        let execution = execute_run(fake_process(), run(&plan, name), &options).unwrap();
+        assert!(!execution.passed(), "{name}");
+        assert!(execution.mismatches().iter().any(|mismatch| matches!(
+            mismatch,
+            RunMismatch::OutputFileOverflow(overflow)
+                if overflow.kind() == kind && overflow.limit() == limit
+        )));
+        assert!(!execution
+            .mismatches()
+            .iter()
+            .any(|mismatch| matches!(mismatch, RunMismatch::OutputFile(_))));
+    }
+
+    let observed = execute_run(fake_process(), run(&plan, "observed-overflow"), &options).unwrap();
+    assert_eq!(
+        observed.output_files()[0].contents(),
+        Some(exact.as_slice())
+    );
+    assert_eq!(
+        observed.output_files()[0].overflow().unwrap().kind(),
+        OutputFileOverflowKind::Observation
     );
 }
 
@@ -506,6 +625,55 @@ fn concurrently_moves_data_larger_than_host_pipes() {
     assert_eq!(observation.stdout(), vec![b'o'; size]);
     assert_eq!(observation.stderr(), vec![b'e'; size]);
     assert!(observation.pipe_failures().is_empty());
+}
+
+#[test]
+fn bounds_binary_captures_while_draining_both_process_pipes() {
+    let fixture = Fixture::new();
+    let limit = 64 * 1024;
+    let exact = process(
+        &[
+            OsString::from("binary-pipes"),
+            OsString::from(limit.to_string()),
+        ],
+        Vec::new(),
+        &fixture.root,
+    )
+    .with_capture_limit(limit);
+    let exact = run_process(&exact).unwrap();
+    assert_eq!(exact.stdout().len(), limit);
+    assert_eq!(exact.stderr().len(), limit);
+    assert!(exact.capture_overflows().is_empty());
+    assert_eq!(&exact.stdout()[..256], &(0u8..=255).collect::<Vec<_>>());
+
+    let produced = 2 * 1024 * 1024;
+    let oversized = process(
+        &[
+            OsString::from("binary-pipes"),
+            OsString::from(produced.to_string()),
+        ],
+        Vec::new(),
+        &fixture.root,
+    )
+    .with_capture_limit(limit);
+    let oversized = run_process(&oversized).unwrap();
+    assert_eq!(oversized.termination(), ProcessTermination::Code(0));
+    assert_eq!(oversized.stdout().len(), limit);
+    assert_eq!(oversized.stderr().len(), limit);
+    assert_eq!(oversized.stdout(), exact.stdout());
+    assert_eq!(oversized.stderr(), exact.stderr());
+    assert_eq!(
+        oversized
+            .capture_overflows()
+            .iter()
+            .map(|overflow| (overflow.pipe(), overflow.limit(), overflow.observed()))
+            .collect::<Vec<_>>(),
+        vec![
+            (ProcessPipe::Stdout, limit, produced),
+            (ProcessPipe::Stderr, limit, produced),
+        ]
+    );
+    assert!(oversized.pipe_failures().is_empty());
 }
 
 #[test]

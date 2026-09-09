@@ -4,6 +4,12 @@
 //! planning, execution, and reporting responsibilities; the companion binary
 //! remains a thin process entry point.
 
+/// Maximum stdout or stderr bytes retained per process by default.
+pub const DEFAULT_PROCESS_CAPTURE_LIMIT: usize = 4 * 1024 * 1024;
+
+/// Maximum bytes loaded from one generated or expected output file by default.
+pub const DEFAULT_OUTPUT_FILE_LIMIT: usize = 32 * 1024 * 1024;
+
 mod cli;
 mod compile;
 mod discovery;
@@ -23,9 +29,9 @@ pub use compile::{
 pub use execute::{
     allowlisted_environment, execute_parallel, execute_run, execute_sequential, BuildExecution,
     ExecutionError, ExecutionOptions, LeafExecution, LinkExecution, OutputFileMismatch,
-    OutputFileObservation, PlanExecution, RunExecution, RunMismatch, RuntimeExecution,
-    RuntimePreparation, SandboxRetention, SchedulerFailure, SchedulerOptions, SequentialExecution,
-    SequentialOptions, StageOptions, StageStatus,
+    OutputFileObservation, OutputFileOverflow, OutputFileOverflowKind, PlanExecution, RunExecution,
+    RunMismatch, RuntimeExecution, RuntimePreparation, SandboxRetention, SchedulerFailure,
+    SchedulerOptions, SequentialExecution, SequentialOptions, StageOptions, StageStatus,
 };
 pub use expectation::{
     compare_exit, compare_matchers, compare_stream, decode_arguments, load_bytes,
@@ -39,8 +45,8 @@ pub use plan::{
     ResolvedWorkingDirectory, TestPlan,
 };
 pub use process::{
-    run_process, PipeFailure, ProcessCommand, ProcessEnvironment, ProcessError, ProcessObservation,
-    ProcessPipe, ProcessTermination,
+    run_process, PipeFailure, ProcessCaptureOverflow, ProcessCommand, ProcessEnvironment,
+    ProcessError, ProcessObservation, ProcessPipe, ProcessTermination,
 };
 pub use report::{
     render as render_report, CaseReport, FailureReport, MatcherReport, ProcessReport, Report,

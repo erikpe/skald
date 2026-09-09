@@ -1,8 +1,10 @@
 use super::{
-    PipeFailure, ProcessCommand, ProcessError, ProcessObservation, ProcessPipe, ProcessTermination,
+    capture::{read_pipe, PipeCapture},
+    PipeFailure, ProcessCaptureOverflow, ProcessCommand, ProcessError, ProcessObservation,
+    ProcessPipe, ProcessTermination,
 };
 use std::{
-    io::{self, Read, Write},
+    io::{self, Write},
     process::{Child, Command, ExitStatus, Stdio},
     thread,
     time::{Duration, Instant},
@@ -46,11 +48,12 @@ pub fn run_process(request: &ProcessCommand) -> Result<ProcessObservation, Proce
         .take()
         .expect("configured child stderr must exist");
     let input = request.stdin().to_vec();
+    let capture_limit = request.capture_limit();
 
     process.workers = Some(PipeWorkers {
         stdin: thread::spawn(move || write_stdin(stdin, &input)),
-        stdout: thread::spawn(move || read_pipe(stdout)),
-        stderr: thread::spawn(move || read_pipe(stderr)),
+        stdout: thread::spawn(move || read_pipe(stdout, capture_limit)),
+        stderr: thread::spawn(move || read_pipe(stderr, capture_limit)),
     });
 
     let (status, timed_out) = match process.wait_until_complete(request.timeout()) {
@@ -70,7 +73,8 @@ pub fn run_process(request: &ProcessCommand) -> Result<ProcessObservation, Proce
         },
     };
 
-    let (stdout, stderr, failures) = process.collect_workers();
+    let (stdout, stderr, capture_overflows, failures) =
+        process.collect_workers(request.capture_limit());
     process.armed = false;
     let termination = if timed_out {
         ProcessTermination::TimedOut {
@@ -85,6 +89,7 @@ pub fn run_process(request: &ProcessCommand) -> Result<ProcessObservation, Proce
         stderr,
         elapsed: started.elapsed(),
         pipe_failures: failures,
+        capture_overflows,
     })
 }
 
@@ -92,16 +97,10 @@ fn write_stdin(mut stdin: std::process::ChildStdin, input: &[u8]) -> io::Result<
     stdin.write_all(input)
 }
 
-fn read_pipe(mut pipe: impl Read) -> io::Result<Vec<u8>> {
-    let mut bytes = Vec::new();
-    pipe.read_to_end(&mut bytes)?;
-    Ok(bytes)
-}
-
 struct PipeWorkers {
     stdin: thread::JoinHandle<io::Result<()>>,
-    stdout: thread::JoinHandle<io::Result<Vec<u8>>>,
-    stderr: thread::JoinHandle<io::Result<Vec<u8>>>,
+    stdout: thread::JoinHandle<io::Result<PipeCapture>>,
+    stderr: thread::JoinHandle<io::Result<PipeCapture>>,
 }
 
 impl PipeWorkers {
@@ -155,16 +154,35 @@ impl RunningProcess {
         terminate_process_group(self.process_group, &mut self.child)
     }
 
-    fn collect_workers(&mut self) -> (Vec<u8>, Vec<u8>, Vec<PipeFailure>) {
+    fn collect_workers(
+        &mut self,
+        capture_limit: usize,
+    ) -> (
+        Vec<u8>,
+        Vec<u8>,
+        Vec<ProcessCaptureOverflow>,
+        Vec<PipeFailure>,
+    ) {
         let workers = self
             .workers
             .take()
             .expect("started process must own pipe workers");
         let mut failures = Vec::new();
         collect_write_result(workers.stdin.join(), &mut failures);
-        let stdout = collect_read_result(workers.stdout.join(), ProcessPipe::Stdout, &mut failures);
-        let stderr = collect_read_result(workers.stderr.join(), ProcessPipe::Stderr, &mut failures);
-        (stdout, stderr, failures)
+        let (stdout, stdout_overflow) = collect_read_result(
+            workers.stdout.join(),
+            ProcessPipe::Stdout,
+            capture_limit,
+            &mut failures,
+        );
+        let (stderr, stderr_overflow) = collect_read_result(
+            workers.stderr.join(),
+            ProcessPipe::Stderr,
+            capture_limit,
+            &mut failures,
+        );
+        let capture_overflows = stdout_overflow.into_iter().chain(stderr_overflow).collect();
+        (stdout, stderr, capture_overflows, failures)
     }
 
     fn cleanup(&mut self) -> Vec<String> {
@@ -176,7 +194,7 @@ impl RunningProcess {
             failures.push(format!("reap child: {error}"));
         }
         if self.workers.is_some() {
-            let (_, _, pipe_failures) = self.collect_workers();
+            let (_, _, _, pipe_failures) = self.collect_workers(0);
             failures.extend(pipe_failures.into_iter().map(|failure| {
                 format!("complete {:?} pipe: {}", failure.pipe(), failure.message())
             }));
@@ -258,19 +276,25 @@ fn collect_write_result(result: thread::Result<io::Result<()>>, failures: &mut V
 }
 
 fn collect_read_result(
-    result: thread::Result<io::Result<Vec<u8>>>,
+    result: thread::Result<io::Result<PipeCapture>>,
     pipe: ProcessPipe,
+    limit: usize,
     failures: &mut Vec<PipeFailure>,
-) -> Vec<u8> {
+) -> (Vec<u8>, Option<ProcessCaptureOverflow>) {
     match result {
-        Ok(Ok(bytes)) => bytes,
+        Ok(Ok(capture)) => {
+            let (bytes, observed) = capture.into_parts();
+            let overflow =
+                (observed > limit).then(|| ProcessCaptureOverflow::new(pipe, limit, observed));
+            (bytes, overflow)
+        }
         Ok(Err(error)) => {
             failures.push(PipeFailure::new(pipe, error.to_string()));
-            Vec::new()
+            (Vec::new(), None)
         }
         Err(_) => {
             failures.push(PipeFailure::new(pipe, "output worker panicked"));
-            Vec::new()
+            (Vec::new(), None)
         }
     }
 }

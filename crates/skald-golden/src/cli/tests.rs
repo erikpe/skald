@@ -1,5 +1,8 @@
 use super::{options::Options, run_cli_with_context, stage_options, HELP};
-use crate::{Determinism, ReportFormat, SandboxRetention};
+use crate::{
+    Determinism, ReportFormat, SandboxRetention, DEFAULT_OUTPUT_FILE_LIMIT,
+    DEFAULT_PROCESS_CAPTURE_LIMIT,
+};
 use std::{
     fs,
     io::{self, Write},
@@ -76,7 +79,7 @@ fn parses_compiler_and_determinism_execution_options() {
 }
 
 #[test]
-fn defaults_compiler_linker_and_execution_stages_to_sixty_seconds() {
+fn defaults_stage_deadlines_and_byte_limits() {
     let options = stage_options(
         PathBuf::from("skac"),
         Path::new("."),
@@ -89,6 +92,26 @@ fn defaults_compiler_linker_and_execution_stages_to_sixty_seconds() {
     assert_eq!(options.linker_timeout().as_secs(), 60);
     assert_eq!(options.execution().default_timeout().as_secs(), 60);
     assert_eq!(options.runtime().command().timeout().as_secs(), 120);
+    assert_eq!(
+        options.compiler().capture_limit(),
+        DEFAULT_PROCESS_CAPTURE_LIMIT
+    );
+    assert_eq!(
+        options.execution().capture_limit(),
+        DEFAULT_PROCESS_CAPTURE_LIMIT
+    );
+    assert_eq!(
+        options.runtime().command().capture_limit(),
+        DEFAULT_PROCESS_CAPTURE_LIMIT
+    );
+    assert_eq!(
+        options.compiler().artifact_limit(),
+        DEFAULT_OUTPUT_FILE_LIMIT
+    );
+    assert_eq!(
+        options.execution().output_file_limit(),
+        DEFAULT_OUTPUT_FILE_LIMIT
+    );
 }
 
 #[test]

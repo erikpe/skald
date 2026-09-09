@@ -32,6 +32,7 @@ fn run(mut arguments: Vec<OsString>) -> Result<(), String> {
         Some("arguments") => write_arguments(&arguments),
         Some("echo") => echo(),
         Some("large-pipes") => large_pipes(&arguments),
+        Some("binary-pipes") => binary_pipes(&arguments),
         Some("copy-file") => copy_file(&arguments),
         Some("write-file") => write_file(&arguments),
         Some("write-vary-file") => write_vary_file(&arguments),
@@ -79,6 +80,34 @@ fn large_pipes(arguments: &[OsString]) -> Result<(), String> {
     }
     io::stdout().write_all(&vec![b'o'; size]).map_err(display)?;
     io::stderr().write_all(&vec![b'e'; size]).map_err(display)
+}
+
+fn binary_pipes(arguments: &[OsString]) -> Result<(), String> {
+    let size = required_utf8(arguments, 0, "size")?
+        .parse::<usize>()
+        .map_err(display)?;
+    write_pattern(&mut io::stdout().lock(), size, false)?;
+    write_pattern(&mut io::stderr().lock(), size, true)
+}
+
+fn write_pattern(
+    output: &mut impl Write,
+    mut remaining: usize,
+    inverted: bool,
+) -> Result<(), String> {
+    let mut offset = 0usize;
+    let mut buffer = [0u8; 8 * 1024];
+    while remaining != 0 {
+        let count = remaining.min(buffer.len());
+        for (index, byte) in buffer[..count].iter_mut().enumerate() {
+            let value = (offset + index) as u8;
+            *byte = if inverted { !value } else { value };
+        }
+        output.write_all(&buffer[..count]).map_err(display)?;
+        remaining -= count;
+        offset += count;
+    }
+    Ok(())
 }
 
 fn write_file(arguments: &[OsString]) -> Result<(), String> {

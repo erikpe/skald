@@ -32,6 +32,8 @@ pub(crate) fn prepare_runtime(options: &SequentialOptions) -> RuntimeExecution {
                 ))
             } else if !process.pipe_failures().is_empty() {
                 StageStatus::Failed("runtime preparation had a pipe failure".to_owned())
+            } else if !process.capture_overflows().is_empty() {
+                StageStatus::Failed("runtime preparation exceeded a capture limit".to_owned())
             } else if !preparation.archive().is_file() {
                 StageStatus::Failed(format!(
                     "runtime preparation did not produce {}",
@@ -104,6 +106,7 @@ pub(crate) fn link_build(
             .with_arguments(invocation.arguments().iter().cloned())
             .with_stdin(invocation.stdin().to_vec())
             .with_environment(options.linker_environment().clone())
+            .with_capture_limit(options.compiler().capture_limit())
             .with_timeout(options.linker_timeout());
             link_command = Some(command.clone());
             let observed = run_process(&command).map_err(|error| ToolchainError::Execute {
@@ -115,6 +118,12 @@ pub(crate) fn link_build(
                 return Err(ToolchainError::Execute {
                     tool: invocation.program().to_owned(),
                     details: "linker pipe operation failed".to_owned(),
+                });
+            }
+            if !observed.capture_overflows().is_empty() {
+                return Err(ToolchainError::Execute {
+                    tool: invocation.program().to_owned(),
+                    details: "linker exceeded a process-output capture limit".to_owned(),
                 });
             }
             match observed.termination() {
@@ -197,6 +206,7 @@ fn same_native_observation(left: &crate::RunExecution, right: &crate::RunExecuti
         && left.observation().stdout() == right.observation().stdout()
         && left.observation().stderr() == right.observation().stderr()
         && left.observation().pipe_failures() == right.observation().pipe_failures()
+        && left.observation().capture_overflows() == right.observation().capture_overflows()
         && left.output_files() == right.output_files()
 }
 

@@ -1,9 +1,8 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A03 and A05–A06 completed on 2026-09-09. Select
-the remaining robustness fixes, then turn the chosen architectural findings
-into separate PR-sized implementation roadmaps. No implementation roadmap
-depends on this document yet.
+Status: actionable audit; A01–A06 completed on 2026-09-09. Turn the chosen
+architectural findings into separate PR-sized implementation roadmaps. No
+implementation roadmap depends on this document yet.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -102,7 +101,7 @@ work and its validation; findings without that record remain `Open`.
 | [A01](#a01--bound-actual-expression-tree-depth-and-stack-usage) | Bound actual expression-tree depth and stack usage | Complete | P0 | 5 | M–L | Medium | R | R, E |
 | [A02](#a02--drain-linker-pipes-concurrently) | Drain linker pipes concurrently | Complete | P1 | 4 | M | Medium | R | R, M |
 | [A03](#a03--enforce-process-deadlines-through-pipe-completion) | Enforce process deadlines through pipe completion | Complete | P1 | 4 | M | Medium | R | R |
-| [A04](#a04--bound-captured-process-and-output-file-bytes) | Bound captured process and output-file bytes | Open | P1 | 4 | M | Medium | O | R, C |
+| [A04](#a04--bound-captured-process-and-output-file-bytes) | Bound captured process and output-file bytes | Complete | P1 | 4 | M | Medium | O | R, C |
 | [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | Complete | P1 | 4 | S | Low | R | R |
 | [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Complete | P1 | 4 | XS | Low | O | R |
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Open | P1 | 3 | S | Low | O | M, E |
@@ -264,6 +263,8 @@ checks, Rust 1.82.0 check, and all 626 golden leaves pass.
 
 ### A04 — Bound captured process and output-file bytes
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** [`read_pipe`](../../crates/skald-golden/src/process/runner.rs)
 uses unbounded `read_to_end`; output-file comparison in
 [`sandbox.rs`](../../crates/skald-golden/src/execute/sandbox.rs) uses `fs::read`.
@@ -279,6 +280,23 @@ create a pipe deadlock. Apply a separate limit to expected/observed files.
 output exactly at the limit, and oversized files. Never silently truncate and
 then allow an exact-byte expectation to pass. Choose defaults against the
 existing corpus before making them part of the runner contract.
+
+**Delivered:** every process now retains at most 4 MiB from each stdout and
+stderr pipe while continuing to drain both streams through EOF. A typed
+overflow observation records the pipe, limit, and complete byte count and is
+propagated as an explicit compiler, linker, runtime, or native-run failure;
+matching the retained prefix can no longer produce a passing result. Generated
+assembly and each declared output-file expectation and observation have a
+separate 32 MiB bounded read. Exact-boundary files pass, while oversized files
+and assembly fail explicitly without exposing truncated assembly as a valid
+artifact. Library callers may override limits through the owning process,
+compiler, and execution options. The defaults leave substantial headroom over
+the measured corpus maxima of 129,944 captured stream bytes and 9,515,537
+assembly bytes. Unit and real-process tests cover binary prefixes, exact limits,
+2 MiB on both pipes after the retained prefix fills, oversized expected and
+observed files, prefix-equal expectations, failure propagation, and oversized
+compiler assembly. The complete golden-runner suite, `make check`, Rust 1.82.0
+check, and all 628 golden leaves pass.
 
 ### A05 — Check container capacity arithmetic
 

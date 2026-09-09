@@ -1,7 +1,8 @@
 use crate::process::DEFAULT_TIMEOUT;
 use crate::{
-    ExitExpectation, MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCommand,
-    ProcessEnvironment, ProcessObservation, ProcessTermination, StreamComparison,
+    ExitExpectation, MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCaptureOverflow,
+    ProcessCommand, ProcessEnvironment, ProcessObservation, ProcessTermination, StreamComparison,
+    DEFAULT_OUTPUT_FILE_LIMIT, DEFAULT_PROCESS_CAPTURE_LIMIT,
 };
 use std::{path::PathBuf, time::Duration};
 
@@ -18,6 +19,8 @@ pub enum SandboxRetention {
 pub struct ExecutionOptions {
     temporary_root: PathBuf,
     default_timeout: Duration,
+    capture_limit: usize,
+    output_file_limit: usize,
     inherited_environment: ProcessEnvironment,
     retention: SandboxRetention,
 }
@@ -27,6 +30,8 @@ impl ExecutionOptions {
         Self {
             temporary_root: temporary_root.into(),
             default_timeout: DEFAULT_TIMEOUT,
+            capture_limit: DEFAULT_PROCESS_CAPTURE_LIMIT,
+            output_file_limit: DEFAULT_OUTPUT_FILE_LIMIT,
             inherited_environment: ProcessEnvironment::new(),
             retention: SandboxRetention::Failures,
         }
@@ -34,6 +39,16 @@ impl ExecutionOptions {
 
     pub fn with_default_timeout(mut self, timeout: Duration) -> Self {
         self.default_timeout = timeout;
+        self
+    }
+
+    pub fn with_capture_limit(mut self, limit: usize) -> Self {
+        self.capture_limit = limit;
+        self
+    }
+
+    pub fn with_output_file_limit(mut self, limit: usize) -> Self {
+        self.output_file_limit = limit;
         self
     }
 
@@ -55,6 +70,14 @@ impl ExecutionOptions {
         self.default_timeout
     }
 
+    pub fn capture_limit(&self) -> usize {
+        self.capture_limit
+    }
+
+    pub fn output_file_limit(&self) -> usize {
+        self.output_file_limit
+    }
+
     pub fn inherited_environment(&self) -> &ProcessEnvironment {
         &self.inherited_environment
     }
@@ -72,16 +95,25 @@ pub struct OutputFileMismatch {
     actual: Option<Vec<u8>>,
 }
 
-/// Captured contents of one declared temporary output file.
+/// Retained bytes and limit status for one declared temporary output file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutputFileObservation {
     name: String,
     contents: Option<Vec<u8>>,
+    overflow: Option<OutputFileOverflow>,
 }
 
 impl OutputFileObservation {
-    pub(super) fn new(name: String, contents: Option<Vec<u8>>) -> Self {
-        Self { name, contents }
+    pub(super) fn new(
+        name: String,
+        contents: Option<Vec<u8>>,
+        overflow: Option<OutputFileOverflow>,
+    ) -> Self {
+        Self {
+            name,
+            contents,
+            overflow,
+        }
     }
 
     pub fn name(&self) -> &str {
@@ -90,6 +122,43 @@ impl OutputFileObservation {
 
     pub fn contents(&self) -> Option<&[u8]> {
         self.contents.as_deref()
+    }
+
+    pub fn overflow(&self) -> Option<&OutputFileOverflow> {
+        self.overflow.as_ref()
+    }
+}
+
+/// Which side of an exact output-file comparison exceeded its byte limit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputFileOverflowKind {
+    Expectation,
+    Observation,
+}
+
+/// A declared output file whose complete bytes were not loaded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OutputFileOverflow {
+    name: String,
+    kind: OutputFileOverflowKind,
+    limit: usize,
+}
+
+impl OutputFileOverflow {
+    pub(super) fn new(name: String, kind: OutputFileOverflowKind, limit: usize) -> Self {
+        Self { name, kind, limit }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn kind(&self) -> OutputFileOverflowKind {
+        self.kind
+    }
+
+    pub fn limit(&self) -> usize {
+        self.limit
     }
 }
 
@@ -126,7 +195,9 @@ pub enum RunMismatch {
     Stderr(MatcherMismatch),
     StdoutLoad(MatcherLoadFailure),
     StderrLoad(MatcherLoadFailure),
+    CaptureOverflow(ProcessCaptureOverflow),
     OutputFile(OutputFileMismatch),
+    OutputFileOverflow(OutputFileOverflow),
     Pipe(PipeFailure),
 }
 

@@ -12,8 +12,8 @@ mod template;
 pub use environment::allowlisted_environment;
 pub use error::ExecutionError;
 pub use model::{
-    ExecutionOptions, OutputFileMismatch, OutputFileObservation, RunExecution, RunMismatch,
-    SandboxRetention,
+    ExecutionOptions, OutputFileMismatch, OutputFileObservation, OutputFileOverflow,
+    OutputFileOverflowKind, RunExecution, RunMismatch, SandboxRetention,
 };
 pub use sandbox::execute_run;
 pub use scheduler::execute_parallel;

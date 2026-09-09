@@ -1,5 +1,6 @@
 //! Bounded subprocess, pipe, timeout, and termination ownership.
 
+mod capture;
 mod error;
 mod model;
 mod runner;
@@ -10,7 +11,7 @@ pub(crate) const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub use error::ProcessError;
 pub use model::{
-    PipeFailure, ProcessCommand, ProcessEnvironment, ProcessObservation, ProcessPipe,
-    ProcessTermination,
+    PipeFailure, ProcessCaptureOverflow, ProcessCommand, ProcessEnvironment, ProcessObservation,
+    ProcessPipe, ProcessTermination,
 };
 pub use runner::run_process;

@@ -285,6 +285,49 @@ fn rejects_unexpected_compiler_output_status_and_missing_assembly() {
 }
 
 #[test]
+fn compiler_artifact_limit_rejects_oversized_assembly_before_linking() {
+    let fixture = Fixture::new();
+    fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write(
+        "large.golden.toml",
+        r#"schema=1
+[[test]]
+name="large"
+mode="run"
+source="program.ska"
+compiler_args=["--fake-mode","large-assembly","--fake-size","257"]
+[[test.run]]
+name="run"
+args=["echo"]
+"#,
+    );
+    let plan = fixture.plan();
+    let selected = select(&plan, &SelectionOptions::default()).unwrap();
+    let base = fixture.options(Determinism::Off, "success");
+    let options = SequentialOptions::new(
+        base.compiler().clone().with_artifact_limit(256),
+        base.runtime().clone(),
+        base.toolchain().clone(),
+        base.execution().clone(),
+    )
+    .with_linker_environment(base.linker_environment().clone())
+    .with_linker_timeout(base.linker_timeout());
+    let execution = execute_sequential(&selected, &options);
+    let compilation = execution.builds()[0].compilation();
+
+    assert!(compilation
+        .issues()
+        .iter()
+        .any(|issue| matches!(issue, CompilationIssue::AssemblyOverflow { limit: 256, .. })));
+    assert!(compilation.first_assembly().is_none());
+    assert!(matches!(
+        execution.leaves()[0].status(),
+        StageStatus::Cancelled { .. }
+    ));
+    assert!(!fixture.link_counter.exists());
+}
+
+#[test]
 fn reports_nondeterministic_assembly_diagnostics_and_native_output_files() {
     let fixture = Fixture::new();
     write_native_spec(&fixture, "nondeterministic-assembly", "args=[\"echo\"]");

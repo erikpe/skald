@@ -713,9 +713,10 @@ non-normative compile, link, execution, and assembly-size observations.
 
 The runner's compiler-independent process tests use its Rust fake-process
 binary to cover exact and partial byte expectations, non-UTF-8 Unix arguments,
-temporary files, environment isolation, large simultaneous pipes, signals,
-timeouts, and Linux process-group cleanup when descendants retain stdin,
-stdout, or stderr after the direct child exits:
+temporary files, environment isolation, bounded binary output on simultaneous
+pipes, expected and observed output-file limits, signals, timeouts, and Linux
+process-group cleanup when descendants retain stdin, stdout, or stderr after
+the direct child exits:
 
 ```text
 cargo test --locked -p skald-golden --test process_execution
@@ -736,7 +737,14 @@ authoritative. The deadline covers both the direct child and completion of its
 three owned pipes. On Linux, a descendant in the child's process group that
 keeps an inherited pipe open therefore makes the observation time out; the
 runner kills that group, reaps the direct child, and collects every pipe worker
-before returning. Human output is the default, while `--format json` and
+before returning. Each stdout and stderr capture retains at most 4 MiB while
+continuing to drain the pipe; producing more is an explicit stage failure that
+reports the complete observed byte count, so a retained exact prefix cannot
+pass. Generated assembly, declared output-file expectations, and observed
+output files are each limited to 32 MiB. The exact boundary is accepted;
+larger files fail explicitly without loading the remainder. Library callers
+may override these defaults on the owning process, compiler, or execution
+options. Human output is the default, while `--format json` and
 `--format junit` emit single
 machine-readable documents with the same canonical leaf IDs, stages, statuses,
 durations, and failures. `--show-output` includes passing streams in human

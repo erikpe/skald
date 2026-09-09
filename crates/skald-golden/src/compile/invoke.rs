@@ -3,8 +3,9 @@ use super::{
     Determinism,
 };
 use crate::{
-    compare_stream, expectation::map_stream_failures, run_process, PlannedBuild, ProcessCommand,
-    ProcessTermination, ResolvedCompileExpectation,
+    compare_stream,
+    expectation::{map_stream_failures, read_bytes_bounded, BoundedBytes},
+    run_process, PlannedBuild, ProcessCommand, ProcessTermination, ResolvedCompileExpectation,
 };
 use std::{
     ffi::OsString,
@@ -77,6 +78,7 @@ pub(crate) fn compile_build(
         let command = ProcessCommand::new(config.executable(), config.working_directory())
             .with_arguments(arguments)
             .with_environment(config.environment().clone())
+            .with_capture_limit(config.capture_limit())
             .with_timeout(timeout);
         let mut process = match run_process(&command) {
             Ok(process) => process,
@@ -95,12 +97,19 @@ pub(crate) fn compile_build(
         let assembly = if matches!(purpose, CompilationPurpose::Success)
             && process.termination() == ProcessTermination::Code(0)
         {
-            match fs::read(&assembly_path) {
-                Ok(assembly) => {
+            match read_bytes_bounded(&assembly_path, config.artifact_limit()) {
+                Ok(BoundedBytes::Complete(assembly)) => {
                     if std::str::from_utf8(&assembly).is_err() {
                         issues.push(CompilationIssue::NonUtf8Assembly(assembly_path.clone()));
                     }
                     Some(assembly)
+                }
+                Ok(BoundedBytes::Overflow(_)) => {
+                    issues.push(CompilationIssue::AssemblyOverflow {
+                        path: assembly_path.clone(),
+                        limit: config.artifact_limit(),
+                    });
+                    None
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                     issues.push(CompilationIssue::MissingAssembly(assembly_path.clone()));
@@ -176,6 +185,13 @@ fn check_process(
             .cloned()
             .map(CompilationIssue::Pipe),
     );
+    issues.extend(
+        process
+            .capture_overflows()
+            .iter()
+            .cloned()
+            .map(CompilationIssue::CaptureOverflow),
+    );
     if matches!(purpose, CompilationPurpose::Success) && !process.stdout().is_empty() {
         issues.push(CompilationIssue::UnexpectedStdout(
             process.stdout().to_vec(),
@@ -210,6 +226,7 @@ fn check_determinism(
                 || first.stdout() != second.stdout()
                 || first.stderr() != second.stderr()
                 || first.pipe_failures() != second.pipe_failures()
+                || first.capture_overflows() != second.capture_overflows()
             {
                 issues.push(CompilationIssue::NondeterministicDiagnostics);
             }

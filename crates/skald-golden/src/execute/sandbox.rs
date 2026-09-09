@@ -1,14 +1,16 @@
 use super::{
     model::{
-        ExecutionOptions, OutputFileMismatch, OutputFileObservation, RunExecution,
-        RunExecutionParts, RunMismatch, SandboxRetention,
+        ExecutionOptions, OutputFileMismatch, OutputFileObservation, OutputFileOverflow,
+        OutputFileOverflowKind, RunExecution, RunExecutionParts, RunMismatch, SandboxRetention,
     },
     template::TemporaryPaths,
     ExecutionError,
 };
 use crate::{
-    compare_exit, compare_stream, decode_arguments, expectation::map_stream_failures, load_bytes,
-    run_process, PlannedRun, ProcessCommand, ResolvedWorkingDirectory, StreamComparison,
+    compare_exit, compare_stream, decode_arguments,
+    expectation::{load_bytes_bounded, map_stream_failures, read_bytes_bounded, BoundedBytes},
+    load_bytes, run_process, PlannedRun, ProcessCommand, ResolvedWorkingDirectory,
+    StreamComparison,
 };
 use std::{
     fs,
@@ -123,6 +125,7 @@ fn execute_in_sandbox(
         .with_arguments(arguments)
         .with_stdin(stdin)
         .with_environment(environment)
+        .with_capture_limit(options.capture_limit())
         .with_timeout(timeout);
     let observation = run_process(&request)
         .map_err(|source| ExecutionError::source("could not execute run", source))?;
@@ -132,6 +135,13 @@ fn execute_in_sandbox(
         .cloned()
         .map(RunMismatch::Pipe)
         .collect::<Vec<_>>();
+    mismatches.extend(
+        observation
+            .capture_overflows()
+            .iter()
+            .cloned()
+            .map(RunMismatch::CaptureOverflow),
+    );
     let expectation = run.expectation();
     if !compare_exit(expectation.exit(), observation.termination()) {
         mismatches.push(RunMismatch::Exit {
@@ -151,7 +161,12 @@ fn execute_in_sandbox(
         RunMismatch::Stderr,
         RunMismatch::StderrLoad,
     ));
-    let output_files = compare_output_files(run, &temporary_paths, &mut mismatches)?;
+    let output_files = compare_output_files(
+        run,
+        &temporary_paths,
+        options.output_file_limit(),
+        &mut mismatches,
+    )?;
     Ok(ObservedRun {
         command: request,
         process: observation,
@@ -165,15 +180,28 @@ fn execute_in_sandbox(
 fn compare_output_files(
     run: &PlannedRun,
     paths: &TemporaryPaths,
+    limit: usize,
     mismatches: &mut Vec<RunMismatch>,
 ) -> Result<Vec<OutputFileObservation>, ExecutionError> {
     let mut observations = Vec::new();
     for file in run.expectation().output_files() {
-        let expected = load_bytes(file.contents()).map_err(|source| {
+        let expected = load_bytes_bounded(file.contents(), limit).map_err(|source| {
             ExecutionError::source("could not load output-file expectation", source)
         })?;
+        let (expected, expected_overflow) = match expected {
+            BoundedBytes::Complete(contents) => (contents, None),
+            BoundedBytes::Overflow(prefix) => {
+                let overflow = OutputFileOverflow::new(
+                    file.name().to_owned(),
+                    OutputFileOverflowKind::Expectation,
+                    limit,
+                );
+                mismatches.push(RunMismatch::OutputFileOverflow(overflow.clone()));
+                (prefix, Some(overflow))
+            }
+        };
         let path = paths.path(file.name());
-        let actual = match fs::read(path) {
+        let actual = match read_bytes_bounded(path, limit) {
             Ok(contents) => Some(contents),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
             Err(source) => {
@@ -184,14 +212,34 @@ fn compare_output_files(
                 ));
             }
         };
-        if actual.as_deref() != Some(expected.as_slice()) {
+        let (actual, actual_overflow) = match actual {
+            Some(BoundedBytes::Complete(contents)) => (Some(contents), None),
+            Some(BoundedBytes::Overflow(prefix)) => {
+                let overflow = OutputFileOverflow::new(
+                    file.name().to_owned(),
+                    OutputFileOverflowKind::Observation,
+                    limit,
+                );
+                mismatches.push(RunMismatch::OutputFileOverflow(overflow.clone()));
+                (Some(prefix), Some(overflow))
+            }
+            None => (None, None),
+        };
+        if expected_overflow.is_none()
+            && actual_overflow.is_none()
+            && actual.as_deref() != Some(expected.as_slice())
+        {
             mismatches.push(RunMismatch::OutputFile(OutputFileMismatch::new(
                 file.name().to_owned(),
                 expected,
                 actual.clone(),
             )));
         }
-        observations.push(OutputFileObservation::new(file.name().to_owned(), actual));
+        observations.push(OutputFileObservation::new(
+            file.name().to_owned(),
+            actual,
+            actual_overflow,
+        ));
     }
     Ok(observations)
 }

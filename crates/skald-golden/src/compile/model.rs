@@ -1,7 +1,8 @@
 use crate::process::DEFAULT_TIMEOUT;
 use crate::{
-    MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCommand, ProcessEnvironment,
-    ProcessObservation, ProcessTermination, StreamComparison,
+    MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCaptureOverflow, ProcessCommand,
+    ProcessEnvironment, ProcessObservation, ProcessTermination, StreamComparison,
+    DEFAULT_OUTPUT_FILE_LIMIT, DEFAULT_PROCESS_CAPTURE_LIMIT,
 };
 use std::{path::PathBuf, time::Duration};
 
@@ -52,6 +53,8 @@ pub struct CompilerConfig {
     working_directory: PathBuf,
     environment: ProcessEnvironment,
     default_timeout: Duration,
+    capture_limit: usize,
+    artifact_limit: usize,
 }
 
 impl CompilerConfig {
@@ -61,6 +64,8 @@ impl CompilerConfig {
             working_directory: working_directory.into(),
             environment: ProcessEnvironment::new(),
             default_timeout: DEFAULT_TIMEOUT,
+            capture_limit: DEFAULT_PROCESS_CAPTURE_LIMIT,
+            artifact_limit: DEFAULT_OUTPUT_FILE_LIMIT,
         }
     }
 
@@ -71,6 +76,16 @@ impl CompilerConfig {
 
     pub fn with_default_timeout(mut self, timeout: Duration) -> Self {
         self.default_timeout = timeout;
+        self
+    }
+
+    pub fn with_capture_limit(mut self, limit: usize) -> Self {
+        self.capture_limit = limit;
+        self
+    }
+
+    pub fn with_artifact_limit(mut self, limit: usize) -> Self {
+        self.artifact_limit = limit;
         self
     }
 
@@ -88,6 +103,14 @@ impl CompilerConfig {
 
     pub fn default_timeout(&self) -> Duration {
         self.default_timeout
+    }
+
+    pub fn capture_limit(&self) -> usize {
+        self.capture_limit
+    }
+
+    pub fn artifact_limit(&self) -> usize {
+        self.artifact_limit
     }
 }
 
@@ -148,12 +171,17 @@ pub enum CompilationIssue {
         actual: ProcessTermination,
     },
     Pipe(PipeFailure),
+    CaptureOverflow(ProcessCaptureOverflow),
     UnexpectedStdout(Vec<u8>),
     UnexpectedStderr(Vec<u8>),
     MissingAssembly(PathBuf),
     AssemblyRead {
         path: PathBuf,
         message: String,
+    },
+    AssemblyOverflow {
+        path: PathBuf,
+        limit: usize,
     },
     NonUtf8Assembly(PathBuf),
     NondeterministicAssembly,

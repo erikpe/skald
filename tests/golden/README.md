@@ -183,9 +183,14 @@ populates it.
 Child environments are rebuilt from the toolchain allowlist plus declared
 values and a private `TMPDIR`. Stdin writing and output capture proceed
 concurrently. Each process has a 60-second default timeout, and Linux timeouts
-terminate the complete child process group. `serial = true` requests exclusive
-execution; equal names in `resources = ["..."]` prevent only those nodes from
-overlapping.
+terminate the complete child process group. Stdout and stderr are each retained
+up to 4 MiB while the reader continues draining; crossing the limit fails the
+stage and reports the complete observed size rather than treating the retained
+prefix as complete output. Generated assembly and each declared output-file
+expectation or observation have a separate 32 MiB limit. Files exactly at the
+limit remain valid, while an oversized file fails without loading its complete
+contents. `serial = true` requests exclusive execution; equal names in
+`resources = ["..."]` prevent only those nodes from overlapping.
 
 The runtime is prepared once when a selection contains native tests.
 Independent compiler, linker, and run nodes share the bounded worker pool.

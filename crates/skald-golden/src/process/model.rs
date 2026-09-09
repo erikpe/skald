@@ -1,4 +1,5 @@
 use super::DEFAULT_TIMEOUT;
+use crate::DEFAULT_PROCESS_CAPTURE_LIMIT;
 use std::{collections::BTreeMap, ffi::OsString, path::PathBuf, time::Duration};
 
 /// The complete, explicit environment supplied to a child process.
@@ -36,6 +37,7 @@ pub struct ProcessCommand {
     working_directory: PathBuf,
     environment: ProcessEnvironment,
     timeout: Duration,
+    capture_limit: usize,
 }
 
 impl ProcessCommand {
@@ -47,6 +49,7 @@ impl ProcessCommand {
             working_directory: working_directory.into(),
             environment: ProcessEnvironment::new(),
             timeout: DEFAULT_TIMEOUT,
+            capture_limit: DEFAULT_PROCESS_CAPTURE_LIMIT,
         }
     }
 
@@ -67,6 +70,11 @@ impl ProcessCommand {
 
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
+        self
+    }
+
+    pub fn with_capture_limit(mut self, limit: usize) -> Self {
+        self.capture_limit = limit;
         self
     }
 
@@ -93,6 +101,10 @@ impl ProcessCommand {
     pub fn timeout(&self) -> Duration {
         self.timeout
     }
+
+    pub fn capture_limit(&self) -> usize {
+        self.capture_limit
+    }
 }
 
 /// A terminal process state, kept distinct from runner I/O failures.
@@ -109,6 +121,36 @@ pub enum ProcessPipe {
     Stdin,
     Stdout,
     Stderr,
+}
+
+/// A process stream that produced more bytes than its retained capture.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessCaptureOverflow {
+    pipe: ProcessPipe,
+    limit: usize,
+    observed: usize,
+}
+
+impl ProcessCaptureOverflow {
+    pub(super) fn new(pipe: ProcessPipe, limit: usize, observed: usize) -> Self {
+        Self {
+            pipe,
+            limit,
+            observed,
+        }
+    }
+
+    pub fn pipe(&self) -> ProcessPipe {
+        self.pipe
+    }
+
+    pub fn limit(&self) -> usize {
+        self.limit
+    }
+
+    pub fn observed(&self) -> usize {
+        self.observed
+    }
 }
 
 /// A non-fatal pipe observation retained alongside process output.
@@ -143,6 +185,7 @@ pub struct ProcessObservation {
     pub(super) stderr: Vec<u8>,
     pub(super) elapsed: Duration,
     pub(super) pipe_failures: Vec<PipeFailure>,
+    pub(super) capture_overflows: Vec<ProcessCaptureOverflow>,
 }
 
 impl ProcessObservation {
@@ -168,6 +211,10 @@ impl ProcessObservation {
 
     pub fn pipe_failures(&self) -> &[PipeFailure] {
         &self.pipe_failures
+    }
+
+    pub fn capture_overflows(&self) -> &[ProcessCaptureOverflow] {
+        &self.capture_overflows
     }
 }
 
