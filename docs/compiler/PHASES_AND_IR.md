@@ -107,6 +107,14 @@ claim is ordinary. Preliminary and final MIR verification, static effects,
 complete-object metadata, exact witness calls, ownership cleanup, and native
 x86-64 execution now consume these closed identities unchanged.
 
+Closed generic contextual validation uses the phase-neutral
+`type_capabilities` service over `ResolvedProgram`. That service owns resolved
+storage eligibility and recursive class, optional, and array lifecycle
+availability, including diagnostic failure paths. Resolution never imports
+type checking or HIR to answer those questions. Type checking separately turns
+the resolved facts into concrete HIR lifecycle plans, with parity coverage for
+class and aggregate availability.
+
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus
 the selected entry module. Every top-level function, class, and interface

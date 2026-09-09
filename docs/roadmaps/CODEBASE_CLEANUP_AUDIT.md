@@ -105,7 +105,7 @@ work and its validation; findings without that record remain `Open`.
 | [A05](#a05--check-container-capacity-arithmetic) | Check container capacity arithmetic | Complete | P1 | 4 | S | Low | R | R |
 | [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Complete | P1 | 4 | XS | Low | O | R |
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Complete | P1 | 3 | S | Low | O | M, E |
-| [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Open | P1 | 5 | L | High | O | M, E, R |
+| [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Complete | P1 | 5 | L | High | O | M, E, R |
 | [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Open | P1 | 5 | L | High | O | M, E, R |
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Open | P2 | 4 | M–L | High | C | M, C |
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Open | P2 | 4 | M | Medium | O | M, E, R, C |
@@ -412,15 +412,16 @@ and the Rust 1.82.0 workspace check pass.
 
 ### A08 — Remove resolution's dependency on type checking
 
-**Evidence:** specialization
+**Status:** Complete (2026-09-09).
+
+**Original evidence:** specialization
 [`validation.rs`](../../crates/skald-compiler/src/resolve/resolver/program/specialization/validation.rs)
-calls `crate::typeck::failed_specialization_requirements` and names
+called `crate::typeck::failed_specialization_requirements` and named
 `typeck::CopyPathElement`;
 [`interface_validation.rs`](../../crates/skald-compiler/src/resolve/resolver/program/specialization/interface_validation.rs)
-calls the interface equivalent. The
-[type-checker query implementation](../../crates/skald-compiler/src/typeck/generic_requirements.rs)
-uses HIR types and lazily computes copy capabilities. Resolution consequently
-reaches into a later phase even though the intended architecture is forward.
+called the interface equivalent. The query lived in type checking, used HIR
+types, and lazily computed copy capabilities. Resolution consequently reached
+into a later phase even though the intended architecture is forward.
 
 **Change:** make closed-type eligibility and lifecycle capability facts a
 semantic service with phase-neutral results, or add an explicit closure
@@ -435,6 +436,28 @@ declarations. Subsequent PRs migrate lifecycle facts and remove reverse imports.
 **Validation:** class/interface bounds, recursive aggregate capabilities,
 repeated application diagnostics, ordinary/generic parity, and HIR erasure.
 Do not simply move the whole type checker under a new module name.
+
+**Delivered:** `type_capabilities` now owns the closed-subject query,
+phase-neutral class/array lifecycle availability, and lifecycle diagnostic
+paths over `ResolvedProgram`. Class and interface specialization validation
+call that service directly; the former type-checker query module and all
+production resolver imports of `typeck` are gone. Type checking retains
+concrete HIR copy/assignment plan construction and consumes the shared
+phase-neutral diagnostic path vocabulary. Obsolete type-check-only query
+helpers were removed.
+
+The migrated capability tests cover declaration roles, default construction,
+shared targets, class/interface subjects, nested optionals, arrays, and
+unavailable lifecycle operations. A parity test compares every resolved class
+and canonical array capability with HIR plan availability, including recursive
+optional/array dependencies. A source-boundary integration test prevents new
+production resolution dependencies on type checking. Architecture and generic
+class/interface documentation now record the neutral service and the HIR plan
+boundary.
+
+The full `make check` gate passed with all six workspace members, 3,090
+compiler unit tests, documentation tests, the direct runtime suite, and all
+628 golden leaves. The Rust 1.82.0 workspace all-target check also passed.
 
 ### A09 — Give resolver stages explicit products and publication
 

@@ -12,7 +12,8 @@ pub(crate) fn validate_specialization_requirements(
 ) {
     let bound_failures = failed_exact_bounds(program);
     let duplicate_bound_failures = duplicate_closed_bounds(program);
-    let requirement_failures = crate::typeck::failed_specialization_requirements(program);
+    let requirement_failures =
+        crate::type_capabilities::failed_specialization_requirements(program);
     if bound_failures.is_empty()
         && duplicate_bound_failures.is_empty()
         && requirement_failures.is_empty()
@@ -279,7 +280,7 @@ fn add_repeated_application_origins(
 fn add_lifecycle_path(
     mut diagnostic: Diagnostic,
     program: &ResolvedProgram,
-    path: &[crate::typeck::CopyPathElement],
+    path: &[crate::type_capabilities::LifecyclePathElement],
 ) -> Diagnostic {
     if path.is_empty() {
         return diagnostic;
@@ -287,7 +288,7 @@ fn add_lifecycle_path(
     let mut names = Vec::with_capacity(path.len());
     for element in path {
         match *element {
-            crate::typeck::CopyPathElement::Base(base) => {
+            crate::type_capabilities::LifecyclePathElement::Base(base) => {
                 if let Some(base) = program.class(base) {
                     names.push(format!("base `{}`", base.name));
                     diagnostic = diagnostic.with_secondary_label(
@@ -296,7 +297,7 @@ fn add_lifecycle_path(
                     );
                 }
             }
-            crate::typeck::CopyPathElement::Field(field) => {
+            crate::type_capabilities::LifecyclePathElement::Field(field) => {
                 if let Some(field) = program.field(field) {
                     names.push(format!("field `{}`", field.name));
                     diagnostic = diagnostic.with_secondary_label(

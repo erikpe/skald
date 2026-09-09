@@ -5,6 +5,14 @@
 //! vocabulary so contextual eligibility rules remain single-sourced without
 //! either phase depending on the other's IR.
 
+mod closed;
+mod lifecycle;
+
+pub(crate) use closed::{
+    failed_interface_specialization_requirements, failed_specialization_requirements,
+};
+pub(crate) use lifecycle::{LifecyclePathElement, ResolvedLifecycleCapabilities};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum TypeCategory {
     Primitive,
@@ -16,6 +24,25 @@ pub(crate) enum TypeCategory {
     Shared,
     Optional,
     Array,
+}
+
+pub(crate) const fn resolved_type_category(kind: crate::resolve::ResolvedTypeKind) -> TypeCategory {
+    use crate::resolve::ResolvedTypeKind;
+    match kind {
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool => TypeCategory::Primitive,
+        ResolvedTypeKind::Unit => TypeCategory::Unit,
+        ResolvedTypeKind::Obj => TypeCategory::Obj,
+        ResolvedTypeKind::Class(_) => TypeCategory::Class,
+        ResolvedTypeKind::Interface(_) => TypeCategory::Interface,
+        ResolvedTypeKind::Function(_) => TypeCategory::Function,
+        ResolvedTypeKind::Shared(_) => TypeCategory::Shared,
+        ResolvedTypeKind::Optional(_) => TypeCategory::Optional,
+        ResolvedTypeKind::Array(_) => TypeCategory::Array,
+    }
 }
 
 pub(crate) const fn supports_stored_value(category: TypeCategory) -> bool {

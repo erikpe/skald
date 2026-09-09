@@ -18,7 +18,7 @@ pub(in crate::resolve::resolver::program) fn validate_interface_specializations(
         return;
     }
 
-    let failures = crate::typeck::failed_interface_specialization_requirements(program);
+    let failures = crate::type_capabilities::failed_interface_specialization_requirements(program);
     let bound_failures = failed_exact_interface_bounds(program);
     let duplicate_bound_failures = duplicate_closed_interface_bounds(program);
     if failures.is_empty() && bound_failures.is_empty() && duplicate_bound_failures.is_empty() {

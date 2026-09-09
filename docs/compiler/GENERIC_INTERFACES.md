@@ -130,9 +130,11 @@ It preserves every optional, array, shared, and function layer exactly.
 
 A closed application validates every requirement signature and declared
 bound. It does not instantiate requirements lazily. Mechanical validity is
-delegated to the existing stored-value, result, alias, optional, array,
-shared-target, function-type, and lifecycle capability owners rather than
-duplicated in generic-interface code.
+delegated to the phase-neutral `type_capabilities` service for stored-value,
+result, alias, optional, array, shared-target, and resolved lifecycle rules.
+Function signatures remain ordinary resolved data. HIR lifecycle plan
+construction stays in type checking and is covered by availability parity
+tests.
 
 For example, substituting a bare interface into an owning result fails the
 ordinary result rule, while substituting it into a read-only alias target can

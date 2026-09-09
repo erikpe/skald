@@ -9,7 +9,7 @@ use crate::{
     },
     object_path::ObjectPath,
     resolve::ResolvedObjectAssignment,
-    typeck::capabilities::CopyPathElement,
+    type_capabilities::LifecyclePathElement,
 };
 
 impl CallableChecker<'_, '_> {
@@ -90,14 +90,14 @@ impl CallableChecker<'_, '_> {
             let names = path
                 .iter()
                 .map(|element| match *element {
-                    CopyPathElement::Base(base) => {
+                    LifecyclePathElement::Base(base) => {
                         let base = self
                             .program
                             .class(base)
                             .expect("capability failure base must exist");
                         format!("base {}", base.name)
                     }
-                    CopyPathElement::Field(field) => {
+                    LifecyclePathElement::Field(field) => {
                         let declaration = self
                             .program
                             .field(field)

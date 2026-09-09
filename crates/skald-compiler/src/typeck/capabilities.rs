@@ -4,8 +4,9 @@ use crate::{
     hir::{
         HirBaseCopy, HirCopyCapability, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy,
     },
-    identity::{ClassId, CopyAssignmentId, CopyConstructorId, FieldId},
+    identity::{ClassId, CopyAssignmentId, CopyConstructorId},
     resolve::{ResolvedClassDeclaration, ResolvedCopyOperation, ResolvedProgram, ResolvedTypeKind},
+    type_capabilities::LifecyclePathElement,
 };
 
 #[derive(Clone, Debug)]
@@ -78,11 +79,11 @@ impl CopyCapabilities {
         self.array_types.clone()
     }
 
-    pub(crate) fn constructor_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
+    pub(crate) fn constructor_failure(&self, class: ClassId) -> Option<&[LifecyclePathElement]> {
         self.constructors.failure(class)
     }
 
-    pub(crate) fn assignment_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
+    pub(crate) fn assignment_failure(&self, class: ClassId) -> Option<&[LifecyclePathElement]> {
         self.assignments.failure(class)
     }
 }
@@ -93,13 +94,7 @@ struct CapabilitySet<I> {
     /// The deterministic outer-to-inner field path responsible for an
     /// unavailable synthesized operation. An empty path means the class's own
     /// resolved operation is unavailable.
-    failure_paths: Vec<Option<Vec<CopyPathElement>>>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum CopyPathElement {
-    Base(ClassId),
-    Field(FieldId),
+    failure_paths: Vec<Option<Vec<LifecyclePathElement>>>,
 }
 
 #[derive(Clone, Copy)]
@@ -143,7 +138,7 @@ impl<I: Copy> CapabilitySet<I> {
         &self.capabilities[class.index()]
     }
 
-    fn failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
+    fn failure(&self, class: ClassId) -> Option<&[LifecyclePathElement]> {
         self.failure_paths[class.index()].as_deref()
     }
 
@@ -178,7 +173,7 @@ impl<I: Copy> CapabilitySet<I> {
             });
             if let Some(field) = unavailable {
                 *capability = HirCopyCapability::Unavailable;
-                self.failure_paths[index] = Some(vec![CopyPathElement::Field(field)]);
+                self.failure_paths[index] = Some(vec![LifecyclePathElement::Field(field)]);
                 changed = true;
             }
         }
@@ -198,7 +193,7 @@ fn compute_class<I: Copy>(
     program: &ResolvedProgram,
     resolved_operation: fn(&ResolvedClassDeclaration) -> ResolvedCopyOperation<I>,
     capabilities: &mut [Option<HirCopyCapability<I>>],
-    failure_paths: &mut [Option<Vec<CopyPathElement>>],
+    failure_paths: &mut [Option<Vec<LifecyclePathElement>>],
     states: &mut [VisitState],
     required_constructors: Option<&CapabilitySet<CopyConstructorId>>,
 ) -> HirCopyCapability<I> {
@@ -233,7 +228,7 @@ fn compute_class<I: Copy>(
     });
     if let Some(direct_base) = class.direct_base {
         if base.is_none() {
-            let mut path = vec![CopyPathElement::Base(direct_base.class)];
+            let mut path = vec![LifecyclePathElement::Base(direct_base.class)];
             if let Some(nested_path) = &failure_paths[direct_base.class.index()] {
                 path.extend(nested_path);
             }
@@ -266,7 +261,7 @@ fn compute_class<I: Copy>(
                             required_constructors,
                         );
                         let Some(operation) = nested.selected() else {
-                            let mut path = vec![CopyPathElement::Field(field.id)];
+                            let mut path = vec![LifecyclePathElement::Field(field.id)];
                             if let Some(nested_path) = &failure_paths[target.index()] {
                                 path.extend(nested_path);
                             }
@@ -304,7 +299,7 @@ fn compute_class<I: Copy>(
                             ResolvedTypeKind::Class(target) => {
                                 if let Some(constructors) = required_constructors {
                                     if constructors.capability(target).selected().is_none() {
-                                        let mut path = vec![CopyPathElement::Field(field.id)];
+                                        let mut path = vec![LifecyclePathElement::Field(field.id)];
                                         if let Some(nested_path) = constructors.failure(target) {
                                             path.extend(nested_path);
                                         }
@@ -322,7 +317,7 @@ fn compute_class<I: Copy>(
                                     required_constructors,
                                 );
                                 let Some(operation) = nested.selected() else {
-                                    let mut path = vec![CopyPathElement::Field(field.id)];
+                                    let mut path = vec![LifecyclePathElement::Field(field.id)];
                                     if let Some(nested_path) = &failure_paths[target.index()] {
                                         path.extend(nested_path);
                                     }
@@ -352,7 +347,8 @@ fn compute_class<I: Copy>(
                                 if let ResolvedTypeKind::Class(target) = leaf {
                                     if let Some(constructors) = required_constructors {
                                         if constructors.capability(target).selected().is_none() {
-                                            let mut path = vec![CopyPathElement::Field(field.id)];
+                                            let mut path =
+                                                vec![LifecyclePathElement::Field(field.id)];
                                             if let Some(nested_path) = constructors.failure(target)
                                             {
                                                 path.extend(nested_path);
@@ -373,7 +369,7 @@ fn compute_class<I: Copy>(
                                     .selected()
                                     .is_none()
                                     {
-                                        let mut path = vec![CopyPathElement::Field(field.id)];
+                                        let mut path = vec![LifecyclePathElement::Field(field.id)];
                                         if let Some(nested_path) = &failure_paths[target.index()] {
                                             path.extend(nested_path);
                                         }
@@ -398,7 +394,7 @@ fn compute_class<I: Copy>(
                             | ResolvedTypeKind::Obj
                             | ResolvedTypeKind::Interface(_)
                             | ResolvedTypeKind::Function(_) => {
-                                failure = Some(vec![CopyPathElement::Field(field.id)]);
+                                failure = Some(vec![LifecyclePathElement::Field(field.id)]);
                                 break;
                             }
                         };

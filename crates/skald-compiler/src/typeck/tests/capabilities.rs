@@ -3,11 +3,71 @@ use crate::{
     hir::HirCopyCapability,
     identity::{ClassId, FieldId},
     resolve::ResolvedCopyOperation,
-    typeck::{
-        capabilities::{CopyCapabilities, CopyPathElement},
-        type_check, COPY_OPERATION_UNAVAILABLE,
-    },
+    type_capabilities::{LifecyclePathElement, ResolvedLifecycleCapabilities},
+    typeck::{capabilities::CopyCapabilities, type_check, COPY_OPERATION_UNAVAILABLE},
 };
+
+fn assert_resolved_lifecycle_matches_hir_plans(program: &crate::resolve::ResolvedProgram) {
+    let resolved = ResolvedLifecycleCapabilities::compute(program);
+    let hir = CopyCapabilities::compute(program);
+    for class in program.classes.iter() {
+        assert_eq!(
+            resolved.constructor(class.id),
+            hir.constructor(class.id).selected().is_some(),
+            "copy-constructor capability diverged for {}",
+            class.name
+        );
+        assert_eq!(
+            resolved.assignment(class.id),
+            hir.assignment(class.id).selected().is_some(),
+            "copy-assignment capability diverged for {}",
+            class.name
+        );
+        assert_eq!(
+            resolved.constructor_failure(class.id),
+            hir.constructor_failure(class.id)
+        );
+        assert_eq!(
+            resolved.assignment_failure(class.id),
+            hir.assignment_failure(class.id)
+        );
+    }
+    for array in program.array_types.iter() {
+        assert_eq!(
+            resolved.array_copy(array.id),
+            hir.array(array.id).lifecycle.copy.is_some()
+        );
+        assert_eq!(
+            resolved.array_assignment(array.id),
+            hir.array(array.id).lifecycle.assignment.is_some()
+        );
+    }
+}
+
+#[test]
+fn phase_neutral_lifecycle_facts_match_hir_plan_availability() {
+    let mut resolved = resolve_text(concat!(
+        "class Good { init() {} }\n",
+        "class Bad { init() {} }\n",
+        "class Aggregate {\n",
+        "  direct: Good; optional: Good??; values: Good?[]; bad: Bad?[];\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let bad = resolved
+        .classes
+        .iter()
+        .find(|class| class.name == "Bad")
+        .unwrap()
+        .id;
+    resolved.classes.entries_mut_for_test()[bad.index()].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    resolved.classes.entries_mut_for_test()[bad.index()].copy_assignment =
+        ResolvedCopyOperation::Unavailable;
+
+    assert_resolved_lifecycle_matches_hir_plans(&resolved);
+}
 
 #[test]
 fn propagates_the_first_unavailable_field_path_without_affecting_the_other_operation() {
@@ -29,7 +89,13 @@ fn propagates_the_first_unavailable_field_path_without_affecting_the_other_opera
     );
     assert_eq!(
         capabilities.assignment_failure(ClassId::new(0)),
-        Some([CopyPathElement::Field(FieldId::new(ClassId::new(0), 0))].as_slice())
+        Some(
+            [LifecyclePathElement::Field(FieldId::new(
+                ClassId::new(0),
+                0
+            ))]
+            .as_slice()
+        )
     );
     assert_eq!(
         capabilities.assignment_failure(ClassId::new(1)),
@@ -81,7 +147,13 @@ fn optional_inline_edges_require_the_payload_copy_capability() {
     );
     assert_eq!(
         capabilities.assignment_failure(ClassId::new(1)),
-        Some([CopyPathElement::Field(FieldId::new(ClassId::new(1), 0))].as_slice())
+        Some(
+            [LifecyclePathElement::Field(FieldId::new(
+                ClassId::new(1),
+                0
+            ))]
+            .as_slice()
+        )
     );
 }
 
@@ -123,7 +195,13 @@ fn recursive_synthesis_terminates_and_marks_the_capability_unavailable() {
     );
     assert_eq!(
         capabilities.constructor_failure(ClassId::new(0)),
-        Some([CopyPathElement::Field(FieldId::new(ClassId::new(0), 0))].as_slice())
+        Some(
+            [LifecyclePathElement::Field(FieldId::new(
+                ClassId::new(0),
+                0
+            ))]
+            .as_slice()
+        )
     );
     assert_eq!(
         capabilities.assignment(ClassId::new(0)),

@@ -3,10 +3,8 @@ use crate::{
     hir::{HirBaseCopy, HirDestructionStep, HirObjectSource, HirStatement},
     mir::MirCopyCapability,
     resolve::ResolvedCopyOperation,
-    typeck::{
-        capabilities::CopyPathElement, AMBIGUOUS_INITIALIZER, FIELD_INITIALIZATION,
-        NO_MATCHING_INITIALIZER,
-    },
+    type_capabilities::LifecyclePathElement,
+    typeck::{AMBIGUOUS_INITIALIZER, FIELD_INITIALIZATION, NO_MATCHING_INITIALIZER},
 };
 
 const BASE_AND_DERIVED: &str = concat!(
@@ -211,11 +209,11 @@ fn user_copy_operations_still_require_available_base_operations() {
     );
     assert_eq!(
         capabilities.constructor_failure(derived),
-        Some([CopyPathElement::Base(ClassId::new(0))].as_slice())
+        Some([LifecyclePathElement::Base(ClassId::new(0))].as_slice())
     );
     assert_eq!(
         capabilities.assignment_failure(derived),
-        Some([CopyPathElement::Base(ClassId::new(0))].as_slice())
+        Some([LifecyclePathElement::Base(ClassId::new(0))].as_slice())
     );
 
     let output = crate::typeck::type_check(&program);

@@ -16,8 +16,9 @@ publishes complete closed bases, interface claims, fields, statics, lifecycle
 signatures, initializer overloads, method signatures, static initializer
 expressions, and callable bodies under deterministic ordinary identities. The
 ordinary body resolver selects closed constructions, calls, casts, places,
-and static members without a duplicate generic resolver. A closed-type
-capability facade composes the existing validators and lifecycle planners;
+and static members without a duplicate generic resolver. A phase-neutral
+closed-type capability service evaluates contextual eligibility and resolved
+lifecycle availability before HIR construction;
 valid closed applications enter the ordinary public MIR/backend pipeline. The
 standard-library `Vec<T>` exercises this complete contract through ordinary
 source specialization.
@@ -176,11 +177,12 @@ Declaration contexts generate their corresponding requirements. Body
 operation selection adds only capabilities actually required. Requirement
 origins retain the exact source span and enclosing template construct.
 
-After substitution, evaluation delegates to existing validators and lifecycle
-planners. Optional default construction, recursive optional copy/assignment,
-array element lifecycle, shared-owner retain/release, exact-class copy
-capabilities, and stored/alias/shared-target eligibility remain single-sourced
-in their ordinary phase owners.
+After substitution, evaluation uses the phase-neutral `type_capabilities`
+service. It owns stored, alias, optional, array, and shared-target eligibility
+plus recursive resolved lifecycle availability for classes and aggregates.
+Type checking consumes the same resolved program to construct concrete HIR
+copy and assignment plans; parity tests keep plan availability aligned with
+the neutral facts without making resolution depend on HIR.
 
 The implemented query facade accepts already-closed subjects from the
 specialization owner. That owner is responsible for structural
@@ -189,9 +191,8 @@ facade reports the originating requirement when a capability is unavailable.
 Static all-zero initialization remains distinct from requested-length array
 element defaulting even though both arise from a default requirement reason.
 
-The generic layer may expose a cohesive query facade over those owners, but it
-must not implement parallel tables whose answers can diverge from non-generic
-types.
+The generic layer closes subjects and reports requirement origins. It does not
+lower types to HIR or call into type checking.
 
 ## Nominal interface bounds
 

@@ -7,7 +7,6 @@ mod capabilities;
 mod containment;
 mod expression;
 mod function;
-mod generic_requirements;
 mod literal;
 mod optional;
 mod optional_box_types;
@@ -22,11 +21,7 @@ pub use arrays::{
     ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE, ARRAY_PROJECTION_REQUIRES_ARRAY,
     INVALID_ARRAY_ELEMENT,
 };
-pub(crate) use capabilities::CopyPathElement;
 pub use containment::RECURSIVE_INLINE_CONTAINMENT;
-pub(crate) use generic_requirements::{
-    failed_interface_specialization_requirements, failed_specialization_requirements,
-};
 pub use optional_validation::INVALID_OPTIONAL_TYPE;
 pub use program::{
     type_check, TypeCheckOutput, AMBIGUOUS_INITIALIZER, COPY_OPERATION_UNAVAILABLE,
