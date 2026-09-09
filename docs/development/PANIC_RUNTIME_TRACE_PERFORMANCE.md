@@ -31,8 +31,10 @@ python3 scripts/measure_panic_runtime_trace.py \
 python3 scripts/measure_panic_runtime_trace.py --json
 ```
 
-Generated assembly and executables are written beneath the ignored
-`build/measurements/panic-runtime-trace/` directory. The procedure is not a
+Generated assembly and executables are written to a unique run directory
+beneath the ignored `build/measurements/panic-runtime-trace/` directory. Every
+compiler and native child has a watchdog, and runtime summaries include median
+absolute deviation. The procedure is not a
 pass/fail timing gate: host load, CPU policy, kernel, linker, and toolchain all
 affect wall time and file size. It does fail if compilation or execution fails,
 if omitted assembly retains any trace artifact, or if enabled assembly no

@@ -10,6 +10,8 @@ The fused-range acceptance measurement is documented in
 [Tight Range-Loop Performance](RANGE_LOOP_PERFORMANCE.md).
 The opt-in structural opportunity census is documented in
 [Local final-MIR redundancy measurement](MIR_REDUNDANCY_MEASUREMENT.md).
+The cross-cutting compiler and native baseline is documented in
+[Cleanup Measurement Baseline](CLEANUP_MEASUREMENTS.md).
 
 ## Prerequisites
 
@@ -107,6 +109,13 @@ assembly, and native-result tests are the ordinary correctness gates.
 corpus through the in-process compiler inspection boundary. It writes canonical
 JSON below ignored `build/measurements/` and is intentionally excluded from
 `make check`; it is evidence collection, not a correctness or timing gate.
+
+`make cleanup-baseline` captures deterministic compiler/artifact facts and
+separate operational compiler and native observations across the reviewed
+cleanup workload matrix. It uses the `golden` compiler profile, unique run
+directories, subprocess watchdogs, repeated artifact and semantic checks, and
+paired native execution order. It remains outside both validation gates; see
+[Cleanup Measurement Baseline](CLEANUP_MEASUREMENTS.md).
 
 ## Minimum supported Rust version
 

@@ -7,11 +7,11 @@ GOLDEN_RELEASE_COMPILER := target/release/skac
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
 	workspace-test compiler-test binary64-test cli-test docs-test golden-runner-test \
-	mir-measure-test golden-tools \
+	mir-measure-test measurement-support-test golden-tools \
 	golden-release-tools golden-expectations-test golden-test \
 	golden-release-test golden-filter golden-exact \
 	golden-determinism-test runtime-test runtime-trace-benchmark test-core test \
-	generic-vec-benchmark range-loop-benchmark mir-redundancy-measure \
+	generic-vec-benchmark range-loop-benchmark cleanup-baseline mir-redundancy-measure \
 	msrv-check robustness-long check-core check check-long
 
 help:
@@ -46,9 +46,11 @@ help:
 	@echo "Extended validation:"
 	@echo "  make golden-release-test Run all goldens with release-built tools"
 	@echo "  make golden-determinism-test Run all goldens twice with optimized assertion-enabled tools"
+	@echo "  make measurement-support-test Run measurement harness unit tests"
 	@echo "  make runtime-trace-benchmark Compare enabled and omitted panic trace overhead"
 	@echo "  make generic-vec-benchmark Measure representative generic Vec growth"
 	@echo "  make range-loop-benchmark Compare fused ranges with matched while loops"
+	@echo "  make cleanup-baseline Capture the repository cleanup measurement baseline"
 	@echo "  make mir-redundancy-measure Measure the reviewed final-MIR redundancy corpus"
 	@echo "  make msrv-check       Type-check every Rust target with the declared MSRV"
 	@echo "  make robustness-long  Run extended deterministic frontend robustness tests"
@@ -107,6 +109,9 @@ golden-runner-test:
 mir-measure-test:
 	cargo test --locked -p skald-mir-measure
 
+measurement-support-test:
+	python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+
 golden-expectations-test:
 	cargo test --locked -p skald-golden --test planning --test process_execution --test reporting
 
@@ -133,17 +138,17 @@ golden-exact: golden-tools
 golden-determinism-test: golden-tools
 	$(GOLDEN_RUNNER) --compiler $(GOLDEN_COMPILER) --determinism full
 
-runtime-trace-benchmark: runtime
-	cargo build --locked -p skac
-	python3 scripts/measure_panic_runtime_trace.py --compiler target/debug/skac
+runtime-trace-benchmark: runtime golden-tools
+	python3 scripts/measure_panic_runtime_trace.py --compiler $(GOLDEN_COMPILER)
 
-generic-vec-benchmark: runtime
-	cargo build --locked -p skac
-	python3 scripts/measure_generic_vec.py --compiler target/debug/skac
+generic-vec-benchmark: runtime golden-tools
+	python3 scripts/measure_generic_vec.py --compiler $(GOLDEN_COMPILER)
 
-range-loop-benchmark: runtime
-	cargo build --locked -p skac
-	python3 scripts/measure_range_loops.py --compiler target/debug/skac --require-target
+range-loop-benchmark: runtime golden-tools
+	python3 scripts/measure_range_loops.py --compiler $(GOLDEN_COMPILER) --require-target
+
+cleanup-baseline: runtime golden-tools
+	python3 scripts/measure_cleanup_baseline.py --compiler $(GOLDEN_COMPILER) --compiler-profile $(GOLDEN_PROFILE)
 
 mir-redundancy-measure:
 	cargo run --quiet --locked -p skald-mir-measure -- \

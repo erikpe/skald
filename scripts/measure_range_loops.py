@@ -6,30 +6,22 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import statistics
-import subprocess
-import time
 from pathlib import Path
 
+from measurement_support import (
+    REPOSITORY,
+    alternating_order,
+    repository_identity,
+    resolve_repository_path,
+    timed_process,
+    timing_summary,
+    unique_run_directory,
+)
 
-REPOSITORY = Path(__file__).resolve().parents[1]
 SOURCE_DIRECTORY = REPOSITORY / "tests/benchmarks/range_loop"
-BUILD_DIRECTORY = REPOSITORY / "build/measurements/range-loop"
+OUTPUT_ROOT = REPOSITORY / "build/measurements/range-loop"
 INTEGER_TYPES = ("u8", "u64", "i64")
 SOURCE_FUNCTION = re.compile(r"^\.type (\.Lska\.fn\..*\.main\.f\d+), @function$")
-
-
-def timed_process(command: list[str]) -> tuple[subprocess.CompletedProcess[bytes], float]:
-    started = time.perf_counter()
-    completed = subprocess.run(command, cwd=REPOSITORY, capture_output=True, check=False)
-    return completed, (time.perf_counter() - started) * 1000.0
-
-
-def require_success(completed: subprocess.CompletedProcess[bytes], operation: str) -> None:
-    if completed.returncode == 0:
-        return
-    stderr = completed.stderr.decode("utf-8", errors="replace")
-    raise SystemExit(f"{operation} failed with exit code {completed.returncode}:\n{stderr}")
 
 
 def source_instruction_profile(assembly: Path) -> dict[str, int]:
@@ -52,30 +44,33 @@ def source_instruction_profile(assembly: Path) -> dict[str, int]:
     return profile
 
 
-def compile_workloads(compiler: Path) -> dict[tuple[str, str], dict[str, object]]:
-    BUILD_DIRECTORY.mkdir(parents=True, exist_ok=True)
+def compile_workloads(
+    compiler: Path, build_directory: Path, timeout_seconds: float
+) -> dict[tuple[str, str], dict[str, object]]:
     products: dict[tuple[str, str], dict[str, object]] = {}
     for integer in INTEGER_TYPES:
         for form in ("range", "while"):
             source = SOURCE_DIRECTORY / f"{integer}_{form}.ska"
-            executable = BUILD_DIRECTORY / f"{integer}_{form}"
-            assembly = BUILD_DIRECTORY / f"{integer}_{form}.s"
-            compiled, compile_ms = timed_process(
-                [str(compiler), str(source), "--omit-runtime-trace", "-o", str(executable)]
+            executable = build_directory / f"{integer}_{form}"
+            assembly = build_directory / f"{integer}_{form}.s"
+            _, compile_ms = timed_process(
+                [compiler, source, "--omit-runtime-trace", "-o", executable],
+                operation=f"{integer} {form} compilation",
+                timeout_seconds=timeout_seconds,
             )
-            require_success(compiled, f"{integer} {form} compilation")
-            emitted, assembly_ms = timed_process(
+            _, assembly_ms = timed_process(
                 [
-                    str(compiler),
-                    str(source),
+                    compiler,
+                    source,
                     "--omit-runtime-trace",
                     "--emit",
                     "asm",
                     "-o",
-                    str(assembly),
-                ]
+                    assembly,
+                ],
+                operation=f"{integer} {form} assembly emission",
+                timeout_seconds=timeout_seconds,
             )
-            require_success(emitted, f"{integer} {form} assembly emission")
             products[(integer, form)] = {
                 "source": str(source.relative_to(REPOSITORY)),
                 "executable": executable,
@@ -90,15 +85,21 @@ def compile_workloads(compiler: Path) -> dict[tuple[str, str], dict[str, object]
 
 
 def run_workloads(
-    products: dict[tuple[str, str], dict[str, object]], repeats: int, warmups: int
+    products: dict[tuple[str, str], dict[str, object]],
+    repeats: int,
+    warmups: int,
+    timeout_seconds: float,
 ) -> None:
     for iteration in range(warmups + repeats):
-        forms = ("range", "while") if iteration % 2 == 0 else ("while", "range")
+        forms = alternating_order(("range", "while"), iteration)
         for integer in INTEGER_TYPES:
             for form in forms:
                 product = products[(integer, form)]
-                completed, elapsed_ms = timed_process([str(product["executable"])])
-                require_success(completed, f"{integer} {form} workload")
+                _, elapsed_ms = timed_process(
+                    [product["executable"]],
+                    operation=f"{integer} {form} workload",
+                    timeout_seconds=timeout_seconds,
+                )
                 if iteration >= warmups:
                     product["run_times_ms"].append(elapsed_ms)
 
@@ -114,7 +115,8 @@ def measurements(
         for form in ("range", "while"):
             product = products[(integer, form)]
             times = product["run_times_ms"]
-            median = statistics.median(times)
+            summary = timing_summary(times)
+            median = summary["median_ms"]
             medians[form] = median
             forms[form] = {
                 **{
@@ -123,6 +125,9 @@ def measurements(
                     if key not in {"executable", "run_times_ms"}
                 },
                 "median_run_ms": median,
+                "median_absolute_deviation_ms": summary[
+                    "median_absolute_deviation_ms"
+                ],
                 "min_run_ms": min(times),
                 "max_run_ms": max(times),
             }
@@ -145,11 +150,13 @@ def measurements(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--compiler", default="target/debug/skac")
+    parser.add_argument("--compiler", default="target/golden/skac")
+    parser.add_argument("--compiler-profile", default="golden")
     parser.add_argument("--repeats", type=int, default=9)
     parser.add_argument("--warmups", type=int, default=2)
     parser.add_argument("--maximum-overhead", type=float, default=0.10)
     parser.add_argument("--require-target", action="store_true")
+    parser.add_argument("--timeout", type=float, default=30.0, dest="timeout_seconds")
     parser.add_argument("--json", action="store_true", dest="as_json")
     arguments = parser.parse_args()
     if arguments.repeats < 1:
@@ -158,17 +165,32 @@ def main() -> None:
         parser.error("--warmups must not be negative")
     if arguments.maximum_overhead < 0:
         parser.error("--maximum-overhead must not be negative")
+    if arguments.timeout_seconds <= 0:
+        parser.error("--timeout must be positive")
 
-    compiler = Path(arguments.compiler)
-    if not compiler.is_absolute():
-        compiler = REPOSITORY / compiler
-    products = compile_workloads(compiler)
-    run_workloads(products, arguments.repeats, arguments.warmups)
+    compiler = resolve_repository_path(arguments.compiler)
+    build_directory = unique_run_directory(OUTPUT_ROOT, "run")
+    products = compile_workloads(compiler, build_directory, arguments.timeout_seconds)
+    run_workloads(products, arguments.repeats, arguments.warmups, arguments.timeout_seconds)
     result = measurements(products, arguments.repeats, arguments.maximum_overhead)
+    result.update(
+        {
+            "compiler": {
+                **repository_identity(arguments.timeout_seconds),
+                "profile": arguments.compiler_profile,
+            },
+            "target": "x86_64-sysv",
+            "runtime_trace": "omitted",
+            "warmups": arguments.warmups,
+            "timeout_seconds": arguments.timeout_seconds,
+            "run_directory": str(build_directory.relative_to(REPOSITORY)),
+        }
+    )
     if arguments.as_json:
         print(json.dumps(result, indent=2))
     else:
         print(f"repeats: {result['repeats']}")
+        print(f"run_directory: {result['run_directory']}")
         print(f"maximum_range_overhead_percent: {result['maximum_range_overhead_percent']}")
         for integer, row in result["integer_types"].items():
             print(

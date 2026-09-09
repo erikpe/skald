@@ -119,6 +119,8 @@ Use the authority closest to the behavior:
   design belongs in [structured compiler reporting](compiler/REPORTING.md);
 - contributor prerequisites and validation belong in the
   [development workflow](development/README.md);
+- reproducible cross-cutting cleanup measurements belong in the
+  [cleanup measurement baseline](development/CLEANUP_MEASUREMENTS.md);
 - test ownership, placement, fixtures, determinism, and robustness belong in
   [testing](development/TESTING.md);
 - phase inspection, dump use, verifier boundaries, and assembly debugging

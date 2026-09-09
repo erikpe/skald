@@ -131,7 +131,7 @@ work and its validation; findings without that record remain `Open`.
 | [A31](#a31--avoid-mandatory-string-to-array-copies-for-output) | Avoid mandatory string-to-array copies for output | Open | P2 | 4 | L | High | C | N, M |
 | [A32](#a32--measure-and-reduce-mapvec-copy-traffic) | Measure and reduce Map/Vec copy traffic | Open | P2 | 4 | L | High | C | N |
 | [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | Open | P2 | 4 | M | Medium | O | M, R, C |
-| [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | Open | P1 | 4 | M | Low | O | C, N, R |
+| [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | Complete | P1 | 4 | M | Low | O | C, N, R |
 | [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Complete | P2 | 2 | XS | Low | O | R |
 | [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Open | P2 | 3 | S–M | Medium | O | R, M |
 | [A37](#a37--simplify-literal-selection-and-bound-glob-matching) | Simplify literal selection and bound glob matching | Open | P3 | 2 | S | Low | O | C, R |
@@ -911,6 +911,8 @@ checks; do not delete similar-looking tests solely to shorten the suite.
 
 ### A34 — Establish reproducible cleanup measurements
 
+**Status:** Complete (2026-09-09).
+
 **Evidence:** [range](../../scripts/measure_range_loops.py) and
 [Vec](../../scripts/measure_generic_vec.py) scripts duplicate timing and error
 helpers, use fixed build directories, and launch subprocesses without
@@ -932,6 +934,26 @@ size. **Validation:** repeated runs preserve semantic results and deterministic
 metrics, timing noise does not fail ordinary `make check`, and operational
 metadata is excluded from deterministic projections. Use this before A10,
 A17, A19, A22, A24, A31, or A32.
+
+**Delivered:** a documented `make cleanup-baseline` procedure now measures 19
+reviewed compile and native workloads with the optimized assertion-enabled
+compiler. Reports record repository/compiler identity, target, trace policy,
+source inventory, the resolved 17-occurrence MIR schedule, repetition policy,
+deterministic assembly hashes and sizes, and repeated native-result digests.
+Compiler wall time and peak RSS, executable-build cost, and native timing live
+in a separate operational section with medians and median absolute deviations.
+Every invocation uses a unique artifact directory and every child process has
+a process-group watchdog. Paired native variants alternate execution order.
+The existing range, generic-Vec, and panic-trace tools reuse the same bounded
+process, timing, ordering, and artifact helpers while retaining their focused
+metrics; Make targets now consistently use the `golden` compiler profile.
+
+The helper unit suite covers timing dispersion, alternating order, unique run
+directories, process-group deadlines, and exclusion of operational metadata
+from deterministic projections. The complete 19-workload baseline preserved
+repeated assembly and native semantics. Focused measurements for all three
+existing scripts, documentation validation, `git diff --check`, and the full
+`make check` gate pass, including all 628 golden leaves.
 
 ### A35 — Preserve snapshot aggregation's saturation flag
 

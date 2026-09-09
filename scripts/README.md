@@ -33,7 +33,23 @@ make runtime-trace-benchmark
 
 Call the script directly to change repeat counts, select workloads, or emit
 JSON after building `skac` and the runtime. Generated measurement artifacts
-remain under the ignored `build/measurements/panic-runtime-trace/` directory.
+remain in a unique run directory under the ignored
+`build/measurements/panic-runtime-trace/` directory.
+
+`measure_cleanup_baseline.py` is the cross-cutting measurement entry point for
+cleanup work. It captures deterministic compiler and artifact facts separately
+from compiler resource use and native timing across the reviewed compile and
+native workload matrix:
+
+```text
+make cleanup-baseline
+```
+
+The report contract and comparison procedure are documented in
+[Cleanup Measurement Baseline](../docs/development/CLEANUP_MEASUREMENTS.md).
+`measurement_support.py` owns the small shared subprocess, watchdog, unique
+directory, alternating-order, timing-summary, hashing, and repository-identity
+helpers. Its focused tests run through `make measurement-support-test`.
 
 `measure_generic_vec.py` compiles the representative generic-vector growth,
 copy, pop, and clear workload under `tests/benchmarks/generic_vec/`, then
@@ -41,12 +57,13 @@ reports assembly/executable size, compile time, and median native run time:
 
 ```sh
 make generic-vec-benchmark
-python3 scripts/measure_generic_vec.py --compiler target/debug/skac --json
+python3 scripts/measure_generic_vec.py --compiler target/golden/skac --json
 ```
 
 It is a reproducible measurement procedure, not a timing correctness gate.
-Artifacts remain under the ignored `build/measurements/generic-vec/`
-directory.
+Artifacts remain in unique run directories under the ignored
+`build/measurements/generic-vec/` directory. Child processes have watchdogs,
+and timing output includes median absolute deviation.
 
 `measure_range_loops.py` compiles matched `u8`, `u64`, and `i64` fused-range
 and handwritten-`while` workloads, validates their checksums, records assembly
@@ -54,10 +71,12 @@ profiles and artifact sizes, and reports interleaved repeated median timings:
 
 ```sh
 make range-loop-benchmark
-python3 scripts/measure_range_loops.py --compiler target/debug/skac --json
+python3 scripts/measure_range_loops.py --compiler target/golden/skac --json
 ```
 
 The Make target enforces the documented maximum 10% range overhead. Timing is
 deliberately outside `make check`; deterministic MIR and assembly-shape tests
-are the correctness gates. Artifacts remain under the ignored
-`build/measurements/range-loop/` directory.
+are the correctness gates. Artifacts remain in unique run directories under
+the ignored `build/measurements/range-loop/` directory. Paired variants
+alternate order, child processes have watchdogs, and timing output includes
+median absolute deviation.

@@ -29,19 +29,20 @@ For machine-readable observations or a different exploratory repeat count:
 
 ```sh
 python3 scripts/measure_range_loops.py \
-  --compiler target/debug/skac --repeats 15 --warmups 3 --json
+  --compiler target/golden/skac --repeats 15 --warmups 3 --json
 ```
 
-The script validates every exit status, reports median/minimum/maximum wall
-time, compilation time, assembly and executable byte counts, and the source
-`main` function's mnemonic profile. Generated artifacts remain under ignored
+The script validates every exit status with a subprocess watchdog, reports
+median/median-absolute-deviation/minimum/maximum wall time, compilation time,
+assembly and executable byte counts, and the source `main` function's mnemonic
+profile. Generated artifacts remain in a unique run directory under ignored
 `build/measurements/range-loop/`. Inspect the emitted source functions without
 freezing addresses or labels, for example:
 
 ```sh
-diff -u build/measurements/range-loop/u64_while.s \
-  build/measurements/range-loop/u64_range.s
-objdump -d build/measurements/range-loop/u64_range
+diff -u build/measurements/range-loop/run-*/u64_while.s \
+  build/measurements/range-loop/run-*/u64_range.s
+objdump -d build/measurements/range-loop/run-*/u64_range
 ```
 
 Close background work and use a stable performance policy for less noisy

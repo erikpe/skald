@@ -6,13 +6,18 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
-import subprocess
-import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from measurement_support import (
+    REPOSITORY,
+    alternating_order,
+    run_checked,
+    timed_process,
+    timing_summary,
+    unique_run_directory,
+)
 
-REPOSITORY = Path(__file__).resolve().parents[1]
 DEFAULT_BUILD_DIRECTORY = REPOSITORY / "build" / "measurements" / "panic-runtime-trace"
 
 
@@ -59,6 +64,7 @@ class RuntimeMetrics:
     repeats: int
     median_ms: float
     mean_ms: float
+    median_absolute_deviation_ms: float
     min_ms: float
     max_ms: float
 
@@ -79,25 +85,12 @@ class WorkloadMeasurement:
     omitted: VariantMeasurement
 
 
-def run_checked(arguments: list[str], *, capture: bool = True) -> subprocess.CompletedProcess[bytes]:
-    result = subprocess.run(
-        arguments,
-        cwd=REPOSITORY,
-        stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if result.returncode != 0:
-        stderr = result.stderr.decode("utf-8", errors="backslashreplace")
-        raise RuntimeError(f"command failed with status {result.returncode}: {arguments!r}\n{stderr}")
-    return result
-
-
 def compile_variant(
     compiler: Path,
     workload: Workload,
     policy: str,
     build_directory: Path,
+    timeout_seconds: float,
 ) -> tuple[Path, Path]:
     stem = build_directory / f"{workload.name}-{policy}"
     assembly = stem.with_suffix(".s")
@@ -112,7 +105,9 @@ def compile_variant(
             *policy_arguments,
             "-o",
             str(assembly),
-        ]
+        ],
+        operation=f"{workload.name} {policy} assembly emission",
+        timeout_seconds=timeout_seconds,
     )
     run_checked(
         [
@@ -121,7 +116,9 @@ def compile_variant(
             *policy_arguments,
             "-o",
             str(executable),
-        ]
+        ],
+        operation=f"{workload.name} {policy} compilation",
+        timeout_seconds=timeout_seconds,
     )
     return assembly, executable
 
@@ -207,17 +204,23 @@ def analyze_assembly(path: Path, policy: str) -> AssemblyMetrics:
     )
 
 
-def timed_run(executable: Path) -> float:
-    start = time.perf_counter_ns()
-    run_checked([str(executable)], capture=False)
-    return (time.perf_counter_ns() - start) / 1_000_000.0
+def timed_run(executable: Path, timeout_seconds: float) -> float:
+    _, elapsed_ms = timed_process(
+        [executable],
+        operation=f"native workload {executable.name}",
+        capture=False,
+        timeout_seconds=timeout_seconds,
+    )
+    return elapsed_ms
 
 
 def runtime_metrics(timings: list[float]) -> RuntimeMetrics:
+    summary = timing_summary(timings)
     return RuntimeMetrics(
         repeats=len(timings),
-        median_ms=statistics.median(timings),
+        median_ms=summary["median_ms"],
         mean_ms=statistics.fmean(timings),
+        median_absolute_deviation_ms=summary["median_absolute_deviation_ms"],
         min_ms=min(timings),
         max_ms=max(timings),
     )
@@ -228,16 +231,21 @@ def benchmark_pair(
     omitted: Path,
     warmups: int,
     repeats: int,
+    timeout_seconds: float,
 ) -> tuple[RuntimeMetrics, RuntimeMetrics]:
-    for _ in range(warmups):
-        run_checked([str(enabled)], capture=False)
-        run_checked([str(omitted)], capture=False)
-    timings = {"enabled": [], "omitted": []}
     variants = {"enabled": enabled, "omitted": omitted}
+    for warmup in range(warmups):
+        for policy in alternating_order(("enabled", "omitted"), warmup):
+            run_checked(
+                [variants[policy]],
+                operation=f"{policy} warmup",
+                capture=False,
+                timeout_seconds=timeout_seconds,
+            )
+    timings = {"enabled": [], "omitted": []}
     for repeat in range(repeats):
-        order = ("enabled", "omitted") if repeat % 2 == 0 else ("omitted", "enabled")
-        for policy in order:
-            timings[policy].append(timed_run(variants[policy]))
+        for policy in alternating_order(("enabled", "omitted"), repeat):
+            timings[policy].append(timed_run(variants[policy], timeout_seconds))
     return runtime_metrics(timings["enabled"]), runtime_metrics(timings["omitted"])
 
 
@@ -247,15 +255,16 @@ def measure_workload(
     build_directory: Path,
     warmups: int,
     repeats: int,
+    timeout_seconds: float,
 ) -> WorkloadMeasurement:
     enabled_assembly, enabled_executable = compile_variant(
-        compiler, workload, "enabled", build_directory
+        compiler, workload, "enabled", build_directory, timeout_seconds
     )
     omitted_assembly, omitted_executable = compile_variant(
-        compiler, workload, "omitted", build_directory
+        compiler, workload, "omitted", build_directory, timeout_seconds
     )
     enabled_runtime, omitted_runtime = benchmark_pair(
-        enabled_executable, omitted_executable, warmups, repeats
+        enabled_executable, omitted_executable, warmups, repeats, timeout_seconds
     )
     return WorkloadMeasurement(
         workload=workload.name,
@@ -331,7 +340,7 @@ def main() -> int:
     parser.add_argument(
         "--compiler",
         type=Path,
-        default=REPOSITORY / "target/debug/skac",
+        default=REPOSITORY / "target/golden/skac",
         help="Path to the skac executable",
     )
     parser.add_argument(
@@ -342,6 +351,7 @@ def main() -> int:
     )
     parser.add_argument("--warmups", type=int, default=2)
     parser.add_argument("--repeats", type=int, default=9)
+    parser.add_argument("--timeout", type=float, default=30.0, dest="timeout_seconds")
     parser.add_argument(
         "--workload",
         action="append",
@@ -352,12 +362,13 @@ def main() -> int:
     arguments = parser.parse_args()
     if arguments.warmups < 0 or arguments.repeats < 1:
         parser.error("--warmups must be nonnegative and --repeats must be positive")
+    if arguments.timeout_seconds <= 0:
+        parser.error("--timeout must be positive")
 
     compiler = arguments.compiler.resolve()
     if not compiler.is_file():
         parser.error(f"compiler does not exist: {compiler}")
-    build_directory = arguments.build_directory.resolve()
-    build_directory.mkdir(parents=True, exist_ok=True)
+    build_directory = unique_run_directory(arguments.build_directory.resolve(), "run")
     selected = [
         workload
         for workload in WORKLOADS
@@ -370,6 +381,7 @@ def main() -> int:
             build_directory,
             arguments.warmups,
             arguments.repeats,
+            arguments.timeout_seconds,
         )
         for workload in selected
     ]
@@ -377,6 +389,7 @@ def main() -> int:
     if arguments.json:
         print(json.dumps([asdict(measurement) for measurement in measurements], indent=2))
     else:
+        print(f"artifacts: {build_directory.relative_to(REPOSITORY)}")
         print_table(measurements)
     return 0
 
