@@ -13,7 +13,7 @@ use crate::{
     reporting::{
         ReportDetail, ReportEvent, ReportMetric, ReportModuleStage, ReportObserver, ReportOutcome,
     },
-    resolve::ResolvedProgram,
+    resolve::ResolveOutput,
     syntax::ParseOutput,
     typeck::TypeCheckOutput,
 };
@@ -90,10 +90,8 @@ fn module_measurement_metrics(measurements: &ModuleLoadMeasurements) -> Vec<Repo
     ]
 }
 
-pub(super) fn resolution_metrics(
-    program: &ResolvedProgram,
-    diagnostics: &Diagnostics,
-) -> Vec<ReportMetric> {
+pub(super) fn resolution_metrics(output: &ResolveOutput) -> Vec<ReportMetric> {
+    let program = &output.program;
     let mut metrics = vec![
         ReportMetric::count("modules", count(program.modules.len())),
         ReportMetric::count("function declarations", count(program.declarations.len())),
@@ -101,8 +99,20 @@ pub(super) fn resolution_metrics(
         ReportMetric::count("class declarations", count(program.classes.len())),
         ReportMetric::count("class definitions", count(program.class_definitions.len())),
         ReportMetric::count("interface declarations", count(program.interfaces.len())),
+        ReportMetric::count(
+            "semantic range discovery rounds",
+            output.measurements.semantic_range_rounds(),
+        ),
+        ReportMetric::count(
+            "semantic range bodies revisited",
+            output.measurements.semantic_range_bodies_revisited(),
+        ),
+        ReportMetric::count(
+            "semantic range interner copies",
+            output.measurements.semantic_range_interner_copies(),
+        ),
     ];
-    metrics.extend(diagnostic_metrics(diagnostics));
+    metrics.extend(diagnostic_metrics(&output.diagnostics));
     metrics
 }
 

@@ -69,7 +69,10 @@ use specialization::{
     GenericTemplateDiscoveryInput, InterfaceMaterializationInput, OrdinaryProgramProducts,
     SpecializationBodyInput, SpecializationDeclarationInput, SpecializationDiscoveryInput,
 };
-use stages::{BodyResolutionStage, CollectedDeclarations, ResolvedBodies};
+use stages::{
+    BodyResolutionStage, CollectedDeclarations, ResolvedBodies, SemanticRangeCompletion,
+    SemanticRangeRequestDelta,
+};
 use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};
 use string_language_item::validate_string_language_item;
 use virtuals::resolve_virtual_families;

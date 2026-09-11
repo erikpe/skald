@@ -150,14 +150,30 @@ deferred exact key. Final specialized-body resolution selects that key
 semantically rather than relying on one source span to identify every closed
 application.
 Key-based probing lets nested sources reuse a completed specialization before
-their own application spans have entered its provenance, while newly requested
-keys repeat the probe to a fixpoint. The probe produces no resolved loop or
-synthetic range construction. It filters callable and class work by traversing
-their statement trees; there is no global range-span registry or
-span-containment test. Specialized declarations and final real bodies are then
-resolved once from the completed request set. Thus method and overloaded
-operator results can select `T` without a second source-level type system, and
-a failed outer range does not publish dependent body requests.
+their own application spans have entered its provenance. Each isolated probe
+produces an explicit request delta and body-revisit count. A nonempty delta is
+applied only through the existing specialization coordinator; another round
+runs only when that application strictly grows the class-specialization table.
+A round with no growth is the fixed point. Programs without a validated range
+language item or any concise range source skip provisional declarations,
+hierarchy construction, probing, and interner copying entirely.
+
+The probe produces no resolved loop or synthetic range construction. It
+filters callable and class work by traversing their statement trees; there is
+no global range-span registry or span-containment test. Specialized
+declarations and final real bodies are then resolved once from the completed
+request set. Thus method and overloaded operator results can select `T`
+without a second source-level type system, and a failed outer range does not
+publish dependent body requests. Resolution detail reports expose semantic
+range discovery rounds, callable bodies revisited, and interner copies so
+future changes can compare repeated frontend work without timing assertions.
+The pinned structural baselines are zero work for an ordinary-expression-only
+program, two rounds/body revisits/interner copies for one direct local range,
+four of each for three differently typed nested ranges, and two rounds, eight
+generated callable-body revisits, and two copies for two closed generic bodies
+sharing one deferred source span. These counts justified removing the
+unconditional no-range probe; they do not justify a more complex per-body
+resumption scheduler.
 
 Resolution evaluates neither endpoint. It resolves both in source order,
 requires one exact static type `T`, requests and validates canonical

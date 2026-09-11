@@ -3,6 +3,7 @@
 use super::super::body::StringLiteralResolutionEnvironment;
 use super::*;
 use crate::identity::LiteralDataId;
+use crate::resolve::resolver::{body::SemanticRangeRequest, ResolutionMeasurements};
 
 pub(super) struct CollectedDeclarations {
     pub(super) module_declarations: ResolvedModuleDeclarationTable,
@@ -12,6 +13,18 @@ pub(super) struct CollectedDeclarations {
     pub(super) class_templates: ResolvedClassTemplateTable,
     pub(super) interface_templates: ResolvedInterfaceTemplateTable,
     pub(super) type_parameters: ResolvedTypeParameterTable,
+}
+
+/// Newly observed exact range applications from one isolated semantic probe.
+pub(super) struct SemanticRangeRequestDelta {
+    pub(super) requests: Vec<SemanticRangeRequest>,
+    pub(super) bodies_revisited: usize,
+}
+
+/// Fixed-point specialization state and the work used to reach it.
+pub(super) struct SemanticRangeCompletion {
+    pub(super) discovery: GenericApplicationDiscovery,
+    pub(super) measurements: ResolutionMeasurements,
 }
 
 /// Stable declaration and language-item inputs shared by every authoritative

@@ -257,7 +257,7 @@ The implemented metrics appear in this deterministic owner order:
 | Singleton lexing | `lex executions`, `source bytes`, `tokens`, `diagnostics`, `warnings`, `errors` |
 | Singleton parsing | `parse executions`, `tokens`, `diagnostics`, `warnings`, `errors` |
 | Module loading | `reached modules`, `source reads`, `source bytes`, discovery lex/parse executions and tokens, then final lex/parse executions and tokens |
-| Resolution | modules, function declarations/definitions, class declarations/definitions, interface declarations, diagnostics, warnings, errors |
+| Resolution | modules, function declarations/definitions, class declarations/definitions, interface declarations, semantic range discovery rounds/bodies revisited/interner copies, diagnostics, warnings, errors |
 | Type checking | produced HIR modules and function/class definitions, then diagnostics, warnings, errors; failed checking has only diagnostic metrics because it produces no HIR |
 | Preliminary MIR lowering | definitions, blocks, instructions |
 | MIR verification boundaries | verification executions; failed verification also includes verification errors |

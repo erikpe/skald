@@ -260,7 +260,7 @@ fn compile_source_to_assembly_instrumented(
                 ReportPhase::Resolution,
                 || resolve_with_source_path(&parsed.ast, path),
                 |output| diagnostics_outcome(&output.diagnostics),
-                |output, _| statistics::resolution_metrics(&output.program, &output.diagnostics),
+                |output, _| statistics::resolution_metrics(output),
             );
             diagnostics.append(resolved.diagnostics);
             finish_compilation(
@@ -293,7 +293,7 @@ fn compile_module_graph_to_assembly(
         ReportPhase::Resolution,
         || resolve_module_graph(&graph),
         |output| diagnostics_outcome(&output.diagnostics),
-        |output, _| statistics::resolution_metrics(&output.program, &output.diagnostics),
+        |output, _| statistics::resolution_metrics(output),
     );
     let sources = graph.into_sources();
     finish_compilation(

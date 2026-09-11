@@ -20,10 +20,12 @@ use super::ir::*;
 mod body;
 mod external_links;
 mod imports;
+mod measurement;
 mod name_lookup;
 mod program;
 mod type_interner;
 
+pub(crate) use measurement::ResolutionMeasurements;
 use name_lookup::{ModuleLookup, TopLevelLookup};
 use type_interner::ResolvedTypeInterner;
 
@@ -93,6 +95,7 @@ pub const UNSUPPORTED_RANGE_APPLICATION: &str = "RES063";
 pub struct ResolveOutput {
     pub program: ResolvedProgram,
     pub diagnostics: Diagnostics,
+    pub(crate) measurements: ResolutionMeasurements,
 }
 
 impl ResolveOutput {

@@ -107,7 +107,7 @@ work and its validation; findings without that record remain `Open`.
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Complete | P1 | 3 | S | Low | O | M, E |
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Complete | P1 | 5 | L | High | O | M, E, R |
 | [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Complete | P1 | 5 | L | High | O | M, E, R |
-| [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Open | P2 | 4 | M–L | High | C | M, C |
+| [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete | P2 | 4 | M–L | High | C | M, C |
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Open | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Open | P2 | 4 | M | Medium | O | M, E |
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
@@ -507,6 +507,8 @@ all-target check also passed.
 
 ### A10 — Isolate and measure semantic range discovery
 
+**Status:** Complete (2026-09-11).
+
 **Evidence:**
 [`complete_semantic_range_specializations`](../../crates/skald-compiler/src/resolve/resolver/program/semantic_range_requests.rs)
 builds provisional classes/hierarchy, clones the type interner in a loop, and
@@ -524,6 +526,38 @@ contract; optimize only after a baseline. Test local endpoint bindings,
 generated bodies, nested class/interface applications, repeated origins, and
 no false range classification for ordinary expressions. Depends on A09's
 staging decisions; do not create a second specialization engine.
+
+**Delivered:** semantic range completion now returns a named stage product
+containing the existing generic-application discovery and request-local
+measurements. Each isolated probe returns an explicit request delta with its
+callable-body revisit count. Applying the delta remains exclusively owned by
+the existing specialization coordinator introduced around A09's publication
+stages; A10 adds no second specialization engine.
+
+The fixed-point invariant is explicit: a new round may run only after applying
+the preceding delta strictly increases the class-specialization table. A round
+with no increase terminates completion. Probe diagnostics, temporary
+function-reference state, and compound types remain isolated from
+authoritative body resolution. Programs lacking either a validated range
+language item or concise range syntax now skip provisional declaration and
+hierarchy construction, body probes, and interner copies.
+
+Resolution detail reports now publish semantic range discovery rounds,
+callable bodies revisited, and interner copies. Saturating counters and focused
+tests pin structural baselines: ordinary expressions perform zero work; one
+local range takes two rounds, two body revisits, and two copies; three nested
+endpoint types take four of each; and two closed generated bodies sharing a
+deferred source span take two rounds, eight body revisits, and two copies.
+Existing range coverage continues to protect generated bodies, nested generic
+class/interface applications, repeated origins, and isolated diagnostics. The
+baseline supports the no-range fast path but does not justify a more complex
+per-body resumption scheduler.
+
+Validation passed through the focused 25-test range-resolution suite and
+resolution reporting coverage, then the full `make check` gate with 3,094
+compiler unit tests, 53 process-determinism tests, runtime and documentation
+checks, 21 compile-fail documentation tests, and all 628 golden leaves. The
+Rust 1.82.0 workspace all-target check also passed.
 
 ### A11 — Make provisional expression-type queries explicit
 

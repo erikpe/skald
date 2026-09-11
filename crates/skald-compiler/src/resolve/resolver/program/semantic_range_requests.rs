@@ -29,7 +29,15 @@ pub(super) fn complete_semantic_range_specializations(
     mut discovery: GenericApplicationDiscovery,
     type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
-) -> GenericApplicationDiscovery {
+) -> SemanticRangeCompletion {
+    let mut measurements = ResolutionMeasurements::default();
+    if input.range.is_none() || !program_contains_range(input.units) {
+        return SemanticRangeCompletion {
+            discovery,
+            measurements,
+        };
+    }
+
     let mut semantic_diagnostics = Diagnostics::new();
     let provisional_specialized = specialize_declarations(
         SpecializationDeclarationInput::new(
@@ -61,7 +69,7 @@ pub(super) fn complete_semantic_range_specializations(
     );
     loop {
         let mut semantic_interner = type_interner.clone();
-        let requests = discover_semantic_range_requests(
+        let delta = discover_semantic_range_requests(
             SemanticRangeDiscoveryInput {
                 units: input.units,
                 modules: input.modules,
@@ -82,18 +90,27 @@ pub(super) fn complete_semantic_range_specializations(
             },
             &mut semantic_interner,
         );
+        measurements.record_semantic_range_round(delta.bodies_revisited);
         let previous_class_count = discovery.class_specializations.iter().len();
         discovery = extend_with_semantic_range_requests(
             input.discovery,
             input.range,
             discovery,
-            &requests,
+            &delta.requests,
             type_interner,
             diagnostics,
         );
-        if discovery.class_specializations.iter().len() == previous_class_count {
-            return discovery;
+        let class_count = discovery.class_specializations.iter().len();
+        if class_count == previous_class_count {
+            return SemanticRangeCompletion {
+                discovery,
+                measurements,
+            };
         }
+        assert!(
+            class_count > previous_class_count,
+            "semantic range discovery may only extend specialization work"
+        );
         semantic_lookups = input.discovery.lookups_with_specializations(
             &discovery.class_specializations,
             &discovery.interface_specializations,
@@ -123,8 +140,9 @@ pub(super) struct SemanticRangeDiscoveryInput<'program, 'ast> {
 pub(super) fn discover_semantic_range_requests(
     input: SemanticRangeDiscoveryInput<'_, '_>,
     type_interner: &mut ResolvedTypeInterner,
-) -> Vec<crate::resolve::resolver::body::SemanticRangeRequest> {
+) -> SemanticRangeRequestDelta {
     let collector = SemanticRangeRequestCollector::default();
+    let mut bodies_revisited = 0usize;
     let mut diagnostics = Diagnostics::new();
     let mut address_taken = ResolvedAddressTakenCallableTable::default();
     let declarations = BodyDeclarationEnvironment::new(
@@ -163,6 +181,7 @@ pub(super) fn discover_semantic_range_requests(
             if !block_contains_range(&function.body) {
                 continue;
             }
+            bodies_revisited = bodies_revisited.saturating_add(1);
             let declaration = input
                 .functions
                 .get(work.id)
@@ -194,6 +213,12 @@ pub(super) fn discover_semantic_range_requests(
             })
             .cloned()
             .collect::<Vec<_>>();
+        bodies_revisited = bodies_revisited.saturating_add(
+            class_work
+                .iter()
+                .map(class_work_body_count)
+                .fold(0usize, usize::saturating_add),
+        );
         let _ = resolve_static_field_initializers(
             unit.ast,
             &class_work,
@@ -234,6 +259,7 @@ pub(super) fn discover_semantic_range_requests(
             .get(specialization.key.template)
             .expect("specialization keys reference template semantics");
         let work = specialization::generated_work_item(declaration, source, unit.module, ast_index);
+        bodies_revisited = bodies_revisited.saturating_add(class_work_body_count(&work));
         let environment = BodyResolutionEnvironment::new(
             input.lookups.for_unit(unit, input.modules),
             declarations,
@@ -267,7 +293,37 @@ pub(super) fn discover_semantic_range_requests(
         );
     }
 
-    collector.into_requests()
+    SemanticRangeRequestDelta {
+        requests: collector.into_requests(),
+        bodies_revisited,
+    }
+}
+
+fn program_contains_range(units: &[resolver::ModuleUnit<'_>]) -> bool {
+    units.iter().any(|unit| {
+        unit.ast
+            .declarations
+            .iter()
+            .any(|declaration| match declaration {
+                syntax::TopLevelDeclaration::Function(function) => {
+                    block_contains_range(&function.body)
+                }
+                syntax::TopLevelDeclaration::Class(class) => class_contains_range(class),
+                syntax::TopLevelDeclaration::ExternalFunction(_)
+                | syntax::TopLevelDeclaration::IntrinsicFunction(_)
+                | syntax::TopLevelDeclaration::Interface(_) => false,
+            })
+    })
+}
+
+fn class_work_body_count(work: &ClassWorkItem) -> usize {
+    work.static_initializer_members
+        .len()
+        .saturating_add(work.initializer_members.len())
+        .saturating_add(usize::from(work.copy_constructor_member.is_some()))
+        .saturating_add(usize::from(work.copy_assignment_member.is_some()))
+        .saturating_add(usize::from(work.destructor_member.is_some()))
+        .saturating_add(work.method_members.len())
 }
 
 fn class_contains_range(class: &syntax::ClassDecl) -> bool {

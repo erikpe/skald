@@ -26,6 +26,42 @@ fn resolve_range_module(source: &str) -> ResolveOutput {
     resolve_module_graph(&graph)
 }
 
+#[test]
+fn ordinary_expressions_skip_semantic_range_discovery() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "import std::range;\n",
+        "fn main() -> i64 { var value: i64 = 1 + 2; return value; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert!(output.program.range_language_item.is_some());
+    assert_eq!(output.measurements.semantic_range_rounds(), 0);
+    assert_eq!(output.measurements.semantic_range_bodies_revisited(), 0);
+    assert_eq!(output.measurements.semantic_range_interner_copies(), 0);
+}
+
+#[test]
+fn semantic_range_delta_follows_local_endpoint_bindings() {
+    let (_graph, output) = resolve_range_syntax(concat!(
+        "fn main() -> i64 {\n",
+        "  var lower: u8 = 1u8;\n",
+        "  var upper: u8 = 3u8;\n",
+        "  var ordinary: u8 = lower + upper;\n",
+        "  for (item in lower .. upper) {}\n",
+        "  return (i64) ordinary;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.measurements.semantic_range_rounds(), 2);
+    assert_eq!(output.measurements.semantic_range_bodies_revisited(), 2);
+    assert_eq!(output.measurements.semantic_range_interner_copies(), 2);
+    assert_eq!(
+        dump_resolved(&output.program)
+            .matches("RangeSource template")
+            .count(),
+        1
+    );
+}
+
 fn replace_once(source: &str, before: &str, after: &str) -> String {
     assert!(
         source.contains(before),
@@ -80,6 +116,9 @@ fn concise_integer_range_activates_canonical_module_and_retains_resolved_evidenc
     let (graph, output) =
         resolve_range_syntax("fn main() -> i64 { for (item in 1u .. 3u) {} return 0; }\n");
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.measurements.semantic_range_rounds(), 2);
+    assert_eq!(output.measurements.semantic_range_bodies_revisited(), 2);
+    assert_eq!(output.measurements.semantic_range_interner_copies(), 2);
 
     let app = graph
         .modules()
@@ -267,6 +306,9 @@ fn deferred_generic_ranges_select_distinct_keys_for_the_same_source_span() {
         "fn main() -> i64 { return 0; }\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.measurements.semantic_range_rounds(), 2);
+    assert_eq!(output.measurements.semantic_range_bodies_revisited(), 8);
+    assert_eq!(output.measurements.semantic_range_interner_copies(), 2);
 
     let dump = dump_resolved(&output.program);
     assert!(
@@ -387,6 +429,8 @@ fn nested_concise_ranges_reuse_one_completed_semantic_specialization() {
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.measurements.semantic_range_rounds(), 2);
+    assert_eq!(output.measurements.semantic_range_bodies_revisited(), 2);
 
     let range_template = output
         .program
@@ -422,6 +466,9 @@ fn deeply_nested_concise_ranges_discover_new_endpoint_types_to_a_fixpoint() {
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.measurements.semantic_range_rounds(), 4);
+    assert_eq!(output.measurements.semantic_range_bodies_revisited(), 4);
+    assert_eq!(output.measurements.semantic_range_interner_copies(), 4);
 
     let dump = dump_resolved(&output.program);
     assert_eq!(dump.matches("RangeSource template").count(), 3, "{dump}");

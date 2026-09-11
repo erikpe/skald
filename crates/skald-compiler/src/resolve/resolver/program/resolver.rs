@@ -634,7 +634,7 @@ impl<'ast> ProgramResolver<'ast> {
             ordinary_class_count,
             ordinary_interfaces.len(),
         );
-        let discovery = complete_semantic_range_specializations(
+        let semantic_range_completion = complete_semantic_range_specializations(
             SemanticRangeCompletionInput {
                 units: &self.units,
                 modules: &self.modules,
@@ -658,6 +658,10 @@ impl<'ast> ProgramResolver<'ast> {
             &mut self.type_interner,
             &mut self.diagnostics,
         );
+        let SemanticRangeCompletion {
+            discovery,
+            measurements,
+        } = semantic_range_completion;
         generic_specializations = discovery.class_specializations;
         generic_interface_specializations = discovery.interface_specializations;
         interfaces = ordinary_interfaces.clone();
@@ -887,6 +891,7 @@ impl<'ast> ProgramResolver<'ast> {
         ResolveOutput {
             program,
             diagnostics: self.diagnostics,
+            measurements,
         }
     }
 
