@@ -280,7 +280,7 @@ fn record_compiler_dependency(
     if ranges.is_empty() {
         return;
     }
-    let path = compiler_dependency_path(kind);
+    let path = kind.canonical_module().path();
     dependencies
         .entry(path)
         .or_default()
@@ -288,15 +288,6 @@ fn record_compiler_dependency(
         .entry(kind)
         .or_default()
         .extend(ranges.iter().copied());
-}
-
-pub(super) fn compiler_dependency_path(kind: CompilerDependencyKind) -> ModulePath {
-    let path = match kind {
-        CompilerDependencyKind::StringLiteral => "std::str",
-        CompilerDependencyKind::GeneralIteration => "std::iter",
-        CompilerDependencyKind::RangeForSource => "std::range",
-    };
-    ModulePath::try_from(path).expect("compiler dependency path must be valid")
 }
 
 fn finalize_graph(

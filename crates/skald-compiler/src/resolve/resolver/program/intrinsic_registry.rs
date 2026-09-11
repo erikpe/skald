@@ -4,7 +4,7 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::ModuleId,
     intrinsic::Intrinsic,
-    module::{ModulePath, ProgramModuleTable},
+    module::{CanonicalModule, ProgramModuleTable},
     resolve::{
         ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable, ResolvedFunctionLinkage,
         ResolvedModuleDeclarationTable, ResolvedParameterBindingMode, ResolvedTopLevelId,
@@ -15,56 +15,51 @@ use crate::{
 
 use super::super::{ResolvedTypeInterner, INVALID_INTRINSIC_DECLARATION};
 
-const ERROR_MODULE_PATH: &str = "std::error";
-const F64_MODULE_PATH: &str = "std::f64";
-const IO_MODULE_PATH: &str = "std::io";
-const STRING_MODULE_PATH: &str = "std::str";
-
 #[derive(Clone, Copy)]
 struct RegistryEntry {
-    module_path: &'static str,
+    module: CanonicalModule,
     name: &'static str,
     intrinsic: Intrinsic,
 }
 
 const REGISTRY: &[RegistryEntry] = &[
     RegistryEntry {
-        module_path: ERROR_MODULE_PATH,
+        module: CanonicalModule::Error,
         name: "panic",
         intrinsic: Intrinsic::Panic,
     },
     RegistryEntry {
-        module_path: IO_MODULE_PATH,
+        module: CanonicalModule::Io,
         name: "_io_standard_handle",
         intrinsic: Intrinsic::IoStandardHandle,
     },
     RegistryEntry {
-        module_path: IO_MODULE_PATH,
+        module: CanonicalModule::Io,
         name: "_io_open",
         intrinsic: Intrinsic::IoOpen,
     },
     RegistryEntry {
-        module_path: IO_MODULE_PATH,
+        module: CanonicalModule::Io,
         name: "_io_read",
         intrinsic: Intrinsic::IoRead,
     },
     RegistryEntry {
-        module_path: IO_MODULE_PATH,
+        module: CanonicalModule::Io,
         name: "_io_write",
         intrinsic: Intrinsic::IoWrite,
     },
     RegistryEntry {
-        module_path: IO_MODULE_PATH,
+        module: CanonicalModule::Io,
         name: "_io_close",
         intrinsic: Intrinsic::IoClose,
     },
     RegistryEntry {
-        module_path: F64_MODULE_PATH,
+        module: CanonicalModule::F64,
         name: "_to_bits",
         intrinsic: Intrinsic::F64ToBits,
     },
     RegistryEntry {
-        module_path: F64_MODULE_PATH,
+        module: CanonicalModule::F64,
         name: "_from_bits",
         intrinsic: Intrinsic::F64FromBits,
     },
@@ -78,12 +73,7 @@ pub(super) fn intrinsic_for_declaration(
     let path = modules.get(module)?.module_path();
     REGISTRY
         .iter()
-        .find(|entry| {
-            entry.name == name
-                && path
-                    == &ModulePath::try_from(entry.module_path)
-                        .expect("canonical intrinsic module path is valid")
-        })
+        .find(|entry| entry.name == name && path == &entry.module.path())
         .map(|entry| entry.intrinsic)
 }
 
@@ -102,11 +92,9 @@ pub(super) fn validate_intrinsic_declarations(
             .get(declaration.module)
             .expect("resolved declaration module must exist")
             .module_path();
-        let io_candidate = module_path
-            == &ModulePath::try_from(IO_MODULE_PATH).expect("canonical I/O path is valid")
-            || declaration.name.starts_with("_io_");
-        let f64_candidate = module_path
-            == &ModulePath::try_from(F64_MODULE_PATH).expect("canonical f64 path is valid");
+        let io_candidate =
+            module_path == &CanonicalModule::Io.path() || declaration.name.starts_with("_io_");
+        let f64_candidate = module_path == &CanonicalModule::F64.path();
         let diagnostic = Diagnostic::error(
             INVALID_INTRINSIC_DECLARATION,
             "intrinsic functions are reserved for compiler-defined declarations",
@@ -153,7 +141,7 @@ fn validate_f64_intrinsics(
     functions: &ResolvedFunctionDeclarationTable,
     diagnostics: &mut Diagnostics,
 ) {
-    let Some(f64_module) = canonical_module(modules, F64_MODULE_PATH) else {
+    let Some(f64_module) = canonical_module(modules, CanonicalModule::F64) else {
         return;
     };
     let declarations = module_declarations
@@ -334,7 +322,7 @@ fn validate_io_intrinsics(
     type_interner: &ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) {
-    let Some(io_module) = canonical_module(modules, IO_MODULE_PATH) else {
+    let Some(io_module) = canonical_module(modules, CanonicalModule::Io) else {
         return;
     };
     let declarations = module_declarations
@@ -668,9 +656,9 @@ const IO_INTRINSICS: &[IoIntrinsicSpecification] = &[
     },
 ];
 
-fn canonical_module(modules: &ProgramModuleTable, path: &str) -> Option<ModuleId> {
+fn canonical_module(modules: &ProgramModuleTable, module: CanonicalModule) -> Option<ModuleId> {
     modules
-        .find(&ModulePath::try_from(path).expect("canonical intrinsic module path is valid"))
+        .find(&module.path())
         .map(|module| module.module_id())
 }
 
@@ -681,7 +669,7 @@ fn validate_panic_intrinsic(
     functions: &ResolvedFunctionDeclarationTable,
     diagnostics: &mut Diagnostics,
 ) {
-    let canonical_error_module = canonical_module(modules, ERROR_MODULE_PATH);
+    let canonical_error_module = canonical_module(modules, CanonicalModule::Error);
 
     let Some(error_module) = canonical_error_module else {
         return;
@@ -748,7 +736,7 @@ fn validate_panic_intrinsic(
         );
     }
 
-    let string_class = canonical_module(modules, STRING_MODULE_PATH)
+    let string_class = canonical_module(modules, CanonicalModule::String)
         .and_then(|module| module_declarations.get(module))
         .and_then(|declarations| declarations.get("Str"))
         .and_then(|declaration| match declaration.declaration {

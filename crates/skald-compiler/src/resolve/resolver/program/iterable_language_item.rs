@@ -3,7 +3,7 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::TypeParameterId,
-    module::{ModulePath, ProgramModuleTable},
+    module::{CanonicalModule, ProgramModuleTable},
     resolve::{
         ResolvedInterfaceTemplateRequirementSignature, ResolvedInterfaceTemplateSemanticTable,
         ResolvedInterfaceTemplateTable, ResolvedIterableLanguageItem,
@@ -31,7 +31,7 @@ pub(super) fn validate_iterable_language_item(
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedIterableLanguageItem> {
     let requirement_span = *evidence.requiring_spans.first()?;
-    let path = ModulePath::try_from("std::iter").expect("canonical iteration module path is valid");
+    let path = CanonicalModule::Iteration.path();
     let module = modules
         .find(&path)
         .expect("iteration dependency evidence must load the canonical module")

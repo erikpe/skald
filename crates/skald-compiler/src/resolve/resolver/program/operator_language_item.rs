@@ -2,7 +2,7 @@
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    module::{ModulePath, ProgramModuleTable},
+    module::{CanonicalModule, ProgramModuleTable},
     resolve::{
         CanonicalOperatorProtocol, CanonicalOperatorProtocolShape,
         ResolvedInterfaceTemplateRequirementSignature, ResolvedInterfaceTemplateSemanticTable,
@@ -31,7 +31,7 @@ pub(super) fn validate_operator_language_item(
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedOperatorLanguageItem> {
     let requirement_span = *evidence.requiring_spans.first()?;
-    let path = ModulePath::try_from("std::ops").expect("canonical operator module path is valid");
+    let path = CanonicalModule::Operators.path();
     let module = modules
         .find(&path)
         .expect("ordinary reachability evidence must load the canonical operator module")

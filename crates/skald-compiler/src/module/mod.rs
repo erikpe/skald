@@ -5,6 +5,7 @@
 
 mod entry;
 mod graph;
+mod language_items;
 mod metadata;
 mod path;
 mod provenance;
@@ -19,6 +20,7 @@ pub(crate) use graph::{
     load_module_graph_measured, MeasuredModuleGraphLoad, ModuleLoadMeasurementOptions,
     ModuleLoadMeasurements, ModuleParseStage,
 };
+pub(crate) use language_items::CanonicalModule;
 pub use metadata::{ProgramModuleTable, ProgramModuleTableError};
 pub use path::{ModulePath, ModulePathError, ModulePathErrorKind};
 pub use provenance::{ModuleProvenance, ModuleSourceLocation};

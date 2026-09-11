@@ -8,7 +8,7 @@ use crate::{
         ParameterId,
     },
     lexer::decode_string_literal,
-    module::{CompilerDependencyKind, ModuleGraph, ModulePath, ProgramModuleTable},
+    module::{ModuleGraph, ProgramModuleTable},
 };
 use std::path::Path;
 
@@ -40,24 +40,11 @@ pub(super) struct ModuleUnit<'ast> {
 
 fn collect_literal_data(
     graph: &ModuleGraph,
+    spans: &[Span],
 ) -> (Vec<ResolvedLiteralData>, HashMap<Span, LiteralDataId>) {
-    let path = ModulePath::try_from("std::str").expect("canonical string module path is valid");
-    let Some(target) = graph
-        .find(&path)
-        .map(|module| module.provenance().module_id())
-    else {
-        return (Vec::new(), HashMap::new());
-    };
-    let spans = graph.modules().iter().flat_map(|module| {
-        module
-            .imports()
-            .iter()
-            .filter(move |edge| edge.target() == target)
-            .flat_map(|edge| edge.string_literal_spans().iter().copied())
-    });
     let mut data = Vec::new();
     let mut ids = HashMap::new();
-    for span in spans {
+    for &span in spans {
         let source = graph
             .sources()
             .get(span.source_id())
@@ -74,191 +61,6 @@ fn collect_literal_data(
         });
     }
     (data, ids)
-}
-
-fn collect_iterable_requirement_spans(graph: &ModuleGraph) -> Vec<Span> {
-    let path = ModulePath::try_from("std::iter").expect("canonical iteration module path is valid");
-    let Some(target) = graph
-        .find(&path)
-        .map(|module| module.provenance().module_id())
-    else {
-        return Vec::new();
-    };
-    let mut spans = graph
-        .modules()
-        .iter()
-        .flat_map(|module| {
-            module
-                .imports()
-                .iter()
-                .filter(move |edge| edge.target() == target)
-                .flat_map(|edge| {
-                    edge.import_spans().iter().copied().chain(
-                        edge.compiler_dependency_spans(CompilerDependencyKind::GeneralIteration)
-                            .iter()
-                            .copied(),
-                    )
-                })
-        })
-        .collect::<Vec<_>>();
-    if spans.is_empty() && graph.entry() == target {
-        spans.push(
-            graph
-                .module(target)
-                .expect("selected canonical iteration module must be loaded")
-                .ast()
-                .span,
-        );
-    }
-    spans
-}
-
-fn iterable_declaration_spans(units: &[ModuleUnit<'_>], modules: &ProgramModuleTable) -> Vec<Span> {
-    let path = ModulePath::try_from("std::iter").expect("canonical iteration module path is valid");
-    let Some(module) = modules.find(&path).map(|entry| entry.module_id()) else {
-        return Vec::new();
-    };
-    let unit = units
-        .iter()
-        .find(|unit| unit.module == module)
-        .expect("every program module has one resolver unit");
-    unit.ast
-        .declarations
-        .iter()
-        .filter(|declaration| declaration.name().text == "Iterable")
-        .map(syntax::TopLevelDeclaration::span)
-        .collect()
-}
-
-fn collect_operator_requirement_spans(graph: &ModuleGraph) -> Vec<Span> {
-    let path = ModulePath::try_from("std::ops").expect("canonical operator module path is valid");
-    let Some(target) = graph
-        .find(&path)
-        .map(|module| module.provenance().module_id())
-    else {
-        return Vec::new();
-    };
-    let mut spans = graph
-        .modules()
-        .iter()
-        .flat_map(|module| {
-            module
-                .imports()
-                .iter()
-                .filter(move |edge| edge.target() == target)
-                .flat_map(|edge| edge.import_spans().iter().copied())
-        })
-        .collect::<Vec<_>>();
-    if spans.is_empty() && graph.entry() == target {
-        spans.push(
-            graph
-                .module(target)
-                .expect("selected canonical operator module must be loaded")
-                .ast()
-                .span,
-        );
-    }
-    spans
-}
-
-fn operator_declaration_spans(
-    units: &[ModuleUnit<'_>],
-    modules: &ProgramModuleTable,
-) -> Vec<(String, Span)> {
-    let path = ModulePath::try_from("std::ops").expect("canonical operator module path is valid");
-    let Some(module) = modules.find(&path).map(|entry| entry.module_id()) else {
-        return Vec::new();
-    };
-    let unit = units
-        .iter()
-        .find(|unit| unit.module == module)
-        .expect("every program module has one resolver unit");
-    unit.ast
-        .declarations
-        .iter()
-        .map(|declaration| {
-            (
-                declaration.name().text.to_string(),
-                syntax::TopLevelDeclaration::span(declaration),
-            )
-        })
-        .collect()
-}
-
-fn collect_range_requirement_spans(graph: &ModuleGraph) -> Vec<Span> {
-    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
-    let Some(target) = graph
-        .find(&path)
-        .map(|module| module.provenance().module_id())
-    else {
-        return Vec::new();
-    };
-    let mut spans = graph
-        .modules()
-        .iter()
-        .flat_map(|module| {
-            module
-                .imports()
-                .iter()
-                .filter(move |edge| edge.target() == target)
-                .flat_map(|edge| {
-                    edge.import_spans().iter().copied().chain(
-                        edge.compiler_dependency_spans(CompilerDependencyKind::RangeForSource)
-                            .iter()
-                            .copied(),
-                    )
-                })
-        })
-        .collect::<Vec<_>>();
-    if spans.is_empty() && graph.entry() == target {
-        spans.push(
-            graph
-                .module(target)
-                .expect("selected canonical range module must be loaded")
-                .ast()
-                .span,
-        );
-    }
-    spans
-}
-
-fn successor_declaration_spans(
-    units: &[ModuleUnit<'_>],
-    modules: &ProgramModuleTable,
-) -> Vec<Span> {
-    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
-    let Some(module) = modules.find(&path).map(|entry| entry.module_id()) else {
-        return Vec::new();
-    };
-    let unit = units
-        .iter()
-        .find(|unit| unit.module == module)
-        .expect("every program module has one resolver unit");
-    unit.ast
-        .declarations
-        .iter()
-        .filter(|declaration| declaration.name().text == "Successor")
-        .map(syntax::TopLevelDeclaration::span)
-        .collect()
-}
-
-fn range_declarations<'ast>(
-    units: &'ast [ModuleUnit<'ast>],
-    modules: &ProgramModuleTable,
-) -> Vec<&'ast syntax::TopLevelDeclaration> {
-    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
-    let Some(module) = modules.find(&path).map(|entry| entry.module_id()) else {
-        return Vec::new();
-    };
-    let unit = units
-        .iter()
-        .find(|unit| unit.module == module)
-        .expect("every program module has one resolver unit");
-    unit.ast
-        .declarations
-        .iter()
-        .filter(|declaration| declaration.name().text == "Range")
-        .collect()
 }
 
 impl<'ast> ModuleUnit<'ast> {
@@ -339,9 +141,7 @@ pub(super) struct ProgramResolver<'ast> {
     address_taken_callables: ResolvedAddressTakenCallableTable,
     literal_data: Vec<ResolvedLiteralData>,
     literal_ids: HashMap<Span, LiteralDataId>,
-    iterable_requirement_spans: Vec<Span>,
-    operator_requirement_spans: Vec<Span>,
-    range_requirement_spans: Vec<Span>,
+    language_item_origins: LanguageItemRequirementOrigins,
     diagnostics: Diagnostics,
 }
 
@@ -355,18 +155,15 @@ impl<'ast> ProgramResolver<'ast> {
             address_taken_callables: ResolvedAddressTakenCallableTable::default(),
             literal_data: Vec::new(),
             literal_ids: HashMap::new(),
-            iterable_requirement_spans: Vec::new(),
-            operator_requirement_spans: Vec::new(),
-            range_requirement_spans: Vec::new(),
+            language_item_origins: LanguageItemRequirementOrigins::default(),
             diagnostics: Diagnostics::new(),
         }
     }
 
     pub(super) fn from_graph(graph: &'ast ModuleGraph) -> Self {
-        let (literal_data, literal_ids) = collect_literal_data(graph);
-        let iterable_requirement_spans = collect_iterable_requirement_spans(graph);
-        let operator_requirement_spans = collect_operator_requirement_spans(graph);
-        let range_requirement_spans = collect_range_requirement_spans(graph);
+        let language_item_origins = LanguageItemRequirementOrigins::collect(graph);
+        let (literal_data, literal_ids) =
+            collect_literal_data(graph, &language_item_origins.string_literals);
         Self {
             units: graph
                 .modules()
@@ -379,9 +176,7 @@ impl<'ast> ProgramResolver<'ast> {
             address_taken_callables: ResolvedAddressTakenCallableTable::default(),
             literal_data,
             literal_ids,
-            iterable_requirement_spans,
-            operator_requirement_spans,
-            range_requirement_spans,
+            language_item_origins,
             diagnostics: Diagnostics::new(),
         }
     }
@@ -451,7 +246,8 @@ impl<'ast> ProgramResolver<'ast> {
         }
         let interface_template_semantics =
             ResolvedInterfaceTemplateSemanticTable::new(interface_template_semantics);
-        let iterable_declaration_spans = iterable_declaration_spans(&self.units, &self.modules);
+        let language_item_declarations =
+            LanguageItemDeclarationOrigins::collect(&self.units, &self.modules);
         let iterable_language_item = validate_iterable_language_item(
             &self.modules,
             &module_declarations,
@@ -459,12 +255,11 @@ impl<'ast> ProgramResolver<'ast> {
             &interface_template_semantics,
             &type_parameters,
             IterableLanguageItemEvidence {
-                requiring_spans: &self.iterable_requirement_spans,
-                declaration_spans: &iterable_declaration_spans,
+                requiring_spans: &self.language_item_origins.iterable,
+                declaration_spans: &language_item_declarations.iterable,
             },
             &mut self.diagnostics,
         );
-        let operator_declaration_spans = operator_declaration_spans(&self.units, &self.modules);
         let operator_language_item = validate_operator_language_item(
             &self.modules,
             &module_declarations,
@@ -472,20 +267,19 @@ impl<'ast> ProgramResolver<'ast> {
             &interface_template_semantics,
             &type_parameters,
             OperatorLanguageItemEvidence {
-                requiring_spans: &self.operator_requirement_spans,
-                declaration_spans: &operator_declaration_spans,
+                requiring_spans: &self.language_item_origins.operators,
+                declaration_spans: &language_item_declarations.operators,
             },
             &mut self.diagnostics,
         );
-        let successor_declaration_spans = successor_declaration_spans(&self.units, &self.modules);
         let successor_language_item = validate_successor_language_item(
             &self.modules,
             &module_declarations,
             &interface_templates,
             &interface_template_semantics,
             &type_parameters,
-            &self.range_requirement_spans,
-            &successor_declaration_spans,
+            &self.language_item_origins.range,
+            &language_item_declarations.successor,
             &mut self.diagnostics,
         );
         let mut template_semantics = Vec::new();
@@ -516,7 +310,6 @@ impl<'ast> ProgramResolver<'ast> {
             }
         }
         let template_semantics = ResolvedClassTemplateSemanticTable::new(template_semantics);
-        let range_declarations = range_declarations(&self.units, &self.modules);
         let range_language_item = validate_range_language_item(
             &self.modules,
             &module_declarations,
@@ -527,8 +320,8 @@ impl<'ast> ProgramResolver<'ast> {
             operator_language_item.as_ref(),
             successor_language_item,
             RangeLanguageItemEvidence {
-                requiring_spans: &self.range_requirement_spans,
-                range_declarations: &range_declarations,
+                requiring_spans: &self.language_item_origins.range,
+                range_declarations: &language_item_declarations.range,
             },
             &mut self.diagnostics,
         );
@@ -743,6 +536,7 @@ impl<'ast> ProgramResolver<'ast> {
             &self.literal_data,
             &mut self.diagnostics,
         );
+        let literal_ids = std::mem::take(&mut self.literal_ids);
         let body_stage = BodyResolutionStage::new(
             self.has_module_context,
             string_language_item.as_ref(),
@@ -750,6 +544,7 @@ impl<'ast> ProgramResolver<'ast> {
             operator_language_item.as_ref(),
             range_language_item.as_ref(),
             &generic_interface_specializations,
+            &literal_ids,
         );
 
         let mut static_initializer_updates = Vec::new();
@@ -772,7 +567,6 @@ impl<'ast> ProgramResolver<'ast> {
                         &interfaces,
                         &hierarchy,
                     ),
-                    &self.literal_ids,
                 ),
                 &mut self.type_interner,
                 &mut self.address_taken_callables,
@@ -793,7 +587,7 @@ impl<'ast> ProgramResolver<'ast> {
                 interfaces: &interfaces,
                 hierarchy: &hierarchy,
                 has_module_context: self.has_module_context,
-                language_items: body_stage.language_items(&self.literal_ids),
+                language_items: body_stage.language_items(),
             },
             &mut self.type_interner,
             &mut self.address_taken_callables,
@@ -826,7 +620,7 @@ impl<'ast> ProgramResolver<'ast> {
                 unit.ast,
                 &unit_class_work,
                 &class_declarations,
-                body_stage.environment(lookup, body_declarations, &self.literal_ids),
+                body_stage.environment(lookup, body_declarations),
                 &mut self.type_interner,
                 &mut self.address_taken_callables,
                 &mut self.diagnostics,
@@ -1291,7 +1085,7 @@ impl<'ast> ProgramResolver<'ast> {
                     CallableResolutionContext::function(item.id.into()),
                     &declaration.parameters,
                     &function.body,
-                    body_stage.environment(lookup, declarations, &self.literal_ids),
+                    body_stage.environment(lookup, declarations),
                     &mut self.type_interner,
                     &mut self.address_taken_callables,
                     &mut self.diagnostics,

@@ -829,17 +829,23 @@ fn canonical_iteration_dependency_uses_ordinary_missing_and_ambiguity_rules() {
 }
 
 #[test]
-fn compiler_dependency_kinds_own_exact_canonical_module_paths() {
+fn compiler_dependency_kinds_select_cataloged_canonical_modules() {
     assert_eq!(
-        super::load::compiler_dependency_path(CompilerDependencyKind::StringLiteral),
+        CompilerDependencyKind::StringLiteral
+            .canonical_module()
+            .path(),
         "std::str".parse().unwrap()
     );
     assert_eq!(
-        super::load::compiler_dependency_path(CompilerDependencyKind::GeneralIteration),
+        CompilerDependencyKind::GeneralIteration
+            .canonical_module()
+            .path(),
         "std::iter".parse().unwrap()
     );
     assert_eq!(
-        super::load::compiler_dependency_path(CompilerDependencyKind::RangeForSource),
+        CompilerDependencyKind::RangeForSource
+            .canonical_module()
+            .path(),
         "std::range".parse().unwrap()
     );
 }

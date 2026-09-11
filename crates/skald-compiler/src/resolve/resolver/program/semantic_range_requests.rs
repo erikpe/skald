@@ -2,9 +2,8 @@
 
 use super::*;
 use crate::{
-    identity::LiteralDataId,
-    module::ProgramModuleTable,
-    resolve::resolver::body::{SemanticRangeRequestCollector, StringLiteralResolutionEnvironment},
+    identity::LiteralDataId, module::ProgramModuleTable,
+    resolve::resolver::body::SemanticRangeRequestCollector,
 };
 
 pub(super) struct SemanticRangeCompletionInput<'program, 'ast> {
@@ -151,26 +150,20 @@ pub(super) fn discover_semantic_range_requests(
         input.interfaces,
         input.hierarchy,
     );
+    let body_stage = BodyResolutionStage::new(
+        input.has_module_context,
+        None,
+        input.iterable,
+        input.operators,
+        input.range,
+        input.interface_specializations,
+        input.literal_ids,
+    );
 
     for unit in input.units {
-        let environment = BodyResolutionEnvironment::new(
-            input.lookups.for_unit(unit, input.modules),
-            declarations,
-            input.has_module_context,
-            BodyLanguageItemEnvironment::new(
-                StringLiteralResolutionEnvironment::new(None, input.literal_ids),
-                input.iterable.map(|item| {
-                    IterationResolutionEnvironment::new(item, input.interface_specializations)
-                }),
-                input.operators.map(|item| {
-                    OperatorResolutionEnvironment::new(item, input.interface_specializations)
-                }),
-                input.range.map(|item| {
-                    RangeResolutionEnvironment::new(item, input.interface_specializations)
-                }),
-            ),
-        )
-        .with_range_request_collector(&collector);
+        let environment = body_stage
+            .environment(input.lookups.for_unit(unit, input.modules), declarations)
+            .with_range_request_collector(&collector);
 
         for work in &unit.function_work {
             let syntax::TopLevelDeclaration::Function(function) =
@@ -260,28 +253,13 @@ pub(super) fn discover_semantic_range_requests(
             .expect("specialization keys reference template semantics");
         let work = specialization::generated_work_item(declaration, source, unit.module, ast_index);
         bodies_revisited = bodies_revisited.saturating_add(class_work_body_count(&work));
-        let environment = BodyResolutionEnvironment::new(
-            input.lookups.for_unit(unit, input.modules),
-            declarations,
-            input.has_module_context,
-            BodyLanguageItemEnvironment::new(
-                StringLiteralResolutionEnvironment::new(None, input.literal_ids),
-                input.iterable.map(|item| {
-                    IterationResolutionEnvironment::new(item, input.interface_specializations)
-                }),
-                input.operators.map(|item| {
-                    OperatorResolutionEnvironment::new(item, input.interface_specializations)
-                }),
-                input.range.map(|item| {
-                    RangeResolutionEnvironment::new(item, input.interface_specializations)
-                }),
-            ),
-        )
-        .with_specialization(BodySpecializationEnvironment::new(
-            semantics,
-            specialization,
-        ))
-        .with_range_request_collector(&collector);
+        let environment = body_stage
+            .environment(input.lookups.for_unit(unit, input.modules), declarations)
+            .with_specialization(BodySpecializationEnvironment::new(
+                semantics,
+                specialization,
+            ))
+            .with_range_request_collector(&collector);
         let _ = resolve_class_bodies(
             unit.ast,
             std::slice::from_ref(&work),

@@ -138,12 +138,24 @@ x86-64 execution now consume these closed identities unchanged.
 Whole-program resolution exposes explicit internal stage products where
 declarations are collected, body definitions are completed, and
 specialization candidates are published. Callable bodies share one
-body-resolution stage environment, so ordinary functions, ordinary classes,
-static initializers, and generated bodies receive the same declaration,
-module-context, literal, and language-item inputs. The final candidate program
-is consumed by publication validation. Each invalid generated product family
-is replaced with its saved ordinary declaration and hierarchy product before
-the resolver returns the published program.
+body-resolution stage environment, assembled once from validated string,
+iterable, operator, and range products plus literal and closed-interface
+identities. Ordinary functions, ordinary classes, static initializers, and
+generated bodies receive that same context. The isolated semantic range probe
+uses the same stage constructor with its intentionally unavailable string
+product. The final candidate program is consumed by publication validation.
+Each invalid generated product family is replaced with its saved ordinary
+declaration and hierarchy product before the resolver returns the published
+program.
+
+Before structural language-item validation, resolution collects one typed
+source-evidence product. It retains string-literal dependency spans and the
+ordered explicit-import, compiler-dependency, or canonical-entry origins for
+iteration, operators, and ranges. A companion declaration-origin product
+selects canonical module declarations through the module layer's centralized
+catalog. Individual validators continue to own their distinct structural
+contracts and diagnostics; lower phases receive only their validated
+identities and plans.
 
 Closed generic contextual validation uses the phase-neutral
 `type_capabilities` service over `ResolvedProgram`. That service owns resolved

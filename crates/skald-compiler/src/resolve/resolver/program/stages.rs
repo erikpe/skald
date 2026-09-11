@@ -32,60 +32,48 @@ pub(super) struct SemanticRangeCompletion {
 #[derive(Clone, Copy)]
 pub(super) struct BodyResolutionStage<'program> {
     has_module_context: bool,
-    string: Option<&'program ResolvedStringLanguageItem>,
-    iterable: Option<&'program ResolvedIterableLanguageItem>,
-    operators: Option<&'program ResolvedOperatorLanguageItem>,
-    range: Option<&'program ResolvedRangeLanguageItem>,
-    interface_specializations: &'program GenericInterfaceSpecializationTable,
+    language_items: BodyLanguageItemEnvironment<'program>,
 }
 
 impl<'program> BodyResolutionStage<'program> {
-    pub(super) const fn new(
+    pub(super) fn new(
         has_module_context: bool,
         string: Option<&'program ResolvedStringLanguageItem>,
         iterable: Option<&'program ResolvedIterableLanguageItem>,
         operators: Option<&'program ResolvedOperatorLanguageItem>,
         range: Option<&'program ResolvedRangeLanguageItem>,
         interface_specializations: &'program GenericInterfaceSpecializationTable,
+        literal_ids: &'program HashMap<Span, LiteralDataId>,
     ) -> Self {
         Self {
             has_module_context,
-            string,
-            iterable,
-            operators,
-            range,
-            interface_specializations,
+            language_items: BodyLanguageItemEnvironment::new(
+                StringLiteralResolutionEnvironment::new(string, literal_ids),
+                iterable.map(|item| {
+                    IterationResolutionEnvironment::new(item, interface_specializations)
+                }),
+                operators.map(|item| {
+                    OperatorResolutionEnvironment::new(item, interface_specializations)
+                }),
+                range.map(|item| RangeResolutionEnvironment::new(item, interface_specializations)),
+            ),
         }
     }
 
-    pub(super) fn language_items(
-        self,
-        literal_ids: &'program HashMap<Span, LiteralDataId>,
-    ) -> BodyLanguageItemEnvironment<'program> {
-        BodyLanguageItemEnvironment::new(
-            StringLiteralResolutionEnvironment::new(self.string, literal_ids),
-            self.iterable.map(|item| {
-                IterationResolutionEnvironment::new(item, self.interface_specializations)
-            }),
-            self.operators.map(|item| {
-                OperatorResolutionEnvironment::new(item, self.interface_specializations)
-            }),
-            self.range
-                .map(|item| RangeResolutionEnvironment::new(item, self.interface_specializations)),
-        )
+    pub(super) const fn language_items(self) -> BodyLanguageItemEnvironment<'program> {
+        self.language_items
     }
 
     pub(super) fn environment(
         self,
         lookup: ModuleLookup<'program>,
         declarations: BodyDeclarationEnvironment<'program>,
-        literal_ids: &'program HashMap<Span, LiteralDataId>,
     ) -> BodyResolutionEnvironment<'program> {
         BodyResolutionEnvironment::new(
             lookup,
             declarations,
             self.has_module_context,
-            self.language_items(literal_ids),
+            self.language_items,
         )
     }
 }

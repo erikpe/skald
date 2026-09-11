@@ -2,7 +2,7 @@
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    module::{ModulePath, ProgramModuleTable},
+    module::{CanonicalModule, ProgramModuleTable},
     resolve::{
         ResolvedClassDeclarationTable, ResolvedCopyOperation, ResolvedFunctionDeclarationTable,
         ResolvedFunctionLinkage, ResolvedLiteralData, ResolvedMemberVisibility,
@@ -22,8 +22,7 @@ pub(super) fn validate_string_language_item(
     literal_data: &[ResolvedLiteralData],
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedStringLanguageItem> {
-    let error_path =
-        ModulePath::try_from("std::error").expect("canonical error module path is valid");
+    let error_path = CanonicalModule::Error.path();
     let requirement_span = literal_data
         .first()
         .map(|literal| literal.span)
@@ -42,7 +41,7 @@ pub(super) fn validate_string_language_item(
             })
         })?;
     let first_literal = requirement_span;
-    let path = ModulePath::try_from("std::str").expect("canonical string module path is valid");
+    let path = CanonicalModule::String.path();
     let module = modules
         .find(&path)
         .expect("string literal dependency must load the canonical module")

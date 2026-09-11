@@ -3,7 +3,7 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::TypeParameterId,
-    module::{ModulePath, ProgramModuleTable},
+    module::{CanonicalModule, ProgramModuleTable},
     resolve::{
         CanonicalOperatorProtocol, ResolvedClassTemplateTable,
         ResolvedInterfaceTemplateSemanticTable, ResolvedInterfaceTemplateTable,
@@ -46,7 +46,7 @@ pub(in crate::resolve::resolver::program) fn validate_successor_language_item(
     diagnostics: &mut Diagnostics,
 ) -> Option<ValidatedSuccessorLanguageItem> {
     let requirement_span = *requiring_spans.first()?;
-    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
+    let path = CanonicalModule::Range.path();
     let module = modules
         .find(&path)
         .expect("ordinary reachability evidence must load the canonical range module")
@@ -224,7 +224,7 @@ pub(in crate::resolve::resolver::program) fn validate_range_language_item(
     let successor = successor?;
     let iterable = iterable?;
     let less = operators?.get(CanonicalOperatorProtocol::Less);
-    let path = ModulePath::try_from("std::range").expect("canonical range module path is valid");
+    let path = CanonicalModule::Range.path();
     let module = modules
         .find(&path)
         .expect("ordinary reachability evidence must load the canonical range module")

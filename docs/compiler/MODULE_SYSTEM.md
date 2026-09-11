@@ -144,17 +144,21 @@ provider is ambiguous.
 
 Compiler-owned dependencies retain a typed source-evidence kind separately
 from explicit import spans, so loading a canonical module does not create a
-source name binding. String literals use this boundary for `std::str`; the
-general-iteration kind is implemented for the canonical `std::iter` protocol and
-is populated by parsed `for-in` keyword spans. Both use ordinary provider
-lookup, missing/ambiguity diagnostics, parsing, identities, and dependency
-cycles. Successfully parsed direct `for-in` range sources add the
+source name binding. The module layer owns one typed catalog that maps each
+compiler-known standard-library role to its exact logical path and maps every
+compiler dependency kind to that role. String literals use this boundary for
+`std::str`; the general-iteration kind is implemented for the canonical
+`std::iter` protocol and is populated by parsed `for-in` keyword spans. Both
+use ordinary provider lookup, missing/ambiguity diagnostics, parsing,
+identities, and dependency cycles. Successfully parsed direct `for-in` range
+sources add the
 `RangeForSource` kind for canonical `std::range` at the `..` span, likewise
 without a source binding. Out-of-context or malformed `..` syntax does not
 activate a compiler dependency.
-The owning feature resolves each canonical declaration bundle once to semantic
-identities; lowering and backends do not repeatedly compare source path
-strings.
+Resolution uses the same catalog for `std::ops`, `std::error`, `std::io`, and
+`std::f64` identity checks. The owning feature resolves each canonical
+declaration bundle once to semantic identities; lowering and backends do not
+repeatedly compare source path strings.
 
 The implemented [operator-protocol compiler contract](OPERATOR_OVERLOADING.md)
 uses no compiler-owned dependency kind. Explicit protocol imports and direct

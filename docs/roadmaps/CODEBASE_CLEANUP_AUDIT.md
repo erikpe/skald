@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A11, A34, A35, A38, and A43 are complete. Turn
+Status: actionable audit; A01–A12, A34, A35, A38, and A43 are complete. Turn
 the remaining architectural findings into separate PR-sized implementation
 roadmaps. No implementation roadmap depends on this document yet.
 
@@ -109,7 +109,7 @@ work and its validation; findings without that record remain `Open`.
 | [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Complete | P1 | 5 | L | High | O | M, E, R |
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete | P2 | 4 | M–L | High | C | M, C |
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete | P2 | 4 | M | Medium | O | M, E, R, C |
-| [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Open | P2 | 4 | M | Medium | O | M, E |
+| [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Open | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
@@ -610,6 +610,8 @@ leaves. The Rust 1.82.0 workspace all-target check also passed.
 
 ### A12 — Consolidate language-item discovery plumbing
 
+**Status:** Complete (2026-09-11).
+
 **Evidence:**
 [`resolver.rs`](../../crates/skald-compiler/src/resolve/resolver/program/resolver.rs)
 has separate span collection for iteration, operators, and ranges; canonical
@@ -629,6 +631,39 @@ one repeated collection path. Cover disabled/replaced standard-library roots,
 malformed canonical declarations, imports versus implicit dependencies, and
 the `std::str`/`std::error` cycle. Lower phases must continue consuming IDs and
 plans, never canonical source-name lookup.
+
+**Delivered:** the module facade now owns one private typed catalog for the
+compiler-known `std::str`, `std::iter`, `std::ops`, `std::range`, `std::error`,
+`std::io`, and `std::f64` module identities. Every compiler dependency kind
+maps to that catalog, and module loading, structural language-item validation,
+string selection, and intrinsic recognition no longer reconstruct those paths
+from scattered string constants. The individual iterable, operator, range,
+string, and intrinsic validators retain their separate structural contracts
+and diagnostic codes.
+
+Resolution now collects ordered requirement origins into one
+`LanguageItemRequirementOrigins` product and canonical declaration origins
+into one `LanguageItemDeclarationOrigins` product. This replaces the repeated
+per-feature graph scans and canonical-module unit lookup in the resolver
+orchestrator while preserving explicit-import spans, typed compiler-dependency
+spans, canonical-entry fallbacks, source order, and literal decoding identity.
+
+A09's `BodyResolutionStage` now assembles its validated string, iterable,
+operator, and range context once. Ordinary functions, classes, static
+initializers, and specialized bodies reuse that context. The diagnostic-
+isolated semantic range probe constructs the same stage once per probe round
+with string selection intentionally unavailable, replacing its two hand-built
+language-item environments. Resolved IR and lower phases continue to consume
+only selected identities and plans.
+
+Focused validation covered 34 module-graph tests, 24 iteration tests, nine
+operator-language-item tests, 25 range tests, nine string tests, and 11
+intrinsic tests, including missing, ambiguous, disabled, replacement,
+canonical-entry, malformed-declaration, explicit-versus-implicit dependency,
+and `std::str`/`std::error` cycle behavior. The full `make check` gate passed
+with 3,100 compiler unit tests, 53 process-determinism tests, runtime and
+documentation checks, 21 compiler compile-fail documentation tests, and all
+628 golden leaves. The Rust 1.82.0 workspace all-target check also passed.
 
 ### A13 — Share structural AST walking where responsibilities repeat
 
