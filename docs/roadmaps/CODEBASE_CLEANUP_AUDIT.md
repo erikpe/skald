@@ -106,7 +106,7 @@ work and its validation; findings without that record remain `Open`.
 | [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Complete | P1 | 4 | XS | Low | O | R |
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Complete | P1 | 3 | S | Low | O | M, E |
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Complete | P1 | 5 | L | High | O | M, E, R |
-| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Open | P1 | 5 | L | High | O | M, E, R |
+| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Complete | P1 | 5 | L | High | O | M, E, R |
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Open | P2 | 4 | M–L | High | C | M, C |
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Open | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Open | P2 | 4 | M | Medium | O | M, E |
@@ -140,7 +140,7 @@ work and its validation; findings without that record remain `Open`.
 | [A40](#a40--reconsider-the-measurement-tools-private-sha-256) | Reconsider the measurement tool's private SHA-256 | Open | P3 | 2 | S | Low | C | M, R |
 | [A41](#a41--make-runtime-build-configuration-visible-in-artifacts) | Make runtime build configuration visible in artifacts | Open | P2 | 3 | S–M | Low | O | R, M |
 | [A42](#a42--rename-sequential-execution-products-used-by-both-schedulers) | Rename sequential execution products used by both schedulers | Open | P3 | 2 | S | Low | O | M |
-| [A43](#a43--add-narrow-automated-phase-dependency-checks) | Add narrow automated phase-dependency checks | Open | P1 | 4 | M | Low | C | M, E, R |
+| [A43](#a43--add-narrow-automated-phase-dependency-checks) | Add narrow automated phase-dependency checks | Complete | P1 | 4 | M | Low | C | M, E, R |
 
 ## Immediate robustness and validation
 
@@ -480,6 +480,30 @@ with candidate publication and then body orchestration. Coordinate the contract
 with A08 before moving lifecycle validation. **Validation:** failed dependent
 specializations, ordinary declarations surviving errors, dispatch consistency,
 module-order determinism, and byte-identical successful resolved dumps.
+
+**Delivered:** whole-program resolution now passes a named collected-declaration
+product into the remaining resolver orchestration and packages completed
+function and class bodies before final assembly. One shared body-resolution
+stage constructs the declaration, module-context, literal, iteration,
+operator, and range environments used by static initializers, specialized
+bodies, ordinary functions, and ordinary classes.
+
+Final specialization selection is owned by a consuming candidate-publication
+boundary. Class and interface validators inspect immutable candidates and
+return validation results; the publication owner alone restores saved ordinary
+class, interface, and hierarchy products, clears rejected body and dispatch
+products, and marks rejected identities failed. Selection remains ordered by
+dependency: rejected class products invalidate dependent interfaces, while
+independent valid class or interface products remain published.
+
+Regression coverage verifies that an invalid interface candidate preserves an
+independent valid class specialization and its bodies. Existing coverage also
+exercises failed dependent specializations, restoration of ordinary
+declarations, dispatch-product clearing, source-order permutation, and stable
+resolved dumps. The full `make check` gate passed with all workspace tests,
+3,091 compiler unit tests, documentation and runtime checks, the 53-process
+determinism suite, and all 628 golden leaves. The Rust 1.82.0 workspace
+all-target check also passed.
 
 ### A10 — Isolate and measure semantic range discovery
 
@@ -1166,6 +1190,8 @@ tests. Keep this opportunistic; it should not block A03's deadline repair.
 
 ### A43 — Add narrow automated phase-dependency checks
 
+**Status:** Complete (2026-09-11).
+
 **Evidence:** A07/A08 contradict the documented forward-dependency goal while
 compiling successfully inside one crate. The
 [binary64 API tests](../../crates/skald-binary64/tests/public_api.rs) already
@@ -1183,6 +1209,32 @@ temporary exceptions, then remove A07/A08 exceptions as their fixes land.
 Ensure the checker detects a deliberately introduced reverse edge without
 flagging legitimate lowering inputs or test-only dependencies. Consider crate
 splitting only after boundaries stabilize and build measurements justify it.
+
+**Delivered:** the compiler's phase-boundary integration test now enforces an
+explicit direct-dependency allowlist across the source, lexer, syntax, module,
+resolution, HIR, type-checking, MIR, pass, backend, reporting, and driver roots.
+The policy rejects the former module-to-driver and resolution-to-type-checking
+directions while admitting documented phase inputs such as module products in
+HIR and MIR. Neutral support modules remain outside the phase-root matrix.
+
+The deliberately limited scanner recognizes direct and grouped `crate` paths,
+raw identifiers, and `super` paths that escape the owning phase. It ignores
+comments and literals and excludes repository test and fixture conventions.
+Focused tests cover those parsing limits, a synthetic reverse edge, legitimate
+lowering inputs, test-source classification, and exception scope. Violations
+include source lines, and the guard reports an exception once its matching edge
+becomes stale.
+
+One exact temporary exception permits `mir/retain/mod.rs` to consume the
+pass-owned, sealed whole-program reachability result. The exception cannot
+spread to another MIR file and is documented in the phase contract. Rust
+visibility and existing compile-fail documentation tests continue to enforce
+opaque seals and mutation authority where compiler enforcement is stronger.
+
+Validation passed through the focused seven-test phase-boundary suite, the full
+`make check` gate with 3,091 compiler unit tests, 53 process-determinism tests,
+runtime and documentation checks, 21 compile-fail documentation tests, and all
+628 golden leaves, plus the Rust 1.82.0 workspace all-target check.
 
 ## Recommended implementation order
 

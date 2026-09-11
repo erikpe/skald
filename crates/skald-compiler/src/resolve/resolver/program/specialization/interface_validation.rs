@@ -2,27 +2,24 @@
 
 use super::*;
 
-pub(in crate::resolve::resolver::program) fn validate_interface_specializations(
-    program: &mut ResolvedProgram,
+pub(super) fn validate_interface_specializations(
+    program: &ResolvedProgram,
     diagnostics: &mut Diagnostics,
-    ordinary_interfaces: ResolvedInterfaceDeclarationTable,
-) {
+) -> bool {
     let has_unpublished_dependency = program
         .generic_interface_specializations
         .iter()
         .flat_map(|specialization| specialization.closed_type_uses.iter().flatten())
         .any(|kind| !type_is_fully_published(program, *kind));
     if has_unpublished_dependency {
-        program.generic_interface_specializations.fail_all();
-        program.interfaces = ordinary_interfaces;
-        return;
+        return false;
     }
 
     let failures = crate::type_capabilities::failed_interface_specialization_requirements(program);
     let bound_failures = failed_exact_interface_bounds(program);
     let duplicate_bound_failures = duplicate_closed_interface_bounds(program);
     if failures.is_empty() && bound_failures.is_empty() && duplicate_bound_failures.is_empty() {
-        return;
+        return true;
     }
 
     for failure in failures {
@@ -184,13 +181,7 @@ pub(in crate::resolve::resolver::program) fn validate_interface_specializations(
         diagnostics.push(diagnostic);
     }
 
-    // Interface identities are reserved before recursive closure, while the
-    // ordinary declaration table is dense. If any contextual obligation
-    // fails, publish none of this attempt's generated suffix and mark every
-    // reserved entry failed. Successful compilations still retain the exact
-    // dense source/dependency order chosen by the coordinator.
-    program.generic_interface_specializations.fail_all();
-    program.interfaces = ordinary_interfaces;
+    false
 }
 
 fn failed_exact_interface_bounds(program: &ResolvedProgram) -> Vec<(InterfaceId, usize)> {

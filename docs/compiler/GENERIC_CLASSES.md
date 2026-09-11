@@ -428,6 +428,15 @@ have been built, generated declarations, definitions, virtual families, and
 body products are unpublished together; diagnostic inspection therefore does
 not expose a partially published specialization graph.
 
+Publication is an explicit consuming resolver stage. Requirement validation
+examines the complete candidate program without mutating it. A successful
+candidate becomes the published resolved program. A class-candidate failure
+restores the ordinary class and hierarchy product and rejects generated class
+declarations, bodies, and virtual families from that attempt. Interface
+publication is validated after this selection, so interfaces that depend on a
+rejected class are not published while valid independent interface products
+remain available. This keeps rollback policy out of the individual validators.
+
 Deterministic inspection includes:
 
 - template and parameter identities;

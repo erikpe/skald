@@ -58,6 +58,34 @@ behavior is separate from the target-independent phase model and is defined by
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
+Production phase-root imports follow an automated direct-dependency policy:
+
+| Owner | Permitted phase-root dependencies |
+|---|---|
+| `source` | none |
+| `lexer` | `source` |
+| `syntax` | `source`, `lexer` |
+| `module` | `source`, `lexer`, `syntax` |
+| `resolve` | `source`, `lexer`, `syntax`, `module` |
+| `hir` | `source`, `module`, `resolve` |
+| `typeck` | `source`, `resolve`, `hir` |
+| `mir` | `source`, `module`, `resolve`, `hir` |
+| `passes` | `source`, `mir` |
+| `backend` | `source`, `mir`, `passes` |
+| `reporting` | `passes` |
+| `driver` | every phase root, as the composition owner |
+
+Neutral support modules such as diagnostics, identities, intrinsics, literal
+handling, and external-link metadata are outside this phase-root matrix. The
+integration guard scans crate-root paths, including grouped imports, and
+relative `super` paths that escape the owning phase root. It excludes test and
+fixture files by the repository conventions documented in the testing guide.
+The source guard permits one exact temporary reverse edge from
+`mir/retain/mod.rs` to pass-owned reachability analysis. Definition retention
+must consume the sealed whole-world result; removing this exception requires a
+replacement authority boundary that does not admit caller-selected retained
+identities.
+
 The frozen [structured reporting contract](REPORTING.md) observes this
 pipeline through a request-scoped interface without entering phase products or
 changing their ownership. Direct public phase paths remain independent from
@@ -106,6 +134,16 @@ successful HIR construction explicitly asserts that every executable class
 claim is ordinary. Preliminary and final MIR verification, static effects,
 complete-object metadata, exact witness calls, ownership cleanup, and native
 x86-64 execution now consume these closed identities unchanged.
+
+Whole-program resolution exposes explicit internal stage products where
+declarations are collected, body definitions are completed, and
+specialization candidates are published. Callable bodies share one
+body-resolution stage environment, so ordinary functions, ordinary classes,
+static initializers, and generated bodies receive the same declaration,
+module-context, literal, and language-item inputs. The final candidate program
+is consumed by publication validation. Each invalid generated product family
+is replaced with its saved ordinary declaration and hierarchy product before
+the resolver returns the published program.
 
 Closed generic contextual validation uses the phase-neutral
 `type_capabilities` service over `ResolvedProgram`. That service owns resolved

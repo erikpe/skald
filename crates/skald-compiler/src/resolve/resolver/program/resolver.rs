@@ -1,6 +1,5 @@
 //! Deterministic multi-module declaration collection and body resolution.
 
-use super::super::body::StringLiteralResolutionEnvironment;
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
@@ -24,15 +23,6 @@ pub(super) const fn resolved_visibility(visibility: syntax::Visibility) -> Resol
 pub(super) struct FunctionWorkItem {
     pub(super) id: FunctionId,
     pub(super) ast_index: usize,
-}
-
-#[derive(Clone, Copy)]
-struct FunctionBodyLanguageItems<'program> {
-    string: Option<&'program ResolvedStringLanguageItem>,
-    iterable: Option<&'program ResolvedIterableLanguageItem>,
-    operators: Option<&'program ResolvedOperatorLanguageItem>,
-    range: Option<&'program ResolvedRangeLanguageItem>,
-    interface_specializations: &'program GenericInterfaceSpecializationTable,
 }
 
 pub(super) struct ModuleUnit<'ast> {
@@ -397,44 +387,21 @@ impl<'ast> ProgramResolver<'ast> {
     }
 
     pub(super) fn resolve(mut self) -> ResolveOutput {
-        if !self.has_module_context {
-            for unit in &self.units {
-                for import in &unit.ast.imports {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            MODULE_CONTEXT_REQUIRED,
-                            "module imports require whole-program module compilation",
-                        )
-                        .with_primary_label(
-                            import.span(),
-                            "use a compilation request to supply module roots and an entry",
-                        )
-                        .with_note("the source-text convenience API has no filesystem context"),
-                    );
-                }
-            }
-        }
-        self.collect_top_levels();
+        let collected = self.collect_declarations();
+        self.resolve_collected_declarations(collected)
+    }
 
-        let CollectedGenericTemplates {
-            classes: class_templates,
-            interfaces: interface_templates,
-            parameters: type_parameters,
-        } = collect_generic_templates(&self.units, &mut self.diagnostics);
+    fn resolve_collected_declarations(mut self, collected: CollectedDeclarations) -> ResolveOutput {
+        let CollectedDeclarations {
+            module_declarations,
+            module_bindings,
+            ordinary_bindings,
+            module_spans,
+            class_templates,
+            interface_templates,
+            type_parameters,
+        } = collected;
 
-        let module_declarations = ResolvedModuleDeclarationTable::new(
-            self.units
-                .iter()
-                .map(|unit| ResolvedModuleDeclarations::new(unit.module, unit.declarations.clone()))
-                .collect(),
-        );
-        let module_bindings = self.collect_module_bindings();
-        let module_spans = self
-            .units
-            .iter()
-            .map(|unit| unit.ast.span)
-            .collect::<Vec<_>>();
-        let ordinary_bindings = self.collect_ordinary_bindings(&module_declarations, &module_spans);
         let lookups = ProgramLookupTables {
             bindings: &module_bindings,
             ordinary_bindings: &ordinary_bindings,
@@ -459,6 +426,7 @@ impl<'ast> ProgramResolver<'ast> {
                 }
             })
         }));
+
         let mut interfaces = self.collect_interface_declarations(lookups);
         let mut interface_template_semantics = Vec::new();
         for unit in &self.units {
@@ -771,6 +739,14 @@ impl<'ast> ProgramResolver<'ast> {
             &self.literal_data,
             &mut self.diagnostics,
         );
+        let body_stage = BodyResolutionStage::new(
+            self.has_module_context,
+            string_language_item.as_ref(),
+            iterable_language_item.as_ref(),
+            operator_language_item.as_ref(),
+            range_language_item.as_ref(),
+            &generic_interface_specializations,
+        );
 
         let mut static_initializer_updates = Vec::new();
         for unit in &self.units {
@@ -784,7 +760,7 @@ impl<'ast> ProgramResolver<'ast> {
                 unit.ast,
                 &unit_class_work,
                 &class_declarations,
-                BodyResolutionEnvironment::new(
+                body_stage.environment(
                     lookup,
                     BodyDeclarationEnvironment::new(
                         &function_declarations,
@@ -792,31 +768,7 @@ impl<'ast> ProgramResolver<'ast> {
                         &interfaces,
                         &hierarchy,
                     ),
-                    self.has_module_context,
-                    BodyLanguageItemEnvironment::new(
-                        StringLiteralResolutionEnvironment::new(
-                            string_language_item.as_ref(),
-                            &self.literal_ids,
-                        ),
-                        iterable_language_item.as_ref().map(|item| {
-                            IterationResolutionEnvironment::new(
-                                item,
-                                &generic_interface_specializations,
-                            )
-                        }),
-                        operator_language_item.as_ref().map(|item| {
-                            OperatorResolutionEnvironment::new(
-                                item,
-                                &generic_interface_specializations,
-                            )
-                        }),
-                        range_language_item.as_ref().map(|item| {
-                            RangeResolutionEnvironment::new(
-                                item,
-                                &generic_interface_specializations,
-                            )
-                        }),
-                    ),
+                    &self.literal_ids,
                 ),
                 &mut self.type_interner,
                 &mut self.address_taken_callables,
@@ -837,24 +789,7 @@ impl<'ast> ProgramResolver<'ast> {
                 interfaces: &interfaces,
                 hierarchy: &hierarchy,
                 has_module_context: self.has_module_context,
-                language_items: BodyLanguageItemEnvironment::new(
-                    StringLiteralResolutionEnvironment::new(
-                        string_language_item.as_ref(),
-                        &self.literal_ids,
-                    ),
-                    iterable_language_item.as_ref().map(|item| {
-                        IterationResolutionEnvironment::new(
-                            item,
-                            &generic_interface_specializations,
-                        )
-                    }),
-                    operator_language_item.as_ref().map(|item| {
-                        OperatorResolutionEnvironment::new(item, &generic_interface_specializations)
-                    }),
-                    range_language_item.as_ref().map(|item| {
-                        RangeResolutionEnvironment::new(item, &generic_interface_specializations)
-                    }),
-                ),
+                language_items: body_stage.language_items(&self.literal_ids),
             },
             &mut self.type_interner,
             &mut self.address_taken_callables,
@@ -867,22 +802,14 @@ impl<'ast> ProgramResolver<'ast> {
             );
         }
 
-        let function_definitions = self.resolve_function_bodies(
-            lookups,
-            BodyDeclarationEnvironment::new(
-                &function_declarations,
-                &class_declarations,
-                &interfaces,
-                &hierarchy,
-            ),
-            FunctionBodyLanguageItems {
-                string: string_language_item.as_ref(),
-                iterable: iterable_language_item.as_ref(),
-                operators: operator_language_item.as_ref(),
-                range: range_language_item.as_ref(),
-                interface_specializations: &generic_interface_specializations,
-            },
+        let body_declarations = BodyDeclarationEnvironment::new(
+            &function_declarations,
+            &class_declarations,
+            &interfaces,
+            &hierarchy,
         );
+        let function_definitions =
+            self.resolve_function_bodies(lookups, body_declarations, body_stage);
         let mut class_definitions = Vec::with_capacity(class_declarations.len());
         for unit in &self.units {
             let lookup = lookups.for_unit(unit, &self.modules);
@@ -895,40 +822,7 @@ impl<'ast> ProgramResolver<'ast> {
                 unit.ast,
                 &unit_class_work,
                 &class_declarations,
-                BodyResolutionEnvironment::new(
-                    lookup,
-                    BodyDeclarationEnvironment::new(
-                        &function_declarations,
-                        &class_declarations,
-                        &interfaces,
-                        &hierarchy,
-                    ),
-                    self.has_module_context,
-                    BodyLanguageItemEnvironment::new(
-                        StringLiteralResolutionEnvironment::new(
-                            string_language_item.as_ref(),
-                            &self.literal_ids,
-                        ),
-                        iterable_language_item.as_ref().map(|item| {
-                            IterationResolutionEnvironment::new(
-                                item,
-                                &generic_interface_specializations,
-                            )
-                        }),
-                        operator_language_item.as_ref().map(|item| {
-                            OperatorResolutionEnvironment::new(
-                                item,
-                                &generic_interface_specializations,
-                            )
-                        }),
-                        range_language_item.as_ref().map(|item| {
-                            RangeResolutionEnvironment::new(
-                                item,
-                                &generic_interface_specializations,
-                            )
-                        }),
-                    ),
-                ),
+                body_stage.environment(lookup, body_declarations, &self.literal_ids),
                 &mut self.type_interner,
                 &mut self.address_taken_callables,
                 &mut self.diagnostics,
@@ -937,6 +831,7 @@ impl<'ast> ProgramResolver<'ast> {
         if specialized_bodies.valid {
             class_definitions.extend(specialized_bodies.definitions);
         }
+        let resolved_bodies = ResolvedBodies::new(function_definitions, class_definitions);
         let entry_unit = &self.units[self.modules.selected().index()];
         let entry_function =
             entry_unit
@@ -953,55 +848,94 @@ impl<'ast> ProgramResolver<'ast> {
         let span = entry_unit.ast.span;
         let (array_types, function_types, optional_types, optional_box_types) =
             self.type_interner.finish();
-        let mut output = ResolveOutput {
-            program: ResolvedProgram {
-                modules: self.modules,
-                external_links,
-                module_bindings,
-                ordinary_bindings,
-                module_declarations,
-                class_templates,
-                interface_templates,
-                interface_template_semantics,
-                type_parameters,
-                template_semantics,
-                generic_specializations,
-                generic_interface_specializations,
-                function_types,
-                address_taken_callables: self.address_taken_callables,
-                array_types,
-                optional_types,
-                optional_box_types,
-                iterable_language_item,
-                operator_language_item,
-                range_language_item,
-                string_language_item,
-                literal_data: ResolvedLiteralDataTable::new(self.literal_data),
-                declarations: function_declarations,
-                definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
-                classes: class_declarations,
-                interfaces,
-                hierarchy,
-                virtual_families,
-                class_definitions: ResolvedClassDefinitionTable::new(class_definitions),
-                entry_function,
-                span,
-            },
+        let ordinary =
+            OrdinaryProgramProducts::new(ordinary_classes, ordinary_interfaces, ordinary_hierarchy);
+        let program = CandidateProgram::new(ResolvedProgram {
+            modules: self.modules,
+            external_links,
+            module_bindings,
+            ordinary_bindings,
+            module_declarations,
+            class_templates,
+            interface_templates,
+            interface_template_semantics,
+            type_parameters,
+            template_semantics,
+            generic_specializations,
+            generic_interface_specializations,
+            function_types,
+            address_taken_callables: self.address_taken_callables,
+            array_types,
+            optional_types,
+            optional_box_types,
+            iterable_language_item,
+            operator_language_item,
+            range_language_item,
+            string_language_item,
+            literal_data: ResolvedLiteralDataTable::new(self.literal_data),
+            declarations: function_declarations,
+            definitions: resolved_bodies.functions,
+            classes: class_declarations,
+            interfaces,
+            hierarchy,
+            virtual_families,
+            class_definitions: resolved_bodies.classes,
+            entry_function,
+            span,
+        })
+        .validate_and_publish(&mut self.diagnostics, ordinary);
+        ResolveOutput {
+            program,
             diagnostics: self.diagnostics,
-        };
-        validate_specialization_requirements(
-            &mut output.program,
-            &mut output.diagnostics,
-            ordinary_class_count,
-            ordinary_hierarchy,
-            ordinary_classes,
+        }
+    }
+
+    fn collect_declarations(&mut self) -> CollectedDeclarations {
+        if !self.has_module_context {
+            for unit in &self.units {
+                for import in &unit.ast.imports {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            MODULE_CONTEXT_REQUIRED,
+                            "module imports require whole-program module compilation",
+                        )
+                        .with_primary_label(
+                            import.span(),
+                            "use a compilation request to supply module roots and an entry",
+                        )
+                        .with_note("the source-text convenience API has no filesystem context"),
+                    );
+                }
+            }
+        }
+        self.collect_top_levels();
+        let CollectedGenericTemplates {
+            classes: class_templates,
+            interfaces: interface_templates,
+            parameters: type_parameters,
+        } = collect_generic_templates(&self.units, &mut self.diagnostics);
+        let module_declarations = ResolvedModuleDeclarationTable::new(
+            self.units
+                .iter()
+                .map(|unit| ResolvedModuleDeclarations::new(unit.module, unit.declarations.clone()))
+                .collect(),
         );
-        validate_interface_specializations(
-            &mut output.program,
-            &mut output.diagnostics,
-            ordinary_interfaces,
-        );
-        output
+        let module_bindings = self.collect_module_bindings();
+        let module_spans = self
+            .units
+            .iter()
+            .map(|unit| unit.ast.span)
+            .collect::<Vec<_>>();
+        let ordinary_bindings = self.collect_ordinary_bindings(&module_declarations, &module_spans);
+        CollectedDeclarations {
+            module_declarations,
+            module_bindings,
+            ordinary_bindings,
+            module_spans,
+            class_templates,
+            interface_templates,
+            type_parameters,
+        }
     }
 
     fn collect_top_levels(&mut self) {
@@ -1332,7 +1266,7 @@ impl<'ast> ProgramResolver<'ast> {
         &mut self,
         lookups: ProgramLookupTables<'_>,
         declarations: BodyDeclarationEnvironment<'_>,
-        language_items: FunctionBodyLanguageItems<'_>,
+        body_stage: BodyResolutionStage<'_>,
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
         let mut definitions = Vec::with_capacity(declarations.functions.len());
         for unit in &self.units {
@@ -1352,35 +1286,7 @@ impl<'ast> ProgramResolver<'ast> {
                     CallableResolutionContext::function(item.id.into()),
                     &declaration.parameters,
                     &function.body,
-                    BodyResolutionEnvironment::new(
-                        lookup,
-                        declarations,
-                        self.has_module_context,
-                        BodyLanguageItemEnvironment::new(
-                            StringLiteralResolutionEnvironment::new(
-                                language_items.string,
-                                &self.literal_ids,
-                            ),
-                            language_items.iterable.map(|item| {
-                                IterationResolutionEnvironment::new(
-                                    item,
-                                    language_items.interface_specializations,
-                                )
-                            }),
-                            language_items.operators.map(|item| {
-                                OperatorResolutionEnvironment::new(
-                                    item,
-                                    language_items.interface_specializations,
-                                )
-                            }),
-                            language_items.range.map(|item| {
-                                RangeResolutionEnvironment::new(
-                                    item,
-                                    language_items.interface_specializations,
-                                )
-                            }),
-                        ),
-                    ),
+                    body_stage.environment(lookup, declarations, &self.literal_ids),
                     &mut self.type_interner,
                     &mut self.address_taken_callables,
                     &mut self.diagnostics,

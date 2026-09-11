@@ -8,6 +8,7 @@ mod declarations;
 mod interface_declarations;
 mod interface_validation;
 mod names;
+mod publication;
 mod requests;
 mod validation;
 
@@ -17,12 +18,11 @@ pub(super) use declarations::{specialize_declarations, SpecializationDeclaration
 pub(super) use interface_declarations::{
     materialize_interface_declarations, InterfaceMaterializationInput,
 };
-pub(super) use interface_validation::validate_interface_specializations;
+pub(super) use publication::{CandidateProgram, OrdinaryProgramProducts};
 pub(super) use requests::{
     discover_specializations, extend_with_semantic_range_requests, GenericApplicationDiscovery,
     GenericTemplateDiscoveryInput, SpecializationDiscoveryInput,
 };
-pub(super) use validation::validate_specialization_requirements;
 
 #[cfg(test)]
 mod body_tests;

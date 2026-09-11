@@ -2,7 +2,8 @@ use super::*;
 use crate::{
     identity::{ClassId, ClassTemplateId, InterfaceId, InterfaceTemplateId},
     resolve::{
-        dump_resolved, NON_TERMINATING_GENERIC_SPECIALIZATION, PRIVATE_DECLARATION, UNKNOWN_TYPE,
+        dump_resolved, INVALID_GENERIC_INTERFACE_REQUIREMENT,
+        NON_TERMINATING_GENERIC_SPECIALIZATION, PRIVATE_DECLARATION, UNKNOWN_TYPE,
     },
     test_support::{load_module_sources, resolve_source},
 };
@@ -409,6 +410,64 @@ fn repeated_failed_keys_emit_once_and_restore_coherent_specialization_products()
     assert!(output.program.class_definitions.is_empty());
     assert!(output.program.definitions.is_empty());
     assert!(output.program.virtual_families.is_empty());
+}
+
+#[test]
+fn invalid_interface_candidate_preserves_independent_class_publication() {
+    let output = resolve_source(
+        "class Plain { init() {} }\n\
+         class Box<T> { value: T; }\n\
+         interface View {}\n\
+         interface Consumer<T> { fn consume(value: T) -> unit; }\n\
+         fn use(value: Box<i64>, ref invalid: Consumer<View>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, INVALID_GENERIC_INTERFACE_REQUIREMENT),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
+    let class_specialization = output
+        .program
+        .generic_specializations
+        .iter()
+        .next()
+        .expect("the closed class application is discovered");
+    assert!(matches!(
+        class_specialization.state,
+        GenericSpecializationState::Complete(_)
+    ));
+    assert!(output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .all(|entry| matches!(
+            entry.state,
+            GenericInterfaceSpecializationState::Failed { .. }
+        )));
+    assert_eq!(output.program.classes.len(), 2);
+    assert_eq!(
+        output.program.classes.get(ClassId::new(0)).unwrap().name,
+        "Plain"
+    );
+    assert_eq!(output.program.interfaces.len(), 1);
+    assert_eq!(
+        output
+            .program
+            .interfaces
+            .get(InterfaceId::new(0))
+            .unwrap()
+            .name,
+        "View"
+    );
+    assert_eq!(
+        output.program.classes.get(ClassId::new(1)).unwrap().name,
+        "Box<i64>"
+    );
+    assert!(!output.program.class_definitions.is_empty());
+    assert!(!output.program.definitions.is_empty());
 }
 
 #[test]

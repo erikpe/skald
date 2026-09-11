@@ -3,13 +3,10 @@
 use super::*;
 use crate::identity::{ArrayTypeId, FunctionTypeId, OptionalBoxTypeId, OptionalTypeId};
 
-pub(crate) fn validate_specialization_requirements(
-    program: &mut ResolvedProgram,
+pub(super) fn validate_specialization_requirements(
+    program: &ResolvedProgram,
     diagnostics: &mut Diagnostics,
-    ordinary_class_count: usize,
-    ordinary_hierarchy: ResolvedClassHierarchy,
-    ordinary_classes: ResolvedClassDeclarationTable,
-) {
+) -> bool {
     let bound_failures = failed_exact_bounds(program);
     let duplicate_bound_failures = duplicate_closed_bounds(program);
     let requirement_failures =
@@ -18,7 +15,7 @@ pub(crate) fn validate_specialization_requirements(
         && duplicate_bound_failures.is_empty()
         && requirement_failures.is_empty()
     {
-        return;
+        return true;
     }
 
     for (class, bound_index) in &bound_failures {
@@ -165,29 +162,7 @@ pub(crate) fn validate_specialization_requirements(
         diagnostics.push(diagnostic);
     }
 
-    // Ordinary class tables are dense. If any candidate fails, retain no
-    // generated declaration from this resolution attempt rather than expose a
-    // hole or a declaration whose dependency graph includes a failed class.
-    // No generated declaration is published when any member of the closed
-    // specialization graph is invalid. Mark every reserved generated identity
-    // failed, then restore the pre-specialization class product. This also
-    // removes virtual-dispatch and initializer mutations made while validating
-    // candidates, rather than leaving diagnostic output with dangling class
-    // references.
-    let generated_classes = program
-        .generic_specializations
-        .iter()
-        .filter_map(GenericSpecialization::class)
-        .collect::<Vec<_>>();
-    for class in generated_classes {
-        program.generic_specializations.fail_class(class);
-    }
-    debug_assert_eq!(ordinary_classes.len(), ordinary_class_count);
-    program.classes = ordinary_classes;
-    program.class_definitions = ResolvedClassDefinitionTable::default();
-    program.definitions = ResolvedFunctionDefinitionTable::default();
-    program.virtual_families = ResolvedVirtualFamilyTable::default();
-    program.hierarchy = ordinary_hierarchy;
+    false
 }
 
 fn application_name(program: &ResolvedProgram, specialization: &GenericSpecialization) -> String {

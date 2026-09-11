@@ -1,40 +1,266 @@
 //! Source-level guards for compiler phase dependency direction.
 
-use std::{fs, path::Path};
+#[path = "phase_boundaries/source_scan.rs"]
+mod source_scan;
+
+use std::{collections::BTreeSet, fs, path::Path};
+
+use source_scan::{crate_root_references, root_references};
+
+const PHASE_ROOTS: &[&str] = &[
+    "source",
+    "lexer",
+    "syntax",
+    "module",
+    "resolve",
+    "hir",
+    "typeck",
+    "mir",
+    "passes",
+    "backend",
+    "reporting",
+    "driver",
+];
+
+struct PhasePolicy {
+    root: &'static str,
+    allowed: &'static [&'static str],
+}
+
+const POLICIES: &[PhasePolicy] = &[
+    PhasePolicy {
+        root: "source",
+        allowed: &[],
+    },
+    PhasePolicy {
+        root: "lexer",
+        allowed: &["source"],
+    },
+    PhasePolicy {
+        root: "syntax",
+        allowed: &["source", "lexer"],
+    },
+    PhasePolicy {
+        root: "module",
+        allowed: &["source", "lexer", "syntax"],
+    },
+    PhasePolicy {
+        root: "resolve",
+        allowed: &["source", "lexer", "syntax", "module"],
+    },
+    PhasePolicy {
+        root: "hir",
+        allowed: &["source", "module", "resolve"],
+    },
+    PhasePolicy {
+        root: "typeck",
+        allowed: &["source", "resolve", "hir"],
+    },
+    PhasePolicy {
+        root: "mir",
+        allowed: &["source", "module", "resolve", "hir"],
+    },
+    PhasePolicy {
+        root: "passes",
+        allowed: &["source", "mir"],
+    },
+    PhasePolicy {
+        root: "backend",
+        allowed: &["source", "mir", "passes"],
+    },
+    PhasePolicy {
+        root: "reporting",
+        allowed: &["passes"],
+    },
+    PhasePolicy {
+        root: "driver",
+        allowed: PHASE_ROOTS,
+    },
+];
+
+struct TemporaryException {
+    owner: &'static str,
+    dependency: &'static str,
+    path: &'static str,
+}
+
+// MIR retention currently consumes the sealed whole-world reachability result
+// owned by the pass pipeline. Keep this exact reverse edge visible until that
+// authority boundary can move without exposing a caller-selected identity set.
+const TEMPORARY_EXCEPTIONS: &[TemporaryException] = &[TemporaryException {
+    owner: "mir",
+    dependency: "passes",
+    path: "mir/retain/mod.rs",
+}];
 
 #[test]
-fn production_resolution_does_not_depend_on_type_checking() {
-    let resolve = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/resolve");
+fn production_phase_dependencies_follow_the_forward_pipeline() {
+    let source_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut violations = Vec::new();
-    visit_rust_sources(&resolve, &mut |path| {
-        let relative = path.strip_prefix(&resolve).unwrap();
-        if relative
-            .components()
-            .any(|part| part.as_os_str() == "tests")
-            || path
-                .file_stem()
-                .is_some_and(|name| name.to_string_lossy().ends_with("_tests"))
-        {
-            return;
+    let mut observed_exceptions = BTreeSet::new();
+
+    for policy in POLICIES {
+        let directory = source_root.join(policy.root);
+        let file = source_root.join(format!("{}.rs", policy.root));
+        let phase_root = if directory.is_dir() {
+            &directory
+        } else {
+            &file
+        };
+        visit_rust_sources(phase_root, &mut |path| {
+            let relative = path.strip_prefix(&source_root).unwrap();
+            if is_test_source(relative) {
+                return;
+            }
+            let source = fs::read_to_string(path).expect("Rust source is valid UTF-8");
+            for reference in root_references(&source, module_depth(relative)) {
+                if let Some(exception) = temporary_exception(policy, relative, &reference.root) {
+                    observed_exceptions.insert((
+                        exception.owner,
+                        exception.dependency,
+                        exception.path,
+                    ));
+                }
+                if !dependency_allowed(policy, relative, &reference.root) {
+                    violations.push(format!(
+                        "{}:{}: `{}` may not depend on `{}`",
+                        relative.display(),
+                        reference.line,
+                        policy.root,
+                        reference.root,
+                    ));
+                }
+            }
+        });
+    }
+    for exception in TEMPORARY_EXCEPTIONS {
+        if !observed_exceptions.contains(&(exception.owner, exception.dependency, exception.path)) {
+            violations.push(format!(
+                "stale temporary exception: `{}` -> `{}` at {}",
+                exception.owner, exception.dependency, exception.path
+            ));
         }
-        let source = fs::read_to_string(path).unwrap();
-        if source.contains("crate::typeck") || source.contains("typeck::") {
-            violations.push(relative.display().to_string());
-        }
-    });
+    }
+
     assert!(
         violations.is_empty(),
-        "resolution must depend only on its own or earlier/neutral phases: {violations:?}"
+        "compiler phase dependency violations:\n{}",
+        violations.join("\n")
     );
 }
 
+fn module_depth(path: &Path) -> usize {
+    let components = path.components().count();
+    if path.file_stem().is_some_and(|stem| stem == "mod") {
+        components - 1
+    } else {
+        components
+    }
+}
+
+fn dependency_allowed(policy: &PhasePolicy, path: &Path, dependency: &str) -> bool {
+    dependency == policy.root
+        || !PHASE_ROOTS.contains(&dependency)
+        || policy.allowed.contains(&dependency)
+        || temporary_exception(policy, path, dependency).is_some()
+}
+
+fn temporary_exception(
+    policy: &PhasePolicy,
+    path: &Path,
+    dependency: &str,
+) -> Option<&'static TemporaryException> {
+    TEMPORARY_EXCEPTIONS.iter().find(|exception| {
+        exception.owner == policy.root
+            && exception.dependency == dependency
+            && path == Path::new(exception.path)
+    })
+}
+
+fn is_test_source(path: &Path) -> bool {
+    path.components().any(|component| {
+        let name = component.as_os_str().to_string_lossy();
+        name == "tests" || name == "test_fixtures"
+    }) || path.file_stem().is_some_and(|stem| {
+        let stem = stem.to_string_lossy();
+        stem == "tests"
+            || stem.ends_with("_tests")
+            || stem == "test_support"
+            || stem == "test_fixtures"
+    })
+}
+
 fn visit_rust_sources(directory: &Path, visit: &mut impl FnMut(&Path)) {
-    for entry in fs::read_dir(directory).unwrap() {
-        let path = entry.unwrap().path();
+    if directory.is_file() {
+        visit(directory);
+        return;
+    }
+    for entry in fs::read_dir(directory).expect("phase source directory is readable") {
+        let path = entry.expect("phase source entry is readable").path();
         if path.is_dir() {
             visit_rust_sources(&path, visit);
         } else if path.extension().is_some_and(|extension| extension == "rs") {
             visit(&path);
         }
     }
+}
+
+#[test]
+fn test_source_detection_matches_the_repository_conventions() {
+    for path in [
+        "resolve/tests.rs",
+        "resolve/tests/classes.rs",
+        "mir/verify/shape_tests.rs",
+        "backend/test_support.rs",
+        "mir/test_fixtures.rs",
+        "mir/test_fixtures/program.rs",
+    ] {
+        assert!(is_test_source(Path::new(path)), "did not exclude {path}");
+    }
+    for path in [
+        "resolve/resolver.rs",
+        "passes/static_lifecycle/verify.rs",
+        "backend/x86_64_sysv/lower.rs",
+    ] {
+        assert!(!is_test_source(Path::new(path)), "excluded {path}");
+    }
+}
+
+#[test]
+fn policy_rejects_reverse_edges_and_accepts_lowering_inputs() {
+    let resolve = POLICIES
+        .iter()
+        .find(|policy| policy.root == "resolve")
+        .unwrap();
+    let synthetic = "use crate::{syntax::CompilationUnit, typeck::TypeCheckOutput};";
+    let violations = crate_root_references(synthetic)
+        .into_iter()
+        .filter(|reference| {
+            !dependency_allowed(resolve, Path::new("resolve/resolver.rs"), &reference.root)
+        })
+        .map(|reference| reference.root)
+        .collect::<Vec<_>>();
+    assert_eq!(violations, ["typeck"]);
+
+    let backend = POLICIES
+        .iter()
+        .find(|policy| policy.root == "backend")
+        .unwrap();
+    assert!(dependency_allowed(
+        backend,
+        Path::new("backend/x86_64_sysv/lower.rs"),
+        "mir"
+    ));
+
+    let mir = POLICIES.iter().find(|policy| policy.root == "mir").unwrap();
+    assert!(dependency_allowed(
+        mir,
+        Path::new("mir/retain/mod.rs"),
+        "passes"
+    ));
+    assert!(!dependency_allowed(
+        mir,
+        Path::new("mir/lower.rs"),
+        "passes"
+    ));
 }

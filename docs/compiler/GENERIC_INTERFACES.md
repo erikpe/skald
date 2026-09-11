@@ -238,6 +238,13 @@ preserves ordinary interface dispatch: specialization does not rewrite a
 bound call to a direct class call merely because the argument is known.
 Ambiguity across multiple bounds is rejected before body specialization.
 
+Closed class and interface applications share one ordered publication
+boundary. Each validator reports against an immutable candidate product; the
+consuming publication step then selects that generated product or its saved
+ordinary fallback. Class publication is selected first, so dependent
+interfaces observe the selected class product. Independent valid interface or
+class products remain published when the other family fails.
+
 ## Closed interface declarations and conformance
 
 Interface specialization publishes one ordinary

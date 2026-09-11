@@ -29,6 +29,7 @@ mod range_language_item;
 mod resolver;
 mod semantic_range_requests;
 mod specialization;
+mod stages;
 mod static_initializer;
 mod string_language_item;
 mod virtuals;
@@ -64,11 +65,11 @@ use semantic_range_requests::{
 use specialization::{
     close_bound_member_selections, discover_specializations, extend_with_semantic_range_requests,
     generated_class_work, materialize_interface_declarations, specialize_bodies,
-    specialize_declarations, validate_interface_specializations,
-    validate_specialization_requirements, GenericApplicationDiscovery,
-    GenericTemplateDiscoveryInput, InterfaceMaterializationInput, SpecializationBodyInput,
-    SpecializationDeclarationInput, SpecializationDiscoveryInput,
+    specialize_declarations, CandidateProgram, GenericApplicationDiscovery,
+    GenericTemplateDiscoveryInput, InterfaceMaterializationInput, OrdinaryProgramProducts,
+    SpecializationBodyInput, SpecializationDeclarationInput, SpecializationDiscoveryInput,
 };
+use stages::{BodyResolutionStage, CollectedDeclarations, ResolvedBodies};
 use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};
 use string_language_item::validate_string_language_item;
 use virtuals::resolve_virtual_families;
