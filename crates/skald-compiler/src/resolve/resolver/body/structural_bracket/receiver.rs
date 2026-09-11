@@ -20,26 +20,30 @@ impl CallableResolver<'_, '_> {
         receiver: ResolvedExpression,
         operator: syntax::BracketProjectionOperator,
     ) -> BracketReceiver {
-        let ty = self.resolved_expression_type(&receiver);
+        let ty = self.provisional_expression_type(&receiver);
         match (operator, ty) {
             (
                 syntax::BracketProjectionOperator::Ordinary { .. },
-                Some(ResolvedTypeKind::Array(_)),
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Array(_)),
             )
             | (
                 syntax::BracketProjectionOperator::Shared { .. },
-                Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(_))),
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Shared(
+                    ResolvedSharedTarget::Array(_),
+                )),
             ) => BracketReceiver::Intrinsic(receiver),
             (
                 syntax::BracketProjectionOperator::Ordinary { .. },
-                Some(ResolvedTypeKind::Class(class)),
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Class(class)),
             ) => match self.object_receiver_from_resolved_expression(receiver, class) {
                 Some(receiver) => BracketReceiver::Class(receiver),
                 None => BracketReceiver::Diagnosed,
             },
             (
                 syntax::BracketProjectionOperator::Shared { arrow_span, .. },
-                Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Class(class))),
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Shared(
+                    ResolvedSharedTarget::Class(class),
+                )),
             ) => {
                 let span = self.cover(receiver.span(), arrow_span);
                 BracketReceiver::Class(ResolvedObjectReceiver::Dereference {
@@ -57,7 +61,7 @@ impl CallableResolver<'_, '_> {
             }
             (
                 syntax::BracketProjectionOperator::Ordinary { .. },
-                Some(ResolvedTypeKind::Interface(interface)),
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Interface(interface)),
             ) => match self.interface_receiver_from_resolved_expression(receiver, interface) {
                 Some((receiver, receiver_span)) => BracketReceiver::Interface {
                     receiver,
@@ -68,7 +72,9 @@ impl CallableResolver<'_, '_> {
             },
             (
                 syntax::BracketProjectionOperator::Shared { arrow_span, .. },
-                Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Interface(interface))),
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Shared(
+                    ResolvedSharedTarget::Interface(interface),
+                )),
             ) => {
                 let span = self.cover(receiver.span(), arrow_span);
                 BracketReceiver::Interface {
@@ -87,7 +93,7 @@ impl CallableResolver<'_, '_> {
             }
             (
                 syntax::BracketProjectionOperator::Ordinary { .. },
-                Some(ResolvedTypeKind::Shared(
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Shared(
                     target @ (ResolvedSharedTarget::Class(_) | ResolvedSharedTarget::Interface(_)),
                 )),
             ) => {

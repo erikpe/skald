@@ -2658,6 +2658,24 @@ spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
 select entries by identity rather than by source spelling.
 
+Callable-body resolution has one private provisional expression-type query for
+the few decisions that must precede type checking, including member, callable,
+operator, iterable, range, and bracket selection. Its result distinguishes a
+known candidate type, a context-dependent unknown type, and an invalid prior
+selection. `none` and `some(...)` are unknown until an expected optional type
+is available; an overloaded operator with zero or multiple selected candidates
+is invalid. A uniquely selected overload contributes its declared output type,
+including selections later realized through a closed generic witness.
+
+This query exposes resolution facts and syntax-directed approximations; it is
+not a second type checker. In particular, an unselected primitive arithmetic
+expression provisionally inherits its left operand's kind, while authoritative
+operand validation remains in type checking. Missing declaration or interner
+metadata is invalid rather than context-dependent. Consumers that do not need
+the distinction explicitly request only a known candidate. Binding types are
+currently found through the resolver's lexical scopes; A25 owns replacing that
+lookup with an identity-indexed table.
+
 A reachable canonical `std::ops` module additionally produces one atomic
 `ResolvedOperatorLanguageItem`. Its fixed canonical table records all
 seventeen exact generic-interface templates, structural parameter identities,

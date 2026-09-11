@@ -511,14 +511,17 @@ impl CallableResolver<'_, '_> {
             return None;
         }
         let receiver = self.resolve_expression(&member.receiver)?;
-        let receiver_type = self.resolved_expression_type(&receiver);
+        let receiver_type = self.provisional_expression_type(&receiver);
         let operator = match (member.operator, receiver_type) {
-            (syntax::MemberAccessOperator::Dot { span }, Some(ResolvedTypeKind::Array(_))) => {
-                ResolvedArrayLengthOperator::Ordinary { dot_span: span }
-            }
+            (
+                syntax::MemberAccessOperator::Dot { span },
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Array(_)),
+            ) => ResolvedArrayLengthOperator::Ordinary { dot_span: span },
             (
                 syntax::MemberAccessOperator::Arrow { span },
-                Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(_))),
+                ProvisionalExpressionType::Known(ResolvedTypeKind::Shared(
+                    ResolvedSharedTarget::Array(_),
+                )),
             ) => ResolvedArrayLengthOperator::Shared { arrow_span: span },
             _ => return None,
         };
@@ -545,198 +548,6 @@ impl CallableResolver<'_, '_> {
                 span: call.span,
             },
         ))))
-    }
-
-    pub(super) fn resolved_expression_type(
-        &self,
-        expression: &ResolvedExpression,
-    ) -> Option<ResolvedTypeKind> {
-        match expression {
-            ResolvedExpression::Absent(_) | ResolvedExpression::Present(_) => None,
-            ResolvedExpression::PresenceTest(_) | ResolvedExpression::TypeTest(_) => {
-                Some(ResolvedTypeKind::Bool)
-            }
-            ResolvedExpression::StringLiteral(literal) => {
-                Some(ResolvedTypeKind::Class(literal.class))
-            }
-            ResolvedExpression::NumericLiteral(literal) => Some(match literal.kind {
-                crate::literal::NumericLiteralKind::I64(_) => ResolvedTypeKind::I64,
-                crate::literal::NumericLiteralKind::U64(_) => ResolvedTypeKind::U64,
-                crate::literal::NumericLiteralKind::U8(_) => ResolvedTypeKind::U8,
-                crate::literal::NumericLiteralKind::F64 => ResolvedTypeKind::F64,
-            }),
-            ResolvedExpression::ByteLiteral(_) => Some(ResolvedTypeKind::U8),
-            ResolvedExpression::Boolean(_) => Some(ResolvedTypeKind::Bool),
-            ResolvedExpression::Binding(binding) => self
-                .receiver_class
-                .filter(|_| binding.binding == BindingId::Receiver(self.callable))
-                .map(ResolvedTypeKind::Class)
-                .or_else(|| {
-                    self.scopes
-                        .iter()
-                        .rev()
-                        .flat_map(|scope| scope.values())
-                        .find(|symbol| symbol.id == binding.binding)
-                        .map(|symbol| symbol.ty)
-                }),
-            ResolvedExpression::Dereference(dereference) => Some(match dereference.target {
-                ResolvedSharedTarget::Obj => ResolvedTypeKind::Obj,
-                ResolvedSharedTarget::Class(class) => ResolvedTypeKind::Class(class),
-                ResolvedSharedTarget::Interface(interface) => {
-                    ResolvedTypeKind::Interface(interface)
-                }
-                ResolvedSharedTarget::Array(array) => ResolvedTypeKind::Array(array),
-                ResolvedSharedTarget::OptionalBox(target) => ResolvedTypeKind::Optional(
-                    self.type_interner
-                        .optional_box(target)
-                        .expect("resolved optional-box target must be interned")
-                        .optional?,
-                ),
-            }),
-            ResolvedExpression::Unwrap(unwrap) => {
-                if let Some(target) = self.resolved_optional_box_object_leaf(unwrap) {
-                    return Some(match target {
-                        ResolvedObjectTarget::Class(class) => ResolvedTypeKind::Class(class),
-                        ResolvedObjectTarget::Interface(interface) => {
-                            ResolvedTypeKind::Interface(interface)
-                        }
-                        ResolvedObjectTarget::Obj => ResolvedTypeKind::Obj,
-                    });
-                }
-                match self.resolved_expression_type(&unwrap.source)? {
-                    ResolvedTypeKind::Optional(optional) => self
-                        .type_interner
-                        .optional(optional)
-                        .map(|entry| entry.payload.kind),
-                    _ => None,
-                }
-            }
-            ResolvedExpression::Grouped(grouped) => {
-                self.resolved_expression_type(&grouped.expression)
-            }
-            ResolvedExpression::Unary(unary) => match &unary.selection {
-                Some(resolution) => resolution.selected().map(|selection| selection.output),
-                None => self.resolved_expression_type(&unary.operand),
-            },
-            ResolvedExpression::Binary(binary) => match &binary.selection {
-                Some(resolution) => resolution.selected().map(|selection| selection.output),
-                None => match binary.operator {
-                    ResolvedBinaryOperator::Equal
-                    | ResolvedBinaryOperator::NotEqual
-                    | ResolvedBinaryOperator::LessThan
-                    | ResolvedBinaryOperator::LessEqual
-                    | ResolvedBinaryOperator::GreaterThan
-                    | ResolvedBinaryOperator::GreaterEqual => Some(ResolvedTypeKind::Bool),
-                    _ => self.resolved_expression_type(&binary.left),
-                },
-            },
-            ResolvedExpression::Logical(_) => Some(ResolvedTypeKind::Bool),
-            ResolvedExpression::PrimitiveCast(cast) => Some(match cast.target {
-                ResolvedPrimitiveType::I64 => ResolvedTypeKind::I64,
-                ResolvedPrimitiveType::U64 => ResolvedTypeKind::U64,
-                ResolvedPrimitiveType::U8 => ResolvedTypeKind::U8,
-                ResolvedPrimitiveType::F64 => ResolvedTypeKind::F64,
-                ResolvedPrimitiveType::Bool => ResolvedTypeKind::Bool,
-            }),
-            ResolvedExpression::ObjectCast(cast) => Some(match cast.target_mode {
-                ResolvedObjectCastTargetMode::Plain => cast.target.kind,
-                ResolvedObjectCastTargetMode::Shared { .. } => {
-                    ResolvedTypeKind::Shared(match cast.target.kind {
-                        ResolvedTypeKind::Class(class) => ResolvedSharedTarget::Class(class),
-                        ResolvedTypeKind::Interface(interface) => {
-                            ResolvedSharedTarget::Interface(interface)
-                        }
-                        ResolvedTypeKind::Obj => ResolvedSharedTarget::Obj,
-                        _ => return None,
-                    })
-                }
-            }),
-            ResolvedExpression::ArrayConstruction(construction) => {
-                let ResolvedTypeKind::Array(array) = construction.array_type.kind else {
-                    return None;
-                };
-                Some(if construction.new_span.is_some() {
-                    ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(array))
-                } else {
-                    ResolvedTypeKind::Array(array)
-                })
-            }
-            ResolvedExpression::ArrayProjection(projection) => {
-                let receiver = self.resolved_expression_type(&projection.receiver)?;
-                let array = match (projection.operator, receiver) {
-                    (
-                        ResolvedArrayProjectionOperator::Ordinary { .. },
-                        ResolvedTypeKind::Array(array),
-                    )
-                    | (
-                        ResolvedArrayProjectionOperator::Shared { .. },
-                        ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(array)),
-                    ) => array,
-                    _ => return None,
-                };
-                match projection.bounds {
-                    ResolvedArrayProjectionBounds::Index(_) => self
-                        .type_interner
-                        .array(array)
-                        .map(|entry| entry.element.kind),
-                    ResolvedArrayProjectionBounds::Slice { .. } => {
-                        Some(ResolvedTypeKind::Array(array))
-                    }
-                }
-            }
-            ResolvedExpression::ArrayLength(_) => Some(ResolvedTypeKind::U64),
-            ResolvedExpression::FieldAccess(access) => self
-                .environment
-                .classes
-                .get(access.field.class())
-                .and_then(|class| class.field(access.field))
-                .map(|field| field.type_syntax.kind),
-            ResolvedExpression::StaticFieldAccess(access) => self
-                .environment
-                .classes
-                .get(access.field.class())
-                .and_then(|class| class.static_field(access.field))
-                .map(|field| field.type_syntax.kind),
-            ResolvedExpression::FunctionReference(reference) => {
-                Some(ResolvedTypeKind::Function(reference.function_type))
-            }
-            ResolvedExpression::IndirectCall(call) => self
-                .type_interner
-                .function(call.function_type)
-                .map(|signature| signature.result.kind),
-            ResolvedExpression::DirectCall(call) => self
-                .environment
-                .functions
-                .get(call.function)
-                .map(|declaration| declaration.return_type.kind),
-            ResolvedExpression::StaticCall(call) => self
-                .environment
-                .classes
-                .get(call.method.class())
-                .and_then(|class| class.method(call.method))
-                .map(|method| method.return_type.kind),
-            ResolvedExpression::MethodCall(call) => self
-                .environment
-                .classes
-                .get(call.method.class())
-                .and_then(|class| class.method(call.method))
-                .map(|method| method.return_type.kind),
-            ResolvedExpression::InterfaceCall(call) => self
-                .environment
-                .interfaces
-                .get(call.interface)
-                .and_then(|interface| interface.requirements.get(call.requirement.index()))
-                .map(|requirement| requirement.return_type.kind),
-            ResolvedExpression::Allocation(allocation) => Some(ResolvedTypeKind::Shared(
-                ResolvedSharedTarget::Class(allocation.class),
-            )),
-            ResolvedExpression::OptionalBoxAllocation(allocation) => Some(
-                ResolvedTypeKind::Shared(ResolvedSharedTarget::OptionalBox(allocation.target)),
-            ),
-            ResolvedExpression::Construct(construction) => {
-                Some(ResolvedTypeKind::Class(construction.class))
-            }
-        }
     }
 
     fn resolve_call_target(

@@ -41,7 +41,10 @@ impl CallableResolver<'_, '_> {
         operand: &ResolvedExpression,
     ) -> Option<ResolvedOperatorResolution> {
         let protocol = operator.protocol()?;
-        let left = self.resolved_expression_type(operand)?;
+        let ProvisionalExpressionType::Known(left) = self.provisional_expression_type(operand)
+        else {
+            return None;
+        };
         matches!(
             left,
             ResolvedTypeKind::Class(_) | ResolvedTypeKind::Interface(_)
@@ -56,14 +59,22 @@ impl CallableResolver<'_, '_> {
         right: &ResolvedExpression,
     ) -> Option<ResolvedOperatorResolution> {
         let protocol = operator.protocol();
-        let left_type = self.resolved_expression_type(left)?;
+        let ProvisionalExpressionType::Known(left_type) = self.provisional_expression_type(left)
+        else {
+            return None;
+        };
         if !matches!(
             left_type,
             ResolvedTypeKind::Class(_) | ResolvedTypeKind::Interface(_)
         ) {
             return None;
         }
-        Some(self.resolve_operator(protocol, left_type, self.resolved_expression_type(right)))
+        let right_type = match self.provisional_expression_type(right) {
+            ProvisionalExpressionType::Known(kind) => Some(kind),
+            ProvisionalExpressionType::Unknown => None,
+            ProvisionalExpressionType::Invalid => return None,
+        };
+        Some(self.resolve_operator(protocol, left_type, right_type))
     }
 
     fn resolve_operator(

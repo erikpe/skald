@@ -34,17 +34,17 @@ impl CallableResolver<'_, '_> {
         let (source, source_type) = match &statement.source {
             syntax::ForInSource::Iterable(iterable) => {
                 let iterable = self.resolve_expression(iterable)?;
-                let source_type = self.resolved_expression_type(&iterable);
+                let source_type = self.provisional_expression_type(&iterable);
                 (ResolvedForInSource::Iterable(iterable), source_type)
             }
             syntax::ForInSource::Range(range) => {
                 let source = self.resolve_range_source(range)?;
                 let source_type = match &source {
                     ResolvedForInSource::Iterable(iterable) => {
-                        self.resolved_expression_type(iterable)
+                        self.provisional_expression_type(iterable)
                     }
                     ResolvedForInSource::Range(range) => {
-                        Some(ResolvedTypeKind::Class(range.range_class))
+                        ProvisionalExpressionType::Known(ResolvedTypeKind::Class(range.range_class))
                     }
                 };
                 (source, source_type)
@@ -137,7 +137,7 @@ impl CallableResolver<'_, '_> {
 
     fn select_iterable(
         &mut self,
-        static_type: Option<ResolvedTypeKind>,
+        static_type: ProvisionalExpressionType,
         annotation: Option<ResolvedTypeKind>,
         statement: &syntax::ForInStatement,
     ) -> Option<ResolvedIterableSelection> {
@@ -178,6 +178,7 @@ impl CallableResolver<'_, '_> {
                 });
         }
         let mut candidates = static_type
+            .known()
             .into_iter()
             .flat_map(|ty| self.iterable_candidates(ty, environment))
             .collect::<Vec<_>>();

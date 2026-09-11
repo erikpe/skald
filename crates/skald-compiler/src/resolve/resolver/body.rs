@@ -19,9 +19,12 @@ mod indirect_call;
 mod iteration;
 mod operator;
 mod place;
+mod provisional_type;
 mod range;
 mod statement;
 mod structural_bracket;
+
+use provisional_type::ProvisionalExpressionType;
 
 /// A selected ordinary class member after privacy and hierarchy lookup.
 #[derive(Clone, Copy)]

@@ -206,8 +206,8 @@ impl CallableResolver<'_, '_> {
         let (Some(lower), Some(upper)) = (lower, upper) else {
             return None;
         };
-        let lower_type = self.resolved_expression_type(&lower)?;
-        let upper_type = self.resolved_expression_type(&upper)?;
+        let lower_type = self.known_provisional_expression_type(&lower)?;
+        let upper_type = self.known_provisional_expression_type(&upper)?;
         if lower_type != upper_type {
             self.diagnostics.push(
                 Diagnostic::error(

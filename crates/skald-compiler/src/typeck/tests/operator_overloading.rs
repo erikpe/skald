@@ -129,6 +129,65 @@ fn generic_operator_selection_supports_structural_rhs_and_output() {
 }
 
 #[test]
+fn failed_operator_selection_used_as_a_receiver_keeps_resolution_diagnostics() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Left { init() {} }\n\
+         class Right { init() {} }\n\
+         fn invalid(ref left: Left, ref right: Right) -> unit { (left + right).missing; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(resolved.diagnostics.len(), 1, "{:?}", resolved.diagnostics);
+    assert_eq!(
+        resolved.diagnostics.iter().next().unwrap().code,
+        crate::resolve::INVALID_MEMBER_SELECTION
+    );
+}
+
+#[test]
+fn selected_operator_output_does_not_bypass_receiver_carrier_rules() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Output { init() {} fn read() -> i64 { return 42; } }\n\
+         class Right { init() {} }\n\
+         class Left implements OpAdd<Right, Output> {\n\
+           init() {}\n\
+           fn op_add(ref rhs: Right) -> Output { return Output(); }\n\
+         }\n\
+         fn read(ref left: Left, ref right: Right) -> i64 { return (left + right).read(); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert_eq!(resolved.diagnostics.len(), 1, "{:?}", resolved.diagnostics);
+    let diagnostic = resolved.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, crate::resolve::INVALID_MEMBER_SELECTION);
+    assert_eq!(
+        diagnostic.message,
+        "member receiver must be an object place"
+    );
+}
+
+#[test]
+fn contextual_optional_rhs_does_not_supply_a_provisional_receiver_type() {
+    let resolved = resolve_operator_source(
+        "from std::ops import OpAdd;\n\
+         class Output { init() {} fn read() -> i64 { return 42; } }\n\
+         class Left implements OpAdd<i64?, Output> {\n\
+           init() {}\n\
+           fn op_add(ref rhs: i64?) -> Output { return Output(); }\n\
+         }\n\
+         fn invalid(ref left: Left) -> i64 { return (left + none).read(); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(resolved.diagnostics.len(), 1, "{:?}", resolved.diagnostics);
+    assert_eq!(
+        resolved.diagnostics.iter().next().unwrap().code,
+        crate::resolve::INVALID_MEMBER_SELECTION
+    );
+}
+
+#[test]
 fn generic_operator_bounds_cover_unary_algebraic_equality_and_ordering() {
     let resolved = resolve_operator_source(
         "from std::ops import OpNeg, OpBitNot, OpEq, OpLess, OpDiv;\n\

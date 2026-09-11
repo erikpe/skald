@@ -83,7 +83,7 @@ impl CallableResolver<'_, '_> {
                 let resolved = self.resolve_expression(expression)?;
                 match resolved {
                     ResolvedExpression::ArrayProjection(projection) => {
-                        let Some(ResolvedTypeKind::Class(class)) = self.resolved_expression_type(
+                        let Some(ResolvedTypeKind::Class(class)) = self.known_provisional_expression_type(
                             &ResolvedExpression::ArrayProjection(projection.clone()),
                         ) else {
                             self.diagnostics.push(
@@ -113,7 +113,7 @@ impl CallableResolver<'_, '_> {
                             return None;
                         }
                         let Some(ResolvedTypeKind::Class(class)) =
-                            self.resolved_expression_type(&producer)
+                            self.known_provisional_expression_type(&producer)
                         else {
                             self.diagnostics.push(
                                 Diagnostic::error(
@@ -161,7 +161,8 @@ impl CallableResolver<'_, '_> {
                     self.report_implicit_shared_member_access(expression.span(), target);
                     return None;
                 }
-                let Some(ResolvedTypeKind::Class(class)) = self.resolved_expression_type(&producer)
+                let Some(ResolvedTypeKind::Class(class)) =
+                    self.known_provisional_expression_type(&producer)
                 else {
                     self.diagnostics.push(
                         Diagnostic::error(

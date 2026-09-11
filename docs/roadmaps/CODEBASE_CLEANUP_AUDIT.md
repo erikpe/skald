@@ -1,7 +1,7 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A06, A35, and A38 completed on 2026-09-09. Turn
-the chosen architectural findings into separate PR-sized implementation
+Status: actionable audit; A01–A11, A34, A35, A38, and A43 are complete. Turn
+the remaining architectural findings into separate PR-sized implementation
 roadmaps. No implementation roadmap depends on this document yet.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
@@ -108,7 +108,7 @@ work and its validation; findings without that record remain `Open`.
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Complete | P1 | 5 | L | High | O | M, E, R |
 | [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Complete | P1 | 5 | L | High | O | M, E, R |
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete | P2 | 4 | M–L | High | C | M, C |
-| [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Open | P2 | 4 | M | Medium | O | M, E, R, C |
+| [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Open | P2 | 4 | M | Medium | O | M, E |
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Open | P1 | 4 | M–L | Medium | O | M, E, R |
@@ -561,11 +561,13 @@ Rust 1.82.0 workspace all-target check also passed.
 
 ### A11 — Make provisional expression-type queries explicit
 
-**Evidence:** [`resolved_expression_type`](../../crates/skald-compiler/src/resolve/resolver/body/call.rs)
-recursively predicts types for member/protocol selection. For example, an
-unselected arithmetic binary expression inherits the left operand's kind;
-`Option<ResolvedTypeKind>` also represents cases with no available answer.
-The type checker later performs authoritative validation.
+**Status:** Complete (2026-09-11).
+
+**Evidence:** the former `resolved_expression_type` helper in callable-body
+resolution recursively predicted types for member/protocol selection. For
+example, an unselected arithmetic binary expression inherits the left
+operand's kind; `Option<ResolvedTypeKind>` also represented cases with no
+available answer. The type checker later performs authoritative validation.
 
 **Change:** name and document this as a provisional shape/type query. Distinguish
 unknown, known candidate, and invalid selection where callers need the
@@ -576,6 +578,35 @@ needs type information; the goal is explicit ownership, not removing it blindly.
 **First PR / validation:** characterize invalid operands used as receivers,
 optional injection, overloaded operators, and generic witnesses. Preserve the
 owner and order of resulting diagnostics. Follow with A25's indexed lookup.
+
+**Delivered:** callable-body resolution now owns one documented
+[`provisional_type`](../../crates/skald-compiler/src/resolve/resolver/body/provisional_type.rs)
+module. Its exhaustive query returns `Known`, `Unknown`, or `Invalid` instead
+of overloading `Option`: contextual `none`/`some` forms remain unknown, one
+selected operator application contributes its declared output, failed or
+ambiguous operator selection is invalid, and missing declaration/interner
+facts are invalid. Syntax-directed primitive inference remains explicitly
+provisional, with authoritative operand validation still owned by type
+checking.
+
+Member, callable, dereference, bracket, iterable, range, and operator selection
+now consume the centralized query. Callers that only need a candidate use one
+named conversion; operator selection handles unknown contextual operands and
+invalid nested selections separately. Existing diagnostic owners and receiver
+carrier restrictions are unchanged. Focused tests cover all three result
+states, zero/one/multiple operator candidates, failed operator receivers,
+contextual optional operands, selected overload outputs, and the existing
+primitive-intrinsic and class-witness generic specialization paths.
+
+Binding facts still come from the resolver's lexical scope maps. The
+architecture contract and this item explicitly leave replacement of that scan
+with an identity-indexed table to A25, avoiding a competing cache design.
+
+Validation passed through the focused 35-test operator-overloading suite and
+the provisional-query unit tests, then the full `make check` gate with 3,099
+compiler unit tests, 53 process-determinism tests, runtime and documentation
+checks, 21 compiler compile-fail documentation tests, and all 628 golden
+leaves. The Rust 1.82.0 workspace all-target check also passed.
 
 ### A12 — Consolidate language-item discovery plumbing
 

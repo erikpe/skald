@@ -8,14 +8,17 @@ impl CallableResolver<'_, '_> {
         callee: &syntax::Expression,
     ) -> Option<(ResolvedExpression, FunctionTypeId)> {
         let callee = self.resolve_expression(callee)?;
-        let Some(ResolvedTypeKind::Function(function_type)) =
-            self.resolved_expression_type(&callee)
-        else {
-            self.diagnostics.push(
-                Diagnostic::error(INVALID_CALL_TARGET, "expression is not callable")
-                    .with_primary_label(callee.span(), "this expression has no function type"),
-            );
-            return None;
+        let function_type = match self.provisional_expression_type(&callee) {
+            ProvisionalExpressionType::Known(ResolvedTypeKind::Function(function_type)) => {
+                function_type
+            }
+            _ => {
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_CALL_TARGET, "expression is not callable")
+                        .with_primary_label(callee.span(), "this expression has no function type"),
+                );
+                return None;
+            }
         };
         Some((callee, function_type))
     }

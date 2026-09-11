@@ -128,13 +128,19 @@ impl CallableResolver<'_, '_> {
         span: Span,
     ) -> Option<ResolvedDereferenceExpr> {
         let source = self.resolve_expression(source)?;
-        let Some(target) = self.resolved_shared_target(&source) else {
-            self.diagnostics.push(
-                Diagnostic::error(INVALID_DEREFERENCE, "dereference requires a shared owner")
-                    .with_primary_label(operator_span, "this operator requires `shared T`")
-                    .with_secondary_label(source.span(), "this expression is not a shared owner"),
-            );
-            return None;
+        let target = match self.provisional_expression_type(&source) {
+            ProvisionalExpressionType::Known(ResolvedTypeKind::Shared(target)) => target,
+            _ => {
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_DEREFERENCE, "dereference requires a shared owner")
+                        .with_primary_label(operator_span, "this operator requires `shared T`")
+                        .with_secondary_label(
+                            source.span(),
+                            "this expression is not a shared owner",
+                        ),
+                );
+                return None;
+            }
         };
         Some(ResolvedDereferenceExpr {
             source: Box::new(source),
@@ -149,7 +155,7 @@ impl CallableResolver<'_, '_> {
         &self,
         expression: &ResolvedExpression,
     ) -> Option<ResolvedSharedTarget> {
-        match self.resolved_expression_type(expression)? {
+        match self.known_provisional_expression_type(expression)? {
             ResolvedTypeKind::Shared(target) => Some(target),
             _ => None,
         }
@@ -166,7 +172,7 @@ impl CallableResolver<'_, '_> {
                 return Some(class);
             }
         }
-        let kind = self.resolved_expression_type(expression)?;
+        let kind = self.known_provisional_expression_type(expression)?;
         match kind {
             ResolvedTypeKind::Optional(optional) => {
                 match self.type_interner.optional(optional)?.payload.kind {
