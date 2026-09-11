@@ -98,6 +98,7 @@ Archived plans:
 - [Structured compiler reporting](STRUCTURED_REPORTING_ROADMAP.md)
 - [Static-lifecycle certificate redesign](STATIC_LIFECYCLE_CERTIFICATE_ROADMAP.md)
 - [Dense callable-local MIR identity rewriting](DENSE_MIR_IDENTITY_REWRITING_ROADMAP.md)
+- [Function-valued fields in class arrays compiler-crash resolution](FUNCTION_FIELD_ARRAY_COMPILER_CRASH.md)
 - [Selectable final-MIR optimization pipeline](SELECTABLE_FINAL_MIR_OPTIMIZATION_PIPELINE_ROADMAP.md)
 - [Target-independent whole-world reachability](TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md)
 - [Reachability-gated static lifecycle](REACHABILITY_GATED_STATIC_LIFECYCLE_ROADMAP.md)

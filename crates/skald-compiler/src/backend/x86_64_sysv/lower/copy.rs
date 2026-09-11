@@ -106,7 +106,7 @@ impl InstructionSelector<'_, '_> {
                                 array,
                             )?;
                         }
-                        MirSynthesizedFieldCopy::Primitive { field } => {
+                        MirSynthesizedFieldCopy::Scalar { field } => {
                             self.select_scalar_copy(
                                 destination.clone().project_field(field),
                                 source.clone().project_field(field),
@@ -252,7 +252,7 @@ impl InstructionSelector<'_, '_> {
                                 array,
                             )?;
                         }
-                        MirSynthesizedFieldCopy::Primitive { field } => {
+                        MirSynthesizedFieldCopy::Scalar { field } => {
                             self.select_scalar_copy(
                                 destination.clone().project_field(field),
                                 source.clone().project_field(field),

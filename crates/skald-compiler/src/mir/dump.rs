@@ -548,8 +548,8 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
             }
             for field in &copy.fields {
                 match field {
-                    MirSynthesizedFieldCopy::Primitive { field } => {
-                        let _ = writeln!(output, "          Primitive {field}");
+                    MirSynthesizedFieldCopy::Scalar { field } => {
+                        let _ = writeln!(output, "          Scalar {field}");
                     }
                     MirSynthesizedFieldCopy::OptionalPrimitive { field, payload } => {
                         let _ =

@@ -449,7 +449,7 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                     .iter()
                     .map(|field| match *field {
                         HirSynthesizedFieldCopy::Scalar { field } => {
-                            MirSynthesizedFieldCopy::Primitive { field }
+                            MirSynthesizedFieldCopy::Scalar { field }
                         }
                         HirSynthesizedFieldCopy::OptionalPrimitive { field, payload } => {
                             MirSynthesizedFieldCopy::OptionalPrimitive {

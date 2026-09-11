@@ -638,7 +638,7 @@ pub struct MirBaseCopy<I> {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirSynthesizedFieldCopy<I> {
-    Primitive {
+    Scalar {
         field: FieldId,
     },
     OptionalPrimitive {
@@ -674,7 +674,7 @@ pub enum MirSynthesizedFieldCopy<I> {
 impl<I> MirSynthesizedFieldCopy<I> {
     pub const fn field(&self) -> FieldId {
         match self {
-            Self::Primitive { field }
+            Self::Scalar { field }
             | Self::OptionalPrimitive { field, .. }
             | Self::OptionalClass { field, .. }
             | Self::Shared { field }

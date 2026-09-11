@@ -179,7 +179,7 @@ fn emit_field_copy<I: Copy>(
         .ok_or_else(|| lifecycle_error(format!("unknown synthesized field {field_id}")))?
         .ty;
     match field {
-        MirSynthesizedFieldCopy::Primitive { .. } => {
+        MirSynthesizedFieldCopy::Scalar { .. } => {
             emit_scalar_copy(ty, offset, output);
         }
         MirSynthesizedFieldCopy::OptionalPrimitive { payload, .. } => {
@@ -515,12 +515,12 @@ fn emit_scalar_copy(ty: MirType, offset: i32, output: &mut Vec<Instruction>) {
                 destination: memory(Register::R11, 0),
             });
         }
-        MirType::I64 | MirType::U64 | MirType::F64 => {
+        MirType::I64 | MirType::U64 | MirType::F64 | MirType::Function(_) => {
             value::load_rax(memory(Register::R11, 0), output);
             load_home_address(DESTINATION_HOME, offset, Register::R11, output);
             value::store_rax(memory(Register::R11, 0), output);
         }
-        _ => unreachable!("verified scalar copy has a primitive payload"),
+        _ => unreachable!("verified scalar copy has a stored scalar payload"),
     }
 }
 

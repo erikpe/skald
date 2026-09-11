@@ -373,7 +373,7 @@ impl MirDependencyExtractor<'_> {
                 MirSynthesizedFieldCopy::Optional { optional, .. } => {
                     self.add_optional_copy(source, optional, MirDependencyRegion::Copy, field_span)?
                 }
-                MirSynthesizedFieldCopy::Primitive { .. }
+                MirSynthesizedFieldCopy::Scalar { .. }
                 | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                 | MirSynthesizedFieldCopy::Shared { .. }
                 | MirSynthesizedFieldCopy::OptionalShared { .. } => {}
@@ -485,7 +485,7 @@ impl MirDependencyExtractor<'_> {
                         MirDependencyRegion::Copy,
                         field_span,
                     )?,
-                MirSynthesizedFieldCopy::Primitive { .. }
+                MirSynthesizedFieldCopy::Scalar { .. }
                 | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                 | MirSynthesizedFieldCopy::Shared { .. }
                 | MirSynthesizedFieldCopy::OptionalShared { .. } => {}

@@ -1,0 +1,53 @@
+fn increment(value: i64) -> i64 {
+    return value + 1;
+}
+
+fn double(value: i64) -> i64 {
+    return value * 2;
+}
+
+fn subtract_three(value: i64) -> i64 {
+    return value - 3;
+}
+
+class State {
+    callback: fn(i64) -> i64;
+    bias: i64;
+
+    init(callback: fn(i64) -> i64, bias: i64) {
+        self.callback = callback;
+        self.bias = bias;
+    }
+
+    fn apply(value: i64) -> i64 {
+        return self.callback(value) + self.bias;
+    }
+}
+
+fn main() -> i64 {
+    var original: State[] = State[]{State(increment, 1), State(double, 2)};
+    var copied: State[] = State[](copy original);
+
+    original[0].callback = double;
+    original[0].bias = 5;
+    if (copied[0].apply(10) != 12 || original[0].apply(10) != 25) {
+        return 1;
+    }
+
+    var assigned: State[] = State[]{State(subtract_three, 0)};
+    assigned = original;
+    original[0].callback = subtract_three;
+    original[0].bias = 100;
+    if (assigned[0].apply(10) != 25 || original[0].apply(10) != 107) {
+        return 2;
+    }
+
+    var sliced: State[] = assigned[:];
+    assigned[1].callback = increment;
+    assigned[1].bias = 20;
+    if (sliced[1].apply(10) != 22 || assigned[1].apply(10) != 31) {
+        return 3;
+    }
+
+    return 42;
+}

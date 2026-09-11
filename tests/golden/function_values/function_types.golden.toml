@@ -60,6 +60,15 @@ name = "storage_dispatch_generics_and_recursion"
 expect = { exit = 42 }
 
 [[test]]
+name = "class_array_fields"
+mode = "run"
+source = "class_array_fields.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "copy_assignment_and_slice_preserve_callback_identity"
+expect = { exit = 42 }
+
+[[test]]
 name = "evaluation_and_cleanup"
 mode = "run"
 source = "evaluation_and_cleanup.ska"

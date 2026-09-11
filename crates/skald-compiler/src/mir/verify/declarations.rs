@@ -791,7 +791,7 @@ impl<'mir> Verifier<'mir> {
                             .and_then(|class| class.copy_constructor.selected())
                             == Some(*operation)
                 }
-                (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
+                (ty, MirSynthesizedFieldCopy::Scalar { field: id }) if ty.is_scalar_value() => {
                     *id == field.id
                 }
                 (
@@ -924,7 +924,7 @@ impl<'mir> Verifier<'mir> {
                             .and_then(|class| class.copy_assignment.selected())
                             == Some(*operation)
                 }
-                (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
+                (ty, MirSynthesizedFieldCopy::Scalar { field: id }) if ty.is_scalar_value() => {
                     *id == field.id
                 }
                 (
