@@ -945,6 +945,9 @@ pass, as do the clean-artifact repository gate, 629 golden cases, and the Rust
 
 ### A21 — Make the shared MIR traversal easier to navigate
 
+**Implementation plan:**
+[MIR Identity Traversal Navigation Roadmap](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md).
+
 **Evidence:** [`mir/rewrite/map.rs`](../../crates/skald-compiler/src/mir/rewrite/map.rs)
 is 2,492 lines, but importantly already defines one structural inventory for
 mutable mapping and read-only observation. It includes typed identity roles

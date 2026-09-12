@@ -8,7 +8,9 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-No implementation roadmap is currently active.
+| Roadmap | Status | Purpose | Next task | Dependencies |
+| --- | --- | --- | --- | --- |
+| [MIR identity traversal navigation](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md) | Planned | Divide the exhaustive callable-local identity traversal into cohesive private modules while retaining one mutable/immutable structural inventory | T01 — establish traversal composition and extract definition structure | A18, A19, and A20 complete; existing rewrite parity and ownership tests |
 
 ## Pending discovery and planning records
 
