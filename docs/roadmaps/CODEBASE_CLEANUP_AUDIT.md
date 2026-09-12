@@ -1,11 +1,12 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A34, A35, A38, and A43 are recorded complete.
-Architectural acceptance of A08–A12 is pending the
-[bounded retrospective](CLEANUP_RETROSPECTIVE_ROADMAP.md), which depends on this
-audit. Existing delivery statuses remain unchanged until that review reaches
-its decisions. Turn remaining architectural findings into focused design
-decisions and PR-sized implementation roadmaps.
+Status: actionable audit; A01–A08, A10–A12, A34, A35, A38, and A43 are complete
+within the scopes recorded below. A09 is partially complete: stage products
+and centralized rejection are delivered; owned publication selection remains
+in the [publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md).
+The [completed retrospective](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
+records accepted boundaries, explicit narrowing, and prerequisites for further
+work. Remaining architectural changes need focused designs and PR-sized tasks.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -97,7 +98,10 @@ Skald's cleanup.
 
 Identifiers are finding references within this audit, not implementation tasks.
 Status is `Complete` only after the corresponding section records delivered
-work and its validation; findings without that record remain `Open`.
+work and its validation; findings without that record remain `Open`. `Partial`
+means a delivered improvement still has an outstanding original obligation.
+`Complete (bounded)` means the detailed entry explicitly accepts a narrower
+endpoint and names any deferred work.
 
 | ID | Improvement | Status | Priority | Impact | Effort | Risk | Evidence | Benefits |
 | --- | --- | --- | --- | ---: | --- | --- | --- | --- |
@@ -109,9 +113,9 @@ work and its validation; findings without that record remain `Open`.
 | [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Complete | P1 | 4 | XS | Low | O | R |
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Complete | P1 | 3 | S | Low | O | M, E |
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Complete | P1 | 5 | L | High | O | M, E, R |
-| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Complete | P1 | 5 | L | High | O | M, E, R |
-| [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete | P2 | 4 | M–L | High | C | M, C |
-| [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete | P2 | 4 | M | Medium | O | M, E, R, C |
+| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Partial | P1 | 5 | L | High | O | M, E, R |
+| [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete (bounded) | P2 | 4 | M–L | High | C | M, C |
+| [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete (bounded) | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Open | P1 | 4 | M–L | Medium | O | M, E, R |
@@ -415,6 +419,11 @@ and the Rust 1.82.0 workspace check pass.
 
 ### A08 — Remove resolution's dependency on type checking
 
+**Retrospective acceptance (2026-09-12):** fulfilled. The neutral service owns
+closed eligibility and lifecycle availability while HIR plans remain in type
+checking. Extending automated guarding of the neutral service is a separate
+P2 prevention follow-up in the discoveries record.
+
 **Status:** Complete (2026-09-09).
 
 **Original evidence:** specialization
@@ -464,6 +473,13 @@ compiler unit tests, documentation tests, the direct runtime suite, and all
 
 ### A09 — Give resolver stages explicit products and publication
 
+**Status:** Partial (retrospective acceptance, 2026-09-12). Named products and
+centralized rejection are delivered and tested. Manual field restoration does
+not satisfy the original ownership endpoint. The
+[publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md) owns explicit
+selection and exhaustive assembly; additions to candidate-dependent products
+and rejection-policy changes must satisfy that prerequisite.
+
 **Evidence:** [`ProgramResolver::resolve`](../../crates/skald-compiler/src/resolve/resolver/program/resolver.rs)
 is roughly 600 lines of coupled ordering: collect declarations and bindings,
 validate language items, discover and materialize specializations, rebuild
@@ -509,6 +525,13 @@ determinism suite, and all 628 golden leaves. The Rust 1.82.0 workspace
 all-target check also passed.
 
 ### A10 — Isolate and measure semantic range discovery
+
+**Retrospective acceptance (2026-09-12):** complete for explicit deltas, work
+counters, isolation and the no-range fast path. Affected-body scheduling is
+not implemented or justified by the current evidence. Work counts are not
+a measured timing/RSS speedup; any further optimization needs comparable
+baselines before its design. The discovered materialization-error panic is
+repaired and regression-tested.
 
 **Status:** Complete (2026-09-11).
 
@@ -564,6 +587,11 @@ Rust 1.82.0 workspace all-target check also passed.
 
 ### A11 — Make provisional expression-type queries explicit
 
+**Retrospective acceptance (2026-09-12):** complete for the provisional query
+and its consumer distinctions. Binding facts still use lexical scope scans;
+identity-indexed storage belongs to A25. This explicit deferral is part of the
+accepted bounded outcome, not delivered caching.
+
 **Status:** Complete (2026-09-11).
 
 **Evidence:** the former `resolved_expression_type` helper in callable-body
@@ -612,6 +640,11 @@ checks, 21 compiler compile-fail documentation tests, and all 628 golden
 leaves. The Rust 1.82.0 workspace all-target check also passed.
 
 ### A12 — Consolidate language-item discovery plumbing
+
+**Retrospective acceptance (2026-09-12):** fulfilled for canonical identities,
+shared origin collection and body context. Validators remain separate. The
+implementation still performs separate graph scans; no traversal speedup or
+need to fuse them is claimed.
 
 **Status:** Complete (2026-09-11).
 
@@ -1342,10 +1375,13 @@ runtime and documentation checks, 21 compile-fail documentation tests, and all
 
 ## Recommended implementation order
 
-Before further work that depends on the delivered A08–A12 contracts, complete
-the relevant acceptance decisions in the
-[cleanup retrospective roadmap](CLEANUP_RETROSPECTIVE_ROADMAP.md). Independent
-narrow fixes may proceed; the retrospective does not reopen all early batches.
+The [retrospective readiness table](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
+now governs dependencies on the reviewed frontend contracts. Publication field
+additions and rejection changes depend on the publication ownership roadmap;
+independent MIR work, bounded fixes, and A25 need not wait if they preserve that
+boundary. Narrow fixes may proceed with a bounded task and tests. Cross-phase,
+representation and substantial algorithm changes require a design decision
+before PR-sized implementation tasks.
 
 This is a selection guide, not a promise that an entire tranche fits one PR.
 Each selected change should acquire an owner, focused test plan, measurable

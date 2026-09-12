@@ -1,14 +1,14 @@
 # Cleanup Architecture Retrospective Roadmap
 
-Status: in progress; R01–R03 are complete and R04 is next. Evidence,
-publication decisions and verification results are in the
-[review](CLEANUP_RETROSPECTIVE_REVIEW.md). The separate publication ownership
-follow-up remains planned; final status reconciliation and closure are pending.
+Status: complete (2026-09-12); R01–R04 are complete. Final acceptance,
+readiness and clean-snapshot validation are recorded in the
+[review](CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness).
+Publication ownership remains in its separately indexed implementation roadmap.
 
 Created: 2026-09-12.
 
 The first cleanup batches were implemented directly from the
-[cleanup audit](CODEBASE_CLEANUP_AUDIT.md), with delivery records and regression
+[cleanup audit](../roadmaps/CODEBASE_CLEANUP_AUDIT.md), with delivery records and regression
 checks but without separate design and implementation roadmaps. This bounded
 retrospective will establish which architectural outcomes are actually complete,
 which were deliberately narrowed, and what must precede further dependent work.
@@ -40,7 +40,7 @@ It preserves useful delivered changes while making their acceptance reviewable.
 - [x] R01 — Establish outcome and evidence traceability
 - [x] R02 — Decide the candidate-publication acceptance boundary
 - [x] R03 — Close targeted verification gaps
-- [ ] R04 — Reconcile statuses and release dependent work
+- [x] R04 — Reconcile statuses and release dependent work
 
 ## PR-sized implementation sequence
 
@@ -146,23 +146,23 @@ work. No production redesign is silently bundled into test hardening.
 **Purpose:** leave an accurate architectural starting point and a finite set of
 explicit prerequisites for the next cleanup work.
 
-- [ ] Finalize the review dispositions and reconcile the cleanup audit's summary,
+- [x] Finalize the review dispositions and reconcile the cleanup audit's summary,
   inventory, detailed entries, and sequencing. Preserve historical validation
   records while clearly distinguishing any new acceptance or narrowing.
-- [ ] Update living contracts only with accepted current behavior. Keep decision
+- [x] Update living contracts only with accepted current behavior. Keep decision
   history in the review and planned implementations in their own roadmaps.
-- [ ] Put additional actionable findings in a separately indexed
+- [x] Put additional actionable findings in a separately indexed
   `CLEANUP_RETROSPECTIVE_DISCOVERIES.md` if needed. Each finding needs evidence,
   owner, priority, scope, and whether it blocks a named next change. Avoid an
   empty discoveries document or copying existing audit items into a new backlog.
-- [ ] Publish a readiness table for the next candidates: A25 and other resolver
+- [x] Publish a readiness table for the next candidates: A25 and other resolver
   consumers, A17's capability work, A18 before A19, and the larger representation
   projects. State the prerequisite, disposition, and next design/task for each;
   do not imply independent MIR or narrow bug fixes require publication redesign.
-- [ ] Specify the future workflow: narrow fixes may use a bounded task with
+- [x] Specify the future workflow: narrow fixes may use a bounded task with
   invariants and tests; cross-phase, representation, and substantial algorithm
   changes require a short design decision followed by PR-sized roadmap tasks.
-- [ ] Close and archive this roadmap and the review after acceptance. Keep
+- [x] Close and archive this roadmap and the review after acceptance. Keep
   actionable discoveries and prerequisite roadmaps indexed under active work,
   repair links, and update the cleanup audit's dependency statement.
 

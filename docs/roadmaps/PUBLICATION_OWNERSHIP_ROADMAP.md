@@ -2,9 +2,10 @@
 
 Status: planned; P01 is next. Retrospective R03 verification is complete and
 the semantic range panic is repaired. The implementation sequence remains
-separate from the retrospective; final readiness is recorded through R04.
+separate from the completed retrospective; its archived R04 readiness table
+records this prerequisite for publication-dependent changes.
 
-The [publication decision](CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
+The [publication decision](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
 requires owned product selection and exhaustive final assembly to complete
 A09's outstanding publication goal. It supplies the field inventory,
 alternatives, rejection policy, and consumer preconditions for this roadmap.

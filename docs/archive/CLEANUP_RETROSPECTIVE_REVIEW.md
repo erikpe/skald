@@ -1,8 +1,8 @@
 # Cleanup Retrospective Review
 
-Status: in progress; R01 evidence, R02 publication decision, and R03 verification
-are complete. R04 owns final status reconciliation and closure. Publication
-ownership requires the separately planned implementation below. These proposals do not change the audit's delivery statuses.
+Status: complete (2026-09-12). R01–R04 evidence, decisions, verification and
+final reconciliation are accepted. This is an archived historical record;
+the active audit and publication ownership roadmap track remaining work.
 
 Reviewed: 2026-09-12, revision `64b6da73b41ed2ec6afe0e1401b3735484847e6d`.
 The working tree was clean before this documentation task. Source inspection
@@ -10,7 +10,7 @@ therefore describes that revision, not uncommitted compiler changes.
 
 This is the evidence record for the
 [retrospective roadmap](CLEANUP_RETROSPECTIVE_ROADMAP.md). Original promises
-remain in the [cleanup audit](CODEBASE_CLEANUP_AUDIT.md); current behavior is
+remain in the [cleanup audit](../roadmaps/CODEBASE_CLEANUP_AUDIT.md); current behavior is
 owned by the [phase contracts](../compiler/PHASES_AND_IR.md). Tests below were
 inspected as evidence, not rerun as part of R01. A named test covers its fixture
 and assertions, not all possible programs or future product additions.
@@ -37,7 +37,7 @@ revision but is outside this retrospective's scope.
 Disposition meanings: **fulfilled** means the inspected implementation meets
 the stated bounded outcome; **deliberately narrowed** identifies a defensible
 smaller endpoint needing explicit acceptance; **outstanding** means the original
-architectural obligation is not yet established. All are proposals until R04.
+architectural obligation is not yet established. These were proposals at R01; the final R04 section records their disposition.
 
 | Finding and original outcome | Current owner/product and evidence below | Proposed disposition | Limitation or residual risk |
 | --- | --- | --- | --- |
@@ -163,7 +163,7 @@ Counter improvements alone do not justify a resumption scheduler.
 returns Known, Unknown, or Invalid. Contextual optional constructors are
 unknown; a uniquely selected overload contributes its output; failed selection
 is invalid. Primitive inference remains provisional. Binding lookup still
-scans scope values, and [A25](CODEBASE_CLEANUP_AUDIT.md#a25--use-identity-indexed-lookup-for-resolved-bindings)
+scans scope values, and [A25](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a25--use-identity-indexed-lookup-for-resolved-bindings)
 owns its replacement. Operator selection handles unknown contextual operands
 and invalid selection separately; consumers needing only a candidate use the
 named conversion to `Option`.
@@ -244,7 +244,7 @@ transitive dependency proof, or semantic ownership check. In particular,
 `type_capabilities` is absent from the scanned owner policies. The inspected
 service currently uses resolved IR, but the guard does not prevent a future
 reverse dependency inside it. Follow-up is recorded in
-[discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md).
+[discoveries](../roadmaps/CLEANUP_RETROSPECTIVE_DISCOVERIES.md).
 
 [Process determinism tests](../../crates/skald-compiler/tests/pipeline_determinism.rs)
 include `generic_module_phase_products_are_deterministic_across_processes`,
@@ -283,7 +283,7 @@ This section records a design decision, not an implemented representation change
 **Decision:** retain the current rejection policy as compatibility behavior,
 but do not accept its manual rollback implementation as A09's final endpoint.
 Require explicit owned product selection and exhaustive final assembly through
-[the publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md). This is
+[the publication ownership roadmap](../roadmaps/PUBLICATION_OWNERSHIP_ROADMAP.md). This is
 an outstanding maintainability obligation, not a newly demonstrated compiler
 correctness failure. R03 may verify today's contract before that follow-up.
 
@@ -451,7 +451,7 @@ adds four behavioral cases, without changing production compiler code:
 
 The last case is a demonstrated failure, not an accepted partial-product
 behavior. Its backtrace and bounded repair scope are described in
-[discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md#prevent-range-probing-from-consuming-absent-class-declarations).
+[discoveries](../roadmaps/CLEANUP_RETROSPECTIVE_DISCOVERIES.md#prevent-range-probing-from-consuming-absent-class-declarations).
 The public compiler's internal test loader uses the real canonical library;
 no artificial missing class was injected. The source's invalid generic
 application should produce a diagnostic rather than panic.
@@ -581,3 +581,69 @@ introduced in this final coverage pass.
 **R03 is complete.** All detail checkboxes and the progress checkbox are now
 checked. R04 is next; acceptance of the remaining architectural follow-ups is
 not implied by these passing tests.
+
+
+## R04 — Final acceptance and readiness
+
+Final decisions, 2026-09-12: A08 and A12 are fulfilled for their reviewed
+ownership contracts. A10 and A11 are accepted as deliberately bounded outcomes:
+range resumption scheduling lacks justification, and indexed binding facts
+remain with A25. A09 is partially complete; the owned publication selection
+obligation remains outstanding in its implementation roadmap. The audit's
+summary, inventory and detailed entries now reflect these distinctions.
+Earlier proposed dispositions and failed-run records are historical evidence,
+not competing current statuses. No known correctness failure from this
+retrospective remains unresolved.
+
+The review of remaining hotspots is by responsibility: the long resolver
+orchestrator is still ordered mutable work, and publication still enumerates
+rejection products manually. The P1 ownership roadmap explicitly addresses that
+extension hazard. Query scope scans belong to A25; the neutral-service source
+guard remains a P2 follow-up. This closure introduces no unrelated cleanup or
+new abstraction and does not equate shorter files with better ownership.
+
+| Next work | Accepted prerequisite and disposition | Next step |
+| --- | --- | --- |
+| Publication ownership | Candidate/error behavior is characterized, including absent retained references and driver error gating. Original ownership goal remains outstanding. | P01 in the publication ownership roadmap; preserve R03 fixtures and characterize any further representation changes before migration. |
+| A25 indexed binding lookup | Provisional query ownership and diagnostic distinctions accepted. Independent of publication representation if IDs and selection behavior stay fixed. | Design callable-local identity facts, then a bounded implementation with shadowing, substitutions and invalid-ID tests. |
+| Other resolver consumers, including A14 | Current body environment and partial error contract accepted. Adding candidate-dependent tables or altering rejection is blocked on publication ownership; local consumers preserving those contracts may proceed. | State the boundary in each design; route publication changes through the existing roadmap. |
+| A17 capability reconstruction | Neutral eligibility/HIR-plan split and parity accepted. No measured performance gain inferred. Neutral-service guard extension is needed before expanding its dependencies. | Capture a comparable baseline and design immutable fact reuse; include the guard prerequisite when changing dependencies. |
+| A18 structural graph queries | Independent MIR contract work, not dependent on frontend publication redesign. | Design the graph/query ownership and preserve deterministic traversal and verifier independence. |
+| A19 analysis reuse | Depends on A18 and a stable immutable MIR snapshot/invalidation contract. | Establish snapshot lifetime, cache validity and measurements before implementation. |
+| A15 optional/place representation | Inventory/design still required; retrospective acceptance does not select a replacement representation. | Review consumers and lifecycle/evaluation invariants, compare alternatives, then stage migration. |
+| A22 target virtual registers; A23 effect/alias work | Separate larger projects; no authorization or design is implied by cleanup completion. | Select a measured objective and define target/lifetime or alias-semantics contracts before roadmapping implementation. |
+| Narrow fixes and independent tool/MIR work | May proceed without publication redesign when existing contracts are preserved. | Record the bounded purpose, invariants, focused tests and repository gates. |
+
+Future workflow: use a bounded task for a narrow demonstrated fix. Use a short
+written design for cross-phase, representation, or substantial algorithm work:
+current behavior, desired endpoint, non-goals, alternatives, invariant changes,
+and observable acceptance. Resolve those decisions before scheduling dependent
+PR-sized tasks. Every task names an owner, tests, and exit criteria. Extra
+findings go to an indexed discoveries record; they do not silently enlarge the
+active task. No retrospective documents need to be manufactured for each early
+small fix.
+
+### Closure validation
+
+A separate local shared clone at
+`/tmp/skald-retrospective-closure-xpnao43e/checkout` was checked out at
+`b572baf5bdb8fa7b7ca021465ca747b92844db12`. It began clean, with neither `target/`
+nor `build/` present; no build artifacts were copied from the working repository.
+Commands are `make check` followed by `make msrv-check` inside that checkout.
+The final archival/link edits are documentation-only and receive separate
+working-tree documentation and diff checks after the move. This procedure
+validates the delivered Rust changes from a clean snapshot without discarding
+workspace artifacts or modifying the user's checkout state.
+
+
+Closure results: clean-snapshot `make check` passed with **3,107 compiler unit
+tests**, **53 process-determinism tests**, documentation/runtime checks and
+**629 golden cases**. Clean-snapshot `make msrv-check` passed on Rust 1.82.
+Both commands exited zero. The snapshot revision is the delivered code baseline;
+only final documentation reconciliation and archival were added afterward.
+Working-tree `make docs-check` and `git diff --check` validate those final edits.
+
+R04 is complete. The retrospective roadmap and this review are archived;
+publication ownership and the neutral-service guard remain indexed active
+follow-ups. Their remaining work is explicit and does not invalidate this
+bounded retrospective's closure.

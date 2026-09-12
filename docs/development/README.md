@@ -48,6 +48,22 @@ the host compiler for source-literal evaluation, but never into generated
 programs or the runtime. Native compilation and runtime tests require the host
 C tools even when a change touches only Rust code.
 
+## Planning and acceptance
+
+A narrow demonstrated fix can use one bounded task with an owner, preserved
+invariants, focused tests and the required repository gates. Cross-phase,
+representation and substantial algorithm changes need a short written design
+first: current behavior, desired endpoint, exclusions, alternatives, contract
+changes and observable acceptance criteria. Resolve decisions before scheduling
+implementation that depends on them.
+
+Keep implementation tasks PR-sized and give each explicit exit criteria.
+Record extra candidates in an indexed discoveries document instead of expanding
+the active task. Passing tests establishes observed behavior; architectural
+acceptance also requires checking ownership and extension obligations. Record
+any deliberately narrowed outcome and the owner of deferred work. Current
+plans and dependencies belong in the [roadmap index](../roadmaps/README.md).
+
 ## Makefile interface
 
 The repository-root Makefile is the shared interface for contributor and

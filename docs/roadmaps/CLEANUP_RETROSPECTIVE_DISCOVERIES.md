@@ -1,7 +1,7 @@
 # Cleanup Retrospective Discoveries
 
 Status: actionable follow-up after the
-[retrospective roadmap](CLEANUP_RETROSPECTIVE_ROADMAP.md). Evidence was recorded
+[retrospective roadmap](../archive/CLEANUP_RETROSPECTIVE_ROADMAP.md). Evidence was recorded
 during R01 at revision `64b6da73b41ed2ec6afe0e1401b3735484847e6d`.
 
 ## Guard the neutral capability service's dependencies
@@ -16,7 +16,7 @@ enumerate compiler phase roots but omit `type_capabilities` as a scanned owner.
 Consequently a future HIR/type-check dependency inside that service would not
 be inspected by the forward-pipeline test. Current production source inspected
 in R01 uses resolved facts; this is a prevention gap, not an observed reverse
-dependency. See the [review](CLEANUP_RETROSPECTIVE_REVIEW.md).
+dependency. See the [review](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md).
 
 **Bounded follow-up:** explicitly represent the neutral service's allowed
 dependencies in the existing guard, preserving legitimate resolution consumers
@@ -38,7 +38,7 @@ behavioral test change, rather than incidental R01 documentation cleanup.
 **Blocking:** candidate-dependent field additions and publication/rejection
 changes; not retrospective closure or independent compiler work.
 
-R02's [field inventory and decision](CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
+R02's [field inventory and decision](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
 show that centralized rollback still requires a manually maintained field list.
 Retained error evidence can reference rejected declarations, so the output
 must not be mistaken for a closed executable program. This is an architectural

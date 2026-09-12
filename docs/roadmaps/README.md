@@ -10,19 +10,16 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Cleanup architecture retrospective](CLEANUP_RETROSPECTIVE_ROADMAP.md) | In progress; R01–R03 complete | Verify delivered frontend cleanup outcomes, settle publication acceptance, and identify prerequisites for further improvements | R04 — Reconcile statuses and release dependent work | Delivered A08–A12; supporting A07, A34, and A43 evidence in the cleanup audit |
-
-| [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md) | Planned | Replace manual rollback with owned selection and exhaustive assembly | P01 — Partition candidate ownership | Retrospective R02 decision and R03 characterization |
+| [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md) | Planned | Replace manual rollback with owned selection and exhaustive assembly | P01 — Partition candidate ownership | Accepted archived retrospective decision and rejection tests |
 
 ## Pending discovery and planning records
 
 | Record | Status | Purpose | Next step | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Cleanup retrospective review](CLEANUP_RETROSPECTIVE_REVIEW.md) | In progress | Trace original frontend cleanup promises to source, named tests, limitations, and proposed dispositions | Reconcile final statuses and readiness through R04 | Cleanup retrospective roadmap |
-| [Cleanup retrospective discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md) | Actionable follow-up | Track capability guarding and publication ownership; probe panic resolved | Complete retrospective verification, then implement planned follow-ups | Existing phase-boundary guard; reviewed neutral-service contract |
+| [Cleanup retrospective discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md) | Actionable follow-up | Track capability guarding and publication ownership; probe panic resolved | Implement publication ownership; extend the neutral-service guard before expanding its dependencies | Existing phase-boundary guard; reviewed neutral-service contract |
 | [Auric port feasibility](AURIC_PORT_FEASIBILITY.md) | Actionable investigation | Assess a silent Oric emulator in Skald, including CPU/VIA/AY keyboard behavior, video, tape loading, and comparison with Doom | Select firmware/game images and validate CPU/bus throughput plus the shared framebuffer bridge | Existing byte arithmetic, arrays and aliases; proposed shared-array native bridge; external firmware and game images |
 | [Doom port feasibility](DOOM_PORT_FEASIBILITY.md) | Actionable investigation | Assess a Skald engine port with a small native platform library, including scope, language gaps, and division-helper evidence | Settle a minimal shared-array handle bridge and numerical helpers, then build the host/framebuffer spike | Existing arrays, I/O, primitive interop; optional 32-bit integer support |
-| [Codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) | Actionable audit | Rank repository-wide robustness, ownership, maintainability, and efficiency improvements | Review delivered frontend contracts through the retrospective before dependent cleanup; independent bounded fixes may proceed | Dependencies are recorded per finding; frontend acceptance is tracked in the retrospective roadmap |
+| [Codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) | Actionable audit | Rank repository-wide robustness, ownership, maintainability, and efficiency improvements | Select work using the accepted retrospective readiness table and per-finding prerequisites | Dependencies are recorded per finding; publication ownership remains outstanding |
 | [Optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) | Living inventory | Track implemented and plausible optimizations, placement, effort, value, prerequisites, and risks | Use measurements and architecture evidence to promote a candidate into a design or roadmap | [Optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md) and candidate-specific measurements or contracts |
 | [Optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md) | Three constraints remain unplanned | Record architectural limits on modular target-independent and target-specific optimization and their sequencing | Design a remaining constraint only when a measured optimization need justifies its prerequisite work | Existing pipeline, reachability, normalization, and MIR identity foundations |
 
