@@ -1,6 +1,6 @@
 # MIR Identity Traversal Navigation Roadmap
 
-Status: planned; T01 is next.
+Status: active; T01 is complete and T02 is next.
 
 This roadmap implements
 [cleanup finding A21](CODEBASE_CLEANUP_AUDIT.md#a21--make-the-shared-mir-traversal-easier-to-navigate)
@@ -46,7 +46,7 @@ crate-private rewrite facade.
 
 ## Progress
 
-- [ ] T01 — Establish traversal composition and extract definition structure
+- [x] T01 — Establish traversal composition and extract definition structure
 - [ ] T02 — Extract core instruction and operation traversal
 - [ ] T03 — Extract aggregate and I/O instruction traversal
 - [ ] T04 — Extract terminators and places, then close A21
@@ -59,20 +59,20 @@ crate-private rewrite facade.
 modules without creating a second inventory or changing the generated mapping
 and observation surfaces.
 
-- [ ] Convert `mir/rewrite/map.rs` into a recursive `map/mod.rs` facade while
+- [x] Convert `mir/rewrite/map.rs` into a recursive `map/mod.rs` facade while
   preserving every existing path and visibility used by rewrite internals.
-- [ ] Introduce the private macro-fragment composition pattern. Keep
+- [x] Introduce the private macro-fragment composition pattern. Keep
   `map_identity`, `observe_identity`, and the single top-level traversal
   instantiation visibly owned by the facade.
-- [ ] Extract function, member, and static-initializer entry traversal;
+- [x] Extract function, member, and static-initializer entry traversal;
   attachments; common declaration tables; body sequencing; path-condition
   metadata; and logical-expression metadata into cohesive definition/body
   fragments.
-- [ ] Keep shared leaf adapters available to later fragments without widening
+- [x] Keep shared leaf adapters available to later fragments without widening
   them outside `mir::rewrite::map` or coupling callers to the internal layout.
-- [ ] Retain exact mapper/observer event parity for functions, members, and
+- [x] Retain exact mapper/observer event parity for functions, members, and
   static initializers, including attachment order and sites.
-- [ ] Document the internal composition rule where future maintainers add a
+- [x] Document the internal composition rule where future maintainers add a
   new identity-bearing MIR field.
 
 **Tests:** Run the rewrite tests that cover all identity families,
@@ -83,10 +83,22 @@ the extracted definition paths. Run `cargo fmt --all -- --check`,
 `cargo test --locked -p skald-compiler mir::rewrite`, `make check`,
 `make msrv-check`, and `git diff --check`.
 
-**Exit criteria:** `map/mod.rs` is a concise facade and composition owner; the
-definition, attachment, body, and proof-metadata inventory lives in cohesive
-private fragments; both generated traversals still emit the same event
-sequence and errors; and no transitional duplicate implementation remains.
+**Exit criteria:** `map/mod.rs` owns the established facade and fragment
+composition; the definition, attachment, body, and proof-metadata inventory
+lives in cohesive private fragments; both generated traversals still emit the
+same event sequence and errors; the remaining inventory stays single-sourced
+while awaiting T02 through T04; and no duplicate implementation remains.
+
+Implemented: `map/mod.rs` now owns leaf behavior, fragment composition, both
+generated traversal instantiations, established re-exports, and owner-
+validation adapters. Private `definition` and `body` fragments contain the
+definition, attachment, declaration-table, body-order, path-condition, and
+logical-expression inventory. Each fragment expands into both mapping and
+observation, so their structure and order remain single-sourced. Existing
+parity, deterministic-order, remapping, attachment, identity-preservation, and
+exact owner-error tests cover the moved paths. The focused rewrite suite, full
+repository gate with 3,146 compiler tests and 629 golden cases, and Rust 1.82.0
+workspace check pass.
 
 ### T02 — Extract core instruction and operation traversal
 

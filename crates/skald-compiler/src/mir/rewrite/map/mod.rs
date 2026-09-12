@@ -1,3 +1,11 @@
+//! Macro-composed traversal of every callable-local identity in executable MIR.
+//!
+//! The facade owns leaf behavior and assembles private structural fragments
+//! inside both generated traversals. A new identity-bearing field belongs in
+//! exactly one fragment and must therefore receive the same exhaustive visit
+//! position in mutable mapping and read-only observation.
+
+use self::{body::define_body_traversal, definition::define_definition_traversal};
 use super::super::*;
 use super::{
     identity::LocalIdentityOwnerValidator, MirLocalIdentityMapper, MirLocalIdentityObserver,
@@ -6,6 +14,9 @@ use super::{
 
 #[cfg(test)]
 use super::identity::PreserveLocalIdentities;
+
+mod body;
+mod definition;
 
 macro_rules! map_identity {
     (storage, $mapper:expr, $site:expr, $identity:expr) => {{
@@ -73,287 +84,18 @@ macro_rules! observe_identity {
 
 /// Defines one traversal over either mutable or shared MIR.
 ///
-/// The complete structural inventory lives in this macro body. Mapping and
-/// observation differ only at the typed identity leaves.
+/// Private macro fragments divide the structural inventory by MIR
+/// responsibility. Every fragment expands here for both mapping and
+/// observation, which keeps identity coverage and order single-sourced.
 macro_rules! define_identity_traversal {
     ($module:ident, $behavior:ident, ($($mir_mutability:tt)*), $leaf:ident) => {
 mod $module {
 use super::super::super::*;
 use super::super::{MirCallValueUse, MirLocalIdentitySite, MirScalarValueUse, MirStoragePlaceUse, MirStorageUseRole, MirStorageWriteAuthorization, MirValueUseRole, $behavior as MirLocalIdentityMapper};
+use super::{define_body_traversal, define_definition_traversal};
 
-pub(crate) fn map_function_local_identities<M: MirLocalIdentityMapper>(
-    definition: &$($mir_mutability)* MirFunctionDefinition,
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    let MirFunctionDefinition {
-        function: _,
-        return_storage,
-        parameters,
-        storage,
-        values,
-        body,
-        span: _,
-    } = definition;
-    map_function_attachments(return_storage, parameters, mapper)?;
-    map_common_local_identities(storage, values, body, mapper)
-}
-
-pub(crate) fn map_member_local_identities<M: MirLocalIdentityMapper>(
-    definition: &$($mir_mutability)* MirMemberDefinition,
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    let MirMemberDefinition {
-        callable: _,
-        class_owner: _,
-        return_storage,
-        receiver,
-        parameters,
-        storage,
-        values,
-        body,
-        span: _,
-    } = definition;
-    map_member_attachments(return_storage, receiver, parameters, mapper)?;
-    map_common_local_identities(storage, values, body, mapper)
-}
-
-pub(crate) fn map_static_initializer_local_identities<M: MirLocalIdentityMapper>(
-    definition: &$($mir_mutability)* MirStaticInitializerBody,
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    let MirStaticInitializerBody {
-        id: _,
-        field: _,
-        destination_type: _,
-        publication,
-        storage,
-        values,
-        body,
-        span: _,
-    } = definition;
-    map_static_publication_attachment(publication, mapper)?;
-    map_common_local_identities(storage, values, body, mapper)
-}
-
-pub(crate) fn map_function_attachments<M: MirLocalIdentityMapper>(
-    return_storage: &$($mir_mutability)* Option<StorageId>,
-    parameters: &$($mir_mutability)* [StorageId],
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    map_optional_storage(
-        mapper,
-        MirLocalIdentitySite::ReturnStorage,
-        MirStorageUseRole::Attachment,
-        return_storage,
-    )?;
-    map_parameters(parameters, mapper)
-}
-
-pub(crate) fn map_member_attachments<M: MirLocalIdentityMapper>(
-    return_storage: &$($mir_mutability)* Option<StorageId>,
-    receiver: &$($mir_mutability)* Option<StorageId>,
-    parameters: &$($mir_mutability)* [StorageId],
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    map_optional_storage(
-        mapper,
-        MirLocalIdentitySite::ReturnStorage,
-        MirStorageUseRole::Attachment,
-        return_storage,
-    )?;
-    map_optional_storage(
-        mapper,
-        MirLocalIdentitySite::Receiver,
-        MirStorageUseRole::Attachment,
-        receiver,
-    )?;
-    map_parameters(parameters, mapper)
-}
-
-pub(crate) fn map_static_publication_attachment<M: MirLocalIdentityMapper>(
-    publication: &$($mir_mutability)* MirStaticPublication,
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    let MirStaticPublication {
-        initialization_exit,
-        cleanup_entry,
-        span: _,
-    } = publication;
-    map_block(
-        mapper,
-        MirLocalIdentitySite::StaticPublicationInitializationExit,
-        initialization_exit,
-    )?;
-    map_block(
-        mapper,
-        MirLocalIdentitySite::StaticPublicationCleanupEntry,
-        cleanup_entry,
-    )
-}
-
-fn map_parameters<M: MirLocalIdentityMapper>(
-    parameters: &$($mir_mutability)* [StorageId],
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    for (index, parameter) in parameters.into_iter().enumerate() {
-        map_storage_use(
-            mapper,
-            MirLocalIdentitySite::Parameter(index),
-            MirStorageUseRole::Attachment,
-            parameter,
-        )?;
-    }
-    Ok(())
-}
-
-pub(crate) fn map_common_local_identities<M: MirLocalIdentityMapper>(
-    storage: &$($mir_mutability)* [MirStorage],
-    values: &$($mir_mutability)* [MirValue],
-    body: &$($mir_mutability)* MirBody,
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    for (index, declaration) in storage.into_iter().enumerate() {
-        let MirStorage {
-            id,
-            source: _,
-            name: _,
-            kind: _,
-            ty: _,
-            span: _,
-        } = declaration;
-        map_storage_use(
-            mapper,
-            MirLocalIdentitySite::StorageDeclaration(index),
-            MirStorageUseRole::Declaration,
-            id,
-        )?;
-    }
-    for (index, declaration) in values.into_iter().enumerate() {
-        let MirValue { id, ty: _, span: _ } = declaration;
-        map_value(mapper, MirLocalIdentitySite::ValueDeclaration(index), id)?;
-    }
-    map_body_local_identities(body, mapper)
-}
-
-pub(crate) fn map_body_local_identities<M: MirLocalIdentityMapper>(
-    body: &$($mir_mutability)* MirBody,
-    mapper: &mut M,
-) -> Result<(), M::Error> {
-    let MirBody {
-        entry,
-        blocks,
-        path_conditions,
-        logical_expressions,
-    } = body;
-    map_block(mapper, MirLocalIdentitySite::BodyEntry, entry)?;
-    for (block_index, block) in blocks.into_iter().enumerate() {
-        let MirBasicBlock {
-            id,
-            instructions,
-            terminator,
-            span: _,
-        } = block;
-        map_block(
-            mapper,
-            MirLocalIdentitySite::BlockDeclaration(block_index),
-            id,
-        )?;
-        for (instruction_index, instruction) in instructions.into_iter().enumerate() {
-            map_instruction(
-                instruction,
-                mapper,
-                MirLocalIdentitySite::Instruction {
-                    block: block_index,
-                    instruction: instruction_index,
-                },
-            )?;
-        }
-        if let Some(terminator) = terminator {
-            map_terminator(
-                terminator,
-                mapper,
-                MirLocalIdentitySite::Terminator(block_index),
-            )?;
-        }
-    }
-    for (index, condition) in path_conditions.into_iter().enumerate() {
-        map_path_condition_metadata(
-            condition,
-            mapper,
-            MirLocalIdentitySite::PathCondition(index),
-        )?;
-    }
-    for (index, expression) in logical_expressions.into_iter().enumerate() {
-        map_logical_expression(
-            expression,
-            mapper,
-            MirLocalIdentitySite::LogicalExpression(index),
-        )?;
-    }
-    Ok(())
-}
-
-pub(crate) fn map_path_condition_metadata<M: MirLocalIdentityMapper>(
-    condition: &$($mir_mutability)* MirPathCondition,
-    mapper: &mut M,
-    site: MirLocalIdentitySite,
-) -> Result<(), M::Error> {
-    let MirPathCondition {
-        id,
-        parent,
-        activation,
-        active_predecessor,
-        inactive_predecessor,
-        merge,
-        span: _,
-    } = condition;
-    map_path_condition(mapper, site, id)?;
-    if let Some(parent) = parent {
-        map_path_condition(mapper, site, parent)?;
-    }
-    map_storage_use(mapper, site, MirStorageUseRole::ProofMetadata, activation)?;
-    map_block(mapper, site, active_predecessor)?;
-    map_block(mapper, site, inactive_predecessor)?;
-    map_block(mapper, site, merge)
-}
-
-pub(crate) fn map_logical_expression<M: MirLocalIdentityMapper>(
-    expression: &$($mir_mutability)* MirLogicalExpression,
-    mapper: &mut M,
-    site: MirLocalIdentitySite,
-) -> Result<(), M::Error> {
-    let MirLogicalExpression {
-        operation: _,
-        condition,
-        result,
-        left_result,
-        split,
-        selection,
-        right_entry,
-        right_exit,
-        right_result,
-        short,
-        join,
-        selected_result,
-        span: _,
-    } = expression;
-    map_path_condition(mapper, site, condition)?;
-    map_storage_use(mapper, site, MirStorageUseRole::ProofMetadata, result)?;
-    map_value_use(mapper, site, MirValueUseRole::ProofMetadata, left_result)?;
-    map_block(mapper, site, split)?;
-    map_block(mapper, site, selection)?;
-    map_block(mapper, site, right_entry)?;
-    map_block(mapper, site, right_exit)?;
-    map_value_use(mapper, site, MirValueUseRole::ProofMetadata, right_result)?;
-    map_block(mapper, site, short)?;
-    map_block(mapper, site, join)?;
-    map_value_use(
-        mapper,
-        site,
-        MirValueUseRole::ProofMetadata,
-        selected_result,
-    )
-}
+define_definition_traversal!(($($mir_mutability)*));
+define_body_traversal!(($($mir_mutability)*));
 
 pub(crate) fn map_instruction<M: MirLocalIdentityMapper>(
     instruction: &$($mir_mutability)* MirInstruction,

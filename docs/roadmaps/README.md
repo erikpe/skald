@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [MIR identity traversal navigation](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md) | Planned | Divide the exhaustive callable-local identity traversal into cohesive private modules while retaining one mutable/immutable structural inventory | T01 — establish traversal composition and extract definition structure | A18, A19, and A20 complete; existing rewrite parity and ownership tests |
+| [MIR identity traversal navigation](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md) | Active | Divide the exhaustive callable-local identity traversal into cohesive private modules while retaining one mutable/immutable structural inventory | T02 — extract core instruction and operation traversal | T01 complete; A18, A19, and A20 complete |
 
 ## Pending discovery and planning records
 
