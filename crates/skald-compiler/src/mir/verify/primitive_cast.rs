@@ -9,9 +9,9 @@ use super::{
             MirPlace, MirPrimitiveCastRangeCheck, MirRvalueKind, MirStorageKind, MirTerminator,
             MirType, StorageId,
         },
-        MirCfgTopology,
+        MirCfgTopology, MirDominators,
     },
-    checked_scalar::{dominates, is_exact_load, storage_writes},
+    checked_scalar::{is_exact_load, storage_writes},
     context::Verifier,
 };
 
@@ -102,6 +102,7 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
         cfg: &MirCfgTopology,
+        dominators: &MirDominators,
     ) {
         let mut checked_successes = HashMap::<BlockId, MirF64ToIntegerRange>::new();
 
@@ -142,7 +143,7 @@ impl Verifier<'_> {
                 block.id,
                 "primitive cast failure block must be reached only by its matching range check",
             );
-            self.verify_primitive_cast_source_write(function, block, check.source);
+            self.verify_primitive_cast_source_write(function, dominators, block, check.source);
 
             if let Some(success) = function.block(*success_target) {
                 if let Some(join) = checked_primitive_cast_success(success, check) {
@@ -209,11 +210,12 @@ impl Verifier<'_> {
     fn verify_primitive_cast_source_write(
         &mut self,
         function: MirDefinitionRef<'_>,
+        dominators: &MirDominators,
         block: &MirBasicBlock,
         source: StorageId,
     ) {
         let writes = storage_writes(function, source);
-        if writes.len() != 1 || !dominates(function, writes[0], block.id) {
+        if writes.len() != 1 || !dominators.dominates(writes[0], block.id) {
             self.block_error(
                 function.callable(),
                 block.id,

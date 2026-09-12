@@ -4,12 +4,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     mir::{
-        checked_scalar_dominates,
         rewrite::{
             value_use_sites_for_definition, MirLocalIdentitySite, MirRewriteError, MirValueUseRole,
         },
-        BlockId, MirAssignment, MirDefinitionRef, MirInstruction, MirPlace, MirPlaceBase,
-        MirRvalueKind, MirStorageKind, MirType, StorageId, ValueId,
+        BlockId, MirAssignment, MirCfgTopology, MirDefinitionRef, MirDominators, MirInstruction,
+        MirPlace, MirPlaceBase, MirRvalueKind, MirStorageKind, MirType, StorageId, ValueId,
     },
     passes::{
         pipeline::{
@@ -80,7 +79,7 @@ impl<'mir> ScalarSpillFacts<'mir> {
     ) -> Option<PrimitiveConstant> {
         let load = self.index.assignments.get(&value).copied()?;
         let consumer = InstructionSite { block, instruction };
-        if !dominates(self.index.definition, load.site, consumer) {
+        if !dominates(&self.index.dominators, load.site, consumer) {
             return None;
         }
         let mut visiting = BTreeSet::new();
@@ -217,12 +216,15 @@ pub(super) fn analyze_unverified_definition(
 
 struct DefinitionIndex<'mir> {
     definition: MirDefinitionRef<'mir>,
+    dominators: MirDominators,
     assignments: BTreeMap<ValueId, AssignmentSite<'mir>>,
     stores: BTreeMap<StorageId, Vec<StoreSite>>,
 }
 
 impl<'mir> DefinitionIndex<'mir> {
     fn new(definition: MirDefinitionRef<'mir>) -> Self {
+        let topology = MirCfgTopology::for_definition(definition);
+        let dominators = MirDominators::for_topology(&topology);
         let mut assignments = BTreeMap::new();
         let mut stores = BTreeMap::<_, Vec<_>>::new();
         for block in &definition.body().blocks {
@@ -250,6 +252,7 @@ impl<'mir> DefinitionIndex<'mir> {
         }
         Self {
             definition,
+            dominators,
             assignments,
             stores,
         }
@@ -313,7 +316,7 @@ impl<'mir> DefinitionIndex<'mir> {
         if !matches!(place.base, MirPlaceBase::Storage(_)) {
             trace.barriers.insert(ScalarSpillBlocker::AliasExposure);
         }
-        if !dominates(self.definition, selected_store.site, load.site) {
+        if !dominates(&self.dominators, selected_store.site, load.site) {
             trace.barriers.insert(ScalarSpillBlocker::MissingDominance);
         }
         trace.values.insert(load.assignment.result);
@@ -355,7 +358,7 @@ impl<'mir> DefinitionIndex<'mir> {
                 .barriers
                 .insert(ScalarSpillBlocker::UnsupportedTypeOrOperation);
         }
-        if !dominates(self.definition, source.site, store.site) {
+        if !dominates(&self.dominators, source.site, store.site) {
             trace.barriers.insert(ScalarSpillBlocker::MissingDominance);
         }
         trace.values.insert(store.value);
@@ -374,7 +377,7 @@ impl<'mir> DefinitionIndex<'mir> {
                 return replacement.map(|(_, constant)| constant);
             }
             let source = self.assignments.get(&value)?;
-            if !dominates(self.definition, source.site, site) {
+            if !dominates(&self.dominators, source.site, site) {
                 return None;
             }
             literal(&source.assignment.rvalue.kind)
@@ -454,7 +457,7 @@ fn checked_unlock(
             index
                 .assignments
                 .get(&value)
-                .filter(|source| dominates(index.definition, source.site, assignment.site))
+                .filter(|source| dominates(&index.dominators, source.site, assignment.site))
                 .and_then(|source| literal(&source.assignment.rvalue.kind))
         })
     };
@@ -499,15 +502,11 @@ fn direct(constant: PrimitiveConstant) -> Trace {
     }
 }
 
-fn dominates(
-    definition: MirDefinitionRef<'_>,
-    first: InstructionSite,
-    later: InstructionSite,
-) -> bool {
+fn dominates(dominators: &MirDominators, first: InstructionSite, later: InstructionSite) -> bool {
     if first.block == later.block {
         first.instruction < later.instruction
     } else {
-        checked_scalar_dominates(definition, first.block, later.block)
+        dominators.dominates(first.block, later.block)
     }
 }
 

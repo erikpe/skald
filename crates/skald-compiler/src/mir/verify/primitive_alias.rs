@@ -1,10 +1,11 @@
 //! Produced primitive read-only alias storage verification.
 
 use crate::mir::{
-    BlockId, MirArgument, MirDefinitionRef, MirInstruction, MirPlace, MirStorageKind, StorageId,
+    BlockId, MirArgument, MirDefinitionRef, MirDominators, MirInstruction, MirPlace,
+    MirStorageKind, StorageId,
 };
 
-use super::{checked_scalar, context::Verifier, lifetime::uses};
+use super::{context::Verifier, lifetime::uses};
 
 #[derive(Clone, Copy)]
 struct InstructionSite {
@@ -23,7 +24,11 @@ struct PrimitiveAliasShape {
 }
 
 impl Verifier<'_> {
-    pub(super) fn verify_produced_primitive_aliases(&mut self, function: MirDefinitionRef<'_>) {
+    pub(super) fn verify_produced_primitive_aliases(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        dominators: &MirDominators,
+    ) {
         for storage in function
             .storage_entries()
             .iter()
@@ -40,13 +45,14 @@ impl Verifier<'_> {
             }
 
             let shape = primitive_alias_shape(function, storage.id);
-            self.verify_primitive_alias_shape(function, storage.id, &shape);
+            self.verify_primitive_alias_shape(function, dominators, storage.id, &shape);
         }
     }
 
     fn verify_primitive_alias_shape(
         &mut self,
         function: MirDefinitionRef<'_>,
+        dominators: &MirDominators,
         storage: StorageId,
         shape: &PrimitiveAliasShape,
     ) {
@@ -114,7 +120,7 @@ impl Verifier<'_> {
             (*store, *borrow, "be initialized before alias use"),
             (*borrow, *dead, "remain live until after the call"),
         ] {
-            if !site_precedes(function, before, after) {
+            if !site_precedes(dominators, before, after) {
                 self.block_error(
                     function.callable(),
                     after.block,
@@ -203,13 +209,13 @@ fn is_exact_alias_argument(argument: &MirArgument, storage: StorageId) -> bool {
 }
 
 fn site_precedes(
-    function: MirDefinitionRef<'_>,
+    dominators: &MirDominators,
     before: InstructionSite,
     after: InstructionSite,
 ) -> bool {
     if before.block == after.block {
         before.index < after.index
     } else {
-        checked_scalar::dominates(function, before.block, after.block)
+        dominators.dominates(before.block, after.block)
     }
 }

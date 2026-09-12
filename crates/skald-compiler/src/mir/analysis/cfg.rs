@@ -85,6 +85,7 @@ pub(crate) struct MirCfgTopology {
     block_indices: BTreeMap<BlockId, usize>,
     edges: Vec<MirCfgEdge>,
     predecessor_blocks: BTreeMap<BlockId, BTreeSet<BlockId>>,
+    entry: Option<BlockId>,
     entry_reachable: BTreeSet<BlockId>,
 }
 
@@ -183,11 +184,13 @@ impl MirCfgTopology {
             }
         }
 
+        let valid_entry = block_indices.contains_key(&entry).then_some(entry);
         let mut topology = Self {
             blocks,
             block_indices,
             edges,
             predecessor_blocks,
+            entry: valid_entry,
             entry_reachable: BTreeSet::new(),
         };
         topology.entry_reachable = topology.reachable_from([entry]);
@@ -220,6 +223,10 @@ impl MirCfgTopology {
     /// and invalid target references coexist in malformed MIR.
     pub(crate) fn predecessor_blocks(&self, block: BlockId) -> Option<&BTreeSet<BlockId>> {
         self.predecessor_blocks.get(&block)
+    }
+
+    pub(super) const fn entry(&self) -> Option<BlockId> {
+        self.entry
     }
 
     pub(crate) fn entry_reachable(&self) -> &BTreeSet<BlockId> {

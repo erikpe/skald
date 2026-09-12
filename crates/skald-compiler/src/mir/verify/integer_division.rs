@@ -9,9 +9,9 @@ use super::{
             MirIntegerDivisorCheck, MirPlace, MirRvalueKind, MirStorageKind, MirTerminator,
             MirType, StorageId, ValueId,
         },
-        MirCfgTopology,
+        MirCfgTopology, MirDominators,
     },
-    checked_scalar::{dominates, is_exact_load, storage_writes},
+    checked_scalar::{is_exact_load, storage_writes},
     context::Verifier,
 };
 
@@ -122,6 +122,7 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
         cfg: &MirCfgTopology,
+        dominators: &MirDominators,
     ) {
         let mut checked_successes = HashMap::<BlockId, MirIntegerDivisionOperation>::new();
         for block in &function.body().blocks {
@@ -164,11 +165,18 @@ impl Verifier<'_> {
 
             self.verify_unique_dominating_carrier_write(
                 function,
+                dominators,
                 block,
                 check.dividend,
                 "dividend",
             );
-            self.verify_unique_dominating_carrier_write(function, block, check.divisor, "divisor");
+            self.verify_unique_dominating_carrier_write(
+                function,
+                dominators,
+                block,
+                check.divisor,
+                "divisor",
+            );
 
             if let Some(success) = function.block(*success_target) {
                 if let Some((join, _)) = checked_integer_division_success(success, check) {
@@ -238,12 +246,13 @@ impl Verifier<'_> {
     fn verify_unique_dominating_carrier_write(
         &mut self,
         function: MirDefinitionRef<'_>,
+        dominators: &MirDominators,
         block: &MirBasicBlock,
         carrier: StorageId,
         name: &str,
     ) {
         let writes = storage_writes(function, carrier);
-        if writes.len() != 1 || !dominates(function, writes[0], block.id) {
+        if writes.len() != 1 || !dominators.dominates(writes[0], block.id) {
             self.block_error(
                 function.callable(),
                 block.id,

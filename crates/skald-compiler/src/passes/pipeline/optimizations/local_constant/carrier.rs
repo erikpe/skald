@@ -3,14 +3,13 @@
 use std::collections::HashSet;
 
 use crate::mir::{
-    checked_scalar_dominates,
     rewrite::{
         storage_use_census_for_definition, MirLocalIdentitySite, MirRewriteError,
         MirStoragePlaceUse, MirStorageUseCensusEntry, MirStorageUseRole,
         MirStorageWriteAuthorization,
     },
-    BlockId, MirDefinitionRef, MirInstruction, MirPlace, MirRvalueKind, MirStorage, MirStorageKind,
-    MirType, StorageId, ValueId,
+    BlockId, MirCfgTopology, MirDefinitionRef, MirDominators, MirInstruction, MirPlace,
+    MirRvalueKind, MirStorage, MirStorageKind, MirType, StorageId, ValueId,
 };
 use crate::source::Span;
 
@@ -283,13 +282,19 @@ pub(super) fn certify_checked_scalar_carriers(
 pub(super) fn certify_checked_integer_carriers(
     definition: MirDefinitionRef<'_>,
 ) -> Result<Vec<CheckedCarrierCertificationObservation>, MirRewriteError> {
-    certify_carrier_candidates(definition, checked_integer_carrier_candidates(definition)?)
+    let candidates = checked_integer_carrier_candidates(definition)?;
+    certify_carrier_candidates(definition, candidates)
 }
 
 fn certify_carrier_candidates(
     definition: MirDefinitionRef<'_>,
     mut candidates: Vec<CheckedCarrierCandidate>,
 ) -> Result<Vec<CheckedCarrierCertificationObservation>, MirRewriteError> {
+    if candidates.is_empty() {
+        return Ok(Vec::new());
+    }
+    let topology = MirCfgTopology::for_definition(definition);
+    let dominators = MirDominators::for_topology(&topology);
     let census = storage_use_census_for_definition(definition)?;
     let mut claimed = HashSet::new();
     let mut observations = Vec::new();
@@ -301,6 +306,7 @@ fn certify_carrier_candidates(
         } else {
             certify_one(
                 definition,
+                &dominators,
                 census.get(candidate.storage),
                 candidate.storage,
                 candidate.ty,
@@ -420,6 +426,7 @@ fn checked_f64_to_integer_carrier_candidates(
 
 fn certify_one(
     definition: MirDefinitionRef<'_>,
+    dominators: &MirDominators,
     census: Option<&MirStorageUseCensusEntry>,
     storage: StorageId,
     ty: MirType,
@@ -499,7 +506,7 @@ fn certify_one(
     }
     if loads
         .iter()
-        .any(|load| !instruction_dominates(definition, store.site, load.site))
+        .any(|load| !instruction_dominates(dominators, store.site, load.site))
     {
         return Err(CheckedCarrierRejectionReason::StoreDoesNotDominateLoad);
     }
@@ -507,10 +514,10 @@ fn certify_one(
         .ok_or(CheckedCarrierRejectionReason::IncompatibleLifetime)?;
     let dead = instruction_site(definition, *dead_site)
         .ok_or(CheckedCarrierRejectionReason::IncompatibleLifetime)?;
-    if !instruction_dominates(definition, live, store.site)
+    if !instruction_dominates(dominators, live, store.site)
         || loads.iter().any(|load| {
-            !instruction_dominates(definition, live, load.site)
-                || lifetime_ends_before_load(definition, dead, load.site)
+            !instruction_dominates(dominators, live, load.site)
+                || lifetime_ends_before_load(dominators, dead, load.site)
         })
     {
         return Err(CheckedCarrierRejectionReason::IncompatibleLifetime);
@@ -531,14 +538,14 @@ fn certify_one(
 /// end, while permitting a common conditional shape where the load executes
 /// only on one branch and `StorageDead` sits in the shared join.
 fn lifetime_ends_before_load(
-    definition: MirDefinitionRef<'_>,
+    dominators: &MirDominators,
     dead: CheckedScalarInstructionSite,
     load: CheckedScalarInstructionSite,
 ) -> bool {
     if dead.block == load.block {
         dead.instruction <= load.instruction
     } else {
-        checked_scalar_dominates(definition, dead.block, load.block)
+        dominators.dominates(dead.block, load.block)
     }
 }
 
@@ -600,11 +607,10 @@ fn instruction_site(
 }
 
 fn instruction_dominates(
-    definition: MirDefinitionRef<'_>,
+    dominators: &MirDominators,
     dominator: CheckedScalarInstructionSite,
     target: CheckedScalarInstructionSite,
 ) -> bool {
     dominator.block == target.block && dominator.instruction <= target.instruction
-        || dominator.block != target.block
-            && checked_scalar_dominates(definition, dominator.block, target.block)
+        || dominator.block != target.block && dominators.dominates(dominator.block, target.block)
 }

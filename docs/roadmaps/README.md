@@ -8,9 +8,7 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-| Roadmap | Status | Purpose | Next task | Dependencies |
-| --- | --- | --- | --- | --- |
-| [MIR structural CFG analysis](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md) | In progress; C02 complete | Give verification, rewrite planning, and optimization one tolerant, deterministic owner for callable-local topology and dominance | C03 — Compute and reuse callable-local dominance | Existing MIR model and strict rewrite CFG facts; completes A18 before A19 |
+No implementation roadmap is currently active.
 
 ## Pending discovery and planning records
 

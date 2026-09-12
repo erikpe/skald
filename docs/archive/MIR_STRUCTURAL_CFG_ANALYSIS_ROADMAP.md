@@ -1,9 +1,9 @@
 # MIR Structural CFG Analysis Roadmap
 
-Status: in progress; C02 is complete and C03 is next.
+Status: complete.
 
 This roadmap implements
-[cleanup finding A18](CODEBASE_CLEANUP_AUDIT.md#a18--reuse-structural-cfg-and-dominance-queries)
+[cleanup finding A18](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a18--reuse-structural-cfg-and-dominance-queries)
 by giving callable-local control-flow structure one neutral MIR owner. The
 result will let verification, rewrite planning, and optimization consume the
 same deterministic edge and predecessor facts, then answer repeated dominance
@@ -86,7 +86,7 @@ MIR while making malformed-ID queries fail closed.
 
 - [x] C01 — Establish neutral structural CFG facts
 - [x] C02 — Migrate predecessor and reachability consumers
-- [ ] C03 — Compute and reuse callable-local dominance
+- [x] C03 — Compute and reuse callable-local dominance
 
 ## PR-sized implementation sequence
 
@@ -176,24 +176,24 @@ unchanged except for the new edge-identity coverage.
 **Purpose:** Replace repeated reachability searches with one clear,
 entry-rooted dominance result and complete the cleanup finding.
 
-- [ ] Add `MirDominators` under the neutral CFG analysis owner. Compute it once
+- [x] Add `MirDominators` under the neutral CFG analysis owner. Compute it once
   with deterministic predecessor intersections over entry-reachable known
   blocks, using internal ordinals rather than trusting `BlockId::index()`.
-- [ ] Freeze tests for known reflexivity, disconnected non-dominance, loops,
+- [x] Freeze tests for known reflexivity, disconnected non-dominance, loops,
   self-edges, diamonds, multiple paths, duplicate edges, and fail-closed
   malformed-ID queries.
-- [ ] Build one dominance result per definition verification and share it
+- [x] Build one dominance result per definition verification and share it
   across primitive-alias, checked-integer-division, and primitive-cast checks.
-- [ ] Thread one dominance result through local constant-carrier analysis and
+- [x] Thread one dominance result through local constant-carrier analysis and
   scalar-spill redundancy analysis instead of rebuilding or searching from
   individual site predicates.
-- [ ] Remove `checked_scalar_dominates`, its reachability searches, and all
+- [x] Remove `checked_scalar_dominates`, its reachability searches, and all
   verifier-owned graph exports. Keep same-block instruction ordering in its
   existing instruction-site owners.
-- [ ] Confirm no caller stores facts across a MIR mutation. Record any need
+- [x] Confirm no caller stores facts across a MIR mutation. Record any need
   for cross-pass or cross-mutation reuse under A19 rather than expanding this
   roadmap.
-- [ ] Mark A18 complete with delivered validation, update A19's prerequisite,
+- [x] Mark A18 complete with delivered validation, update A19's prerequisite,
   archive this roadmap, and repair the active and archive indexes.
 
 **Tests:** Add focused dominance unit tests and retain the verifier and pass

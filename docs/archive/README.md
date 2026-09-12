@@ -29,6 +29,7 @@ Archived plans:
 - [Cleanup retrospective evidence and acceptance review](CLEANUP_RETROSPECTIVE_REVIEW.md)
 - [Cleanup retrospective resolved discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md)
 - [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md)
+- [MIR structural CFG analysis](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md)
 
 - [First vertical slice](FIRST_VERTICAL_SLICE_ROADMAP.md)
 - [`i64` output and golden-test observability](I64_OUTPUT_ROADMAP.md)

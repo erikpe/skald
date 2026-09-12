@@ -753,6 +753,17 @@ facade is crate-private through `mir`; later phases do not import its
 implementation module. Facts describe one immutable snapshot and are rebuilt
 after mutation rather than cached across edits.
 
+The same facade derives `MirDominators` once when a verifier or optimization
+needs repeated dominance queries. It assigns deterministic internal ordinals
+in snapshot order and computes entry-rooted membership by predecessor
+intersection. Every unambiguous known block dominates itself, including an
+entry-unreachable block; all other dominance is limited to the entry-reachable
+component. Unknown, foreign, duplicate, and misindexed identities fail closed.
+Definition verification shares one result across its dominance checks, while
+local constant-carrier and scalar-spill analyses each keep one result for their
+own immutable callable snapshot. Instruction-site owners still decide order
+within one block. No dominance result survives a MIR mutation.
+
 The rewrite owner builds its stricter callable-local CFG snapshot on that
 neutral topology for both dense definitions and sparse edit state. It still
 rejects missing terminators and invalid local references before exposing

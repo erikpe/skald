@@ -22,7 +22,7 @@ mod verify;
 #[cfg(test)]
 pub(crate) mod test_fixtures;
 
-pub(crate) use analysis::{MirCfgBlockTopology, MirCfgEdge, MirCfgTopology};
+pub(crate) use analysis::{MirCfgBlockTopology, MirCfgEdge, MirCfgTopology, MirDominators};
 pub use dump::{dump_mir, dump_preliminary_mir};
 pub use lower::{lower_hir, lower_preliminary_hir};
 pub(crate) use model::mir_execution_node_key;
@@ -87,7 +87,6 @@ pub use model::{
     StaticLifecycleEffectFact, StaticLifecyclePlan, StaticLifecycleRootAuthority, StorageId,
     ValueId,
 };
-pub(crate) use verify::checked_scalar_dominates;
 pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,
 };

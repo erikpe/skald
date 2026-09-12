@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A25, A34, A35, A38, and A43 are complete within
+Status: actionable audit; A01–A12, A18, A25, A34, A35, A38, and A43 are complete within
 the scopes recorded below. A09's stage products and owned publication
 selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
@@ -17,12 +17,10 @@ independent MIR verification, deterministic products, and extensive tests.
 Preserve those foundations. A wholesale rewrite or indiscriminate merging of
 IRs would discard much of what is working.
 
-The immediate findings include reproducible compiler/process failures, a
-standard-library nontermination case, and a missing test-suite gate. The next
-architectural priorities are the resolver/type-checker dependency cycle,
-resolver staging, and common MIR graph queries. Larger changes to optional
-representations, alias analysis, and register allocation need explicit designs
-and measurements.
+The immediate robustness findings and the first architectural tranche are now
+complete, including resolver staging and common MIR graph queries. Larger
+changes to optional representations, alias analysis, and register allocation
+still need explicit designs and measurements.
 
 ## Scope, method, and limits
 
@@ -122,7 +120,7 @@ endpoint and names any deferred work.
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
-| [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Open | P1 | 4 | M | Medium | O | M, C, R |
+| [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Open | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Open | P2 | 3 | M | Medium | O | M, R |
 | [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Open | P2 | 3 | M | Medium | O | M, E, R |
@@ -808,14 +806,16 @@ assignment dependencies. Do not introduce an arbitrary iteration cap.
 
 ### A18 — Reuse structural CFG and dominance queries
 
+**Status:** Complete (2026-09-12).
+
 **Implementation plan:**
-[MIR Structural CFG Analysis Roadmap](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md).
+[archived MIR Structural CFG Analysis Roadmap](../archive/MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md).
 
 **Evidence:**
 [`mir/verify/checked_scalar.rs`](../../crates/skald-compiler/src/mir/verify/checked_scalar.rs)
-builds predecessor sets and answers dominance with two graph searches per
-query. [Logical topology](../../crates/skald-compiler/src/passes/pipeline/optimizations/logical_topology.rs)
-has another predecessor builder. Rich edge-preserving facts already exist in
+previously built predecessor sets and answered dominance with two graph
+searches per query. [Logical topology](../../crates/skald-compiler/src/passes/pipeline/optimizations/logical_topology.rs)
+had another predecessor builder. Rich edge-preserving facts already existed in
 [`mir/rewrite/cfg.rs`](../../crates/skald-compiler/src/mir/rewrite/cfg.rs).
 
 **Change:** extract structural graph facts into a neutral MIR analysis owner
@@ -830,7 +830,30 @@ disconnected components, malformed IDs, loops, self-edges, and protected roots.
 Verifier inputs are untrusted; never require an already verified rewrite
 snapshot merely to perform initial structural verification.
 
+**Delivered:** the private `mir::analysis` facade now owns one tolerant,
+deterministic topology per callable snapshot. It preserves successor edge
+occurrences separately from predecessor sets, supplies entry-rooted and
+caller-rooted closure, and lets the strict rewrite layer retain its validation
+and protected-root policy. Verification and optimization no longer maintain
+callable-local predecessor builders.
+
+`MirDominators` derives deterministic internal ordinals and entry-rooted
+dominator membership once per analysis scope. Definition verification shares
+one result across primitive aliases, checked integer division, and primitive
+casts. Local constant-carrier and scalar-spill analyses each reuse one result.
+Same-block instruction ordering remains with those consumers, malformed
+identities fail closed, and no result survives mutation.
+
+Focused validation covered eight neutral CFG and dominance tests, 82 MIR
+verifier tests, 28 local-constant tests, 46 redundancy tests, and 23 rewrite
+CFG tests. The full repository and Rust 1.82 gates also passed.
+
 ### A19 — Reuse analyses within an immutable MIR snapshot
+
+**Prerequisite:** A18 is complete. The neutral topology and dominance result
+provide callable-local, immutable-snapshot facts; A19 must separately measure
+reuse across pass boundaries and define invalidation before extending their
+lifetime.
 
 **Evidence:** the
 [default schedule](../../crates/skald-compiler/src/passes/pipeline/policy/profile.rs)

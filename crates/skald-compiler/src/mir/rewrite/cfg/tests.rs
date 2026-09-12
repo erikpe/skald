@@ -1,9 +1,9 @@
 use crate::{
     identity::{CallableId, ClassId, FunctionId, MethodId, StaticFieldId, StaticInitializerId},
     mir::{
-        test_fixtures::empty_member_definition, BlockId, MirBasicBlock, MirBody,
-        MirFunctionDefinition, MirPathCondition, MirStaticInitializerBody, MirStaticPublication,
-        MirTerminator, MirType, PathConditionId, ValueId,
+        test_fixtures::empty_member_definition, BlockId, MirBasicBlock, MirBody, MirCfgTopology,
+        MirDominators, MirFunctionDefinition, MirPathCondition, MirStaticInitializerBody,
+        MirStaticPublication, MirTerminator, MirType, PathConditionId, ValueId,
     },
     test_support::lower_source_to_mir,
 };
@@ -294,6 +294,12 @@ fn loops_disconnected_regions_and_protected_closure_are_distinguished() {
         &[block(2), block(3)]
     );
     assert_eq!(facts.unreachable(), &[block(4)]);
+
+    let topology = MirCfgTopology::for_definition((&definition).into());
+    let dominators = MirDominators::for_topology(&topology);
+    assert!(dominators.dominates(block(2), block(2)));
+    assert!(!dominators.dominates(block(0), block(2)));
+    assert!(!dominators.dominates(block(0), block(3)));
 }
 
 #[test]
