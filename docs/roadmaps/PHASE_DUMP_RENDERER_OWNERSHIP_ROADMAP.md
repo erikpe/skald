@@ -1,6 +1,6 @@
 # Phase Dump Renderer Ownership Roadmap
 
-Status: in progress; D01 and D02 are complete, and D03 is next.
+Status: in progress; D01 through D03 are complete, and D04 is next.
 
 This roadmap implements
 [cleanup finding A26](CODEBASE_CLEANUP_AUDIT.md#a26--split-large-dump-renderers-by-responsibility)
@@ -52,7 +52,7 @@ move must preserve their bytes and ordering.
 
 - [x] D01 — Establish the recursive layout with MIR dumping
 - [x] D02 — Divide typed HIR dumping by structural responsibility
-- [ ] D03 — Divide resolved-program dumping by structural responsibility
+- [x] D03 — Divide resolved-program dumping by structural responsibility
 - [ ] D04 — Audit ownership, validate all phase observations, and close A26
 
 ## PR-sized implementation sequence
@@ -139,24 +139,24 @@ narrow; and every exact and cross-process HIR observation is unchanged.
 **Purpose:** give the resolved renderer clear owners while preserving its
 program-aware semantic naming and specialization evidence.
 
-- [ ] Convert `resolve/dump.rs` into a private recursive `resolve/dump/` module
+- [x] Convert `resolve/dump.rs` into a private recursive `resolve/dump/` module
   while preserving the existing `resolve::dump_resolved` facade.
-- [ ] Keep the `ResolvedDumper` program context, indentation primitives, and
+- [x] Keep the `ResolvedDumper` program context, indentation primitives, and
   `ResolvedTypeNameContext` implementation in clear owners with narrow
   internal visibility.
-- [ ] Extract cohesive implementations for program and language-item
+- [x] Extract cohesive implementations for program and language-item
   metadata; templates, constraints, specialization states, and semantic type
   names; class/interface/function declarations and definitions; blocks and
   statements; and expressions, operators, places, receivers, and
   dereferences.
-- [ ] Keep specialization and template naming helpers with the generic/type
+- [x] Keep specialization and template naming helpers with the generic/type
   responsibility. Preserve module qualification, selected identities,
   requirement reasons, declaration order, source-shaped resolved syntax, and
   all spans exactly.
-- [ ] Avoid coupling dump fragments to resolver implementation modules or
+- [x] Avoid coupling dump fragments to resolver implementation modules or
   introducing an alternate semantic-name authority. The published
   `ResolvedProgram` remains the sole input.
-- [ ] Add focused exact coverage only where the current resolved, generic,
+- [x] Add focused exact coverage only where the current resolved, generic,
   object, and cross-process suites do not represent a moved output family.
 
 **Tests:** Run the complete resolver tests, focused resolved/object dump tests,

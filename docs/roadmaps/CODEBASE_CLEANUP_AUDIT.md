@@ -1075,8 +1075,9 @@ tests, integration and compile-fail documentation tests, runtime tests, and all
 
 **Evidence:** [HIR dumping](../../crates/skald-compiler/src/hir/dump/mod.rs) was
 3,122 lines before its recursive-module split, while
-[resolved dumping](../../crates/skald-compiler/src/resolve/dump.rs) has
-2,747, and [MIR dumping](../../crates/skald-compiler/src/mir/dump/mod.rs) was
+[resolved dumping](../../crates/skald-compiler/src/resolve/dump/mod.rs) was
+2,747 lines before its recursive-module split, and
+[MIR dumping](../../crates/skald-compiler/src/mir/dump/mod.rs) was
 2,100 lines before its recursive-module split.
 Declaration, type, expression, lifecycle, and body formatting have grown
 together. Shared byte/span/indentation helpers already exist in
