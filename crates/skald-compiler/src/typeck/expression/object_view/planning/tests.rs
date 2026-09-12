@@ -80,6 +80,60 @@ fn planning_checks_access_before_constructing_a_view() {
 }
 
 #[test]
+fn checked_plans_distinguish_static_runtime_and_rejected_relations() {
+    let program = resolved_view_graph();
+    let root = ClassId::new(0);
+    let leaf = ClassId::new(2);
+
+    let static_plan = plan_checked_object_view(
+        &program,
+        exact_class_source(&program, leaf, HirAccess::Mutable),
+        immediate(HirViewTarget::Class(root), HirAccess::ReadOnly),
+    )
+    .expect("an exact derived source must provide its base statically");
+    let (view, kind, projections) = static_plan.into_parts();
+    assert_eq!(kind, CheckedObjectViewPlanKind::Static);
+    assert!(projections.is_empty());
+    assert!(matches!(
+        view.source,
+        HirViewSource::Place(ref place) if place.class() == root
+    ));
+
+    let span = program.class(root).unwrap().span;
+    let runtime_plan = plan_checked_object_view(
+        &program,
+        ObjectViewSource::Obj {
+            binding: binding(0),
+            access: HirAccess::Mutable,
+            span,
+        },
+        immediate(HirViewTarget::Class(leaf), HirAccess::ReadOnly),
+    )
+    .expect("an Obj source may provide a class after a runtime test");
+    assert_eq!(
+        runtime_plan.into_parts().1,
+        CheckedObjectViewPlanKind::Runtime
+    );
+
+    assert!(matches!(
+        plan_checked_object_view(
+            &program,
+            exact_class_source(&program, root, HirAccess::Mutable),
+            immediate(HirViewTarget::Class(leaf), HirAccess::ReadOnly),
+        ),
+        Err(CheckedObjectViewProblem::IncompatibleTarget)
+    ));
+    assert!(matches!(
+        plan_checked_object_view(
+            &program,
+            exact_class_source(&program, leaf, HirAccess::ReadOnly),
+            immediate(HirViewTarget::Class(root), HirAccess::Mutable),
+        ),
+        Err(CheckedObjectViewProblem::InsufficientAccess)
+    ));
+}
+
+#[test]
 fn class_and_shared_plans_preserve_base_projection_order() {
     let program = resolved_view_graph();
     let root = ClassId::new(0);

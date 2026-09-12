@@ -1,8 +1,8 @@
 # Object-View Planning Design Proposal
 
 Status: frozen decision record. The design was accepted on 2026-09-12 and its
-delivery is tracked by the active
-[Object-View Planning Roadmap](../roadmaps/OBJECT_VIEW_PLANNING_ROADMAP.md).
+delivery is recorded by the completed
+[Object-View Planning Roadmap](OBJECT_VIEW_PLANNING_ROADMAP.md).
 
 This proposal separates reusable object-view planning from alias-argument
 checking in Skald's type checker. The change is internal: it preserves the

@@ -118,11 +118,7 @@ impl CheckedSharedPointee {
         }
     }
 
-    pub(in crate::typeck) fn into_view(
-        self,
-        target: HirViewTarget,
-        access: HirAccess,
-    ) -> HirObjectView {
+    pub(super) fn into_view(self, target: HirViewTarget, access: HirAccess) -> HirObjectView {
         let origin = Box::new(self.origin());
         match self.source {
             CheckedSharedPointeeSource::Stable(binding) => HirObjectView {

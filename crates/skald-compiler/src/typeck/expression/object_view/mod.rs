@@ -13,10 +13,10 @@ mod source;
 #[cfg(test)]
 mod tests;
 
-pub(super) use planning::project_place_to_ancestor;
 pub(in crate::typeck) use planning::{
-    apply_object_view_retention, plan_object_view, plan_resolved_object_view, ObjectViewProblem,
-    ObjectViewRequest, ObjectViewRetention,
+    plan_checked_object_view, plan_object_view, plan_resolved_object_view,
+    CheckedObjectViewPlanKind, CheckedObjectViewProblem, ObjectViewProblem, ObjectViewRequest,
+    ObjectViewRetention,
 };
 pub(in crate::typeck) use relation::{
     class_provides_view, classify_object_view_relation, ObjectViewRelation,

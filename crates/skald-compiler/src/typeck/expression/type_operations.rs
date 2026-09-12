@@ -1,39 +1,22 @@
 //! Type-test checking and checked non-owning view selection.
 
 use super::object_view::{
-    apply_object_view_retention, ObjectViewRetention, ObjectViewSource, ObjectViewSourceAdmission,
+    plan_checked_object_view, plan_resolved_object_view, CheckedObjectViewPlanKind,
+    CheckedObjectViewProblem, ObjectViewRequest, ObjectViewRetention, ObjectViewSourceAdmission,
     ObjectViewSourceDiagnosticContext,
 };
 use super::*;
 
 use crate::{
     hir::{
-        HirAccess, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpressionKind,
-        HirObjectView, HirTypeTest, HirTypeTestKind, HirViewTarget,
+        HirAccess, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpressionKind, HirTypeTest,
+        HirTypeTestKind, HirViewTarget,
     },
     resolve::{ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr},
     typeck::program::{
         lower_type, INVALID_COPY_CONSTRUCTION, INVALID_OBJECT_CAST, INVALID_TYPE_TEST,
     },
 };
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum CheckedViewKind {
-    Static,
-    Runtime,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct CheckedViewOperation {
-    view: HirObjectView,
-    kind: CheckedViewKind,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum CheckedViewRejection {
-    StaticFailure,
-    InsufficientAccess,
-}
 
 const COPY_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext =
     ObjectViewSourceDiagnosticContext::new(
@@ -75,14 +58,14 @@ impl CallableChecker<'_, '_> {
         let source_span = source.span();
         let target_class = target;
         let target = HirViewTarget::Class(target_class);
-        let operation = match self.select_checked_view(
-            source,
+        let request = ObjectViewRequest::new(
             target,
             HirAccess::ReadOnly,
             ObjectViewRetention::ImmediateConsumer,
-        ) {
+        );
+        let operation = match plan_checked_object_view(self.program, source, request) {
             Ok(operation) => operation,
-            Err(CheckedViewRejection::StaticFailure) => {
+            Err(CheckedObjectViewProblem::IncompatibleTarget) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_COPY_CONSTRUCTION,
@@ -96,19 +79,19 @@ impl CallableChecker<'_, '_> {
                 );
                 return None;
             }
-            Err(CheckedViewRejection::InsufficientAccess) => {
+            Err(CheckedObjectViewProblem::InsufficientAccess) => {
                 unreachable!("every object source permits read-only copy access")
             }
         };
-        let projections = self.checked_view_projections(&operation.view, target);
+        let (view, kind, projections) = operation.into_parts();
         Some(HirCheckedObjectView {
             class: Some(target_class),
-            view: operation.view,
+            view,
             consumer_target: target,
             consumer_access: HirAccess::ReadOnly,
-            kind: match operation.kind {
-                CheckedViewKind::Static => HirCheckedObjectViewKind::Static,
-                CheckedViewKind::Runtime => HirCheckedObjectViewKind::RuntimeTerminate,
+            kind: match kind {
+                CheckedObjectViewPlanKind::Static => HirCheckedObjectViewKind::Static,
+                CheckedObjectViewPlanKind::Runtime => HirCheckedObjectViewKind::RuntimeTerminate,
             },
             projections,
             span,
@@ -154,9 +137,10 @@ impl CallableChecker<'_, '_> {
         let target = self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
         let source_span = source.span();
         let access = source.access();
-        let operation = match self.select_checked_view(source, target, access, retention) {
+        let request = ObjectViewRequest::new(target, access, retention);
+        let operation = match plan_checked_object_view(self.program, source, request) {
             Ok(operation) => operation,
-            Err(CheckedViewRejection::StaticFailure) => {
+            Err(CheckedObjectViewProblem::IncompatibleTarget) => {
                 self.diagnostics.push(
                     Diagnostic::error(INVALID_OBJECT_CAST, "object cast can never succeed")
                         .with_primary_label(
@@ -167,57 +151,26 @@ impl CallableChecker<'_, '_> {
                 );
                 return None;
             }
-            Err(CheckedViewRejection::InsufficientAccess) => {
+            Err(CheckedObjectViewProblem::InsufficientAccess) => {
                 unreachable!("a plain object cast preserves the source access")
             }
         };
-        let projections = self.checked_view_projections(&operation.view, target);
+        let (view, kind, projections) = operation.into_parts();
         Some(HirCheckedObjectView {
             class: match target {
                 HirViewTarget::Class(class) => Some(class),
                 HirViewTarget::Interface(_) | HirViewTarget::Obj => None,
             },
-            view: operation.view,
+            view,
             consumer_target: target,
             consumer_access: access,
-            kind: match operation.kind {
-                CheckedViewKind::Static => HirCheckedObjectViewKind::Static,
-                CheckedViewKind::Runtime => HirCheckedObjectViewKind::RuntimeTerminate,
+            kind: match kind {
+                CheckedObjectViewPlanKind::Static => HirCheckedObjectViewKind::Static,
+                CheckedObjectViewPlanKind::Runtime => HirCheckedObjectViewKind::RuntimeTerminate,
             },
             projections,
             span: cast.span,
         })
-    }
-
-    fn checked_view_projections(
-        &self,
-        view: &HirObjectView,
-        target: HirViewTarget,
-    ) -> Vec<crate::object_path::ObjectProjection> {
-        match (&view.source, target) {
-            (
-                crate::hir::HirViewSource::Produced {
-                    producer,
-                    projections,
-                },
-                HirViewTarget::Class(target),
-            ) => {
-                let actual = self.produced_projection_dynamic_class(producer.class(), projections);
-                if actual == target {
-                    Vec::new()
-                } else {
-                    self.program
-                        .hierarchy
-                        .base_chain(actual)
-                        .expect("statically successful produced cast must have valid ancestry")
-                        .take_while(|base| *base != target)
-                        .chain(std::iter::once(target))
-                        .map(crate::object_path::ObjectProjection::Base)
-                        .collect()
-                }
-            }
-            _ => Vec::new(),
-        }
     }
 
     pub(super) fn check_type_test(&mut self, test: &ResolvedTypeTestExpr) -> Option<HirExpression> {
@@ -236,9 +189,18 @@ impl CallableChecker<'_, '_> {
         };
         let access = source.access();
         let source_target = source.static_target();
+        let source = plan_resolved_object_view(
+            self.program,
+            source,
+            ObjectViewRequest::new(
+                source_target,
+                access,
+                ObjectViewRetention::ImmediateConsumer,
+            ),
+        );
         Some(HirExpression {
             kind: HirExpressionKind::TypeTest(HirTypeTest {
-                source: source.into_view(source_target, access),
+                source,
                 target,
                 kind,
             }),
@@ -268,51 +230,5 @@ impl CallableChecker<'_, '_> {
                 None
             }
         }
-    }
-
-    fn select_checked_view(
-        &self,
-        source: ObjectViewSource,
-        target: HirViewTarget,
-        access: HirAccess,
-        retention: ObjectViewRetention,
-    ) -> Result<CheckedViewOperation, CheckedViewRejection> {
-        let relation =
-            classify_object_view_relation(self.program, source.relation_source(), target);
-        if relation == ObjectViewRelation::StaticFailure {
-            return Err(CheckedViewRejection::StaticFailure);
-        }
-        if !source.access().permits(access) {
-            return Err(CheckedViewRejection::InsufficientAccess);
-        }
-
-        let source = apply_object_view_retention(source, retention);
-        let view = match (relation, source, target) {
-            (
-                ObjectViewRelation::StaticSuccess,
-                ObjectViewSource::Class { place, origin },
-                HirViewTarget::Class(target),
-            ) => {
-                let place =
-                    super::object_view::project_place_to_ancestor(self.program, place, target)
-                        .expect("statically successful class view must select an ancestor");
-                HirObjectView {
-                    span: place.span(),
-                    source: crate::hir::HirViewSource::Place(place),
-                    origin: Box::new(origin),
-                    target: HirViewTarget::Class(target),
-                    access,
-                }
-            }
-            (_, source, target) => source.into_view(target, access),
-        };
-        let kind = match relation {
-            ObjectViewRelation::StaticSuccess => CheckedViewKind::Static,
-            ObjectViewRelation::Runtime => CheckedViewKind::Runtime,
-            ObjectViewRelation::StaticFailure => {
-                unreachable!("statically impossible views returned above")
-            }
-        };
-        Ok(CheckedViewOperation { view, kind })
     }
 }

@@ -1,4 +1,4 @@
-//! Direct object-view planning after source checking.
+//! Direct and checked object-view planning after source checking.
 
 use crate::{
     hir::{HirAccess, HirObjectPlace, HirObjectView, HirViewTarget},
@@ -11,14 +11,14 @@ use super::{
     classify_object_view_relation, ObjectViewRelation, ObjectViewRelationSource, ObjectViewSource,
 };
 
-/// How long the direct consumer must keep a view's owner alive.
+/// How long the consumer must keep a view's owner alive.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::typeck) enum ObjectViewRetention {
     ImmediateConsumer,
     LoopBody,
 }
 
-/// Consumer-owned input to direct object-view planning.
+/// Consumer-owned input to object-view planning.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::typeck) struct ObjectViewRequest {
     target: HirViewTarget,
@@ -60,6 +60,40 @@ pub(in crate::typeck) struct ObjectViewPlan {
     source: ObjectViewSource,
     request: ObjectViewRequest,
     target_projections: Vec<ObjectProjection>,
+}
+
+/// Whether a checked operation is compile-time guaranteed or needs a runtime
+/// class test. Consumers choose the operation-specific HIR failure behavior.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(in crate::typeck) enum CheckedObjectViewPlanKind {
+    Static,
+    Runtime,
+}
+
+/// A checked non-owning view decision, ready for an operation-specific HIR
+/// wrapper.
+pub(in crate::typeck) struct CheckedObjectViewPlan {
+    view: HirObjectView,
+    kind: CheckedObjectViewPlanKind,
+    projections: Vec<ObjectProjection>,
+}
+
+impl CheckedObjectViewPlan {
+    pub(in crate::typeck) fn into_parts(
+        self,
+    ) -> (
+        HirObjectView,
+        CheckedObjectViewPlanKind,
+        Vec<ObjectProjection>,
+    ) {
+        (self.view, self.kind, self.projections)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(in crate::typeck) enum CheckedObjectViewProblem {
+    IncompatibleTarget,
+    InsufficientAccess,
 }
 
 impl ObjectViewPlan {
@@ -134,7 +168,54 @@ pub(in crate::typeck) fn plan_resolved_object_view(
     }
 }
 
-pub(in crate::typeck) fn apply_object_view_retention(
+pub(in crate::typeck) fn plan_checked_object_view(
+    program: &ResolvedProgram,
+    source: ObjectViewSource,
+    request: ObjectViewRequest,
+) -> Result<CheckedObjectViewPlan, CheckedObjectViewProblem> {
+    let relation = classify_object_view_relation(program, source.relation_source(), request.target);
+    if relation == ObjectViewRelation::StaticFailure {
+        return Err(CheckedObjectViewProblem::IncompatibleTarget);
+    }
+    if !source.access().permits(request.access) {
+        return Err(CheckedObjectViewProblem::InsufficientAccess);
+    }
+
+    let projections = checked_target_projections(program, &source, request.target, relation);
+    let source = apply_object_view_retention(source, request.retention);
+    let view = match (relation, source, request.target) {
+        (
+            ObjectViewRelation::StaticSuccess,
+            ObjectViewSource::Class { place, origin },
+            HirViewTarget::Class(target),
+        ) => {
+            let place = project_place_to_ancestor(program, place, target)
+                .expect("statically successful class view must select an ancestor");
+            HirObjectView {
+                span: place.span(),
+                source: crate::hir::HirViewSource::Place(place),
+                origin: Box::new(origin),
+                target: HirViewTarget::Class(target),
+                access: request.access,
+            }
+        }
+        (_, source, target) => source.into_view(target, request.access),
+    };
+    let kind = match relation {
+        ObjectViewRelation::StaticSuccess => CheckedObjectViewPlanKind::Static,
+        ObjectViewRelation::Runtime => CheckedObjectViewPlanKind::Runtime,
+        ObjectViewRelation::StaticFailure => {
+            unreachable!("statically impossible checked views returned above")
+        }
+    };
+    Ok(CheckedObjectViewPlan {
+        view,
+        kind,
+        projections,
+    })
+}
+
+fn apply_object_view_retention(
     source: ObjectViewSource,
     retention: ObjectViewRetention,
 ) -> ObjectViewSource {
@@ -144,6 +225,27 @@ pub(in crate::typeck) fn apply_object_view_retention(
         }
         (source, ObjectViewRetention::ImmediateConsumer | ObjectViewRetention::LoopBody) => source,
     }
+}
+
+fn checked_target_projections(
+    program: &ResolvedProgram,
+    source: &ObjectViewSource,
+    target: HirViewTarget,
+    relation: ObjectViewRelation,
+) -> Vec<ObjectProjection> {
+    let (
+        ObjectViewRelation::StaticSuccess,
+        ObjectViewSource::Produced { dynamic_class, .. },
+        HirViewTarget::Class(target),
+    ) = (relation, source, target)
+    else {
+        return Vec::new();
+    };
+    static_class_up_projections(
+        program,
+        HirViewTarget::Class(*dynamic_class),
+        HirViewTarget::Class(target),
+    )
 }
 
 fn uses_published_target(source: &ObjectViewSource) -> bool {
@@ -216,7 +318,7 @@ fn prepare_source(
     }
 }
 
-pub(in crate::typeck::expression) fn project_place_to_ancestor(
+fn project_place_to_ancestor(
     program: &ResolvedProgram,
     mut place: HirObjectPlace,
     target: crate::identity::ClassId,

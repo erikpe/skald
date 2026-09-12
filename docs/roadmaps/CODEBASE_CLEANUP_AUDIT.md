@@ -1,12 +1,12 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A18, A19, A25, A34, A35, A38, and A43 are complete within
+Status: actionable audit; A01–A12, A14, A18, A19, A25, A34, A35, A38, and A43 are complete within
 the scopes recorded below. A09's stage products and owned publication
 selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
 The [completed retrospective](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
 records accepted boundaries, explicit narrowing, and prerequisites for further
-work. A14 now has an accepted design and a staged implementation roadmap;
+work. A14's accepted object-view planning design is fully implemented;
 remaining architectural changes need focused designs and PR-sized tasks.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
@@ -117,7 +117,7 @@ endpoint and names any deferred work.
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete (bounded) | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
-| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | In progress | P1 | 4 | M–L | Medium | O | M, E, R |
+| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Complete | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
@@ -726,14 +726,15 @@ all compiler IRs.
 
 ### A14 — Separate object-view planning from alias-argument checking
 
-**Status:** In progress; the facade and checked source product are complete,
-and direct-view planning for object aliases is next.
+**Status:** Complete. The private object-view facade owns checked source facts,
+direct and checked planning, relations, access, retention, projections, and
+conversion into existing HIR views.
 
 **Accepted design:**
 [Object-View Planning Design Proposal](../archive/OBJECT_VIEW_PLANNING_DESIGN_PROPOSAL.md).
 
 **Implementation plan:**
-[Object-View Planning Roadmap](OBJECT_VIEW_PLANNING_ROADMAP.md).
+[Object-View Planning Roadmap](../archive/OBJECT_VIEW_PLANNING_ROADMAP.md).
 
 **Evidence:**
 [`typeck/expression/alias.rs`](../../crates/skald-compiler/src/typeck/expression/alias.rs)
@@ -749,10 +750,15 @@ and anchor planning, and context-specific diagnostics. Reuse a typed view plan
 for receivers, aliases, and iteration where their rules agree, with explicit
 context rather than new booleans for every feature.
 
-**Next step:** introduce the typed direct-view request and plan, then migrate
-the ordinary object-alias branch while preserving non-exclusive aliases,
-read-only versus mutable access, owner anchoring, evaluation order,
-diagnostics, HIR, and exact destruction timing.
+**Implemented:** object aliases and implicit view receivers use one direct plan;
+iteration selects loop-body retention before HIR construction; casts and copy
+construction use a distinct checked plan; and type tests share the checked
+source and relation facts while retaining their own result. Consumer-specific
+diagnostics, protocol selection, copy allocation, and final HIR wrappers remain
+with their semantic owners. Raw source-to-view conversion is private to the
+facade. Focused type-operation, iteration, ownership, construction, and MIR
+tests passed, followed by `make check` with 3,146 compiler unit tests and all
+629 golden cases, plus the Rust 1.82.0 workspace all-target check.
 
 ### A15 — Reassess overlapping optional/place families
 

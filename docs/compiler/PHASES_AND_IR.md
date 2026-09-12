@@ -3253,6 +3253,16 @@ classes that can inhabit the source view. Checked-view selection then preserves
 access, projects statically selected class targets, and records terminating
 runtime failure.
 
+The private `typeck::expression::object_view` facade owns checked source facts,
+the closed-world relation, requested access, immediate or loop-body owner
+retention, target projections, and conversion into `HirObjectView`. Direct
+aliases and implicit receivers require static compatibility. Casts and copy
+construction use a separate checked plan that preserves static versus runtime
+classification for their operation-specific `HirCheckedObjectView` wrappers;
+type tests map the same relation directly to `HirTypeTestKind`. Syntax-specific
+selection, diagnostics, protocol lookup, owning-copy decisions, and final HIR
+wrappers remain with their existing consumers.
+
 The implemented [object-cast profile](../language/OBJECT_CASTS.md) uses an
 expression-level checked-place operation. HIR retains the source view,
 target identity, preserved access/origin, static or runtime classification,

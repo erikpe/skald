@@ -196,15 +196,11 @@ impl ObjectViewSource {
         )
     }
 
-    pub(in crate::typeck) fn into_view(
-        self,
-        target: HirViewTarget,
-        access: HirAccess,
-    ) -> HirObjectView {
+    pub(super) fn into_view(self, target: HirViewTarget, access: HirAccess) -> HirObjectView {
         self.into_view_with_target_projections(target, access, Vec::new())
     }
 
-    pub(in crate::typeck) fn into_view_with_target_projections(
+    pub(super) fn into_view_with_target_projections(
         self,
         target: HirViewTarget,
         access: HirAccess,

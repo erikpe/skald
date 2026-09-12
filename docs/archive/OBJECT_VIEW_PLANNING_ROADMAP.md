@@ -1,11 +1,11 @@
 # Object-View Planning Roadmap
 
-Status: in progress; V01 through V03 are complete and V04 is next.
+Status: complete; V01 through V04 delivered the accepted design.
 
 This roadmap implements
-[cleanup finding A14](CODEBASE_CLEANUP_AUDIT.md#a14--separate-object-view-planning-from-alias-argument-checking)
+[cleanup finding A14](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a14--separate-object-view-planning-from-alias-argument-checking)
 through the accepted
-[object-view planning design](../archive/OBJECT_VIEW_PLANNING_DESIGN_PROPOSAL.md).
+[object-view planning design](OBJECT_VIEW_PLANNING_DESIGN_PROPOSAL.md).
 It gives reusable object-view source checking and planning one private owner,
 then migrates consumers in stages that preserve their existing diagnostics and
 typed HIR products.
@@ -53,7 +53,7 @@ current semantic owners.
 - [x] V01 — Establish the facade and checked source product
 - [x] V02 — Introduce direct-view planning and migrate object aliases
 - [x] V03 — Migrate view receivers and iteration retention
-- [ ] V04 — Reuse source facts in checked operations and close A14
+- [x] V04 — Reuse source facts in checked operations and close A14
 
 ## PR-sized implementation sequence
 
@@ -196,26 +196,26 @@ projections preserve both allocation provenance and direct compatibility.
 without collapsing checked casts, type tests, or owning copy construction into
 the direct-view result type, then leave one maintainable module boundary.
 
-- [ ] Migrate object casts and type tests to facade-owned source facts and the
+- [x] Migrate object casts and type tests to facade-owned source facts and the
   shared relation classifier. Preserve their separate handling of static
   success, static failure, and runtime dependence.
-- [ ] Migrate copy construction where shared source facts or direct/checked
+- [x] Migrate copy construction where shared source facts or direct/checked
   views remove real duplication. Keep allocation, owning-copy planning,
   destination safety, and copy diagnostics with copy/construction checking.
-- [ ] Preserve `HirCheckedObjectView`, `HirTypeTestKind`, runtime-terminate
+- [x] Preserve `HirCheckedObjectView`, `HirTypeTestKind`, runtime-terminate
   behavior, checked-cast-to-alias wrappers, and operation-specific access and
   result metadata. Add a checked-view planning product only if the remaining
   duplication demonstrates one cohesive invariant.
-- [ ] Audit all object-view source, relation, access, projection, anchor, and
+- [x] Audit all object-view source, relation, access, projection, anchor, and
   view-construction call sites. Remove superseded exports, helpers, booleans,
   duplicate matches, and temporary migration shims.
-- [ ] Review the final recursive module by responsibility. Keep a concise
+- [x] Review the final recursive module by responsibility. Keep a concise
   facade and cohesive implementation files; avoid one-function wrappers and
   visibility widened only to support file movement.
-- [ ] Update living compiler documentation for the final owner and invariants,
+- [x] Update living compiler documentation for the final owner and invariants,
   mark A14 complete with its implementation and validation, then mark this
   roadmap complete and archive it with repaired links and indexes.
-- [ ] Record any valuable work beyond this accepted scope in an indexed
+- [x] Record any valuable work beyond this accepted scope in an indexed
   discoveries document instead of expanding the closure task.
 
 **Tests:** Cover static-success, static-failure, and runtime cast/test matrices;
@@ -231,6 +231,15 @@ relations, and direct-view planning; every intended consumer uses it without a
 universal checked-operation result; no superseded implementation remains;
 public paths and observable behavior are unchanged; A14 is complete; and the
 accepted design and completed roadmap are archived and indexed.
+
+Implemented: checked casts and copy construction now consume a facade-owned
+checked plan that selects static or runtime behavior, validates access and
+retention, and preserves produced-source target projections. Type tests use
+the same checked source facts and relation while retaining their dedicated HIR
+classification. Direct identity views used by tests and projected shared-field
+copies also pass through the planner; raw source-to-HIR conversion is confined
+to the facade. The full repository and Rust 1.82.0 gates passed. No additional
+actionable work was found, so no discoveries record was needed.
 
 ## Ordering and dependencies
 

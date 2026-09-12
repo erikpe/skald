@@ -657,9 +657,15 @@ impl CallableChecker<'_, '_> {
         };
         let pointee =
             self.check_explicit_shared_pointee(dereference, projections.clone(), access.span)?;
-        let view = pointee.into_view(
-            crate::hir::HirViewTarget::Class(*receiver_class),
-            HirAccess::ReadOnly,
+        let target = crate::hir::HirViewTarget::Class(*receiver_class);
+        let view = super::object_view::plan_resolved_object_view(
+            self.program,
+            super::object_view::ObjectViewSource::Shared(pointee),
+            super::object_view::ObjectViewRequest::new(
+                target,
+                HirAccess::ReadOnly,
+                super::object_view::ObjectViewRetention::ImmediateConsumer,
+            ),
         );
         Some(HirCheckedObjectView {
             view,

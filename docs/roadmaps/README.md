@@ -8,9 +8,7 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-| Roadmap | Status | Purpose | Next task | Dependencies |
-| --- | --- | --- | --- | --- |
-| [Object-view planning](OBJECT_VIEW_PLANNING_ROADMAP.md) | In progress | Give reusable checked object-view source facts and direct-view planning one private type-checking owner | V04 — Reuse source facts in checked operations and close A14 | Accepted object-view design; existing HIR provenance, anchor, guard, and relation contracts |
+No implementation roadmap is currently active.
 
 ## Pending discovery and planning records
 
