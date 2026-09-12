@@ -241,11 +241,11 @@ include `production_phase_dependencies_follow_the_forward_pipeline` and
 direct/grouped crate paths and relative paths leaving a phase root, excludes
 comments/literals and conventionally named test files, and has one file-scoped
 MIR retention exception. It is not a Rust name resolver, macro expansion engine,
-transitive dependency proof, or semantic ownership check. In particular,
-`type_capabilities` is absent from the scanned owner policies. The inspected
-service currently uses resolved IR, but the guard does not prevent a future
-reverse dependency inside it. Follow-up is recorded in
-[discoveries](../roadmaps/CLEANUP_RETROSPECTIVE_DISCOVERIES.md).
+transitive dependency proof, or semantic ownership check. At review time,
+`type_capabilities` was absent from the scanned owner policies. The inspected
+service used resolved IR, but the guard did not prevent a future reverse
+dependency inside it. The completed follow-up is recorded in
+[resolved discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md).
 
 [Process determinism tests](../../crates/skald-compiler/tests/pipeline_determinism.rs)
 include `generic_module_phase_products_are_deterministic_across_processes`,
@@ -452,7 +452,7 @@ adds four behavioral cases, without changing production compiler code:
 
 The last case is a demonstrated failure, not an accepted partial-product
 behavior. Its backtrace and bounded repair scope are described in
-[discoveries](../roadmaps/CLEANUP_RETROSPECTIVE_DISCOVERIES.md#prevent-range-probing-from-consuming-absent-class-declarations).
+[resolved discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md#prevent-range-probing-from-consuming-absent-class-declarations).
 The public compiler's internal test loader uses the real canonical library;
 no artificial missing class was injected. The source's invalid generic
 application should produce a diagnostic rather than panic.

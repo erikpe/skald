@@ -1,22 +1,21 @@
 # Cleanup Retrospective Discoveries
 
-Status: actionable follow-up after the
-[retrospective roadmap](../archive/CLEANUP_RETROSPECTIVE_ROADMAP.md). Evidence was recorded
+Status: resolved and archived after the
+[retrospective roadmap](CLEANUP_RETROSPECTIVE_ROADMAP.md). Evidence was recorded
 during R01 at revision `64b6da73b41ed2ec6afe0e1401b3735484847e6d`.
 
 ## Guard the neutral capability service's dependencies
 
 **Priority:** P2. **Owner:** compiler phase-boundary integration tests.
-**Status:** pending. **Blocking:** does not block retrospective completion or
-current capability use; settle the guard before expanding neutral-service
-dependencies in subsequent capability refactoring.
+**Status:** resolved (2026-09-12). **Blocking:** resolved; future capability
+refactoring is protected by the explicit service policy.
 
 **Evidence:** [phase policies](../../crates/skald-compiler/tests/phase_boundaries.rs)
 enumerate compiler phase roots but omit `type_capabilities` as a scanned owner.
 Consequently a future HIR/type-check dependency inside that service would not
 be inspected by the forward-pipeline test. Current production source inspected
 in R01 uses resolved facts; this is a prevention gap, not an observed reverse
-dependency. See the [review](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md).
+dependency. See the [review](CLEANUP_RETROSPECTIVE_REVIEW.md).
 
 **Bounded follow-up:** explicitly represent the neutral service's allowed
 dependencies in the existing guard, preserving legitimate resolution consumers
@@ -30,16 +29,29 @@ Retain existing exception and scanner tests, document the coverage limit, then
 run `make check` and `make msrv-check`. This policy extension is a separate
 behavioral test change, rather than incidental R01 documentation cleanup.
 
+**Delivered:** the existing source guard now distinguishes compiler phases
+from governed supporting semantic services and scans `type_capabilities` as an
+owner. Its policy permits source and resolved inputs; the resolution and type-
+checking policies explicitly permit the service as a consumer dependency.
+Focused synthetic tests reject service imports of HIR, type-check, MIR, passes,
+and backend roots, verify the two allowed consumers, and require exactly one
+policy for every governed root. The living phase and test contracts document
+both the boundary and the scanner's direct-source coverage limit.
+
+**Validation completed (2026-09-12):** all 10 focused `phase_boundaries`
+integration tests passed. The full `make check` repository gate and Rust 1.82
+`make msrv-check` gate also passed before this record was archived.
+
 
 ## Complete candidate publication ownership
 
 **Priority:** P1. **Owner:** resolver publication. **Status:** resolved
 (2026-09-12); implementation and acceptance are recorded in the
-[archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
+[archived publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md).
 **Blocking:** resolved. Future fields and rejection changes use the implemented
 owned-product and exhaustive-assembly boundary.
 
-R02's [field inventory and decision](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
+R02's [field inventory and decision](CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
 show that centralized rollback still requires a manually maintained field list.
 Retained error evidence can reference rejected declarations, so the output
 must not be mistaken for a closed executable program. This is an architectural
@@ -57,8 +69,8 @@ and independent class survival remain covered by the publication regressions.
 
 **Priority:** P0. **Owner:** resolver semantic range completion and provisional
 body environments. **Status:** resolved (2026-09-12); full repair gates passed.
-**Blocking:** resolved; R03 verification may resume. This was a demonstrated
-panic, distinct from the still-pending manual rollback work.
+**Blocking:** resolved; R03 verification resumed after this repair. This was a
+demonstrated panic, distinct from the then-pending manual rollback work.
 
 The new `class_rejection_preserves_canonical_string_fields_and_literal_bytes`
 test in [publication tests](../../crates/skald-compiler/src/resolve/resolver/program/specialization/publication_tests.rs)

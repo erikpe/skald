@@ -185,7 +185,11 @@ storage eligibility and recursive class, optional, and array lifecycle
 availability, including diagnostic failure paths. Resolution never imports
 type checking or HIR to answer those questions. Type checking separately turns
 the resolved facts into concrete HIR lifecycle plans, with parity coverage for
-class and aggregate availability.
+class and aggregate availability. This is a supporting semantic service rather
+than a compiler phase. Its implementation may depend directly on source and
+resolved products, while resolution and type checking are its explicit phase
+consumers. The phase-boundary integration policy rejects direct service
+dependencies on HIR, type-check, MIR, pass, and backend products.
 
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus

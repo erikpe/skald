@@ -27,6 +27,7 @@ Archived plans:
 
 - [Cleanup architecture retrospective](CLEANUP_RETROSPECTIVE_ROADMAP.md)
 - [Cleanup retrospective evidence and acceptance review](CLEANUP_RETROSPECTIVE_REVIEW.md)
+- [Cleanup retrospective resolved discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md)
 - [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md)
 
 - [First vertical slice](FIRST_VERTICAL_SLICE_ROADMAP.md)

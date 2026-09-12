@@ -10,15 +10,21 @@ the contracts mean.
 Choose the narrowest layer that observes the behavior at its owning boundary.
 
 The `skald-compiler` `phase_boundaries` integration test checks direct
-production dependencies between compiler phase roots. Its limited Rust source
-scanner recognizes fully qualified and grouped `crate` paths and `super` paths
-that leave the owning phase root, while excluding comments, literals, and files
-following the repository's test and fixture naming conventions. Scanner tests
-pin those parsing limits, and policy tests prove that a synthetic reverse edge
-is rejected while legitimate lowering inputs and each documented file-scoped
-exception are accepted. The test runs through ordinary workspace and
-repository gates. Opaque phase seals and mutation authority remain enforced by
-Rust visibility and their existing compile-fail documentation tests.
+production dependencies between compiler phase roots and explicitly governed
+supporting semantic services. `type_capabilities` remains a service rather than
+a phase: it may consume source and resolved facts, and only resolution and type
+checking may consume it. Its synthetic policy tests reject dependencies on
+later IR and backend owners. The limited Rust source scanner recognizes fully
+qualified and grouped `crate` paths and `super` paths that leave the owning
+root, while excluding comments, literals, and files following the repository's
+test and fixture naming conventions. Scanner tests pin those parsing limits,
+and policy tests prove that synthetic reverse edges are rejected while
+legitimate inputs, consumers, and each documented file-scoped exception are
+accepted. This is direct source-path coverage, not Rust name resolution, macro
+expansion, transitive dependency proof, or a semantic ownership check. The test
+runs through ordinary workspace and repository gates. Opaque phase seals and
+mutation authority remain enforced by Rust visibility and their existing
+compile-fail documentation tests.
 
 Generic-interface coverage follows the complete compiler pipeline. Syntax
 tests own source shape, punctuation, nested closers, and recovery. Resolution
