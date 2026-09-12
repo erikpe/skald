@@ -11,19 +11,27 @@ use super::{
         MirFinalPassCapability, MirFinalPassChange, MirFinalPassOutcome, MirPassFailure,
         MirProofPassCapability, MirProofPassChange, MirProofPassOutcome,
     },
-    observation::MirPassOccurrenceRecorder,
+    observation::{MirPassAttempt, MirPassOccurrenceRecorder},
     statistics::{MeasuredMirPipeline, MirPipelineStatistics},
     MirProofTransitionCapability, MirProofTransitionFailureKind, ProofNormalizationTransition,
 };
 use crate::passes::pipeline::{
+    normalization::MirProofNormalizationStatistics,
     seal::{reseal_final_mir, transition_proof_mir, MirProofTransitionError},
     snapshot_analysis::{
         MirProofPassContext, MirProofSnapshotAnalysis, MirProofTransitionContext,
         MirSnapshotAnalysisCheckpoint, MirSnapshotAnalysisKind, MirSnapshotAnalysisPolicy,
         MirSnapshotAnalysisUsage,
     },
-    verify_proof_mir, MirPassOccurrence, MirPassSchedule,
+    verify_proof_mir, MirPassOccurrence, MirPassSchedule, VerifiedFinalMirProgram,
+    VerifiedProofMirProgram,
 };
+
+struct MirPipelineExecution<'inspection> {
+    inspector: Option<&'inspection mut dyn MirPipelineInspector>,
+    statistics: MirPipelineStatistics,
+    occurrence_recorder: MirPassOccurrenceRecorder,
+}
 
 pub(crate) fn run_mir_pipeline_measured(
     program: MirProgram,
@@ -123,64 +131,86 @@ fn run_mir_pipeline_with_transition(
     transition: ProofNormalizationTransition,
     analysis_policy: MirSnapshotAnalysisPolicy,
 ) -> MeasuredMirPipeline {
-    let mut inspector = inspector;
-    let mut statistics = MirPipelineStatistics::default();
-    let mut occurrence_recorder =
-        MirPassOccurrenceRecorder::new(record_occurrences, schedule.len());
-    statistics.record_verification();
-    let mut verified = match verify_proof_mir(program) {
-        Ok(verified) => verified,
-        Err(errors) => {
-            return MeasuredMirPipeline::new(
-                Err(MirPipelineError::input_verification(errors)),
-                statistics,
-                occurrence_recorder.into_records(),
-            );
-        }
-    };
-    inspect_proof_checkpoint(
-        &mut inspector,
-        MirPipelineCheckpointLabel::ProofRichInput,
-        &verified,
-    );
-    let mut analyses = MirProofSnapshotAnalysis::new(analysis_policy);
+    let mut execution = MirPipelineExecution::new(inspector, record_occurrences, schedule.len());
+    let result = execution.run(program, schedule, transition, analysis_policy);
+    execution.finish(result)
+}
 
-    for occurrence in schedule.proof_rich() {
-        statistics.record_pass_execution();
-        let attempt = occurrence_recorder.start(occurrence);
+impl<'inspection> MirPipelineExecution<'inspection> {
+    fn new(
+        inspector: Option<&'inspection mut dyn MirPipelineInspector>,
+        record_occurrences: bool,
+        schedule_len: usize,
+    ) -> Self {
+        Self {
+            inspector,
+            statistics: MirPipelineStatistics::default(),
+            occurrence_recorder: MirPassOccurrenceRecorder::new(record_occurrences, schedule_len),
+        }
+    }
+
+    fn run(
+        &mut self,
+        program: MirProgram,
+        schedule: &MirPassSchedule,
+        transition: ProofNormalizationTransition,
+        analysis_policy: MirSnapshotAnalysisPolicy,
+    ) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
+        self.statistics.record_verification();
+        let verified = verify_proof_mir(program).map_err(MirPipelineError::input_verification)?;
+        self.inspect_proof(MirPipelineCheckpointLabel::ProofRichInput, &verified);
+
+        let mut analyses = MirProofSnapshotAnalysis::new(analysis_policy);
+        let verified = self.run_proof_rich_stage(verified, schedule, &mut analyses)?;
+        let verified = self.run_proof_transition_stage(
+            verified,
+            schedule.proof_transition(),
+            &mut analyses,
+            transition,
+        )?;
+        let verified = self.run_final_stage(verified, schedule)?;
+
+        self.inspect_final(MirPipelineCheckpointLabel::Final, &verified);
+        Ok(verified)
+    }
+
+    fn run_proof_rich_stage(
+        &mut self,
+        mut verified: VerifiedProofMirProgram,
+        schedule: &MirPassSchedule,
+        analyses: &mut MirProofSnapshotAnalysis,
+    ) -> Result<VerifiedProofMirProgram, MirPipelineError> {
+        for occurrence in schedule.proof_rich() {
+            verified = self.run_proof_rich_occurrence(verified, occurrence, analyses)?;
+        }
+        Ok(verified)
+    }
+
+    fn run_proof_rich_occurrence(
+        &mut self,
+        verified: VerifiedProofMirProgram,
+        occurrence: MirPassOccurrence,
+        analyses: &mut MirProofSnapshotAnalysis,
+    ) -> Result<VerifiedProofMirProgram, MirPipelineError> {
+        let attempt = self.start_pass(occurrence);
         let transform = occurrence
             .proof_transform()
             .expect("validated proof-rich occurrence must have a proof-rich callback");
         let checkpoint = analyses.checkpoint();
         let result = transform(MirProofPassContext::new(
             MirProofPassCapability::new(verified),
-            &mut analyses,
+            analyses,
         ));
         let outcome = match result {
             Ok(outcome) => outcome,
-            Err(MirPassFailure::Execution(error)) => {
-                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
-                occurrence_recorder.record_failed(
+            Err(failure) => {
+                let analysis_usage = self.record_analysis_usage(analyses, checkpoint);
+                return Err(self.record_pass_failure(
+                    occurrence,
                     attempt,
                     Some((MirSnapshotAnalysisKind::LocalConstants, analysis_usage)),
-                );
-                return MeasuredMirPipeline::new(
-                    Err(MirPipelineError::pass_execution(occurrence, error)),
-                    statistics,
-                    occurrence_recorder.into_records(),
-                );
-            }
-            Err(MirPassFailure::Rewrite(error)) => {
-                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
-                occurrence_recorder.record_failed(
-                    attempt,
-                    Some((MirSnapshotAnalysisKind::LocalConstants, analysis_usage)),
-                );
-                return MeasuredMirPipeline::new(
-                    Err(MirPipelineError::structural_rewrite(occurrence, error)),
-                    statistics,
-                    occurrence_recorder.into_records(),
-                );
+                    failure,
+                ));
             }
         };
 
@@ -189,10 +219,10 @@ fn run_mir_pipeline_with_transition(
                 verified: unchanged,
                 data,
             } => {
-                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
+                let analysis_usage = self.record_analysis_usage(analyses, checkpoint);
                 debug_assert_eq!(data.changed_callables(), 0);
-                statistics.record_pass_data(occurrence, &data);
-                occurrence_recorder.record_completed(
+                self.statistics.record_pass_data(occurrence, &data);
+                self.occurrence_recorder.record_completed(
                     attempt,
                     MirPassOccurrenceOutcome::Unchanged,
                     data,
@@ -200,28 +230,24 @@ fn run_mir_pipeline_with_transition(
                     0,
                     Some((MirSnapshotAnalysisKind::LocalConstants, analysis_usage)),
                 );
-                verified = unchanged;
-                inspect_proof_checkpoint(
-                    &mut inspector,
-                    after_proof_pass_label(occurrence),
-                    &verified,
-                );
+                self.inspect_proof(after_proof_pass_label(occurrence), &unchanged);
+                Ok(unchanged)
             }
             MirProofPassOutcome::Changed { change, data } => {
                 analyses.reset();
-                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
-                statistics.record_pass_data(occurrence, &data);
+                let analysis_usage = self.record_analysis_usage(analyses, checkpoint);
+                self.statistics.record_pass_data(occurrence, &data);
                 let (program, rewrite_changes) = match change {
                     MirProofPassChange::Rewrite(rewrite) => {
-                        let rewrite_changes = statistics.record_rewrite(&rewrite);
+                        let rewrite_changes = self.statistics.record_rewrite(&rewrite);
                         let MirProgramRewriteResult { program, .. } = rewrite;
                         (program, rewrite_changes)
                     }
                 };
-                statistics.record_verification();
-                verified = match verify_proof_mir(program) {
+                self.statistics.record_verification();
+                let verified = match verify_proof_mir(program) {
                     Ok(verified) => {
-                        occurrence_recorder.record_completed(
+                        self.occurrence_recorder.record_completed(
                             attempt,
                             MirPassOccurrenceOutcome::Changed,
                             data,
@@ -232,7 +258,7 @@ fn run_mir_pipeline_with_transition(
                         verified
                     }
                     Err(errors) => {
-                        occurrence_recorder.record_completed(
+                        self.occurrence_recorder.record_completed(
                             attempt,
                             MirPassOccurrenceOutcome::Failed,
                             data,
@@ -240,68 +266,81 @@ fn run_mir_pipeline_with_transition(
                             1,
                             Some((MirSnapshotAnalysisKind::LocalConstants, analysis_usage)),
                         );
-                        return MeasuredMirPipeline::new(
-                            Err(MirPipelineError::output_verification(occurrence, errors)),
-                            statistics,
-                            occurrence_recorder.into_records(),
-                        );
+                        return Err(MirPipelineError::output_verification(occurrence, errors));
                     }
                 };
-                inspect_proof_checkpoint(
-                    &mut inspector,
-                    after_proof_pass_label(occurrence),
-                    &verified,
-                );
+                self.inspect_proof(after_proof_pass_label(occurrence), &verified);
+                Ok(verified)
             }
         }
     }
 
-    let (mut verified, normalization) = if let Some(occurrence) = schedule.proof_transition() {
-        statistics.record_pass_execution();
-        let attempt = occurrence_recorder.start(occurrence);
+    fn run_proof_transition_stage(
+        &mut self,
+        verified: VerifiedProofMirProgram,
+        occurrence: Option<MirPassOccurrence>,
+        analyses: &mut MirProofSnapshotAnalysis,
+        transition: ProofNormalizationTransition,
+    ) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
+        let (verified, normalization) = match occurrence {
+            Some(occurrence) => {
+                self.run_selected_proof_transition(verified, occurrence, analyses, transition)?
+            }
+            None => self.run_implicit_proof_transition(verified, analyses, transition)?,
+        };
+        self.statistics
+            .record_normalization_statistics(normalization);
+        self.inspect_final(
+            MirPipelineCheckpointLabel::AfterProofNormalization,
+            &verified,
+        );
+        Ok(verified)
+    }
+
+    fn run_selected_proof_transition(
+        &mut self,
+        verified: VerifiedProofMirProgram,
+        occurrence: MirPassOccurrence,
+        analyses: &mut MirProofSnapshotAnalysis,
+        transition: ProofNormalizationTransition,
+    ) -> Result<(VerifiedFinalMirProgram, MirProofNormalizationStatistics), MirPipelineError> {
+        let attempt = self.start_pass(occurrence);
         let transform = occurrence
             .transition_transform()
             .expect("validated transition occurrence must have a transition callback");
         let checkpoint = analyses.checkpoint();
         let result = transform(MirProofTransitionContext::new(
             MirProofTransitionCapability::with_transition(verified, transition),
-            &mut analyses,
+            analyses,
         ));
         analyses.reset();
-        let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
+        let analysis_usage = self.record_analysis_usage(analyses, checkpoint);
         let outcome = match result {
             Ok(outcome) => outcome,
             Err(failure) => {
                 let error = match failure.into_kind() {
-                    MirProofTransitionFailureKind::Pass(MirPassFailure::Execution(error)) => {
-                        MirPipelineError::pass_execution(occurrence, error)
-                    }
-                    MirProofTransitionFailureKind::Pass(MirPassFailure::Rewrite(error)) => {
-                        MirPipelineError::structural_rewrite(occurrence, error)
+                    MirProofTransitionFailureKind::Pass(failure) => {
+                        pass_failure_error(occurrence, failure)
                     }
                     MirProofTransitionFailureKind::Boundary(error) => {
-                        statistics.record_normalization_execution();
-                        statistics.record_verification();
+                        self.statistics.record_normalization_execution();
+                        self.statistics.record_verification();
                         transition_boundary_error(Some(occurrence), error)
                     }
                 };
-                occurrence_recorder.record_failed(
+                self.occurrence_recorder.record_failed(
                     attempt,
                     Some((MirSnapshotAnalysisKind::LocalConstants, analysis_usage)),
                 );
-                return MeasuredMirPipeline::new(
-                    Err(error),
-                    statistics,
-                    occurrence_recorder.into_records(),
-                );
+                return Err(error);
             }
         };
 
-        statistics.record_normalization_execution();
-        statistics.record_verification();
+        self.statistics.record_normalization_execution();
+        self.statistics.record_verification();
         let (verified, normalization, data, changed) = outcome.into_parts();
-        statistics.record_pass_data(occurrence, &data);
-        occurrence_recorder.record_completed(
+        self.statistics.record_pass_data(occurrence, &data);
+        self.occurrence_recorder.record_completed(
             attempt,
             if changed {
                 MirPassOccurrenceOutcome::Changed
@@ -313,59 +352,48 @@ fn run_mir_pipeline_with_transition(
             1,
             Some((MirSnapshotAnalysisKind::LocalConstants, analysis_usage)),
         );
-        inspect_final_checkpoint(
-            &mut inspector,
-            after_transition_pass_label(occurrence),
-            &verified,
-        );
-        (verified, normalization)
-    } else {
+        self.inspect_final(after_transition_pass_label(occurrence), &verified);
+        Ok((verified, normalization))
+    }
+
+    fn run_implicit_proof_transition(
+        &mut self,
+        verified: VerifiedProofMirProgram,
+        analyses: &mut MirProofSnapshotAnalysis,
+        transition: ProofNormalizationTransition,
+    ) -> Result<(VerifiedFinalMirProgram, MirProofNormalizationStatistics), MirPipelineError> {
         let checkpoint = analyses.checkpoint();
         analyses.reset();
-        record_analysis_usage(&analyses, checkpoint, &mut statistics);
-        statistics.record_normalization_execution();
-        statistics.record_verification();
-        match transition(verified, None) {
-            Ok(result) => result,
-            Err(error) => {
-                return MeasuredMirPipeline::new(
-                    Err(transition_boundary_error(None, error)),
-                    statistics,
-                    occurrence_recorder.into_records(),
-                );
-            }
-        }
-    };
-    statistics.record_normalization_statistics(normalization);
-    inspect_final_checkpoint(
-        &mut inspector,
-        MirPipelineCheckpointLabel::AfterProofNormalization,
-        &verified,
-    );
+        self.record_analysis_usage(analyses, checkpoint);
+        self.statistics.record_normalization_execution();
+        self.statistics.record_verification();
+        transition(verified, None).map_err(|error| transition_boundary_error(None, error))
+    }
 
-    for occurrence in schedule.final_stage() {
-        statistics.record_pass_execution();
-        let attempt = occurrence_recorder.start(occurrence);
+    fn run_final_stage(
+        &mut self,
+        mut verified: VerifiedFinalMirProgram,
+        schedule: &MirPassSchedule,
+    ) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
+        for occurrence in schedule.final_stage() {
+            verified = self.run_final_occurrence(verified, occurrence)?;
+        }
+        Ok(verified)
+    }
+
+    fn run_final_occurrence(
+        &mut self,
+        verified: VerifiedFinalMirProgram,
+        occurrence: MirPassOccurrence,
+    ) -> Result<VerifiedFinalMirProgram, MirPipelineError> {
+        let attempt = self.start_pass(occurrence);
         let transform = occurrence
             .final_transform()
             .expect("validated final-stage occurrence must have a final-stage callback");
         let outcome = match transform(MirFinalPassCapability::new(verified)) {
             Ok(outcome) => outcome,
-            Err(MirPassFailure::Execution(error)) => {
-                occurrence_recorder.record_failed(attempt, None);
-                return MeasuredMirPipeline::new(
-                    Err(MirPipelineError::pass_execution(occurrence, error)),
-                    statistics,
-                    occurrence_recorder.into_records(),
-                );
-            }
-            Err(MirPassFailure::Rewrite(error)) => {
-                occurrence_recorder.record_failed(attempt, None);
-                return MeasuredMirPipeline::new(
-                    Err(MirPipelineError::structural_rewrite(occurrence, error)),
-                    statistics,
-                    occurrence_recorder.into_records(),
-                );
+            Err(failure) => {
+                return Err(self.record_pass_failure(occurrence, attempt, None, failure));
             }
         };
 
@@ -375,8 +403,8 @@ fn run_mir_pipeline_with_transition(
                 data,
             } => {
                 debug_assert_eq!(data.changed_callables(), 0);
-                statistics.record_pass_data(occurrence, &data);
-                occurrence_recorder.record_completed(
+                self.statistics.record_pass_data(occurrence, &data);
+                self.occurrence_recorder.record_completed(
                     attempt,
                     MirPassOccurrenceOutcome::Unchanged,
                     data,
@@ -384,28 +412,26 @@ fn run_mir_pipeline_with_transition(
                     0,
                     None,
                 );
-                verified = unchanged;
-                inspect_final_checkpoint(
-                    &mut inspector,
-                    after_final_pass_label(occurrence),
-                    &verified,
-                );
+                self.inspect_final(after_final_pass_label(occurrence), &unchanged);
+                Ok(unchanged)
             }
             MirFinalPassOutcome::Changed { change, data } => {
-                statistics.record_pass_data(occurrence, &data);
+                self.statistics.record_pass_data(occurrence, &data);
                 let (unverified, rewrite_changes) = match change {
                     MirFinalPassChange::DefinitionRetention(unverified) => {
                         (unverified, Default::default())
                     }
                     MirFinalPassChange::Rewrite(rewrite) => {
-                        let changes = statistics.record_callable_rewrites(rewrite.callables());
+                        let changes = self
+                            .statistics
+                            .record_callable_rewrites(rewrite.callables());
                         (rewrite.into_unverified(), changes)
                     }
                 };
-                statistics.record_verification();
-                verified = match reseal_final_mir(unverified) {
+                self.statistics.record_verification();
+                let verified = match reseal_final_mir(unverified) {
                     Ok(verified) => {
-                        occurrence_recorder.record_completed(
+                        self.occurrence_recorder.record_completed(
                             attempt,
                             MirPassOccurrenceOutcome::Changed,
                             data,
@@ -416,7 +442,7 @@ fn run_mir_pipeline_with_transition(
                         verified
                     }
                     Err(errors) => {
-                        occurrence_recorder.record_completed(
+                        self.occurrence_recorder.record_completed(
                             attempt,
                             MirPassOccurrenceOutcome::Failed,
                             data,
@@ -424,25 +450,77 @@ fn run_mir_pipeline_with_transition(
                             1,
                             None,
                         );
-                        return MeasuredMirPipeline::new(
-                            Err(MirPipelineError::output_verification(occurrence, errors)),
-                            statistics,
-                            occurrence_recorder.into_records(),
-                        );
+                        return Err(MirPipelineError::output_verification(occurrence, errors));
                     }
                 };
-                inspect_final_checkpoint(
-                    &mut inspector,
-                    after_final_pass_label(occurrence),
-                    &verified,
-                );
+                self.inspect_final(after_final_pass_label(occurrence), &verified);
+                Ok(verified)
             }
         }
     }
 
-    inspect_final_checkpoint(&mut inspector, MirPipelineCheckpointLabel::Final, &verified);
+    fn start_pass(&mut self, occurrence: MirPassOccurrence) -> MirPassAttempt {
+        self.statistics.record_pass_execution();
+        self.occurrence_recorder.start(occurrence)
+    }
 
-    MeasuredMirPipeline::new(Ok(verified), statistics, occurrence_recorder.into_records())
+    fn record_pass_failure(
+        &mut self,
+        occurrence: MirPassOccurrence,
+        attempt: MirPassAttempt,
+        analysis_usage: Option<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)>,
+        failure: MirPassFailure,
+    ) -> MirPipelineError {
+        self.occurrence_recorder
+            .record_failed(attempt, analysis_usage);
+        pass_failure_error(occurrence, failure)
+    }
+
+    fn record_analysis_usage(
+        &mut self,
+        analyses: &MirProofSnapshotAnalysis,
+        checkpoint: MirSnapshotAnalysisCheckpoint,
+    ) -> MirSnapshotAnalysisUsage {
+        let usage = analyses.usage_since(checkpoint);
+        self.statistics
+            .record_analysis_usage(MirSnapshotAnalysisKind::LocalConstants, usage);
+        usage
+    }
+
+    fn inspect_proof(
+        &mut self,
+        label: MirPipelineCheckpointLabel,
+        verified: &VerifiedProofMirProgram,
+    ) {
+        if let Some(inspector) = self.inspector.as_deref_mut() {
+            inspector.inspect(MirPipelineCheckpoint::ProofRich(
+                MirProofPipelineCheckpoint::new(label, verified),
+            ));
+        }
+    }
+
+    fn inspect_final(
+        &mut self,
+        label: MirPipelineCheckpointLabel,
+        verified: &VerifiedFinalMirProgram,
+    ) {
+        if let Some(inspector) = self.inspector.as_deref_mut() {
+            inspector.inspect(MirPipelineCheckpoint::Final(
+                MirFinalPipelineCheckpoint::new(label, verified),
+            ));
+        }
+    }
+
+    fn finish(
+        self,
+        result: Result<VerifiedFinalMirProgram, MirPipelineError>,
+    ) -> MeasuredMirPipeline {
+        MeasuredMirPipeline::new(
+            result,
+            self.statistics,
+            self.occurrence_recorder.into_records(),
+        )
+    }
 }
 
 fn after_proof_pass_label(occurrence: MirPassOccurrence) -> MirPipelineCheckpointLabel {
@@ -500,36 +578,9 @@ fn transition_boundary_error(
     }
 }
 
-fn inspect_proof_checkpoint(
-    inspector: &mut Option<&mut dyn MirPipelineInspector>,
-    label: MirPipelineCheckpointLabel,
-    verified: &crate::passes::VerifiedProofMirProgram,
-) {
-    if let Some(inspector) = inspector.as_deref_mut() {
-        inspector.inspect(MirPipelineCheckpoint::ProofRich(
-            MirProofPipelineCheckpoint::new(label, verified),
-        ));
+fn pass_failure_error(occurrence: MirPassOccurrence, failure: MirPassFailure) -> MirPipelineError {
+    match failure {
+        MirPassFailure::Execution(error) => MirPipelineError::pass_execution(occurrence, error),
+        MirPassFailure::Rewrite(error) => MirPipelineError::structural_rewrite(occurrence, error),
     }
-}
-
-fn inspect_final_checkpoint(
-    inspector: &mut Option<&mut dyn MirPipelineInspector>,
-    label: MirPipelineCheckpointLabel,
-    verified: &crate::passes::VerifiedFinalMirProgram,
-) {
-    if let Some(inspector) = inspector.as_deref_mut() {
-        inspector.inspect(MirPipelineCheckpoint::Final(
-            MirFinalPipelineCheckpoint::new(label, verified),
-        ));
-    }
-}
-
-fn record_analysis_usage(
-    analyses: &MirProofSnapshotAnalysis,
-    checkpoint: MirSnapshotAnalysisCheckpoint,
-    statistics: &mut MirPipelineStatistics,
-) -> MirSnapshotAnalysisUsage {
-    let usage = analyses.usage_since(checkpoint);
-    statistics.record_analysis_usage(MirSnapshotAnalysisKind::LocalConstants, usage);
-    usage
 }
