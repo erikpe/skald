@@ -8,7 +8,9 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-No implementation roadmaps are currently active.
+| Roadmap | Status | Purpose | Next task | Dependencies |
+| --- | --- | --- | --- | --- |
+| [Phase dump renderer ownership](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md) | Planned | Split resolved, HIR, and MIR dump rendering into cohesive private modules with byte-identical deterministic output | D01 — establish the recursive layout with MIR dumping | Existing exact phase dumps and pipeline determinism coverage; A21 complete |
 
 ## Pending discovery and planning records
 

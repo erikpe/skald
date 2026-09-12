@@ -1070,6 +1070,9 @@ tests, integration and compile-fail documentation tests, runtime tests, and all
 
 ### A26 — Split large dump renderers by responsibility
 
+**Implementation plan:**
+[Phase Dump Renderer Ownership Roadmap](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md).
+
 **Evidence:** [HIR dumping](../../crates/skald-compiler/src/hir/dump.rs) has
 3,122 lines, [resolved dumping](../../crates/skald-compiler/src/resolve/dump.rs)
 2,747, and [MIR dumping](../../crates/skald-compiler/src/mir/dump.rs) 2,100.
