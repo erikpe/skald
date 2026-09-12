@@ -1,6 +1,6 @@
 # MIR Identity Traversal Navigation Roadmap
 
-Status: active; T01 is complete and T02 is next.
+Status: active; T01 and T02 are complete and T03 is next.
 
 This roadmap implements
 [cleanup finding A21](CODEBASE_CLEANUP_AUDIT.md#a21--make-the-shared-mir-traversal-easier-to-navigate)
@@ -47,7 +47,7 @@ crate-private rewrite facade.
 ## Progress
 
 - [x] T01 — Establish traversal composition and extract definition structure
-- [ ] T02 — Extract core instruction and operation traversal
+- [x] T02 — Extract core instruction and operation traversal
 - [ ] T03 — Extract aggregate and I/O instruction traversal
 - [ ] T04 — Extract terminators and places, then close A21
 
@@ -105,18 +105,18 @@ workspace check pass.
 **Purpose:** give ordinary instructions and their shared operation structures a
 clear owner before separating the larger aggregate families.
 
-- [ ] Extract the exhaustive `MirInstruction` dispatcher and ordinary storage,
+- [x] Extract the exhaustive `MirInstruction` dispatcher and ordinary storage,
   value, assignment, rvalue, call, argument, cleanup, initialization, store,
   copy, shared-owner, cast, and string-operation traversal into a private
   instruction facade with cohesive implementation files.
-- [ ] Keep each nested helper beside the operation family whose fields it
+- [x] Keep each nested helper beside the operation family whose fields it
   classifies. Avoid splitting short helpers solely to reduce file length.
-- [ ] Preserve source-before-destination and receiver-before-argument visit
+- [x] Preserve source-before-destination and receiver-before-argument visit
   order, value definition/use distinctions, storage use roles, and write
   authorization decisions exactly.
-- [ ] Keep instruction entry points and imports used by sparse editing and
+- [x] Keep instruction entry points and imports used by sparse editing and
   cross-callable import execution unchanged through the `map` facade.
-- [ ] Extend focused parity and role tests only for operation families whose
+- [x] Extend focused parity and role tests only for operation families whose
   structural contract is not already represented.
 
 **Tests:** Run focused rewrite mapping, value-use, storage-use, import, edit,
@@ -129,6 +129,21 @@ mir::rewrite`, `make check`, `make msrv-check`, and `git diff --check`.
 private instruction owner; every match remains exhaustive; downstream callers
 retain their existing paths; and parity, roles, authorization, order, and
 error behavior are unchanged.
+
+Implemented: the private `instruction` facade now owns the exhaustive
+`MirInstruction` dispatcher, while its cohesive `operation` fragment owns
+ordinary assignments and rvalues, calls and arguments, cleanup and
+initialization, stores and copies, checked views, shared-owner operations,
+casts, and string initialization. Both fragments still expand into the same
+mutable and immutable traversal modules, and the established
+`map_instruction` path remains unchanged. Optional, array, and I/O helpers
+remain in the composition module for T03. A source reconstruction check
+confirmed that composing the extracted fragments reproduces the pre-T02
+inventory exactly, including order and classifications. Existing parity,
+role, authorization, edit, import, remapping, and exact owner-error tests cover
+these paths, so no duplicate extraction-only test was added. The 96-test
+focused rewrite suite, full repository gate with 3,146 compiler tests and 629
+golden cases, and Rust 1.82.0 workspace check pass.
 
 ### T03 — Extract aggregate and I/O instruction traversal
 

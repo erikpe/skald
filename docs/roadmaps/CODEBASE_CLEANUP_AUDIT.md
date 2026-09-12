@@ -949,7 +949,9 @@ pass, as do the clean-artifact repository gate, 629 golden cases, and the Rust
 [MIR Identity Traversal Navigation Roadmap](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md).
 T01 established the recursive traversal facade and extracted definition,
 attachment, body-order, and proof-metadata fragments without changing the
-generated mapper and observer surfaces.
+generated mapper and observer surfaces. T02 placed the exhaustive instruction
+dispatcher and ordinary operation families behind a private instruction
+facade while preserving the same single generated inventory and entry paths.
 
 **Evidence:** the [MIR identity traversal facade](../../crates/skald-compiler/src/mir/rewrite/map/mod.rs)
 originated as one 2,492-line file, but importantly already defines one
