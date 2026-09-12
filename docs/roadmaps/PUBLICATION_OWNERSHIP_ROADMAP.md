@@ -1,9 +1,10 @@
 # Resolver Publication Ownership Roadmap
 
-Status: planned; P01 is next. Retrospective R03 verification is complete and
-the semantic range panic is repaired. The implementation sequence remains
-separate from the completed retrospective; its archived R04 readiness table
-records this prerequisite for publication-dependent changes.
+Status: in progress; P01 is complete and P02 is next. Retrospective R03
+verification is complete and the semantic range panic is repaired. The
+implementation sequence remains separate from the completed retrospective;
+its archived R04 readiness table records this prerequisite for
+publication-dependent changes.
 
 The [publication decision](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
 requires owned product selection and exhaustive final assembly to complete
@@ -27,7 +28,7 @@ alternatives, rejection policy, and consumer preconditions for this roadmap.
 
 ## Progress
 
-- [ ] P01 — Partition candidate ownership without changing selection
+- [x] P01 — Partition candidate ownership without changing selection
 - [ ] P02 — Select products and assemble the result once
 - [ ] P03 — Verify extension obligations and close the migration
 
@@ -37,16 +38,16 @@ alternatives, rejection policy, and consumer preconditions for this roadmap.
 
 **Purpose:** make every retained or replaceable field have an explicit owner.
 
-- [ ] Map all current fields to retained request/declaration evidence, class
+- [x] Map all current fields to retained request/declaration evidence, class
   declarations/hierarchy, interfaces, and completed bodies/dispatch. Keep
   specialization transition metadata explicitly owned beside the selectors.
-- [ ] Introduce private products with exhaustive conversion at the current
+- [x] Introduce private products with exhaustive conversion at the current
   assembly boundary, preserving ordinary snapshot timing and all field values.
-- [ ] Define the borrowed validation view needed to read candidate products
+- [x] Define the borrowed validation view needed to read candidate products
   and later class-selected products without constructing another independently
   mutable complete program. Keep capability evaluation over resolved facts;
   any required adapter must not introduce a reverse phase dependency.
-- [ ] Document the private ownership and diagnostic-output contract.
+- [x] Document the private ownership and diagnostic-output contract.
 
 **Tests:** existing publication/requirement tests plus R03's regressions; check
 successful dumps and module permutations. Run `make check` and `make msrv-check`.
@@ -54,6 +55,36 @@ successful dumps and module permutations. Run `make check` and `make msrv-check`
 **Exit criteria:** every field has an explicit owner and conversion, with no
 wildcard destructuring or default-filled catch-all; behavior is unchanged.
 The validation-view API is concrete before changing its consumers in P02.
+
+**Delivered:** the resolver now constructs four private publication products.
+`RetainedProgramProducts` owns request, declaration, interned-type,
+language-item, literal, entry, and partial diagnostic evidence.
+`ClassPublicationProducts` keeps class specialization transitions beside
+candidate declarations and their derived hierarchy.
+`InterfacePublicationProducts` likewise owns interface transitions and
+declarations. `ExecutablePublicationProducts` owns function bodies, class
+bodies, and virtual dispatch families as one derived group.
+
+`CandidateProgramProducts::into_program` destructures every product and names
+every `ResolvedProgram` field in one exhaustive assembly. It has no wildcard,
+default-filled remainder, or public API change. Adding a resolved-program field
+therefore requires a compile-time ownership decision at this boundary. The
+candidate publication owner still applies the existing rollback behavior in
+P01, preserving snapshot timing, rejection order, diagnostics, IDs, dumps, and
+partial error evidence.
+
+A private `PublicationValidationView` gives class and interface validators
+immutable access to the assembled candidate. The mutation owner remains
+`CandidateProgram`; validators cannot alter publication state. This is the
+concrete validation interface P02 will use while moving selection from manual
+field mutation into the owned products.
+
+Focused all-target compilation and all six publication regression tests pass,
+including successful product retention, populated dispatch clearing,
+class-dependent interface rejection, rejected-interface partial evidence,
+module-order stability, and canonical string/literal evidence. `make check`
+passes, including the complete workspace, documentation, runtime, determinism,
+and 629-case golden suites. `make msrv-check` also passes with Rust 1.82.0.
 
 ### P02 — Select products and assemble the result once
 

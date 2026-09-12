@@ -143,10 +143,15 @@ iterable, operator, and range products plus literal and closed-interface
 identities. Ordinary functions, ordinary classes, static initializers, and
 generated bodies receive that same context. The isolated semantic range probe
 uses the same stage constructor with its intentionally unavailable string
-product. The final candidate program is consumed by publication validation.
-Each invalid generated product family is replaced with its saved ordinary
-declaration and hierarchy product before the resolver returns the published
-program.
+product. The publication boundary groups candidate state into retained
+diagnostic evidence, class declarations and hierarchy, interface declarations,
+and executable bodies and dispatch. It exhaustively assembles those private
+products into the public resolved program before immutable publication
+validation. Validators receive a read-only publication view and cannot mutate
+candidate state. Each invalid generated product family is currently replaced
+with its saved ordinary declaration and hierarchy product before the resolver
+returns the published program; the publication owner alone performs that
+selection.
 
 Error-bearing resolved output retains diagnostic evidence, including interned
 types and signatures whose generated declarations may have been rejected. It

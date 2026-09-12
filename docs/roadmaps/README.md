@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md) | Planned | Replace manual rollback with owned selection and exhaustive assembly | P01 — Partition candidate ownership | Accepted archived retrospective decision and rejection tests |
+| [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md) | In progress; P01 complete | Replace manual rollback with owned selection and exhaustive assembly | P02 — Select products and assemble the result once | Accepted archived retrospective decision and rejection tests; P01 private ownership products |
 
 ## Pending discovery and planning records
 

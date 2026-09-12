@@ -18,7 +18,11 @@ pub(super) use declarations::{specialize_declarations, SpecializationDeclaration
 pub(super) use interface_declarations::{
     materialize_interface_declarations, InterfaceMaterializationInput,
 };
-pub(super) use publication::{CandidateProgram, OrdinaryProgramProducts};
+pub(super) use publication::{
+    CandidateProgram, CandidateProgramProducts, ClassPublicationProducts,
+    ExecutablePublicationProducts, InterfacePublicationProducts, OrdinaryProgramProducts,
+    RetainedProgramProducts,
+};
 pub(super) use requests::{
     discover_specializations, extend_with_semantic_range_requests, GenericApplicationDiscovery,
     GenericTemplateDiscoveryInput, SpecializationDiscoveryInput,

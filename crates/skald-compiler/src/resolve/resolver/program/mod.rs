@@ -67,9 +67,11 @@ use semantic_range_requests::{
 use specialization::{
     close_bound_member_selections, discover_specializations, extend_with_semantic_range_requests,
     generated_class_work, materialize_interface_declarations, specialize_bodies,
-    specialize_declarations, CandidateProgram, GenericApplicationDiscovery,
-    GenericTemplateDiscoveryInput, InterfaceMaterializationInput, OrdinaryProgramProducts,
-    SpecializationBodyInput, SpecializationDeclarationInput, SpecializationDiscoveryInput,
+    specialize_declarations, CandidateProgram, CandidateProgramProducts, ClassPublicationProducts,
+    ExecutablePublicationProducts, GenericApplicationDiscovery, GenericTemplateDiscoveryInput,
+    InterfaceMaterializationInput, InterfacePublicationProducts, OrdinaryProgramProducts,
+    RetainedProgramProducts, SpecializationBodyInput, SpecializationDeclarationInput,
+    SpecializationDiscoveryInput,
 };
 use stages::{
     BodyResolutionStage, CollectedDeclarations, ResolvedBodies, SemanticRangeCompletion,
