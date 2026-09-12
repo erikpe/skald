@@ -1,6 +1,6 @@
 # Phase Dump Renderer Ownership Roadmap
 
-Status: in progress; D01 is complete and D02 is next.
+Status: in progress; D01 and D02 are complete, and D03 is next.
 
 This roadmap implements
 [cleanup finding A26](CODEBASE_CLEANUP_AUDIT.md#a26--split-large-dump-renderers-by-responsibility)
@@ -51,7 +51,7 @@ move must preserve their bytes and ordering.
 ## Progress
 
 - [x] D01 — Establish the recursive layout with MIR dumping
-- [ ] D02 — Divide typed HIR dumping by structural responsibility
+- [x] D02 — Divide typed HIR dumping by structural responsibility
 - [ ] D03 — Divide resolved-program dumping by structural responsibility
 - [ ] D04 — Audit ownership, validate all phase observations, and close A26
 
@@ -102,23 +102,23 @@ resulting module pattern is suitable for the HIR and resolved renderers.
 **Purpose:** separate the largest renderer without losing the shared type
 metadata and indentation state that make HIR output coherent.
 
-- [ ] Convert `hir/dump.rs` into a private recursive `hir/dump/` module while
+- [x] Convert `hir/dump.rs` into a private recursive `hir/dump/` module while
   preserving the existing `hir::dump_hir` facade.
-- [ ] Keep the `HirDumper` context and low-level line/indentation operations in
+- [x] Keep the `HirDumper` context and low-level line/indentation operations in
   one clear owner. Expose its fields and methods to child fragments only at
   the narrow visibility required by their calls.
-- [ ] Extract cohesive implementations for program/type metadata and
+- [x] Extract cohesive implementations for program/type metadata and
   declarations; functions, locals, blocks, and statements; expressions,
   calls, and iteration; arrays and optionals; and shared ownership, object
   views, places, receivers, and origins. Keep small label/name helpers beside
   the family whose output they define.
-- [ ] Preserve recursive rendering order, expression type suffixes, selected
+- [x] Preserve recursive rendering order, expression type suffixes, selected
   operation names, lifecycle and copy plans, object provenance, generic
   identities, spans, and every conditional section exactly.
-- [ ] Avoid a generic node renderer or one method per file. Review cross-family
+- [x] Avoid a generic node renderer or one method per file. Review cross-family
   calls explicitly so dependencies remain visible rather than being hidden by
   wildcard re-exports.
-- [ ] Retain the local object-place exact-output test with its implementation
+- [x] Retain the local object-place exact-output test with its implementation
   owner, and add focused coverage only for a moved family absent from existing
   HIR dump and phase-product tests.
 

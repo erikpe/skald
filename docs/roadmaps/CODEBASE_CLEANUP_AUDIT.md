@@ -1073,8 +1073,9 @@ tests, integration and compile-fail documentation tests, runtime tests, and all
 **Implementation plan:**
 [Phase Dump Renderer Ownership Roadmap](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md).
 
-**Evidence:** [HIR dumping](../../crates/skald-compiler/src/hir/dump.rs) has
-3,122 lines, [resolved dumping](../../crates/skald-compiler/src/resolve/dump.rs)
+**Evidence:** [HIR dumping](../../crates/skald-compiler/src/hir/dump/mod.rs) was
+3,122 lines before its recursive-module split, while
+[resolved dumping](../../crates/skald-compiler/src/resolve/dump.rs) has
 2,747, and [MIR dumping](../../crates/skald-compiler/src/mir/dump/mod.rs) was
 2,100 lines before its recursive-module split.
 Declaration, type, expression, lifecycle, and body formatting have grown
