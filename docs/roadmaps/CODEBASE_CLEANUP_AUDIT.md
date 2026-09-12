@@ -896,6 +896,9 @@ permission to skip verification or remove repeated passes without evidence.
 
 ### A20 — Factor pipeline observation bookkeeping
 
+**Implementation plan:**
+[MIR Pipeline Observation Bookkeeping Roadmap](MIR_PIPELINE_OBSERVATION_BOOKKEEPING_ROADMAP.md).
+
 **Evidence:**
 [`execution/runner.rs`](../../crates/skald-compiler/src/passes/pipeline/execution/runner.rs)
 repeats timing, statistics, occurrence-record construction, and failure

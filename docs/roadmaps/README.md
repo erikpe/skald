@@ -10,6 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
+| [MIR pipeline observation bookkeeping](MIR_PIPELINE_OBSERVATION_BOOKKEEPING_ROADMAP.md) | Planned | Centralize pass occurrence timing and publication while preserving explicit MIR stage authority | O01 — centralize occurrence recording | Completed structural CFG and snapshot-analysis contracts; current typed runner and reporting behavior |
 
 ## Pending discovery and planning records
 
