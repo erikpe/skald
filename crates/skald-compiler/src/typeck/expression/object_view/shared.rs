@@ -12,14 +12,14 @@ use crate::{
     source::Span,
 };
 
-use super::super::function::CallableChecker;
+use crate::typeck::function::CallableChecker;
 
 /// A checked shared owner together with the lifetime strategy required before
 /// its pointee can be exposed as a non-owning object place.
 ///
 /// Stable bindings borrow directly. Replaceable places and produced owners
 /// retain their complete allocation through an explicit hidden anchor.
-pub(super) struct CheckedSharedPointee {
+pub(in crate::typeck::expression) struct CheckedSharedPointee {
     source: CheckedSharedPointeeSource,
     target: HirViewTarget,
     access: HirAccess,
@@ -36,7 +36,7 @@ enum CheckedSharedPointeeSource {
 }
 
 impl CheckedSharedPointee {
-    pub(super) fn stable(
+    pub(in crate::typeck::expression) fn stable(
         binding: BindingId,
         target: HirViewTarget,
         access: HirAccess,
@@ -52,45 +52,50 @@ impl CheckedSharedPointee {
         }
     }
 
-    pub(super) const fn access(&self) -> HirAccess {
+    pub(in crate::typeck::expression) const fn access(&self) -> HirAccess {
         self.access
     }
 
-    pub(super) const fn span(&self) -> Span {
+    pub(in crate::typeck::expression) const fn span(&self) -> Span {
         self.span
     }
 
-    pub(super) const fn static_target(&self) -> HirViewTarget {
+    pub(in crate::typeck::expression) const fn static_target(&self) -> HirViewTarget {
         self.target
     }
 
-    pub(super) fn exact_dynamic_class(&self) -> Option<crate::identity::ClassId> {
+    pub(in crate::typeck::expression) fn exact_dynamic_class(
+        &self,
+    ) -> Option<crate::identity::ClassId> {
         match &self.source {
             CheckedSharedPointeeSource::Stable(_) => None,
             CheckedSharedPointeeSource::Anchored(source) => source.exact_dynamic_class(),
         }
     }
 
-    pub(super) const fn stable_binding(&self) -> Option<BindingId> {
+    pub(in crate::typeck::expression) const fn stable_binding(&self) -> Option<BindingId> {
         match &self.source {
             CheckedSharedPointeeSource::Stable(binding) => Some(*binding),
             CheckedSharedPointeeSource::Anchored(_) => None,
         }
     }
 
-    pub(super) fn set_span(&mut self, span: Span) {
+    pub(in crate::typeck::expression) fn set_span(&mut self, span: Span) {
         self.span = span;
     }
 
-    pub(super) fn set_projections(&mut self, projections: Vec<ObjectProjection>) {
+    pub(in crate::typeck::expression) fn set_projections(
+        &mut self,
+        projections: Vec<ObjectProjection>,
+    ) {
         self.projections = projections;
     }
 
-    pub(super) fn projections(&self) -> &[ObjectProjection] {
+    pub(in crate::typeck::expression) fn projections(&self) -> &[ObjectProjection] {
         &self.projections
     }
 
-    pub(super) fn origin(&self) -> HirObjectOrigin {
+    pub(in crate::typeck::expression) fn origin(&self) -> HirObjectOrigin {
         match &self.source {
             CheckedSharedPointeeSource::Stable(binding) => HirObjectOrigin::Shared {
                 binding: *binding,
@@ -106,7 +111,11 @@ impl CheckedSharedPointee {
         }
     }
 
-    pub(super) fn into_view(self, target: HirViewTarget, access: HirAccess) -> HirObjectView {
+    pub(in crate::typeck::expression) fn into_view(
+        self,
+        target: HirViewTarget,
+        access: HirAccess,
+    ) -> HirObjectView {
         let origin = Box::new(self.origin());
         match self.source {
             CheckedSharedPointeeSource::Stable(binding) => HirObjectView {
@@ -140,7 +149,7 @@ impl CheckedSharedPointee {
 
     /// Force a strong owner anchor for a view retained across a loop body.
     /// Even a syntactically stable binding may be replaced by that body.
-    pub(super) fn into_iteration_source(mut self) -> Self {
+    pub(in crate::typeck::expression) fn into_iteration_source(mut self) -> Self {
         if let Some(binding) = self.stable_binding() {
             self.source = CheckedSharedPointeeSource::Anchored(HirSharedSource::Place(
                 HirSharedPlace::Binding {
@@ -155,7 +164,7 @@ impl CheckedSharedPointee {
 }
 
 impl CallableChecker<'_, '_> {
-    pub(super) fn check_explicit_shared_pointee(
+    pub(in crate::typeck::expression) fn check_explicit_shared_pointee(
         &mut self,
         dereference: &ResolvedDereferenceExpr,
         projections: Vec<ObjectProjection>,
@@ -197,53 +206,6 @@ impl CallableChecker<'_, '_> {
         Some(pointee)
     }
 
-    pub(in crate::typeck) fn check_optional_box_pointee(
-        &mut self,
-        dereference: &ResolvedDereferenceExpr,
-    ) -> Option<crate::hir::HirOptionalBoxPointee> {
-        let crate::resolve::ResolvedSharedTarget::OptionalBox(target) = dereference.target else {
-            return None;
-        };
-        let metadata = self
-            .program
-            .optional_box_types
-            .get(target)
-            .expect("resolved optional-box target must have typed metadata");
-        let Some(optional) = metadata.optional else {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
-                    "a polymorphic optional-box view has no standalone optional value type",
-                )
-                .with_primary_label(
-                    dereference.operator_span,
-                    "use presence testing or checked unwrap through this box view",
-                ),
-            );
-            return None;
-        };
-        let source = self.check_shared_source(&dereference.source, false)?;
-        if source.target() != HirSharedTarget::OptionalBox(target) {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
-                    "resolved optional-box dereference does not match its owner",
-                )
-                .with_primary_label(
-                    dereference.operator_span,
-                    "dereference target is inconsistent with this owner",
-                ),
-            );
-            return None;
-        }
-        Some(crate::hir::HirOptionalBoxPointee {
-            source,
-            target,
-            optional,
-            span: dereference.span,
-        })
-    }
-
     fn check_shared_pointee(
         &mut self,
         expression: &ResolvedExpression,
@@ -283,7 +245,9 @@ impl CallableChecker<'_, '_> {
     }
 }
 
-pub(super) const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget {
+pub(in crate::typeck::expression) const fn shared_target_view(
+    target: HirSharedTarget,
+) -> HirViewTarget {
     match target {
         HirSharedTarget::Obj => HirViewTarget::Obj,
         HirSharedTarget::Class(class) => HirViewTarget::Class(class),
@@ -297,7 +261,9 @@ pub(super) const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget
     }
 }
 
-pub(super) const fn view_shared_target(target: HirViewTarget) -> HirSharedTarget {
+pub(in crate::typeck::expression) const fn view_shared_target(
+    target: HirViewTarget,
+) -> HirSharedTarget {
     match target {
         HirViewTarget::Obj => HirSharedTarget::Obj,
         HirViewTarget::Class(class) => HirSharedTarget::Class(class),

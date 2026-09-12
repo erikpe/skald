@@ -6,7 +6,8 @@ use crate::{
 };
 
 use super::expression::{
-    class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
+    class_provides_view, classify_object_view_relation, ObjectViewRelation,
+    ObjectViewRelationSource,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -98,7 +99,8 @@ fn object_relation(
     if object_target_accepts(program, target, source) {
         return SharedTargetRelation::UpView;
     }
-    match classify_object_view_relation(program, ObjectViewSource::Dynamic(source), target) {
+    match classify_object_view_relation(program, ObjectViewRelationSource::Dynamic(source), target)
+    {
         ObjectViewRelation::StaticSuccess => SharedTargetRelation::UpView,
         ObjectViewRelation::Runtime => SharedTargetRelation::CheckedDowncast,
         ObjectViewRelation::StaticFailure => SharedTargetRelation::Impossible,

@@ -1,6 +1,7 @@
 //! Guarded object views selected from immutable shared optional boxes.
 
 use crate::{
+    diagnostics::Diagnostic,
     hir::{
         HirAccess, HirObjectOrigin, HirObjectView, HirOptionalBoxObjectView, HirSharedPlace,
         HirSharedSource, HirSharedTarget, HirViewSource, HirViewTarget,
@@ -72,6 +73,53 @@ impl CallableChecker<'_, '_> {
             target,
             access,
             span: unwrap.span,
+        })
+    }
+
+    pub(in crate::typeck) fn check_optional_box_pointee(
+        &mut self,
+        dereference: &ResolvedDereferenceExpr,
+    ) -> Option<crate::hir::HirOptionalBoxPointee> {
+        let crate::resolve::ResolvedSharedTarget::OptionalBox(target) = dereference.target else {
+            return None;
+        };
+        let metadata = self
+            .program
+            .optional_box_types
+            .get(target)
+            .expect("resolved optional-box target must have typed metadata");
+        let Some(optional) = metadata.optional else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    "a polymorphic optional-box view has no standalone optional value type",
+                )
+                .with_primary_label(
+                    dereference.operator_span,
+                    "use presence testing or checked unwrap through this box view",
+                ),
+            );
+            return None;
+        };
+        let source = self.check_shared_source(&dereference.source, false)?;
+        if source.target() != HirSharedTarget::OptionalBox(target) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    "resolved optional-box dereference does not match its owner",
+                )
+                .with_primary_label(
+                    dereference.operator_span,
+                    "dereference target is inconsistent with this owner",
+                ),
+            );
+            return None;
+        }
+        Some(crate::hir::HirOptionalBoxPointee {
+            source,
+            target,
+            optional,
+            span: dereference.span,
         })
     }
 }

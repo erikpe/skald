@@ -13,7 +13,7 @@ impl CallableChecker<'_, '_> {
     pub(super) fn object_origin(&self, place: &HirObjectPlace) -> HirObjectOrigin {
         let root_type = self.binding_type(place.root());
         if let Type::Shared(crate::hir::HirSharedTarget::Class(static_class)) = root_type {
-            return super::shared_pointee::CheckedSharedPointee::stable(
+            return super::object_view::CheckedSharedPointee::stable(
                 place.root(),
                 HirViewTarget::Class(static_class),
                 place.access,

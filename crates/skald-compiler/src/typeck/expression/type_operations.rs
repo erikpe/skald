@@ -1,10 +1,10 @@
 //! Type-test checking and checked non-owning view selection.
 
-use super::{
-    alias::ViewSourceUse,
-    object_view_relation::{classify_object_view_relation, ObjectViewRelation},
-    *,
+use super::object_view::{
+    ObjectViewSource, ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
 };
+use super::*;
+
 use crate::{
     hir::{
         HirAccess, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpressionKind,
@@ -34,6 +34,30 @@ enum CheckedViewRejection {
     InsufficientAccess,
 }
 
+const COPY_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext =
+    ObjectViewSourceDiagnosticContext::new(
+        "copy-construction source",
+        INVALID_COPY_CONSTRUCTION,
+        "copy-construction source must designate an object",
+        "copy-construction source must be an object place or produced object",
+    );
+
+const CAST_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext =
+    ObjectViewSourceDiagnosticContext::new(
+        "object-cast source",
+        INVALID_OBJECT_CAST,
+        "object-cast source must designate an object",
+        "object-cast source must be an existing object place",
+    );
+
+const TYPE_TEST_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext =
+    ObjectViewSourceDiagnosticContext::new(
+        "type-test source",
+        INVALID_TYPE_TEST,
+        "type-test source must designate an object",
+        "type-test source must be an existing object place",
+    );
+
 impl CallableChecker<'_, '_> {
     pub(in crate::typeck) fn check_copy_construction_view(
         &mut self,
@@ -42,7 +66,11 @@ impl CallableChecker<'_, '_> {
         target_span: Span,
         span: Span,
     ) -> Option<HirCheckedObjectView> {
-        let source = self.check_object_view_source(expression, ViewSourceUse::CopyConstruction)?;
+        let source = self.check_object_view_source(
+            expression,
+            ObjectViewSourceAdmission::ExistingOrProducedObject,
+            COPY_OBJECT_VIEW_SOURCE,
+        )?;
         let source_span = source.span();
         let target_class = target;
         let target = HirViewTarget::Class(target_class);
@@ -97,7 +125,11 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         }
-        let source = self.check_object_view_source(&cast.source, ViewSourceUse::Cast)?;
+        let source = self.check_object_view_source(
+            &cast.source,
+            ObjectViewSourceAdmission::ExistingOrProducedObject,
+            CAST_OBJECT_VIEW_SOURCE,
+        )?;
         let target = self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
         let source_span = source.span();
         let access = source.access();
@@ -168,7 +200,11 @@ impl CallableChecker<'_, '_> {
     }
 
     pub(super) fn check_type_test(&mut self, test: &ResolvedTypeTestExpr) -> Option<HirExpression> {
-        let source = self.check_object_view_source(&test.source, ViewSourceUse::TypeTest)?;
+        let source = self.check_object_view_source(
+            &test.source,
+            ObjectViewSourceAdmission::ExistingObjectPlace,
+            TYPE_TEST_OBJECT_VIEW_SOURCE,
+        )?;
         let target = self.check_view_target(&test.target, test.target_span, INVALID_TYPE_TEST)?;
         let relation =
             classify_object_view_relation(self.program, source.relation_source(), target);
@@ -215,7 +251,7 @@ impl CallableChecker<'_, '_> {
 
     fn select_checked_view(
         &self,
-        source: alias::CheckedObjectViewSource,
+        source: ObjectViewSource,
         target: HirViewTarget,
         access: HirAccess,
     ) -> Result<CheckedViewOperation, CheckedViewRejection> {
@@ -231,7 +267,7 @@ impl CallableChecker<'_, '_> {
         let view = match (relation, source, target) {
             (
                 ObjectViewRelation::StaticSuccess,
-                alias::CheckedObjectViewSource::Class { place, origin },
+                ObjectViewSource::Class { place, origin },
                 HirViewTarget::Class(target),
             ) => {
                 let place = self

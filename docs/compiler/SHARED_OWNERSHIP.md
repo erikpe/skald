@@ -96,14 +96,21 @@ Typed HIR records:
   cast.
 
 Type checking has one checked shared-pointee conversion for the boundary from
-an explicitly dereferenced owner source to a non-owning object place. It consumes the existing
-named-place or produced-owner classification and records a stable shared
-origin or an anchored shared origin together with the target, access,
-projections, source span, and anchor source. Class and interface receivers,
-alias arguments, plain checked-place casts, type tests, field access, and
-owning inline-copy consumers all use that operation. HIR therefore states the
-owner-versus-borrowed-place distinction directly; MIR lowering does not infer
-it from source expression shape or a consumer's expected type.
+an explicitly dereferenced owner source to a non-owning object place. It
+consumes the existing named-place or produced-owner classification and records
+a stable shared origin or an anchored shared origin together with the target,
+access, projections, source span, and anchor source. Class and interface
+receivers, alias arguments, plain checked-place casts, type tests, field
+access, and owning inline-copy consumers all use that operation. HIR therefore
+states the owner-versus-borrowed-place distinction directly; MIR lowering does
+not infer it from source expression shape or a consumer's expected type.
+
+The private `typeck::expression::object_view` facade owns this shared-pointee
+classification together with all other checked object-view source facts and
+the closed-world class/interface/`Obj` relation query. Each consumer supplies
+its source-admission policy and diagnostic wording explicitly. Alias dispatch,
+iteration protocol selection, casts, type tests, copies, and their final HIR
+wrappers remain with their respective type-checking owners.
 
 Resolution represents an explicit `*owner` or the dereference implied by
 `owner->member` with one typed dereference node carrying its resolved shared

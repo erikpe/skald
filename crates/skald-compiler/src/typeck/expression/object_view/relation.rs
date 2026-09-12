@@ -13,7 +13,7 @@ pub(in crate::typeck) enum ObjectViewRelation {
 
 /// The dynamic-class knowledge available at one object-view operation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::typeck) enum ObjectViewSource {
+pub(in crate::typeck) enum ObjectViewRelationSource {
     /// Inline owning storage and inline subobjects have one exact class.
     ExactClass(ClassId),
     /// Forwarded aliases retain a static view and runtime dynamic metadata.
@@ -22,13 +22,13 @@ pub(in crate::typeck) enum ObjectViewSource {
 
 pub(in crate::typeck) fn classify_object_view_relation(
     program: &ResolvedProgram,
-    source: ObjectViewSource,
+    source: ObjectViewRelationSource,
     target: HirViewTarget,
 ) -> ObjectViewRelation {
     if target == HirViewTarget::Obj {
         return ObjectViewRelation::StaticSuccess;
     }
-    if let ObjectViewSource::ExactClass(class) = source {
+    if let ObjectViewRelationSource::ExactClass(class) = source {
         return if class_provides_view(program, class, target) {
             ObjectViewRelation::StaticSuccess
         } else {
@@ -36,7 +36,7 @@ pub(in crate::typeck) fn classify_object_view_relation(
         };
     }
 
-    let ObjectViewSource::Dynamic(source) = source else {
+    let ObjectViewRelationSource::Dynamic(source) = source else {
         unreachable!("exact object sources returned above");
     };
     if view_guarantees_target(program, source, target) {

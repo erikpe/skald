@@ -25,19 +25,19 @@ mod division;
 mod indirect_call;
 mod io;
 mod logical;
-mod object_view_relation;
+mod object_view;
 mod operator;
 mod optional_box_view;
 mod place;
 mod primitive;
 mod receiver;
-mod shared_pointee;
 mod shift;
 mod static_field;
 mod type_operations;
 
-pub(in crate::typeck) use object_view_relation::{
-    class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
+pub(in crate::typeck) use object_view::{
+    class_provides_view, classify_object_view_relation, ObjectViewRelation,
+    ObjectViewRelationSource,
 };
 pub(in crate::typeck) use operator::is_selected_operator_expression;
 pub(in crate::typeck) use place::{CheckedReceiverCarrier, ObjectPlaceUse};

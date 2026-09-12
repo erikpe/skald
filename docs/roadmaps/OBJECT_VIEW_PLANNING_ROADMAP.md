@@ -1,6 +1,6 @@
 # Object-View Planning Roadmap
 
-Status: planned; V01 is next.
+Status: in progress; V01 is complete and V02 is next.
 
 This roadmap implements
 [cleanup finding A14](CODEBASE_CLEANUP_AUDIT.md#a14--separate-object-view-planning-from-alias-argument-checking)
@@ -50,7 +50,7 @@ current semantic owners.
 
 ## Progress
 
-- [ ] V01 — Establish the facade and checked source product
+- [x] V01 — Establish the facade and checked source product
 - [ ] V02 — Introduce direct-view planning and migrate object aliases
 - [ ] V03 — Migrate view receivers and iteration retention
 - [ ] V04 — Reuse source facts in checked operations and close A14
@@ -63,27 +63,27 @@ current semantic owners.
 private owner while every production consumer continues through its existing
 entry point and produces identical HIR and diagnostics.
 
-- [ ] Add the private recursive `expression::object_view` facade with cohesive
+- [x] Add the private recursive `expression::object_view` facade with cohesive
   `source`, `relation`, and later-planning modules. Keep implementation files
   private and expose only the narrow crate-private surface required by current
   type-checking siblings.
-- [ ] Move `object_view_relation` and its focused tests under the facade without
+- [x] Move `object_view_relation` and its focused tests under the facade without
   changing the closed-world `StaticSuccess`, `StaticFailure`, and `Runtime`
   results used by shared compatibility and type operations.
-- [ ] Move and rename `CheckedObjectViewSource` as the facade-owned
+- [x] Move and rename `CheckedObjectViewSource` as the facade-owned
   `ObjectViewSource`. Preserve every existing variant payload, source span,
   static target, exact dynamic class, access, origin, guard, anchor, and
   projection.
-- [ ] Replace `ViewSourceUse` admission booleans with a closed
+- [x] Replace `ViewSourceUse` admission booleans with a closed
   `ObjectViewSourceAdmission` policy. Keep consumer-specific diagnostic
   wording at the existing adapter boundary during this extraction.
-- [ ] Route current alias, iteration, cast, type-test, and copy-construction
+- [x] Route current alias, iteration, cast, type-test, and copy-construction
   source checks through the facade without yet changing their relation or HIR
   assembly logic.
-- [ ] Decide `shared_pointee` ownership based on cohesion: merge it into source
+- [x] Decide `shared_pointee` ownership based on cohesion: merge it into source
   implementation or keep it as a substantive sibling, but leave one owner and
   no pass-through module.
-- [ ] Add focused source tests only for semantic admission and source facts not
+- [x] Add focused source tests only for semantic admission and source facts not
   already pinned by end-to-end type-checking tests.
 
 **Tests:** Preserve the existing object-view relation suite and add focused

@@ -26,31 +26,31 @@ fn exact_classes_resolve_same_upcast_interface_and_impossible_targets_statically
 
     assert_relation(
         &program,
-        ObjectViewSource::ExactClass(derived),
+        ObjectViewRelationSource::ExactClass(derived),
         HirViewTarget::Class(derived),
         ObjectViewRelation::StaticSuccess,
     );
     assert_relation(
         &program,
-        ObjectViewSource::ExactClass(derived),
+        ObjectViewRelationSource::ExactClass(derived),
         HirViewTarget::Class(ClassId::new(0)),
         ObjectViewRelation::StaticSuccess,
     );
     assert_relation(
         &program,
-        ObjectViewSource::ExactClass(derived),
+        ObjectViewRelationSource::ExactClass(derived),
         HirViewTarget::Interface(InterfaceId::new(0)),
         ObjectViewRelation::StaticSuccess,
     );
     assert_relation(
         &program,
-        ObjectViewSource::ExactClass(ClassId::new(0)),
+        ObjectViewRelationSource::ExactClass(ClassId::new(0)),
         HirViewTarget::Class(derived),
         ObjectViewRelation::StaticFailure,
     );
     assert_relation(
         &program,
-        ObjectViewSource::ExactClass(ClassId::new(3)),
+        ObjectViewRelationSource::ExactClass(ClassId::new(3)),
         HirViewTarget::Interface(InterfaceId::new(0)),
         ObjectViewRelation::StaticFailure,
     );
@@ -64,43 +64,43 @@ fn forwarded_class_interface_and_obj_views_use_the_closed_declared_class_set() {
 
     assert_relation(
         &program,
-        ObjectViewSource::Dynamic(HirViewTarget::Class(ClassId::new(0))),
+        ObjectViewRelationSource::Dynamic(HirViewTarget::Class(ClassId::new(0))),
         HirViewTarget::Class(ClassId::new(1)),
         ObjectViewRelation::Runtime,
     );
     assert_relation(
         &program,
-        ObjectViewSource::Dynamic(HirViewTarget::Class(ClassId::new(0))),
+        ObjectViewRelationSource::Dynamic(HirViewTarget::Class(ClassId::new(0))),
         marker,
         ObjectViewRelation::StaticSuccess,
     );
     assert_relation(
         &program,
-        ObjectViewSource::Dynamic(marker),
+        ObjectViewRelationSource::Dynamic(marker),
         marker,
         ObjectViewRelation::StaticSuccess,
     );
     assert_relation(
         &program,
-        ObjectViewSource::Dynamic(marker),
+        ObjectViewRelationSource::Dynamic(marker),
         extra,
         ObjectViewRelation::Runtime,
     );
     assert_relation(
         &program,
-        ObjectViewSource::Dynamic(extra),
+        ObjectViewRelationSource::Dynamic(extra),
         HirViewTarget::Class(ClassId::new(2)),
         ObjectViewRelation::StaticFailure,
     );
     assert_relation(
         &program,
-        ObjectViewSource::Dynamic(HirViewTarget::Obj),
+        ObjectViewRelationSource::Dynamic(HirViewTarget::Obj),
         HirViewTarget::Class(ClassId::new(0)),
         ObjectViewRelation::Runtime,
     );
     assert_relation(
         &program,
-        ObjectViewSource::Dynamic(HirViewTarget::Obj),
+        ObjectViewRelationSource::Dynamic(HirViewTarget::Obj),
         HirViewTarget::Obj,
         ObjectViewRelation::StaticSuccess,
     );
@@ -118,7 +118,7 @@ fn resolved_view_graph() -> ResolvedProgram {
 
 fn assert_relation(
     program: &ResolvedProgram,
-    source: ObjectViewSource,
+    source: ObjectViewRelationSource,
     target: HirViewTarget,
     expected: ObjectViewRelation,
 ) {

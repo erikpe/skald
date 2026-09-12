@@ -117,7 +117,7 @@ endpoint and names any deferred work.
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete (bounded) | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
-| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Planned | P1 | 4 | M–L | Medium | O | M, E, R |
+| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | In progress | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
@@ -726,7 +726,8 @@ all compiler IRs.
 
 ### A14 — Separate object-view planning from alias-argument checking
 
-**Status:** Planned; the facade and checked source product are next.
+**Status:** In progress; the facade and checked source product are complete,
+and direct-view planning for object aliases is next.
 
 **Accepted design:**
 [Object-View Planning Design Proposal](../archive/OBJECT_VIEW_PLANNING_DESIGN_PROPOSAL.md).
@@ -736,21 +737,22 @@ all compiler IRs.
 
 **Evidence:**
 [`typeck/expression/alias.rs`](../../crates/skald-compiler/src/typeck/expression/alias.rs)
-is 1,689 lines and owns primitive aliases, shared-owner aliases, optional
-aliases, casts, produced views, iteration views, ancestor projections, and
-diagnostic rendering. The existing
-[`object_view_relation`](../../crates/skald-compiler/src/typeck/expression/object_view_relation.rs)
-is a useful narrower seam.
+was 1,689 lines before source extraction and owned primitive aliases,
+shared-owner aliases, optional aliases, casts, produced views, iteration
+views, ancestor projections, and diagnostic rendering. The relation query now
+lives under the private
+[`object_view` facade](../../crates/skald-compiler/src/typeck/expression/object_view/mod.rs),
+which is the narrower seam selected for the staged cleanup.
 
 **Change:** separate source classification, target/access relation, lifetime
 and anchor planning, and context-specific diagnostics. Reuse a typed view plan
 for receivers, aliases, and iteration where their rules agree, with explicit
 context rather than new booleans for every feature.
 
-**Next step:** establish the private facade and checked source product behind
-the current consumer APIs. Preserve non-exclusive aliases, read-only versus
-mutable access, owner anchoring, evaluation order, diagnostics, HIR, and exact
-destruction timing before introducing the typed direct-view plan.
+**Next step:** introduce the typed direct-view request and plan, then migrate
+the ordinary object-alias branch while preserving non-exclusive aliases,
+read-only versus mutable access, owner anchoring, evaluation order,
+diagnostics, HIR, and exact destruction timing.
 
 ### A15 — Reassess overlapping optional/place families
 

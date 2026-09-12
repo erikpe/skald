@@ -143,7 +143,7 @@ impl CallableChecker<'_, '_> {
                 let access = checked.access();
                 let class = checked.class();
                 let target = HirViewTarget::Interface(call.interface);
-                debug_assert!(super::object_view_relation::class_provides_view(
+                debug_assert!(super::object_view::class_provides_view(
                     self.program,
                     class,
                     target,

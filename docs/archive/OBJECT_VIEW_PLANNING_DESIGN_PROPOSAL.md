@@ -60,11 +60,11 @@ differences.
 
 Several useful seams already exist:
 
-- [`object_view_relation`](../../crates/skald-compiler/src/typeck/expression/object_view_relation.rs)
+- [`object_view::relation`](../../crates/skald-compiler/src/typeck/expression/object_view/relation.rs)
   is a pure closed-world query over an exact or dynamic source and a requested
   class, interface, or `Obj` target. It distinguishes static success, static
   failure, and a runtime-dependent relation.
-- [`shared_pointee`](../../crates/skald-compiler/src/typeck/expression/shared_pointee.rs)
+- [`object_view::shared`](../../crates/skald-compiler/src/typeck/expression/object_view/shared.rs)
   distinguishes stable shared bindings from sources that require a hidden
   strong-owner anchor. It can strengthen a stable binding into a loop-duration
   anchor.

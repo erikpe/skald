@@ -1,300 +1,37 @@
 //! Non-owning alias sources, access checks, and static view conversions.
 
-use super::shared_pointee::CheckedSharedPointee;
+use super::object_view::{
+    ObjectViewSource, ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
+};
 use super::*;
+
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirObjectOrigin, HirObjectPlace, HirObjectView, HirViewSource,
         HirViewTarget, Type,
     },
     identity::BindingId,
-    resolve::{ResolvedExpression, ResolvedTypeKind},
+    resolve::ResolvedExpression,
     source::Span,
     typeck::program::{
         lower_parameter_mode, lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT,
-        INVALID_COPY_CONSTRUCTION, INVALID_TYPE_TEST,
     },
 };
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub(super) enum ViewSourceUse {
-    AliasArgument,
-    Iteration,
-    TypeTest,
-    Cast,
-    CopyConstruction,
-}
+const ALIAS_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext = ObjectViewSourceDiagnosticContext::new(
+    "alias argument source",
+    INVALID_ALIAS_ARGUMENT,
+    "alias argument must designate an object",
+    "alias argument must use an object place, an explicit shared dereference, or a compatible produced object",
+);
 
-impl ViewSourceUse {
-    const fn accepts_produced_inline(self) -> bool {
-        matches!(
-            self,
-            Self::AliasArgument | Self::Iteration | Self::Cast | Self::CopyConstruction
-        )
-    }
-
-    const fn source_context(self) -> &'static str {
-        match self {
-            Self::AliasArgument => "alias argument source",
-            Self::Iteration => "iteration receiver",
-            Self::TypeTest => "type-test source",
-            Self::Cast => "object-cast source",
-            Self::CopyConstruction => "copy-construction source",
-        }
-    }
-
-    const fn diagnostic_code(self) -> &'static str {
-        match self {
-            Self::AliasArgument => INVALID_ALIAS_ARGUMENT,
-            Self::Iteration => crate::typeck::program::GENERAL_ITERATION_UNSUPPORTED,
-            Self::TypeTest => INVALID_TYPE_TEST,
-            Self::Cast => crate::typeck::program::INVALID_OBJECT_CAST,
-            Self::CopyConstruction => INVALID_COPY_CONSTRUCTION,
-        }
-    }
-
-    const fn object_message(self) -> &'static str {
-        match self {
-            Self::AliasArgument => "alias argument must designate an object",
-            Self::Iteration => "iteration requires a read-only object receiver",
-            Self::TypeTest => "type-test source must designate an object",
-            Self::Cast => "object-cast source must designate an object",
-            Self::CopyConstruction => "copy-construction source must designate an object",
-        }
-    }
-
-    const fn place_message(self) -> &'static str {
-        match self {
-            Self::AliasArgument => {
-                "alias argument must use an object place, an explicit shared dereference, or a compatible produced object"
-            }
-            Self::Iteration => {
-                "iteration requires an object view that is safe for the whole loop"
-            }
-            Self::TypeTest => "type-test source must be an existing object place",
-            Self::Cast => "object-cast source must be an existing object place",
-            Self::CopyConstruction => {
-                "copy-construction source must be an object place or produced object"
-            }
-        }
-    }
-}
-
-pub(super) enum CheckedObjectViewSource {
-    Class {
-        place: HirObjectPlace,
-        origin: HirObjectOrigin,
-    },
-    Obj {
-        binding: BindingId,
-        access: HirAccess,
-        span: Span,
-    },
-    Interface {
-        binding: BindingId,
-        interface: crate::identity::InterfaceId,
-        access: HirAccess,
-        span: Span,
-    },
-    Shared(CheckedSharedPointee),
-    Produced {
-        source: crate::hir::HirObjectProducer,
-        class: crate::identity::ClassId,
-        projections: Vec<crate::object_path::ObjectProjection>,
-        span: Span,
-    },
-    Optional {
-        view: crate::hir::HirCheckedOptionalView,
-        class: crate::identity::ClassId,
-        projections: Vec<crate::object_path::ObjectProjection>,
-    },
-    OptionalBox {
-        view: crate::hir::HirOptionalBoxObjectView,
-        projections: Vec<crate::object_path::ObjectProjection>,
-    },
-    ArrayElement {
-        element: Box<crate::hir::HirArrayElementPlace>,
-        class: crate::identity::ClassId,
-        span: Span,
-    },
-}
-
-impl CheckedObjectViewSource {
-    pub(super) const fn access(&self) -> HirAccess {
-        match self {
-            Self::Class { place, .. } => place.access,
-            Self::Obj { access, .. } | Self::Interface { access, .. } => *access,
-            Self::Shared(source) => source.access(),
-            Self::Produced { .. } => HirAccess::ReadOnly,
-            Self::Optional { view, .. } => view.access,
-            Self::OptionalBox { view, .. } => view.access,
-            Self::ArrayElement { element, .. } => element.receiver.access,
-        }
-    }
-
-    pub(super) const fn span(&self) -> Span {
-        match self {
-            Self::Class { place, .. } => place.span(),
-            Self::Obj { span, .. } | Self::Interface { span, .. } => *span,
-            Self::Shared(source) => source.span(),
-            Self::Produced { span, .. } => *span,
-            Self::Optional { view, .. } => view.span,
-            Self::OptionalBox { view, .. } => view.span,
-            Self::ArrayElement { span, .. } => *span,
-        }
-    }
-
-    pub(super) const fn static_target(&self) -> HirViewTarget {
-        match self {
-            Self::Class { place, .. } => HirViewTarget::Class(place.class()),
-            Self::Obj { .. } => HirViewTarget::Obj,
-            Self::Interface { interface, .. } => HirViewTarget::Interface(*interface),
-            Self::Shared(source) => source.static_target(),
-            Self::Produced { class, .. } => HirViewTarget::Class(*class),
-            Self::Optional { class, .. } => HirViewTarget::Class(*class),
-            Self::OptionalBox { view, .. } => view.target,
-            Self::ArrayElement { class, .. } => HirViewTarget::Class(*class),
-        }
-    }
-
-    pub(super) fn exact_dynamic_class(&self) -> Option<crate::identity::ClassId> {
-        match self {
-            Self::Class {
-                origin:
-                    HirObjectOrigin::Exact { dynamic_class, .. }
-                    | HirObjectOrigin::Static { dynamic_class, .. },
-                ..
-            } => Some(*dynamic_class),
-            Self::Class {
-                origin:
-                    HirObjectOrigin::Forwarded { .. }
-                    | HirObjectOrigin::Shared { .. }
-                    | HirObjectOrigin::AnchoredShared { .. }
-                    | HirObjectOrigin::Produced { .. },
-                ..
-            }
-            | Self::Obj { .. }
-            | Self::Interface { .. } => None,
-            Self::Shared(source) => source.exact_dynamic_class(),
-            Self::Produced { class, .. } => Some(*class),
-            Self::Optional { class, .. } => Some(*class),
-            Self::OptionalBox { view, .. } => view.source.exact_dynamic_class(),
-            Self::ArrayElement { class, .. } => Some(*class),
-        }
-    }
-
-    pub(super) fn relation_source(&self) -> super::object_view_relation::ObjectViewSource {
-        self.exact_dynamic_class().map_or_else(
-            || super::object_view_relation::ObjectViewSource::Dynamic(self.static_target()),
-            super::object_view_relation::ObjectViewSource::ExactClass,
-        )
-    }
-
-    pub(super) fn into_view(self, target: HirViewTarget, access: HirAccess) -> HirObjectView {
-        self.into_view_with_produced_projections(target, access, Vec::new())
-    }
-
-    fn into_view_with_produced_projections(
-        self,
-        target: HirViewTarget,
-        access: HirAccess,
-        produced_projections: Vec<crate::object_path::ObjectProjection>,
-    ) -> HirObjectView {
-        match self {
-            Self::Class { place, origin } => HirObjectView {
-                span: place.span(),
-                source: HirViewSource::Place(place),
-                origin: Box::new(origin),
-                target,
-                access,
-            },
-            Self::Obj {
-                binding,
-                access: source_access,
-                span,
-            } => forwarded_object_view(
-                binding,
-                HirViewTarget::Obj,
-                target,
-                source_access,
-                access,
-                span,
-            ),
-            Self::Interface {
-                binding,
-                interface,
-                access: source_access,
-                span,
-            } => forwarded_object_view(
-                binding,
-                HirViewTarget::Interface(interface),
-                target,
-                source_access,
-                access,
-                span,
-            ),
-            Self::Produced {
-                source,
-                class,
-                mut projections,
-                span,
-            } => {
-                projections.extend(produced_projections);
-                HirObjectView {
-                    source: HirViewSource::Produced {
-                        producer: Box::new(source),
-                        projections,
-                    },
-                    origin: Box::new(HirObjectOrigin::Produced {
-                        dynamic_class: class,
-                        span,
-                    }),
-                    target,
-                    access,
-                    span,
-                }
-            }
-            Self::Shared(source) => source.into_view(target, access),
-            Self::Optional {
-                view,
-                class,
-                projections,
-            } => {
-                let span = view.span;
-                HirObjectView {
-                    source: HirViewSource::OptionalPayload {
-                        view: Box::new(view),
-                        projections,
-                    },
-                    origin: Box::new(HirObjectOrigin::Produced {
-                        dynamic_class: class,
-                        span,
-                    }),
-                    target,
-                    access,
-                    span,
-                }
-            }
-            Self::OptionalBox { view, projections } => {
-                super::optional_box_view::into_object_view(view, target, access, projections)
-            }
-            Self::ArrayElement {
-                element,
-                class,
-                span,
-            } => HirObjectView {
-                source: HirViewSource::ArrayElement(element),
-                origin: Box::new(HirObjectOrigin::Produced {
-                    dynamic_class: class,
-                    span,
-                }),
-                target,
-                access,
-                span,
-            },
-        }
-    }
-}
+const ITERATION_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext =
+    ObjectViewSourceDiagnosticContext::new(
+        "iteration receiver",
+        crate::typeck::program::GENERAL_ITERATION_UNSUPPORTED,
+        "iteration requires a read-only object receiver",
+        "iteration requires an object view that is safe for the whole loop",
+    );
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_alias_argument(
@@ -336,7 +73,7 @@ impl CallableChecker<'_, '_> {
             let diagnostic = self
                 .implicit_shared_dereference_diagnostic(expression.span(), target)
                 .with_secondary_label(parameter.span(), "alias parameter declared here")
-                .with_note(ViewSourceUse::AliasArgument.place_message());
+                .with_note(ALIAS_OBJECT_VIEW_SOURCE.place_message());
             self.diagnostics.push(diagnostic);
             return None;
         }
@@ -365,7 +102,11 @@ impl CallableChecker<'_, '_> {
                 return self.check_alias_argument(&grouped.expression, parameter);
             }
         }
-        let source = self.check_object_view_source(expression, ViewSourceUse::AliasArgument)?;
+        let source = self.check_object_view_source(
+            expression,
+            ObjectViewSourceAdmission::ExistingOrProducedObject,
+            ALIAS_OBJECT_VIEW_SOURCE,
+        )?;
         if !source.access().permits(required) {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -808,11 +549,7 @@ impl CallableChecker<'_, '_> {
             }
             (HirViewTarget::Class(_), HirViewTarget::Obj) => true,
             (HirViewTarget::Class(actual), HirViewTarget::Interface(interface)) => {
-                super::object_view_relation::class_provides_view(
-                    self.program,
-                    actual,
-                    HirViewTarget::Interface(interface),
-                )
+                class_provides_view(self.program, actual, HirViewTarget::Interface(interface))
             }
             _ => false,
         };
@@ -858,263 +595,6 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    pub(super) fn check_object_view_source(
-        &mut self,
-        expression: &ResolvedExpression,
-        source_use: ViewSourceUse,
-    ) -> Option<CheckedObjectViewSource> {
-        match expression {
-            ResolvedExpression::Dereference(dereference) => self
-                .check_explicit_shared_pointee(dereference, Vec::new(), dereference.span)
-                .map(CheckedObjectViewSource::Shared),
-            ResolvedExpression::Unwrap(unwrap) => {
-                if let Some(view) = self.check_optional_box_object_view(unwrap) {
-                    return Some(CheckedObjectViewSource::OptionalBox {
-                        view,
-                        projections: Vec::new(),
-                    });
-                }
-                let view = self.check_class_optional_view(unwrap)?;
-                let class = self.optional_operand_class(&view.source);
-                Some(CheckedObjectViewSource::Optional {
-                    view,
-                    class,
-                    projections: Vec::new(),
-                })
-            }
-            ResolvedExpression::Binding(binding) => {
-                let binding_type = self.binding_type(binding.binding);
-                if binding_type == Type::Obj {
-                    let access = self.binding_access(binding.binding, false, binding.span)?;
-                    Some(CheckedObjectViewSource::Obj {
-                        binding: binding.binding,
-                        access,
-                        span: binding.span,
-                    })
-                } else if let Type::Interface(interface) = binding_type {
-                    let access = self.binding_access(binding.binding, false, binding.span)?;
-                    Some(CheckedObjectViewSource::Interface {
-                        binding: binding.binding,
-                        interface,
-                        access,
-                        span: binding.span,
-                    })
-                } else if matches!(binding_type, Type::Class(_)) {
-                    let place = self.check_binding_place(binding.binding, binding.span, false)?;
-                    let origin = self.object_origin(&place);
-                    Some(CheckedObjectViewSource::Class { place, origin })
-                } else if let Type::Shared(target) = binding_type {
-                    self.reject_implicit_shared_view_source(
-                        expression,
-                        Type::Shared(target),
-                        source_use,
-                    )
-                } else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            source_use.diagnostic_code(),
-                            source_use.object_message(),
-                        )
-                        .with_primary_label(binding.span, "this binding has a primitive type"),
-                    );
-                    None
-                }
-            }
-            ResolvedExpression::Grouped(grouped) => {
-                let mut source = self.check_object_view_source(&grouped.expression, source_use)?;
-                match &mut source {
-                    CheckedObjectViewSource::Class { place, origin } => {
-                        place.path.span = grouped.span;
-                        set_origin_span(origin, grouped.span);
-                    }
-                    CheckedObjectViewSource::Obj { span, .. }
-                    | CheckedObjectViewSource::Interface { span, .. }
-                    | CheckedObjectViewSource::Produced { span, .. } => *span = grouped.span,
-                    CheckedObjectViewSource::Shared(source) => source.set_span(grouped.span),
-                    CheckedObjectViewSource::Optional { view, .. } => view.span = grouped.span,
-                    CheckedObjectViewSource::OptionalBox { view, .. } => view.span = grouped.span,
-                    CheckedObjectViewSource::ArrayElement { span, .. } => *span = grouped.span,
-                }
-                Some(source)
-            }
-            ResolvedExpression::ArrayProjection(projection) => {
-                let checked = self.check_array_projection(projection)?;
-                let Type::Class(class) = checked.ty else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            source_use.diagnostic_code(),
-                            source_use.object_message(),
-                        )
-                        .with_primary_label(checked.span, "this array element is not a class"),
-                    );
-                    return None;
-                };
-                let crate::hir::HirExpressionKind::ArrayElement(mut element) = checked.kind else {
-                    unreachable!("checked indexed class source must retain its element place")
-                };
-                if element.receiver.ownership == crate::hir::HirArrayReceiverOwnership::Inline {
-                    element.receiver.anchor = crate::hir::HirArrayAnchor::InlineBacking;
-                }
-                Some(CheckedObjectViewSource::ArrayElement {
-                    element,
-                    class,
-                    span: checked.span,
-                })
-            }
-            ResolvedExpression::FieldAccess(access) => {
-                let field = self
-                    .program
-                    .field(access.field)
-                    .expect("resolved field access must reference a field");
-                if matches!(
-                    access.receiver,
-                    crate::resolve::ResolvedObjectReceiver::OptionalPayload { .. }
-                ) {
-                    let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                source_use.diagnostic_code(),
-                                source_use.object_message(),
-                            )
-                            .with_primary_label(
-                                access.member_span,
-                                "this field has a primitive type",
-                            ),
-                        );
-                        return None;
-                    };
-                    let receiver =
-                        self.check_object_receiver(&access.receiver, ObjectPlaceUse::Alias)?;
-                    let super::CheckedReceiverCarrier::View { view: optional, .. } =
-                        receiver.carrier
-                    else {
-                        unreachable!("optional receiver must retain its checked payload view")
-                    };
-                    let HirViewSource::OptionalPayload {
-                        view,
-                        mut projections,
-                    } = optional.source
-                    else {
-                        unreachable!("optional receiver must use optional payload provenance")
-                    };
-                    projections.push(crate::object_path::ObjectProjection::Field(access.field));
-                    return Some(CheckedObjectViewSource::Optional {
-                        view: *view,
-                        class,
-                        projections,
-                    });
-                }
-                if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_)) {
-                    return self.reject_implicit_shared_view_source(
-                        expression,
-                        lower_type(self.program, &field.type_syntax),
-                        source_use,
-                    );
-                }
-                let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            source_use.diagnostic_code(),
-                            source_use.object_message(),
-                        )
-                        .with_primary_label(access.member_span, "this field has a primitive type"),
-                    );
-                    return None;
-                };
-                if matches!(
-                    access.receiver,
-                    crate::resolve::ResolvedObjectReceiver::Produced { .. }
-                ) {
-                    let receiver =
-                        access
-                            .receiver
-                            .clone()
-                            .project_field(access.field, class, access.span);
-                    let checked = self.check_object_receiver(&receiver, ObjectPlaceUse::Alias)?;
-                    let super::CheckedReceiverCarrier::View { view, .. } = checked.carrier else {
-                        unreachable!("produced field source must retain its object view")
-                    };
-                    let HirViewSource::Produced {
-                        producer,
-                        projections,
-                    } = view.source
-                    else {
-                        unreachable!("produced field source must retain produced provenance")
-                    };
-                    let HirObjectOrigin::Produced { dynamic_class, .. } = *view.origin else {
-                        unreachable!("produced field source must retain exact dynamic class")
-                    };
-                    debug_assert_eq!(dynamic_class, class);
-                    return Some(CheckedObjectViewSource::Produced {
-                        source: *producer,
-                        class,
-                        projections,
-                        span: access.span,
-                    });
-                }
-                let place = access
-                    .receiver
-                    .clone()
-                    .project_field(access.field, class, access.span);
-                let Some(path) = place.binding_path() else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            source_use.diagnostic_code(),
-                            "a cast-relative field cannot be the source of another type operation",
-                        )
-                        .with_primary_label(
-                            access.span,
-                            "consume this checked field directly or copy it into inline storage",
-                        ),
-                    );
-                    return None;
-                };
-                let place = self.check_object_place(path, ObjectPlaceUse::Alias)?;
-                let origin = self.object_origin(&place);
-                Some(CheckedObjectViewSource::Class { place, origin })
-            }
-            expression
-                if self.resolved_shared_target(expression).is_some()
-                    && matches!(
-                        expression,
-                        ResolvedExpression::Allocation(_)
-                            | ResolvedExpression::DirectCall(_)
-                            | ResolvedExpression::IndirectCall(_)
-                            | ResolvedExpression::StaticCall(_)
-                            | ResolvedExpression::MethodCall(_)
-                            | ResolvedExpression::InterfaceCall(_)
-                            | ResolvedExpression::ObjectCast(_)
-                    ) =>
-            {
-                let target = self
-                    .resolved_shared_target(expression)
-                    .expect("guarded shared expression must retain its target");
-                self.reject_implicit_shared_view_source(
-                    expression,
-                    Type::Shared(target),
-                    source_use,
-                )
-            }
-            expression
-                if source_use.accepts_produced_inline()
-                    && !is_object_cast_expression(expression)
-                    && self.resolved_object_class(expression).is_some() =>
-            {
-                self.check_produced_inline_view_source(expression, source_use)
-            }
-            _ => {
-                self.diagnostics.push(
-                    Diagnostic::error(source_use.diagnostic_code(), source_use.place_message())
-                        .with_primary_label(
-                            expression.span(),
-                            "expected an object local, `self`, alias parameter, or grouping",
-                        ),
-                );
-                None
-            }
-        }
-    }
-
     /// Builds a read-only loop-duration view using the ordinary object-view
     /// source rules. Shared bindings are deliberately anchored: the loop body
     /// may replace the owner binding without invalidating the retained view.
@@ -1123,64 +603,25 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         target: HirViewTarget,
     ) -> Option<(Type, HirObjectView)> {
-        let source = self.check_object_view_source(expression, ViewSourceUse::Iteration)?;
+        let source = self.check_object_view_source(
+            expression,
+            ObjectViewSourceAdmission::ExistingOrProducedObject,
+            ITERATION_OBJECT_VIEW_SOURCE,
+        )?;
         let iterable = view_target_type(source.static_target());
         debug_assert!(source.access().permits(HirAccess::ReadOnly));
         let source = match source {
-            CheckedObjectViewSource::Shared(shared) => {
-                CheckedObjectViewSource::Shared(shared.into_iteration_source())
+            ObjectViewSource::Shared(shared) => {
+                ObjectViewSource::Shared(shared.into_iteration_source())
             }
             source => source,
         };
         Some((iterable, source.into_view(target, HirAccess::ReadOnly)))
     }
 
-    fn reject_implicit_shared_view_source(
-        &mut self,
-        expression: &ResolvedExpression,
-        owner_type: Type,
-        source_use: ViewSourceUse,
-    ) -> Option<CheckedObjectViewSource> {
-        let Type::Shared(target) = owner_type else {
-            unreachable!("implicit shared view rejection requires a shared owner");
-        };
-        self.reject_implicit_shared_dereference(
-            expression.span(),
-            target,
-            source_use.place_message(),
-        )
-    }
-
-    fn check_produced_inline_view_source(
-        &mut self,
-        expression: &ResolvedExpression,
-        source_use: ViewSourceUse,
-    ) -> Option<CheckedObjectViewSource> {
-        let Some(class) = self.resolved_object_class(expression) else {
-            self.diagnostics.push(
-                Diagnostic::error(source_use.diagnostic_code(), source_use.place_message())
-                    .with_primary_label(
-                        expression.span(),
-                        "expected an object local, `self`, alias parameter, or grouping",
-                    ),
-            );
-            return None;
-        };
-        let source = self.check_object_source(expression, class, source_use.source_context())?;
-        let crate::hir::HirObjectSource::Produced(source) = source else {
-            unreachable!("non-place object cast source must produce an object")
-        };
-        Some(CheckedObjectViewSource::Produced {
-            span: expression.span(),
-            source,
-            class,
-            projections: Vec::new(),
-        })
-    }
-
     fn convert_alias_argument(
         &mut self,
-        source: CheckedObjectViewSource,
+        source: ObjectViewSource,
         expected: Type,
         required: HirAccess,
         parameter: &impl CallParameter,
@@ -1199,7 +640,7 @@ impl CallableChecker<'_, '_> {
         };
 
         match (source, expected) {
-            (CheckedObjectViewSource::Class { place, origin }, Type::Class(target)) => {
+            (ObjectViewSource::Class { place, origin }, Type::Class(target)) => {
                 let actual = place.class();
                 let Some(projected) = self.project_place_to_ancestor(place, target) else {
                     let actual_name = self
@@ -1231,7 +672,7 @@ impl CallableChecker<'_, '_> {
                     span,
                 }))
             }
-            (CheckedObjectViewSource::Class { place, origin }, Type::Obj) => {
+            (ObjectViewSource::Class { place, origin }, Type::Obj) => {
                 let span = place.span();
                 Some(HirCallArgument::View(HirObjectView {
                     source: HirViewSource::Place(place),
@@ -1241,13 +682,9 @@ impl CallableChecker<'_, '_> {
                     span,
                 }))
             }
-            (CheckedObjectViewSource::Class { place, origin }, Type::Interface(interface)) => {
+            (ObjectViewSource::Class { place, origin }, Type::Interface(interface)) => {
                 let actual = place.class();
-                if !super::object_view_relation::class_provides_view(
-                    self.program,
-                    actual,
-                    HirViewTarget::Interface(interface),
-                ) {
+                if !class_provides_view(self.program, actual, HirViewTarget::Interface(interface)) {
                     let interface_name = &self
                         .program
                         .interface(interface)
@@ -1275,7 +712,7 @@ impl CallableChecker<'_, '_> {
                 }))
             }
             (
-                CheckedObjectViewSource::Obj {
+                ObjectViewSource::Obj {
                     binding,
                     access,
                     span,
@@ -1289,7 +726,7 @@ impl CallableChecker<'_, '_> {
                 required,
                 span,
             )),
-            (CheckedObjectViewSource::Obj { span, .. }, Type::Class(target)) => {
+            (ObjectViewSource::Obj { span, .. }, Type::Class(target)) => {
                 let target_name = self
                     .program
                     .class(target)
@@ -1305,7 +742,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (
-                CheckedObjectViewSource::Interface {
+                ObjectViewSource::Interface {
                     binding,
                     interface,
                     access,
@@ -1321,7 +758,7 @@ impl CallableChecker<'_, '_> {
                 span,
             )),
             (
-                CheckedObjectViewSource::Interface {
+                ObjectViewSource::Interface {
                     binding,
                     interface,
                     access,
@@ -1336,7 +773,7 @@ impl CallableChecker<'_, '_> {
                 required,
                 span,
             )),
-            (CheckedObjectViewSource::Interface { span, .. }, Type::Class(target)) => {
+            (ObjectViewSource::Interface { span, .. }, Type::Class(target)) => {
                 let target_name = &self
                     .program
                     .class(target)
@@ -1351,7 +788,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (
-                CheckedObjectViewSource::Interface {
+                ObjectViewSource::Interface {
                     interface: actual,
                     span,
                     ..
@@ -1366,7 +803,7 @@ impl CallableChecker<'_, '_> {
                 ));
                 None
             }
-            (CheckedObjectViewSource::Obj { span, .. }, Type::Interface(expected)) => {
+            (ObjectViewSource::Obj { span, .. }, Type::Interface(expected)) => {
                 self.diagnostics.push(mismatch(
                     "Obj",
                     &format!("interface {expected}"),
@@ -1376,8 +813,8 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (
-                source @ (CheckedObjectViewSource::Produced { .. }
-                | CheckedObjectViewSource::ArrayElement { .. }),
+                source
+                @ (ObjectViewSource::Produced { .. } | ObjectViewSource::ArrayElement { .. }),
                 expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
             ) => {
                 let HirViewTarget::Class(class) = source.static_target() else {
@@ -1403,11 +840,7 @@ impl CallableChecker<'_, '_> {
                     Type::Obj => HirViewTarget::Obj,
                     _ => unreachable!(),
                 };
-                if !super::object_view_relation::class_provides_view(
-                    self.program,
-                    class,
-                    expected_target,
-                ) {
+                if !class_provides_view(self.program, class, expected_target) {
                     self.diagnostics.push(mismatch(
                         &view_target_name(self.program, HirViewTarget::Class(class)),
                         &view_target_name(self.program, expected_target),
@@ -1429,7 +862,7 @@ impl CallableChecker<'_, '_> {
                 ))
             }
             (
-                CheckedObjectViewSource::Shared(mut source),
+                ObjectViewSource::Shared(mut source),
                 expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
             ) => {
                 let actual = source.static_target();
@@ -1441,8 +874,8 @@ impl CallableChecker<'_, '_> {
                 };
                 if !crate::typeck::shared::target_accepts(
                     self.program,
-                    super::shared_pointee::view_shared_target(expected_target),
-                    super::shared_pointee::view_shared_target(actual),
+                    super::object_view::view_shared_target(expected_target),
+                    super::object_view::view_shared_target(actual),
                 ) {
                     self.diagnostics.push(mismatch(
                         &view_target_name(self.program, actual),
@@ -1460,7 +893,7 @@ impl CallableChecker<'_, '_> {
                 ))
             }
             (
-                CheckedObjectViewSource::Optional {
+                ObjectViewSource::Optional {
                     view,
                     class,
                     mut projections,
@@ -1473,11 +906,7 @@ impl CallableChecker<'_, '_> {
                     Type::Obj => HirViewTarget::Obj,
                     _ => unreachable!(),
                 };
-                if !super::object_view_relation::class_provides_view(
-                    self.program,
-                    class,
-                    expected_target,
-                ) {
+                if !class_provides_view(self.program, class, expected_target) {
                     self.diagnostics.push(mismatch(
                         &view_target_name(self.program, HirViewTarget::Class(class)),
                         &view_target_name(self.program, expected_target),
@@ -1492,7 +921,7 @@ impl CallableChecker<'_, '_> {
                     expected_target,
                 ));
                 Some(HirCallArgument::View(
-                    CheckedObjectViewSource::Optional {
+                    ObjectViewSource::Optional {
                         view,
                         class,
                         projections,
@@ -1501,7 +930,7 @@ impl CallableChecker<'_, '_> {
                 ))
             }
             (
-                source @ CheckedObjectViewSource::OptionalBox { .. },
+                source @ ObjectViewSource::OptionalBox { .. },
                 expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
             ) => {
                 let actual = source.static_target();
@@ -1513,8 +942,8 @@ impl CallableChecker<'_, '_> {
                 };
                 if !crate::typeck::shared::target_accepts(
                     self.program,
-                    super::shared_pointee::view_shared_target(expected_target),
-                    super::shared_pointee::view_shared_target(actual),
+                    super::object_view::view_shared_target(expected_target),
+                    super::object_view::view_shared_target(actual),
                 ) {
                     self.diagnostics.push(mismatch(
                         &view_target_name(self.program, actual),
@@ -1607,14 +1036,6 @@ fn static_class_up_projections(
         .collect()
 }
 
-fn is_object_cast_expression(expression: &ResolvedExpression) -> bool {
-    match expression {
-        ResolvedExpression::ObjectCast(_) => true,
-        ResolvedExpression::Grouped(grouped) => is_object_cast_expression(&grouped.expression),
-        _ => false,
-    }
-}
-
 const fn view_target_type(target: HirViewTarget) -> Type {
     match target {
         HirViewTarget::Class(class) => Type::Class(class),
@@ -1666,24 +1087,5 @@ fn forwarded_object_view(
         target,
         access: required_access,
         span,
-    }
-}
-
-fn set_origin_span(origin: &mut HirObjectOrigin, span: Span) {
-    match origin {
-        HirObjectOrigin::Exact { complete, .. } => complete.path.span = span,
-        HirObjectOrigin::Static { place, .. } => place.span = span,
-        HirObjectOrigin::Forwarded {
-            span: origin_span, ..
-        } => *origin_span = span,
-        HirObjectOrigin::Shared {
-            span: origin_span, ..
-        }
-        | HirObjectOrigin::AnchoredShared {
-            span: origin_span, ..
-        } => *origin_span = span,
-        HirObjectOrigin::Produced {
-            span: origin_span, ..
-        } => *origin_span = span,
     }
 }

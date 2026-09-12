@@ -453,7 +453,7 @@ impl CallableChecker<'_, '_> {
 
     fn finish_shared_object_receiver(
         &self,
-        pointee: super::shared_pointee::CheckedSharedPointee,
+        pointee: super::object_view::CheckedSharedPointee,
         class: crate::identity::ClassId,
         span: Span,
     ) -> CheckedObjectReceiver {
