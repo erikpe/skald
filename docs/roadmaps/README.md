@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [MIR structural CFG analysis](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md) | In progress; C01 complete | Give verification, rewrite planning, and optimization one tolerant, deterministic owner for callable-local topology and dominance | C02 — Migrate predecessor and reachability consumers | Existing MIR model and strict rewrite CFG facts; completes A18 before A19 |
+| [MIR structural CFG analysis](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md) | In progress; C02 complete | Give verification, rewrite planning, and optimization one tolerant, deterministic owner for callable-local topology and dominance | C03 — Compute and reuse callable-local dominance | Existing MIR model and strict rewrite CFG facts; completes A18 before A19 |
 
 ## Pending discovery and planning records
 

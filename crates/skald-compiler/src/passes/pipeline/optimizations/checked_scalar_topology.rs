@@ -4,8 +4,6 @@
 //! only exact instruction/value sites and low-level shape checks that are
 //! identical for checked integer operations and checked floating casts.
 
-use std::collections::{HashMap, HashSet};
-
 use crate::mir::{
     rewrite::{
         MirCallableEdit, MirLocalCfgFacts, MirLocalIdentity, MirLocalIdentitySite,
@@ -86,19 +84,6 @@ pub(super) fn edit_storage_write_sites(
         .collect()
 }
 
-pub(super) fn cfg_predecessors(cfg: &MirLocalCfgFacts) -> HashMap<BlockId, HashSet<BlockId>> {
-    let mut predecessors = HashMap::<_, HashSet<_>>::new();
-    for block in cfg.blocks() {
-        for successor in block.successors() {
-            predecessors
-                .entry(*successor)
-                .or_default()
-                .insert(block.block());
-        }
-    }
-    predecessors
-}
-
 pub(super) fn exact_first_load(
     block: &MirBasicBlock,
     storage: StorageId,
@@ -124,11 +109,12 @@ pub(super) fn is_exact_load(kind: &MirRvalueKind, storage: StorageId) -> bool {
 }
 
 pub(super) fn has_only_predecessor(
-    predecessors: &HashMap<BlockId, HashSet<BlockId>>,
+    cfg: &MirLocalCfgFacts,
     block: BlockId,
     expected: BlockId,
 ) -> bool {
-    predecessors.get(&block) == Some(&HashSet::from([expected]))
+    cfg.predecessor_blocks(block)
+        .is_some_and(|predecessors| predecessors.len() == 1 && predecessors.contains(&expected))
 }
 
 pub(super) fn required_storage(

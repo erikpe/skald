@@ -3,12 +3,11 @@
 //! Discovery records one owned callable-local snapshot without deciding
 //! whether the source is constant or whether the protocol should be rewritten.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::{
     mir::{
-        checked_scalar_predecessors,
-        rewrite::{local_cfg_facts_for_definition, MirRewriteError},
+        rewrite::{local_cfg_facts_for_definition, MirLocalCfgFacts, MirRewriteError},
         BlockId, MirDefinitionRef, MirF64ToIntegerRange, MirPrimitiveCastRangeCheck,
         MirStorageKind, MirTerminationReason, MirTerminator, MirType, StorageId,
     },
@@ -77,7 +76,6 @@ pub(super) fn observe_checked_f64_to_integer_topologies(
     definition: MirDefinitionRef<'_>,
 ) -> Result<Vec<CheckedF64ToIntegerTopologyObservation>, MirRewriteError> {
     let cfg = local_cfg_facts_for_definition(definition)?;
-    let predecessors = checked_scalar_predecessors(definition);
     let protected = cfg
         .protected_roots()
         .iter()
@@ -85,7 +83,7 @@ pub(super) fn observe_checked_f64_to_integer_topologies(
         .collect::<HashSet<_>>();
     let context = TopologyObservationContext {
         definition,
-        predecessors: &predecessors,
+        cfg: &cfg,
         protected: &protected,
     };
     let mut observations = Vec::new();
@@ -120,7 +118,7 @@ pub(super) fn observe_checked_f64_to_integer_topologies(
 
 struct TopologyObservationContext<'mir, 'facts> {
     definition: MirDefinitionRef<'mir>,
-    predecessors: &'facts HashMap<BlockId, HashSet<BlockId>>,
+    cfg: &'facts MirLocalCfgFacts,
     protected: &'facts HashSet<BlockId>,
 }
 
@@ -165,9 +163,9 @@ fn observe_topology(
         return Ok(None);
     };
 
-    if !has_only_predecessor(context.predecessors, success_block, check_block)
-        || !has_only_predecessor(context.predecessors, failure_block, check_block)
-        || !has_only_predecessor(context.predecessors, shape.join_block, success_block)
+    if !has_only_predecessor(context.cfg, success_block, check_block)
+        || !has_only_predecessor(context.cfg, failure_block, check_block)
+        || !has_only_predecessor(context.cfg, shape.join_block, success_block)
         || !failure.instructions.is_empty()
         || storage_write_sites(definition, check.result).as_slice()
             != [CheckedScalarInstructionSite {

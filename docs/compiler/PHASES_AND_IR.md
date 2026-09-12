@@ -747,7 +747,9 @@ missing terminators contribute no edges, malformed targets remain observable
 as raw edge occurrences, and foreign, unknown, duplicate, or misindexed block
 identities cannot cause a panic or become traversal nodes. This lets initial
 verification inspect untrusted MIR without depending on rewrite validation.
-The facade is crate-private through `mir`; later phases do not import its
+Definition verification constructs this topology once and shares it across
+checked-scalar, logical-expression, and path-condition shape checks. The
+facade is crate-private through `mir`; later phases do not import its
 implementation module. Facts describe one immutable snapshot and are rebuilt
 after mutation rather than cached across edits.
 
@@ -757,10 +759,12 @@ rejects missing terminators and invalid local references before exposing
 facts. Per-block rewrite facts enrich the shared successor and predecessor
 edges with the defined-value inventory, entry and protected-root roles,
 permanent publication attachments, instruction count, and a closed terminator
-kind. Protected roots extend rewrite reachability but do not change ordinary
-entry reachability. The terminator and attachment classifications are
-exhaustive maintenance points: new forms must choose their structural role
-before the compiler builds. Proof-rich snapshots retain consumable proof
+kind. Optimization topology observers and checked-scalar rewrite validation
+query predecessor sets through this already validated snapshot. Protected
+roots extend rewrite reachability but do not change ordinary entry
+reachability. The terminator and attachment classifications are exhaustive
+maintenance points: new forms must choose their structural role before the
+compiler builds. Proof-rich snapshots retain consumable proof
 roots; normalized snapshots reject them and retain only executable entry and
 permanent semantic attachments.
 

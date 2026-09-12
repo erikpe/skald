@@ -11,6 +11,7 @@ use super::{
         MirBasicBlock, MirDefinitionRef, MirInstruction, MirParameter, MirParameterMode,
         MirStorageKind, MirTerminationReason, MirTerminator, MirType, ValueId,
     },
+    super::MirCfgTopology,
     context::Verifier,
 };
 
@@ -21,6 +22,7 @@ impl<'mir> Verifier<'mir> {
         return_type: MirType,
         function: MirDefinitionRef<'mir>,
     ) {
+        let cfg = MirCfgTopology::for_definition(function);
         self.verify_definition_contract(function);
         if function.class_owner() != function.callable().class() {
             self.function_error(
@@ -73,12 +75,12 @@ impl<'mir> Verifier<'mir> {
             self.verify_block(return_type, function, block, &mut defined_values);
         }
         if self.verification_contract().requires_proof_provenance() {
-            self.verify_path_conditions(function);
-            self.verify_logical_expressions(function);
+            self.verify_path_conditions(function, &cfg);
+            self.verify_logical_expressions(function, &cfg);
         }
-        self.verify_checked_shifts(function);
-        self.verify_checked_integer_divisions(function);
-        self.verify_checked_primitive_casts(function);
+        self.verify_checked_shifts(function, &cfg);
+        self.verify_checked_integer_divisions(function, &cfg);
+        self.verify_checked_primitive_casts(function, &cfg);
         self.verify_produced_primitive_aliases(function);
         if self.verification_contract().requires_proof_provenance() {
             self.verify_cleanup_liveness(function);

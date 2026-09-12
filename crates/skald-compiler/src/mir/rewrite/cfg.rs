@@ -161,6 +161,10 @@ impl MirLocalCfgBlockFacts {
         self.topology.predecessor_edges()
     }
 
+    pub(crate) fn predecessor_blocks(&self) -> &BTreeSet<BlockId> {
+        self.topology.predecessor_blocks()
+    }
+
     pub(crate) fn defined_values(&self) -> &[ValueId] {
         &self.defined_values
     }
@@ -250,6 +254,11 @@ impl MirLocalCfgFacts {
         (block.callable() == self.callable)
             .then(|| self.blocks.iter().find(|facts| facts.block() == block))
             .flatten()
+    }
+
+    pub(crate) fn predecessor_blocks(&self, block: BlockId) -> Option<&BTreeSet<BlockId>> {
+        self.block(block)
+            .map(MirLocalCfgBlockFacts::predecessor_blocks)
     }
 
     pub(crate) fn entry_reachable(&self) -> &[BlockId] {

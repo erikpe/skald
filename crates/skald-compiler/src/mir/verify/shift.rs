@@ -1,11 +1,15 @@
 //! Structural verification for checked integer-shift diamonds.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use super::{
-    super::model::{
-        BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirPlace, MirRvalueKind,
-        MirShiftCountCheck, MirShiftOperation, MirStorageKind, MirTerminator, MirType, StorageId,
+    super::{
+        model::{
+            BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirPlace, MirRvalueKind,
+            MirShiftCountCheck, MirShiftOperation, MirStorageKind, MirTerminator, MirType,
+            StorageId,
+        },
+        MirCfgTopology,
     },
     context::Verifier,
 };
@@ -102,16 +106,12 @@ impl Verifier<'_> {
         }
     }
 
-    pub(super) fn verify_checked_shifts(&mut self, function: MirDefinitionRef<'_>) {
-        let mut predecessors: HashMap<BlockId, HashSet<BlockId>> = HashMap::new();
+    pub(super) fn verify_checked_shifts(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        cfg: &MirCfgTopology,
+    ) {
         let mut checked_successes = HashMap::<BlockId, MirShiftOperation>::new();
-        for block in &function.body().blocks {
-            if let Some(terminator) = &block.terminator {
-                for successor in terminator.successors() {
-                    predecessors.entry(successor).or_default().insert(block.id);
-                }
-            }
-        }
         for block in &function.body().blocks {
             if let Some(MirTerminator::ShiftCountCheck {
                 check,
@@ -129,8 +129,8 @@ impl Verifier<'_> {
                         "shift success block is shared by multiple checks",
                     );
                 }
-                if predecessors
-                    .get(success_target)
+                if cfg
+                    .predecessor_blocks(*success_target)
                     .is_some_and(|incoming| incoming.len() != 1 || !incoming.contains(&block.id))
                 {
                     self.block_error(

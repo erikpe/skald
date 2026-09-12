@@ -1,17 +1,20 @@
 //! Verification of structured logical-expression MIR provenance.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 
 use crate::mir::{
     BlockId, MirDefinitionRef, MirInstruction, MirLogicalExpression, MirLogicalOperation,
     MirPlaceBase, MirRvalueKind, MirStorageKind, MirTerminator, MirType, StorageId, ValueId,
 };
 
-use super::context::Verifier;
+use super::{super::MirCfgTopology, context::Verifier};
 
 impl Verifier<'_> {
-    pub(super) fn verify_logical_expressions(&mut self, function: MirDefinitionRef<'_>) {
-        let predecessors = predecessors(function);
+    pub(super) fn verify_logical_expressions(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        cfg: &MirCfgTopology,
+    ) {
         let mut conditions = HashSet::new();
         for logical in function.logical_expressions() {
             if !conditions.insert(logical.condition) {
@@ -23,7 +26,7 @@ impl Verifier<'_> {
                     ),
                 );
             }
-            self.verify_logical_expression(function, logical, &predecessors);
+            self.verify_logical_expression(function, logical, cfg);
         }
     }
 
@@ -31,7 +34,7 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
         logical: &MirLogicalExpression,
-        predecessors: &HashMap<BlockId, HashSet<BlockId>>,
+        cfg: &MirCfgTopology,
     ) {
         let Some(condition) = function.path_condition(logical.condition) else {
             self.function_error(
@@ -135,8 +138,8 @@ impl Verifier<'_> {
             "right",
         );
 
-        let expected_predecessors = HashSet::from([logical.short, logical.right_exit]);
-        if predecessors.get(&logical.join) != Some(&expected_predecessors) {
+        let expected_predecessors = BTreeSet::from([logical.short, logical.right_exit]);
+        if cfg.predecessor_blocks(logical.join) != Some(&expected_predecessors) {
             self.logical_error(
                 function,
                 logical,
@@ -206,14 +209,14 @@ impl Verifier<'_> {
                 "logical right completion is not reachable exclusively from its right entry",
             );
         }
-        self.verify_right_region_exclusivity(function, logical, predecessors);
+        self.verify_right_region_exclusivity(function, logical, cfg);
     }
 
     fn verify_right_region_exclusivity(
         &mut self,
         function: MirDefinitionRef<'_>,
         logical: &MirLogicalExpression,
-        predecessors: &HashMap<BlockId, HashSet<BlockId>>,
+        cfg: &MirCfgTopology,
     ) {
         let region = reachable_region(
             function,
@@ -222,13 +225,14 @@ impl Verifier<'_> {
         );
         for block in &region {
             let has_external_predecessor = if *block == logical.right_entry {
-                predecessors
-                    .get(block)
-                    .is_some_and(|incoming| incoming != &HashSet::from([logical.selection]))
+                cfg.predecessor_blocks(*block)
+                    .is_some_and(|incoming| incoming != &BTreeSet::from([logical.selection]))
             } else {
-                predecessors
-                    .get(block)
-                    .is_some_and(|incoming| !incoming.is_subset(&region))
+                cfg.predecessor_blocks(*block).is_some_and(|incoming| {
+                    incoming
+                        .iter()
+                        .any(|predecessor| !region.contains(predecessor))
+                })
             };
             if has_external_predecessor {
                 self.logical_error(
@@ -374,16 +378,6 @@ fn constant_bool(block: &crate::mir::MirBasicBlock, value: ValueId) -> Option<bo
             }
             _ => None,
         })
-}
-
-fn predecessors(function: MirDefinitionRef<'_>) -> HashMap<BlockId, HashSet<BlockId>> {
-    let mut predecessors: HashMap<_, HashSet<_>> = HashMap::new();
-    for block in &function.body().blocks {
-        for target in block.terminator.iter().flat_map(MirTerminator::successors) {
-            predecessors.entry(target).or_default().insert(block.id);
-        }
-    }
-    predecessors
 }
 
 fn reachable_without(

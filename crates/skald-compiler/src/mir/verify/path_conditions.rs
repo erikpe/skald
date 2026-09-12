@@ -8,22 +8,30 @@ use crate::mir::{
 };
 
 use super::{
+    super::MirCfgTopology,
     context::Verifier,
     dataflow::ForwardDataflow,
     path_state::{condition_reads, PathEdgeError, PathStates},
 };
 
 impl Verifier<'_> {
-    pub(super) fn verify_path_conditions(&mut self, function: MirDefinitionRef<'_>) {
-        self.verify_path_condition_declarations(function);
+    pub(super) fn verify_path_conditions(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        cfg: &MirCfgTopology,
+    ) {
+        self.verify_path_condition_declarations(function, cfg);
         self.verify_path_condition_flow(function);
     }
 
-    fn verify_path_condition_declarations(&mut self, function: MirDefinitionRef<'_>) {
+    fn verify_path_condition_declarations(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        cfg: &MirCfgTopology,
+    ) {
         let mut ids = HashSet::new();
         let mut activations = HashSet::new();
         let mut merges = HashSet::new();
-        let predecessors = predecessors(function);
 
         for (index, condition) in function.path_conditions().iter().enumerate() {
             self.verify_path_condition_identity(function, condition, index, &mut ids);
@@ -66,7 +74,7 @@ impl Verifier<'_> {
                     ),
                 );
             }
-            self.verify_path_condition_blocks(function, condition, &predecessors);
+            self.verify_path_condition_blocks(function, condition, cfg);
             self.verify_path_condition_selection(function, condition, true);
             self.verify_path_condition_selection(function, condition, false);
         }
@@ -129,7 +137,7 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
         condition: &MirPathCondition,
-        predecessors: &HashMap<BlockId, BTreeSet<BlockId>>,
+        cfg: &MirCfgTopology,
     ) {
         if condition.active_predecessor == condition.inactive_predecessor {
             self.function_error(
@@ -183,7 +191,7 @@ impl Verifier<'_> {
 
         let expected =
             BTreeSet::from([condition.active_predecessor, condition.inactive_predecessor]);
-        if predecessors.get(&condition.merge) != Some(&expected) {
+        if cfg.predecessor_blocks(condition.merge) != Some(&expected) {
             self.function_error(
                 function.callable(),
                 format!(
@@ -452,16 +460,6 @@ impl Verifier<'_> {
             existing.merge(incoming, |_, _| {})
         });
     }
-}
-
-fn predecessors(function: MirDefinitionRef<'_>) -> HashMap<BlockId, BTreeSet<BlockId>> {
-    let mut predecessors: HashMap<_, BTreeSet<_>> = HashMap::new();
-    for block in &function.body().blocks {
-        for target in block.terminator.iter().flat_map(MirTerminator::successors) {
-            predecessors.entry(target).or_default().insert(block.id);
-        }
-    }
-    predecessors
 }
 
 fn constant_bool_in_block(block: &crate::mir::MirBasicBlock, value: ValueId) -> Option<bool> {

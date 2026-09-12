@@ -69,7 +69,6 @@ impl MirCfgBlockTopology {
     }
 
     /// Unique predecessor blocks, independent of parallel edge count.
-    #[allow(dead_code)]
     pub(crate) fn predecessor_blocks(&self) -> &BTreeSet<BlockId> {
         &self.predecessor_blocks
     }
@@ -85,12 +84,12 @@ pub(crate) struct MirCfgTopology {
     blocks: Vec<MirCfgBlockTopology>,
     block_indices: BTreeMap<BlockId, usize>,
     edges: Vec<MirCfgEdge>,
+    predecessor_blocks: BTreeMap<BlockId, BTreeSet<BlockId>>,
     entry_reachable: BTreeSet<BlockId>,
 }
 
 impl MirCfgTopology {
     /// Builds tolerant facts directly from a dense MIR definition.
-    #[allow(dead_code)]
     pub(crate) fn for_definition(definition: MirDefinitionRef<'_>) -> Self {
         let callable = definition.callable();
         let blocks = definition
@@ -170,13 +169,17 @@ impl MirCfgTopology {
             })
             .collect::<Vec<_>>();
 
+        let mut predecessor_blocks = BTreeMap::<BlockId, BTreeSet<BlockId>>::new();
         for edge in &edges {
-            let Some(target) = block_indices.get(&edge.target()).copied() else {
-                continue;
-            };
-            blocks[target].predecessor_edges.push(*edge);
-            if block_indices.contains_key(&edge.source()) {
-                blocks[target].predecessor_blocks.insert(edge.source());
+            predecessor_blocks
+                .entry(edge.target())
+                .or_default()
+                .insert(edge.source());
+            if let Some(target) = block_indices.get(&edge.target()).copied() {
+                blocks[target].predecessor_edges.push(*edge);
+                if block_indices.contains_key(&edge.source()) {
+                    blocks[target].predecessor_blocks.insert(edge.source());
+                }
             }
         }
 
@@ -184,6 +187,7 @@ impl MirCfgTopology {
             blocks,
             block_indices,
             edges,
+            predecessor_blocks,
             entry_reachable: BTreeSet::new(),
         };
         topology.entry_reachable = topology.reachable_from([entry]);
@@ -207,6 +211,15 @@ impl MirCfgTopology {
         self.block_indices
             .get(&block)
             .and_then(|position| self.blocks.get(*position))
+    }
+
+    /// Unique sources for any target named by a declared edge.
+    ///
+    /// Unlike [`Self::block`], this can return facts for an undeclared target.
+    /// Verification uses that distinction to preserve diagnostics when valid
+    /// and invalid target references coexist in malformed MIR.
+    pub(crate) fn predecessor_blocks(&self, block: BlockId) -> Option<&BTreeSet<BlockId>> {
+        self.predecessor_blocks.get(&block)
     }
 
     pub(crate) fn entry_reachable(&self) -> &BTreeSet<BlockId> {

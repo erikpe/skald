@@ -52,9 +52,7 @@ use context::Verifier;
 
 pub(crate) use contract::{classify_local_identity_site, MirIdentitySiteRole};
 
-pub(crate) use checked_scalar::{
-    dominates as checked_scalar_dominates, predecessors as checked_scalar_predecessors,
-};
+pub(crate) use checked_scalar::dominates as checked_scalar_dominates;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirVerificationError {

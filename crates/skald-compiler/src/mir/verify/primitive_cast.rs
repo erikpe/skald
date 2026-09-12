@@ -1,14 +1,17 @@
 //! Structural verification for checked floating-to-integer cast diamonds.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use super::{
-    super::model::{
-        BlockId, MirBasicBlock, MirDefinitionRef, MirF64ToIntegerRange, MirInstruction, MirPlace,
-        MirPrimitiveCastRangeCheck, MirRvalueKind, MirStorageKind, MirTerminator, MirType,
-        StorageId,
+    super::{
+        model::{
+            BlockId, MirBasicBlock, MirDefinitionRef, MirF64ToIntegerRange, MirInstruction,
+            MirPlace, MirPrimitiveCastRangeCheck, MirRvalueKind, MirStorageKind, MirTerminator,
+            MirType, StorageId,
+        },
+        MirCfgTopology,
     },
-    checked_scalar::{dominates, is_exact_load, predecessors, storage_writes},
+    checked_scalar::{dominates, is_exact_load, storage_writes},
     context::Verifier,
 };
 
@@ -95,8 +98,11 @@ impl Verifier<'_> {
         }
     }
 
-    pub(super) fn verify_checked_primitive_casts(&mut self, function: MirDefinitionRef<'_>) {
-        let predecessors = predecessors(function);
+    pub(super) fn verify_checked_primitive_casts(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        cfg: &MirCfgTopology,
+    ) {
         let mut checked_successes = HashMap::<BlockId, MirF64ToIntegerRange>::new();
 
         for block in &function.body().blocks {
@@ -123,7 +129,7 @@ impl Verifier<'_> {
             self.require_primitive_cast_predecessor(
                 function,
                 block,
-                &predecessors,
+                cfg,
                 *success_target,
                 block.id,
                 "primitive cast success block must be dominated by its matching range check",
@@ -131,7 +137,7 @@ impl Verifier<'_> {
             self.require_primitive_cast_predecessor(
                 function,
                 block,
-                &predecessors,
+                cfg,
                 *failure_target,
                 block.id,
                 "primitive cast failure block must be reached only by its matching range check",
@@ -143,7 +149,7 @@ impl Verifier<'_> {
                     self.require_primitive_cast_predecessor(
                         function,
                         block,
-                        &predecessors,
+                        cfg,
                         join,
                         *success_target,
                         "primitive cast result join must be reached only from its success block",
@@ -220,12 +226,12 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
-        predecessors: &HashMap<BlockId, HashSet<BlockId>>,
+        cfg: &MirCfgTopology,
         target: BlockId,
         expected: BlockId,
         message: &str,
     ) {
-        if predecessors.get(&target) != Some(&HashSet::from([expected])) {
+        if cfg.predecessor_blocks(target) != Some(&BTreeSet::from([expected])) {
             self.block_error(function.callable(), block.id, message);
         }
     }

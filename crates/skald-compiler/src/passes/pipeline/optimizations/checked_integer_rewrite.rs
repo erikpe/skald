@@ -15,9 +15,7 @@ use super::{
         CheckedIntegerInstructionSite, CheckedIntegerProtocolCheck,
         CheckedIntegerProtocolOperation, CheckedIntegerProtocolTopology, CheckedIntegerValueSite,
     },
-    checked_scalar_topology::{
-        cfg_predecessors, edit_storage_write_sites, has_only_predecessor, is_exact_load,
-    },
+    checked_scalar_topology::{edit_storage_write_sites, has_only_predecessor, is_exact_load},
     local_constant::{
         CheckedCarrierPlanEvidence, CheckedCarrierPlanRole, LocalConstantFact,
         LocalConstantProvenanceCategory,
@@ -190,7 +188,6 @@ fn revalidate(
 ) -> Result<(), MirRewriteError> {
     validate_live_identities(edit, candidate)?;
     let cfg = edit.local_cfg_facts()?;
-    let predecessors = cfg_predecessors(&cfg);
     let protected = cfg
         .protected_roots()
         .iter()
@@ -201,17 +198,9 @@ fn revalidate(
         || !success_matches(edit, candidate)
         || !failure_matches(edit, candidate)
         || !reload_matches(edit, candidate)
-        || !has_only_predecessor(
-            &predecessors,
-            candidate.success_block,
-            candidate.check_block,
-        )
-        || !has_only_predecessor(
-            &predecessors,
-            candidate.failure_block,
-            candidate.check_block,
-        )
-        || !has_only_predecessor(&predecessors, candidate.join_block, candidate.success_block)
+        || !has_only_predecessor(&cfg, candidate.success_block, candidate.check_block)
+        || !has_only_predecessor(&cfg, candidate.failure_block, candidate.check_block)
+        || !has_only_predecessor(&cfg, candidate.join_block, candidate.success_block)
         || !candidate_carriers_match(edit, candidate)
         || !candidate_evaluation_matches(candidate)
         || edit_storage_write_sites(edit, candidate.result_storage).as_slice()

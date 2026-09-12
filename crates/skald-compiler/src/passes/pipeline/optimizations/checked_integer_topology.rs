@@ -4,12 +4,11 @@
 //! constant. It records one immutable callable-local snapshot which later
 //! analyses and the existing narrow constant-candidate adapter may consume.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::{
     mir::{
-        checked_scalar_predecessors,
-        rewrite::{local_cfg_facts_for_definition, MirRewriteError},
+        rewrite::{local_cfg_facts_for_definition, MirLocalCfgFacts, MirRewriteError},
         BlockId, MirDefinitionRef, MirIntegerDivisionOperation, MirIntegerDivisorCheck,
         MirShiftCountCheck, MirShiftOperation, MirStorageKind, MirTerminationReason, MirTerminator,
         MirType, StorageId,
@@ -118,7 +117,6 @@ pub(super) fn observe_checked_integer_topologies(
     definition: MirDefinitionRef<'_>,
 ) -> Result<Vec<CheckedIntegerTopologyObservation>, MirRewriteError> {
     let cfg = local_cfg_facts_for_definition(definition)?;
-    let predecessors = checked_scalar_predecessors(definition);
     let protected = cfg
         .protected_roots()
         .iter()
@@ -126,7 +124,7 @@ pub(super) fn observe_checked_integer_topologies(
         .collect::<HashSet<_>>();
     let context = TopologyObservationContext {
         definition,
-        predecessors: &predecessors,
+        cfg: &cfg,
         protected: &protected,
     };
     let mut observations = Vec::new();
@@ -159,7 +157,7 @@ pub(super) fn observe_checked_integer_topologies(
 
 struct TopologyObservationContext<'mir, 'facts> {
     definition: MirDefinitionRef<'mir>,
-    predecessors: &'facts HashMap<BlockId, HashSet<BlockId>>,
+    cfg: &'facts MirLocalCfgFacts,
     protected: &'facts HashSet<BlockId>,
 }
 
@@ -204,9 +202,9 @@ fn observe_topology(
         return Err(invalid_block(definition, shape.join_block, success_block));
     };
 
-    if !has_only_predecessor(context.predecessors, success_block, check_block)
-        || !has_only_predecessor(context.predecessors, failure_block, check_block)
-        || !has_only_predecessor(context.predecessors, shape.join_block, success_block)
+    if !has_only_predecessor(context.cfg, success_block, check_block)
+        || !has_only_predecessor(context.cfg, failure_block, check_block)
+        || !has_only_predecessor(context.cfg, shape.join_block, success_block)
         || !failure.instructions.is_empty()
         || !matches!(
             failure.terminator,

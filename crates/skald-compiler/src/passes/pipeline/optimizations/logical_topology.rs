@@ -3,11 +3,13 @@
 //! The observation owns identities and spans from one callable snapshot. It
 //! deliberately records no constant facts and exposes no mutation surface.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashSet};
 
 use crate::{
     mir::{
-        rewrite::{local_cfg_facts_for_definition, MirLocalIdentity, MirRewriteError},
+        rewrite::{
+            local_cfg_facts_for_definition, MirLocalCfgFacts, MirLocalIdentity, MirRewriteError,
+        },
         BlockId, MirDefinitionRef, MirInstruction, MirLogicalExpression, MirLogicalOperation,
         MirPathCondition, MirPlace, MirRvalueKind, MirStorageKind, MirTerminator, MirType,
         PathConditionId, StorageId, ValueId,
@@ -68,8 +70,7 @@ pub(super) fn observe_logical_topologies(
 ) -> Result<Vec<LogicalTopologyObservation>, MirRewriteError> {
     // Reuse the exhaustive MIR identity/CFG validation boundary before
     // interpreting proof-record relationships.
-    let _cfg = local_cfg_facts_for_definition(definition)?;
-    let predecessors = predecessors(definition);
+    let cfg = local_cfg_facts_for_definition(definition)?;
     let mut claimed_conditions = HashSet::new();
     let mut observations = Vec::with_capacity(definition.logical_expressions().len());
 
@@ -93,7 +94,7 @@ pub(super) fn observe_logical_topologies(
 
         let reason = if condition.merge != logical.selection {
             Some(LogicalTopologyRejectionReason::MismatchedPathCondition)
-        } else if !is_canonical_logical_topology(definition, logical, condition, &predecessors) {
+        } else if !is_canonical_logical_topology(definition, logical, condition, &cfg) {
             Some(LogicalTopologyRejectionReason::NonCanonicalTopology)
         } else {
             None
@@ -135,7 +136,7 @@ fn is_canonical_logical_topology(
     definition: MirDefinitionRef<'_>,
     logical: &MirLogicalExpression,
     condition: &MirPathCondition,
-    predecessors: &HashMap<BlockId, HashSet<BlockId>>,
+    cfg: &MirLocalCfgFacts,
 ) -> bool {
     let Some(result) = definition.storage(logical.result) else {
         return false;
@@ -190,8 +191,8 @@ fn is_canonical_logical_topology(
         condition.activation,
         condition.merge,
         false,
-    ) || predecessors.get(&condition.merge)
-        != Some(&HashSet::from([
+    ) || cfg.predecessor_blocks(condition.merge)
+        != Some(&BTreeSet::from([
             condition.active_predecessor,
             condition.inactive_predecessor,
         ]))
@@ -216,8 +217,8 @@ fn is_canonical_logical_topology(
             Some(logical.right_result),
             None,
         )
-        || predecessors.get(&logical.join)
-            != Some(&HashSet::from([logical.short, logical.right_exit]))
+        || cfg.predecessor_blocks(logical.join)
+            != Some(&BTreeSet::from([logical.short, logical.right_exit]))
         || !join_loads_selected_result(definition, logical)
     {
         return false;
@@ -355,16 +356,6 @@ fn constant_bool(block: &crate::mir::MirBasicBlock, value: ValueId) -> Option<bo
             }
             _ => None,
         })
-}
-
-fn predecessors(definition: MirDefinitionRef<'_>) -> HashMap<BlockId, HashSet<BlockId>> {
-    let mut predecessors: HashMap<_, HashSet<_>> = HashMap::new();
-    for block in &definition.body().blocks {
-        for target in block.terminator.iter().flat_map(MirTerminator::successors) {
-            predecessors.entry(target).or_default().insert(block.id);
-        }
-    }
-    predecessors
 }
 
 #[cfg(test)]

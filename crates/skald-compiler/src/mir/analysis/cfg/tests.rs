@@ -84,28 +84,44 @@ fn malformed_sparse_nodes_and_targets_remain_tolerant() {
         callable,
         block(0),
         [
-            (block(0), vec![unknown, foreign]),
+            (block(0), vec![block(2), unknown, foreign]),
             (foreign, vec![block(0)]),
             (block(1), vec![]),
             (block(1), vec![]),
+            (block(2), vec![]),
         ],
     );
 
-    assert_eq!(topology.edges().len(), 3);
-    assert_eq!(topology.edges()[0].target(), unknown);
-    assert_eq!(topology.edges()[1].target(), foreign);
+    assert_eq!(topology.edges().len(), 4);
+    assert_eq!(topology.edges()[0].target(), block(2));
+    assert_eq!(topology.edges()[1].target(), unknown);
+    assert_eq!(topology.edges()[2].target(), foreign);
     assert!(topology.block(foreign).is_none());
     assert!(topology.block(block(1)).is_none());
-    assert_eq!(topology.entry_reachable(), &BTreeSet::from([block(0)]));
+    assert_eq!(
+        topology.entry_reachable(),
+        &BTreeSet::from([block(0), block(2)])
+    );
+    assert_eq!(
+        topology.predecessor_blocks(block(2)),
+        Some(&BTreeSet::from([block(0)]))
+    );
     assert_eq!(
         topology.block(block(0)).unwrap().predecessor_edges(),
         &[edge(foreign, block(0), 0)]
     );
-    assert!(topology
-        .block(block(0))
-        .unwrap()
-        .predecessor_blocks()
-        .is_empty());
+    assert_eq!(
+        topology.block(block(0)).unwrap().predecessor_blocks(),
+        &BTreeSet::new()
+    );
+    assert_eq!(
+        topology.predecessor_blocks(block(0)),
+        Some(&BTreeSet::from([foreign]))
+    );
+    assert_eq!(
+        topology.predecessor_blocks(unknown),
+        Some(&BTreeSet::from([block(0)]))
+    );
     assert!(topology.reachable_from([foreign, unknown]).is_empty());
 
     let invalid_entry = sparse_topology(callable, unknown, [(block(0), vec![])]);

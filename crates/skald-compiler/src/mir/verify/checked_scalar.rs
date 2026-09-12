@@ -1,22 +1,10 @@
 //! Shared graph and carrier queries for verified checked-scalar diamonds.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use super::super::model::{
     BlockId, MirDefinitionRef, MirInstruction, MirPlace, MirRvalueKind, StorageId,
 };
-
-pub(crate) fn predecessors(function: MirDefinitionRef<'_>) -> HashMap<BlockId, HashSet<BlockId>> {
-    let mut predecessors = HashMap::<_, HashSet<_>>::new();
-    for block in &function.body().blocks {
-        if let Some(terminator) = &block.terminator {
-            for successor in terminator.successors() {
-                predecessors.entry(successor).or_default().insert(block.id);
-            }
-        }
-    }
-    predecessors
-}
 
 pub(super) fn storage_writes(function: MirDefinitionRef<'_>, storage: StorageId) -> Vec<BlockId> {
     function

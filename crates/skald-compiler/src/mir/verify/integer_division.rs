@@ -1,14 +1,17 @@
 //! Structural verification for checked integer division/remainder diamonds.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use super::{
-    super::model::{
-        BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirIntegerDivisionOperation,
-        MirIntegerDivisorCheck, MirPlace, MirRvalueKind, MirStorageKind, MirTerminator, MirType,
-        StorageId, ValueId,
+    super::{
+        model::{
+            BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirIntegerDivisionOperation,
+            MirIntegerDivisorCheck, MirPlace, MirRvalueKind, MirStorageKind, MirTerminator,
+            MirType, StorageId, ValueId,
+        },
+        MirCfgTopology,
     },
-    checked_scalar::{dominates, is_exact_load, predecessors, storage_writes},
+    checked_scalar::{dominates, is_exact_load, storage_writes},
     context::Verifier,
 };
 
@@ -115,8 +118,11 @@ impl Verifier<'_> {
         }
     }
 
-    pub(super) fn verify_checked_integer_divisions(&mut self, function: MirDefinitionRef<'_>) {
-        let predecessors = predecessors(function);
+    pub(super) fn verify_checked_integer_divisions(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        cfg: &MirCfgTopology,
+    ) {
         let mut checked_successes = HashMap::<BlockId, MirIntegerDivisionOperation>::new();
         for block in &function.body().blocks {
             let Some(MirTerminator::IntegerDivisorCheck {
@@ -142,7 +148,7 @@ impl Verifier<'_> {
             self.require_exact_predecessor(
                 function,
                 block,
-                &predecessors,
+                cfg,
                 *success_target,
                 block.id,
                 "integer divisor success block must be dominated by its matching check",
@@ -150,7 +156,7 @@ impl Verifier<'_> {
             self.require_exact_predecessor(
                 function,
                 block,
-                &predecessors,
+                cfg,
                 *failure_target,
                 block.id,
                 "integer divisor failure block must be reached only by its matching check",
@@ -169,7 +175,7 @@ impl Verifier<'_> {
                     self.require_exact_predecessor(
                         function,
                         block,
-                        &predecessors,
+                        cfg,
                         join,
                         *success_target,
                         "integer division or remainder result join must be reached only from its success block",
@@ -252,12 +258,12 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
-        predecessors: &HashMap<BlockId, HashSet<BlockId>>,
+        cfg: &MirCfgTopology,
         target: BlockId,
         expected: BlockId,
         message: &str,
     ) {
-        if predecessors.get(&target) != Some(&HashSet::from([expected])) {
+        if cfg.predecessor_blocks(target) != Some(&BTreeSet::from([expected])) {
             self.block_error(function.callable(), block.id, message);
         }
     }

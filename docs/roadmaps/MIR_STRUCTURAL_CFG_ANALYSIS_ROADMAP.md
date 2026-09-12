@@ -1,6 +1,6 @@
 # MIR Structural CFG Analysis Roadmap
 
-Status: in progress; C01 is complete and C02 is next.
+Status: in progress; C02 is complete and C03 is next.
 
 This roadmap implements
 [cleanup finding A18](CODEBASE_CLEANUP_AUDIT.md#a18--reuse-structural-cfg-and-dominance-queries)
@@ -85,7 +85,7 @@ MIR while making malformed-ID queries fail closed.
 ## Progress
 
 - [x] C01 — Establish neutral structural CFG facts
-- [ ] C02 — Migrate predecessor and reachability consumers
+- [x] C02 — Migrate predecessor and reachability consumers
 - [ ] C03 — Compute and reuse callable-local dominance
 
 ## PR-sized implementation sequence
@@ -136,24 +136,24 @@ preserved, and the ownership contract is documented.
 **Purpose:** Replace the repeated predecessor builders only after their shared
 set-versus-edge semantics are explicit and tested.
 
-- [ ] Construct one `MirCfgTopology` at the start of each definition's
+- [x] Construct one `MirCfgTopology` at the start of each definition's
   verification and thread an immutable reference to checked integer division,
   checked primitive casts, checked shifts, logical expressions, and path
   conditions.
-- [ ] Replace the predecessor export in `mir::verify::checked_scalar` and the
+- [x] Replace the predecessor export in `mir::verify::checked_scalar` and the
   crate-level `checked_scalar_predecessors` path with the neutral MIR facade.
   Keep carrier load/write helpers owned by checked-scalar verification.
-- [ ] Migrate checked-integer topology, checked floating-to-integer topology,
+- [x] Migrate checked-integer topology, checked floating-to-integer topology,
   logical-topology optimization, and checked-scalar rewrite topology to the
   neutral predecessor-set query.
-- [ ] Delete every callable-local MIR predecessor-map builder and the
+- [x] Delete every callable-local MIR predecessor-map builder and the
   associated `HashMap`/`HashSet` plumbing. Component-graph predecessors in
   static-lifecycle analysis remain separate because they describe a different
   graph.
-- [ ] Preserve exact-predecessor checks as set comparisons. Do not infer edge
+- [x] Preserve exact-predecessor checks as set comparisons. Do not infer edge
   count from the unique predecessor set when a transformation needs edge
   occurrence identity.
-- [ ] Keep verifier error collection and ordering unchanged on malformed MIR;
+- [x] Keep verifier error collection and ordering unchanged on malformed MIR;
   the topology supplies facts and never emits diagnostics.
 
 **Tests:** Run the focused verifier suites for logical expressions, path
