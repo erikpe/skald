@@ -8,7 +8,9 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-No implementation roadmap is currently active.
+| Roadmap | Status | Purpose | Next task | Dependencies |
+| --- | --- | --- | --- | --- |
+| [MIR snapshot analysis reuse](MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md) | Planned | Measure and conditionally reuse proof-rich local constant facts on one unchanged verified MIR snapshot | S01 — Instrument uncached requests and decide Gate 1 | Accepted snapshot-analysis design; completed A18; existing pass seals and cleanup measurements |
 
 ## Pending discovery and planning records
 

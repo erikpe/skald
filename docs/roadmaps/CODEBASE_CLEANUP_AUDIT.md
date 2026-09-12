@@ -121,7 +121,7 @@ endpoint and names any deferred work.
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
-| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Open | P2 | 4 | L | High | C | C, M |
+| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Planned | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Open | P2 | 3 | M | Medium | O | M, R |
 | [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Open | P2 | 3 | M | Medium | O | M, E, R |
 | [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Open | P3 | 5 | XL | High | C | N, E |
@@ -854,6 +854,12 @@ CFG tests. The full repository and Rust 1.82 gates also passed.
 provide callable-local, immutable-snapshot facts; A19 must separately measure
 reuse across pass boundaries and define invalidation before extending their
 lifetime.
+
+**Design proposal:**
+[frozen MIR Snapshot Analysis Reuse Design Proposal](../archive/MIR_SNAPSHOT_ANALYSIS_REUSE_DESIGN_PROPOSAL.md).
+
+**Implementation plan:**
+[MIR Snapshot Analysis Reuse Roadmap](MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md).
 
 **Evidence:** the
 [default schedule](../../crates/skald-compiler/src/passes/pipeline/policy/profile.rs)
