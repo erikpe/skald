@@ -37,7 +37,7 @@ impl<'types> HirDumper<'types> {
         });
     }
 
-    pub(super) fn statement(&mut self, statement: &HirStatement) {
+    fn statement(&mut self, statement: &HirStatement) {
         match statement {
             HirStatement::BaseInitialization(statement) => {
                 self.line(

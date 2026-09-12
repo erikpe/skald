@@ -8,9 +8,7 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-| Roadmap | Status | Purpose | Next task | Dependencies |
-| --- | --- | --- | --- | --- |
-| [Phase dump renderer ownership](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md) | In progress | Split resolved, HIR, and MIR dump rendering into cohesive private modules with byte-identical deterministic output | D04 — audit ownership, validate all phase observations, and close A26 | Existing exact phase dumps and pipeline determinism coverage; A21 and D01 through D03 complete |
+No implementation roadmaps are currently active.
 
 ## Pending discovery and planning records
 

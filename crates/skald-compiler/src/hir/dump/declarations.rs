@@ -451,7 +451,7 @@ impl<'types> HirDumper<'types> {
         });
     }
 
-    pub(super) fn parameter(&mut self, parameter: &HirParameter) {
+    fn parameter(&mut self, parameter: &HirParameter) {
         self.write_indentation();
         let _ = write!(self.output, "Parameter {} ", parameter.id);
         write_quoted(&mut self.output, &parameter.name);

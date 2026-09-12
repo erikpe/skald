@@ -129,7 +129,7 @@ endpoint and names any deferred work.
 | [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | Open | P3 | 5 | XL | High | C | N, E, R |
 | [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | Open | P2 | 3 | M | Medium | C | C, M |
 | [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Complete | P2 | 3 | S–M | Low | O | C, M |
-| [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | Open | P2 | 3 | M | Low | O | M, E |
+| [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | Complete | P2 | 3 | M | Low | O | M, E |
 | [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | Open | P3 | 2 | S | Low | O | C, M |
 | [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | Open | P2 | 3 | M | Low | O | M, E |
 | [A29](#a29--remove-obsolete-rollout-comments-and-broad-allowances) | Remove obsolete rollout comments and broad allowances | Open | P2 | 2 | S | Low | O | M, R |
@@ -1070,8 +1070,10 @@ tests, integration and compile-fail documentation tests, runtime tests, and all
 
 ### A26 — Split large dump renderers by responsibility
 
+**Status:** Complete (2026-09-12).
+
 **Implementation plan:**
-[Phase Dump Renderer Ownership Roadmap](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md).
+[archived Phase Dump Renderer Ownership Roadmap](../archive/PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md).
 
 **Evidence:** [HIR dumping](../../crates/skald-compiler/src/hir/dump/mod.rs) was
 3,122 lines before its recursive-module split, while
@@ -1090,6 +1092,22 @@ generic dump model that obscures phase-specific semantics.
 **First PR / validation:** split one phase at a time; require byte-identical
 dumps and independent-process determinism. File length alone is not a reason
 to redesign the dump format or replace exact expectations.
+
+**Delivered:** MIR, typed HIR, and resolved-program dumping now use recursive
+private modules behind the unchanged `dump_mir`, `dump_preliminary_mir`,
+`dump_hir`, and `dump_resolved` phase facades. Each phase retains its own
+formatting vocabulary and shared renderer state while declarations, bodies,
+values, aggregates, ownership, object navigation, generic metadata, and type
+naming have cohesive implementation owners. No old monolithic `dump.rs`,
+duplicate renderer, or cross-phase semantic abstraction remains.
+
+The unchanged generic-module determinism fixture produced the same normalized
+30,973-byte resolved, HIR, preliminary MIR, planned MIR, and final MIR stream
+before and after the split. Existing exact expectations cover headings,
+ordering, empty and conditional sections, quoted and UTF-8 names, spans,
+generic/object/optional/array/shared forms, and trailing newlines. The complete
+phase suites, dump-preserving rewrite coverage, cross-process phase-product
+tests, full repository gate, and Rust 1.82.0 workspace check passed.
 
 ### A27 — Render diagnostics into one output buffer
 

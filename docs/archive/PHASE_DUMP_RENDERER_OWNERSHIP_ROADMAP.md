@@ -1,9 +1,9 @@
 # Phase Dump Renderer Ownership Roadmap
 
-Status: in progress; D01 through D03 are complete, and D04 is next.
+Status: complete; all tasks finished on 2026-09-12.
 
 This roadmap implements
-[cleanup finding A26](CODEBASE_CLEANUP_AUDIT.md#a26--split-large-dump-renderers-by-responsibility)
+[cleanup finding A26](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a26--split-large-dump-renderers-by-responsibility)
 by dividing the MIR, HIR, and resolved-program renderers into cohesive private
 modules. Each phase keeps its existing dump entry point and exact textual
 contract while giving program metadata, declarations, executable bodies,
@@ -53,7 +53,7 @@ move must preserve their bytes and ordering.
 - [x] D01 — Establish the recursive layout with MIR dumping
 - [x] D02 — Divide typed HIR dumping by structural responsibility
 - [x] D03 — Divide resolved-program dumping by structural responsibility
-- [ ] D04 — Audit ownership, validate all phase observations, and close A26
+- [x] D04 — Audit ownership, validate all phase observations, and close A26
 
 ## PR-sized implementation sequence
 
@@ -179,26 +179,26 @@ products.
 scaffolding, and prove the repository still has one exact dump contract per
 phase before closing the cleanup finding.
 
-- [ ] Review every new facade and fragment by responsibility. Merge trivial or
+- [x] Review every new facade and fragment by responsibility. Merge trivial or
   artificially separated files, remove migration-only imports and re-exports,
   and keep implementation-only visibility narrow.
-- [ ] Confirm each public phase entry point still routes to one renderer and
+- [x] Confirm each public phase entry point still routes to one renderer and
   that no old `dump.rs`, duplicate formatting path, separately maintained
   output inventory, or generic cross-phase semantic layer remains.
-- [ ] Compare representative pre-roadmap and final resolved, HIR, preliminary
+- [x] Compare representative pre-roadmap and final resolved, HIR, preliminary
   MIR, and final MIR bytes. Audit headings, ordering, empty sections, UTF-8 and
   quoted names, spans, generic/object/optional/array/shared forms, and trailing
   newlines.
-- [ ] Run the exact phase suites and independent-process determinism coverage
+- [x] Run the exact phase suites and independent-process determinism coverage
   together. Add a regression only for a concrete coverage gap found during
   the audit.
-- [ ] Update living compiler or testing documentation only if the stable dump
+- [x] Update living compiler or testing documentation only if the stable dump
   contract changed in a way maintainers need to know; do not document private
   filenames as architecture.
-- [ ] Mark A26 complete with the delivered ownership and validation evidence,
+- [x] Mark A26 complete with the delivered ownership and validation evidence,
   mark this roadmap complete, archive it, and repair the active/archive
   indexes and every incoming link.
-- [ ] Record actionable work beyond this behavior-preserving split in an
+- [x] Record actionable work beyond this behavior-preserving split in an
   indexed `PHASE_DUMP_RENDERER_OWNERSHIP_DISCOVERIES.md` rather than expanding
   closure scope. Do not create the file when no follow-up remains.
 
@@ -212,6 +212,28 @@ modules with stable entry points and byte-identical deterministic output; no
 substantial mixed-responsibility dump owner or migration scaffolding remains;
 all repository gates pass; A26 is complete; and the roadmap is archived and
 indexed.
+
+## Delivered result
+
+MIR, typed HIR, and resolved-program dumping now use private recursive modules
+behind their original phase entry points. The facades retain only entry
+coordination and shared renderer context, while declarations, executable
+bodies, values, aggregates, ownership, object navigation, generic metadata,
+and semantic type naming have cohesive owners. The final audit made two
+HIR-only renderer methods private and found no trivial fragments, duplicate
+formatting paths, old `dump.rs` owners, widened public namespaces, generic
+cross-phase semantic layer, or migration scaffolding.
+
+The unchanged generic-module determinism fixture produced an identical
+30,973-byte normalized stream before and after the roadmap. Its resolved, HIR,
+preliminary MIR, planned MIR, and final MIR sections have SHA-256
+`a524688a3750b3c6da3aae2c966d564c03ab1cdb5e9fa0470ae2265c6a05466e`.
+Unchanged exact phase expectations additionally cover empty sections, quoted
+and UTF-8 names, spans, generic and object identities, optionals, arrays,
+shared ownership, preliminary/final headings, and trailing newlines. The
+complete phase suites, dump-preserving rewrite tests, independent-process
+phase-product tests, full repository gate, and Rust 1.82.0 workspace check all
+pass. No follow-up discovery remains to record.
 
 ## Ordering and dependencies
 
