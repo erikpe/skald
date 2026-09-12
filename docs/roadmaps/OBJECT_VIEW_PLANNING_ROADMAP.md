@@ -1,6 +1,6 @@
 # Object-View Planning Roadmap
 
-Status: in progress; V01 is complete and V02 is next.
+Status: in progress; V01 and V02 are complete and V03 is next.
 
 This roadmap implements
 [cleanup finding A14](CODEBASE_CLEANUP_AUDIT.md#a14--separate-object-view-planning-from-alias-argument-checking)
@@ -51,7 +51,7 @@ current semantic owners.
 ## Progress
 
 - [x] V01 — Establish the facade and checked source product
-- [ ] V02 — Introduce direct-view planning and migrate object aliases
+- [x] V02 — Introduce direct-view planning and migrate object aliases
 - [ ] V03 — Migrate view receivers and iteration retention
 - [ ] V04 — Reuse source facts in checked operations and close A14
 
@@ -106,25 +106,25 @@ behavior are unchanged; and the old source/relation ownership is removed.
 branch, where access, compatibility, projections, and immediate retention are
 currently most entangled with alias-specific dispatch and diagnostics.
 
-- [ ] Add closed `ObjectViewRequest`, `ObjectViewRetention`, and
+- [x] Add closed `ObjectViewRequest`, `ObjectViewRetention`, and
   `ObjectViewProblem` types. A request contains a target, required access, and
   immediate-consumer or loop-body retention; it contains no syntax, callable,
   parameter, or diagnostic data.
-- [ ] Add a consumable, non-`Clone` `ObjectViewPlan` that proves source access,
+- [x] Add a consumable, non-`Clone` `ObjectViewPlan` that proves source access,
   static compatibility, projection ordering, and source-specific guard or
   anchor selection before producing exactly one existing `HirObjectView`.
-- [ ] Accept `StaticSuccess` for a direct plan. Return distinct structured
+- [x] Accept `StaticSuccess` for a direct plan. Return distinct structured
   problems for insufficient access, incompatible targets, and relations that
   require an explicit checked operation.
-- [ ] Migrate the ordinary object alias-argument branch to source
+- [x] Migrate the ordinary object alias-argument branch to source
   classification plus an immediate-consumer plan and wrap success in
   `HirCallArgument::View`.
-- [ ] Keep alias parameter-mode dispatch and diagnostic rendering in
+- [x] Keep alias parameter-mode dispatch and diagnostic rendering in
   `alias.rs`. Map planning problems to the exact existing parameter labels,
   mutable-access notes, spans, order, and recovery behavior.
-- [ ] Leave primitive, array, shared-owner, optional-owner, and checked-cast
+- [x] Leave primitive, array, shared-owner, optional-owner, and checked-cast
   alias paths explicit and outside the new plan.
-- [ ] Remove superseded object-alias compatibility and view-construction
+- [x] Remove superseded object-alias compatibility and view-construction
   helpers once no caller remains; do not retain parallel planning paths.
 
 **Tests:** Add table-driven private planning tests for class/base/interface/

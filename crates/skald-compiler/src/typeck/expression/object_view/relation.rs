@@ -77,7 +77,7 @@ pub(in crate::typeck) fn class_provides_view(
     }
 }
 
-fn view_guarantees_target(
+pub(super) fn view_guarantees_target(
     program: &ResolvedProgram,
     source: HirViewTarget,
     target: HirViewTarget,

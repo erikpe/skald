@@ -270,9 +270,9 @@ impl CallableChecker<'_, '_> {
                 ObjectViewSource::Class { place, origin },
                 HirViewTarget::Class(target),
             ) => {
-                let place = self
-                    .project_place_to_ancestor(place, target)
-                    .expect("statically successful class view must select an ancestor");
+                let place =
+                    super::object_view::project_place_to_ancestor(self.program, place, target)
+                        .expect("statically successful class view must select an ancestor");
                 HirObjectView {
                     span: place.span(),
                     source: crate::hir::HirViewSource::Place(place),

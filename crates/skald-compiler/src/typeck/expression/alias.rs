@@ -1,16 +1,13 @@
 //! Non-owning alias sources, access checks, and static view conversions.
 
 use super::object_view::{
-    ObjectViewSource, ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
+    plan_object_view, ObjectViewProblem, ObjectViewRequest, ObjectViewRetention, ObjectViewSource,
+    ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
 };
 use super::*;
 
 use crate::{
-    hir::{
-        HirAccess, HirCallArgument, HirObjectOrigin, HirObjectPlace, HirObjectView, HirViewSource,
-        HirViewTarget, Type,
-    },
-    identity::BindingId,
+    hir::{HirAccess, HirCallArgument, HirObjectView, HirViewTarget, Type},
     resolve::ResolvedExpression,
     source::Span,
     typeck::program::{
@@ -81,17 +78,7 @@ impl CallableChecker<'_, '_> {
             .required_access()
             .expect("alias parameter mode must require place access");
         if required == HirAccess::Mutable && self.is_produced_alias_source(expression) {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_ALIAS_ARGUMENT,
-                    "mutable alias argument requires an existing object place",
-                )
-                .with_primary_label(
-                    expression.span(),
-                    "this expression produces a temporary object",
-                )
-                .with_secondary_label(parameter.span(), "mutable alias declared here"),
-            );
+            self.report_mutable_produced_alias(expression.span(), parameter);
             return None;
         }
         if let ResolvedExpression::ObjectCast(cast) = expression {
@@ -104,26 +91,23 @@ impl CallableChecker<'_, '_> {
         }
         let source = self.check_object_view_source(
             expression,
-            ObjectViewSourceAdmission::ExistingOrProducedObject,
+            match required {
+                HirAccess::ReadOnly => ObjectViewSourceAdmission::ExistingOrProducedObject,
+                HirAccess::Mutable => ObjectViewSourceAdmission::ExistingObjectPlace,
+            },
             ALIAS_OBJECT_VIEW_SOURCE,
         )?;
-        if !source.access().permits(required) {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INSUFFICIENT_ALIAS_ACCESS,
-                    "read-only access cannot satisfy a mutable alias parameter",
-                )
-                .with_primary_label(source.span(), "this place provides read-only access")
-                .with_secondary_label(parameter.span(), "mutable alias declared here"),
-            );
-            return None;
+        let target = alias_object_view_target(expected)
+            .expect("non-object alias families must return before object-view planning");
+        let request =
+            ObjectViewRequest::new(target, required, ObjectViewRetention::ImmediateConsumer);
+        match plan_object_view(self.program, source, request) {
+            Ok(plan) => Some(HirCallArgument::View(plan.into_view())),
+            Err(problem) => {
+                self.report_alias_object_view_problem(problem, parameter);
+                None
+            }
         }
-        self.convert_alias_argument(
-            source,
-            lower_type(self.program, parameter.type_syntax()),
-            required,
-            parameter,
-        )
     }
 
     fn check_shared_owner_alias_argument(
@@ -619,376 +603,129 @@ impl CallableChecker<'_, '_> {
         Some((iterable, source.into_view(target, HirAccess::ReadOnly)))
     }
 
-    fn convert_alias_argument(
+    fn report_alias_object_view_problem(
         &mut self,
-        source: ObjectViewSource,
-        expected: Type,
-        required: HirAccess,
+        problem: ObjectViewProblem,
         parameter: &impl CallParameter,
-    ) -> Option<HirCallArgument> {
+    ) {
+        let (source, request) = match problem {
+            ObjectViewProblem::InsufficientAccess(source, request) => {
+                if matches!(*source, ObjectViewSource::Produced { .. }) {
+                    self.report_mutable_produced_alias(source.span(), parameter);
+                } else {
+                    debug_assert_eq!(request.access(), HirAccess::Mutable);
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INSUFFICIENT_ALIAS_ACCESS,
+                            "read-only access cannot satisfy a mutable alias parameter",
+                        )
+                        .with_primary_label(source.span(), "this place provides read-only access")
+                        .with_secondary_label(parameter.span(), "mutable alias declared here"),
+                    );
+                }
+                return;
+            }
+            ObjectViewProblem::IncompatibleTarget(source, request)
+            | ObjectViewProblem::RequiresExplicitCheckedOperation(source, request) => {
+                (*source, request)
+            }
+        };
+
+        let target = request.target();
         let source_span = source.span();
-        let mismatch = |actual: &str, expected: &str, span, label| {
+        let mismatch = |actual: &str, expected: &str, label| {
             Diagnostic::error(
                 TYPE_MISMATCH,
                 format!("alias argument has type `{actual}`, expected `{expected}`"),
             )
-            .with_primary_label(span, label)
+            .with_primary_label(source_span, label)
             .with_secondary_label(
                 parameter.type_syntax().span,
                 "alias parameter type declared here",
             )
         };
 
-        match (source, expected) {
-            (ObjectViewSource::Class { place, origin }, Type::Class(target)) => {
-                let actual = place.class();
-                let Some(projected) = self.project_place_to_ancestor(place, target) else {
-                    let actual_name = self
-                        .program
-                        .class(actual)
-                        .expect("alias source class must exist")
-                        .name
-                        .clone();
-                    let expected_name = self
-                        .program
-                        .class(target)
-                        .expect("alias target class must exist")
-                        .name
-                        .clone();
-                    self.diagnostics.push(mismatch(
-                        &actual_name,
-                        &expected_name,
-                        source_span,
-                        "this place has the wrong class",
-                    ));
-                    return None;
-                };
-                let span = projected.span();
-                Some(HirCallArgument::View(HirObjectView {
-                    source: HirViewSource::Place(projected),
-                    origin: Box::new(origin),
-                    target: HirViewTarget::Class(target),
-                    access: required,
-                    span,
-                }))
-            }
-            (ObjectViewSource::Class { place, origin }, Type::Obj) => {
-                let span = place.span();
-                Some(HirCallArgument::View(HirObjectView {
-                    source: HirViewSource::Place(place),
-                    origin: Box::new(origin),
-                    target: HirViewTarget::Obj,
-                    access: required,
-                    span,
-                }))
-            }
-            (ObjectViewSource::Class { place, origin }, Type::Interface(interface)) => {
-                let actual = place.class();
-                if !class_provides_view(self.program, actual, HirViewTarget::Interface(interface)) {
-                    let interface_name = &self
-                        .program
-                        .interface(interface)
-                        .expect("alias target interface must exist")
-                        .name;
-                    self.diagnostics.push(mismatch(
-                        &self
-                            .program
-                            .class(actual)
-                            .expect("source class must exist")
-                            .name,
-                        interface_name,
-                        source_span,
-                        "this class does not implement the target interface",
-                    ));
-                    return None;
+        let diagnostic =
+            match source {
+                ObjectViewSource::Class { place, .. } => {
+                    let actual = HirViewTarget::Class(place.class());
+                    let label = match target {
+                        HirViewTarget::Class(_) => "this place has the wrong class",
+                        HirViewTarget::Interface(_) => {
+                            "this class does not implement the target interface"
+                        }
+                        HirViewTarget::Obj => unreachable!("every object provides an Obj view"),
+                    };
+                    mismatch(
+                        &view_target_name(self.program, actual),
+                        &view_target_name(self.program, target),
+                        label,
+                    )
                 }
-                let span = place.span();
-                Some(HirCallArgument::View(HirObjectView {
-                    source: HirViewSource::Place(place),
-                    origin: Box::new(origin),
-                    target: HirViewTarget::Interface(interface),
-                    access: required,
-                    span,
-                }))
-            }
-            (
-                ObjectViewSource::Obj {
-                    binding,
-                    access,
-                    span,
-                },
-                Type::Obj,
-            ) => Some(forwarded_view(
-                binding,
-                HirViewTarget::Obj,
-                HirViewTarget::Obj,
-                access,
-                required,
-                span,
-            )),
-            (ObjectViewSource::Obj { span, .. }, Type::Class(target)) => {
-                let target_name = self
-                    .program
-                    .class(target)
-                    .expect("alias target class must exist")
-                    .name
-                    .clone();
-                self.diagnostics.push(mismatch(
-                    "Obj",
-                    &target_name,
-                    span,
-                    "an `Obj` view cannot convert implicitly to a class",
-                ));
-                None
-            }
-            (
-                ObjectViewSource::Interface {
-                    binding,
-                    interface,
-                    access,
-                    span,
-                },
-                Type::Interface(target),
-            ) if interface == target => Some(forwarded_view(
-                binding,
-                HirViewTarget::Interface(interface),
-                HirViewTarget::Interface(target),
-                access,
-                required,
-                span,
-            )),
-            (
-                ObjectViewSource::Interface {
-                    binding,
-                    interface,
-                    access,
-                    span,
-                },
-                Type::Obj,
-            ) => Some(forwarded_view(
-                binding,
-                HirViewTarget::Interface(interface),
-                HirViewTarget::Obj,
-                access,
-                required,
-                span,
-            )),
-            (ObjectViewSource::Interface { span, .. }, Type::Class(target)) => {
-                let target_name = &self
-                    .program
-                    .class(target)
-                    .expect("target class must exist")
-                    .name;
-                self.diagnostics.push(mismatch(
-                    "interface view",
-                    target_name,
-                    span,
-                    "an interface view cannot convert implicitly to a class",
-                ));
-                None
-            }
-            (
-                ObjectViewSource::Interface {
-                    interface: actual,
-                    span,
-                    ..
-                },
-                Type::Interface(expected),
-            ) => {
-                self.diagnostics.push(mismatch(
-                    &format!("interface {actual}"),
-                    &format!("interface {expected}"),
-                    span,
-                    "interfaces do not implicitly convert to unrelated interfaces",
-                ));
-                None
-            }
-            (ObjectViewSource::Obj { span, .. }, Type::Interface(expected)) => {
-                self.diagnostics.push(mismatch(
-                    "Obj",
-                    &format!("interface {expected}"),
-                    span,
-                    "an `Obj` view cannot convert implicitly to an interface",
-                ));
-                None
-            }
-            (
-                source
-                @ (ObjectViewSource::Produced { .. } | ObjectViewSource::ArrayElement { .. }),
-                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
-            ) => {
-                let HirViewTarget::Class(class) = source.static_target() else {
-                    unreachable!("exact retained sources must have a class target")
-                };
-                if required != HirAccess::ReadOnly {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_ALIAS_ARGUMENT,
-                            "mutable alias argument requires an existing object place",
-                        )
-                        .with_primary_label(
-                            source_span,
-                            "this source provides only a read-only retained view",
-                        )
-                        .with_secondary_label(parameter.span(), "mutable alias declared here"),
-                    );
-                    return None;
-                }
-                let expected_target = match expected {
-                    Type::Class(class) => HirViewTarget::Class(class),
-                    Type::Interface(interface) => HirViewTarget::Interface(interface),
-                    Type::Obj => HirViewTarget::Obj,
-                    _ => unreachable!(),
-                };
-                if !class_provides_view(self.program, class, expected_target) {
-                    self.diagnostics.push(mismatch(
-                        &view_target_name(self.program, HirViewTarget::Class(class)),
-                        &view_target_name(self.program, expected_target),
-                        source_span,
-                        "this produced object cannot provide the required view",
-                    ));
-                    return None;
-                }
-                Some(HirCallArgument::View(
-                    source.into_view_with_produced_projections(
-                        expected_target,
-                        HirAccess::ReadOnly,
-                        static_class_up_projections(
-                            self.program,
-                            HirViewTarget::Class(class),
-                            expected_target,
-                        ),
+                ObjectViewSource::Obj { .. } => match target {
+                    HirViewTarget::Class(_) => mismatch(
+                        "Obj",
+                        &view_target_name(self.program, target),
+                        "an `Obj` view cannot convert implicitly to a class",
                     ),
-                ))
-            }
-            (
-                ObjectViewSource::Shared(mut source),
-                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
-            ) => {
-                let actual = source.static_target();
-                let expected_target = match expected {
-                    Type::Class(class) => HirViewTarget::Class(class),
-                    Type::Interface(interface) => HirViewTarget::Interface(interface),
-                    Type::Obj => HirViewTarget::Obj,
-                    _ => unreachable!(),
-                };
-                if !crate::typeck::shared::target_accepts(
-                    self.program,
-                    super::object_view::view_shared_target(expected_target),
-                    super::object_view::view_shared_target(actual),
-                ) {
-                    self.diagnostics.push(mismatch(
-                        &view_target_name(self.program, actual),
-                        &view_target_name(self.program, expected_target),
-                        source_span,
-                        "shared-backed aliases convert implicitly only to compatible up-views",
-                    ));
-                    return None;
-                }
-                let projections =
-                    static_class_up_projections(self.program, actual, expected_target);
-                source.set_projections(projections);
-                Some(HirCallArgument::View(
-                    source.into_view(expected_target, required),
-                ))
-            }
-            (
-                ObjectViewSource::Optional {
-                    view,
-                    class,
-                    mut projections,
+                    HirViewTarget::Interface(interface) => mismatch(
+                        "Obj",
+                        &format!("interface {interface}"),
+                        "an `Obj` view cannot convert implicitly to an interface",
+                    ),
+                    HirViewTarget::Obj => unreachable!("an Obj view is statically compatible"),
                 },
-                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
-            ) => {
-                let expected_target = match expected {
-                    Type::Class(class) => HirViewTarget::Class(class),
-                    Type::Interface(interface) => HirViewTarget::Interface(interface),
-                    Type::Obj => HirViewTarget::Obj,
-                    _ => unreachable!(),
-                };
-                if !class_provides_view(self.program, class, expected_target) {
-                    self.diagnostics.push(mismatch(
-                        &view_target_name(self.program, HirViewTarget::Class(class)),
-                        &view_target_name(self.program, expected_target),
-                        source_span,
-                        "checked optional payload converts only to compatible up-views",
-                    ));
-                    return None;
-                }
-                projections.extend(static_class_up_projections(
-                    self.program,
-                    HirViewTarget::Class(class),
-                    expected_target,
-                ));
-                Some(HirCallArgument::View(
-                    ObjectViewSource::Optional {
-                        view,
-                        class,
-                        projections,
+                ObjectViewSource::Interface {
+                    interface: actual, ..
+                } => match target {
+                    HirViewTarget::Class(_) => mismatch(
+                        "interface view",
+                        &view_target_name(self.program, target),
+                        "an interface view cannot convert implicitly to a class",
+                    ),
+                    HirViewTarget::Interface(expected) => mismatch(
+                        &format!("interface {actual}"),
+                        &format!("interface {expected}"),
+                        "interfaces do not implicitly convert to unrelated interfaces",
+                    ),
+                    HirViewTarget::Obj => {
+                        unreachable!("every interface view provides an Obj view")
                     }
-                    .into_view(expected_target, required),
-                ))
-            }
-            (
-                source @ ObjectViewSource::OptionalBox { .. },
-                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
-            ) => {
-                let actual = source.static_target();
-                let expected_target = match expected {
-                    Type::Class(class) => HirViewTarget::Class(class),
-                    Type::Interface(interface) => HirViewTarget::Interface(interface),
-                    Type::Obj => HirViewTarget::Obj,
-                    _ => unreachable!(),
-                };
-                if !crate::typeck::shared::target_accepts(
-                    self.program,
-                    super::object_view::view_shared_target(expected_target),
-                    super::object_view::view_shared_target(actual),
-                ) {
-                    self.diagnostics.push(mismatch(
-                        &view_target_name(self.program, actual),
-                        &view_target_name(self.program, expected_target),
-                        source_span,
-                        "boxed optional payload converts implicitly only to compatible up-views",
-                    ));
-                    return None;
-                }
-                Some(HirCallArgument::View(
-                    source.into_view(expected_target, required),
-                ))
-            }
-            (
-                _,
-                Type::I64
-                | Type::U64
-                | Type::U8
-                | Type::F64
-                | Type::Bool
-                | Type::Unit
-                | Type::Function(_)
-                | Type::Optional(_)
-                | Type::Array(_),
-            ) => None,
-            (_, Type::Shared(_)) => None,
-        }
+                },
+                source @ (ObjectViewSource::Produced { .. }
+                | ObjectViewSource::ArrayElement { .. }) => mismatch(
+                    &view_target_name(self.program, source.static_target()),
+                    &view_target_name(self.program, target),
+                    "this produced object cannot provide the required view",
+                ),
+                ObjectViewSource::Shared(source) => mismatch(
+                    &view_target_name(self.program, source.static_target()),
+                    &view_target_name(self.program, target),
+                    "shared-backed aliases convert implicitly only to compatible up-views",
+                ),
+                ObjectViewSource::Optional { class, .. } => mismatch(
+                    &view_target_name(self.program, HirViewTarget::Class(class)),
+                    &view_target_name(self.program, target),
+                    "checked optional payload converts only to compatible up-views",
+                ),
+                source @ ObjectViewSource::OptionalBox { .. } => mismatch(
+                    &view_target_name(self.program, source.static_target()),
+                    &view_target_name(self.program, target),
+                    "boxed optional payload converts implicitly only to compatible up-views",
+                ),
+            };
+        self.diagnostics.push(diagnostic);
     }
 
-    pub(super) fn project_place_to_ancestor(
-        &self,
-        mut place: HirObjectPlace,
-        target: crate::identity::ClassId,
-    ) -> Option<HirObjectPlace> {
-        if place.class() == target {
-            return Some(place);
-        }
-        let span = place.span();
-        for base in self.program.hierarchy.base_chain(place.class())? {
-            place.path = place.path.project_base(base, span);
-            if base == target {
-                return Some(place);
-            }
-        }
-        None
+    fn report_mutable_produced_alias(&mut self, span: Span, parameter: &impl CallParameter) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                INVALID_ALIAS_ARGUMENT,
+                "mutable alias argument requires an existing object place",
+            )
+            .with_primary_label(span, "this expression produces a temporary object")
+            .with_secondary_label(parameter.span(), "mutable alias declared here"),
+        );
     }
 }
 
@@ -1015,25 +752,22 @@ fn view_target_name(program: &crate::resolve::ResolvedProgram, target: HirViewTa
     }
 }
 
-fn static_class_up_projections(
-    program: &crate::resolve::ResolvedProgram,
-    actual: HirViewTarget,
-    expected: HirViewTarget,
-) -> Vec<crate::object_path::ObjectProjection> {
-    let (HirViewTarget::Class(actual), HirViewTarget::Class(expected)) = (actual, expected) else {
-        return Vec::new();
-    };
-    if actual == expected {
-        return Vec::new();
+const fn alias_object_view_target(expected: Type) -> Option<HirViewTarget> {
+    match expected {
+        Type::Class(class) => Some(HirViewTarget::Class(class)),
+        Type::Interface(interface) => Some(HirViewTarget::Interface(interface)),
+        Type::Obj => Some(HirViewTarget::Obj),
+        Type::I64
+        | Type::U64
+        | Type::U8
+        | Type::F64
+        | Type::Bool
+        | Type::Unit
+        | Type::Function(_)
+        | Type::Array(_)
+        | Type::Shared(_)
+        | Type::Optional(_) => None,
     }
-    program
-        .hierarchy
-        .base_chain(actual)
-        .expect("compatible shared class view must have valid ancestry")
-        .take_while(|class| *class != expected)
-        .chain(std::iter::once(expected))
-        .map(crate::object_path::ObjectProjection::Base)
-        .collect()
 }
 
 const fn view_target_type(target: HirViewTarget) -> Type {
@@ -1041,51 +775,5 @@ const fn view_target_type(target: HirViewTarget) -> Type {
         HirViewTarget::Class(class) => Type::Class(class),
         HirViewTarget::Interface(interface) => Type::Interface(interface),
         HirViewTarget::Obj => Type::Obj,
-    }
-}
-
-fn forwarded_view(
-    binding: BindingId,
-    source_target: HirViewTarget,
-    target: HirViewTarget,
-    source_access: HirAccess,
-    required_access: HirAccess,
-    span: Span,
-) -> HirCallArgument {
-    HirCallArgument::View(forwarded_object_view(
-        binding,
-        source_target,
-        target,
-        source_access,
-        required_access,
-        span,
-    ))
-}
-
-fn forwarded_object_view(
-    binding: BindingId,
-    source_target: HirViewTarget,
-    target: HirViewTarget,
-    source_access: HirAccess,
-    required_access: HirAccess,
-    span: Span,
-) -> HirObjectView {
-    HirObjectView {
-        source: HirViewSource::Forwarded {
-            binding,
-            target: source_target,
-            access: source_access,
-            span,
-        },
-        origin: Box::new(HirObjectOrigin::Forwarded {
-            binding,
-            static_target: source_target,
-            access: source_access,
-            dispatch_limit: None,
-            span,
-        }),
-        target,
-        access: required_access,
-        span,
     }
 }
