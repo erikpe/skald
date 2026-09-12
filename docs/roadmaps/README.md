@@ -8,9 +8,7 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-| Roadmap | Status | Purpose | Next task | Dependencies |
-| --- | --- | --- | --- | --- |
-| [MIR identity traversal navigation](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md) | Active | Divide the exhaustive callable-local identity traversal into cohesive private modules while retaining one mutable/immutable structural inventory | T04 — extract terminators and places, then close A21 | T01 through T03 complete; A18, A19, and A20 complete |
+No implementation roadmaps are currently active.
 
 ## Pending discovery and planning records
 

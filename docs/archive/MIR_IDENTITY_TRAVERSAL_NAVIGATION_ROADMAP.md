@@ -1,9 +1,9 @@
 # MIR Identity Traversal Navigation Roadmap
 
-Status: active; T01 through T03 are complete and T04 is next.
+Status: complete; all tasks finished on 2026-09-12.
 
 This roadmap implements
-[cleanup finding A21](CODEBASE_CLEANUP_AUDIT.md#a21--make-the-shared-mir-traversal-easier-to-navigate)
+[cleanup finding A21](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a21--make-the-shared-mir-traversal-easier-to-navigate)
 by dividing the exhaustive callable-local MIR identity traversal into cohesive
 private modules. The resulting layout must remain one structural inventory
 that generates both mutable mapping and read-only observation, while making
@@ -49,7 +49,7 @@ crate-private rewrite facade.
 - [x] T01 — Establish traversal composition and extract definition structure
 - [x] T02 — Extract core instruction and operation traversal
 - [x] T03 — Extract aggregate and I/O instruction traversal
-- [ ] T04 — Extract terminators and places, then close A21
+- [x] T04 — Extract terminators and places, then close A21
 
 ## PR-sized implementation sequence
 
@@ -193,26 +193,26 @@ cases, and Rust 1.82.0 workspace check pass.
 **Purpose:** complete the navigable structural inventory, audit its boundaries,
 and leave future MIR additions with one obvious exhaustive maintenance path.
 
-- [ ] Extract terminator traversal, block-target helpers, places, projections,
+- [x] Extract terminator traversal, block-target helpers, places, projections,
   object views, receivers, origins, and leaf identity dispatch into cohesive
   private modules.
-- [ ] Preserve terminator operand and successor order, conditional edge
+- [x] Preserve terminator operand and successor order, conditional edge
   identity, call result definitions, panic inputs, checked-operation metadata,
   place base/projection order, and provenance-carrier roles exactly.
-- [ ] Review the complete recursive module by responsibility. Merge fragments
+- [x] Review the complete recursive module by responsibility. Merge fragments
   that became trivial, remove migration-only imports or re-exports, and keep
   `map/mod.rs` focused on composition and its established internal facade.
-- [ ] Audit every callable-local identity-bearing MIR field against the final
+- [x] Audit every callable-local identity-bearing MIR field against the final
   inventory and confirm mapper/observer parity, ownership validation, sparse
   editing, dense commit, import, census, CFG-root, storage-use, and value-use
   consumers still share it.
-- [ ] Update living compiler documentation only if navigation or the
+- [x] Update living compiler documentation only if navigation or the
   maintenance contract is described there; avoid documenting private file
   names as architecture.
-- [ ] Mark A21 complete with delivered structure and validation, mark this
+- [x] Mark A21 complete with delivered structure and validation, mark this
   roadmap complete, archive it, and repair the active and archive indexes and
   all incoming links.
-- [ ] Record valuable work beyond this behavior-preserving scope in an indexed
+- [x] Record valuable work beyond this behavior-preserving scope in an indexed
   discoveries document rather than expanding the closure task.
 
 **Tests:** Exercise identity remapping, identity preservation, exact malformed
@@ -227,6 +227,23 @@ responsibility and easy to navigate; one macro-composed inventory still
 generates mapping and observation; all established paths and behavior are
 unchanged; no substantial mixed-responsibility traversal file remains; A21 is
 complete; and the completed roadmap is archived and indexed.
+
+Implemented: private `terminator`, `place`, and `leaf` fragments now own
+control-flow exits and ordered targets; place projections, object views,
+receivers, and origins; and typed identity-role dispatch. The 202-line facade
+owns fragment composition, mutable and immutable leaf behavior, established
+re-exports, borrowed-definition observation, and owner validation. The final
+responsibility audit found no trivial fragments, widened paths, duplicated
+visitor inventory, or substantial mixed-responsibility owner. Exact source
+reconstruction proves that terminator operands and successors, checked
+protocols, place bases and projections, provenance carriers, and every leaf
+classification retain their previous order and behavior. Existing remapping,
+identity-preservation, owner-error, use-role, edit, commit, import, census,
+CFG, mapper/observer parity, and deterministic-order tests exercise the shared
+inventory, so no extraction-only test was added. The full repository gate and
+Rust 1.82.0 workspace check pass from an artifact-free exported snapshot,
+including 3,146 compiler tests and 629 golden cases. No follow-up discovery
+remains to record.
 
 ## Ordering and dependencies
 

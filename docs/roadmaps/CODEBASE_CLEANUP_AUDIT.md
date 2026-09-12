@@ -1,8 +1,8 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A14, A18, A19, A25, A34, A35, A38, and A43 are complete within
-the scopes recorded below. A09's stage products and owned publication
-selection are delivered; its implementation record is the
+Status: actionable audit; A01–A12, A14, A18–A21, A25, A34, A35, A38, and A43
+are complete within the scopes recorded below. A09's stage products and owned
+publication selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
 The [completed retrospective](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
 records accepted boundaries, explicit narrowing, and prerequisites for further
@@ -124,7 +124,7 @@ endpoint and names any deferred work.
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Complete | P2 | 3 | M | Medium | O | M, R |
-| [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Open | P2 | 3 | M | Medium | O | M, E, R |
+| [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Complete | P2 | 3 | M | Medium | O | M, E, R |
 | [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Open | P3 | 5 | XL | High | C | N, E |
 | [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | Open | P3 | 5 | XL | High | C | N, E, R |
 | [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | Open | P2 | 3 | M | Medium | C | C, M |
@@ -945,31 +945,28 @@ pass, as do the clean-artifact repository gate, 629 golden cases, and the Rust
 
 ### A21 — Make the shared MIR traversal easier to navigate
 
-**Implementation plan:**
-[MIR Identity Traversal Navigation Roadmap](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md).
-T01 established the recursive traversal facade and extracted definition,
-attachment, body-order, and proof-metadata fragments without changing the
-generated mapper and observer surfaces. T02 placed the exhaustive instruction
-dispatcher and ordinary operation families behind a private instruction
-facade while preserving the same single generated inventory and entry paths.
-T03 placed optional, array, and I/O traversal in cohesive private instruction
-fragments without changing their ordering or semantic classifications.
+**Status:** Complete (2026-09-12).
+
+**Implementation record:**
+[MIR Identity Traversal Navigation Roadmap](../archive/MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md).
 
 **Evidence:** the [MIR identity traversal facade](../../crates/skald-compiler/src/mir/rewrite/map/mod.rs)
-originated as one 2,492-line file, but importantly already defines one
-structural inventory for mutable mapping and read-only observation. It
-includes typed identity roles that rewrites and analyses depend on.
+originated as one 2,492-line file. It now composes cohesive definition, body,
+instruction, terminator, place, and typed-leaf fragments while retaining one
+structural inventory for mutable mapping and read-only observation.
 
-**Change:** divide the inventory into cohesive callable, instruction, place,
-and attachment sections/modules if this improves navigation. Preserve one
-source for the structural inventory, exhaustive matches/destructuring, and
-distinct definition/use/authorization roles. Avoid separately maintained
-mutable and immutable visitors.
+**Delivered change:** the 202-line facade owns composition, mutable and
+immutable leaf behavior, stable internal re-exports, definition observation,
+and owner validation. Private fragments preserve exhaustive matches and
+destructuring, deterministic visitation, identity sites, definition/use roles,
+write authorizations, and callable-owner validation without separately
+maintained visitors.
 
-**First PR / validation:** extract one family with identity-preserving output;
-run mapper/observer parity, identity remapping, and malformed-reference tests.
-Coordinate public fact ownership with A18. Do not replace explicit safety
-classification with a permissive default branch.
+**Validation:** exact reconstruction checks confirmed that each extraction
+retained the previous structural inventory. Remapping, identity preservation,
+malformed-owner sites, role censuses, editing, commit, import, CFG, and
+mapper/observer parity tests pass. The artifact-free repository gate passed
+3,146 compiler tests and 629 golden cases, and the Rust 1.82 gate passed.
 
 ### A22 — Introduce virtual-register target IR when justified
 
@@ -1510,8 +1507,9 @@ exit criteria, and any necessary contract decisions in its own roadmap.
    completed their remaining callable-local binding lookup work. Implement A18
    before cross-pass analysis reuse in A19. Revisit A17 after the semantic
    capability owner is stable.
-5. **Decompose code along those established responsibilities.** A14, A20,
-   A21, A26, A28, A29, and A33 should preserve current products and diagnostics.
+5. **Decompose code along those established responsibilities.** A14, A20, and
+   A21 established patterns that A26, A28, A29, and A33 should follow while
+   preserving current products and diagnostics.
    A13 must cooperate with the actual tree-depth fix rather than merely hiding
    recursion in a helper.
 6. **Select measured runtime and representation investments.** A30 is bounded;

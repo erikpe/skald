@@ -33,6 +33,7 @@ Archived plans:
 - [MIR snapshot analysis reuse design proposal](MIR_SNAPSHOT_ANALYSIS_REUSE_DESIGN_PROPOSAL.md)
 - [MIR snapshot analysis reuse](MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md)
 - [MIR pipeline observation bookkeeping](MIR_PIPELINE_OBSERVATION_BOOKKEEPING_ROADMAP.md)
+- [MIR identity traversal navigation](MIR_IDENTITY_TRAVERSAL_NAVIGATION_ROADMAP.md)
 - [Object-view planning design proposal](OBJECT_VIEW_PLANNING_DESIGN_PROPOSAL.md)
 - [Object-view planning](OBJECT_VIEW_PLANNING_ROADMAP.md)
 
