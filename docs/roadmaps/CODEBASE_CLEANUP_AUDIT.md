@@ -6,7 +6,8 @@ selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
 The [completed retrospective](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
 records accepted boundaries, explicit narrowing, and prerequisites for further
-work. Remaining architectural changes need focused designs and PR-sized tasks.
+work. A14 now has an accepted design and a staged implementation roadmap;
+remaining architectural changes need focused designs and PR-sized tasks.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -116,7 +117,7 @@ endpoint and names any deferred work.
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete (bounded) | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
-| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Open | P1 | 4 | M–L | Medium | O | M, E, R |
+| [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Planned | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
@@ -725,6 +726,14 @@ all compiler IRs.
 
 ### A14 — Separate object-view planning from alias-argument checking
 
+**Status:** Planned; the facade and checked source product are next.
+
+**Accepted design:**
+[Object-View Planning Design Proposal](../archive/OBJECT_VIEW_PLANNING_DESIGN_PROPOSAL.md).
+
+**Implementation plan:**
+[Object-View Planning Roadmap](OBJECT_VIEW_PLANNING_ROADMAP.md).
+
 **Evidence:**
 [`typeck/expression/alias.rs`](../../crates/skald-compiler/src/typeck/expression/alias.rs)
 is 1,689 lines and owns primitive aliases, shared-owner aliases, optional
@@ -738,11 +747,10 @@ and anchor planning, and context-specific diagnostics. Reuse a typed view plan
 for receivers, aliases, and iteration where their rules agree, with explicit
 context rather than new booleans for every feature.
 
-**First PR / validation:** extract produced/borrowed view-source planning behind
-the current API; then migrate one consumer. Preserve non-exclusive aliases,
-read-only versus mutable access, owner anchoring, evaluation order, and exact
-destruction timing. Existing alias, cast, produced-receiver, and iteration
-matrices should constrain the refactor.
+**Next step:** establish the private facade and checked source product behind
+the current consumer APIs. Preserve non-exclusive aliases, read-only versus
+mutable access, owner anchoring, evaluation order, diagnostics, HIR, and exact
+destruction timing before introducing the typed direct-view plan.
 
 ### A15 — Reassess overlapping optional/place families
 

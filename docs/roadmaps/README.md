@@ -10,6 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
+| [Object-view planning](OBJECT_VIEW_PLANNING_ROADMAP.md) | Planned | Give reusable checked object-view source facts and direct-view planning one private type-checking owner | V01 — Establish the facade and checked source product | Accepted object-view design; existing HIR provenance, anchor, guard, and relation contracts |
 
 ## Pending discovery and planning records
 
