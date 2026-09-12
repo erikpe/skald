@@ -1,15 +1,15 @@
 # Resolver Publication Ownership Roadmap
 
-Status: in progress; P01 and P02 are complete and P03 is next. Retrospective R03
+Status: complete; archived on 2026-09-12. Retrospective R03
 verification is complete and the semantic range panic is repaired. The
 implementation sequence remains separate from the completed retrospective;
 its archived R04 readiness table records this prerequisite for
 publication-dependent changes.
 
-The [publication decision](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
-requires owned product selection and exhaustive final assembly to complete
-A09's outstanding publication goal. It supplies the field inventory,
-alternatives, rejection policy, and consumer preconditions for this roadmap.
+The [publication decision](CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
+required owned product selection and exhaustive final assembly to complete
+A09's publication goal. It supplied the field inventory, alternatives,
+rejection policy, and consumer preconditions for this roadmap.
 
 ## Scope and invariants
 
@@ -30,7 +30,7 @@ alternatives, rejection policy, and consumer preconditions for this roadmap.
 
 - [x] P01 — Partition candidate ownership without changing selection
 - [x] P02 — Select products and assemble the result once
-- [ ] P03 — Verify extension obligations and close the migration
+- [x] P03 — Verify extension obligations and close the migration
 
 ## PR-sized implementation sequence
 
@@ -136,13 +136,13 @@ cases. `make msrv-check` also passes with Rust 1.82.0.
 
 **Purpose:** establish the new endpoint and remove the architectural blocker.
 
-- [ ] Review all fields against the decision inventory; verify adding a field
+- [x] Review all fields against the decision inventory; verify adding a field
   requires an explicit disposition in owned products and final assembly.
-- [ ] Review diagnostic consumers and driver error gating; ensure no new closed-
+- [x] Review diagnostic consumers and driver error gating; ensure no new closed-
   program assumption was introduced for rejected output.
-- [ ] Reconcile A09's detailed outcome and inventory, resolve the publication
+- [x] Reconcile A09's detailed outcome and inventory, resolve the publication
   discovery, and record remaining independent work without expanding scope.
-- [ ] Archive this roadmap, repair links and indexes, and leave only current
+- [x] Archive this roadmap, repair links and indexes, and leave only current
   contracts in living documentation.
 
 **Tests:** `make check` from a clean checkout or artifact-free snapshot,
@@ -152,11 +152,41 @@ cases. `make msrv-check` also passes with Rust 1.82.0.
 manual field-maintenance hazard is addressed, and dependent work has a clear
 accepted boundary. No measured speedup or fully closed error IR is claimed.
 
+**Acceptance audit:** all 31 `ResolvedProgram` fields match the retrospective
+inventory: 23 retained fields, three class-selection fields, two interface-
+selection fields, and three executable fields. Each field is named in its
+private product, in exhaustive product destructuring, and in the sole
+production `ResolvedProgram` assembly. There is no wildcard/default remainder.
+Adding a field therefore fails compilation until publication gives it an owner
+and an explicit final disposition.
+
+Resolver publication is the only production owner that selects these tables.
+Resolution reporting reads counts from partial output for diagnostics, while
+`finish_compilation` rejects any accumulated resolution error before invoking
+type checking or a lower phase. Public `ResolveOutput` remains inspectable and
+unsealed, so error-bearing output is still documented as diagnostic evidence
+rather than a closed executable program. No consumer or API now assumes more.
+
+The active cleanup audit marks A09 complete and describes the implemented
+selection boundary. The publication discovery is resolved; the independent
+neutral-service dependency guard remains actionable. No further implementation
+finding was discovered during the ownership, consumer, and module-structure
+review. Final clean-snapshot and archival results follow below.
+
+**Closure validation:** a separate clone at
+`/tmp/skald-publication-p03` checked out
+`23e5a33b9a67607f29f90e20e52e8703b26d0d66`. It began with a clean working
+tree and without `target/` or `build/`. `make check` passed with 3,107 compiler
+tests, 53 process-determinism tests, runtime and documentation checks, and 629
+golden cases. `make msrv-check` passed with Rust 1.82.0. Final reconciliation
+and archival edits are documentation-only; working-tree link, formatting, and
+diff-hygiene checks passed after the move.
+
 ## Ordering and dependencies
 
-P01 follows retrospective R03's characterization and R02's design decision;
-P02 consumes P01's ownership/view API; P03 accepts the final implementation.
-The retrospective may close with this roadmap still planned. Changes adding
-candidate-dependent tables or altering rejection must satisfy this prerequisite;
-independent compiler work need not wait. Additional design discoveries belong
-in the indexed retrospective discoveries record, not hidden extra tasks here.
+P01 followed retrospective R03's characterization and R02's design decision;
+P02 consumed P01's ownership/view API; P03 accepted the final implementation.
+Future candidate-dependent tables must join an explicit owned product and the
+exhaustive assembly. Changes to rejection must preserve the selected-product
+and partial-error contracts. Additional design discoveries belong in an
+indexed discoveries record rather than hidden extra tasks.

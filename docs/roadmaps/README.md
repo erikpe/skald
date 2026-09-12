@@ -10,16 +10,16 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md) | In progress; P01–P02 complete | Replace manual rollback with owned selection and exhaustive assembly | P03 — Verify extension obligations and close the migration | Accepted archived retrospective decision and rejection tests; implemented private ownership and selection products |
+| _None_ | — | — | — | — |
 
 ## Pending discovery and planning records
 
 | Record | Status | Purpose | Next step | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Cleanup retrospective discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md) | Actionable follow-up | Track capability guarding and publication ownership; probe panic resolved | Implement publication ownership; extend the neutral-service guard before expanding its dependencies | Existing phase-boundary guard; reviewed neutral-service contract |
+| [Cleanup retrospective discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md) | One actionable follow-up | Track the neutral capability dependency guard; publication ownership and probe panic resolved | Extend the neutral-service guard before expanding its dependencies | Existing phase-boundary guard; reviewed neutral-service contract |
 | [Auric port feasibility](AURIC_PORT_FEASIBILITY.md) | Actionable investigation | Assess a silent Oric emulator in Skald, including CPU/VIA/AY keyboard behavior, video, tape loading, and comparison with Doom | Select firmware/game images and validate CPU/bus throughput plus the shared framebuffer bridge | Existing byte arithmetic, arrays and aliases; proposed shared-array native bridge; external firmware and game images |
 | [Doom port feasibility](DOOM_PORT_FEASIBILITY.md) | Actionable investigation | Assess a Skald engine port with a small native platform library, including scope, language gaps, and division-helper evidence | Settle a minimal shared-array handle bridge and numerical helpers, then build the host/framebuffer spike | Existing arrays, I/O, primitive interop; optional 32-bit integer support |
-| [Codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) | Actionable audit | Rank repository-wide robustness, ownership, maintainability, and efficiency improvements | Select work using the accepted retrospective readiness table and per-finding prerequisites | Dependencies are recorded per finding; publication ownership remains outstanding |
+| [Codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) | Actionable audit | Rank repository-wide robustness, ownership, maintainability, and efficiency improvements | Select work using the accepted retrospective readiness table and per-finding prerequisites | Dependencies are recorded per finding; publication ownership is complete |
 | [Optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) | Living inventory | Track implemented and plausible optimizations, placement, effort, value, prerequisites, and risks | Use measurements and architecture evidence to promote a candidate into a design or roadmap | [Optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md) and candidate-specific measurements or contracts |
 | [Optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md) | Three constraints remain unplanned | Record architectural limits on modular target-independent and target-specific optimization and their sequencing | Design a remaining constraint only when a measured optimization need justifies its prerequisite work | Existing pipeline, reachability, normalization, and MIR identity foundations |
 

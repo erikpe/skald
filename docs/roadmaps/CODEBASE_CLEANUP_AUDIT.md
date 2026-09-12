@@ -1,9 +1,9 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A08, A10–A12, A34, A35, A38, and A43 are complete
-within the scopes recorded below. A09 is partially complete: stage products
-and centralized rejection are delivered; owned publication selection remains
-in the [publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md).
+Status: actionable audit; A01–A12, A34, A35, A38, and A43 are complete within
+the scopes recorded below. A09's stage products and owned publication
+selection are delivered; its implementation record is the
+[archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
 The [completed retrospective](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
 records accepted boundaries, explicit narrowing, and prerequisites for further
 work. Remaining architectural changes need focused designs and PR-sized tasks.
@@ -113,7 +113,7 @@ endpoint and names any deferred work.
 | [A06](#a06--include-binary64-tests-in-repository-gates) | Include binary64 tests in repository gates | Complete | P1 | 4 | XS | Low | O | R |
 | [A07](#a07--move-module-entry-selection-out-of-the-driver-layer) | Move module entry selection out of the driver layer | Complete | P1 | 3 | S | Low | O | M, E |
 | [A08](#a08--remove-resolutions-dependency-on-type-checking) | Remove resolution's dependency on type checking | Complete | P1 | 5 | L | High | O | M, E, R |
-| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Partial | P1 | 5 | L | High | O | M, E, R |
+| [A09](#a09--give-resolver-stages-explicit-products-and-publication) | Give resolver stages explicit products and publication | Complete | P1 | 5 | L | High | O | M, E, R |
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete (bounded) | P2 | 4 | M–L | High | C | M, C |
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete (bounded) | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
@@ -473,20 +473,18 @@ compiler unit tests, documentation tests, the direct runtime suite, and all
 
 ### A09 — Give resolver stages explicit products and publication
 
-**Status:** Partial (retrospective acceptance, 2026-09-12). Named products and
-centralized rejection are delivered and tested. Manual field restoration does
-not satisfy the original ownership endpoint. The
-[publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md) owns explicit
-selection and exhaustive assembly; additions to candidate-dependent products
-and rejection-policy changes must satisfy that prerequisite.
+**Status:** Complete (2026-09-12). Named resolver stages, private owned
+publication products, ordered class/interface selection, and exhaustive final
+assembly are delivered and tested. The implementation and acceptance record is
+the [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
 
 **Evidence:** [`ProgramResolver::resolve`](../../crates/skald-compiler/src/resolve/resolver/program/resolver.rs)
 is roughly 600 lines of coupled ordering: collect declarations and bindings,
 validate language items, discover and materialize specializations, rebuild
 hierarchy/dispatch, resolve bodies, finish interning, and validate publication.
-Specialization failure restores saved ordinary tables and clears generated
-definitions/virtual families in
-[`validation.rs`](../../crates/skald-compiler/src/resolve/resolver/program/specialization/validation.rs).
+Publication validation reads borrowed candidate products in
+[`publication.rs`](../../crates/skald-compiler/src/resolve/resolver/program/specialization/publication.rs)
+before the selected result is assembled.
 
 **Change:** introduce a few named stage products around existing responsibility
 boundaries, such as collected declarations, closed candidate declarations,
@@ -508,21 +506,27 @@ operator, and range environments used by static initializers, specialized
 bodies, ordinary functions, and ordinary classes.
 
 Final specialization selection is owned by a consuming candidate-publication
-boundary. Class and interface validators inspect immutable candidates and
-return validation results; the publication owner alone restores saved ordinary
-class, interface, and hierarchy products, clears rejected body and dispatch
-products, and marks rejected identities failed. Selection remains ordered by
-dependency: rejected class products invalidate dependent interfaces, while
-independent valid class or interface products remain published.
+boundary. Class and interface validators inspect a borrowed product view and
+return validation results. Class selection moves either candidate declarations,
+hierarchy, bodies and dispatch or saved ordinary declarations/hierarchy plus an
+empty executable product. Interface selection then runs against that selected
+class view and independently moves candidate or saved ordinary interfaces.
+Rejected identity transitions remain available as partial diagnostic evidence.
+`CandidateProgramProducts::into_program` names every field and assembles the
+public `ResolvedProgram` exactly once after both decisions; there is no complete
+mutable candidate, restoration list, wildcard/default remainder, or snapshot
+clone on rejection.
 
 Regression coverage verifies that an invalid interface candidate preserves an
 independent valid class specialization and its bodies. Existing coverage also
 exercises failed dependent specializations, restoration of ordinary
 declarations, dispatch-product clearing, source-order permutation, and stable
 resolved dumps. The full `make check` gate passed with all workspace tests,
-3,091 compiler unit tests, documentation and runtime checks, the 53-process
-determinism suite, and all 628 golden leaves. The Rust 1.82.0 workspace
-all-target check also passed.
+3,107 compiler unit tests, documentation and runtime checks, the 53-process
+determinism suite, and all 629 golden cases. The Rust 1.82.0 workspace
+all-target check also passed. P03 rechecked the 31-field ownership inventory,
+the driver error gate, diagnostic-only consumers, and the exhaustive assembly
+boundary before archiving the implementation roadmap.
 
 ### A10 — Isolate and measure semantic range discovery
 
@@ -1376,12 +1380,13 @@ runtime and documentation checks, 21 compile-fail documentation tests, and all
 ## Recommended implementation order
 
 The [retrospective readiness table](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
-now governs dependencies on the reviewed frontend contracts. Publication field
-additions and rejection changes depend on the publication ownership roadmap;
-independent MIR work, bounded fixes, and A25 need not wait if they preserve that
-boundary. Narrow fixes may proceed with a bounded task and tests. Cross-phase,
-representation and substantial algorithm changes require a design decision
-before PR-sized implementation tasks.
+governs dependencies on the reviewed frontend contracts. The publication
+ownership prerequisite is complete; future publication fields must join an
+owned product and the exhaustive assembly, while rejection changes must
+preserve the documented selection and partial-error contracts. Narrow fixes
+may proceed with a bounded task and tests. Cross-phase, representation and
+substantial algorithm changes require a design decision before PR-sized
+implementation tasks.
 
 This is a selection guide, not a promise that an entire tranche fits one PR.
 Each selected change should acquire an owner, focused test plan, measurable

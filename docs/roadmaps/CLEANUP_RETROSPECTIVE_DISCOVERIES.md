@@ -33,10 +33,11 @@ behavioral test change, rather than incidental R01 documentation cleanup.
 
 ## Complete candidate publication ownership
 
-**Priority:** P1. **Owner:** resolver publication. **Status:** planned in the
-[publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md).
-**Blocking:** candidate-dependent field additions and publication/rejection
-changes; not retrospective closure or independent compiler work.
+**Priority:** P1. **Owner:** resolver publication. **Status:** resolved
+(2026-09-12); implementation and acceptance are recorded in the
+[archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
+**Blocking:** resolved. Future fields and rejection changes use the implemented
+owned-product and exhaustive-assembly boundary.
 
 R02's [field inventory and decision](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
 show that centralized rollback still requires a manually maintained field list.
@@ -44,11 +45,12 @@ Retained error evidence can reference rejected declarations, so the output
 must not be mistaken for a closed executable program. This is an architectural
 follow-up, not a demonstrated new correctness defect.
 
-Implement owned selection and exhaustive assembly under the linked roadmap,
-using R03's rejection characterization. Preserve existing partial error output,
-identity allocation, class-family rejection and independent class survival.
-The implementation roadmap owns tasks and gates; this record tracks the risk
-without duplicating that implementation plan.
+Publication now validates borrowed products, selects class/hierarchy and
+executable products together, selects interfaces against that class-selected
+view, and exhaustively assembles `ResolvedProgram` once. Saved ordinary
+snapshots move into rejected output without restoration clones. Existing
+partial error output, identity allocation, class-family rejection, diagnostics,
+and independent class survival remain covered by the publication regressions.
 
 
 ## Prevent range probing from consuming absent class declarations

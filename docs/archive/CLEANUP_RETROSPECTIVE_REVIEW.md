@@ -2,7 +2,8 @@
 
 Status: complete (2026-09-12). R01–R04 evidence, decisions, verification and
 final reconciliation are accepted. This is an archived historical record;
-the active audit and publication ownership roadmap track remaining work.
+the active audit tracks remaining work. The publication follow-up is complete
+in the [archived publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md).
 
 Reviewed: 2026-09-12, revision `64b6da73b41ed2ec6afe0e1401b3735484847e6d`.
 The working tree was clean before this documentation task. Source inspection
@@ -283,7 +284,7 @@ This section records a design decision, not an implemented representation change
 **Decision:** retain the current rejection policy as compatibility behavior,
 but do not accept its manual rollback implementation as A09's final endpoint.
 Require explicit owned product selection and exhaustive final assembly through
-[the publication ownership roadmap](../roadmaps/PUBLICATION_OWNERSHIP_ROADMAP.md). This is
+[the publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md). This is
 an outstanding maintainability obligation, not a newly demonstrated compiler
 correctness failure. R03 may verify today's contract before that follow-up.
 
