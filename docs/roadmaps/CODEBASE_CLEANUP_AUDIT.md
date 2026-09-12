@@ -122,7 +122,7 @@ endpoint and names any deferred work.
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
-| [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Open | P2 | 3 | M | Medium | O | M, R |
+| [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Partial | P2 | 3 | M | Medium | O | M, R |
 | [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Open | P2 | 3 | M | Medium | O | M, E, R |
 | [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Open | P3 | 5 | XL | High | C | N, E |
 | [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | Open | P3 | 5 | XL | High | C | N, E, R |
@@ -912,6 +912,14 @@ generic runner that erases proof consumption or permits invalid stage order.
 **First PR / validation:** factor record creation; compare enabled/disabled
 reporting, changed/unchanged/error outcomes, occurrence numbering, inspection
 order, and observer-independent artifacts.
+
+**Status:** Partial. O01 introduced one private occurrence recorder for
+enabled-only timing, allocation, and ordered publication across all three
+selectable stages. Existing focused coverage preserves disabled and enabled
+reporting, occurrence identity and order, failure data, analysis usage, and
+verification counts; the full repository and Rust 1.82 gates pass. O02 still
+needs to expose the stage-specific execution boundaries and close the remaining
+duplicated accounting and ordinary failure plumbing.
 
 ### A21 — Make the shared MIR traversal easier to navigate
 

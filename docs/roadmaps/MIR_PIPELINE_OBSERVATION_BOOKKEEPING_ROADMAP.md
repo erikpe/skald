@@ -1,6 +1,6 @@
 # MIR Pipeline Observation Bookkeeping Roadmap
 
-Status: planned; O01 is next.
+Status: in progress; O01 is complete and O02 is next.
 
 This roadmap implements
 [cleanup finding A20](CODEBASE_CLEANUP_AUDIT.md#a20--factor-pipeline-observation-bookkeeping)
@@ -54,7 +54,7 @@ event framework.
 
 ## Progress
 
-- [ ] O01 — Centralize occurrence recording
+- [x] O01 — Centralize occurrence recording
 - [ ] O02 — Expose stage-specific execution boundaries and close A20
 
 ## PR-sized implementation sequence
@@ -64,24 +64,24 @@ event framework.
 **Purpose:** remove repeated timer and occurrence-vector mechanics without
 changing the runner's semantic control flow.
 
-- [ ] Add one private, cohesively named execution module for occurrence
+- [x] Add one private, cohesively named execution module for occurrence
   recording. Keep `execution::mod.rs` as the facade and expose nothing outside
   the existing execution boundary.
-- [ ] Give the recorder ownership of whether trace collection is enabled, the
+- [x] Give the recorder ownership of whether trace collection is enabled, the
   optional start time for one attempted occurrence, and ordered insertion into
   the occurrence vector. Allocate capacity only when collection is enabled.
-- [ ] Provide narrow completed and failed recording operations over the
+- [x] Provide narrow completed and failed recording operations over the
   existing typed `MirPassOccurrenceRecord` constructors. Callers continue to
   supply the semantic outcome, pass data, rewrite summary, verification count,
   and already-accounted analysis usage.
-- [ ] Migrate proof-rich, selected-transition, and final-stage record creation
+- [x] Migrate proof-rich, selected-transition, and final-stage record creation
   to the recorder. Remove the repeated `record_occurrences.then(Instant::now)`,
   conditional pushes, and standalone failure-record helper from the runner.
-- [ ] Keep `execution::measurement` responsible for the immutable record model
+- [x] Keep `execution::measurement` responsible for the immutable record model
   and `execution::statistics` responsible for aggregate counts. Do not move
   verification, snapshot reset, resealing, failure classification, or
   checkpoint callbacks into the recorder.
-- [ ] Add or refine focused tests only where existing coverage does not pin the
+- [x] Add or refine focused tests only where existing coverage does not pin the
   recorder boundary. Require empty occurrence output when disabled; exact
   schedule order and identity when enabled; unavailable data for execution and
   rewrite failures; retained pass data for output-verification failure; and
@@ -98,6 +98,22 @@ excluding elapsed durations. Run `cargo fmt --all -- --check`,
 private recorder; the runner contains no direct timer start, conditional
 occurrence push, or duplicate failed-record construction; aggregate-only and
 trace-enabled execution retain their exact observable contracts.
+
+**Delivered:** `execution::observation` now privately owns the optional timer,
+enabled-only record allocation, and ordered construction of completed and
+failed occurrence records. Proof-rich, selected-transition, and final-stage
+execution all publish through that recorder. The runner retains analysis
+accounting, aggregate statistics, verification, invalidation, resealing,
+failure classification, and checkpoint authority. Existing pipeline tests
+already cover disabled and enabled collection, exact occurrence identity and
+order, failure data availability, changed-output verification data, analysis
+usage, and verification counts, so no implementation-mirroring recorder tests
+were added.
+
+**Validation:** the 59 focused pipeline tests and the trace occurrence-rendering
+test pass. `cargo clippy --locked -p skald-compiler --all-targets -- -D
+warnings`, `make check` (including 629 golden cases), and `make msrv-check` with
+Rust 1.82 pass.
 
 ### O02 — Expose stage-specific execution boundaries and close A20
 

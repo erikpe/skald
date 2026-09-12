@@ -6,6 +6,7 @@ mod final_storage_cleanup;
 mod inspection;
 mod measurement;
 mod model;
+mod observation;
 mod runner;
 mod statistics;
 mod transition;
