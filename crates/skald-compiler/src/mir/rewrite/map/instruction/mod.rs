@@ -1,8 +1,14 @@
 //! Exhaustive dispatch across executable MIR instruction variants.
 
+mod array;
+mod io;
 mod operation;
+mod optional;
 
-pub(super) use operation::define_core_operation_traversal;
+pub(super) use {
+    array::define_array_instruction_traversal, io::define_io_instruction_traversal,
+    operation::define_core_operation_traversal, optional::define_optional_instruction_traversal,
+};
 
 macro_rules! define_instruction_dispatch {
     (($($mir_mutability:tt)*)) => {

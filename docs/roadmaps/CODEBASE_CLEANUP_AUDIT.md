@@ -952,6 +952,8 @@ attachment, body-order, and proof-metadata fragments without changing the
 generated mapper and observer surfaces. T02 placed the exhaustive instruction
 dispatcher and ordinary operation families behind a private instruction
 facade while preserving the same single generated inventory and entry paths.
+T03 placed optional, array, and I/O traversal in cohesive private instruction
+fragments without changing their ordering or semantic classifications.
 
 **Evidence:** the [MIR identity traversal facade](../../crates/skald-compiler/src/mir/rewrite/map/mod.rs)
 originated as one 2,492-line file, but importantly already defines one

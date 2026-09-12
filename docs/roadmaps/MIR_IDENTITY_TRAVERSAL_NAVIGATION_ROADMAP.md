@@ -1,6 +1,6 @@
 # MIR Identity Traversal Navigation Roadmap
 
-Status: active; T01 and T02 are complete and T03 is next.
+Status: active; T01 through T03 are complete and T04 is next.
 
 This roadmap implements
 [cleanup finding A21](CODEBASE_CLEANUP_AUDIT.md#a21--make-the-shared-mir-traversal-easier-to-navigate)
@@ -48,7 +48,7 @@ crate-private rewrite facade.
 
 - [x] T01 — Establish traversal composition and extract definition structure
 - [x] T02 — Extract core instruction and operation traversal
-- [ ] T03 — Extract aggregate and I/O instruction traversal
+- [x] T03 — Extract aggregate and I/O instruction traversal
 - [ ] T04 — Extract terminators and places, then close A21
 
 ## PR-sized implementation sequence
@@ -150,17 +150,17 @@ golden cases, and Rust 1.82.0 workspace check pass.
 **Purpose:** separate the largest nested instruction families along their MIR
 model boundaries without hiding their identity and authorization decisions.
 
-- [ ] Extract optional, optional-box, optional-shared, array, and I/O traversal
+- [x] Extract optional, optional-box, optional-shared, array, and I/O traversal
   into cohesive private instruction submodules. Keep the instruction facade as
   their composition point.
-- [ ] Preserve nested optional-source recursion, object and array place order,
+- [x] Preserve nested optional-source recursion, object and array place order,
   guards, anchors, normalized indexes, range endpoints, buffer identities, and
   every storage write authorization.
-- [ ] Retain exhaustive matching for all aggregate and I/O enums and complete
+- [x] Retain exhaustive matching for all aggregate and I/O enums and complete
   destructuring for their payload structs.
-- [ ] Avoid generic field walkers that erase semantic roles or make adding a
+- [x] Avoid generic field walkers that erase semantic roles or make adding a
   protocol-bearing identity compile without an explicit classification.
-- [ ] Add representative mapper/observer parity and semantic-role cases where
+- [x] Add representative mapper/observer parity and semantic-role cases where
   existing tests do not cover an extracted family.
 
 **Tests:** Run focused rewrite, optional, array, I/O, value-use, storage-use,
@@ -172,6 +172,21 @@ edit, import, and malformed-owner tests. Run `cargo fmt --all -- --check`,
 the instruction facade; their generated mutable and immutable walks remain one
 inventory; all classifications and ordering are preserved; and no broad
 fallback or duplicate traversal has been introduced.
+
+Implemented: private `optional`, `array`, and `io` fragments now own their
+respective instruction families beneath the instruction facade. They retain
+explicit exhaustive matches and complete destructuring, including optional
+source recursion, guards and owners, array construction and slicing state,
+aliases and anchors, normalized indexes, I/O buffers, and every existing role
+and authorization decision. Each fragment expands into both mutable mapping
+and immutable observation, leaving one structural inventory and no generic
+field walker. A source reconstruction check confirmed that the composed
+fragments reproduce the pre-T03 inventory exactly. Existing representative
+optional, array, and I/O coverage already participates in mapper/observer
+event equality, deterministic order, remapping, role, import, edit, and owner
+validation tests, so no extraction-only test was added. The 96-test focused
+rewrite suite, full repository gate with 3,146 compiler tests and 629 golden
+cases, and Rust 1.82.0 workspace check pass.
 
 ### T04 — Extract terminators and places, then close A21
 
