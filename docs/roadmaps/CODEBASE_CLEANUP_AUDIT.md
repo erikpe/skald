@@ -808,6 +808,9 @@ assignment dependencies. Do not introduce an arbitrary iteration cap.
 
 ### A18 — Reuse structural CFG and dominance queries
 
+**Implementation plan:**
+[MIR Structural CFG Analysis Roadmap](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md).
+
 **Evidence:**
 [`mir/verify/checked_scalar.rs`](../../crates/skald-compiler/src/mir/verify/checked_scalar.rs)
 builds predecessor sets and answers dominance with two graph searches per

@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| _None_ | — | — | — | — |
+| [MIR structural CFG analysis](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md) | Planned | Give verification, rewrite planning, and optimization one tolerant, deterministic owner for callable-local topology and dominance | C01 — Establish neutral structural CFG facts | Existing MIR model and strict rewrite CFG facts; completes A18 before A19 |
 
 ## Pending discovery and planning records
 
