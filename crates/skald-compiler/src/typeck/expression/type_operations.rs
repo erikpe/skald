@@ -1,7 +1,8 @@
 //! Type-test checking and checked non-owning view selection.
 
 use super::object_view::{
-    ObjectViewSource, ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
+    apply_object_view_retention, ObjectViewRetention, ObjectViewSource, ObjectViewSourceAdmission,
+    ObjectViewSourceDiagnosticContext,
 };
 use super::*;
 
@@ -74,7 +75,12 @@ impl CallableChecker<'_, '_> {
         let source_span = source.span();
         let target_class = target;
         let target = HirViewTarget::Class(target_class);
-        let operation = match self.select_checked_view(source, target, HirAccess::ReadOnly) {
+        let operation = match self.select_checked_view(
+            source,
+            target,
+            HirAccess::ReadOnly,
+            ObjectViewRetention::ImmediateConsumer,
+        ) {
             Ok(operation) => operation,
             Err(CheckedViewRejection::StaticFailure) => {
                 self.diagnostics.push(
@@ -113,6 +119,21 @@ impl CallableChecker<'_, '_> {
         &mut self,
         cast: &ResolvedObjectCastExpr,
     ) -> Option<HirCheckedObjectView> {
+        self.check_object_cast_with_retention(cast, ObjectViewRetention::ImmediateConsumer)
+    }
+
+    pub(in crate::typeck) fn check_loop_object_cast(
+        &mut self,
+        cast: &ResolvedObjectCastExpr,
+    ) -> Option<HirCheckedObjectView> {
+        self.check_object_cast_with_retention(cast, ObjectViewRetention::LoopBody)
+    }
+
+    fn check_object_cast_with_retention(
+        &mut self,
+        cast: &ResolvedObjectCastExpr,
+        retention: ObjectViewRetention,
+    ) -> Option<HirCheckedObjectView> {
         if let ResolvedObjectCastTargetMode::Shared { shared_span } = cast.target_mode {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -133,7 +154,7 @@ impl CallableChecker<'_, '_> {
         let target = self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
         let source_span = source.span();
         let access = source.access();
-        let operation = match self.select_checked_view(source, target, access) {
+        let operation = match self.select_checked_view(source, target, access, retention) {
             Ok(operation) => operation,
             Err(CheckedViewRejection::StaticFailure) => {
                 self.diagnostics.push(
@@ -254,6 +275,7 @@ impl CallableChecker<'_, '_> {
         source: ObjectViewSource,
         target: HirViewTarget,
         access: HirAccess,
+        retention: ObjectViewRetention,
     ) -> Result<CheckedViewOperation, CheckedViewRejection> {
         let relation =
             classify_object_view_relation(self.program, source.relation_source(), target);
@@ -264,6 +286,7 @@ impl CallableChecker<'_, '_> {
             return Err(CheckedViewRejection::InsufficientAccess);
         }
 
+        let source = apply_object_view_retention(source, retention);
         let view = match (relation, source, target) {
             (
                 ObjectViewRelation::StaticSuccess,

@@ -13,21 +13,21 @@ use super::{
 
 /// How long the direct consumer must keep a view's owner alive.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::typeck::expression) enum ObjectViewRetention {
+pub(in crate::typeck) enum ObjectViewRetention {
     ImmediateConsumer,
     LoopBody,
 }
 
 /// Consumer-owned input to direct object-view planning.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::typeck::expression) struct ObjectViewRequest {
+pub(in crate::typeck) struct ObjectViewRequest {
     target: HirViewTarget,
     access: HirAccess,
     retention: ObjectViewRetention,
 }
 
 impl ObjectViewRequest {
-    pub(in crate::typeck::expression) const fn new(
+    pub(in crate::typeck) const fn new(
         target: HirViewTarget,
         access: HirAccess,
         retention: ObjectViewRetention,
@@ -39,40 +39,40 @@ impl ObjectViewRequest {
         }
     }
 
-    pub(in crate::typeck::expression) const fn target(self) -> HirViewTarget {
+    pub(in crate::typeck) const fn target(self) -> HirViewTarget {
         self.target
     }
 
-    pub(in crate::typeck::expression) const fn access(self) -> HirAccess {
+    pub(in crate::typeck) const fn access(self) -> HirAccess {
         self.access
     }
 }
 
 /// A source and request that cannot form a direct object view.
-pub(in crate::typeck::expression) enum ObjectViewProblem {
+pub(in crate::typeck) enum ObjectViewProblem {
     InsufficientAccess(Box<ObjectViewSource>, ObjectViewRequest),
     IncompatibleTarget(Box<ObjectViewSource>, ObjectViewRequest),
     RequiresExplicitCheckedOperation(Box<ObjectViewSource>, ObjectViewRequest),
 }
 
 /// A fully checked direct view, consumed when its existing HIR carrier is made.
-pub(in crate::typeck::expression) struct ObjectViewPlan {
+pub(in crate::typeck) struct ObjectViewPlan {
     source: ObjectViewSource,
     request: ObjectViewRequest,
-    produced_projections: Vec<ObjectProjection>,
+    target_projections: Vec<ObjectProjection>,
 }
 
 impl ObjectViewPlan {
-    pub(in crate::typeck::expression) fn into_view(self) -> HirObjectView {
-        self.source.into_view_with_produced_projections(
+    pub(in crate::typeck) fn into_view(self) -> HirObjectView {
+        self.source.into_view_with_target_projections(
             self.request.target,
             self.request.access,
-            self.produced_projections,
+            self.target_projections,
         )
     }
 }
 
-pub(in crate::typeck::expression) fn plan_object_view(
+pub(in crate::typeck) fn plan_object_view(
     program: &ResolvedProgram,
     source: ObjectViewSource,
     request: ObjectViewRequest,
@@ -113,13 +113,37 @@ pub(in crate::typeck::expression) fn plan_object_view(
     }
 
     let actual = source.static_target();
-    let produced_projections = static_class_up_projections(program, actual, request.target);
-    let source = prepare_source(program, source, request, &produced_projections);
+    let target_projections = static_class_up_projections(program, actual, request.target);
+    let source = prepare_source(program, source, request, &target_projections);
+    let source = apply_object_view_retention(source, request.retention);
     Ok(ObjectViewPlan {
         source,
         request,
-        produced_projections,
+        target_projections,
     })
+}
+
+pub(in crate::typeck) fn plan_resolved_object_view(
+    program: &ResolvedProgram,
+    source: ObjectViewSource,
+    request: ObjectViewRequest,
+) -> HirObjectView {
+    match plan_object_view(program, source, request) {
+        Ok(plan) => plan.into_view(),
+        Err(_) => panic!("resolved object receiver must produce a valid direct-view plan"),
+    }
+}
+
+pub(in crate::typeck) fn apply_object_view_retention(
+    source: ObjectViewSource,
+    retention: ObjectViewRetention,
+) -> ObjectViewSource {
+    match (source, retention) {
+        (ObjectViewSource::Shared(source), ObjectViewRetention::LoopBody) => {
+            ObjectViewSource::Shared(source.into_iteration_source())
+        }
+        (source, ObjectViewRetention::ImmediateConsumer | ObjectViewRetention::LoopBody) => source,
+    }
 }
 
 fn uses_published_target(source: &ObjectViewSource) -> bool {
@@ -139,6 +163,12 @@ fn direct_relation_source(source: &ObjectViewSource) -> ObjectViewRelationSource
         // place, just as its ancestor projections do.
         ObjectViewSource::Class { place, .. } => {
             ObjectViewRelationSource::ExactClass(place.class())
+        }
+        ObjectViewSource::Static { class, .. }
+        | ObjectViewSource::Produced { class, .. }
+        | ObjectViewSource::Optional { class, .. }
+        | ObjectViewSource::ArrayElement { class, .. } => {
+            ObjectViewRelationSource::ExactClass(*class)
         }
         // Direct shared-backed views are limited by their published static
         // target even when a freshly produced owner exposes its exact class.
@@ -165,20 +195,19 @@ fn prepare_source(
             ObjectViewSource::Class { place, origin }
         }
         ObjectViewSource::Shared(mut source) => {
-            source.set_projections(projections.to_vec());
-            if request.retention == ObjectViewRetention::LoopBody {
-                source = source.into_iteration_source();
-            }
+            source.select_target(request.target, projections.iter().copied());
             ObjectViewSource::Shared(source)
         }
         ObjectViewSource::Optional {
             view,
+            dynamic_class,
             class,
             projections: mut source_projections,
         } => {
             source_projections.extend_from_slice(projections);
             ObjectViewSource::Optional {
                 view,
+                dynamic_class,
                 class,
                 projections: source_projections,
             }

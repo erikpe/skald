@@ -18,10 +18,14 @@ use crate::typeck::function::CallableChecker;
 /// its pointee can be exposed as a non-owning object place.
 ///
 /// Stable bindings borrow directly. Replaceable places and produced owners
-/// retain their complete allocation through an explicit hidden anchor.
-pub(in crate::typeck::expression) struct CheckedSharedPointee {
+/// retain their complete allocation through an explicit hidden anchor. The
+/// owner target remains separate from the target selected by inline
+/// projections so HIR lifetime provenance never loses the allocation root.
+pub(in crate::typeck) struct CheckedSharedPointee {
     source: CheckedSharedPointeeSource,
+    owner_target: HirViewTarget,
     target: HirViewTarget,
+    dynamic_class: Option<crate::identity::ClassId>,
     access: HirAccess,
     projections: Vec<ObjectProjection>,
     span: Span,
@@ -36,82 +40,85 @@ enum CheckedSharedPointeeSource {
 }
 
 impl CheckedSharedPointee {
-    pub(in crate::typeck::expression) fn stable(
+    pub(in crate::typeck) fn stable(
         binding: BindingId,
-        target: HirViewTarget,
+        owner_target: HirViewTarget,
         access: HirAccess,
         projections: Vec<ObjectProjection>,
         span: Span,
     ) -> Self {
         Self {
             source: CheckedSharedPointeeSource::Stable(binding),
-            target,
+            owner_target,
+            target: owner_target,
+            dynamic_class: None,
             access,
             projections,
             span,
         }
     }
 
-    pub(in crate::typeck::expression) const fn access(&self) -> HirAccess {
+    pub(in crate::typeck) const fn access(&self) -> HirAccess {
         self.access
     }
 
-    pub(in crate::typeck::expression) const fn span(&self) -> Span {
+    pub(in crate::typeck) const fn span(&self) -> Span {
         self.span
     }
 
-    pub(in crate::typeck::expression) const fn static_target(&self) -> HirViewTarget {
+    pub(in crate::typeck) const fn static_target(&self) -> HirViewTarget {
         self.target
     }
 
-    pub(in crate::typeck::expression) fn exact_dynamic_class(
-        &self,
-    ) -> Option<crate::identity::ClassId> {
-        match &self.source {
-            CheckedSharedPointeeSource::Stable(_) => None,
-            CheckedSharedPointeeSource::Anchored(source) => source.exact_dynamic_class(),
-        }
+    const fn owner_target(&self) -> HirViewTarget {
+        self.owner_target
     }
 
-    pub(in crate::typeck::expression) const fn stable_binding(&self) -> Option<BindingId> {
+    pub(in crate::typeck) fn exact_dynamic_class(&self) -> Option<crate::identity::ClassId> {
+        self.dynamic_class
+    }
+
+    pub(in crate::typeck) const fn stable_binding(&self) -> Option<BindingId> {
         match &self.source {
             CheckedSharedPointeeSource::Stable(binding) => Some(*binding),
             CheckedSharedPointeeSource::Anchored(_) => None,
         }
     }
 
-    pub(in crate::typeck::expression) fn set_span(&mut self, span: Span) {
+    pub(in crate::typeck) fn set_span(&mut self, span: Span) {
         self.span = span;
     }
 
-    pub(in crate::typeck::expression) fn set_projections(
+    pub(in crate::typeck) fn select_target(
         &mut self,
-        projections: Vec<ObjectProjection>,
+        target: HirViewTarget,
+        projections: impl IntoIterator<Item = ObjectProjection>,
     ) {
-        self.projections = projections;
+        self.target = target;
+        self.projections.extend(projections);
     }
 
-    pub(in crate::typeck::expression) fn projections(&self) -> &[ObjectProjection] {
+    pub(in crate::typeck) fn projections(&self) -> &[ObjectProjection] {
         &self.projections
     }
 
-    pub(in crate::typeck::expression) fn origin(&self) -> HirObjectOrigin {
+    pub(in crate::typeck) fn origin(&self) -> HirObjectOrigin {
         match &self.source {
             CheckedSharedPointeeSource::Stable(binding) => HirObjectOrigin::Shared {
                 binding: *binding,
-                static_target: self.target,
+                static_target: self.owner_target,
                 access: self.access,
                 span: self.span,
             },
             CheckedSharedPointeeSource::Anchored(_) => HirObjectOrigin::AnchoredShared {
-                static_target: self.target,
+                static_target: self.owner_target,
                 access: self.access,
                 span: self.span,
             },
         }
     }
 
-    pub(in crate::typeck::expression) fn into_view(
+    pub(in crate::typeck) fn into_view(
         self,
         target: HirViewTarget,
         access: HirAccess,
@@ -121,7 +128,7 @@ impl CheckedSharedPointee {
             CheckedSharedPointeeSource::Stable(binding) => HirObjectView {
                 source: HirViewSource::Shared {
                     binding,
-                    target: self.target,
+                    target: self.owner_target,
                     access: self.access,
                     projections: self.projections,
                     span: self.span,
@@ -134,7 +141,7 @@ impl CheckedSharedPointee {
             CheckedSharedPointeeSource::Anchored(source) => HirObjectView {
                 source: HirViewSource::AnchoredShared {
                     source: Box::new(source),
-                    target: self.target,
+                    target: self.owner_target,
                     access: self.access,
                     projections: self.projections,
                     span: self.span,
@@ -149,12 +156,12 @@ impl CheckedSharedPointee {
 
     /// Force a strong owner anchor for a view retained across a loop body.
     /// Even a syntactically stable binding may be replaced by that body.
-    pub(in crate::typeck::expression) fn into_iteration_source(mut self) -> Self {
+    pub(in crate::typeck) fn into_iteration_source(mut self) -> Self {
         if let Some(binding) = self.stable_binding() {
             self.source = CheckedSharedPointeeSource::Anchored(HirSharedSource::Place(
                 HirSharedPlace::Binding {
                     binding,
-                    target: view_shared_target(self.target),
+                    target: view_shared_target(self.owner_target),
                     span: self.span,
                 },
             ));
@@ -164,7 +171,7 @@ impl CheckedSharedPointee {
 }
 
 impl CallableChecker<'_, '_> {
-    pub(in crate::typeck::expression) fn check_explicit_shared_pointee(
+    pub(in crate::typeck) fn check_explicit_shared_pointee(
         &mut self,
         dereference: &ResolvedDereferenceExpr,
         projections: Vec<ObjectProjection>,
@@ -190,7 +197,7 @@ impl CallableChecker<'_, '_> {
         let resolved_target = shared_target_view(crate::typeck::shared::lower_shared_target(
             dereference.target,
         ));
-        if pointee.static_target() != resolved_target {
+        if pointee.owner_target() != resolved_target {
             self.diagnostics.push(
                 Diagnostic::error(
                     crate::typeck::program::INVALID_OBJECT_CONTEXT,
@@ -222,27 +229,70 @@ impl CallableChecker<'_, '_> {
         projections: Vec<ObjectProjection>,
         span: Span,
     ) -> Option<CheckedSharedPointee> {
-        let target = shared_target_view(source.target());
+        let owner_target = shared_target_view(source.target());
+        let target = selected_target(self.program, owner_target, &projections);
+        let dynamic_class =
+            selected_dynamic_class(self.program, source.exact_dynamic_class(), &projections);
         match source {
             HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
                 let access = self.binding_access(binding, false, span)?;
-                Some(CheckedSharedPointee::stable(
-                    binding,
-                    target,
-                    access,
-                    projections,
-                    span,
-                ))
+                let mut pointee =
+                    CheckedSharedPointee::stable(binding, owner_target, access, projections, span);
+                pointee.target = target;
+                Some(pointee)
             }
             source => Some(CheckedSharedPointee {
                 source: CheckedSharedPointeeSource::Anchored(source),
+                owner_target,
                 target,
+                dynamic_class,
                 access: HirAccess::Mutable,
                 projections,
                 span,
             }),
         }
     }
+}
+
+fn selected_dynamic_class(
+    program: &crate::resolve::ResolvedProgram,
+    owner: Option<crate::identity::ClassId>,
+    projections: &[ObjectProjection],
+) -> Option<crate::identity::ClassId> {
+    projections
+        .iter()
+        .fold(owner, |dynamic, projection| match projection {
+            ObjectProjection::Base(_) => dynamic,
+            ObjectProjection::Field(field) => Some(projected_field_class(program, *field)),
+        })
+}
+
+fn selected_target(
+    program: &crate::resolve::ResolvedProgram,
+    owner: HirViewTarget,
+    projections: &[ObjectProjection],
+) -> HirViewTarget {
+    projections
+        .iter()
+        .fold(owner, |_, projection| match projection {
+            ObjectProjection::Base(class) => HirViewTarget::Class(*class),
+            ObjectProjection::Field(field) => {
+                HirViewTarget::Class(projected_field_class(program, *field))
+            }
+        })
+}
+
+fn projected_field_class(
+    program: &crate::resolve::ResolvedProgram,
+    field: crate::identity::FieldId,
+) -> crate::identity::ClassId {
+    let declaration = program
+        .field(field)
+        .expect("resolved shared projection must reference a field");
+    let crate::resolve::ResolvedTypeKind::Class(class) = declaration.type_syntax.kind else {
+        unreachable!("resolved shared object projection must have a class type")
+    };
+    class
 }
 
 pub(in crate::typeck::expression) const fn shared_target_view(

@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Object-view planning](OBJECT_VIEW_PLANNING_ROADMAP.md) | In progress | Give reusable checked object-view source facts and direct-view planning one private type-checking owner | V03 — Migrate view receivers and iteration retention | Accepted object-view design; existing HIR provenance, anchor, guard, and relation contracts |
+| [Object-view planning](OBJECT_VIEW_PLANNING_ROADMAP.md) | In progress | Give reusable checked object-view source facts and direct-view planning one private type-checking owner | V04 — Reuse source facts in checked operations and close A14 | Accepted object-view design; existing HIR provenance, anchor, guard, and relation contracts |
 
 ## Pending discovery and planning records
 

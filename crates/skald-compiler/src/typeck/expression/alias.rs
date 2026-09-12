@@ -7,7 +7,7 @@ use super::object_view::{
 use super::*;
 
 use crate::{
-    hir::{HirAccess, HirCallArgument, HirObjectView, HirViewTarget, Type},
+    hir::{HirAccess, HirCallArgument, HirViewTarget, Type},
     resolve::ResolvedExpression,
     source::Span,
     typeck::program::{
@@ -21,14 +21,6 @@ const ALIAS_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext = ObjectViewSo
     "alias argument must designate an object",
     "alias argument must use an object place, an explicit shared dereference, or a compatible produced object",
 );
-
-const ITERATION_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext =
-    ObjectViewSourceDiagnosticContext::new(
-        "iteration receiver",
-        crate::typeck::program::GENERAL_ITERATION_UNSUPPORTED,
-        "iteration requires a read-only object receiver",
-        "iteration requires an object view that is safe for the whole loop",
-    );
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_alias_argument(
@@ -579,30 +571,6 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    /// Builds a read-only loop-duration view using the ordinary object-view
-    /// source rules. Shared bindings are deliberately anchored: the loop body
-    /// may replace the owner binding without invalidating the retained view.
-    pub(in crate::typeck) fn check_iteration_view(
-        &mut self,
-        expression: &ResolvedExpression,
-        target: HirViewTarget,
-    ) -> Option<(Type, HirObjectView)> {
-        let source = self.check_object_view_source(
-            expression,
-            ObjectViewSourceAdmission::ExistingOrProducedObject,
-            ITERATION_OBJECT_VIEW_SOURCE,
-        )?;
-        let iterable = view_target_type(source.static_target());
-        debug_assert!(source.access().permits(HirAccess::ReadOnly));
-        let source = match source {
-            ObjectViewSource::Shared(shared) => {
-                ObjectViewSource::Shared(shared.into_iteration_source())
-            }
-            source => source,
-        };
-        Some((iterable, source.into_view(target, HirAccess::ReadOnly)))
-    }
-
     fn report_alias_object_view_problem(
         &mut self,
         problem: ObjectViewProblem,
@@ -649,6 +617,21 @@ impl CallableChecker<'_, '_> {
             match source {
                 ObjectViewSource::Class { place, .. } => {
                     let actual = HirViewTarget::Class(place.class());
+                    let label = match target {
+                        HirViewTarget::Class(_) => "this place has the wrong class",
+                        HirViewTarget::Interface(_) => {
+                            "this class does not implement the target interface"
+                        }
+                        HirViewTarget::Obj => unreachable!("every object provides an Obj view"),
+                    };
+                    mismatch(
+                        &view_target_name(self.program, actual),
+                        &view_target_name(self.program, target),
+                        label,
+                    )
+                }
+                ObjectViewSource::Static { class, .. } => {
+                    let actual = HirViewTarget::Class(class);
                     let label = match target {
                         HirViewTarget::Class(_) => "this place has the wrong class",
                         HirViewTarget::Interface(_) => {
@@ -767,13 +750,5 @@ const fn alias_object_view_target(expected: Type) -> Option<HirViewTarget> {
         | Type::Array(_)
         | Type::Shared(_)
         | Type::Optional(_) => None,
-    }
-}
-
-const fn view_target_type(target: HirViewTarget) -> Type {
-    match target {
-        HirViewTarget::Class(class) => Type::Class(class),
-        HirViewTarget::Interface(interface) => Type::Interface(interface),
-        HirViewTarget::Obj => Type::Obj,
     }
 }

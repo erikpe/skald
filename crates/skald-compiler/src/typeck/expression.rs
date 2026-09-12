@@ -36,8 +36,9 @@ mod static_field;
 mod type_operations;
 
 pub(in crate::typeck) use object_view::{
-    class_provides_view, classify_object_view_relation, ObjectViewRelation,
-    ObjectViewRelationSource,
+    class_provides_view, classify_object_view_relation, plan_resolved_object_view,
+    ObjectViewRelation, ObjectViewRelationSource, ObjectViewRequest, ObjectViewRetention,
+    ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
 };
 pub(in crate::typeck) use operator::is_selected_operator_expression;
 pub(in crate::typeck) use place::{CheckedReceiverCarrier, ObjectPlaceUse};

@@ -1,8 +1,8 @@
 use super::*;
 use crate::typeck::expression::object_view::CheckedSharedPointee;
 use crate::{
-    hir::{HirObjectOrigin, HirViewSource},
-    identity::{BindingId, ClassId, FunctionId, InterfaceId, LocalId},
+    hir::{HirObjectOrigin, HirStaticPlace, HirViewSource},
+    identity::{BindingId, ClassId, FunctionId, InterfaceId, LocalId, StaticFieldId},
     object_path::ObjectPath,
     test_support::resolve_source,
 };
@@ -108,6 +108,46 @@ fn class_and_shared_plans_preserve_base_projection_order() {
         panic!("immediate stable shared plans must borrow the binding")
     };
     assert_eq!(projections, expected);
+}
+
+#[test]
+fn static_plans_preserve_complete_origin_and_append_target_projections() {
+    let program = resolved_view_graph();
+    let root = ClassId::new(0);
+    let middle = ClassId::new(1);
+    let leaf = ClassId::new(2);
+    let span = program.class(leaf).unwrap().span;
+    let place = HirStaticPlace {
+        field: StaticFieldId::new(leaf, 0),
+        span,
+    };
+
+    let view = planned(plan_object_view(
+        &program,
+        ObjectViewSource::Static {
+            place,
+            dynamic_class: leaf,
+            class: leaf,
+            projections: Vec::new(),
+            span,
+        },
+        immediate(HirViewTarget::Class(root), HirAccess::ReadOnly),
+    ))
+    .into_view();
+
+    assert!(matches!(
+        *view.origin,
+        HirObjectOrigin::Static {
+            place: origin_place,
+            dynamic_class,
+        } if origin_place == place && dynamic_class == leaf
+    ));
+    assert!(matches!(
+        view.source,
+        HirViewSource::Static { place: source_place, ref projections }
+            if source_place == place
+                && projections == &[ObjectProjection::Base(middle), ObjectProjection::Base(root)]
+    ));
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # Object-View Planning Roadmap
 
-Status: in progress; V01 and V02 are complete and V03 is next.
+Status: in progress; V01 through V03 are complete and V04 is next.
 
 This roadmap implements
 [cleanup finding A14](CODEBASE_CLEANUP_AUDIT.md#a14--separate-object-view-planning-from-alias-argument-checking)
@@ -52,7 +52,7 @@ current semantic owners.
 
 - [x] V01 — Establish the facade and checked source product
 - [x] V02 — Introduce direct-view planning and migrate object aliases
-- [ ] V03 — Migrate view receivers and iteration retention
+- [x] V03 — Migrate view receivers and iteration retention
 - [ ] V04 — Reuse source facts in checked operations and close A14
 
 ## PR-sized implementation sequence
@@ -148,21 +148,21 @@ diagnostic equivalence; and no obsolete object-alias planning path remains.
 consumers and make iteration's longer shared-owner retention a request-time
 decision rather than a post-construction mutation.
 
-- [ ] Identify receiver carriers already represented by `HirObjectView` and
+- [x] Identify receiver carriers already represented by `HirObjectView` and
   route their source facts, requested target/access, and immediate retention
   through the planner. Add the existing static-object carrier to the source
   vocabulary if the migration requires it.
-- [ ] Keep ordinary `HirObjectPlace`, checked receiver-place carriers, member
+- [x] Keep ordinary `HirObjectPlace`, checked receiver-place carriers, member
   selection, and receiver-specific diagnostics under `place`, `call`, and
   receiver checking.
-- [ ] Replace iteration's generic view construction followed by
+- [x] Replace iteration's generic view construction followed by
   `anchor_checked_iteration_source` mutation with a read-only `LoopBody`
   request that selects the correct shared anchor before HIR construction.
-- [ ] Keep protocol selection, iterable type checking, guarded optional
+- [x] Keep protocol selection, iterable type checking, guarded optional
   binding handling, and `HirForIn` assembly in the iteration checker.
-- [ ] Remove receiver and iteration view-construction helpers made redundant by
+- [x] Remove receiver and iteration view-construction helpers made redundant by
   the planner, including post-hoc retention mutation.
-- [ ] Document the type-checking boundary in living compiler documentation if
+- [x] Document the type-checking boundary in living compiler documentation if
   its ownership or lifetime contract is not already described there.
 
 **Tests:** Pin HIR for produced receivers, static object sources, shared
@@ -180,6 +180,15 @@ iteration views use the typed planner; loop-duration anchoring is selected by
 retention policy before HIR construction; place-specific carriers and
 protocol logic remain with their owners; and evaluation, lifetime, HIR, MIR,
 diagnostic, and native observations are unchanged.
+
+Implemented: produced, static, unstable shared, optional-payload, optional-box,
+and interface receiver views now enter the direct planner with immediate
+retention. Ordinary places, array-element carriers, and checked receiver
+carriers keep their existing representations. Protocol iteration requests
+loop-body retention before view construction, including checked casts, and no
+longer mutates completed HIR to install an anchor. Shared projected sources
+retain separate owner and selected targets so nested fields and later ancestor
+projections preserve both allocation provenance and direct compatibility.
 
 ### V04 — Reuse source facts in checked operations and close A14
 

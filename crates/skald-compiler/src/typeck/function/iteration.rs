@@ -15,9 +15,23 @@ use crate::{
 };
 
 use super::{
-    super::program::{lower_type, lower_type_kind, GENERAL_ITERATION_UNSUPPORTED},
+    super::{
+        expression::{
+            plan_resolved_object_view, ObjectViewRequest, ObjectViewRetention,
+            ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
+        },
+        program::{lower_type, lower_type_kind, GENERAL_ITERATION_UNSUPPORTED},
+    },
     CallableChecker, CheckedStatement,
 };
+
+const ITERATION_OBJECT_VIEW_SOURCE: ObjectViewSourceDiagnosticContext =
+    ObjectViewSourceDiagnosticContext::new(
+        "iteration receiver",
+        GENERAL_ITERATION_UNSUPPORTED,
+        "iteration requires a read-only object receiver",
+        "iteration requires an object view that is safe for the whole loop",
+    );
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_for_in_statement(&mut self, statement: &ResolvedForIn) -> CheckedStatement {
@@ -145,9 +159,8 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirIterationReceiver> {
         let target = HirViewTarget::Interface(statement.selection.interface);
         let (iterable, carrier) = if let Some(cast) = iteration_cast(iterable_expression) {
-            let mut checked = self.check_object_cast(cast)?;
+            let mut checked = self.check_loop_object_cast(cast)?;
             let iterable = view_target_type(checked.view.target);
-            anchor_checked_iteration_source(&mut checked.view);
             checked.consumer_target = target;
             checked.consumer_access = HirAccess::ReadOnly;
             (
@@ -155,7 +168,17 @@ impl CallableChecker<'_, '_> {
                 HirIterationReceiverCarrier::Checked(Box::new(checked)),
             )
         } else {
-            let (iterable, view) = self.check_iteration_view(iterable_expression, target)?;
+            let source = self.check_object_view_source(
+                iterable_expression,
+                ObjectViewSourceAdmission::ExistingOrProducedObject,
+                ITERATION_OBJECT_VIEW_SOURCE,
+            )?;
+            let iterable = view_target_type(source.static_target());
+            let view = plan_resolved_object_view(
+                self.program,
+                source,
+                ObjectViewRequest::new(target, HirAccess::ReadOnly, ObjectViewRetention::LoopBody),
+            );
             (iterable, HirIterationReceiverCarrier::View(view))
         };
         Some(HirIterationReceiver {
@@ -370,50 +393,6 @@ const fn view_target_type(target: HirViewTarget) -> Type {
         HirViewTarget::Class(class) => Type::Class(class),
         HirViewTarget::Interface(interface) => Type::Interface(interface),
         HirViewTarget::Obj => Type::Obj,
-    }
-}
-
-fn anchor_checked_iteration_source(view: &mut crate::hir::HirObjectView) {
-    let crate::hir::HirViewSource::Shared {
-        binding,
-        target,
-        access,
-        projections,
-        span,
-    } = &view.source
-    else {
-        return;
-    };
-    let binding = *binding;
-    let target = *target;
-    let access = *access;
-    let projections = projections.clone();
-    let span = *span;
-    view.source = crate::hir::HirViewSource::AnchoredShared {
-        source: Box::new(crate::hir::HirSharedSource::Place(
-            crate::hir::HirSharedPlace::Binding {
-                binding,
-                target: view_shared_target(target),
-                span,
-            },
-        )),
-        target,
-        access,
-        projections,
-        span,
-    };
-    *view.origin = crate::hir::HirObjectOrigin::AnchoredShared {
-        static_target: target,
-        access,
-        span,
-    };
-}
-
-const fn view_shared_target(target: HirViewTarget) -> crate::hir::HirSharedTarget {
-    match target {
-        HirViewTarget::Class(class) => crate::hir::HirSharedTarget::Class(class),
-        HirViewTarget::Interface(interface) => crate::hir::HirSharedTarget::Interface(interface),
-        HirViewTarget::Obj => crate::hir::HirSharedTarget::Obj,
     }
 }
 

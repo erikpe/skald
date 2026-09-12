@@ -4,8 +4,7 @@ use super::*;
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind, HirInterfaceCallTarget,
-        HirInterfaceReceiver, HirMethodCallTarget, HirObjectOrigin, HirObjectView, HirViewSource,
-        HirViewTarget,
+        HirInterfaceReceiver, HirMethodCallTarget, HirObjectOrigin, HirViewTarget,
     },
     identity::BindingId,
     resolve::{ResolvedMethodDispatch, ResolvedParameterBindingMode},
@@ -118,63 +117,71 @@ impl CallableChecker<'_, '_> {
             crate::resolve::ResolvedInterfaceReceiver::Binding { binding, span } => {
                 let target = HirViewTarget::Interface(call.interface);
                 let access = self.binding_access(*binding, false, *span)?;
-                let view = HirObjectView {
-                    source: HirViewSource::Forwarded {
+                let view = super::object_view::plan_resolved_object_view(
+                    self.program,
+                    super::object_view::ObjectViewSource::Interface {
                         binding: *binding,
-                        target,
+                        interface: call.interface,
                         access,
                         span: *span,
                     },
-                    origin: Box::new(HirObjectOrigin::Forwarded {
-                        binding: *binding,
-                        static_target: target,
+                    super::object_view::ObjectViewRequest::new(
+                        target,
                         access,
-                        dispatch_limit: None,
-                        span: *span,
-                    }),
-                    target,
-                    access,
-                    span: *span,
-                };
+                        super::object_view::ObjectViewRetention::ImmediateConsumer,
+                    ),
+                );
                 (access, HirInterfaceReceiver::View(view))
             }
             crate::resolve::ResolvedInterfaceReceiver::Object(receiver) => {
-                let checked = self.check_object_receiver(receiver, ObjectPlaceUse::Member)?;
-                let access = checked.access();
-                let class = checked.class();
                 let target = HirViewTarget::Interface(call.interface);
-                debug_assert!(super::object_view::class_provides_view(
-                    self.program,
-                    class,
+                let checked = self.check_object_receiver_for_consumer(
+                    receiver,
+                    ObjectPlaceUse::Member,
                     target,
-                ));
+                )?;
+                let access = checked.access();
                 let receiver = match checked.carrier {
                     CheckedReceiverCarrier::Checked { mut view, .. } => {
                         view.consumer_target = target;
                         view.consumer_access = required_access;
                         HirInterfaceReceiver::Checked(view)
                     }
-                    CheckedReceiverCarrier::View { mut view, .. } => {
-                        view.target = target;
-                        view.access = access;
-                        HirInterfaceReceiver::View(*view)
-                    }
+                    CheckedReceiverCarrier::View { view, .. } => HirInterfaceReceiver::View(*view),
                     carrier => {
                         let source = match carrier {
-                            CheckedReceiverCarrier::Place(place) => HirViewSource::Place(place),
-                            CheckedReceiverCarrier::ArrayElement { element, .. } => {
-                                HirViewSource::ArrayElement(element)
+                            CheckedReceiverCarrier::Place(place) => {
+                                super::object_view::ObjectViewSource::Class {
+                                    place,
+                                    origin: checked.origin,
+                                }
+                            }
+                            CheckedReceiverCarrier::ArrayElement { element, place } => {
+                                let HirObjectOrigin::Exact { dynamic_class, .. } = checked.origin
+                                else {
+                                    unreachable!(
+                                        "array-element receiver must retain exact provenance"
+                                    )
+                                };
+                                super::object_view::ObjectViewSource::ArrayElement {
+                                    element,
+                                    dynamic_class,
+                                    class: place.class(),
+                                    span: call.receiver_span,
+                                }
                             }
                             CheckedReceiverCarrier::Checked { .. }
                             | CheckedReceiverCarrier::View { .. } => unreachable!(),
                         };
-                        HirInterfaceReceiver::View(HirObjectView {
+                        HirInterfaceReceiver::View(super::object_view::plan_resolved_object_view(
+                            self.program,
                             source,
-                            origin: Box::new(checked.origin),
-                            target,
-                            access,
-                            span: call.receiver_span,
-                        })
+                            super::object_view::ObjectViewRequest::new(
+                                target,
+                                access,
+                                super::object_view::ObjectViewRetention::ImmediateConsumer,
+                            ),
+                        ))
                     }
                 };
                 (access, receiver)
@@ -197,15 +204,33 @@ impl CallableChecker<'_, '_> {
                     call.receiver_span,
                 )?;
                 let access = pointee.access();
-                let view = pointee.into_view(target, access);
+                let view = super::object_view::plan_resolved_object_view(
+                    self.program,
+                    super::object_view::ObjectViewSource::Shared(pointee),
+                    super::object_view::ObjectViewRequest::new(
+                        target,
+                        access,
+                        super::object_view::ObjectViewRetention::ImmediateConsumer,
+                    ),
+                );
                 (access, HirInterfaceReceiver::View(view))
             }
             crate::resolve::ResolvedInterfaceReceiver::OptionalBoxPayload(unwrap) => {
                 let view = self.check_optional_box_object_view(unwrap)?;
                 let access = view.access;
                 let target = HirViewTarget::Interface(call.interface);
-                let view =
-                    super::optional_box_view::into_object_view(view, target, access, Vec::new());
+                let view = super::object_view::plan_resolved_object_view(
+                    self.program,
+                    super::object_view::ObjectViewSource::OptionalBox {
+                        view,
+                        projections: Vec::new(),
+                    },
+                    super::object_view::ObjectViewRequest::new(
+                        target,
+                        access,
+                        super::object_view::ObjectViewRetention::ImmediateConsumer,
+                    ),
+                );
                 (access, HirInterfaceReceiver::View(view))
             }
         };

@@ -16,7 +16,7 @@ use super::{CheckedSharedPointee, ObjectViewRelationSource};
 
 /// The source families a consumer permits before target planning begins.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::typeck::expression) enum ObjectViewSourceAdmission {
+pub(in crate::typeck) enum ObjectViewSourceAdmission {
     ExistingObjectPlace,
     ExistingOrProducedObject,
 }
@@ -32,7 +32,7 @@ impl ObjectViewSourceAdmission {
 /// Admission is passed separately so diagnostic phrasing cannot silently
 /// widen the accepted source families.
 #[derive(Clone, Copy)]
-pub(in crate::typeck::expression) struct ObjectViewSourceDiagnosticContext {
+pub(in crate::typeck) struct ObjectViewSourceDiagnosticContext {
     source_context: &'static str,
     diagnostic_code: &'static str,
     object_message: &'static str,
@@ -40,7 +40,7 @@ pub(in crate::typeck::expression) struct ObjectViewSourceDiagnosticContext {
 }
 
 impl ObjectViewSourceDiagnosticContext {
-    pub(in crate::typeck::expression) const fn new(
+    pub(in crate::typeck) const fn new(
         source_context: &'static str,
         diagnostic_code: &'static str,
         object_message: &'static str,
@@ -66,13 +66,13 @@ impl ObjectViewSourceDiagnosticContext {
         self.object_message
     }
 
-    pub(in crate::typeck::expression) const fn place_message(self) -> &'static str {
+    pub(in crate::typeck) const fn place_message(self) -> &'static str {
         self.place_message
     }
 }
 
 /// A source checked exactly once with the HIR provenance needed by consumers.
-pub(in crate::typeck::expression) enum ObjectViewSource {
+pub(in crate::typeck) enum ObjectViewSource {
     Class {
         place: HirObjectPlace,
         origin: HirObjectOrigin,
@@ -88,15 +88,24 @@ pub(in crate::typeck::expression) enum ObjectViewSource {
         access: HirAccess,
         span: Span,
     },
+    Static {
+        place: crate::hir::HirStaticPlace,
+        dynamic_class: crate::identity::ClassId,
+        class: crate::identity::ClassId,
+        projections: Vec<crate::object_path::ObjectProjection>,
+        span: Span,
+    },
     Shared(CheckedSharedPointee),
     Produced {
         source: crate::hir::HirObjectProducer,
+        dynamic_class: crate::identity::ClassId,
         class: crate::identity::ClassId,
         projections: Vec<crate::object_path::ObjectProjection>,
         span: Span,
     },
     Optional {
         view: crate::hir::HirCheckedOptionalView,
+        dynamic_class: crate::identity::ClassId,
         class: crate::identity::ClassId,
         projections: Vec<crate::object_path::ObjectProjection>,
     },
@@ -106,16 +115,18 @@ pub(in crate::typeck::expression) enum ObjectViewSource {
     },
     ArrayElement {
         element: Box<crate::hir::HirArrayElementPlace>,
+        dynamic_class: crate::identity::ClassId,
         class: crate::identity::ClassId,
         span: Span,
     },
 }
 
 impl ObjectViewSource {
-    pub(in crate::typeck::expression) const fn access(&self) -> HirAccess {
+    pub(in crate::typeck) const fn access(&self) -> HirAccess {
         match self {
             Self::Class { place, .. } => place.access,
             Self::Obj { access, .. } | Self::Interface { access, .. } => *access,
+            Self::Static { .. } => HirAccess::Mutable,
             Self::Shared(source) => source.access(),
             Self::Produced { .. } => HirAccess::ReadOnly,
             Self::Optional { view, .. } => view.access,
@@ -124,10 +135,11 @@ impl ObjectViewSource {
         }
     }
 
-    pub(in crate::typeck::expression) const fn span(&self) -> Span {
+    pub(in crate::typeck) const fn span(&self) -> Span {
         match self {
             Self::Class { place, .. } => place.span(),
             Self::Obj { span, .. } | Self::Interface { span, .. } => *span,
+            Self::Static { span, .. } => *span,
             Self::Shared(source) => source.span(),
             Self::Produced { span, .. } => *span,
             Self::Optional { view, .. } => view.span,
@@ -136,11 +148,12 @@ impl ObjectViewSource {
         }
     }
 
-    pub(in crate::typeck::expression) const fn static_target(&self) -> HirViewTarget {
+    pub(in crate::typeck) const fn static_target(&self) -> HirViewTarget {
         match self {
             Self::Class { place, .. } => HirViewTarget::Class(place.class()),
             Self::Obj { .. } => HirViewTarget::Obj,
             Self::Interface { interface, .. } => HirViewTarget::Interface(*interface),
+            Self::Static { class, .. } => HirViewTarget::Class(*class),
             Self::Shared(source) => source.static_target(),
             Self::Produced { class, .. } => HirViewTarget::Class(*class),
             Self::Optional { class, .. } => HirViewTarget::Class(*class),
@@ -149,9 +162,7 @@ impl ObjectViewSource {
         }
     }
 
-    pub(in crate::typeck::expression) fn exact_dynamic_class(
-        &self,
-    ) -> Option<crate::identity::ClassId> {
+    pub(in crate::typeck) fn exact_dynamic_class(&self) -> Option<crate::identity::ClassId> {
         match self {
             Self::Class {
                 origin:
@@ -169,34 +180,35 @@ impl ObjectViewSource {
             }
             | Self::Obj { .. }
             | Self::Interface { .. } => None,
+            Self::Static { dynamic_class, .. } => Some(*dynamic_class),
             Self::Shared(source) => source.exact_dynamic_class(),
-            Self::Produced { class, .. } => Some(*class),
-            Self::Optional { class, .. } => Some(*class),
+            Self::Produced { dynamic_class, .. } => Some(*dynamic_class),
+            Self::Optional { dynamic_class, .. } => Some(*dynamic_class),
             Self::OptionalBox { view, .. } => view.source.exact_dynamic_class(),
-            Self::ArrayElement { class, .. } => Some(*class),
+            Self::ArrayElement { dynamic_class, .. } => Some(*dynamic_class),
         }
     }
 
-    pub(in crate::typeck::expression) fn relation_source(&self) -> ObjectViewRelationSource {
+    pub(in crate::typeck) fn relation_source(&self) -> ObjectViewRelationSource {
         self.exact_dynamic_class().map_or_else(
             || ObjectViewRelationSource::Dynamic(self.static_target()),
             ObjectViewRelationSource::ExactClass,
         )
     }
 
-    pub(in crate::typeck::expression) fn into_view(
+    pub(in crate::typeck) fn into_view(
         self,
         target: HirViewTarget,
         access: HirAccess,
     ) -> HirObjectView {
-        self.into_view_with_produced_projections(target, access, Vec::new())
+        self.into_view_with_target_projections(target, access, Vec::new())
     }
 
-    pub(in crate::typeck::expression) fn into_view_with_produced_projections(
+    pub(in crate::typeck) fn into_view_with_target_projections(
         self,
         target: HirViewTarget,
         access: HirAccess,
-        produced_projections: Vec<crate::object_path::ObjectProjection>,
+        target_projections: Vec<crate::object_path::ObjectProjection>,
     ) -> HirObjectView {
         match self {
             Self::Class { place, origin } => HirObjectView {
@@ -231,20 +243,40 @@ impl ObjectViewSource {
                 access,
                 span,
             ),
-            Self::Produced {
-                source,
-                class,
+            Self::Static {
+                place,
+                dynamic_class,
+                class: _,
                 mut projections,
                 span,
             } => {
-                projections.extend(produced_projections);
+                projections.extend(target_projections);
+                HirObjectView {
+                    source: HirViewSource::Static { place, projections },
+                    origin: Box::new(HirObjectOrigin::Static {
+                        place,
+                        dynamic_class,
+                    }),
+                    target,
+                    access,
+                    span,
+                }
+            }
+            Self::Produced {
+                source,
+                dynamic_class,
+                class: _,
+                mut projections,
+                span,
+            } => {
+                projections.extend(target_projections);
                 HirObjectView {
                     source: HirViewSource::Produced {
                         producer: Box::new(source),
                         projections,
                     },
                     origin: Box::new(HirObjectOrigin::Produced {
-                        dynamic_class: class,
+                        dynamic_class,
                         span,
                     }),
                     target,
@@ -255,7 +287,8 @@ impl ObjectViewSource {
             Self::Shared(source) => source.into_view(target, access),
             Self::Optional {
                 view,
-                class,
+                dynamic_class,
+                class: _,
                 projections,
             } => {
                 let span = view.span;
@@ -265,7 +298,7 @@ impl ObjectViewSource {
                         projections,
                     },
                     origin: Box::new(HirObjectOrigin::Produced {
-                        dynamic_class: class,
+                        dynamic_class,
                         span,
                     }),
                     target,
@@ -278,12 +311,13 @@ impl ObjectViewSource {
             }
             Self::ArrayElement {
                 element,
-                class,
+                dynamic_class,
+                class: _,
                 span,
             } => HirObjectView {
                 source: HirViewSource::ArrayElement(element),
                 origin: Box::new(HirObjectOrigin::Produced {
-                    dynamic_class: class,
+                    dynamic_class,
                     span,
                 }),
                 target,
@@ -295,7 +329,7 @@ impl ObjectViewSource {
 }
 
 impl CallableChecker<'_, '_> {
-    pub(in crate::typeck::expression) fn check_object_view_source(
+    pub(in crate::typeck) fn check_object_view_source(
         &mut self,
         expression: &ResolvedExpression,
         admission: ObjectViewSourceAdmission,
@@ -316,6 +350,7 @@ impl CallableChecker<'_, '_> {
                 let class = self.optional_operand_class(&view.source);
                 Some(ObjectViewSource::Optional {
                     view,
+                    dynamic_class: class,
                     class,
                     projections: Vec::new(),
                 })
@@ -368,6 +403,7 @@ impl CallableChecker<'_, '_> {
                     }
                     ObjectViewSource::Obj { span, .. }
                     | ObjectViewSource::Interface { span, .. }
+                    | ObjectViewSource::Static { span, .. }
                     | ObjectViewSource::Produced { span, .. } => *span = grouped.span,
                     ObjectViewSource::Shared(source) => source.set_span(grouped.span),
                     ObjectViewSource::Optional { view, .. } => view.span = grouped.span,
@@ -396,6 +432,7 @@ impl CallableChecker<'_, '_> {
                 }
                 Some(ObjectViewSource::ArrayElement {
                     element,
+                    dynamic_class: class,
                     class,
                     span: checked.span,
                 })
@@ -439,6 +476,7 @@ impl CallableChecker<'_, '_> {
                     projections.push(crate::object_path::ObjectProjection::Field(access.field));
                     return Some(ObjectViewSource::Optional {
                         view: *view,
+                        dynamic_class: class,
                         class,
                         projections,
                     });
@@ -484,10 +522,14 @@ impl CallableChecker<'_, '_> {
                     let HirObjectOrigin::Produced { dynamic_class, .. } = *view.origin else {
                         unreachable!("produced field source must retain exact dynamic class")
                     };
+                    let HirViewTarget::Class(static_class) = view.target else {
+                        unreachable!("produced field source must retain a class target")
+                    };
                     debug_assert_eq!(dynamic_class, class);
                     return Some(ObjectViewSource::Produced {
                         source: *producer,
-                        class,
+                        dynamic_class,
+                        class: static_class,
                         projections,
                         span: access.span,
                     });
@@ -593,6 +635,7 @@ impl CallableChecker<'_, '_> {
         Some(ObjectViewSource::Produced {
             span: expression.span(),
             source,
+            dynamic_class: class,
             class,
             projections: Vec::new(),
         })
