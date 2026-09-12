@@ -10,13 +10,13 @@ use crate::mir::{
 use super::{
     super::{
         execution::{
-            MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
+            MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassContext,
             MirProofPassOutcome,
         },
         policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
         MirPassIdentity, MirPassStage,
     },
-    local_constant::{solve_local_constants, BlockLocalConstantView, LocalConstantSolution},
+    local_constant::{BlockLocalConstantView, LocalConstantSolution},
     primitive_evaluation::PrimitiveConstant,
 };
 
@@ -77,23 +77,25 @@ struct BranchRewrite {
     kind: BranchRewriteKind,
 }
 
-fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
+fn transform(mut capability: MirProofPassContext) -> Result<MirProofPassOutcome, MirPassFailure> {
     let mut solutions = BTreeMap::new();
     let mut processed_callables = 0;
     let mut protected_unreachable_blocks = 0usize;
     let mut has_candidate = false;
 
-    for definition in capability.verified().program().executable_definitions() {
+    for callable in capability.executable_callables() {
         processed_callables += 1;
-        let solution = solve_local_constants(definition)
+        let solution = capability
+            .local_constants(callable)
             .map_err(|error| MirPassFailure::execution(error.to_string()))?;
+        let definition = capability.executable_definition(callable);
         let scan = scan_definition(definition, &solution).map_err(MirPassFailure::Rewrite)?;
         if scan.has_candidate {
             has_candidate = true;
         }
         protected_unreachable_blocks =
             protected_unreachable_blocks.saturating_add(scan.protected_unreachable_blocks);
-        solutions.insert(definition.callable(), solution);
+        solutions.insert(callable, solution);
     }
 
     if !has_candidate {

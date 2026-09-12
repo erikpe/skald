@@ -15,7 +15,7 @@ use crate::{
 use super::{
     execution::{
         MirFinalPassCapability, MirFinalPassOutcome, MirPassData, MirPassFailure,
-        MirProofPassCapability, MirProofPassOutcome, MirProofTransitionCapability,
+        MirProofPassContext, MirProofPassOutcome, MirProofTransitionContext,
         MirProofTransitionFailure, MirProofTransitionOutcome,
     },
     optimizations::whole_world_reachability,
@@ -49,6 +49,10 @@ const FINAL_STALE_CFG: MirPassIdentity = MirPassIdentity::new(119);
 const TRANSITION_UNCHANGED: MirPassIdentity = MirPassIdentity::new(120);
 const TRANSITION_EXECUTION_FAILURE: MirPassIdentity = MirPassIdentity::new(121);
 const TRANSITION_INVALID_ACCOUNTING: MirPassIdentity = MirPassIdentity::new(122);
+const ANALYSIS_QUERY: MirPassIdentity = MirPassIdentity::new(123);
+const ANALYSIS_QUERY_CHANGE: MirPassIdentity = MirPassIdentity::new(124);
+const ANALYSIS_QUERY_FAILURE: MirPassIdentity = MirPassIdentity::new(125);
+const TRANSITION_ANALYSIS_QUERY: MirPassIdentity = MirPassIdentity::new(126);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -132,7 +136,7 @@ const fn transition_registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 24] = [
+static TEST_REGISTRATIONS: [MirPassRegistration; 28] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -219,6 +223,22 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 24] = [
         TRANSITION_INVALID_ACCOUNTING,
         "transition-invalid-accounting-pass",
         transition_invalid_accounting_pass,
+    ),
+    registration(ANALYSIS_QUERY, "analysis-query-pass", analysis_query_pass),
+    registration(
+        ANALYSIS_QUERY_CHANGE,
+        "analysis-query-change-pass",
+        analysis_query_change_pass,
+    ),
+    registration(
+        ANALYSIS_QUERY_FAILURE,
+        "analysis-query-failure-pass",
+        analysis_query_failure_pass,
+    ),
+    transition_registration(
+        TRANSITION_ANALYSIS_QUERY,
+        "transition-analysis-query-pass",
+        transition_analysis_query_pass,
     ),
     whole_world_reachability::REGISTRATION,
 ];
@@ -1173,6 +1193,119 @@ fn aggregate_only_runner_skips_occurrence_recording() {
     assert_eq!(measured.statistics.processed_callables(), 4);
 }
 
+#[test]
+fn analysis_usage_records_schedule_order_and_same_snapshot_repetition() {
+    let measured = run_mir_pipeline_with_occurrences(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY]),
+    );
+
+    assert!(measured.result.is_ok());
+    let records = measured.occurrences();
+    assert_eq!(records.len(), 2);
+    for (record, repeated) in records.iter().zip([0, 1]) {
+        assert_eq!(record.analysis_usage().len(), 1);
+        let (kind, usage) = record.analysis_usage()[0];
+        assert_eq!(kind, MirSnapshotAnalysisKind::LocalConstants);
+        assert_eq!(usage.requests(), 1);
+        assert_eq!(usage.computations(), 1);
+        assert_eq!(usage.repeated_snapshot_requests(), repeated);
+        assert_eq!(usage.results_before(), 0);
+        assert_eq!(usage.results_inserted(), 0);
+        assert_eq!(usage.results_discarded(), 0);
+    }
+    assert_eq!(analysis_usage(&measured), (2, 2, 1));
+}
+
+#[test]
+fn changed_outcome_starts_a_fresh_analysis_measurement_epoch() {
+    let measured = run_mir_pipeline_with_occurrences(
+        lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }"),
+        &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY_CHANGE, ANALYSIS_QUERY]),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(
+        measured
+            .occurrences()
+            .iter()
+            .map(|record| record.analysis_usage()[0].1.repeated_snapshot_requests())
+            .collect::<Vec<_>>(),
+        [0, 1, 0]
+    );
+}
+
+#[test]
+fn proof_transition_observes_the_last_proof_snapshot_before_normalization() {
+    let measured = run_mir_pipeline_with_occurrences(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY, TRANSITION_ANALYSIS_QUERY]),
+    );
+
+    assert!(measured.result.is_ok());
+    assert_eq!(measured.occurrences().len(), 2);
+    assert_eq!(
+        measured.occurrences()[1].analysis_usage()[0]
+            .1
+            .repeated_snapshot_requests(),
+        1
+    );
+}
+
+#[test]
+fn detailed_records_and_inspection_are_observational_for_analysis_counts() {
+    let schedule = test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY]);
+    let quiet = run_mir_pipeline_measured(lowered_program(), &schedule);
+    let detailed = run_mir_pipeline_with_occurrences(lowered_program(), &schedule);
+    let mut inspector = CheckpointCollector::default();
+    let inspected =
+        run_mir_pipeline_measured_inspected(lowered_program(), &schedule, Some(&mut inspector));
+
+    assert!(quiet.occurrences().is_empty());
+    assert_eq!(analysis_usage(&quiet), (2, 2, 1));
+    assert_eq!(analysis_usage(&detailed), analysis_usage(&quiet));
+    assert_eq!(analysis_usage(&inspected), analysis_usage(&quiet));
+    assert!(!inspector.labels.is_empty());
+}
+
+#[test]
+fn analysis_failure_is_attributed_to_its_requesting_occurrence() {
+    let measured = run_mir_pipeline_with_occurrences(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY_FAILURE, LATER]),
+    );
+
+    let error = measured.result.as_ref().unwrap_err();
+    assert_eq!(error.pass_identity(), Some(ANALYSIS_QUERY_FAILURE));
+    assert_eq!(error.pass_position(), Some(0));
+    assert_eq!(error.pass_occurrence(), Some(0));
+    assert_eq!(measured.occurrences().len(), 1);
+    assert_eq!(
+        measured.occurrences()[0].analysis_usage()[0].1.requests(),
+        1
+    );
+}
+
+#[test]
+fn schedules_without_analysis_consumers_record_no_analysis_usage() {
+    let measured = run_mir_pipeline_measured(lowered_program(), &none_schedule());
+    assert!(measured.result.is_ok());
+    assert!(measured.statistics.analysis_usage().next().is_none());
+}
+
+fn analysis_usage(measured: &MeasuredMirPipeline) -> (u64, u64, u64) {
+    let (_, usage) = measured
+        .statistics
+        .analysis_usage()
+        .next()
+        .expect("analysis-query schedules must record local constant usage");
+    (
+        usage.requests(),
+        usage.computations(),
+        usage.repeated_snapshot_requests(),
+    )
+}
+
 #[derive(Default)]
 struct CheckpointCollector {
     labels: Vec<String>,
@@ -1612,6 +1745,7 @@ fn occurrence_fingerprint(records: &[MirPassOccurrenceRecord]) -> String {
                     record.verification_executions(),
                 ),
                 record.measurements().to_vec(),
+                record.analysis_usage().to_vec(),
             ))
             .collect::<Vec<_>>()
     )
@@ -2168,31 +2302,71 @@ fn lifecycle_effect_change_rechecks_immutable_baseline_authority() {
     assert_eq!(execution_log(), ["retarget-static"]);
 }
 
-fn unchanged_pass(
-    capability: MirProofPassCapability,
-) -> Result<MirProofPassOutcome, MirPassFailure> {
+fn unchanged_pass(capability: MirProofPassContext) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("unchanged");
     assert!(!capability.verified().definitions.is_empty());
     Ok(capability.unchanged())
 }
 
+fn analysis_query_pass(
+    mut context: MirProofPassContext,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let callable = context.executable_callables()[0];
+    context
+        .local_constants(callable)
+        .map_err(|error| MirPassFailure::execution(error.to_string()))?;
+    Ok(context.unchanged())
+}
+
+fn analysis_query_change_pass(
+    mut context: MirProofPassContext,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let callable = context.executable_callables()[0];
+    context
+        .local_constants(callable)
+        .map_err(|error| MirPassFailure::execution(error.to_string()))?;
+    rewrite_equivalent_constants(context, false)
+}
+
+fn analysis_query_failure_pass(
+    mut context: MirProofPassContext,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let callable = context.executable_callables()[0];
+    context
+        .local_constants(callable)
+        .map_err(|error| MirPassFailure::execution(error.to_string()))?;
+    Err(MirPassFailure::execution(
+        "synthetic failure after local constant analysis",
+    ))
+}
+
 fn transition_unchanged_pass(
-    capability: MirProofTransitionCapability,
+    capability: MirProofTransitionContext,
 ) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
     log_execution("transition-unchanged");
     assert!(!capability.verified().definitions.is_empty());
     capability.normalize(None, MirPassData::default())
 }
 
+fn transition_analysis_query_pass(
+    mut context: MirProofTransitionContext,
+) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
+    let callable = context.executable_callables()[0];
+    context.local_constants(callable).map_err(|error| {
+        MirProofTransitionFailure::from(MirPassFailure::execution(error.to_string()))
+    })?;
+    context.normalize(None, MirPassData::default())
+}
+
 fn transition_execution_failure_pass(
-    _capability: MirProofTransitionCapability,
+    _capability: MirProofTransitionContext,
 ) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
     log_execution("transition-execution-failure");
     Err(MirPassFailure::execution("synthetic proof-transition failure").into())
 }
 
 fn transition_invalid_accounting_pass(
-    capability: MirProofTransitionCapability,
+    capability: MirProofTransitionContext,
 ) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
     log_execution("transition-invalid-accounting");
     capability.normalize(None, MirPassData::changed(1))
@@ -2266,7 +2440,7 @@ fn final_stale_cfg_pass(
 }
 
 fn measured_unchanged_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("measured-unchanged");
     capability.unchanged_with(
@@ -2277,14 +2451,14 @@ fn measured_unchanged_pass(
 }
 
 fn delete_equivalent_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("delete");
     rewrite_equivalent_constants(capability, false)
 }
 
 fn observe_delete_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("observe");
     let constants = capability
@@ -2306,14 +2480,14 @@ fn observe_delete_pass(
 }
 
 fn execution_failure_pass(
-    _capability: MirProofPassCapability,
+    _capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("execution-failure");
     Err(MirPassFailure::execution("synthetic analysis failure"))
 }
 
 fn rewrite_failure_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("rewrite-failure");
     let changed = capability.rewrite(|_callable, edit| {
@@ -2324,7 +2498,7 @@ fn rewrite_failure_pass(
 }
 
 fn invalid_output_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("invalid-output");
     let changed = capability.rewrite(|_callable, edit| {
@@ -2336,13 +2510,13 @@ fn invalid_output_pass(
     changed.finish(MirPassData::changed(1))
 }
 
-fn later_pass(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
+fn later_pass(capability: MirProofPassContext) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("later");
     Ok(capability.unchanged())
 }
 
 fn fail_second_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("fail-second");
     let call = FAIL_SECOND_CALLS.with(|calls| {
@@ -2358,7 +2532,7 @@ fn fail_second_pass(
 }
 
 fn retarget_static_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("retarget-static");
     let (source, target) = RETARGET_CONFIGURATION
@@ -2383,7 +2557,7 @@ fn retarget_static_pass(
 }
 
 fn retarget_call_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("retarget-call");
     let (source, old, target) = RETARGET_CALL_CONFIGURATION
@@ -2455,14 +2629,14 @@ fn invalid_retention_accounting_pass(
 }
 
 fn rewrite_all_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("rewrite-all");
     rewrite_equivalent_constants(capability, true)
 }
 
 fn invalid_accounting_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     log_execution("invalid-accounting");
     let changed = capability.rewrite(|_callable, _edit| Ok(()))?;
@@ -2470,7 +2644,7 @@ fn invalid_accounting_pass(
 }
 
 fn rewrite_equivalent_constants(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
     record_callables: bool,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     let changed_callables = Cell::new(0usize);

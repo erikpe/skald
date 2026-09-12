@@ -9,6 +9,7 @@ mod normalization;
 mod optimizations;
 mod policy;
 mod seal;
+mod snapshot_analysis;
 
 pub(in crate::passes) use optimizations::{
     evaluate_integer_division, evaluate_rvalue, evaluate_shift, CheckedIntegerEvaluation,
@@ -39,6 +40,7 @@ pub(crate) use policy::{
 };
 pub(crate) use seal::verify_proof_mir;
 pub use seal::{verify_final_mir, VerifiedFinalMirProgram, VerifiedProofMirProgram};
+pub use snapshot_analysis::{MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage};
 
 /// Runs the target-independent MIR pass pipeline.
 ///

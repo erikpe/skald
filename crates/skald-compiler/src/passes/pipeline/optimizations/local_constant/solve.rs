@@ -23,13 +23,13 @@ use super::{
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(in crate::passes::pipeline::optimizations) enum LocalConstantIdentity {
+pub(in crate::passes::pipeline) enum LocalConstantIdentity {
     Value(ValueId),
     Carrier(StorageId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) enum LocalConstantProvenanceCategory {
+pub(in crate::passes::pipeline) enum LocalConstantProvenanceCategory {
     Literal,
     Primitive,
     CarrierStore,
@@ -41,7 +41,7 @@ pub(in crate::passes::pipeline::optimizations) enum LocalConstantProvenanceCateg
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) struct LocalConstantProvenance {
+pub(in crate::passes::pipeline) struct LocalConstantProvenance {
     category: LocalConstantProvenanceCategory,
     depth: usize,
     crossed_carrier: bool,
@@ -128,7 +128,7 @@ struct SolvedConstant {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) struct LocalConstantFact {
+pub(in crate::passes::pipeline) struct LocalConstantFact {
     identity: LocalConstantIdentity,
     constant: PrimitiveConstant,
     provenance: LocalConstantProvenance,
@@ -153,13 +153,13 @@ impl LocalConstantFact {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) enum LogicalSelectionKind {
+pub(in crate::passes::pipeline) enum LogicalSelectionKind {
     Short,
     Right,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) struct LogicalSelection {
+pub(in crate::passes::pipeline) struct LogicalSelection {
     record_index: usize,
     kind: LogicalSelectionKind,
     constant: Option<PrimitiveConstant>,
@@ -203,7 +203,7 @@ impl RetainedCheckedFailure {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) enum LocalConstantAnalysisError {
+pub(in crate::passes::pipeline) enum LocalConstantAnalysisError {
     Rewrite(crate::mir::rewrite::MirRewriteError),
     InvalidValueIdentity {
         expected: ValueId,
@@ -262,7 +262,7 @@ impl fmt::Display for LocalConstantAnalysisError {
 impl std::error::Error for LocalConstantAnalysisError {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(in crate::passes::pipeline::optimizations) struct LocalConstantSolution {
+pub(in crate::passes::pipeline) struct LocalConstantSolution {
     callable: CallableId,
     value_constants: Vec<Option<SolvedConstant>>,
     carrier_constants: Vec<Option<SolvedConstant>>,
@@ -355,7 +355,7 @@ impl LocalConstantSolution {
     }
 }
 
-pub(in crate::passes::pipeline::optimizations) fn solve_local_constants(
+pub(in crate::passes::pipeline) fn solve_local_constants(
     definition: MirDefinitionRef<'_>,
 ) -> Result<LocalConstantSolution, LocalConstantAnalysisError> {
     solve_with_seed_order(definition, false)

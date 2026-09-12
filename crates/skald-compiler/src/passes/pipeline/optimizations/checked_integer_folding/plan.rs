@@ -9,7 +9,7 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{MirCallableEdit, MirCallableEditSnapshot, MirRewriteError},
-        MirDefinitionRef, MirIntegerDivisionKind, MirProgram, MirTerminationReason,
+        MirDefinitionRef, MirIntegerDivisionKind, MirTerminationReason,
     },
 };
 
@@ -23,10 +23,13 @@ use super::super::{
         CheckedIntegerTopologyObservation,
     },
     local_constant::{
-        checked_carrier_plan_evidence, solve_local_constants, CheckedCarrierPlanEvidence,
-        CheckedCarrierPlanRole, LocalConstantAnalysisError, LocalConstantFact,
+        checked_carrier_plan_evidence, CheckedCarrierPlanEvidence, CheckedCarrierPlanRole,
+        LocalConstantAnalysisError, LocalConstantFact,
     },
 };
+use crate::passes::pipeline::snapshot_analysis::MirProofPassContext;
+#[cfg(test)]
+use crate::{mir::MirProgram, passes::pipeline::optimizations::solve_local_constants};
 
 /// Checked-operation families selected while preparing one fold plan.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -144,6 +147,24 @@ pub(in crate::passes::pipeline::optimizations) struct CheckedIntegerFoldPlan {
 }
 
 impl CheckedIntegerFoldPlan {
+    pub(in crate::passes::pipeline::optimizations) fn prepare_with_context(
+        context: &mut MirProofPassContext<'_>,
+        selection: CheckedIntegerFoldSelection,
+    ) -> Result<Self, CheckedIntegerFoldPlanError> {
+        let mut plan = Self::default();
+        for callable in context.executable_callables() {
+            plan.processed_callables = plan.processed_callables.saturating_add(1);
+            let solution = context.local_constants(callable)?;
+            plan.prepare_definition(
+                context.executable_definition(callable),
+                &solution,
+                selection,
+            )?;
+        }
+        Ok(plan)
+    }
+
+    #[cfg(test)]
     pub(in crate::passes::pipeline::optimizations) fn prepare(
         program: &MirProgram,
         selection: CheckedIntegerFoldSelection,
@@ -151,7 +172,8 @@ impl CheckedIntegerFoldPlan {
         let mut plan = Self::default();
         for definition in program.executable_definitions() {
             plan.processed_callables = plan.processed_callables.saturating_add(1);
-            plan.prepare_definition(definition, selection)?;
+            let solution = solve_local_constants(definition)?;
+            plan.prepare_definition(definition, &solution, selection)?;
         }
         Ok(plan)
     }
@@ -159,9 +181,9 @@ impl CheckedIntegerFoldPlan {
     fn prepare_definition(
         &mut self,
         definition: MirDefinitionRef<'_>,
+        solution: &crate::passes::pipeline::optimizations::local_constant::LocalConstantSolution,
         selection: CheckedIntegerFoldSelection,
     ) -> Result<(), CheckedIntegerFoldPlanError> {
-        let solution = solve_local_constants(definition)?;
         let evidence = checked_carrier_plan_evidence(definition)?
             .into_iter()
             .map(|evidence| ((evidence.check_block(), evidence.role()), evidence))

@@ -5,7 +5,7 @@ mod plan;
 
 use super::super::{
     execution::{
-        MirPassData, MirPassFailure, MirPassMeasurement, MirProofTransitionCapability,
+        MirPassData, MirPassFailure, MirPassMeasurement, MirProofTransitionContext,
         MirProofTransitionFailure, MirProofTransitionOutcome,
     },
     normalization::MirProofTransitionPlan,
@@ -32,10 +32,9 @@ pub(in crate::passes::pipeline) const REGISTRATION: MirPassRegistration = MirPas
 );
 
 fn transform(
-    capability: MirProofTransitionCapability,
+    mut capability: MirProofTransitionContext,
 ) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
-    let plan =
-        LogicalSelectionPlan::prepare(capability.verified().program()).map_err(plan_failure)?;
+    let plan = LogicalSelectionPlan::prepare_with_context(&mut capability).map_err(plan_failure)?;
     let data = if plan.is_empty() {
         MirPassData::processed(plan.processed_callables())
     } else {

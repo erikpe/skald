@@ -12,14 +12,15 @@ use crate::{
 };
 
 use super::super::{
-    local_constant::{
-        solve_local_constants, LocalConstantAnalysisError, LogicalSelection, LogicalSelectionKind,
-    },
+    local_constant::{LocalConstantAnalysisError, LogicalSelection, LogicalSelectionKind},
     logical_topology::{
         observe_logical_topologies, LogicalProtocolTopology, LogicalTopologyObservation,
         LogicalTopologyRejectionReason,
     },
 };
+#[cfg(test)]
+use crate::passes::pipeline::optimizations::solve_local_constants;
+use crate::passes::pipeline::snapshot_analysis::MirProofTransitionContext;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum LogicalSelectionPlanError {
@@ -299,72 +300,91 @@ pub(in crate::passes::pipeline) struct LogicalSelectionPlan {
 }
 
 impl LogicalSelectionPlan {
+    pub(super) fn prepare_with_context(
+        context: &mut MirProofTransitionContext<'_>,
+    ) -> Result<Self, LogicalSelectionPlanError> {
+        let mut plan = Self::default();
+        for callable in context.executable_callables() {
+            let solution = context.local_constants(callable)?;
+            plan.prepare_definition(context.executable_definition(callable), &solution)?;
+        }
+        Ok(plan)
+    }
+
+    #[cfg(test)]
     pub(super) fn prepare(program: &MirProgram) -> Result<Self, LogicalSelectionPlanError> {
         let mut plan = Self::default();
         for definition in program.executable_definitions() {
-            let callable = definition.callable();
             let solution = solve_local_constants(definition)?;
-            let mut topologies = vec![None; definition.logical_expressions().len()];
-            for observation in observe_logical_topologies(definition)? {
-                match observation {
-                    LogicalTopologyObservation::Protocol(topology) => {
-                        let record_index = topology.record_index;
-                        let slot = topologies.get_mut(record_index).ok_or(
-                            LogicalSelectionPlanError::MissingTopology {
-                                callable,
-                                record_index,
-                            },
-                        )?;
-                        if slot.replace(topology).is_some() {
-                            return Err(LogicalSelectionPlanError::ConflictingCandidates {
-                                callable,
-                            });
-                        }
-                    }
-                    LogicalTopologyObservation::Rejected {
-                        record_index,
-                        reason,
-                    } => {
-                        return Err(LogicalSelectionPlanError::RejectedTopology {
-                            callable,
-                            record_index,
-                            reason,
-                        });
-                    }
-                }
-            }
-
-            let mut candidates = Vec::new();
-            for selection in solution.selections() {
-                let topology = topologies
-                    .get(selection.record_index())
-                    .and_then(Option::as_deref)
-                    .ok_or(LogicalSelectionPlanError::MissingTopology {
-                        callable,
-                        record_index: selection.record_index(),
-                    })?;
-                candidates.push(LogicalSelectionCandidate::prepare(
-                    definition, topology, *selection,
-                )?);
-            }
-            if !candidates_are_non_conflicting(&candidates) {
-                return Err(LogicalSelectionPlanError::ConflictingCandidates { callable });
-            }
-            let candidate_count = candidates.len();
-            let previous = plan.callables.insert(
-                callable,
-                CallableLogicalSelectionPlan {
-                    snapshot: MirCallableEditSnapshot::capture(definition),
-                    candidates,
-                },
-            );
-            if previous.is_some() {
-                return Err(LogicalSelectionPlanError::ConflictingCandidates { callable });
-            }
-            plan.selection_count = plan.selection_count.saturating_add(candidate_count);
-            plan.callable_order.push(callable);
+            plan.prepare_definition(definition, &solution)?;
         }
         Ok(plan)
+    }
+
+    fn prepare_definition(
+        &mut self,
+        definition: crate::mir::MirDefinitionRef<'_>,
+        solution: &crate::passes::pipeline::optimizations::local_constant::LocalConstantSolution,
+    ) -> Result<(), LogicalSelectionPlanError> {
+        let callable = definition.callable();
+        let mut topologies = vec![None; definition.logical_expressions().len()];
+        for observation in observe_logical_topologies(definition)? {
+            match observation {
+                LogicalTopologyObservation::Protocol(topology) => {
+                    let record_index = topology.record_index;
+                    let slot = topologies.get_mut(record_index).ok_or(
+                        LogicalSelectionPlanError::MissingTopology {
+                            callable,
+                            record_index,
+                        },
+                    )?;
+                    if slot.replace(topology).is_some() {
+                        return Err(LogicalSelectionPlanError::ConflictingCandidates { callable });
+                    }
+                }
+                LogicalTopologyObservation::Rejected {
+                    record_index,
+                    reason,
+                } => {
+                    return Err(LogicalSelectionPlanError::RejectedTopology {
+                        callable,
+                        record_index,
+                        reason,
+                    });
+                }
+            }
+        }
+
+        let mut candidates = Vec::new();
+        for selection in solution.selections() {
+            let topology = topologies
+                .get(selection.record_index())
+                .and_then(Option::as_deref)
+                .ok_or(LogicalSelectionPlanError::MissingTopology {
+                    callable,
+                    record_index: selection.record_index(),
+                })?;
+            candidates.push(LogicalSelectionCandidate::prepare(
+                definition, topology, *selection,
+            )?);
+        }
+        if !candidates_are_non_conflicting(&candidates) {
+            return Err(LogicalSelectionPlanError::ConflictingCandidates { callable });
+        }
+        let candidate_count = candidates.len();
+        let previous = self.callables.insert(
+            callable,
+            CallableLogicalSelectionPlan {
+                snapshot: MirCallableEditSnapshot::capture(definition),
+                candidates,
+            },
+        );
+        if previous.is_some() {
+            return Err(LogicalSelectionPlanError::ConflictingCandidates { callable });
+        }
+        self.selection_count = self.selection_count.saturating_add(candidate_count);
+        self.callable_order.push(callable);
+        Ok(())
     }
 
     pub(in crate::passes::pipeline) const fn is_empty(&self) -> bool {

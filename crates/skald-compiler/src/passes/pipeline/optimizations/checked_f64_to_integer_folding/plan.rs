@@ -9,7 +9,7 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{MirCallableEdit, MirCallableEditSnapshot, MirRewriteError},
-        MirDefinitionRef, MirIntegerType, MirProgram, MirTerminationReason,
+        MirDefinitionRef, MirIntegerType, MirTerminationReason,
     },
 };
 
@@ -22,10 +22,13 @@ use super::super::{
         observe_checked_f64_to_integer_topologies, CheckedF64ToIntegerTopologyObservation,
     },
     local_constant::{
-        checked_f64_to_integer_carrier_plan_evidence, solve_local_constants,
-        CheckedCarrierPlanEvidence, CheckedCarrierPlanRole, LocalConstantAnalysisError,
+        checked_f64_to_integer_carrier_plan_evidence, CheckedCarrierPlanEvidence,
+        CheckedCarrierPlanRole, LocalConstantAnalysisError,
     },
 };
+use crate::passes::pipeline::snapshot_analysis::MirProofPassContext;
+#[cfg(test)]
+use crate::{mir::MirProgram, passes::pipeline::optimizations::solve_local_constants};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(super) struct CheckedF64ToIntegerFoldCounts {
@@ -98,13 +101,27 @@ pub(in crate::passes::pipeline::optimizations) struct CheckedF64ToIntegerFoldPla
 }
 
 impl CheckedF64ToIntegerFoldPlan {
+    pub(in crate::passes::pipeline::optimizations) fn prepare_with_context(
+        context: &mut MirProofPassContext<'_>,
+    ) -> Result<Self, CheckedF64ToIntegerFoldPlanError> {
+        let mut plan = Self::default();
+        for callable in context.executable_callables() {
+            plan.processed_callables = plan.processed_callables.saturating_add(1);
+            let solution = context.local_constants(callable)?;
+            plan.prepare_definition(context.executable_definition(callable), &solution)?;
+        }
+        Ok(plan)
+    }
+
+    #[cfg(test)]
     pub(in crate::passes::pipeline::optimizations) fn prepare(
         program: &MirProgram,
     ) -> Result<Self, CheckedF64ToIntegerFoldPlanError> {
         let mut plan = Self::default();
         for definition in program.executable_definitions() {
             plan.processed_callables = plan.processed_callables.saturating_add(1);
-            plan.prepare_definition(definition)?;
+            let solution = solve_local_constants(definition)?;
+            plan.prepare_definition(definition, &solution)?;
         }
         Ok(plan)
     }
@@ -112,8 +129,8 @@ impl CheckedF64ToIntegerFoldPlan {
     fn prepare_definition(
         &mut self,
         definition: MirDefinitionRef<'_>,
+        solution: &crate::passes::pipeline::optimizations::local_constant::LocalConstantSolution,
     ) -> Result<(), CheckedF64ToIntegerFoldPlanError> {
-        let solution = solve_local_constants(definition)?;
         let evidence = checked_f64_to_integer_carrier_plan_evidence(definition)?
             .into_iter()
             .map(|evidence| ((evidence.check_block(), evidence.role()), evidence))

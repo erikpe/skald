@@ -8,8 +8,9 @@ use super::{
     MirPipelineError,
 };
 use crate::passes::pipeline::{
-    normalization::MirProofNormalizationStatistics, MirPassIdentity, MirPassOccurrence,
-    VerifiedFinalMirProgram,
+    normalization::MirProofNormalizationStatistics,
+    snapshot_analysis::{MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage},
+    MirPassIdentity, MirPassOccurrence, VerifiedFinalMirProgram,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -22,6 +23,7 @@ pub(crate) struct MirPipelineStatistics {
     changed_callables: u64,
     rewrite_changes: MirRewriteChangeSummary,
     pass_measurements: Vec<MirPassAggregateMeasurement>,
+    analysis_usage: Vec<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -72,6 +74,12 @@ impl MirPipelineStatistics {
         })
     }
 
+    pub(crate) fn analysis_usage(
+        &self,
+    ) -> impl Iterator<Item = (MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)> + '_ {
+        self.analysis_usage.iter().copied()
+    }
+
     pub(super) fn record_verification(&mut self) {
         self.verification_executions = self.verification_executions.saturating_add(1);
     }
@@ -90,6 +98,20 @@ impl MirPipelineStatistics {
 
     pub(super) fn record_pass_execution(&mut self) {
         self.pass_executions = self.pass_executions.saturating_add(1);
+    }
+
+    pub(super) fn record_analysis_usage(
+        &mut self,
+        kind: MirSnapshotAnalysisKind,
+        usage: MirSnapshotAnalysisUsage,
+    ) {
+        if usage.is_empty() {
+            return;
+        }
+        match self.analysis_usage.iter_mut().find(|entry| entry.0 == kind) {
+            Some((_, aggregate)) => aggregate.accumulate(usage),
+            None => self.analysis_usage.push((kind, usage)),
+        }
     }
 
     pub(super) fn record_pass_data(&mut self, occurrence: MirPassOccurrence, data: &MirPassData) {
@@ -168,6 +190,7 @@ impl MirPipelineStatistics {
                     },
                 )
                 .collect(),
+            analysis_usage: Vec::new(),
         }
     }
 }

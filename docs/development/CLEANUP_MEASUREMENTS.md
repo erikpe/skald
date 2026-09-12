@@ -22,12 +22,16 @@ writes two JSON files:
 - `deterministic.json` contains compiler revision and dirty state, compiler
   profile, target, MIR profile and exclusions, the resolved pass schedule,
   repetition policy, source inventory and byte size, compiler arguments,
-  runtime-trace policy, artifact sizes and hashes, and repeated native-result
-  digests;
+  runtime-trace policy, per-occurrence proof-snapshot analysis usage, artifact
+  sizes and hashes, and repeated native-result digests;
 - `report.json` contains that projection plus compiler wall time and peak RSS,
   executable-build observations, native wall time, and the unique run path.
 
 Assembly compilation is repeated at least twice and must emit identical bytes.
+One separate untimed trace compilation records analysis requests,
+computations, same-snapshot repetitions, distinct callable-snapshot keys, and
+result-table activity for each requesting pass occurrence. This trace run does
+not contribute to compiler wall-time or peak-RSS samples.
 Native workloads repeat the same exit status, standard output, and standard
 error digests. Paired variants alternate order during warmups and measured
 runs. Every child process has a configurable watchdog; a timeout terminates

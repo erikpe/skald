@@ -15,6 +15,9 @@ pub(in crate::passes::pipeline) mod dead_normalized_path_activation_cleanup;
 pub(in crate::passes::pipeline) mod dead_pure_definition_elimination;
 pub(in crate::passes::pipeline) mod integer_cast_chain_canonicalization;
 mod local_constant;
+pub(in crate::passes::pipeline) use local_constant::{
+    solve_local_constants, LocalConstantAnalysisError, LocalConstantSolution,
+};
 mod logical_topology;
 pub(in crate::passes::pipeline) mod post_proof_basic_block_merging;
 pub(in crate::passes::pipeline) mod post_proof_empty_block_forwarding;

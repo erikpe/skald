@@ -6,7 +6,7 @@ mod plan;
 use super::{
     super::{
         execution::{
-            MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
+            MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassContext,
             MirProofPassOutcome,
         },
         policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
@@ -75,8 +75,8 @@ enum PrimitiveFoldKind {
     Cast,
 }
 
-fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
-    let plan = PrimitiveFoldPlan::prepare(capability.verified().program())
+fn transform(mut capability: MirProofPassContext) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let plan = PrimitiveFoldPlan::prepare_with_context(&mut capability)
         .map_err(|error| MirPassFailure::execution(error.to_string()))?;
     if plan.is_empty() {
         return capability.unchanged_with(pass_data(plan.processed_callables(), 0, plan.counts()));

@@ -19,8 +19,8 @@ pub use pipeline::{
     MirFinalPipelineCheckpoint, MirOptimizationProfile, MirPassDescriptor, MirPassIdentity,
     MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPassStage,
     MirPipelineCheckpoint, MirPipelineCheckpointLabel, MirPipelineError, MirPipelineFailureStage,
-    MirPipelineInspector, MirProofPipelineCheckpoint, VerifiedFinalMirProgram,
-    VerifiedProofMirProgram,
+    MirPipelineInspector, MirProofPipelineCheckpoint, MirSnapshotAnalysisKind,
+    MirSnapshotAnalysisUsage, VerifiedFinalMirProgram, VerifiedProofMirProgram,
 };
 #[cfg(test)]
 pub(crate) use pipeline::{resolve_exact_mir_pass_schedule, verify_proof_mir};

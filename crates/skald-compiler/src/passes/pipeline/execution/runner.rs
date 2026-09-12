@@ -18,6 +18,10 @@ use super::{
 };
 use crate::passes::pipeline::{
     seal::{reseal_final_mir, transition_proof_mir, MirProofTransitionError},
+    snapshot_analysis::{
+        MirProofPassContext, MirProofSnapshotAnalysis, MirProofTransitionContext,
+        MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage,
+    },
     verify_proof_mir, MirPassOccurrence, MirPassSchedule,
 };
 
@@ -109,6 +113,7 @@ fn run_mir_pipeline_with_transition(
         MirPipelineCheckpointLabel::ProofRichInput,
         &verified,
     );
+    let mut analyses = MirProofSnapshotAnalysis::default();
 
     for occurrence in schedule.proof_rich() {
         statistics.record_pass_execution();
@@ -116,10 +121,22 @@ fn run_mir_pipeline_with_transition(
         let transform = occurrence
             .proof_transform()
             .expect("validated proof-rich occurrence must have a proof-rich callback");
-        let outcome = match transform(MirProofPassCapability::new(verified)) {
+        let checkpoint = analyses.checkpoint();
+        let result = transform(MirProofPassContext::new(
+            MirProofPassCapability::new(verified),
+            &mut analyses,
+        ));
+        let analysis_usage = analyses.usage_since(checkpoint);
+        statistics.record_analysis_usage(MirSnapshotAnalysisKind::LocalConstants, analysis_usage);
+        let outcome = match result {
             Ok(outcome) => outcome,
             Err(MirPassFailure::Execution(error)) => {
-                record_failure(&mut records, occurrence, started);
+                record_failure(
+                    &mut records,
+                    occurrence,
+                    started,
+                    analysis_records(analysis_usage),
+                );
                 return MeasuredMirPipeline::new(
                     Err(MirPipelineError::pass_execution(occurrence, error)),
                     statistics,
@@ -127,7 +144,12 @@ fn run_mir_pipeline_with_transition(
                 );
             }
             Err(MirPassFailure::Rewrite(error)) => {
-                record_failure(&mut records, occurrence, started);
+                record_failure(
+                    &mut records,
+                    occurrence,
+                    started,
+                    analysis_records(analysis_usage),
+                );
                 return MeasuredMirPipeline::new(
                     Err(MirPipelineError::structural_rewrite(occurrence, error)),
                     statistics,
@@ -151,6 +173,7 @@ fn run_mir_pipeline_with_transition(
                         data,
                         Default::default(),
                         0,
+                        analysis_records(analysis_usage),
                     ));
                 }
                 verified = unchanged;
@@ -161,6 +184,7 @@ fn run_mir_pipeline_with_transition(
                 );
             }
             MirProofPassOutcome::Changed { change, data } => {
+                analyses.reset();
                 statistics.record_pass_data(occurrence, &data);
                 let (program, rewrite_changes) = match change {
                     MirProofPassChange::Rewrite(rewrite) => {
@@ -180,6 +204,7 @@ fn run_mir_pipeline_with_transition(
                                 data,
                                 rewrite_changes,
                                 1,
+                                analysis_records(analysis_usage),
                             ));
                         }
                         verified
@@ -193,6 +218,7 @@ fn run_mir_pipeline_with_transition(
                                 data,
                                 rewrite_changes,
                                 1,
+                                analysis_records(analysis_usage),
                             ));
                         }
                         return MeasuredMirPipeline::new(
@@ -217,9 +243,15 @@ fn run_mir_pipeline_with_transition(
         let transform = occurrence
             .transition_transform()
             .expect("validated transition occurrence must have a transition callback");
-        let outcome = match transform(MirProofTransitionCapability::with_transition(
-            verified, transition,
-        )) {
+        let checkpoint = analyses.checkpoint();
+        let result = transform(MirProofTransitionContext::new(
+            MirProofTransitionCapability::with_transition(verified, transition),
+            &mut analyses,
+        ));
+        let analysis_usage = analyses.usage_since(checkpoint);
+        statistics.record_analysis_usage(MirSnapshotAnalysisKind::LocalConstants, analysis_usage);
+        analyses.reset();
+        let outcome = match result {
             Ok(outcome) => outcome,
             Err(failure) => {
                 let error = match failure.into_kind() {
@@ -235,7 +267,12 @@ fn run_mir_pipeline_with_transition(
                         transition_boundary_error(Some(occurrence), error)
                     }
                 };
-                record_failure(&mut records, occurrence, started);
+                record_failure(
+                    &mut records,
+                    occurrence,
+                    started,
+                    analysis_records(analysis_usage),
+                );
                 return MeasuredMirPipeline::new(Err(error), statistics, records);
             }
         };
@@ -256,6 +293,7 @@ fn run_mir_pipeline_with_transition(
                 data,
                 Default::default(),
                 1,
+                analysis_records(analysis_usage),
             ));
         }
         inspect_final_checkpoint(
@@ -265,6 +303,7 @@ fn run_mir_pipeline_with_transition(
         );
         (verified, normalization)
     } else {
+        analyses.reset();
         statistics.record_normalization_execution();
         statistics.record_verification();
         match transition(verified, None) {
@@ -294,7 +333,7 @@ fn run_mir_pipeline_with_transition(
         let outcome = match transform(MirFinalPassCapability::new(verified)) {
             Ok(outcome) => outcome,
             Err(MirPassFailure::Execution(error)) => {
-                record_failure(&mut records, occurrence, started);
+                record_failure(&mut records, occurrence, started, Vec::new());
                 return MeasuredMirPipeline::new(
                     Err(MirPipelineError::pass_execution(occurrence, error)),
                     statistics,
@@ -302,7 +341,7 @@ fn run_mir_pipeline_with_transition(
                 );
             }
             Err(MirPassFailure::Rewrite(error)) => {
-                record_failure(&mut records, occurrence, started);
+                record_failure(&mut records, occurrence, started, Vec::new());
                 return MeasuredMirPipeline::new(
                     Err(MirPipelineError::structural_rewrite(occurrence, error)),
                     statistics,
@@ -326,6 +365,7 @@ fn run_mir_pipeline_with_transition(
                         data,
                         Default::default(),
                         0,
+                        Vec::new(),
                     ));
                 }
                 verified = unchanged;
@@ -357,6 +397,7 @@ fn run_mir_pipeline_with_transition(
                                 data,
                                 rewrite_changes,
                                 1,
+                                Vec::new(),
                             ));
                         }
                         verified
@@ -370,6 +411,7 @@ fn run_mir_pipeline_with_transition(
                                 data,
                                 rewrite_changes,
                                 1,
+                                Vec::new(),
                             ));
                         }
                         return MeasuredMirPipeline::new(
@@ -476,11 +518,23 @@ fn record_failure(
     records: &mut Vec<MirPassOccurrenceRecord>,
     occurrence: MirPassOccurrence,
     started: Option<Instant>,
+    analysis_usage: Vec<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)>,
 ) {
     if let Some(started) = started {
         records.push(MirPassOccurrenceRecord::failed(
             occurrence,
             started.elapsed(),
+            analysis_usage,
         ));
+    }
+}
+
+fn analysis_records(
+    usage: MirSnapshotAnalysisUsage,
+) -> Vec<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)> {
+    if usage.is_empty() {
+        Vec::new()
+    } else {
+        vec![(MirSnapshotAnalysisKind::LocalConstants, usage)]
     }
 }

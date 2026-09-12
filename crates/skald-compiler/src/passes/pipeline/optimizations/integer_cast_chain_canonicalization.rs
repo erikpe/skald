@@ -5,8 +5,7 @@ mod plan;
 
 use super::super::{
     execution::{
-        MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
-        MirProofPassOutcome,
+        MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassContext, MirProofPassOutcome,
     },
     policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
     MirPassIdentity, MirPassStage,
@@ -30,7 +29,7 @@ pub(in crate::passes::pipeline) const REGISTRATION: MirPassRegistration = MirPas
     MirPassImplementation::proof_rich(IDENTITY, transform),
 );
 
-fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
+fn transform(capability: MirProofPassContext) -> Result<MirProofPassOutcome, MirPassFailure> {
     let plan = IntegerCastCanonicalizationPlan::prepare(capability.verified().program())
         .map_err(MirPassFailure::Rewrite)?;
     if plan.is_empty() {

@@ -15,7 +15,8 @@ use crate::{
 };
 
 use super::super::{
-    seal::UnverifiedFinalMirProgram, VerifiedFinalMirProgram, VerifiedProofMirProgram,
+    seal::UnverifiedFinalMirProgram, snapshot_analysis::MirProofPassContext,
+    VerifiedFinalMirProgram, VerifiedProofMirProgram,
 };
 use super::final_cfg::{MirFinalCfgEdit, MirFinalCfgStorageInvariant};
 use super::measurement::MirPassMeasurement;
@@ -444,6 +445,6 @@ impl MirPassFailure {
 }
 
 pub(in crate::passes::pipeline) type MirProofPassTransform =
-    fn(MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure>;
+    for<'session> fn(MirProofPassContext<'session>) -> Result<MirProofPassOutcome, MirPassFailure>;
 pub(in crate::passes::pipeline) type MirFinalPassTransform =
     fn(MirFinalPassCapability) -> Result<MirFinalPassOutcome, MirPassFailure>;

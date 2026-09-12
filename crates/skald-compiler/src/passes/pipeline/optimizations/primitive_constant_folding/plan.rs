@@ -6,14 +6,15 @@ use crate::{
     identity::CallableId,
     mir::{
         rewrite::{MirCallableEdit, MirRewriteError},
-        MirDefinitionRef, MirInstruction, MirProgram, MirRvalueKind,
+        MirDefinitionRef, MirInstruction, MirRvalueKind,
     },
 };
 
 use super::{FoldCounts, PrimitiveFoldKind};
-use crate::passes::pipeline::optimizations::local_constant::{
-    solve_local_constants, LocalConstantAnalysisError,
-};
+use crate::passes::pipeline::optimizations::local_constant::LocalConstantAnalysisError;
+use crate::passes::pipeline::snapshot_analysis::MirProofPassContext;
+#[cfg(test)]
+use crate::{mir::MirProgram, passes::pipeline::optimizations::solve_local_constants};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct PrimitiveFoldCandidate {
@@ -32,11 +33,25 @@ pub(super) struct PrimitiveFoldPlan {
 }
 
 impl PrimitiveFoldPlan {
+    pub(super) fn prepare_with_context(
+        context: &mut MirProofPassContext<'_>,
+    ) -> Result<Self, LocalConstantAnalysisError> {
+        let mut plan = Self::default();
+        for callable in context.executable_callables() {
+            plan.processed_callables = plan.processed_callables.saturating_add(1);
+            let solution = context.local_constants(callable)?;
+            plan.prepare_definition(context.executable_definition(callable), &solution)?;
+        }
+        Ok(plan)
+    }
+
+    #[cfg(test)]
     pub(super) fn prepare(program: &MirProgram) -> Result<Self, LocalConstantAnalysisError> {
         let mut plan = Self::default();
         for definition in program.executable_definitions() {
             plan.processed_callables = plan.processed_callables.saturating_add(1);
-            plan.prepare_definition(definition)?;
+            let solution = solve_local_constants(definition)?;
+            plan.prepare_definition(definition, &solution)?;
         }
         Ok(plan)
     }
@@ -44,8 +59,8 @@ impl PrimitiveFoldPlan {
     fn prepare_definition(
         &mut self,
         definition: MirDefinitionRef<'_>,
+        solution: &crate::passes::pipeline::optimizations::local_constant::LocalConstantSolution,
     ) -> Result<(), LocalConstantAnalysisError> {
-        let solution = solve_local_constants(definition)?;
         for block in &definition.body().blocks {
             for (instruction_index, instruction) in block.instructions.iter().enumerate() {
                 let MirInstruction::Assign(assignment) = instruction else {

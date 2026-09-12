@@ -5,8 +5,7 @@ mod plan;
 
 use super::super::{
     execution::{
-        MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
-        MirProofPassOutcome,
+        MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassContext, MirProofPassOutcome,
     },
     policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
     MirPassIdentity, MirPassStage,
@@ -30,9 +29,9 @@ pub(in crate::passes::pipeline) const REGISTRATION: MirPassRegistration = MirPas
     MirPassImplementation::proof_rich(IDENTITY, transform),
 );
 
-fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
-    let plan = CheckedF64ToIntegerFoldPlan::prepare(capability.verified().program())
-        .map_err(plan_failure)?;
+fn transform(mut capability: MirProofPassContext) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let plan =
+        CheckedF64ToIntegerFoldPlan::prepare_with_context(&mut capability).map_err(plan_failure)?;
     if plan.is_empty() {
         return capability.unchanged_with(pass_data(&plan, 0, 0));
     }

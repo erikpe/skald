@@ -1,6 +1,6 @@
 # MIR Snapshot Analysis Reuse Roadmap
 
-Status: planned; S01 is next.
+Status: in progress; Gate 1 is go and S02 is next.
 
 This roadmap implements
 [cleanup finding A19](CODEBASE_CLEANUP_AUDIT.md#a19--reuse-analyses-within-an-immutable-mir-snapshot)
@@ -98,7 +98,7 @@ without a new design decision.
 
 ## Progress
 
-- [ ] S01 — Instrument uncached requests and decide Gate 1
+- [x] S01 — Instrument uncached requests and decide Gate 1
 - [ ] S02 — Establish snapshot-bound session ownership
 - [ ] S03 — Enable bounded reuse and decide Gate 2
 - [ ] S04 — Deliver or remove reuse and close A19
@@ -110,28 +110,35 @@ without a new design decision.
 **Purpose:** establish whether the default pipeline actually repeats local
 constant work on one unchanged snapshot before adding memoization.
 
-- [ ] Add a private `pipeline::snapshot_analysis` facade with a closed local-
+- [x] Add a private `pipeline::snapshot_analysis` facade with a closed local-
   constant analysis identity, deterministic saturating usage counts, and
   colocated tests. Keep memoization disabled.
-- [ ] Introduce the stage-specific proof-pass context selected by the design.
+- [x] Introduce the stage-specific proof-pass context selected by the design.
   It owns the existing capability, borrows the runner's measurement state, and
   mirrors unchanged and rewrite operations without widening mutation access.
-- [ ] Route every production proof-rich local constant request through the
+- [x] Route every production proof-rich local constant request through the
   typed context. Remove direct solver calls from pass implementations after
   confirming that every current consumer is covered.
-- [ ] Record, by schedule occurrence, requests, computations, repeated
+- [x] Record, by schedule occurrence, requests, computations, repeated
   callable-snapshot requests, results present before the occurrence, inserted
   results, and discarded results. With memoization disabled, requests equal
   computations and result counts remain zero.
-- [ ] Keep detailed-recording selection observational: enabling reports or an
+- [x] Keep detailed-recording selection observational: enabling reports or an
   inspector must not cause a query or change aggregate counts.
-- [ ] Add the maintained
+- [x] Add the maintained
   `MIR_ANALYSIS_REUSE_MEASUREMENTS.md` evidence document under
   `docs/development/`. Record commands, compiler revision and dirty state,
   inputs, repetition policy, raw report paths, deterministic counts, timing,
   RSS, and Gate 1's decision.
-- [ ] Run the reviewed cleanup workloads and apply Gate 1 exactly as written.
+- [x] Run the reviewed cleanup workloads and apply Gate 1 exactly as written.
   Update this roadmap immediately with the decision and selected next step.
+
+**Gate 1 decision:** go. The reviewed matrix recorded 12,040 uncached requests
+and computations across 6,399 callable-snapshot keys, including 5,641 repeated
+same-snapshot requests. The exact occurrences, operational context, and raw
+report paths are retained in the
+[measurement evidence](../development/MIR_ANALYSIS_REUSE_MEASUREMENTS.md).
+After S01 validation, continue to S02; do not take the Gate 1 no-go branch.
 
 **Tests:** Cover saturating aggregation, schedule-ordered records, repeated
 requests within one measurement epoch, reset after a synthetic changed

@@ -32,6 +32,10 @@ PASS_PATTERN = re.compile(
     rb"\(pass identity \d+, schedule position (\d+), occurrence (\d+)\) ",
     re.MULTILINE,
 )
+ANALYSIS_PATTERN = re.compile(
+    rb"^skac: trace analysis: ([^:]+): requests (\d+), computations (\d+), "
+    rb"repeated snapshot requests (\d+), results before (\d+), inserted (\d+), discarded (\d+)$"
+)
 
 
 @dataclass(frozen=True)
@@ -175,6 +179,65 @@ def resolved_schedule(
     return schedule
 
 
+def parse_analysis_usage(stderr: bytes) -> list[dict[str, object]]:
+    current: dict[str, object] | None = None
+    usage: list[dict[str, object]] = []
+    for line in stderr.splitlines():
+        if match := PASS_PATTERN.match(line):
+            stage, name, position, occurrence = match.groups()
+            current = {
+                "position": int(position),
+                "pass": name.decode("utf-8"),
+                "stage": stage.decode("ascii"),
+                "occurrence": int(occurrence),
+            }
+            continue
+        match = ANALYSIS_PATTERN.match(line)
+        if match is None:
+            continue
+        if current is None:
+            raise MeasurementFailure("analysis usage preceded its MIR pass occurrence")
+        kind, requests, computations, repeated, before, inserted, discarded = match.groups()
+        usage.append(
+            {
+                **current,
+                "analysis": kind.decode("ascii"),
+                "requests": int(requests),
+                "computations": int(computations),
+                "repeated_snapshot_requests": int(repeated),
+                "distinct_callable_snapshot_keys": int(requests) - int(repeated),
+                "results_before": int(before),
+                "results_inserted": int(inserted),
+                "results_discarded": int(discarded),
+            }
+        )
+    return usage
+
+
+def inspect_analysis_usage(
+    compiler: Path,
+    workload: Workload,
+    run_directory: Path,
+    timeout_seconds: float,
+) -> list[dict[str, object]]:
+    output = run_directory / f"{workload.identity.replace('/', '-')}-analysis.s"
+    completed = run_checked(
+        [
+            compiler,
+            *workload.compiler_arguments,
+            "--emit",
+            "asm",
+            "--report-level",
+            "trace",
+            "-o",
+            output,
+        ],
+        operation=f"{workload.identity} analysis-usage inspection",
+        timeout_seconds=timeout_seconds,
+    )
+    return parse_analysis_usage(completed.stderr)
+
+
 def numeric_summary(samples: list[int]) -> dict[str, int | float]:
     summary = timing_summary([float(sample) for sample in samples])
     return {
@@ -193,6 +256,9 @@ def compile_workload(
     repeats: int,
     timeout_seconds: float,
 ) -> tuple[dict[str, object], dict[str, object], Path | None]:
+    analysis_usage = inspect_analysis_usage(
+        compiler, workload, run_directory, timeout_seconds
+    )
     assembly_values: list[bytes] = []
     compile_wall_ms: list[float] = []
     compile_peak_rss_kib: list[int] = []
@@ -239,6 +305,7 @@ def compile_workload(
             "assembly_sha256": sha256_bytes(assembly_values[0]),
             "executable_bytes": executable_bytes,
         },
+        "analysis_usage": analysis_usage,
     }
     operational = {
         "id": workload.identity,

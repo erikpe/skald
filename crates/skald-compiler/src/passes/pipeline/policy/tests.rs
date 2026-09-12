@@ -10,8 +10,8 @@ use super::{
     MirPassStage,
 };
 use crate::passes::pipeline::execution::{
-    MirFinalPassCapability, MirFinalPassOutcome, MirPassFailure, MirProofPassCapability,
-    MirProofPassOutcome, MirProofTransitionCapability, MirProofTransitionFailure,
+    MirFinalPassCapability, MirFinalPassOutcome, MirPassFailure, MirProofPassContext,
+    MirProofPassOutcome, MirProofTransitionContext, MirProofTransitionFailure,
     MirProofTransitionOutcome,
 };
 use crate::passes::pipeline::optimizations::{
@@ -46,7 +46,7 @@ const fn registration(
 }
 
 fn metadata_only_pass(
-    capability: MirProofPassCapability,
+    capability: MirProofPassContext,
 ) -> Result<MirProofPassOutcome, MirPassFailure> {
     Ok(capability.unchanged())
 }
@@ -80,7 +80,7 @@ const fn transition_registration(
 }
 
 fn transition_metadata_only_pass(
-    capability: MirProofTransitionCapability,
+    capability: MirProofTransitionContext,
 ) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
     capability.normalize(None, Default::default())
 }

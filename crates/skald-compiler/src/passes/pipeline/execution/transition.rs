@@ -3,6 +3,7 @@
 use crate::passes::pipeline::{
     normalization::{MirProofNormalizationStatistics, MirProofTransitionPlan},
     seal::MirProofTransitionError,
+    snapshot_analysis::MirProofTransitionContext,
     VerifiedFinalMirProgram, VerifiedProofMirProgram,
 };
 
@@ -129,6 +130,6 @@ impl From<MirPassFailure> for MirProofTransitionFailure {
 }
 
 pub(in crate::passes::pipeline) type MirProofTransitionTransform =
-    fn(
-        MirProofTransitionCapability,
+    for<'session> fn(
+        MirProofTransitionContext<'session>,
     ) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure>;

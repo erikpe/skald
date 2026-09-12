@@ -4,7 +4,10 @@ use std::{
     time::Duration,
 };
 
-use crate::passes::{MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPassStage};
+use crate::passes::{
+    MirPassOccurrenceOutcome, MirPassOccurrenceRecord, MirPassStage, MirSnapshotAnalysisKind,
+    MirSnapshotAnalysisUsage,
+};
 
 use super::*;
 
@@ -209,6 +212,10 @@ fn mir_pass_rendering_is_trace_only_and_uses_fixed_occurrence_data() {
         MirPassOccurrenceOutcome::Changed,
         Some((3, 1)),
         vec![("removed values", 4)],
+    )
+    .with_analysis_usage_for_test(
+        MirSnapshotAnalysisKind::LocalConstants,
+        MirSnapshotAnalysisUsage::for_test(3, 3, 1, 0, 0, 0),
     );
     let event = ReportEvent::MirPassFinished { occurrence };
 
@@ -224,6 +231,7 @@ fn mir_pass_rendering_is_trace_only_and_uses_fixed_occurrence_data() {
             "skac: trace stats: inserted MIR entities: 0\n",
             "skac: trace stats: removed MIR entities: 0\n",
             "skac: trace stats: removed values: 4\n",
+            "skac: trace analysis: local-constants: requests 3, computations 3, repeated snapshot requests 1, results before 0, inserted 0, discarded 0\n",
             "skac: trace stats: verification executions: 0\n",
         )
     );

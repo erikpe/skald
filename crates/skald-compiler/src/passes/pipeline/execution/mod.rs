@@ -10,6 +10,9 @@ mod runner;
 mod statistics;
 mod transition;
 
+pub(in crate::passes::pipeline) use super::snapshot_analysis::{
+    MirProofPassContext, MirProofTransitionContext,
+};
 pub use error::{MirPipelineError, MirPipelineFailureStage};
 #[cfg(test)]
 pub(in crate::passes::pipeline) use final_storage_cleanup::test_support::{
@@ -24,7 +27,8 @@ pub use inspection::{
 pub use measurement::{MirPassMeasurement, MirPassOccurrenceOutcome, MirPassOccurrenceRecord};
 pub(in crate::passes::pipeline) use model::{
     MirFinalPassCapability, MirFinalPassOutcome, MirFinalPassTransform, MirPassData,
-    MirPassFailure, MirProofPassCapability, MirProofPassOutcome, MirProofPassTransform,
+    MirPassFailure, MirProofChangedProgram, MirProofPassCapability, MirProofPassOutcome,
+    MirProofPassTransform,
 };
 pub(crate) use runner::{
     run_mir_pipeline_instrumented, run_mir_pipeline_measured, run_mir_pipeline_with_occurrences,

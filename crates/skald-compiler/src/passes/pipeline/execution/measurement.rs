@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use crate::mir::rewrite::MirRewriteChangeSummary;
 
+use super::super::snapshot_analysis::{MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage};
 use super::super::{MirPassIdentity, MirPassOccurrence, MirPassStage};
 use super::model::MirPassData;
 
@@ -57,6 +58,7 @@ pub struct MirPassOccurrenceRecord {
     removed_mir_entities: u64,
     verification_executions: u64,
     measurements: Vec<MirPassMeasurement>,
+    analysis_usage: Vec<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)>,
 }
 
 impl MirPassOccurrenceRecord {
@@ -136,6 +138,10 @@ impl MirPassOccurrenceRecord {
         &self.measurements
     }
 
+    pub fn analysis_usage(&self) -> &[(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)] {
+        &self.analysis_usage
+    }
+
     pub(super) fn completed(
         occurrence: MirPassOccurrence,
         elapsed: Duration,
@@ -143,6 +149,7 @@ impl MirPassOccurrenceRecord {
         data: MirPassData,
         rewrite_changes: MirRewriteChangeSummary,
         verification_executions: u64,
+        analysis_usage: Vec<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)>,
     ) -> Self {
         Self::new(
             occurrence,
@@ -156,10 +163,15 @@ impl MirPassOccurrenceRecord {
             count(rewrite_changes.removed()),
             verification_executions,
             data.into_measurements(),
+            analysis_usage,
         )
     }
 
-    pub(super) fn failed(occurrence: MirPassOccurrence, elapsed: Duration) -> Self {
+    pub(super) fn failed(
+        occurrence: MirPassOccurrence,
+        elapsed: Duration,
+        analysis_usage: Vec<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)>,
+    ) -> Self {
         Self::new(
             occurrence,
             elapsed,
@@ -172,6 +184,7 @@ impl MirPassOccurrenceRecord {
             0,
             0,
             Vec::new(),
+            analysis_usage,
         )
     }
 
@@ -188,6 +201,7 @@ impl MirPassOccurrenceRecord {
         removed_mir_entities: u64,
         verification_executions: u64,
         measurements: Vec<MirPassMeasurement>,
+        analysis_usage: Vec<(MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage)>,
     ) -> Self {
         Self {
             position: occurrence.position(),
@@ -205,6 +219,7 @@ impl MirPassOccurrenceRecord {
             removed_mir_entities,
             verification_executions,
             measurements,
+            analysis_usage,
         }
     }
 
@@ -239,7 +254,18 @@ impl MirPassOccurrenceRecord {
                 .into_iter()
                 .map(|(name, value)| MirPassMeasurement::count(name, value))
                 .collect(),
+            analysis_usage: Vec::new(),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_analysis_usage_for_test(
+        mut self,
+        kind: MirSnapshotAnalysisKind,
+        usage: MirSnapshotAnalysisUsage,
+    ) -> Self {
+        self.analysis_usage.push((kind, usage));
+        self
     }
 }
 

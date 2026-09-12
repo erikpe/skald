@@ -11,8 +11,7 @@ use crate::mir::{
 
 use super::super::{
     execution::{
-        MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassCapability,
-        MirProofPassOutcome,
+        MirPassData, MirPassFailure, MirPassMeasurement, MirProofPassContext, MirProofPassOutcome,
     },
     policy::{MirPassDescriptor, MirPassImplementation, MirPassRegistration},
     MirPassIdentity, MirPassStage,
@@ -46,7 +45,7 @@ impl EliminationCount {
     }
 }
 
-fn transform(capability: MirProofPassCapability) -> Result<MirProofPassOutcome, MirPassFailure> {
+fn transform(capability: MirProofPassContext) -> Result<MirProofPassOutcome, MirPassFailure> {
     let mut processed_callables = 0;
     let mut has_candidate = false;
     for definition in capability.verified().executable_definitions() {

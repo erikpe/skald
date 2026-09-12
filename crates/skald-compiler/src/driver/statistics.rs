@@ -325,6 +325,25 @@ fn pipeline_execution_metrics(statistics: &MirPipelineStatistics) -> Vec<ReportM
                 }),
         );
     }
+    for (kind, usage) in statistics.analysis_usage() {
+        let owner = kind.name();
+        metrics.extend([
+            ReportMetric::pass_count(owner, "analysis requests", usage.requests()),
+            ReportMetric::pass_count(owner, "analysis computations", usage.computations()),
+            ReportMetric::pass_count(
+                owner,
+                "repeated snapshot requests",
+                usage.repeated_snapshot_requests(),
+            ),
+            ReportMetric::pass_count(
+                owner,
+                "results present before occurrences",
+                usage.results_before(),
+            ),
+            ReportMetric::pass_count(owner, "results inserted", usage.results_inserted()),
+            ReportMetric::pass_count(owner, "results discarded", usage.results_discarded()),
+        ]);
+    }
     metrics
 }
 
