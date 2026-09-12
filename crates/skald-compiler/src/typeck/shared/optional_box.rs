@@ -14,8 +14,8 @@ use crate::{
 };
 
 use super::super::{
+    diagnostic_codes::{COPY_OPERATION_UNAVAILABLE, INVALID_SHARED_CONVERSION},
     function::CallableChecker,
-    program::{COPY_OPERATION_UNAVAILABLE, INVALID_SHARED_CONVERSION},
 };
 
 impl CallableChecker<'_, '_> {

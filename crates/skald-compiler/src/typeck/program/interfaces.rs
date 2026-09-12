@@ -15,8 +15,10 @@ use crate::{
     },
 };
 
-use super::{
-    lower_parameter_mode, lower_type, INVALID_INTERFACE_CONFORMANCE, INVALID_INTERFACE_REQUIREMENT,
+use crate::typeck::{
+    categories::supports_alias_type,
+    conversion::{lower_parameter_mode, lower_type, same_resolved_type},
+    diagnostic_codes::{INVALID_INTERFACE_CONFORMANCE, INVALID_INTERFACE_REQUIREMENT},
 };
 
 pub(super) struct InterfaceAnalysis {
@@ -154,9 +156,9 @@ fn lower_interfaces(
                         parameters: requirement
                             .parameters
                             .iter()
-                            .map(|parameter| lower_interface_parameter(program, parameter))
+                            .map(lower_interface_parameter)
                             .collect(),
-                        return_type: lower_type(program, &requirement.return_type),
+                        return_type: lower_type(&requirement.return_type),
                         span: requirement.span,
                     }
                 })
@@ -193,7 +195,7 @@ fn validate_requirement_signature(
                 .with_secondary_label(previous, "first declared here"),
             );
         }
-        let ty = lower_type(program, &parameter.type_syntax);
+        let ty = lower_type(&parameter.type_syntax);
         let valid = match parameter.binding_mode {
             crate::resolve::ResolvedParameterBindingMode::Value => !matches!(
                 ty,
@@ -201,7 +203,7 @@ fn validate_requirement_signature(
             ),
             crate::resolve::ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | crate::resolve::ResolvedParameterBindingMode::MutableAlias { .. } => {
-                super::is_supported_alias_type(program, ty)
+                supports_alias_type(program, ty)
             }
         };
         if !valid {
@@ -221,7 +223,7 @@ fn validate_requirement_signature(
         }
     }
     if matches!(
-        lower_type(program, &requirement.return_type),
+        lower_type(&requirement.return_type),
         crate::hir::Type::Obj | crate::hir::Type::Interface(_)
     ) {
         diagnostics.push(
@@ -240,15 +242,12 @@ fn validate_requirement_signature(
     }
 }
 
-fn lower_interface_parameter(
-    program: &ResolvedProgram,
-    parameter: &ResolvedInterfaceParameter,
-) -> HirInterfaceParameter {
+fn lower_interface_parameter(parameter: &ResolvedInterfaceParameter) -> HirInterfaceParameter {
     HirInterfaceParameter {
         mode: lower_parameter_mode(parameter.binding_mode),
         name: parameter.name.clone(),
         name_span: parameter.name_span,
-        ty: lower_type(program, &parameter.type_syntax),
+        ty: lower_type(&parameter.type_syntax),
         span: parameter.span,
     }
 }
@@ -376,11 +375,11 @@ fn signature_difference(
         if parameter_mode_kind(actual.binding_mode) != parameter_mode_kind(expected.binding_mode) {
             return Some("a parameter binding mode differs from the interface requirement");
         }
-        if !super::same_resolved_type(&actual.type_syntax, &expected.type_syntax) {
+        if !same_resolved_type(&actual.type_syntax, &expected.type_syntax) {
             return Some("a parameter type differs from the interface requirement");
         }
     }
-    (!super::same_resolved_type(&method.return_type, &requirement.return_type))
+    (!same_resolved_type(&method.return_type, &requirement.return_type))
         .then_some("result type differs from the interface requirement")
 }
 

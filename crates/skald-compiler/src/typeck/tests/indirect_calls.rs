@@ -177,15 +177,15 @@ fn indirect_call_failures_report_arity_type_and_alias_mode_without_target_infere
     assert!(output
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == super::super::program::WRONG_ARGUMENT_COUNT));
+        .any(|diagnostic| diagnostic.code == super::super::WRONG_ARGUMENT_COUNT));
     assert!(output
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == super::super::program::TYPE_MISMATCH));
+        .any(|diagnostic| diagnostic.code == super::super::TYPE_MISMATCH));
     assert!(output
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == super::super::program::INSUFFICIENT_ALIAS_ACCESS));
+        .any(|diagnostic| diagnostic.code == super::super::INSUFFICIENT_ALIAS_ACCESS));
 }
 
 #[test]

@@ -16,8 +16,8 @@ use crate::{
 };
 
 use super::{
-    expression::is_call_through_groups, function::CallableChecker,
-    optional_types::OptionalPayloadKind, program::TYPE_MISMATCH,
+    diagnostic_codes::TYPE_MISMATCH, expression::is_call_through_groups, function::CallableChecker,
+    optional_types::OptionalPayloadKind,
 };
 
 impl CallableChecker<'_, '_> {
@@ -760,7 +760,7 @@ impl CallableChecker<'_, '_> {
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    crate::typeck::diagnostic_codes::INVALID_OBJECT_CONTEXT,
                     "this optional payload is not a scalar value",
                 )
                 .with_primary_label(
@@ -814,7 +814,7 @@ impl CallableChecker<'_, '_> {
             | HirOptionalOperand::AggregateProduced(_) => {
                 self.diagnostics.push(
                     Diagnostic::error(
-                        crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                        crate::typeck::diagnostic_codes::INVALID_OBJECT_CONTEXT,
                         "checked object view requires an inline class optional",
                     )
                     .with_primary_label(unwrap.span, "this optional has a primitive payload"),

@@ -16,9 +16,9 @@ use crate::{
 };
 
 use super::super::{
+    diagnostic_codes::{IMPLICIT_SHARED_DEREFERENCE, WRONG_ARGUMENT_COUNT},
     expression::require_type,
     function::CallableChecker,
-    program::{IMPLICIT_SHARED_DEREFERENCE, WRONG_ARGUMENT_COUNT},
 };
 use super::ARRAY_CAPABILITY_UNAVAILABLE;
 

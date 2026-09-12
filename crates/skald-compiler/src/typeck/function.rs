@@ -17,13 +17,14 @@ use crate::{
 
 use super::{
     capabilities::CopyCapabilities,
-    expression::{
-        direct_call_through_groups, is_call_through_groups, require_type, ObjectPlaceUse,
-    },
-    program::{
-        lower_type, COPY_OPERATION_UNAVAILABLE, FIELD_INITIALIZATION, INVALID_CALL_STATEMENT,
+    conversion::lower_type,
+    diagnostic_codes::{
+        COPY_OPERATION_UNAVAILABLE, FIELD_INITIALIZATION, INVALID_CALL_STATEMENT,
         INVALID_CONSTRUCTION, INVALID_INITIALIZER_BODY, INVALID_OBJECT_CONTEXT, INVALID_RETURN,
         MISSING_RETURN, READ_ONLY_RECEIVER,
+    },
+    expression::{
+        direct_call_through_groups, is_call_through_groups, require_type, ObjectPlaceUse,
     },
 };
 
@@ -143,7 +144,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         }
         self.diagnostics.push(
             Diagnostic::error(
-                super::program::TYPE_MISMATCH,
+                super::diagnostic_codes::TYPE_MISMATCH,
                 format!(
                     "{context} has type `{}` but `{}` is required",
                     self.diagnostic_type_name(actual),
@@ -171,7 +172,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             body: Some(&definition.body),
             definition_span: definition.span,
             callable_name: format!("function `{}`", declaration.name),
-            return_type: lower_type(program, &declaration.return_type),
+            return_type: lower_type(&declaration.return_type),
             class_owner: None,
             receiver: None,
             member_body_kind: None,
@@ -353,7 +354,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             .iter()
             .map(|resolved| {
                 let type_span = resolved.type_syntax.span;
-                let local = lower_local(self.program, resolved);
+                let local = lower_local(resolved);
                 let ty = local.ty;
                 if matches!(ty, Type::Obj | Type::Interface(_)) {
                     self.diagnostics.push(
@@ -373,12 +374,12 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     }
 }
 
-pub(super) fn lower_local(program: &ResolvedProgram, local: &ResolvedLocal) -> HirLocal {
+pub(super) fn lower_local(local: &ResolvedLocal) -> HirLocal {
     HirLocal {
         id: local.id,
         name: local.name.clone(),
         name_span: local.name_span,
-        ty: lower_type(program, &local.type_syntax),
+        ty: lower_type(&local.type_syntax),
         span: local.span,
     }
 }

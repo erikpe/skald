@@ -281,7 +281,7 @@ impl CallableChecker<'_, '_> {
             .field(place.field)
             .expect("selected field must exist");
         let field_name = field.name.clone();
-        let field_type = lower_type(self.program, &field.type_syntax);
+        let field_type = lower_type(&field.type_syntax);
         let cell_span = field.cell_span;
         let final_span = field.final_span;
         let direct_self_field = place.receiver.inspection_place().is_some_and(|receiver| {

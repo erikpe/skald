@@ -9,7 +9,7 @@ use crate::{
         ResolvedObjectReceiver, ResolvedOperatorResolution, ResolvedOperatorSelection,
         ResolvedUnaryExpr,
     },
-    typeck::program::lower_type_kind,
+    typeck::conversion::lower_type_kind,
 };
 
 /// Whether this source expression is known to erase to one ordinary
@@ -115,7 +115,7 @@ impl CallableChecker<'_, '_> {
             }
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::program::INVALID_OPERATOR_SELECTION,
+                    crate::typeck::diagnostic_codes::INVALID_OPERATOR_SELECTION,
                     "resolved operator selection has inconsistent canonical mapping evidence",
                 )
                 .with_primary_label(
@@ -132,13 +132,13 @@ impl CallableChecker<'_, '_> {
         let left_type = self.static_expression_type(left);
         let mut diagnostic = if !resolution.incompatible_rhs.is_empty() {
             Diagnostic::error(
-                crate::typeck::program::INCOMPATIBLE_OPERATOR_RHS,
+                crate::typeck::diagnostic_codes::INCOMPATIBLE_OPERATOR_RHS,
                 format!("operator `{spelling}` cannot bind its right operand to any canonical application"),
             )
             .with_primary_label(operator_span, "right operand is incompatible with every declared `Rhs`")
         } else if resolution.candidates.is_empty() {
             Diagnostic::error(
-                crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION,
+                crate::typeck::diagnostic_codes::UNSUPPORTED_OPERATOR_APPLICATION,
                 format!("operator `{spelling}` is unsupported for these operands"),
             )
             .with_primary_label(
@@ -147,7 +147,7 @@ impl CallableChecker<'_, '_> {
             )
         } else {
             Diagnostic::error(
-                crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION,
+                crate::typeck::diagnostic_codes::AMBIGUOUS_OPERATOR_APPLICATION,
                 format!("operator `{spelling}` has multiple applicable protocol applications"),
             )
             .with_primary_label(operator_span, "operator selection is ambiguous")
@@ -285,7 +285,7 @@ impl CallableChecker<'_, '_> {
             actual => {
                 self.diagnostics.push(
                     Diagnostic::error(
-                        crate::typeck::program::TYPE_MISMATCH,
+                        crate::typeck::diagnostic_codes::TYPE_MISMATCH,
                         "selected operator requires an exact class or canonical interface receiver",
                     )
                     .with_primary_label(
@@ -336,7 +336,7 @@ impl CallableChecker<'_, '_> {
     fn report_operator_receiver_form(&mut self, span: crate::source::Span) {
         self.diagnostics.push(
             Diagnostic::error(
-                crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                crate::typeck::diagnostic_codes::INVALID_OBJECT_CONTEXT,
                 "this object expression cannot be used as an overloaded operator receiver",
             )
             .with_primary_label(span, "unsupported receiver form"),

@@ -16,11 +16,9 @@ use crate::{
 };
 
 use super::super::{
+    conversion::{lower_parameter_mode, lower_type},
+    diagnostic_codes::{FIELD_INITIALIZATION, INVALID_ALIAS_ARGUMENT, INVALID_OBJECT_CONTEXT},
     function::{CallableChecker, MemberBodyKind},
-    program::{
-        lower_parameter_mode, lower_type, FIELD_INITIALIZATION, INVALID_ALIAS_ARGUMENT,
-        INVALID_OBJECT_CONTEXT,
-    },
 };
 
 #[derive(Clone, Copy)]
@@ -156,7 +154,7 @@ impl CallableChecker<'_, '_> {
         }
         Some(HirExpression {
             kind: HirExpressionKind::FieldRead(place),
-            ty: lower_type(self.program, &field.type_syntax),
+            ty: lower_type(&field.type_syntax),
             span: access.span,
         })
     }
@@ -247,8 +245,7 @@ impl CallableChecker<'_, '_> {
                 .program
                 .static_field(*field)
                 .expect("resolved static receiver must reference a static field");
-            let Type::Class(dynamic_class) = lower_type(self.program, &declaration.type_syntax)
-            else {
+            let Type::Class(dynamic_class) = lower_type(&declaration.type_syntax) else {
                 unreachable!("resolved static object receiver must retain an exact class type")
             };
             let place = crate::hir::HirStaticPlace {
@@ -794,9 +791,8 @@ impl CallableChecker<'_, '_> {
                     .expect("receiver binding must be checked in a member body")
                     .class,
             ),
-            BindingId::Parameter(id) => lower_type(self.program, &self.parameter(id).type_syntax),
+            BindingId::Parameter(id) => lower_type(&self.parameter(id).type_syntax),
             BindingId::Local(id) => lower_type(
-                self.program,
                 &self
                     .locals
                     .get(id.index())

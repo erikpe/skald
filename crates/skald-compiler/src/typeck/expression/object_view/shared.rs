@@ -179,7 +179,7 @@ impl CallableChecker<'_, '_> {
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    crate::typeck::diagnostic_codes::INVALID_OBJECT_CONTEXT,
                     "an optional-box dereference yields an optional wrapper, not an object",
                 )
                 .with_primary_label(
@@ -196,7 +196,7 @@ impl CallableChecker<'_, '_> {
         if pointee.owner_target() != resolved_target {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    crate::typeck::diagnostic_codes::INVALID_OBJECT_CONTEXT,
                     "resolved dereference target does not match its shared owner",
                 )
                 .with_primary_label(

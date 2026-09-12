@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Compiler facade ownership](COMPILER_FACADE_OWNERSHIP_ROADMAP.md) | Planned | Restore clear type-check program ownership and explicit resolver program-boundary dependencies | Give type conversion and program diagnostics cohesive owners | Completed resolver stage-product and publication ownership work |
+| [Compiler facade ownership](COMPILER_FACADE_OWNERSHIP_ROADMAP.md) | Active; type conversion and program diagnostic ownership complete | Restore clear type-check program ownership and explicit resolver program-boundary dependencies | Isolate declaration validation behind the type-check program facade | Completed resolver stage-product and publication ownership work |
 
 ## Pending discovery and planning records
 

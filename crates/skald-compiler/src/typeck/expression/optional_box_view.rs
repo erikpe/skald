@@ -91,7 +91,7 @@ impl CallableChecker<'_, '_> {
         let Some(optional) = metadata.optional else {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    crate::typeck::diagnostic_codes::INVALID_OBJECT_CONTEXT,
                     "a polymorphic optional-box view has no standalone optional value type",
                 )
                 .with_primary_label(
@@ -105,7 +105,7 @@ impl CallableChecker<'_, '_> {
         if source.target() != HirSharedTarget::OptionalBox(target) {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    crate::typeck::diagnostic_codes::INVALID_OBJECT_CONTEXT,
                     "resolved optional-box dereference does not match its owner",
                 )
                 .with_primary_label(

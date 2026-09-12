@@ -1,7 +1,7 @@
 //! Receiverless calls through canonical capture-free function signatures.
 
 use super::*;
-use crate::{hir::HirIndirectCall, typeck::program::lower_type};
+use crate::{hir::HirIndirectCall, typeck::conversion::lower_type};
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_indirect_call(
@@ -34,7 +34,7 @@ impl CallableChecker<'_, '_> {
             None,
             Some(signature.span),
         )?;
-        let result = lower_type(self.program, &signature.result);
+        let result = lower_type(&signature.result);
         Some(
             HirIndirectCall::new(callee, call.function_type, arguments, result, call.span)
                 .into_expression(),

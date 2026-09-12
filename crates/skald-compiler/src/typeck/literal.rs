@@ -11,11 +11,11 @@ use crate::{
 };
 
 use super::{
-    function::CallableChecker,
-    program::{
+    diagnostic_codes::{
         F64_LITERAL_OUT_OF_RANGE, INTEGER_LITERAL_OUT_OF_RANGE, INVALID_RESOLVED_F64_LITERAL,
         U64_LITERAL_OUT_OF_RANGE, U8_LITERAL_OUT_OF_RANGE,
     },
+    function::CallableChecker,
 };
 
 impl CallableChecker<'_, '_> {

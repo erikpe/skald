@@ -87,7 +87,7 @@ impl CallableChecker<'_, '_> {
             ResolvedArrayConstructionArguments::Indexed(initializer) => {
                 let length = self.check_array_construction_length(&initializer.length)?;
                 debug_assert_eq!(initializer.binding.type_syntax.kind, ResolvedTypeKind::I64);
-                let binding = lower_local(self.program, &initializer.binding);
+                let binding = lower_local(&initializer.binding);
                 debug_assert_eq!(binding.ty, Type::I64);
 
                 let inserted = self.read_only_locals.insert(binding.id);

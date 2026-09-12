@@ -56,7 +56,7 @@ impl CallableChecker<'_, '_> {
                 .expect("selected final field must exist");
             self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::program::FINAL_FIELD_REPLACEMENT,
+                    super::super::diagnostic_codes::FINAL_FIELD_REPLACEMENT,
                     format!("final field `{}` cannot be replaced", field.name),
                 )
                 .with_primary_label(
@@ -83,7 +83,7 @@ impl CallableChecker<'_, '_> {
 
         self.diagnostics.push(
             Diagnostic::error(
-                super::super::program::READ_ONLY_RECEIVER,
+                super::super::diagnostic_codes::READ_ONLY_RECEIVER,
                 "cannot assign through a read-only receiver",
             )
             .with_primary_label(

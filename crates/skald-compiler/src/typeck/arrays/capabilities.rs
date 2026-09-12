@@ -9,7 +9,7 @@ use crate::{
     resolve::{ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind},
 };
 
-use super::super::{capabilities::CopyCapabilities, program::lower_type};
+use super::super::{capabilities::CopyCapabilities, conversion::lower_type};
 
 pub(in crate::typeck) fn lower_array_types(
     program: &ResolvedProgram,
@@ -17,7 +17,7 @@ pub(in crate::typeck) fn lower_array_types(
 ) -> HirArrayTypeTable {
     let mut entries = Vec::with_capacity(program.array_types.len());
     for array in program.array_types.iter() {
-        let element = lower_type(program, &array.element);
+        let element = lower_type(&array.element);
         entries.push(HirArrayType {
             id: array.id,
             element,

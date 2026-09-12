@@ -13,8 +13,9 @@ use crate::{
         HirTypeTestKind, HirViewTarget,
     },
     resolve::{ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr},
-    typeck::program::{
-        lower_type, INVALID_COPY_CONSTRUCTION, INVALID_OBJECT_CAST, INVALID_TYPE_TEST,
+    typeck::{
+        conversion::lower_type,
+        diagnostic_codes::{INVALID_COPY_CONSTRUCTION, INVALID_OBJECT_CAST, INVALID_TYPE_TEST},
     },
 };
 
@@ -215,7 +216,7 @@ impl CallableChecker<'_, '_> {
         span: Span,
         diagnostic_code: &'static str,
     ) -> Option<HirViewTarget> {
-        match lower_type(self.program, target) {
+        match lower_type(target) {
             Type::Class(class) => Some(HirViewTarget::Class(class)),
             Type::Interface(interface) => Some(HirViewTarget::Interface(interface)),
             Type::Obj => Some(HirViewTarget::Obj),

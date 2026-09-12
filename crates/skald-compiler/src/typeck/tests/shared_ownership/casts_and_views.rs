@@ -418,7 +418,7 @@ fn shared_casts_reject_nonowners_and_statically_impossible_targets() {
     let cast_errors: Vec<_> = output
         .diagnostics
         .iter()
-        .filter(|diagnostic| diagnostic.code == crate::typeck::program::INVALID_OBJECT_CAST)
+        .filter(|diagnostic| diagnostic.code == crate::typeck::INVALID_OBJECT_CAST)
         .collect();
     assert_eq!(cast_errors.len(), 3, "{:?}", output.diagnostics);
     assert!(cast_errors.iter().any(|diagnostic| diagnostic

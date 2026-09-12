@@ -11,8 +11,8 @@ use crate::{
 };
 
 use crate::typeck::{
+    diagnostic_codes::{INVALID_CONSTRUCTION, INVALID_OBJECT_CONTEXT},
     literal::{classify_i64_magnitude, i64_literal_through_groups, Magnitude},
-    program::{INVALID_CONSTRUCTION, INVALID_OBJECT_CONTEXT},
 };
 
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];

@@ -12,8 +12,7 @@ use crate::{
 };
 
 use super::super::{
-    function::CallableChecker,
-    program::{lower_type, FINAL_STATIC_REPLACEMENT},
+    conversion::lower_type, diagnostic_codes::FINAL_STATIC_REPLACEMENT, function::CallableChecker,
 };
 
 impl CallableChecker<'_, '_> {
@@ -65,7 +64,7 @@ impl CallableChecker<'_, '_> {
             .program
             .static_field(field)
             .expect("resolved static-field use must reference a declaration");
-        let ty = lower_type(self.program, &declaration.type_syntax);
+        let ty = lower_type(&declaration.type_syntax);
         Some((HirStaticPlace { field, span }, ty))
     }
 

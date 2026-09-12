@@ -10,7 +10,11 @@ use crate::{
     },
 };
 
-use super::{lower_type, FINAL_STATIC_INITIALIZER_REQUIRED, INVALID_STATIC_FIELD_TYPE};
+use crate::typeck::{
+    categories::type_category,
+    conversion::lower_type,
+    diagnostic_codes::{FINAL_STATIC_INITIALIZER_REQUIRED, INVALID_STATIC_FIELD_TYPE},
+};
 
 pub(super) fn lower_static_fields(
     program: &crate::resolve::ResolvedProgram,
@@ -22,7 +26,7 @@ pub(super) fn lower_static_fields(
     let fields = fields
         .iter()
         .map(|field| {
-            let ty = lower_type(program, &field.type_syntax);
+            let ty = lower_type(&field.type_syntax);
             let initializer = if let Some(initializer) = &field.initializer {
                 if !is_stored_value_type(ty) {
                     report_invalid_explicit_storage(field, ty, diagnostics);
@@ -42,11 +46,7 @@ pub(super) fn lower_static_fields(
                     value.map(|value| HirStaticFieldInitializer {
                         id: initializer.id,
                         equal_span: initializer.equal_span,
-                        locals: initializer
-                            .locals
-                            .iter()
-                            .map(|local| lower_local(program, local))
-                            .collect(),
+                        locals: initializer.locals.iter().map(lower_local).collect(),
                         value,
                         span: initializer.span,
                     })
@@ -134,7 +134,7 @@ fn report_invalid_explicit_storage(
 }
 
 pub(in crate::typeck) const fn is_stored_value_type(ty: Type) -> bool {
-    crate::type_capabilities::supports_stored_value(super::super::type_category(ty))
+    crate::type_capabilities::supports_stored_value(type_category(ty))
 }
 
 pub(in crate::typeck) const fn has_zero_default(ty: Type) -> bool {

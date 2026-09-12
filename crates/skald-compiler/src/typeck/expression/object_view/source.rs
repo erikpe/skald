@@ -9,7 +9,7 @@ use crate::{
     identity::BindingId,
     resolve::{ResolvedExpression, ResolvedTypeKind},
     source::Span,
-    typeck::{expression::ObjectPlaceUse, function::CallableChecker, program::lower_type},
+    typeck::{conversion::lower_type, expression::ObjectPlaceUse, function::CallableChecker},
 };
 
 use super::{CheckedSharedPointee, ObjectViewRelationSource};
@@ -480,7 +480,7 @@ impl CallableChecker<'_, '_> {
                 if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_)) {
                     return self.reject_implicit_shared_view_source(
                         expression,
-                        lower_type(self.program, &field.type_syntax),
+                        lower_type(&field.type_syntax),
                         diagnostics,
                     );
                 }

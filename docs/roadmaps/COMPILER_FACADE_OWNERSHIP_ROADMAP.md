@@ -1,6 +1,6 @@
 # Compiler Facade Ownership Roadmap
 
-Status: planned; F01 is next.
+Status: active; F01 is complete and F02 is next.
 
 This roadmap implements
 [cleanup finding A28](CODEBASE_CLEANUP_AUDIT.md#a28--restore-concise-facades-in-selected-hotspots)
@@ -49,7 +49,7 @@ counts are evidence for review, not repository-wide cleanup targets.
 
 ## Progress
 
-- [ ] F01 — Give type conversion and program diagnostics cohesive owners
+- [x] F01 — Give type conversion and program diagnostics cohesive owners
 - [ ] F02 — Isolate declaration validation behind the type-check program facade
 - [ ] F03 — Make resolver program-boundary dependencies explicit
 - [ ] F04 — Audit the selected facades, validate behavior, and close A28
@@ -62,19 +62,19 @@ counts are evidence for review, not repository-wide cleanup targets.
 diagnostic vocabulary from whole-program orchestration before moving validation
 that depends on both.
 
-- [ ] Inventory the constants and conversion helpers currently owned by
+- [x] Inventory the constants and conversion helpers currently owned by
   `typeck::program`, including all type-checker callers and public re-exports.
-- [ ] Move the program-level diagnostic constants to a cohesive private owner.
+- [x] Move the program-level diagnostic constants to a cohesive private owner.
   Preserve every constant name, value, and public `typeck::CONSTANT` path.
-- [ ] Move resolved-to-HIR type and parameter-mode conversion, resolved-type
+- [x] Move resolved-to-HIR type and parameter-mode conversion, resolved-type
   equality, and closely related conversion helpers to a cohesive type-checker
   owner. Place optional alias eligibility with the narrowest owner supported by
   its actual dependencies rather than retaining it in program orchestration.
-- [ ] Replace imports that describe the old ownership with explicit imports
+- [x] Replace imports that describe the old ownership with explicit imports
   from the new owners. Keep compatibility forwarding only when an established
   internal path has a demonstrated caller, and remove migration-only forwarding
   before completing the task.
-- [ ] Add focused unit tests for pure conversion or equality behavior only when
+- [x] Add focused unit tests for pure conversion or equality behavior only when
   current type-check tests do not exercise a meaningful boundary case.
 
 **Tests:** Run `cargo fmt --all -- --check`, `cargo test --locked -p
@@ -85,6 +85,26 @@ public_api`, `make check`, `make msrv-check`, and `git diff --check`.
 clear private owners; all public constants retain their names and values; all
 type-checker callers use intentional paths; conversion behavior is unchanged;
 and `typeck/program/mod.rs` no longer owns those unrelated responsibilities.
+
+Implemented: the private `diagnostic_codes` owner contains the 45 diagnostic
+constants formerly mixed into program orchestration, while the `typeck` facade
+retains every established public constant path. The private `conversion` owner
+now maps closed resolved types and parameter modes to HIR and compares resolved
+type identities. Its `lower_type` contract no longer accepts an unused program
+context, and thin parameter, local, and declaration lowering helpers likewise
+no longer forward that misleading dependency. The private `categories` owner
+contains both phase adapters to the neutral capability vocabulary and the
+optional-aware alias eligibility query.
+
+All production callers import the responsible private owner directly; tests
+use the supported `typeck` facade for public diagnostic constants. An exact
+inventory comparison confirmed that all 45 moved names and values are
+unchanged. Existing type-check coverage already exercises every resolved type
+family, parameter mode, resolved identity comparison, optional alias category,
+and diagnostic family, so no extraction-only test was added. The 526-test
+focused type-check suite, public API integration tests, full repository gate
+with 3,146 compiler tests and 629 golden cases, and Rust 1.82.0 workspace check
+pass.
 
 ### F02 — Isolate declaration validation behind the type-check program facade
 

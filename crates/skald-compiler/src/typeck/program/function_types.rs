@@ -9,7 +9,7 @@ use crate::{
     resolve::{ResolvedFunctionTypeParameterMode, ResolvedProgram, ResolvedTypeKind},
 };
 
-use super::{lower_type, INVALID_ALIAS_PARAMETER};
+use crate::typeck::{conversion::lower_type, diagnostic_codes::INVALID_ALIAS_PARAMETER};
 
 pub(super) fn lower_function_types(
     program: &ResolvedProgram,
@@ -42,7 +42,7 @@ pub(super) fn lower_function_types(
                     }
                     HirFunctionTypeParameter {
                         mode: lower_mode(parameter.mode),
-                        ty: lower_type(program, &parameter.type_syntax),
+                        ty: lower_type(&parameter.type_syntax),
                         span: parameter.span,
                     }
                 })
@@ -50,7 +50,7 @@ pub(super) fn lower_function_types(
             HirFunctionType {
                 id: function.id,
                 parameters,
-                result: lower_type(program, &function.result),
+                result: lower_type(&function.result),
                 span: function.span,
             }
         })

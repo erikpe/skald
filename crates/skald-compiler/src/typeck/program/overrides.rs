@@ -9,7 +9,7 @@ use crate::{
     source::Span,
 };
 
-use super::{same_resolved_type, INVALID_OVERRIDE_SIGNATURE};
+use crate::typeck::{conversion::same_resolved_type, diagnostic_codes::INVALID_OVERRIDE_SIGNATURE};
 
 pub(super) fn validate_override_signatures(
     program: &ResolvedProgram,

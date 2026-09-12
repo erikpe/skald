@@ -10,8 +10,9 @@ use crate::{
     hir::{HirAccess, HirCallArgument, HirViewTarget, Type},
     resolve::ResolvedExpression,
     source::Span,
-    typeck::program::{
-        lower_parameter_mode, lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT,
+    typeck::{
+        conversion::{lower_parameter_mode, lower_type},
+        diagnostic_codes::{INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT},
     },
 };
 
@@ -28,7 +29,7 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
-        let expected = lower_type(self.program, parameter.type_syntax());
+        let expected = lower_type(parameter.type_syntax());
         if matches!(expected, Type::Array(_)) || is_array_projection_through_groups(expression) {
             return self.check_array_alias_argument(expression, parameter);
         }
@@ -483,7 +484,7 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         }
-        let expected = lower_type(self.program, parameter.type_syntax());
+        let expected = lower_type(parameter.type_syntax());
         let expected_target = match expected {
             Type::Class(class) => HirViewTarget::Class(class),
             Type::Interface(interface) => HirViewTarget::Interface(interface),

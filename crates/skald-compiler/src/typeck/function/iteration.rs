@@ -16,11 +16,12 @@ use crate::{
 
 use super::{
     super::{
+        conversion::{lower_type, lower_type_kind},
+        diagnostic_codes::GENERAL_ITERATION_UNSUPPORTED,
         expression::{
             plan_resolved_object_view, ObjectViewRequest, ObjectViewRetention,
             ObjectViewSourceAdmission, ObjectViewSourceDiagnosticContext,
         },
-        program::{lower_type, lower_type_kind, GENERAL_ITERATION_UNSUPPORTED},
     },
     CallableChecker, CheckedStatement,
 };
@@ -223,7 +224,7 @@ impl CallableChecker<'_, '_> {
             .get(statement.selection.iter_next.index())
             .filter(|requirement| requirement.id == statement.selection.iter_next)
             .expect("selected iter_next requirement must exist");
-        let Type::Optional(optional) = lower_type(self.program, &requirement.return_type) else {
+        let Type::Optional(optional) = lower_type(&requirement.return_type) else {
             unreachable!("canonical iter_next must return the selected optional item")
         };
         let metadata = self
@@ -231,7 +232,7 @@ impl CallableChecker<'_, '_> {
             .optional_types
             .get(optional)
             .expect("selected iteration result must have canonical optional metadata");
-        debug_assert_eq!(lower_type(self.program, &metadata.payload), item);
+        debug_assert_eq!(lower_type(&metadata.payload), item);
         let (presence, unwrap, destruction) = match item {
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool => (
                 HirOptionalPresenceTestPlan::OuterTag,

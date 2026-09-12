@@ -372,7 +372,7 @@ fn impossible_optional_box_cast_reports_a_diagnostic_without_prior_target_use() 
 
     assert!(output.hir.is_none());
     assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == crate::typeck::program::INVALID_OBJECT_CAST
+        diagnostic.code == crate::typeck::INVALID_OBJECT_CAST
             && diagnostic.message.contains("can never succeed")
     }));
 }

@@ -6,19 +6,26 @@ use crate::{
         HirClassDeclarationTable, HirClassDefinitionTable, HirFunctionDeclaration,
         HirFunctionDeclarationTable, HirFunctionDefinitionTable, HirFunctionLinkage,
         HirInterfaceDeclarationTable, HirLiteralData, HirLiteralDataTable, HirParameter,
-        HirParameterMode, HirProgram, HirStringLanguageItem, HirVirtualFamily,
-        HirVirtualFamilyTable, Type,
+        HirProgram, HirStringLanguageItem, HirVirtualFamily, HirVirtualFamilyTable, Type,
     },
     identity::FunctionId,
     resolve::{
         ResolvedFunctionDeclaration, ResolvedFunctionLinkage, ResolvedParameter,
-        ResolvedParameterBindingMode, ResolvedProgram, ResolvedType, ResolvedTypeKind,
+        ResolvedParameterBindingMode, ResolvedProgram,
     },
     source::Span,
 };
 
 use super::{
-    capabilities::CopyCapabilities, containment::validate_containment, function::CallableChecker,
+    capabilities::CopyCapabilities,
+    categories::supports_alias_type,
+    containment::validate_containment,
+    conversion::{lower_parameter_mode, lower_type},
+    diagnostic_codes::{
+        INVALID_ALIAS_PARAMETER, INVALID_ENTRY_POINT, INVALID_EXTERNAL_DECLARATION,
+        INVALID_OBJECT_DECLARATION, MISSING_ENTRY_POINT,
+    },
+    function::CallableChecker,
 };
 
 mod class;
@@ -33,51 +40,6 @@ use overrides::validate_override_signatures;
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
-pub const MISSING_ENTRY_POINT: &str = "TYP001";
-pub const INVALID_ENTRY_POINT: &str = "TYP002";
-pub const INTEGER_LITERAL_OUT_OF_RANGE: &str = "TYP003";
-pub const WRONG_ARGUMENT_COUNT: &str = "TYP004";
-pub const TYPE_MISMATCH: &str = "TYP005";
-pub const MISSING_RETURN: &str = "TYP006";
-pub const INVALID_RETURN: &str = "TYP007";
-pub const INVALID_CALL_STATEMENT: &str = "TYP008";
-pub const INVALID_EXTERNAL_DECLARATION: &str = "TYP009";
-pub const U64_LITERAL_OUT_OF_RANGE: &str = "TYP010";
-pub const U8_LITERAL_OUT_OF_RANGE: &str = "TYP011";
-pub const F64_LITERAL_OUT_OF_RANGE: &str = "TYP012";
-pub const INVALID_OBJECT_DECLARATION: &str = "TYP013";
-pub const INVALID_OBJECT_CONTEXT: &str = "TYP014";
-pub const INVALID_CONSTRUCTION: &str = "TYP015";
-pub const INVALID_INITIALIZER_BODY: &str = "TYP016";
-pub const FIELD_INITIALIZATION: &str = "TYP017";
-pub const READ_ONLY_RECEIVER: &str = "TYP018";
-pub const INVALID_ALIAS_PARAMETER: &str = "TYP019";
-pub const INVALID_ALIAS_ARGUMENT: &str = "TYP020";
-pub const INSUFFICIENT_ALIAS_ACCESS: &str = "TYP021";
-pub const COPY_OPERATION_UNAVAILABLE: &str = "TYP023";
-pub const INVALID_OVERRIDE_SIGNATURE: &str = "TYP024";
-pub const INVALID_INTERFACE_REQUIREMENT: &str = "TYP025";
-pub const INVALID_INTERFACE_CONFORMANCE: &str = "TYP026";
-pub const INVALID_TYPE_TEST: &str = "TYP027";
-pub const INVALID_OBJECT_CAST: &str = "TYP029";
-pub const NO_MATCHING_INITIALIZER: &str = "TYP030";
-pub const AMBIGUOUS_INITIALIZER: &str = "TYP031";
-pub const INVALID_COPY_CONSTRUCTION: &str = "TYP032";
-pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
-pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
-pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
-pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
-pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
-pub const FINAL_FIELD_REPLACEMENT: &str = "TYP043";
-pub const FINAL_STATIC_REPLACEMENT: &str = "TYP044";
-pub const FINAL_STATIC_INITIALIZER_REQUIRED: &str = "TYP045";
-pub const GENERAL_ITERATION_UNSUPPORTED: &str = "TYP046";
-pub const UNSUPPORTED_OPERATOR_APPLICATION: &str = "TYP047";
-pub const AMBIGUOUS_OPERATOR_APPLICATION: &str = "TYP048";
-pub const INCOMPATIBLE_OPERATOR_RHS: &str = "TYP049";
-pub const INVALID_OPERATOR_SELECTION: &str = "TYP050";
-pub const INVALID_RESOLVED_RANGE_SOURCE: &str = "TYP053";
-pub const INVALID_RESOLVED_F64_LITERAL: &str = "TYP054";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -125,11 +87,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         &interface_analysis.conformances,
         &mut diagnostics,
     );
-    let declarations = program
-        .declarations
-        .iter()
-        .map(|declaration| lower_declaration(program, declaration))
-        .collect();
+    let declarations = program.declarations.iter().map(lower_declaration).collect();
     let definitions = program
         .declarations
         .iter()
@@ -224,7 +182,7 @@ fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &m
         if matches!(declaration.linkage, ResolvedFunctionLinkage::Internal) {
             validate_parameters(program, &declaration.parameters, diagnostics, "function");
             if matches!(
-                lower_type(program, &declaration.return_type),
+                lower_type(&declaration.return_type),
                 Type::Obj | Type::Interface(_)
             ) {
                 diagnostics.push(
@@ -253,7 +211,7 @@ fn validate_parameters(
 ) -> bool {
     let mut valid = true;
     for parameter in parameters {
-        let ty = lower_type(program, &parameter.type_syntax);
+        let ty = lower_type(&parameter.type_syntax);
         match parameter.binding_mode {
             ResolvedParameterBindingMode::Value
                 if matches!(ty, Type::Unit | Type::Obj | Type::Interface(_)) =>
@@ -275,7 +233,7 @@ fn validate_parameters(
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. }
-                if !is_supported_alias_type(program, ty) =>
+                if !supports_alias_type(program, ty) =>
             {
                 diagnostics.push(
                     Diagnostic::error(
@@ -298,42 +256,14 @@ fn validate_parameters(
     valid
 }
 
-pub(super) fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bool {
-    let optional_payload_supports_alias = match ty {
-        Type::Optional(optional) => matches!(
-            super::optional_types::classify_payload(program, optional),
-            Some(
-                super::optional_types::OptionalPayloadKind::Primitive(_)
-                    | super::optional_types::OptionalPayloadKind::Class(_)
-                    | super::optional_types::OptionalPayloadKind::Shared(_)
-                    | super::optional_types::OptionalPayloadKind::Nested(_)
-                    | super::optional_types::OptionalPayloadKind::Array(_)
-            )
-        ),
-        _ => false,
-    };
-    crate::type_capabilities::supports_alias_target(
-        super::type_category(ty),
-        optional_payload_supports_alias,
-    )
-}
-
-fn lower_parameter(program: &ResolvedProgram, parameter: &ResolvedParameter) -> HirParameter {
+fn lower_parameter(parameter: &ResolvedParameter) -> HirParameter {
     HirParameter {
         id: parameter.id,
         mode: lower_parameter_mode(parameter.binding_mode),
         name: parameter.name.clone(),
         name_span: parameter.name_span,
-        ty: lower_type(program, &parameter.type_syntax),
+        ty: lower_type(&parameter.type_syntax),
         span: parameter.span,
-    }
-}
-
-pub(super) const fn lower_parameter_mode(mode: ResolvedParameterBindingMode) -> HirParameterMode {
-    match mode {
-        ResolvedParameterBindingMode::Value => HirParameterMode::Value,
-        ResolvedParameterBindingMode::ReadOnlyAlias { .. } => HirParameterMode::ReadOnlyAlias,
-        ResolvedParameterBindingMode::MutableAlias { .. } => HirParameterMode::MutableAlias,
     }
 }
 
@@ -356,7 +286,7 @@ fn check_entry_point(
         .declarations
         .get(entry_id)
         .expect("resolved entry ID must exist in the declaration table");
-    let return_type = lower_type(program, &entry.return_type);
+    let return_type = lower_type(&entry.return_type);
 
     if !matches!(entry.linkage, ResolvedFunctionLinkage::Internal)
         || program.definitions.get(entry_id).is_none()
@@ -435,12 +365,12 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
         }
         let has_valid_parameters = declaration.parameters.iter().all(|parameter| {
             matches!(
-                lower_type(program, &parameter.type_syntax),
+                lower_type(&parameter.type_syntax),
                 Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
             )
         });
         let has_valid_return = matches!(
-            lower_type(program, &declaration.return_type),
+            lower_type(&declaration.return_type),
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Unit
         );
         if !has_valid_parameters || !has_valid_return || symbol != &declaration.name {
@@ -466,15 +396,8 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
     }
 }
 
-fn lower_declaration(
-    program: &ResolvedProgram,
-    function: &ResolvedFunctionDeclaration,
-) -> HirFunctionDeclaration {
-    let parameters = function
-        .parameters
-        .iter()
-        .map(|parameter| lower_parameter(program, parameter))
-        .collect();
+fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDeclaration {
+    let parameters = function.parameters.iter().map(lower_parameter).collect();
 
     HirFunctionDeclaration {
         id: function.id,
@@ -482,7 +405,7 @@ fn lower_declaration(
         name: function.name.clone(),
         name_span: function.name_span,
         parameters,
-        return_type: lower_type(program, &function.return_type),
+        return_type: lower_type(&function.return_type),
         linkage: match &function.linkage {
             ResolvedFunctionLinkage::Internal => HirFunctionLinkage::Internal,
             ResolvedFunctionLinkage::External { link } => {
@@ -497,36 +420,4 @@ fn lower_declaration(
         },
         span: function.span,
     }
-}
-
-pub(super) fn lower_type(_program: &ResolvedProgram, type_syntax: &ResolvedType) -> Type {
-    lower_type_kind(type_syntax.kind)
-}
-
-/// Lowers an already closed resolved type identity without manufacturing
-/// source syntax solely to call `lower_type`.
-pub(super) fn lower_type_kind(kind: ResolvedTypeKind) -> Type {
-    match kind {
-        ResolvedTypeKind::I64 => Type::I64,
-        ResolvedTypeKind::U64 => Type::U64,
-        ResolvedTypeKind::U8 => Type::U8,
-        ResolvedTypeKind::F64 => Type::F64,
-        ResolvedTypeKind::Bool => Type::Bool,
-        ResolvedTypeKind::Unit => Type::Unit,
-        ResolvedTypeKind::Obj => Type::Obj,
-        ResolvedTypeKind::Class(class) => Type::Class(class),
-        ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
-        ResolvedTypeKind::Function(function) => Type::Function(function),
-        ResolvedTypeKind::Array(array) => Type::Array(array),
-        ResolvedTypeKind::Shared(target) => {
-            Type::Shared(crate::typeck::shared::lower_shared_target(target))
-        }
-        ResolvedTypeKind::Optional(optional) => Type::Optional(optional),
-    }
-}
-
-/// Compares resolved type identities while ignoring source-location metadata
-/// carried by compound type syntax.
-pub(super) fn same_resolved_type(left: &ResolvedType, right: &ResolvedType) -> bool {
-    left.kind == right.kind
 }

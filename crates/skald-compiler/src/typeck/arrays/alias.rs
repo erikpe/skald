@@ -8,12 +8,10 @@ use crate::{
     },
     resolve::ResolvedExpression,
     typeck::{
+        conversion::{lower_parameter_mode, lower_type},
+        diagnostic_codes::{INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT, TYPE_MISMATCH},
         expression::CallParameter,
         function::CallableChecker,
-        program::{
-            lower_parameter_mode, lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT,
-            TYPE_MISMATCH,
-        },
     },
 };
 
@@ -25,7 +23,7 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
-        let expected = lower_type(self.program, parameter.type_syntax());
+        let expected = lower_type(parameter.type_syntax());
         let required = lower_parameter_mode(parameter.binding_mode())
             .required_access()
             .expect("array alias parameters require place access");

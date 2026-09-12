@@ -6,7 +6,7 @@ use crate::{
     resolve::{ResolvedProgram, ResolvedType, ResolvedTypeKind},
 };
 
-use super::super::program::lower_type;
+use super::super::{categories::type_category, conversion::lower_type};
 
 pub const INVALID_ARRAY_ELEMENT: &str = "TYP036";
 
@@ -15,7 +15,7 @@ pub(in crate::typeck) fn validate_array_types(
     diagnostics: &mut Diagnostics,
 ) {
     for array in program.array_types.iter() {
-        let element = lower_type(program, &array.element);
+        let element = lower_type(&array.element);
         if !is_array_element(element) {
             diagnostics.push(
                 Diagnostic::error(
@@ -44,7 +44,7 @@ pub(in crate::typeck) fn validate_array_types(
 }
 
 pub(in crate::typeck) const fn is_array_element(ty: Type) -> bool {
-    crate::type_capabilities::supports_array_element(super::super::type_category(ty))
+    crate::type_capabilities::supports_array_element(type_category(ty))
 }
 
 fn reject_external_array(
@@ -55,7 +55,7 @@ fn reject_external_array(
     if resolved_type_contains_array(program, ty.kind) {
         diagnostics.push(
             Diagnostic::error(
-                super::super::program::INVALID_EXTERNAL_DECLARATION,
+                super::super::diagnostic_codes::INVALID_EXTERNAL_DECLARATION,
                 "external array signatures are not supported",
             )
             .with_primary_label(ty.span, "arrays have no external ABI mapping"),

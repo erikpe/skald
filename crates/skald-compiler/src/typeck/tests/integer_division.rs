@@ -77,8 +77,7 @@ fn rejects_mixed_and_noninteger_operands_with_focused_actual_types() {
                 .iter()
                 .find(|diagnostic| {
                     diagnostic.code == TYPE_MISMATCH
-                        || diagnostic.code
-                            == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+                        || diagnostic.code == crate::typeck::UNSUPPORTED_OPERATOR_APPLICATION
                 })
                 .unwrap();
             if diagnostic.code != TYPE_MISMATCH {

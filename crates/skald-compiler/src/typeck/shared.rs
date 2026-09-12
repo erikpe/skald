@@ -17,10 +17,11 @@ use crate::{
 mod optional_box;
 
 use super::{
-    function::CallableChecker,
-    program::{
-        lower_type, IMPLICIT_SHARED_DEREFERENCE, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION,
+    conversion::lower_type,
+    diagnostic_codes::{
+        IMPLICIT_SHARED_DEREFERENCE, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION,
     },
+    function::CallableChecker,
 };
 
 pub(super) fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {
@@ -431,7 +432,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => self
                 .program
                 .field(access.field)
-                .map(|field| lower_type(self.program, &field.type_syntax))
+                .map(|field| lower_type(&field.type_syntax))
                 .unwrap_or(Type::Unit),
             ResolvedExpression::Allocation(allocation) => {
                 Type::Shared(HirSharedTarget::Class(allocation.class))

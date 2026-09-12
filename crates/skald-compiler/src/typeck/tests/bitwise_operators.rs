@@ -131,8 +131,7 @@ fn rejects_every_noninteger_family_with_focused_actual_type_diagnostics() {
                 .iter()
                 .find(|diagnostic| {
                     diagnostic.code == TYPE_MISMATCH
-                        || diagnostic.code
-                            == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+                        || diagnostic.code == crate::typeck::UNSUPPORTED_OPERATOR_APPLICATION
                 })
                 .unwrap();
             if diagnostic.code == TYPE_MISMATCH {

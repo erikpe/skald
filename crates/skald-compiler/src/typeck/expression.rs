@@ -11,8 +11,8 @@ use crate::{
 };
 
 use super::{
+    diagnostic_codes::{INVALID_OBJECT_CAST, INVALID_OBJECT_CONTEXT, TYPE_MISMATCH},
     function::CallableChecker,
-    program::{INVALID_OBJECT_CAST, INVALID_OBJECT_CONTEXT, TYPE_MISMATCH},
 };
 
 pub(super) mod alias;

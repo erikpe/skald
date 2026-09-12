@@ -13,7 +13,7 @@ use crate::{
     resolve::{ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind},
 };
 
-use super::{capabilities::CopyCapabilities, program::lower_type};
+use super::{capabilities::CopyCapabilities, conversion::lower_type};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum OptionalPayloadKind {
@@ -44,7 +44,6 @@ pub(super) fn classify_payload(
 
 pub(super) fn payload_type(program: &ResolvedProgram, optional: OptionalTypeId) -> Type {
     lower_type(
-        program,
         &program
             .optional_types
             .get(optional)

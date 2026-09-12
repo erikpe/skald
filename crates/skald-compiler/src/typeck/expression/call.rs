@@ -11,10 +11,13 @@ use crate::{
 };
 
 use super::CheckedReceiverCarrier;
-use crate::typeck::function::MemberBodyKind;
-use crate::typeck::program::{
-    lower_type, INVALID_INITIALIZER_BODY, PANIC_REQUIRES_CALL_STATEMENT, READ_ONLY_RECEIVER,
-    WRONG_ARGUMENT_COUNT,
+use crate::typeck::{
+    conversion::lower_type,
+    diagnostic_codes::{
+        INVALID_INITIALIZER_BODY, PANIC_REQUIRES_CALL_STATEMENT, READ_ONLY_RECEIVER,
+        WRONG_ARGUMENT_COUNT,
+    },
+    function::MemberBodyKind,
 };
 
 impl CallableChecker<'_, '_> {
@@ -63,7 +66,7 @@ impl CallableChecker<'_, '_> {
                 function: call.function,
                 arguments,
             },
-            ty: lower_type(self.program, &target.return_type),
+            ty: lower_type(&target.return_type),
             span: call.span,
         })
     }
@@ -90,7 +93,7 @@ impl CallableChecker<'_, '_> {
                 method: call.method,
                 arguments,
             },
-            ty: lower_type(self.program, &target.return_type),
+            ty: lower_type(&target.return_type),
             span: call.span,
         })
     }
@@ -268,7 +271,7 @@ impl CallableChecker<'_, '_> {
                 },
                 arguments,
             },
-            ty: lower_type(self.program, &requirement.return_type),
+            ty: lower_type(&requirement.return_type),
             span: call.span,
         })
     }
@@ -361,7 +364,7 @@ impl CallableChecker<'_, '_> {
                 target,
                 arguments,
             },
-            ty: lower_type(self.program, &method.return_type),
+            ty: lower_type(&method.return_type),
             span: call.span,
         })
     }
@@ -420,7 +423,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirCallArgument> {
         match parameter.binding_mode() {
             ResolvedParameterBindingMode::Value => {
-                let parameter_type = lower_type(self.program, parameter.type_syntax());
+                let parameter_type = lower_type(parameter.type_syntax());
                 if let Type::Shared(target) = parameter_type {
                     return self
                         .check_shared_transfer(source, target, "shared value argument")

@@ -9,7 +9,7 @@ use crate::{
         ResolvedRangeForSource, ResolvedRangeProtocolEvidence, ResolvedRangeProtocolRealization,
         ResolvedTypeKind,
     },
-    typeck::program::{lower_type_kind, INVALID_RESOLVED_RANGE_SOURCE},
+    typeck::{conversion::lower_type_kind, diagnostic_codes::INVALID_RESOLVED_RANGE_SOURCE},
 };
 
 impl CallableChecker<'_, '_> {

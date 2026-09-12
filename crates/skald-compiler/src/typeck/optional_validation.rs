@@ -5,6 +5,8 @@ use crate::{
     resolve::{ResolvedProgram, ResolvedTypeKind},
 };
 
+use super::categories::resolved_type_category;
+
 pub const INVALID_OPTIONAL_TYPE: &str = "TYP043";
 
 pub(super) fn validate_optional_types(
@@ -53,5 +55,5 @@ pub(super) fn validate_optional_types(
 }
 
 pub(in crate::typeck) const fn is_optional_payload(kind: ResolvedTypeKind) -> bool {
-    crate::type_capabilities::supports_optional_payload(super::resolved_type_category(kind))
+    crate::type_capabilities::supports_optional_payload(resolved_type_category(kind))
 }

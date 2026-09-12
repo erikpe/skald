@@ -152,9 +152,7 @@ fn diagnoses_unsupported_class_binary_operands_at_the_operator() {
     let diagnostics: Vec<_> = output
         .diagnostics
         .iter()
-        .filter(|diagnostic| {
-            diagnostic.code == crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
-        })
+        .filter(|diagnostic| diagnostic.code == crate::typeck::UNSUPPORTED_OPERATOR_APPLICATION)
         .collect();
 
     assert_eq!(diagnostics.len(), 1);

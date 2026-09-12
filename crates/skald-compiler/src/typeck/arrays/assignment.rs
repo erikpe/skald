@@ -17,9 +17,9 @@ use crate::{
 
 use super::{place::ArrayReceiverSyntax, ARRAY_CAPABILITY_UNAVAILABLE};
 use crate::typeck::{
+    diagnostic_codes::{INVALID_ALIAS_ARGUMENT, READ_ONLY_RECEIVER},
     expression::require_type,
     function::CallableChecker,
-    program::{INVALID_ALIAS_ARGUMENT, READ_ONLY_RECEIVER},
 };
 
 impl CallableChecker<'_, '_> {

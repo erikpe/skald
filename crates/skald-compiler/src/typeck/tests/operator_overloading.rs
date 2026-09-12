@@ -872,7 +872,7 @@ fn main() -> i64 { return 0; }
     assert!(checked
         .diagnostics
         .iter()
-        .any(|diagnostic| { diagnostic.code == crate::typeck::program::INVALID_CALL_STATEMENT }));
+        .any(|diagnostic| { diagnostic.code == crate::typeck::INVALID_CALL_STATEMENT }));
 }
 
 #[test]
@@ -911,11 +911,11 @@ fn main() -> i64 { return 0; }
     assert_eq!(diagnostics.len(), 2, "{:?}", checked.diagnostics);
     assert_eq!(
         diagnostics[0].code,
-        crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+        crate::typeck::UNSUPPORTED_OPERATOR_APPLICATION
     );
     assert_eq!(
         diagnostics[1].code,
-        crate::typeck::program::INCOMPATIBLE_OPERATOR_RHS
+        crate::typeck::INCOMPATIBLE_OPERATOR_RHS
     );
     assert!(diagnostics[1].labels.iter().any(|label| label
         .message
@@ -955,7 +955,7 @@ fn main() -> i64 { return 0; }
     let checked = crate::typeck::type_check(&resolved.program);
     assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
     let diagnostic = checked.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, crate::typeck::program::TYPE_MISMATCH);
+    assert_eq!(diagnostic.code, crate::typeck::TYPE_MISMATCH);
 }
 
 #[test]
@@ -1049,7 +1049,7 @@ fn main() -> i64 { return 0; }
     assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
     assert_eq!(
         checked.diagnostics.iter().next().unwrap().code,
-        crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION
+        crate::typeck::AMBIGUOUS_OPERATOR_APPLICATION
     );
 }
 
@@ -1137,7 +1137,7 @@ fn main() -> i64 { return 0; }
     assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
     assert_eq!(
         checked.diagnostics.iter().next().unwrap().code,
-        crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION
+        crate::typeck::AMBIGUOUS_OPERATOR_APPLICATION
     );
 }
 
@@ -1200,7 +1200,7 @@ fn main() -> i64 { return 0; }
     assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
     assert_eq!(
         checked.diagnostics.iter().next().unwrap().code,
-        crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+        crate::typeck::UNSUPPORTED_OPERATOR_APPLICATION
     );
 }
 
@@ -1385,7 +1385,7 @@ fn main() -> i64 { return 0; }
     assert_eq!(checked.diagnostics.len(), 1, "{:?}", checked.diagnostics);
     assert_eq!(
         checked.diagnostics.iter().next().unwrap().code,
-        crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
+        crate::typeck::UNSUPPORTED_OPERATOR_APPLICATION
     );
 }
 
@@ -1419,7 +1419,7 @@ fn main() -> i64 { return 0; }
         checked
             .diagnostics
             .iter()
-            .filter(|diagnostic| diagnostic.code == crate::typeck::program::TYPE_MISMATCH)
+            .filter(|diagnostic| diagnostic.code == crate::typeck::TYPE_MISMATCH)
             .count(),
         3,
         "{:?}",
@@ -1427,7 +1427,7 @@ fn main() -> i64 { return 0; }
     );
     assert!(!checked.diagnostics.iter().any(|diagnostic| matches!(
         diagnostic.code,
-        crate::typeck::program::UNSUPPORTED_OPERATOR_APPLICATION
-            | crate::typeck::program::AMBIGUOUS_OPERATOR_APPLICATION
+        crate::typeck::UNSUPPORTED_OPERATOR_APPLICATION
+            | crate::typeck::AMBIGUOUS_OPERATOR_APPLICATION
     )));
 }
