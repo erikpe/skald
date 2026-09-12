@@ -24,7 +24,7 @@ use crate::typeck::{
     function::{CallableChecker, MemberBodyKind, MemberCheckContext, ReceiverContext},
 };
 
-use super::{lower_parameter, validate_parameters};
+use super::declarations::{lower_parameter, validate_parameters};
 
 const DESTRUCTOR_RECEIVER_ACCESS: HirAccess = HirAccess::Mutable;
 

@@ -1,6 +1,6 @@
 # Compiler Facade Ownership Roadmap
 
-Status: active; F01 is complete and F02 is next.
+Status: active; F01–F02 are complete and F03 is next.
 
 This roadmap implements
 [cleanup finding A28](CODEBASE_CLEANUP_AUDIT.md#a28--restore-concise-facades-in-selected-hotspots)
@@ -50,7 +50,7 @@ counts are evidence for review, not repository-wide cleanup targets.
 ## Progress
 
 - [x] F01 — Give type conversion and program diagnostics cohesive owners
-- [ ] F02 — Isolate declaration validation behind the type-check program facade
+- [x] F02 — Isolate declaration validation behind the type-check program facade
 - [ ] F03 — Make resolver program-boundary dependencies explicit
 - [ ] F04 — Audit the selected facades, validate behavior, and close A28
 
@@ -112,24 +112,24 @@ pass.
 moving function declaration validation and lowering behind one cohesive private
 boundary.
 
-- [ ] Extract internal-parameter, external-declaration, entry-point, and shared
+- [x] Extract internal-parameter, external-declaration, entry-point, and shared
   parameter validation into a private program declaration owner. Keep helpers
   used by class and interface checking available at the narrowest suitable
   visibility.
-- [ ] Move function declaration and parameter lowering with declaration
+- [x] Move function declaration and parameter lowering with declaration
   validation when their shared inputs and invariants make that the clearer
   owner. Avoid a pass-through file whose only purpose is reducing line count.
-- [ ] Keep `type_check` responsible for ordering whole-program checks, invoking
+- [x] Keep `type_check` responsible for ordering whole-program checks, invoking
   callable and class checking, deciding whether executable HIR may be
   published, and assembling the final `TypeCheckOutput`.
-- [ ] Preserve the early return for invalid optional types, continued
+- [x] Preserve the early return for invalid optional types, continued
   declaration-wide diagnostics after other recoverable errors, entry-point
   requirements, external ABI restrictions, and the closed-interface boundary.
-- [ ] Review the resulting program facade and its existing `class`,
+- [x] Review the resulting program facade and its existing `class`,
   `function_types`, `interfaces`, `overrides`, and `static_fields` children.
   Merge or adjust boundaries only where the extraction reveals a direct
   responsibility mismatch.
-- [ ] Strengthen source-to-diagnostic coverage only for a concrete ordering or
+- [x] Strengthen source-to-diagnostic coverage only for a concrete ordering or
   validation gap found during the move.
 
 **Tests:** Run focused declaration, interface, generic, array, alias-parameter,
@@ -141,6 +141,28 @@ dump coverage; and phase-product determinism. Run `cargo fmt --all -- --check`,
 whole-program stage outline; declaration validation and lowering have one
 cohesive private owner; sibling visibility remains narrow; and diagnostics,
 HIR publication, exact dumps, and public paths are unchanged.
+
+Implemented: the private `program::declarations` owner now contains internal
+function parameter validation, shared class/function parameter rules, external
+ABI validation, entry-point validation, and resolved function declaration and
+parameter lowering. These operations share the same resolved declaration
+inputs, type conversion rules, and diagnostic vocabulary. The class checker
+uses the two shared helpers through this private owner; their visibility is
+confined to the `program` module.
+
+The 167-line program facade retains the complete semantic stage order, the
+invalid-optional early return, callable and class body checking, the final
+closed-interface assertion, executable HIR publication, and `TypeCheckOutput`
+assembly. Reviewing its five existing responsibility modules found no direct
+boundary mismatch: interface parameters use a distinct resolved model and
+interface-specific rules, while function types, overrides, and static fields
+remain cohesive owners. Existing tests already cover the moved diagnostic
+families and ordering, exact declaration and parameter HIR, and the invalid-HIR
+publication boundary, so no extraction-only test was added.
+
+The 526-test focused type-check suite, all 53 cross-process phase-product
+determinism tests, public API integration tests, full repository gate with
+3,146 compiler tests and 629 golden cases, and Rust 1.82.0 workspace check pass.
 
 ### F03 — Make resolver program-boundary dependencies explicit
 
