@@ -2,7 +2,16 @@
 
 use std::collections::BTreeMap;
 
-use super::*;
+use crate::{
+    diagnostics::{Diagnostic, Diagnostics},
+    identity::ClassId,
+    resolve::{ResolvedClassDeclarationTable, ResolvedClassHierarchy, ResolvedClassMember},
+};
+
+use crate::resolve::{
+    ir::ResolvedClassHierarchyEntry,
+    resolver::{ClassSymbols, OrdinaryMemberSymbolKind, INHERITANCE_CYCLE},
+};
 
 pub(super) fn build_class_hierarchy(
     classes: &ResolvedClassDeclarationTable,

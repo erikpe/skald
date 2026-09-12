@@ -1,21 +1,10 @@
 //! Whole-program resolution orchestration and responsibility-oriented stages.
 
-use std::collections::HashMap;
 use std::path::Path;
 
-use super::{
-    body::{
-        resolve_callable_body, resolve_static_initializer_expression, BodyDeclarationEnvironment,
-        BodyLanguageItemEnvironment, BodyResolutionEnvironment, BodySpecializationEnvironment,
-        CallableResolutionContext, IterationResolutionEnvironment, OperatorResolutionEnvironment,
-        RangeResolutionEnvironment,
-    },
-    *,
-};
-use crate::{
-    diagnostics::Diagnostic,
-    identity::{CallableId, InterfaceRequirementId, ModuleId, ParameterId},
-};
+use crate::{module::ModuleGraph, syntax};
+
+use super::ResolveOutput;
 
 mod class;
 mod class_body;
@@ -35,51 +24,8 @@ mod static_initializer;
 mod string_language_item;
 mod virtuals;
 
-use super::{
-    external_links::ExternalLinkPlan,
-    imports::{collect_module_bindings, collect_ordinary_bindings},
-    name_lookup::{ModuleLookup, ModuleLookupProgram, TopLevelLookup},
-};
-use class::{collect_class, ClassWorkItem};
-use class_body::resolve_class_bodies;
 pub(in crate::resolve::resolver) use generic_templates::TemplateTypeResolver;
-use generic_templates::{
-    collect_generic_templates, resolve_class_template_semantics,
-    resolve_interface_template_semantics, ClassTemplateWorkItem, CollectedGenericTemplates,
-    InterfaceTemplateWorkItem, TemplateInterfaceEnvironment,
-};
-use hierarchy::build_class_hierarchy;
-use interface::{collect_interface_declarations, resolve_interface_claims};
-use intrinsic_registry::{intrinsic_for_declaration, validate_intrinsic_declarations};
-use iterable_language_item::{validate_iterable_language_item, IterableLanguageItemEvidence};
-use language_item_sources::{LanguageItemDeclarationOrigins, LanguageItemRequirementOrigins};
-use operator_language_item::{validate_operator_language_item, OperatorLanguageItemEvidence};
-use range_language_item::{
-    validate_range_language_item, validate_successor_language_item, RangeLanguageItemEvidence,
-};
-use resolver::{
-    resolve_parameter_binding_mode, resolve_parameters, resolve_result_type, resolved_visibility,
-    ProgramResolver,
-};
-use semantic_range_requests::{
-    complete_semantic_range_specializations, SemanticRangeCompletionInput,
-};
-use specialization::{
-    close_bound_member_selections, discover_specializations, extend_with_semantic_range_requests,
-    generated_class_work, materialize_interface_declarations, specialize_bodies,
-    specialize_declarations, CandidateProgram, CandidateProgramProducts, ClassPublicationProducts,
-    ExecutablePublicationProducts, GenericApplicationDiscovery, GenericTemplateDiscoveryInput,
-    InterfaceMaterializationInput, InterfacePublicationProducts, OrdinaryProgramProducts,
-    RetainedProgramProducts, SpecializationBodyInput, SpecializationDeclarationInput,
-    SpecializationDiscoveryInput,
-};
-use stages::{
-    BodyResolutionStage, CollectedDeclarations, ResolvedBodies, SemanticRangeCompletion,
-    SemanticRangeRequestDelta,
-};
-use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};
-use string_language_item::validate_string_language_item;
-use virtuals::resolve_virtual_families;
+use resolver::ProgramResolver;
 
 pub(super) fn resolve_singleton(
     ast: &syntax::CompilationUnit,

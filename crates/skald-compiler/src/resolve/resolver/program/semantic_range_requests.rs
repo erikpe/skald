@@ -1,9 +1,40 @@
 //! Diagnostic-isolated semantic discovery of concise range applications.
 
-use super::*;
+use std::collections::HashMap;
+
+use crate::resolve::resolver::{
+    body::{
+        resolve_callable_body, BodyDeclarationEnvironment, BodySpecializationEnvironment,
+        CallableResolutionContext, SemanticRangeRequestCollector,
+    },
+    ClassSymbols, ResolutionMeasurements, ResolvedTypeInterner,
+};
 use crate::{
-    identity::LiteralDataId, module::ProgramModuleTable,
-    resolve::resolver::body::SemanticRangeRequestCollector,
+    diagnostics::Diagnostics,
+    identity::LiteralDataId,
+    module::ProgramModuleTable,
+    resolve::{
+        GenericInterfaceSpecializationTable, GenericSpecializationState,
+        GenericSpecializationTable, ResolvedAddressTakenCallableTable,
+        ResolvedClassDeclarationTable, ResolvedClassHierarchy, ResolvedClassTemplateSemanticTable,
+        ResolvedFunctionDeclarationTable, ResolvedInterfaceDeclarationTable,
+        ResolvedIterableLanguageItem, ResolvedOperatorLanguageItem, ResolvedRangeLanguageItem,
+    },
+    source::Span,
+    syntax,
+};
+
+use super::{
+    class::ClassWorkItem,
+    class_body::resolve_class_bodies,
+    hierarchy::build_class_hierarchy,
+    resolver,
+    specialization::{
+        self, extend_with_semantic_range_requests, specialize_declarations,
+        GenericApplicationDiscovery, SpecializationDeclarationInput, SpecializationDiscoveryInput,
+    },
+    stages::{BodyResolutionStage, SemanticRangeCompletion, SemanticRangeRequestDelta},
+    static_initializer::resolve_static_field_initializers,
 };
 
 pub(super) struct SemanticRangeCompletionInput<'program, 'ast> {

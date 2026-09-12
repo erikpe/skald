@@ -116,7 +116,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                 if let Some(arguments) = &named.arguments {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::INVALID_GENERIC_APPLICATION,
+                            INVALID_GENERIC_APPLICATION,
                             format!(
                                 "type parameter `{}` is not a generic class",
                                 named.name.text
@@ -136,7 +136,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                 if let Some(arguments) = &named.arguments {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::INVALID_GENERIC_APPLICATION,
+                            INVALID_GENERIC_APPLICATION,
                             "`Obj` is not a generic class",
                         )
                         .with_primary_label(arguments.span, "type arguments are not allowed here"),
@@ -172,7 +172,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                 let Some(arguments) = &named.arguments else {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::RAW_GENERIC_TYPE,
+                            RAW_GENERIC_TYPE,
                             format!(
                                 "generic class `{}` requires type arguments",
                                 named.name.text
@@ -187,7 +187,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                 if arguments.arguments.len() != expected {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::GENERIC_ARITY_MISMATCH,
+                            GENERIC_ARITY_MISMATCH,
                             format!(
                                 "generic class `{}` expects {expected} type argument{}",
                                 named.name.text,
@@ -219,7 +219,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                 let Some(arguments) = &named.arguments else {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::RAW_GENERIC_TYPE,
+                            RAW_GENERIC_TYPE,
                             format!(
                                 "generic interface `{}` requires type arguments",
                                 named.name.text
@@ -234,7 +234,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                 if arguments.arguments.len() != expected {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::GENERIC_ARITY_MISMATCH,
+                            GENERIC_ARITY_MISMATCH,
                             format!(
                                 "generic interface `{}` expects {expected} type argument{}",
                                 named.name.text,
@@ -262,7 +262,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
             TopLevelLookup::Found(symbol) => {
                 self.diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::UNKNOWN_TYPE,
+                        UNKNOWN_TYPE,
                         format!("`{}` does not name a type", named.name.text),
                     )
                     .with_primary_label(named.name.span, "expected a type declaration")
@@ -272,14 +272,11 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
             }
             TopLevelLookup::Missing => {
                 self.diagnostics.push(
-                    Diagnostic::error(
-                        super::super::super::UNKNOWN_TYPE,
-                        format!("unknown type `{}`", named.name.text),
-                    )
-                    .with_primary_label(
-                        named.name.span,
-                        "no type with this name is visible in the template's module",
-                    ),
+                    Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", named.name.text))
+                        .with_primary_label(
+                            named.name.span,
+                            "no type with this name is visible in the template's module",
+                        ),
                 );
                 None
             }
@@ -296,7 +293,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
         if let Some(arguments) = &named.arguments {
             self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_GENERIC_APPLICATION,
+                    INVALID_GENERIC_APPLICATION,
                     format!("`{}` is not a generic class", named.name.text),
                 )
                 .with_primary_label(arguments.span, "type arguments are not allowed here")

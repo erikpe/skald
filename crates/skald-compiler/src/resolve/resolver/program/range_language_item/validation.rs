@@ -16,9 +16,10 @@ use crate::{
     syntax,
 };
 
-use super::super::{
-    super::INVALID_RANGE_LANGUAGE_ITEM, ResolvedClassTemplateSemanticTable, ResolvedTemplateBound,
-    ResolvedTemplateTypeUseContext,
+use crate::resolve::{
+    ir::{ResolvedTemplateBound, ResolvedTemplateTypeUseContext},
+    resolver::INVALID_RANGE_LANGUAGE_ITEM,
+    ResolvedClassTemplateSemanticTable,
 };
 
 pub(in crate::resolve::resolver::program) struct RangeLanguageItemEvidence<'a> {

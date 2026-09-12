@@ -44,7 +44,7 @@ pub(super) fn validate_interface_specializations(
             .first()
             .expect("requested specialization retains an origin");
         let mut diagnostic = Diagnostic::error(
-            super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+            INVALID_GENERIC_INTERFACE_REQUIREMENT,
             format!(
                 "type arguments for `{}` do not produce a valid interface signature",
                 template.name
@@ -89,7 +89,7 @@ pub(super) fn validate_interface_specializations(
             .first()
             .expect("requested specialization retains an origin");
         let mut diagnostic = Diagnostic::error(
-            super::super::super::DUPLICATE_GENERIC_BOUND,
+            DUPLICATE_GENERIC_BOUND,
             format!(
                 "type arguments for `{}` produce duplicate bound `{}`",
                 template.name, required.name
@@ -152,7 +152,7 @@ pub(super) fn validate_interface_specializations(
             .first()
             .expect("requested specialization retains an origin");
         let mut diagnostic = Diagnostic::error(
-            super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+            INVALID_GENERIC_INTERFACE_REQUIREMENT,
             format!(
                 "type argument for `{}` does not satisfy `{}`'s bound",
                 template.name, parameter.name

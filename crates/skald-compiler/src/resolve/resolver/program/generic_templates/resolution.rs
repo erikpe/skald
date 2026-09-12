@@ -79,7 +79,7 @@ pub(crate) fn resolve_class_template_semantics(
                     .expect("template type parameter belongs to its declaration");
                 diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::INVALID_GENERIC_BASE,
+                        INVALID_GENERIC_BASE,
                         "a class template cannot extend a bare type parameter",
                     )
                     .with_primary_label(base.span, "parameter-dependent base class is unsupported")
@@ -90,7 +90,7 @@ pub(crate) fn resolve_class_template_semantics(
             _ => {
                 diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::INVALID_GENERIC_BASE,
+                        INVALID_GENERIC_BASE,
                         format!("`{}` is not a class base", base.name.text),
                     )
                     .with_primary_label(base.span, "expected a class or generic class application"),

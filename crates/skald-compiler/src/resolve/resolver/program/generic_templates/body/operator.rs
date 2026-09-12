@@ -120,7 +120,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
         candidates: &[ResolvedTemplateOperatorSelection],
     ) {
         let mut diagnostic = Diagnostic::error(
-            super::super::super::super::INCOMPATIBLE_GENERIC_OPERATOR_RHS,
+            super::INCOMPATIBLE_GENERIC_OPERATOR_RHS,
             format!(
                 "operator `{}` cannot bind its right operand to any declared bound",
                 operator_spelling(syntax)
@@ -159,7 +159,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
         let declaration = self.parameter(parameter);
         self.diagnostics.push(
             Diagnostic::error(
-                super::super::super::super::UNSUPPORTED_GENERIC_OPERATOR_APPLICATION,
+                super::UNSUPPORTED_GENERIC_OPERATOR_APPLICATION,
                 format!(
                     "operator `{}` is not authorized for type parameter `{}`",
                     operator_spelling(syntax),
@@ -180,7 +180,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
         candidates: &[ResolvedTemplateOperatorSelection],
     ) {
         let mut diagnostic = Diagnostic::error(
-            super::super::super::super::AMBIGUOUS_GENERIC_OPERATOR_APPLICATION,
+            super::AMBIGUOUS_GENERIC_OPERATOR_APPLICATION,
             format!(
                 "operator `{}` has multiple applicable bounds",
                 operator_spelling(syntax)

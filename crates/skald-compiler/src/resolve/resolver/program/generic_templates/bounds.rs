@@ -20,7 +20,7 @@ pub(super) fn resolve_bounds(
         else {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_GENERIC_BOUND,
+                    INVALID_GENERIC_BOUND,
                     format!(
                         "unknown type parameter `{}` in generic bound",
                         requirement.parameter.text
@@ -45,7 +45,7 @@ pub(super) fn resolve_bounds(
         let Some(interface) = ResolvedInterfaceType::from_type(&term) else {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_GENERIC_BOUND,
+                    INVALID_GENERIC_BOUND,
                     format!(
                         "`{}` does not name an interface",
                         requirement.interface.text
@@ -60,7 +60,7 @@ pub(super) fn resolve_bounds(
         }) {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::DUPLICATE_GENERIC_BOUND,
+                    DUPLICATE_GENERIC_BOUND,
                     format!(
                         "duplicate bound `{}: {}`",
                         requirement.parameter.text, requirement.interface.text
@@ -101,7 +101,7 @@ pub(super) fn resolve_implemented_interfaces(
         let Some(interface) = ResolvedInterfaceType::from_type(&term) else {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_INTERFACE_CLAIM,
+                    INVALID_INTERFACE_CLAIM,
                     format!("`{}` does not name an interface", claim.text),
                 )
                 .with_primary_label(claim.span, "expected an interface type"),
@@ -114,7 +114,7 @@ pub(super) fn resolve_implemented_interfaces(
         {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_INTERFACE_CLAIM,
+                    INVALID_INTERFACE_CLAIM,
                     format!("duplicate interface `{}`", claim.text),
                 )
                 .with_primary_label(claim.span, "repeated here"),

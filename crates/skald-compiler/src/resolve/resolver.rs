@@ -6,9 +6,8 @@ use std::path::Path;
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::{
-        ClassId, ClassTemplateId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
-        FunctionId, InitializerId, InterfaceId, InterfaceTemplateId, MethodId, StaticFieldId,
-        StaticInitializerId,
+        ClassId, ClassTemplateId, FieldId, FunctionId, InterfaceId, InterfaceTemplateId, MethodId,
+        StaticFieldId,
     },
     module::ModuleGraph,
     source::Span,

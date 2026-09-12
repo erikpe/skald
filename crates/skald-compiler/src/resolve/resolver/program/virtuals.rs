@@ -1,11 +1,22 @@
 //! Virtual-root allocation and explicit override-family resolution.
 
 use crate::{
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Diagnostics},
     identity::{ClassId, VirtualFamilyId, VirtualSlotId},
+    resolve::{
+        ResolvedClassDeclarationTable, ResolvedClassHierarchy, ResolvedClassMember,
+        ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodKind,
+        ResolvedMethodModifier, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    },
+    source::Span,
+    syntax,
 };
 
-use super::*;
+use crate::resolve::resolver::{
+    ClassSymbols, OrdinaryMemberSymbolKind, INHERITED_MEMBER_COLLISION, INVALID_OVERRIDE,
+};
+
+use super::class::ClassWorkItem;
 
 pub(super) fn resolve_virtual_families(
     asts: &[&syntax::CompilationUnit],

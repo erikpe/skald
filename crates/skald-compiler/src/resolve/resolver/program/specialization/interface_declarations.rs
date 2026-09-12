@@ -214,7 +214,7 @@ fn report_invalid_template(
         .expect("requested specialization retains an origin");
     diagnostics.push(
         Diagnostic::error(
-            super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+            INVALID_GENERIC_INTERFACE_REQUIREMENT,
             format!(
                 "cannot specialize invalid generic interface `{}`",
                 template.name
@@ -238,7 +238,7 @@ fn report_unclosed_type_use(
         .expect("requested specialization retains an origin");
     diagnostics.push(
         Diagnostic::error(
-            super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+            INVALID_GENERIC_INTERFACE_REQUIREMENT,
             format!(
                 "type arguments for `{}` do not produce a valid closed interface signature",
                 template.name

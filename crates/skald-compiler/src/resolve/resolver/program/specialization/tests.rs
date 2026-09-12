@@ -364,10 +364,7 @@ fn contextual_requirement_failures_reject_declaration_publication_after_identity
         .iter()
         .any(|entry| matches!(entry.state, GenericSpecializationState::Failed { .. })));
     assert_eq!(
-        diagnostic_count(
-            &output,
-            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT
-        ),
+        diagnostic_count(&output, UNSATISFIED_GENERIC_REQUIREMENT),
         1
     );
     assert!(output.program.classes.is_empty());

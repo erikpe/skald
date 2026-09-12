@@ -1,6 +1,6 @@
 # Compiler Facade Ownership Roadmap
 
-Status: active; F01–F02 are complete and F03 is next.
+Status: active; F01–F03 are complete and F04 is next.
 
 This roadmap implements
 [cleanup finding A28](CODEBASE_CLEANUP_AUDIT.md#a28--restore-concise-facades-in-selected-hotspots)
@@ -51,7 +51,7 @@ counts are evidence for review, not repository-wide cleanup targets.
 
 - [x] F01 — Give type conversion and program diagnostics cohesive owners
 - [x] F02 — Isolate declaration validation behind the type-check program facade
-- [ ] F03 — Make resolver program-boundary dependencies explicit
+- [x] F03 — Make resolver program-boundary dependencies explicit
 - [ ] F04 — Audit the selected facades, validate behavior, and close A28
 
 ## PR-sized implementation sequence
@@ -170,25 +170,25 @@ determinism tests, public API integration tests, full repository gate with
 currently receive a large implicit namespace from their parent facade, without
 turning every tightly coupled implementation file into an import inventory.
 
-- [ ] Inventory names supplied through broad parent imports in
+- [x] Inventory names supplied through broad parent imports in
   `resolve::resolver::program`, its direct responsibility modules, and the
   `generic_templates` and `specialization` subtree facades. Classify each use as
   a same-responsibility dependency, a dependency on an explicit stage product,
   or a cross-boundary dependency that should be named at its source.
-- [ ] Replace the broad import in the program facade with explicit imports and
+- [x] Replace the broad import in the program facade with explicit imports and
   keep its module declarations, selective re-exports, and resolver entry points
   easy to scan.
-- [ ] Replace `use super::*` at direct production responsibility boundaries
+- [x] Replace `use super::*` at direct production responsibility boundaries
   where it inherits the program facade's orchestration namespace. Import from
   the actual owning sibling, resolver facade, phase IR, identity, diagnostics,
   syntax, or module layer as appropriate.
-- [ ] Apply the same rule to the `generic_templates` and `specialization`
+- [x] Apply the same rule to the `generic_templates` and `specialization`
   subtree facades when their wildcard import exposes the whole program
   namespace to descendants. Do not mechanically rewrite leaf modules whose
   shared private context is cohesive and clearer through their local parent.
-- [ ] Remove import forwarding and visibility that become unnecessary. Do not
+- [x] Remove import forwarding and visibility that become unnecessary. Do not
   widen a function, type, field, or module merely to avoid an explicit import.
-- [ ] Confirm the dependency cleanup preserves the stage-product and
+- [x] Confirm the dependency cleanup preserves the stage-product and
   publication boundaries established by the completed resolver ownership work.
 
 **Tests:** Run `cargo fmt --all -- --check`, the complete resolver tests,
@@ -201,6 +201,31 @@ explicitly; selected responsibility and subtree facades no longer inherit an
 unrelated orchestration namespace; remaining wildcard imports are local and
 deliberate; visibility has not widened; and resolved products, diagnostics,
 specialization publication, identities, and dumps are unchanged.
+
+Implemented: `resolve::resolver::program` is now a 39-line facade whose imports
+name only its two entry-point inputs, output, and coordinator. Its former broad
+parent import and orchestration-wide forwarding imports are gone. The nine
+direct production responsibility modules that previously inherited that
+namespace now import diagnostics, identities, resolved IR, syntax, lookup,
+body-resolution services, or sibling stage products from their actual owners.
+No item or module visibility was widened.
+
+The `generic_templates` and `specialization` facades now declare the private
+context shared by their tightly coupled descendants explicitly. Their leaf
+implementation modules retain local `super::*` imports where that context is
+cohesive; test modules retain the same local convention. Relative paths that
+reached through three module levels for resolver diagnostic codes were replaced
+by explicit facade imports, and the range, iterable, and operator language-item
+validators now name their resolver or resolved-IR dependencies at the source.
+This leaves no wildcard import at the whole-program facade or any direct
+production responsibility boundary.
+
+Existing coverage already exercises every affected boundary, so no
+import-structure-only test was added. The 351-test resolver suite, generic
+specialization and publication cases, module graph cases, all 53 cross-process
+phase-product determinism tests, public API and phase-boundary integration
+tests, full repository gate with 3,146 compiler tests and 629 golden cases, and
+Rust 1.82.0 workspace check pass.
 
 ### F04 — Audit the selected facades, validate behavior, and close A28
 

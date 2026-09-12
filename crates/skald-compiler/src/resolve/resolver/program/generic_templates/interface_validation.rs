@@ -12,7 +12,7 @@ pub(super) fn validate_interface_signature_type(
     if !term.depends_on_parameter() && !supports_closed_signature_capability(term, capability) {
         diagnostics.push(
             Diagnostic::error(
-                super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+                INVALID_GENERIC_INTERFACE_REQUIREMENT,
                 "generic interface requirement contains an invalid closed type",
             )
             .with_primary_label(term.span, capability_label(capability)),
@@ -92,7 +92,7 @@ fn is_closed_shared_target(term: &ResolvedTemplateType) -> bool {
 fn report_invalid_construction(span: Span, label: &'static str, diagnostics: &mut Diagnostics) {
     diagnostics.push(
         Diagnostic::error(
-            super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+            INVALID_GENERIC_INTERFACE_REQUIREMENT,
             "generic interface requirement contains an invalid closed compound type",
         )
         .with_primary_label(span, label),

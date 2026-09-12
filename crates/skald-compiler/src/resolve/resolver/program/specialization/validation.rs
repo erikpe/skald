@@ -56,7 +56,7 @@ pub(super) fn validate_specialization_requirements(
             .expect("requested specialization retains an origin");
         let application_name = application_name(program, specialization);
         let mut diagnostic = Diagnostic::error(
-            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
+            UNSATISFIED_GENERIC_REQUIREMENT,
             format!(
                 "type argument for `{application_name}` does not satisfy `{}`'s bound",
                 parameter.name
@@ -98,7 +98,7 @@ pub(super) fn validate_specialization_requirements(
             .first()
             .expect("requested specialization retains an origin");
         let mut diagnostic = Diagnostic::error(
-            super::super::super::DUPLICATE_GENERIC_BOUND,
+            DUPLICATE_GENERIC_BOUND,
             format!(
                 "type arguments for `{}` produce duplicate bound `{}`",
                 application_name(program, specialization),
@@ -141,7 +141,7 @@ pub(super) fn validate_specialization_requirements(
             .expect("requested specialization retains an origin");
         let application_name = application_name(program, specialization);
         let mut diagnostic = Diagnostic::error(
-            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
+            UNSATISFIED_GENERIC_REQUIREMENT,
             format!("type arguments for `{application_name}` do not satisfy its requirements"),
         )
         .with_primary_label(

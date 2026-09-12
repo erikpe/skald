@@ -1,6 +1,22 @@
 //! Delayed resolution of static declaration initializer expressions.
 
-use super::*;
+use crate::resolve::resolver::{
+    body::{
+        resolve_static_initializer_expression, BodyResolutionEnvironment, CallableResolutionContext,
+    },
+    ResolvedTypeInterner,
+};
+use crate::{
+    diagnostics::Diagnostics,
+    identity::StaticFieldId,
+    resolve::{
+        ResolvedAddressTakenCallableTable, ResolvedClassDeclarationTable,
+        ResolvedStaticFieldInitializer,
+    },
+    syntax,
+};
+
+use super::class::ClassWorkItem;
 
 pub(super) struct ResolvedStaticInitializerUpdate {
     pub(super) field: StaticFieldId,

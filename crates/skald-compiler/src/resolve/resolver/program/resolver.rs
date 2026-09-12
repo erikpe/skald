@@ -1,16 +1,74 @@
 //! Deterministic multi-module declaration collection and body resolution.
 
-use super::*;
+use std::{collections::HashMap, path::Path};
+
+use crate::resolve::resolver::{
+    body::{resolve_callable_body, BodyDeclarationEnvironment, CallableResolutionContext},
+    external_links::ExternalLinkPlan,
+    imports::{collect_module_bindings, collect_ordinary_bindings},
+    name_lookup::{ModuleLookup, ModuleLookupProgram},
+    resolve_type, ClassSymbols, ResolveOutput, ResolvedTypeInterner, TopLevelSymbol,
+    TopLevelSymbolKind, DUPLICATE_BINDING, DUPLICATE_TOP_LEVEL, MODULE_CONTEXT_REQUIRED,
+};
 use crate::{
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Diagnostics},
     identity::{
-        CallableId, ClassTemplateId, InterfaceId, InterfaceTemplateId, LiteralDataId, ModuleId,
-        ParameterId,
+        CallableId, ClassId, ClassTemplateId, FunctionId, InterfaceId, InterfaceTemplateId,
+        LiteralDataId, ModuleId, ParameterId,
     },
     lexer::decode_string_literal,
     module::{ModuleGraph, ProgramModuleTable},
+    resolve::{
+        GenericInterfaceSpecializationTable, GenericSpecializationTable,
+        ResolvedAddressTakenCallableTable, ResolvedClassDeclaration, ResolvedClassDeclarationTable,
+        ResolvedClassTemplateSemanticTable, ResolvedClassTemplateTable,
+        ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable, ResolvedFunctionDefinition,
+        ResolvedFunctionLinkage, ResolvedInterfaceDeclarationTable,
+        ResolvedInterfaceTemplateSemanticTable, ResolvedLiteralData, ResolvedLiteralDataTable,
+        ResolvedModuleBindingTable, ResolvedModuleBindings, ResolvedModuleDeclaration,
+        ResolvedModuleDeclarationTable, ResolvedModuleDeclarations, ResolvedOrdinaryBindingTable,
+        ResolvedOrdinaryBindings, ResolvedParameter, ResolvedParameterBindingMode,
+        ResolvedTopLevelId, ResolvedType, ResolvedTypeKind, ResolvedTypeParameterTable,
+        ResolvedVisibility,
+    },
+    source::Span,
+    syntax,
 };
-use std::path::Path;
+
+use super::{
+    class::{collect_class, ClassWorkItem},
+    class_body::resolve_class_bodies,
+    generic_templates::{
+        collect_generic_templates, resolve_class_template_semantics,
+        resolve_interface_template_semantics, ClassTemplateWorkItem, CollectedGenericTemplates,
+        InterfaceTemplateWorkItem, TemplateInterfaceEnvironment,
+    },
+    hierarchy::build_class_hierarchy,
+    interface::{collect_interface_declarations, resolve_interface_claims},
+    intrinsic_registry::{intrinsic_for_declaration, validate_intrinsic_declarations},
+    iterable_language_item::{validate_iterable_language_item, IterableLanguageItemEvidence},
+    language_item_sources::{LanguageItemDeclarationOrigins, LanguageItemRequirementOrigins},
+    operator_language_item::{validate_operator_language_item, OperatorLanguageItemEvidence},
+    range_language_item::{
+        validate_range_language_item, validate_successor_language_item, RangeLanguageItemEvidence,
+    },
+    semantic_range_requests::{
+        complete_semantic_range_specializations, SemanticRangeCompletionInput,
+    },
+    specialization::{
+        close_bound_member_selections, discover_specializations, generated_class_work,
+        materialize_interface_declarations, specialize_bodies, specialize_declarations,
+        CandidateProgram, CandidateProgramProducts, ClassPublicationProducts,
+        ExecutablePublicationProducts, GenericApplicationDiscovery, GenericTemplateDiscoveryInput,
+        InterfaceMaterializationInput, InterfacePublicationProducts, OrdinaryProgramProducts,
+        RetainedProgramProducts, SpecializationBodyInput, SpecializationDeclarationInput,
+        SpecializationDiscoveryInput,
+    },
+    stages::{BodyResolutionStage, CollectedDeclarations, ResolvedBodies, SemanticRangeCompletion},
+    static_initializer::{attach_static_field_initializers, resolve_static_field_initializers},
+    string_language_item::validate_string_language_item,
+    virtuals::resolve_virtual_families,
+};
 
 pub(super) const fn resolved_visibility(visibility: syntax::Visibility) -> ResolvedVisibility {
     match visibility {

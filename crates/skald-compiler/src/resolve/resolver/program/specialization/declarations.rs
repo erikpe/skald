@@ -507,7 +507,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
             .first()
             .expect("requested specialization has an application origin");
         let mut diagnostic = Diagnostic::error(
-            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
+            UNSATISFIED_GENERIC_REQUIREMENT,
             format!("generic application `{}` is invalid", self.name),
         )
         .with_primary_label(origin.span, message)
@@ -532,7 +532,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
             .first()
             .expect("requested specialization has an application origin");
         let mut diagnostic = Diagnostic::error(
-            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
+            UNSATISFIED_GENERIC_REQUIREMENT,
             format!("generic application `{}` is invalid", self.name),
         )
         .with_primary_label(origin.span, message)

@@ -576,7 +576,7 @@ impl<'semantic, 'interner, 'diagnostics>
     fn push_recursion_diagnostic(&mut self, name: &str, name_span: Span, root: Span, nested: Span) {
         self.diagnostics.push(
             Diagnostic::error(
-                super::super::super::NON_TERMINATING_GENERIC_SPECIALIZATION,
+                NON_TERMINATING_GENERIC_SPECIALIZATION,
                 format!("recursive application of `{name}` changes its type arguments"),
             )
             .with_primary_label(

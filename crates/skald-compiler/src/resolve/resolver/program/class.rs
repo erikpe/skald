@@ -1,6 +1,32 @@
 //! Source-ordered class declaration collection.
 
-use super::*;
+use crate::{
+    diagnostics::{Diagnostic, Diagnostics},
+    identity::{
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
+        InitializerId, MethodId, ModuleId, ParameterId, StaticFieldId, StaticInitializerId,
+    },
+    resolve::{
+        ResolvedClassDeclaration, ResolvedCopyAssignmentDeclaration,
+        ResolvedCopyConstructorDeclaration, ResolvedCopyOperation, ResolvedDestructorDeclaration,
+        ResolvedDirectBase, ResolvedFieldDeclaration, ResolvedInitializerDeclaration,
+        ResolvedMemberVisibility, ResolvedMethodDeclaration, ResolvedMethodDispatch,
+        ResolvedMethodKind, ResolvedMethodModifier, ResolvedParameter, ResolvedReceiverAccess,
+        ResolvedStaticFieldDeclaration, ResolvedTypeKind,
+    },
+    source::Span,
+    syntax,
+};
+
+use super::resolver::{
+    resolve_parameter_binding_mode, resolve_parameters, resolve_result_type, resolved_visibility,
+};
+use crate::resolve::resolver::{
+    name_lookup::{ModuleLookup, TopLevelLookup},
+    resolve_type, ClassSymbols, OrdinaryMemberSymbol, OrdinaryMemberSymbolKind,
+    ResolvedTypeInterner, TopLevelSymbol, TopLevelSymbolKind, DUPLICATE_MEMBER, INVALID_BASE_CLASS,
+    INVALID_LIFECYCLE_SIGNATURE,
+};
 
 struct LifecycleDeclarations {
     initializers: Vec<ResolvedInitializerDeclaration>,

@@ -1,9 +1,29 @@
 //! Named products passed between the resolver's orchestration stages.
 
-use super::super::body::StringLiteralResolutionEnvironment;
-use super::*;
-use crate::identity::LiteralDataId;
-use crate::resolve::resolver::{body::SemanticRangeRequest, ResolutionMeasurements};
+use std::collections::HashMap;
+
+use crate::resolve::resolver::{
+    body::{
+        BodyDeclarationEnvironment, BodyLanguageItemEnvironment, BodyResolutionEnvironment,
+        IterationResolutionEnvironment, OperatorResolutionEnvironment, RangeResolutionEnvironment,
+        SemanticRangeRequest, StringLiteralResolutionEnvironment,
+    },
+    name_lookup::ModuleLookup,
+    ResolutionMeasurements,
+};
+use crate::{
+    identity::LiteralDataId,
+    resolve::{
+        GenericInterfaceSpecializationTable, ResolvedClassDefinition, ResolvedClassDefinitionTable,
+        ResolvedClassTemplateTable, ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable,
+        ResolvedInterfaceTemplateTable, ResolvedIterableLanguageItem, ResolvedModuleBindingTable,
+        ResolvedModuleDeclarationTable, ResolvedOperatorLanguageItem, ResolvedOrdinaryBindingTable,
+        ResolvedRangeLanguageItem, ResolvedStringLanguageItem, ResolvedTypeParameterTable,
+    },
+    source::Span,
+};
+
+use super::specialization::GenericApplicationDiscovery;
 
 pub(super) struct CollectedDeclarations {
     pub(super) module_declarations: ResolvedModuleDeclarationTable,

@@ -1,7 +1,24 @@
 //! Interface declaration collection and class conformance-name resolution.
 
-use super::generic_templates::TemplateTypeResolver;
-use super::*;
+use crate::{
+    diagnostics::{Diagnostic, Diagnostics},
+    identity::{ClassId, InterfaceId, InterfaceRequirementId, ModuleId},
+    resolve::{
+        ResolvedClassDeclarationTable, ResolvedInterfaceClaim, ResolvedInterfaceDeclaration,
+        ResolvedInterfaceParameter, ResolvedInterfaceRequirement, ResolvedInterfaceType,
+    },
+    syntax,
+};
+
+use super::{
+    generic_templates::TemplateTypeResolver,
+    resolver::{resolve_parameter_binding_mode, resolve_result_type, resolved_visibility},
+};
+use crate::resolve::resolver::{
+    name_lookup::{ModuleLookup, TopLevelLookup},
+    resolve_type, ResolvedTypeInterner, TopLevelSymbol, TopLevelSymbolKind,
+    INVALID_INTERFACE_CLAIM,
+};
 
 pub(super) fn collect_interface_declarations(
     ast: &syntax::CompilationUnit,

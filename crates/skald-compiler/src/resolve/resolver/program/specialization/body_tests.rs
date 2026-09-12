@@ -1,6 +1,9 @@
 use crate::{
     identity::{ClassId, ClassTemplateId},
-    resolve::{dump_resolved, ResolvedExpression, ResolvedStatement, ResolvedTypeKind},
+    resolve::{
+        dump_resolved, ResolvedExpression, ResolvedStatement, ResolvedTypeKind,
+        UNSATISFIED_GENERIC_REQUIREMENT,
+    },
     test_support::resolve_source,
     typeck::type_check,
 };
@@ -192,7 +195,7 @@ fn body_operation_requirements_report_application_and_template_origins() {
     let diagnostic = output
         .diagnostics
         .iter()
-        .find(|diagnostic| diagnostic.code == super::super::super::UNSATISFIED_GENERIC_REQUIREMENT)
+        .find(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT)
         .expect("stored initialization must require a copyable argument");
     assert_eq!(diagnostic.labels.len(), 3);
     assert_eq!(
@@ -225,9 +228,7 @@ fn unavailable_bound_witness_suppresses_only_its_dependent_body_diagnostic() {
     let bound_diagnostics = output
         .diagnostics
         .iter()
-        .filter(|diagnostic| {
-            diagnostic.code == super::super::super::UNSATISFIED_GENERIC_REQUIREMENT
-        })
+        .filter(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT)
         .collect::<Vec<_>>();
     assert_eq!(bound_diagnostics.len(), 1, "{:?}", output.diagnostics);
     assert!(bound_diagnostics[0].labels.iter().any(|label| {

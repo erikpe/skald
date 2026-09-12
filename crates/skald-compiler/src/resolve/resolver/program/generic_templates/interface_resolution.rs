@@ -28,7 +28,7 @@ pub(crate) fn resolve_interface_template_semantics(
         {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+                    INVALID_GENERIC_INTERFACE_REQUIREMENT,
                     format!(
                         "duplicate requirement `{}` in generic interface",
                         declaration.name.text
@@ -47,7 +47,7 @@ pub(crate) fn resolve_interface_template_semantics(
             {
                 diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::INVALID_GENERIC_INTERFACE_REQUIREMENT,
+                        INVALID_GENERIC_INTERFACE_REQUIREMENT,
                         format!(
                             "duplicate parameter `{}` in generic interface requirement `{}`",
                             parameter.name.text, declaration.name.text
@@ -131,7 +131,7 @@ fn resolve_interface_bounds(
         else {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_GENERIC_BOUND,
+                    INVALID_GENERIC_BOUND,
                     format!(
                         "unknown type parameter `{}` in generic bound",
                         requirement.parameter.text
@@ -157,7 +157,7 @@ fn resolve_interface_bounds(
         let Some(interface_type) = ResolvedInterfaceType::from_type(&term) else {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_GENERIC_BOUND,
+                    INVALID_GENERIC_BOUND,
                     format!(
                         "`{}` does not name an interface",
                         requirement.interface.text
@@ -172,7 +172,7 @@ fn resolve_interface_bounds(
         }) {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::DUPLICATE_GENERIC_BOUND,
+                    DUPLICATE_GENERIC_BOUND,
                     format!(
                         "duplicate bound `{}: {}`",
                         requirement.parameter.text, requirement.interface.text

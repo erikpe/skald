@@ -14,7 +14,7 @@ use crate::{
     source::Span,
 };
 
-use super::super::INVALID_OPERATOR_LANGUAGE_ITEM;
+use crate::resolve::resolver::INVALID_OPERATOR_LANGUAGE_ITEM;
 
 pub(super) struct OperatorLanguageItemEvidence<'a> {
     pub requiring_spans: &'a [Span],

@@ -1,7 +1,23 @@
 //! Resolution of accepted class callable bodies.
 
-use super::*;
-use crate::resolve::resolver::body::BaseInitializationPolicy;
+use crate::resolve::resolver::{
+    body::{
+        resolve_callable_body, BaseInitializationPolicy, BodyResolutionEnvironment,
+        CallableResolutionContext,
+    },
+    ResolvedTypeInterner,
+};
+use crate::{
+    diagnostics::Diagnostics,
+    resolve::{
+        ResolvedAddressTakenCallableTable, ResolvedClassDeclarationTable, ResolvedClassDefinition,
+        ResolvedMemberDefinition, ResolvedParameter,
+    },
+    source::Span,
+    syntax,
+};
+
+use super::class::ClassWorkItem;
 
 pub(super) fn resolve_class_bodies(
     ast: &syntax::CompilationUnit,

@@ -2,6 +2,9 @@
 
 use super::super::closed_types::object_target;
 use super::*;
+use crate::resolve::resolver::{
+    GENERIC_ARITY_MISMATCH, INVALID_GENERIC_APPLICATION, RAW_GENERIC_TYPE, UNKNOWN_TYPE,
+};
 
 pub(super) struct SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, 'lookup> {
     owner: &'owner mut SpecializationCoordinator<'semantic, 'interner, 'diagnostics>,
@@ -112,11 +115,8 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
             }
             if report_lookup_errors {
                 self.owner.diagnostics.push(
-                    Diagnostic::error(
-                        super::super::super::INVALID_GENERIC_APPLICATION,
-                        "`Obj` is not a generic class",
-                    )
-                    .with_primary_label(named.span, "type arguments are not allowed here"),
+                    Diagnostic::error(INVALID_GENERIC_APPLICATION, "`Obj` is not a generic class")
+                        .with_primary_label(named.span, "type arguments are not allowed here"),
                 );
             }
             return None;
@@ -157,7 +157,7 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
                     let expected = self.lookup.template_arity(template);
                     self.owner.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::GENERIC_ARITY_MISMATCH,
+                            GENERIC_ARITY_MISMATCH,
                             format!(
                                 "generic class `{}` expects {expected} type argument{}",
                                 named.name.text,
@@ -174,7 +174,7 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
                 if report_lookup_errors {
                     self.owner.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::RAW_GENERIC_TYPE,
+                            RAW_GENERIC_TYPE,
                             format!(
                                 "generic class `{}` requires type arguments",
                                 named.name.text
@@ -218,7 +218,7 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
                     let expected = self.lookup.interface_template_arity(template);
                     self.owner.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::GENERIC_ARITY_MISMATCH,
+                            GENERIC_ARITY_MISMATCH,
                             format!(
                                 "generic interface `{}` expects {expected} type argument{}",
                                 named.name.text,
@@ -235,7 +235,7 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
                 if report_lookup_errors {
                     self.owner.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::RAW_GENERIC_TYPE,
+                            RAW_GENERIC_TYPE,
                             format!(
                                 "generic interface `{}` requires type arguments",
                                 named.name.text
@@ -253,7 +253,7 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
                 if report_lookup_errors {
                     self.owner.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::INVALID_GENERIC_APPLICATION,
+                            INVALID_GENERIC_APPLICATION,
                             format!("`{}` is not a generic class", named.name.text),
                         )
                         .with_primary_label(arguments.span, "type arguments are not allowed here")
@@ -266,7 +266,7 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
                 if report_lookup_errors {
                     self.owner.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::UNKNOWN_TYPE,
+                            UNKNOWN_TYPE,
                             format!("`{}` does not name a type", named.name.text),
                         )
                         .with_primary_label(named.name.span, "expected a class or interface type")
@@ -314,7 +314,7 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
                     if report_lookup_errors {
                         self.owner.diagnostics.push(
                             Diagnostic::error(
-                                super::super::super::UNKNOWN_TYPE,
+                                UNKNOWN_TYPE,
                                 "shared ownership requires an object target",
                             )
                             .with_primary_label(
@@ -346,11 +346,8 @@ impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
             TopLevelLookup::Missing => {
                 if report_lookup_errors {
                     self.owner.diagnostics.push(
-                        Diagnostic::error(
-                            super::super::super::UNKNOWN_TYPE,
-                            format!("unknown type `{}`", name.text),
-                        )
-                        .with_primary_label(name.span, "no type with this name is declared"),
+                        Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", name.text))
+                            .with_primary_label(name.span, "no type with this name is declared"),
                     );
                 }
                 None

@@ -118,7 +118,7 @@ fn collect_parameters(
         if let Some(previous_span) = names.get(parameter.text.as_str()).copied() {
             diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::DUPLICATE_TYPE_PARAMETER,
+                    DUPLICATE_TYPE_PARAMETER,
                     format!("duplicate type parameter `{}`", parameter.text),
                 )
                 .with_primary_label(parameter.span, "redeclared here")

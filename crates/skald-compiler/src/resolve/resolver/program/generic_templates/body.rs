@@ -580,7 +580,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             } else if !self.has_direct_base {
                 self.diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::UNKNOWN_MEMBER,
+                        UNKNOWN_MEMBER,
                         format!("unknown template member `{}`", expression.member.text),
                     )
                     .with_primary_label(
@@ -622,7 +622,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             }),
             TopLevelLookup::Found(symbol) => self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::TOP_LEVEL_USED_AS_VALUE,
+                    TOP_LEVEL_USED_AS_VALUE,
                     format!("`{}` is a declaration, not a value", identifier.name.text),
                 )
                 .with_primary_label(
@@ -633,7 +633,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             ),
             TopLevelLookup::Missing => self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::UNKNOWN_NAME,
+                    UNKNOWN_NAME,
                     format!("unknown name `{}`", identifier.name.text),
                 )
                 .with_primary_label(
@@ -677,7 +677,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 name_span,
             }) => self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::RAW_GENERIC_TYPE,
+                    RAW_GENERIC_TYPE,
                     format!(
                         "generic class `{}` requires type arguments",
                         identifier.name.text
@@ -691,7 +691,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 name_span,
             }) => self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_CALL_TARGET,
+                    INVALID_CALL_TARGET,
                     format!("interface `{}` is not callable", identifier.name.text),
                 )
                 .with_primary_label(identifier.span, "interfaces cannot be constructed")
@@ -702,7 +702,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 name_span,
             }) => self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::RAW_GENERIC_TYPE,
+                    RAW_GENERIC_TYPE,
                     format!(
                         "generic interface `{}` requires type arguments",
                         identifier.name.text
@@ -713,7 +713,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             ),
             TopLevelLookup::Missing => self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::UNKNOWN_NAME,
+                    UNKNOWN_NAME,
                     format!("unknown function or class `{}`", identifier.name.text),
                 )
                 .with_primary_label(
@@ -800,7 +800,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     .expect("dependent receiver parameter belongs to its template");
                 self.diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::UNCONSTRAINED_TYPE_PARAMETER_MEMBER,
+                        UNCONSTRAINED_TYPE_PARAMETER_MEMBER,
                         format!(
                             "member `{}` is not authorized for type parameter `{}`",
                             member.text, parameter_declaration.name
@@ -818,7 +818,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             }
             candidates => {
                 let mut diagnostic = Diagnostic::error(
-                    super::super::super::AMBIGUOUS_GENERIC_BOUND_MEMBER,
+                    AMBIGUOUS_GENERIC_BOUND_MEMBER,
                     format!(
                         "member `{}` is provided by multiple interface bounds",
                         member.text
@@ -844,7 +844,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             .expect("constructed parameter belongs to its template");
         self.diagnostics.push(
             Diagnostic::error(
-                super::super::super::UNSUPPORTED_PARAMETER_CONSTRUCTION,
+                UNSUPPORTED_PARAMETER_CONSTRUCTION,
                 format!(
                     "construction through type parameter `{}` is unsupported",
                     declaration.name
@@ -1026,7 +1026,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             [(bound, span, item, state)] => (*bound, *span, item.clone(), state.clone()),
             [] if annotation.is_some() && !unfiltered.is_empty() => {
                 let mut diagnostic = Diagnostic::error(
-                    super::super::super::ITERATION_ITEM_TYPE_MISMATCH,
+                    ITERATION_ITEM_TYPE_MISMATCH,
                     "the iteration item annotation matches no eligible generic bound",
                 )
                 .with_primary_label(
@@ -1048,7 +1048,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             [] => {
                 self.diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::MISSING_ITERABLE_APPLICATION,
+                        MISSING_ITERABLE_APPLICATION,
                         "the generic iterable type has no canonical `Iterable` bound",
                     )
                     .with_primary_label(
@@ -1060,7 +1060,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             }
             candidates => {
                 let mut diagnostic = Diagnostic::error(
-                    super::super::super::AMBIGUOUS_ITERABLE_APPLICATION,
+                    AMBIGUOUS_ITERABLE_APPLICATION,
                     "multiple canonical `Iterable` bounds remain eligible",
                 )
                 .with_primary_label(
@@ -1140,7 +1140,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
         if scope.contains_key(name.text.as_str()) {
             self.diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::DUPLICATE_BINDING,
+                    DUPLICATE_BINDING,
                     format!("duplicate {binding_kind} `{}`", name.text),
                 )
                 .with_primary_label(name.span, "redeclared here"),
