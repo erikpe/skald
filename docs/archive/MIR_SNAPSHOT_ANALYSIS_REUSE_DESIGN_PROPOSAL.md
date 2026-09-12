@@ -1,8 +1,8 @@
 # MIR Snapshot Analysis Reuse Design Proposal
 
-Status: frozen decision record. The design was accepted on 2026-09-12 and its
-measurement-led delivery is tracked by the active
-[MIR snapshot analysis reuse roadmap](../roadmaps/MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md).
+Status: frozen delivered decision record. The design was accepted and its
+bounded Gate 2 go outcome was delivered on 2026-09-12 through the completed
+[MIR snapshot analysis reuse roadmap](MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md).
 
 This proposal defines how Skald may reuse expensive read-only MIR analyses
 while the exact verified MIR snapshot remains unchanged. It follows the
@@ -17,6 +17,27 @@ constant folding. Delivery remains conditional on reproducible evidence that
 multiple requests occur on the same snapshot and that avoiding those
 computations improves compiler cost without materially increasing retained
 memory. The design does not assume that every MIR analysis belongs in a cache.
+
+## Delivered outcome
+
+Skald retains one runner-owned, typed proof-snapshot cache for successful local
+constant solutions. The production pipeline always uses memoization. Complete
+session invalidation occurs before verification of every changed proof-rich
+outcome and at proof normalization; no cached fact reaches a final seal,
+checkpoint, pass outcome, or backend input. The uncached policy remains
+test-only because it provides direct behavior, failure, output, and lifecycle
+equivalence coverage.
+
+Three paired comparisons over the maintained 19-workload matrix preserved the
+deterministic compiler and native projections. Memoization reduced local
+constant computations from 12,040 to 6,399 in each run, a workload range of
+25–87.5 percent. Multiple nontrivial workloads improved beyond combined
+dispersion in all three pairs, no workload had a repeatable adjusted
+regression, and the largest median peak-RSS increase was 2.34 percent. The
+[measurement evidence](../development/MIR_ANALYSIS_REUSE_MEASUREMENTS.md)
+records the raw reports, calculations, and bounded Gate 2 decision. This
+result does not justify caching another analysis kind, partial invalidation,
+schedule changes, skipped verification, or a general analysis manager.
 
 ## Intended outcome
 

@@ -973,6 +973,25 @@ structural-rewrite, and output-verification failures identify the exact pass
 name, identity, schedule position, and occurrence where applicable, then stop
 without exposing a partial product.
 
+The runner owns one private analysis session beside the current proof-rich
+seal. Its only cached result is a successful local constant solution, keyed by
+callable identity and resolved against that exact verified program. The local
+constant analysis remains owned by its optimization module; the session owns
+only result lifetime and lookup. An unchanged proof-rich outcome retains the
+session. A changed outcome clears the complete session before the rewritten
+program is verified, and proof normalization clears it before producing final
+MIR. Changed-callable summaries never preserve entries. Final seals,
+checkpoints, pass outcomes, and backend inputs cannot contain the session or a
+cached result. A pass may hold the shared immutable result only during its
+current callback and atomic rewrite planning.
+
+Memoization is deliberately typed and stage-specific. There is no final-stage
+session, revision key, per-callable invalidation, preservation declaration, or
+type-erased analysis manager. Deterministic usage accounting records requests,
+computations, hits, same-snapshot repetition, insertions, and complete-session
+discards. A test-only uncached policy runs the same consumers and remains the
+behavioral reference for cache-equivalence and invalidation regressions.
+
 Passes cannot construct seals, mutate dense definition tables directly,
 change lifecycle authority, emit diagnostics, log, write files, render dumps,
 or depend on driver, reporting, target, or another pass's private analysis.

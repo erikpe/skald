@@ -10,7 +10,6 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [MIR snapshot analysis reuse](MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md) | In progress; S03 complete, Gate 2 go | Reuse proof-rich local constant facts on one unchanged verified MIR snapshot | S04 — retain the measured cache and close A19 | Accepted snapshot-analysis design; completed A18; both gates go; mechanically verified session invalidation |
 
 ## Pending discovery and planning records
 

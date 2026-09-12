@@ -1,4 +1,4 @@
-//! Proof-snapshot analysis lifetime, lookup, and optional memoization.
+//! Proof-snapshot analysis lifetime, lookup, and memoization.
 
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -15,9 +15,8 @@ use super::super::optimizations::{
 };
 use super::MirSnapshotAnalysisUsage;
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::passes::pipeline) enum MirSnapshotAnalysisPolicy {
-    #[default]
     Memoized,
     #[cfg(test)]
     MeasureOnly,
@@ -26,7 +25,6 @@ pub(in crate::passes::pipeline) enum MirSnapshotAnalysisPolicy {
 #[derive(Clone, Copy)]
 pub(in crate::passes::pipeline) struct MirSnapshotAnalysisCheckpoint(MirSnapshotAnalysisUsage);
 
-#[derive(Default)]
 pub(in crate::passes::pipeline) struct MirProofSnapshotAnalysis {
     policy: MirSnapshotAnalysisPolicy,
     #[cfg(test)]

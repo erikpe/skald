@@ -1,11 +1,12 @@
 # MIR Snapshot Analysis Reuse Roadmap
 
-Status: in progress; Gate 2 is go, S03 is complete, and S04 is next.
+Status: complete. Gate 2 selected the retained typed local-constant cache, S04
+closed A19 on 2026-09-12, and this roadmap is archived.
 
 This roadmap implements
-[cleanup finding A19](CODEBASE_CLEANUP_AUDIT.md#a19--reuse-analyses-within-an-immutable-mir-snapshot)
+[cleanup finding A19](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a19--reuse-analyses-within-an-immutable-mir-snapshot)
 through the accepted
-[MIR snapshot analysis reuse design](../archive/MIR_SNAPSHOT_ANALYSIS_REUSE_DESIGN_PROPOSAL.md).
+[MIR snapshot analysis reuse design](MIR_SNAPSHOT_ANALYSIS_REUSE_DESIGN_PROPOSAL.md).
 It first measures repeated local constant analysis on unchanged proof-rich MIR,
 then builds and enables a runner-owned cache only if two explicit decision
 gates justify it.
@@ -101,7 +102,7 @@ without a new design decision.
 - [x] S01 — Instrument uncached requests and decide Gate 1
 - [x] S02 — Establish snapshot-bound session ownership
 - [x] S03 — Enable bounded reuse and decide Gate 2
-- [ ] S04 — Deliver or remove reuse and close A19
+- [x] S04 — Deliver or remove reuse and close A19
 
 ## PR-sized implementation sequence
 
@@ -253,7 +254,7 @@ than treating implemented cache code as automatically permanent.
 
 **Selected closure branch:** Gate 2 go.
 
-- [ ] Follow exactly one closure branch:
+- [x] Follow exactly one closure branch:
   - **Gate 2 go:** retain the typed production session, remove comparison-only
     scaffolding with no regression-testing value, keep useful deterministic
     usage reporting, and document the snapshot/invalidation contract in living
@@ -263,15 +264,15 @@ than treating implemented cache code as automatically permanent.
     restore direct local constant solver calls; keep only independently useful
     measurement vocabulary and tests; and document the measured reason reuse
     was rejected.
-- [ ] In either branch, audit direct solver call sites, session/result
+- [x] In either branch, audit direct solver call sites, session/result
   visibility, outcomes, checkpoints, proof normalization, final seals, and
   backend inputs for one unambiguous owner.
-- [ ] Update the accepted design record with the delivered or rejected outcome
+- [x] Update the accepted design record with the delivered or rejected outcome
   and link its evidence. Record any narrower measured follow-up in an indexed
   discoveries document rather than expanding A19.
-- [ ] Mark A19 complete with its bounded outcome and validation. Do not claim a
+- [x] Mark A19 complete with its bounded outcome and validation. Do not claim a
   speedup on the no-go branch or beyond the measured workloads on the go branch.
-- [ ] Mark this roadmap complete, archive it, remove it from the active index,
+- [x] Mark this roadmap complete, archive it, remove it from the active index,
   add it to the archive index, and repair every incoming link.
 
 **Tests:** On the final retained repository state, rerun focused affected
@@ -284,6 +285,23 @@ fully invalidated typed cache or no cache-specific production machinery. The
 decision and evidence are durable, A19 is complete, mandatory verification and
 all observable compiler behavior are preserved, and no analysis survives a
 changed snapshot.
+
+**Closure:** The Gate 2 go branch retains the production typed session and its
+deterministic reporting. The uncached policy and policy-selecting runner entry
+remain compiled only for tests because they directly protect solution,
+failure, final-MIR, assembly, reporting, and invalidation equivalence; no
+comparison-only code without continuing regression value remained. The
+session and policy have no implicit default, so every construction names the
+intended behavior.
+
+The final ownership audit found production solver calls only inside the
+session. Direct calls outside it are confined to `#[cfg(test)]` plan adapters
+and test modules. The session and shared solution handles remain private to the
+pipeline and current callback; outcomes, checkpoints, normalized seals, and
+backend inputs cannot retain them. Every changed proof-rich outcome resets the
+session before output verification, and both transition routes reset it before
+normalization. The accepted design and living compiler/reporting contracts now
+record these boundaries. No narrower follow-up was discovered.
 
 ## Ordering and dependencies
 

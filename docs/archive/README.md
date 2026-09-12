@@ -31,6 +31,7 @@ Archived plans:
 - [Resolver publication ownership](PUBLICATION_OWNERSHIP_ROADMAP.md)
 - [MIR structural CFG analysis](MIR_STRUCTURAL_CFG_ANALYSIS_ROADMAP.md)
 - [MIR snapshot analysis reuse design proposal](MIR_SNAPSHOT_ANALYSIS_REUSE_DESIGN_PROPOSAL.md)
+- [MIR snapshot analysis reuse](MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md)
 
 - [First vertical slice](FIRST_VERTICAL_SLICE_ROADMAP.md)
 - [`i64` output and golden-test observability](I64_OUTPUT_ROADMAP.md)

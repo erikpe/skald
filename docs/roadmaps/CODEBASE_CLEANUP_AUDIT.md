@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A18, A25, A34, A35, A38, and A43 are complete within
+Status: actionable audit; A01–A12, A18, A19, A25, A34, A35, A38, and A43 are complete within
 the scopes recorded below. A09's stage products and owned publication
 selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
@@ -121,7 +121,7 @@ endpoint and names any deferred work.
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
-| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | In progress; Gate 2 go | P2 | 4 | L | High | C | C, M |
+| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Open | P2 | 3 | M | Medium | O | M, R |
 | [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Open | P2 | 3 | M | Medium | O | M, E, R |
 | [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Open | P3 | 5 | XL | High | C | N, E |
@@ -859,7 +859,7 @@ lifetime.
 [frozen MIR Snapshot Analysis Reuse Design Proposal](../archive/MIR_SNAPSHOT_ANALYSIS_REUSE_DESIGN_PROPOSAL.md).
 
 **Implementation plan:**
-[MIR Snapshot Analysis Reuse Roadmap](MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md).
+[archived MIR Snapshot Analysis Reuse Roadmap](../archive/MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md).
 
 **Measurement evidence:**
 [MIR Analysis Reuse Measurements](../development/MIR_ANALYSIS_REUSE_MEASUREMENTS.md).
@@ -879,10 +879,14 @@ are reverified by the
 [Final sealing](../../crates/skald-compiler/src/passes/pipeline/seal.rs)
 recomputes reachability and lifecycle checks.
 
-**Change:** profile pass analysis versus transformation versus verification.
-Start with borrowed, lazy facts scoped to one immutable callable/program
-snapshot. Drop them on mutation. Only later consider explicit revision keys
-and invalidation summaries for unaffected callables.
+**Status:** Complete within the measured local-constant scope on 2026-09-12.
+The runner retains one typed lazy result table only across unchanged
+proof-rich outcomes, invalidates it completely before changed-output
+verification and proof normalization, and exposes deterministic usage through
+existing pipeline reporting. Exact policy-equivalence tests cover solutions,
+failures, pass results, final MIR, assembly, and lifecycle boundaries. No
+revision keys, partial invalidation, other cached analyses, verification
+elision, or general analysis manager were introduced.
 
 **First PR / validation:** measure recomputation and reuse one read-only fact
 inside a pass. Verify that changed CFGs, identities, static effects, and

@@ -2,7 +2,7 @@
 
 Status: authoritative evidence for the staged proof-snapshot local constant
 reuse experiment. The implementation and decision sequence is owned by the
-[MIR snapshot analysis reuse roadmap](../roadmaps/MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md).
+[completed MIR snapshot analysis reuse roadmap](../archive/MIR_SNAPSHOT_ANALYSIS_REUSE_ROADMAP.md).
 
 ## Uncached Gate 1 baseline
 
@@ -129,8 +129,11 @@ Raw reports:
 | 2 | `build/measurements/cleanup-baseline/run-wlzlhuw4/report.json` | `build/measurements/cleanup-baseline/run-57ka5suz/report.json` |
 | 3 | `build/measurements/cleanup-baseline/run-ef74x67o/report.json` | `build/measurements/cleanup-baseline/run-usaz5nvg/report.json` |
 
-The final production `make cleanup-baseline` validation is retained at
-`build/measurements/cleanup-baseline/run-84mqsu00/report.json`.
+The final production `make cleanup-baseline` validation was captured from a
+clean source-equivalent checkout (`compiler.dirty = false`) and is retained at
+`build/measurements/cleanup-baseline/run-sp5lisvs/report.json`. It covered the
+same 19 workloads and 17-occurrence schedule and reproduced 12,040 requests,
+6,399 computations, 5,641 hits, 6,399 insertions, and 6,399 discards.
 
 The following calculations use `Δ = measurement-only median - memoized
 median`, so a positive value favors memoization. `band` is the sum of the two

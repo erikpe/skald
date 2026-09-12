@@ -498,6 +498,24 @@ publishes no partial product, and emits no successful after-transition or final
 checkpoint. Unsupported facts and ineligible candidates remain ordinary
 conservative outcomes rather than diagnostics.
 
+### Proof-snapshot analysis usage
+
+The MIR pipeline reports deterministic `local-constants` usage for its one
+typed proof-snapshot cache. Details reporting adds aggregate analysis requests,
+computations, cache hits, repeated same-snapshot requests, results present
+before occurrences, inserted results, and discarded results in that order.
+Trace reporting also attaches the same counters to each pass occurrence that
+requested or invalidated a result. Occurrences without analysis activity omit
+the entry, and final-stage occurrences never carry proof-snapshot usage.
+
+A cache hit means the runner still owns the exact verified proof-rich snapshot
+that produced the result. A changed proof-rich outcome reports every entry
+discarded before output verification; the proof-normalization boundary also
+discards the complete session. These counts observe the runner's lifetime
+rules. They do not authorize preservation from changed-callable summaries and
+do not affect pass outcomes, verification, diagnostics, MIR, assembly, or
+native behavior. Memoization has no report, request, or command-line policy.
+
 ## Proof-normalization observation
 
 The archived
