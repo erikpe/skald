@@ -73,6 +73,7 @@ impl MirSnapshotAnalysisUsage {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn record_uncached_request(&mut self, repeated: bool) {
         self.requests = self.requests.saturating_add(1);
         self.computations = self.computations.saturating_add(1);
@@ -81,20 +82,17 @@ impl MirSnapshotAnalysisUsage {
             .saturating_add(u64::from(repeated));
     }
 
-    #[cfg(test)]
     pub(super) fn record_cache_hit(&mut self) {
         self.requests = self.requests.saturating_add(1);
         self.hits = self.hits.saturating_add(1);
         self.repeated_snapshot_requests = self.repeated_snapshot_requests.saturating_add(1);
     }
 
-    #[cfg(test)]
     pub(super) fn record_cache_miss(&mut self) {
         self.requests = self.requests.saturating_add(1);
         self.computations = self.computations.saturating_add(1);
     }
 
-    #[cfg(test)]
     pub(super) fn record_insertion(&mut self) {
         self.results_inserted = self.results_inserted.saturating_add(1);
     }

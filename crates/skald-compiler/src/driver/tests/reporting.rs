@@ -694,12 +694,12 @@ fn details_publish_deterministic_phase_owned_metrics() {
         pipeline[101..108],
         [
             ReportMetric::pass_count("local-constants", "analysis requests", 8),
-            ReportMetric::pass_count("local-constants", "analysis computations", 8),
-            ReportMetric::pass_count("local-constants", "analysis cache hits", 0),
+            ReportMetric::pass_count("local-constants", "analysis computations", 1),
+            ReportMetric::pass_count("local-constants", "analysis cache hits", 7),
             ReportMetric::pass_count("local-constants", "repeated snapshot requests", 7),
-            ReportMetric::pass_count("local-constants", "results present before occurrences", 0,),
-            ReportMetric::pass_count("local-constants", "results inserted", 0),
-            ReportMetric::pass_count("local-constants", "results discarded", 0),
+            ReportMetric::pass_count("local-constants", "results present before occurrences", 10,),
+            ReportMetric::pass_count("local-constants", "results inserted", 1),
+            ReportMetric::pass_count("local-constants", "results discarded", 1),
         ]
     );
     assert_eq!(pipeline[108], ReportMetric::count("definitions", 1));

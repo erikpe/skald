@@ -61,7 +61,7 @@ pub(crate) fn run_mir_pipeline_instrumented(
         record_occurrences,
         inspector,
         transition_proof_mir,
-        MirSnapshotAnalysisPolicy::MeasureOnly,
+        MirSnapshotAnalysisPolicy::Memoized,
     )
 }
 

@@ -1201,9 +1201,11 @@ fn aggregate_only_runner_skips_occurrence_recording() {
 
 #[test]
 fn analysis_usage_records_schedule_order_and_same_snapshot_repetition() {
-    let measured = run_mir_pipeline_with_occurrences(
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
         lowered_program(),
         &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY]),
+        None,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
     );
 
     assert!(measured.result.is_ok());
@@ -1226,9 +1228,11 @@ fn analysis_usage_records_schedule_order_and_same_snapshot_repetition() {
 
 #[test]
 fn changed_outcome_starts_a_fresh_analysis_measurement_epoch() {
-    let measured = run_mir_pipeline_with_occurrences(
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
         lower_source_to_final_mir("fn main() -> i64 { return 1 + 1; }"),
         &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY_CHANGE, ANALYSIS_QUERY]),
+        None,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
     );
 
     assert!(measured.result.is_ok());
@@ -1372,10 +1376,119 @@ fn memoized_inspection_and_disabled_schedules_do_not_request_facts() {
 }
 
 #[test]
+fn analysis_policies_preserve_default_schedule_mir_metrics_and_assembly() {
+    let input = lower_source_to_final_mir(LOCAL_SIMPLIFICATION_PROFILE_SOURCE);
+    let schedule = default_mir_pass_schedule();
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
+        input.clone(),
+        &schedule,
+        None,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
+    );
+    let memoized = run_mir_pipeline_with_analysis_policy_for_test(
+        input,
+        &schedule,
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+
+    assert_eq!(measured.occurrences().len(), memoized.occurrences().len());
+    for (measured, memoized) in measured.occurrences().iter().zip(memoized.occurrences()) {
+        assert_eq!(measured.position(), memoized.position());
+        assert_eq!(measured.identity(), memoized.identity());
+        assert_eq!(measured.name(), memoized.name());
+        assert_eq!(measured.stage(), memoized.stage());
+        assert_eq!(measured.occurrence(), memoized.occurrence());
+        assert_eq!(measured.outcome(), memoized.outcome());
+        assert_eq!(
+            measured.processed_callables(),
+            memoized.processed_callables()
+        );
+        assert_eq!(measured.changed_callables(), memoized.changed_callables());
+        assert_eq!(
+            measured.retained_mir_entities(),
+            memoized.retained_mir_entities()
+        );
+        assert_eq!(
+            measured.inserted_mir_entities(),
+            memoized.inserted_mir_entities()
+        );
+        assert_eq!(
+            measured.removed_mir_entities(),
+            memoized.removed_mir_entities()
+        );
+        assert_eq!(
+            measured.verification_executions(),
+            memoized.verification_executions()
+        );
+        assert_eq!(measured.measurements(), memoized.measurements());
+    }
+
+    let measured_usage = measured.statistics.analysis_usage().next().unwrap().1;
+    let memoized_usage = memoized.statistics.analysis_usage().next().unwrap().1;
+    assert_eq!(measured_usage.requests(), memoized_usage.requests());
+    assert!(memoized_usage.computations() < measured_usage.computations());
+    assert_eq!(
+        memoized_usage.requests(),
+        memoized_usage.computations() + memoized_usage.hits()
+    );
+
+    let measured_program = measured.result.unwrap();
+    let memoized_program = memoized.result.unwrap();
+    assert_eq!(measured_program, memoized_program);
+    let measured_assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&measured_program),
+    )
+    .unwrap();
+    let memoized_assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&memoized_program),
+    )
+    .unwrap();
+    assert_eq!(measured_assembly, memoized_assembly);
+}
+
+#[test]
+fn analysis_policies_preserve_failure_text_and_occurrence_ownership() {
+    let schedule = test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY_FAILURE, LATER]);
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &schedule,
+        None,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
+    );
+    let memoized = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &schedule,
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+
+    let measured_error = measured.result.unwrap_err();
+    let memoized_error = memoized.result.unwrap_err();
+    assert_eq!(measured_error.to_string(), memoized_error.to_string());
+    assert_eq!(
+        measured_error.pass_identity(),
+        memoized_error.pass_identity()
+    );
+    assert_eq!(
+        measured_error.pass_position(),
+        memoized_error.pass_position()
+    );
+    assert_eq!(
+        measured_error.pass_occurrence(),
+        memoized_error.pass_occurrence()
+    );
+}
+
+#[test]
 fn proof_transition_observes_the_last_proof_snapshot_before_normalization() {
-    let measured = run_mir_pipeline_with_occurrences(
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
         lowered_program(),
         &test_schedule(&[ANALYSIS_QUERY, TRANSITION_ANALYSIS_QUERY]),
+        None,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
     );
 
     assert!(measured.result.is_ok());
@@ -1398,7 +1511,7 @@ fn detailed_records_and_inspection_are_observational_for_analysis_counts() {
         run_mir_pipeline_measured_inspected(lowered_program(), &schedule, Some(&mut inspector));
 
     assert!(quiet.occurrences().is_empty());
-    assert_eq!(analysis_usage(&quiet), (2, 2, 1));
+    assert_eq!(analysis_usage(&quiet), (2, 1, 1));
     assert_eq!(analysis_usage(&detailed), analysis_usage(&quiet));
     assert_eq!(analysis_usage(&inspected), analysis_usage(&quiet));
     assert!(!inspector.labels.is_empty());

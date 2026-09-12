@@ -34,7 +34,7 @@ fn usage_aggregation_saturates() {
 fn resetting_a_snapshot_starts_fresh_repetition_accounting() {
     let program = lower_source_to_final_mir("fn main() -> i64 { return 1 + 2; }");
     let callable = program.executable_definitions().next().unwrap().callable();
-    let mut analyses = MirProofSnapshotAnalysis::default();
+    let mut analyses = MirProofSnapshotAnalysis::new(MirSnapshotAnalysisPolicy::MeasureOnly);
 
     let first = analyses.checkpoint();
     analyses.local_constants(&program, callable).unwrap();
@@ -123,4 +123,32 @@ fn memoized_sessions_never_insert_failed_computations() {
         (2, 2, 0)
     );
     assert_eq!(usage.results_inserted(), 0);
+}
+
+#[test]
+fn memoized_and_measurement_policies_produce_identical_typed_solutions() {
+    let sources = [
+        "fn main() -> i64 { return (((8 / 2) + 1) << 1u) * 5; }",
+        "fn main() -> i64 { return (i64) (1.5 + 2.5); }",
+        "fn choose() -> bool { return true && false; } fn main() -> i64 { if (choose()) { return 1; } return 0; }",
+        "fn main() -> i64 { var value: i64 = 0; while (value < 2) { value = value + 1; } return value; }",
+        "fn main() -> i64 { if (true) { return 1; } return 2; }",
+    ];
+
+    for source in sources {
+        let program = lower_source_to_final_mir(source);
+        let callables = program
+            .executable_definitions()
+            .map(|definition| definition.callable())
+            .collect::<Vec<_>>();
+        let mut measured = MirProofSnapshotAnalysis::new(MirSnapshotAnalysisPolicy::MeasureOnly);
+        let mut memoized = MirProofSnapshotAnalysis::new(MirSnapshotAnalysisPolicy::Memoized);
+        for callable in callables {
+            let expected = measured.local_constants(&program, callable).unwrap();
+            let first = memoized.local_constants(&program, callable).unwrap();
+            let second = memoized.local_constants(&program, callable).unwrap();
+            assert_eq!(first, expected, "solution mismatch for {callable}");
+            assert!(Arc::ptr_eq(&first, &second));
+        }
+    }
 }

@@ -1,6 +1,6 @@
 # MIR Snapshot Analysis Reuse Roadmap
 
-Status: in progress; S02 is complete and S03 is next.
+Status: in progress; Gate 2 is go, S03 is complete, and S04 is next.
 
 This roadmap implements
 [cleanup finding A19](CODEBASE_CLEANUP_AUDIT.md#a19--reuse-analyses-within-an-immutable-mir-snapshot)
@@ -100,7 +100,7 @@ without a new design decision.
 
 - [x] S01 — Instrument uncached requests and decide Gate 1
 - [x] S02 — Establish snapshot-bound session ownership
-- [ ] S03 — Enable bounded reuse and decide Gate 2
+- [x] S03 — Enable bounded reuse and decide Gate 2
 - [ ] S04 — Deliver or remove reuse and close A19
 
 ## PR-sized implementation sequence
@@ -208,22 +208,22 @@ real benefit to justify its complexity and retained memory.
 
 This task is performed only after S02 and a Gate 1 go decision.
 
-- [ ] Enable memoization for production proof-rich local constant queries.
+- [x] Enable memoization for production proof-rich local constant queries.
   Keep the test-only measurement policy for direct equivalence checks.
-- [ ] Migrate all default-schedule local constant consumers to shared handles
+- [x] Migrate all default-schedule local constant consumers to shared handles
   without combining their topology observations, candidate selection, rewrite
   plans, or pass measurements.
-- [ ] Preserve analysis failure text and requesting-occurrence attribution.
+- [x] Preserve analysis failure text and requesting-occurrence attribution.
   Insert only successful complete results and never recompute after a hit.
-- [ ] Compare memoized and measurement-only schedules for exact typed local
+- [x] Compare memoized and measurement-only schedules for exact typed local
   constant solutions across primitive chains, checked integer and floating
   protocols, logical selections, carrier facts, loops, and disconnected
   blocks.
-- [ ] Capture at least two paired pre-reuse/post-reuse reports for every
+- [x] Capture at least two paired pre-reuse/post-reuse reports for every
   reviewed workload. Include deterministic usage counts, compiler wall time,
   peak RSS, schedule and pass outcomes, artifacts, and native observations in
   the evidence document.
-- [ ] Apply Gate 2 exactly as written, record every calculation and the final
+- [x] Apply Gate 2 exactly as written, record every calculation and the final
   go or no-go decision, and update S04 to name the applicable closure branch.
 
 **Tests:** Compare memoized and measurement-only execution on identical exact
@@ -239,10 +239,19 @@ proves exact behavioral parity, a meaningful deterministic computation
 reduction, repeatable timing benefit, and bounded RSS. A no-go identifies the
 failed condition and authorizes removal, not further cache generalization.
 
+**Gate 2 decision:** go. Three paired comparisons preserve deterministic
+behavior, reduce computations by 25–87.5 percent on every workload, show
+repeatable dispersion-adjusted wins on multiple nontrivial workloads, contain
+no repeatable adjusted regression, and keep the largest median RSS increase at
+2.34 percent. The full calculations and raw paths are retained in the
+[measurement evidence](../development/MIR_ANALYSIS_REUSE_MEASUREMENTS.md).
+
 ### S04 — Deliver or remove reuse and close A19
 
 **Purpose:** leave one coherent repository state after the experiment rather
 than treating implemented cache code as automatically permanent.
+
+**Selected closure branch:** Gate 2 go.
 
 - [ ] Follow exactly one closure branch:
   - **Gate 2 go:** retain the typed production session, remove comparison-only

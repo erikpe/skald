@@ -8,7 +8,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 
-from measure_cleanup_baseline import parse_analysis_usage  # noqa: E402
+from measure_cleanup_baseline import parse_analysis_usage, parse_pass_occurrences  # noqa: E402
 from measurement_support import MeasurementFailure  # noqa: E402
 
 
@@ -23,6 +23,18 @@ class CleanupBaselineTests(unittest.TestCase):
         )
 
         self.assertEqual(
+            parse_pass_occurrences(stderr),
+            [
+                {
+                    "position": 3,
+                    "pass": "fold",
+                    "stage": "proof-rich",
+                    "occurrence": 1,
+                    "outcome": "unchanged",
+                }
+            ],
+        )
+        self.assertEqual(
             parse_analysis_usage(stderr),
             [
                 {
@@ -30,6 +42,7 @@ class CleanupBaselineTests(unittest.TestCase):
                     "pass": "fold",
                     "stage": "proof-rich",
                     "occurrence": 1,
+                    "outcome": "unchanged",
                     "analysis": "local-constants",
                     "requests": 2,
                     "computations": 2,

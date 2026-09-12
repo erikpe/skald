@@ -29,7 +29,8 @@ from measurement_support import (
 DEFAULT_OUTPUT_ROOT = REPOSITORY / "build/measurements/cleanup-baseline"
 PASS_PATTERN = re.compile(
     rb"^skac: trace: (proof-rich|proof-transition|final) MIR pass `([^`]+)` "
-    rb"\(pass identity \d+, schedule position (\d+), occurrence (\d+)\) ",
+    rb"\(pass identity \d+, schedule position (\d+), occurrence (\d+)\) "
+    rb"(unchanged|changed|failed) ",
     re.MULTILINE,
 )
 ANALYSIS_PATTERN = re.compile(
@@ -164,12 +165,12 @@ def resolved_schedule(
     )
     schedule = [
         {
-            "position": int(position),
-            "pass": name.decode("utf-8"),
-            "stage": stage.decode("ascii"),
-            "occurrence": int(occurrence),
+            "position": occurrence["position"],
+            "pass": occurrence["pass"],
+            "stage": occurrence["stage"],
+            "occurrence": occurrence["occurrence"],
         }
-        for stage, name, position, occurrence in PASS_PATTERN.findall(completed.stderr)
+        for occurrence in parse_pass_occurrences(completed.stderr)
     ]
     positions = [entry["position"] for entry in schedule]
     if not schedule or positions != list(range(len(schedule))):
@@ -179,17 +180,31 @@ def resolved_schedule(
     return schedule
 
 
+def parse_pass_occurrences(stderr: bytes) -> list[dict[str, object]]:
+    return [
+        {
+            "position": int(position),
+            "pass": name.decode("utf-8"),
+            "stage": stage.decode("ascii"),
+            "occurrence": int(occurrence),
+            "outcome": outcome.decode("ascii"),
+        }
+        for stage, name, position, occurrence, outcome in PASS_PATTERN.findall(stderr)
+    ]
+
+
 def parse_analysis_usage(stderr: bytes) -> list[dict[str, object]]:
     current: dict[str, object] | None = None
     usage: list[dict[str, object]] = []
     for line in stderr.splitlines():
         if match := PASS_PATTERN.match(line):
-            stage, name, position, occurrence = match.groups()
+            stage, name, position, occurrence, outcome = match.groups()
             current = {
                 "position": int(position),
                 "pass": name.decode("utf-8"),
                 "stage": stage.decode("ascii"),
                 "occurrence": int(occurrence),
+                "outcome": outcome.decode("ascii"),
             }
             continue
         match = ANALYSIS_PATTERN.match(line)
@@ -220,7 +235,7 @@ def inspect_analysis_usage(
     workload: Workload,
     run_directory: Path,
     timeout_seconds: float,
-) -> list[dict[str, object]]:
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     output = run_directory / f"{workload.identity.replace('/', '-')}-analysis.s"
     completed = run_checked(
         [
@@ -236,7 +251,10 @@ def inspect_analysis_usage(
         operation=f"{workload.identity} analysis-usage inspection",
         timeout_seconds=timeout_seconds,
     )
-    return parse_analysis_usage(completed.stderr)
+    return (
+        parse_analysis_usage(completed.stderr),
+        parse_pass_occurrences(completed.stderr),
+    )
 
 
 def numeric_summary(samples: list[int]) -> dict[str, int | float]:
@@ -257,7 +275,7 @@ def compile_workload(
     repeats: int,
     timeout_seconds: float,
 ) -> tuple[dict[str, object], dict[str, object], Path | None]:
-    analysis_usage = inspect_analysis_usage(
+    analysis_usage, mir_pass_occurrences = inspect_analysis_usage(
         compiler, workload, run_directory, timeout_seconds
     )
     assembly_values: list[bytes] = []
@@ -307,6 +325,7 @@ def compile_workload(
             "executable_bytes": executable_bytes,
         },
         "analysis_usage": analysis_usage,
+        "mir_pass_occurrences": mir_pass_occurrences,
     }
     operational = {
         "id": workload.identity,
@@ -379,6 +398,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler", default="target/golden/skac")
     parser.add_argument("--compiler-profile", default="golden")
+    parser.add_argument(
+        "--compiler-label",
+        default="repository",
+        help="Stable label identifying a preserved compiler binary",
+    )
     parser.add_argument("--compile-repeats", type=int, default=3)
     parser.add_argument("--native-warmups", type=int, default=1)
     parser.add_argument("--native-repeats", type=int, default=5)
@@ -440,6 +464,8 @@ def main() -> int:
         "compiler": {
             **repository_identity(arguments.timeout_seconds),
             "profile": arguments.compiler_profile,
+            "label": arguments.compiler_label,
+            "executable_sha256": sha256_bytes(compiler.read_bytes()),
         },
         "configuration": {
             "target": "x86_64-sysv",
@@ -470,7 +496,10 @@ def main() -> int:
         print(json.dumps(report, indent=2))
     else:
         print(f"cleanup baseline: {len(selected)} workloads")
-        print(f"compiler: {deterministic['compiler']['revision']} ({arguments.compiler_profile})")
+        print(
+            f"compiler: {deterministic['compiler']['revision']} "
+            f"({arguments.compiler_profile}; {arguments.compiler_label})"
+        )
         print(f"resolved MIR schedule: {len(schedule)} occurrences")
         print(f"report: {run_directory.relative_to(REPOSITORY) / 'report.json'}")
         print("timing is observational and has no pass threshold")
