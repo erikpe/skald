@@ -1,8 +1,8 @@
 # Cleanup Retrospective Review
 
-Status: in progress; R01 evidence and proposed dispositions recorded. R02 owns
-publication acceptance, R03 owns verification gaps, and R04 owns final status
-reconciliation. These proposals do not change the audit's delivery statuses.
+Status: in progress; R01 evidence and R02 publication decision recorded. R03
+owns verification gaps and R04 owns final status reconciliation. Publication
+ownership requires the separately planned implementation below. These proposals do not change the audit's delivery statuses.
 
 Reviewed: 2026-09-12, revision `64b6da73b41ed2ec6afe0e1401b3735484847e6d`.
 The working tree was clean before this documentation task. Source inspection
@@ -45,7 +45,7 @@ architectural obligation is not yet established. All are proposals until R04.
 | A08: neutral lifecycle facts; preserve HIR plans and diagnostic paths | Resolved lifecycle availability plus type-check-owned concrete plans; parity tests | Fulfilled | Parallel availability/plan algorithms can drift; fixture parity is not a proof over every recursive graph. |
 | A08: ordinary/generic eligibility and atomic rejection | Shared categories, closed requirement query, publication tests | Fulfilled for bounded migration | Publication completeness remains R02's separate obligation; no exhaustive ordinary/generic cross-product test was established. |
 | A09: named collection and body products with stable identities | `CollectedDeclarations`, `ResolvedBodies`, `BodyResolutionStage`; determinism tests | Fulfilled | Orchestration still relies on local ordering and mutable interning. |
-| A09: separate candidate publication so rollback need not remember every table | Consuming `CandidateProgram` and saved `OrdinaryProgramProducts` | Outstanding | Rejection still manually enumerates restored and cleared fields. R02 must decide whether to accept a narrowed contract or require stronger ownership. |
+| A09: separate candidate publication so rollback need not remember every table | Consuming `CandidateProgram` and saved `OrdinaryProgramProducts` | Outstanding | R02 requires owned selection and exhaustive assembly in the publication ownership roadmap; manual restoration remains an interim implementation. |
 | A09: preserve failed-dependency behavior and successful dumps | Ordered class/interface validation; publication and permutation assertions | Fulfilled for covered cases | Current-run determinism is not byte comparison against the pre-cleanup compiler; no complete field/rejection matrix yet. |
 | A10: explicit delta, termination contract, and measured work | `SemanticRangeRequestDelta`, `SemanticRangeCompletion`, counters | Fulfilled | Growth is a continuation condition, not independently a proof that the key universe is finite; existing specialization recursion controls remain essential. |
 | A10: optimize repeated work only with evidence | No-range fast path; probe-local inputs and state | Deliberately narrowed | Work counters establish avoided operations. No comparable before/after timing or RSS result was established by R01; affected-body scheduling remains unimplemented and unjustified here. |
@@ -272,3 +272,165 @@ must decide which uncovered assertions warrant tests; R04 must reconcile
 statuses and readiness. The guard follow-up can remain separate after this
 roadmap. Indexed bindings and performance work remain with their existing
 audit owners, avoiding duplicate backlog entries.
+
+
+## R02 — Publication acceptance decision
+
+Reviewed 2026-09-12 at `72424ff2f73b7430697d0d75597f9792a969f949`, with a clean
+working tree before this task. R01's historical record remains unchanged.
+This section records a design decision, not an implemented representation change.
+
+**Decision:** retain the current rejection policy as compatibility behavior,
+but do not accept its manual rollback implementation as A09's final endpoint.
+Require explicit owned product selection and exhaustive final assembly through
+[the publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md). This is
+an outstanding maintainability obligation, not a newly demonstrated compiler
+correctness failure. R03 may verify today's contract before that follow-up.
+
+### Complete field disposition inventory
+
+The authoritative field list is
+[`ResolvedProgram`](../../crates/skald-compiler/src/resolve/ir/declarations.rs).
+The following covers all 31 fields. **Keep** means retain the candidate field,
+not prove that every referenced declaration remains published. **Restore**
+means select the saved ordinary snapshot. **Clear** means replace with an empty
+table. Success keeps every field. Combined rejection applies the class column
+first and then the interface column to the resulting product.
+
+| Field | Owner/dependencies and retention rationale | Class rejection | Interface rejection |
+| --- | --- | --- | --- |
+| `modules` | Request module identities and provenance | Keep | Keep |
+| `external_links` | Ordinary external function linkage plan | Keep | Keep |
+| `module_bindings` | Module import identities | Keep | Keep |
+| `ordinary_bindings` | Source-selected ordinary names; diagnostic identity evidence | Keep | Keep |
+| `module_declarations` | Source declaration indexes, including template identity slots | Keep | Keep |
+| `class_templates` | Original generic syntax identity inventory | Keep | Keep |
+| `interface_templates` | Original interface template inventory | Keep | Keep |
+| `interface_template_semantics` | Definition-site requirements and diagnostic origins | Keep | Keep |
+| `type_parameters` | Template parameter identities used by retained evidence | Keep | Keep |
+| `template_semantics` | Class template requirements and body-origin evidence | Keep | Keep |
+| `generic_specializations` | Closed keys, reserved class IDs, provenance and state transitions | Mark all entries with class identities failed | Keep |
+| `generic_interface_specializations` | Closed interface keys, type uses and transitions; inspected after class rejection | Keep until interface validation | Mark entries with interface identities failed |
+| `function_types` | Interned signatures can mention rejected types; preserve numbering/evidence | Keep | Keep |
+| `address_taken_callables` | Accumulated body facts can reference cleared candidate bodies | Keep as partial evidence | Keep as partial evidence |
+| `array_types` | Interned element kinds can mention rejected types | Keep | Keep |
+| `optional_types` | Interned payload kinds can mention rejected types | Keep | Keep |
+| `optional_box_types` | Interned optional/object references can mention rejected types | Keep | Keep |
+| `iterable_language_item` | Canonical template/requirement identities; not a closed application | Keep | Keep |
+| `operator_language_item` | Canonical template/requirement bundle | Keep | Keep |
+| `range_language_item` | Canonical templates and declaration slots, not generated range classes | Keep | Keep |
+| `string_language_item` | Canonical ordinary string class and field IDs | Keep; verify snapshot correspondence in R03 | Keep |
+| `literal_data` | Source-ordered bytes and spans independent of body publication | Keep | Keep |
+| `declarations` | Ordinary function signatures may contain rejected generated types | Keep as partial evidence | Keep as partial evidence |
+| `definitions` | Completed ordinary and generated-dependent function bodies | Clear all, including ordinary bodies | Keep |
+| `classes` | Ordinary snapshot or candidate ordinary/generated class declarations | Restore | Keep |
+| `interfaces` | Ordinary snapshot or candidate interface declarations | Keep until interface validation | Restore |
+| `hierarchy` | Derived class hierarchy aligned with class snapshot | Restore | Keep |
+| `virtual_families` | Dispatch derived from candidate classes and interfaces | Clear | Keep |
+| `class_definitions` | Completed class bodies dependent on closed declarations | Clear all | Keep |
+| `entry_function` | Ordinary selected function ID, not a promise its body survives | Keep | Keep |
+| `span` | Entry source span | Keep | Keep |
+
+The snapshot is not a completely independent ordinary program: ordinary
+signatures and claims can already refer to generated identities. The class
+snapshot is captured after ordinary interface claims; its hierarchy is built
+at that point. The interface snapshot is captured before specialization.
+These capture points in the resolver are part of the compatibility contract.
+Moving them earlier or rebuilding an ordinary program would change behavior.
+
+Related state outside these fields: `OrdinaryProgramProducts` holds only the
+three saved tables; the type interner is finished before candidate assembly;
+body-local lookup state and probe state do not become publication owners.
+Diagnostics and resolution measurements belong to `ResolveOutput` and are not
+rolled back. Class `fail_class` and interface `fail_all` preserve keys, reserved
+identities, origins and prior transitions while recording failure; they do not
+compact or recycle identities.
+
+### Success, rejection and consumer boundaries
+
+1. Success: both validators return true and the candidate is returned intact.
+   Other resolution diagnostics can still exist; successful specialization
+   validation does not alone make the whole compilation valid.
+2. Class failure: class validation emits its diagnostics, all generated class
+   entries with identities become failed, the ordinary class/hierarchy snapshot
+   is restored, and all bodies/virtual families are cleared. Independently valid
+   generated classes are not salvaged. This all-class-family policy predates A09.
+3. Interface validation follows the class decision. It first checks closed type
+   uses with `type_is_fully_published`; missing class/interface declarations in
+   nested signatures, arrays, optionals or shared targets cause rejection
+   without another interface diagnostic. Otherwise contextual and bound checks
+   emit their own diagnostics. This is a dependency check over those uses,
+   not a verifier for every reference in `ResolvedProgram`.
+4. Interface-only failure restores ordinary interfaces and marks generated
+   interface entries failed. It preserves the class product and bodies, as the
+   independent-class regression requires. It does not revalidate all class claims
+   against the restored interfaces. Such cross-links remain partial error evidence.
+5. Combined failure performs both actions in that order. Independent interface
+   candidates can survive class rejection if their checks succeed; if one
+   interface candidate fails the family is rejected, not salvaged per key.
+
+The driver checks `diagnostics.has_errors()` before calling type checking in
+[`finish_compilation`](../../crates/skald-compiler/src/driver/pipeline.rs).
+Thus error-bearing resolved output is inspectable diagnostic state, not a
+closed program ready for HIR. The public resolved structure itself has no type
+seal enforcing that precondition. Retained interned/signature references must
+not be represented as a promise that all their targets survive rejection.
+No new consumer may lower or execute these partial products. A separate public
+success/error IR redesign is outside this decision.
+
+### Alternatives and selected representation
+
+| Alternative | Extension cost and intermediate states | Copy/migration implications | Decision |
+| --- | --- | --- | --- |
+| Keep manual mutation plus this inventory and tests | One mutation list must remember every new dependent field; inventory can drift; partially restored candidate exists between validators | Smallest migration; current ordinary snapshots are cloned again on rejection | Useful interim contract, insufficient for original A09 maintainability goal |
+| Own selection products and assemble once exhaustively | New fields must be assigned to a product and explicitly destructured/assembled; coupled body/dispatch fields move together; validators receive an explicit selected view | Keep existing snapshot timing; move selected owned snapshots at rejection to avoid the extra restore clones where feasible; moderate private refactor | Selected |
+| Rebuild a fully closed ordinary program on failure | Eliminates some partial references but introduces another resolution/re-interning policy and changes diagnostic products | High semantic and identity risk, potentially repeated frontend work | Excluded |
+
+The selected private design separates retained request/declaration evidence,
+class declaration/hierarchy selection, interface selection, and completed
+bodies/dispatch. Class rejection selects ordinary class/hierarchy plus empty
+bodies/dispatch; interface rejection selects ordinary interfaces without
+implicitly clearing class bodies. The interface validator must see the
+class-selected view before its own decision. Explicit owned selection and
+exhaustive destructuring (without `..` or a default-filled assembly) force a
+new field to receive a disposition. This cannot prove semantic classification
+correct: tests and review still check which product owns a new field.
+
+Preserve success IDs, dumps, diagnostic ordering, all-class-family rejection,
+independent-class survival, and partial diagnostic evidence. Do not implement
+per-specialization salvage, rebuild interning, silently clear retained evidence,
+or claim that error output is closed. Snapshot copying before candidate
+mutation remains necessary unless separately redesigned; no speedup is claimed.
+
+### Test obligations and gaps
+
+Existing tests are linked in the A09 section above. Their exact assertions map
+as follows; a blank area is an obligation for R03, not an assumed failure.
+
+| Contract | Existing named evidence | Remaining verification |
+| --- | --- | --- |
+| Success keys, identities and dumps | `cross_module_reuse_and_source_permutation_have_identical_dumps`; process determinism suites | Preserve equivalent products when migrating selection; current tests alone are not historical byte comparisons |
+| Ordinary classes and repeated failure origins | `repeated_failed_keys_emit_once_and_restore_coherent_specialization_products` | Assert restored hierarchy correspondence, retained ordinary signatures/entry, and the expected partial nature of their type references |
+| Class-dependent interface rejection | `mixed_interface_and_class_recursion_does_not_publish_a_failed_dependency_graph` | Add a non-recursive contextual class failure with dependent and independent interface applications to distinguish dependency rejection from recursion failure |
+| Interface failure preserves valid class bodies | `invalid_interface_candidate_preserves_independent_class_publication` | Exercise claims/dispatch that mention an invalid interface; establish safe diagnostic inspection and blocked lowering, not false closure |
+| Class failure clears dependent executable products | `repeated_failed_keys_emit_once_and_restore_coherent_specialization_products` | Fixture currently lacks a populated virtual family; use one that can observe dispatch clearing |
+| Retained canonical and interned evidence | No combined rejection assertion established in R01/R02 | Include string/literal metadata, optional/array/function types and address-taken evidence where a meaningful consumer boundary can be asserted |
+| Diagnostic ordering | Repeated-key and field-path tests; interface validators inspected | Combined rejection should retain causal diagnostics without cascades, and be stable under supported module permutations |
+
+### Acceptance and blocking scope
+
+R02 is complete as a design decision and inventory. A09's publication ownership
+outcome remains outstanding pending the separate roadmap. R03 can characterize
+current rejection behavior now; R04 can close this retrospective with that
+explicit prerequisite still open. Changes that add candidate-dependent fields,
+change rejection/publication, or assume closed failed output must wait for the
+ownership follow-up or explicitly incorporate its contract. Independent MIR
+work and indexed binding lookup need not wait if they preserve this boundary.
+The discovered risk is owned by resolver publication, priority P1, and indexed
+in the discoveries record. No production defect has been demonstrated by this
+source review, and no production fix is silently bundled here.
+
+R02 validation: field names were checked against the current struct; existing
+assertions and rejection/helper implementations were inspected. `make docs-check`
+and `git diff --check` passed. No compiler tests or benchmarks were run for
+this documentation-only design task; R03 owns execution and added coverage.

@@ -1,8 +1,9 @@
 # Cleanup Architecture Retrospective Roadmap
 
-Status: in progress; R01 is complete and R02 is next. Outcome evidence and
-proposed dispositions are in the [review](CLEANUP_RETROSPECTIVE_REVIEW.md);
-publication acceptance and final status reconciliation remain pending.
+Status: in progress; R01 and R02 are complete and R03 is next. Outcome evidence and
+proposed dispositions are in the [review](CLEANUP_RETROSPECTIVE_REVIEW.md).
+The publication decision requires a separate ownership follow-up; verification
+and final status reconciliation remain pending.
 
 Created: 2026-09-12.
 
@@ -37,7 +38,7 @@ It preserves useful delivered changes while making their acceptance reviewable.
 ## Progress
 
 - [x] R01 — Establish outcome and evidence traceability
-- [ ] R02 — Decide the candidate-publication acceptance boundary
+- [x] R02 — Decide the candidate-publication acceptance boundary
 - [ ] R03 — Close targeted verification gaps
 - [ ] R04 — Reconcile statuses and release dependent work
 
@@ -85,19 +86,19 @@ audit inventory says Complete.
 **Purpose:** resolve the principal remaining design question before changing
 publication representation or allowing dependent changes to assume it is settled.
 
-- [ ] In the review record, inventory every `ResolvedProgram` field and related
+- [x] In the review record, inventory every `ResolvedProgram` field and related
   specialization state. Identify ordinary/candidate ownership, dependencies,
   and required preservation, restoration, clearing, or failure marking for each
   rejection path. Include bodies, hierarchy, dispatch, interface dependencies,
   interned identities, and retained language-item references where applicable.
-- [ ] Trace successful publication, class rejection, interface rejection, and
+- [x] Trace successful publication, class rejection, interface rejection, and
   combined/dependent rejection. Determine which independent valid products
   survive and which rejection effects are intentional existing policy.
-- [ ] Evaluate at least two concrete alternatives: retain centralized rollback
+- [x] Evaluate at least two concrete alternatives: retain centralized rollback
   with an explicit dependency contract, or select coherent owned ordinary and
   candidate products. Explain extension cost when a new dependent table is
   added, invalid intermediate states, cloning cost, and migration risk.
-- [ ] Record the chosen endpoint and rationale. If centralized rollback is
+- [x] Record the chosen endpoint and rationale. If centralized rollback is
   accepted, state how its remaining manual field maintenance satisfies a
   deliberately narrowed goal. If stronger ownership is necessary, define its
   product boundary, invariants, migration steps, and acceptance tests in a

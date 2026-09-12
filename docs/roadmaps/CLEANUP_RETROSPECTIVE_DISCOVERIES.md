@@ -29,3 +29,23 @@ must fail; its legitimate resolved/source inputs and phase consumers must pass.
 Retain existing exception and scanner tests, document the coverage limit, then
 run `make check` and `make msrv-check`. This policy extension is a separate
 behavioral test change, rather than incidental R01 documentation cleanup.
+
+
+## Complete candidate publication ownership
+
+**Priority:** P1. **Owner:** resolver publication. **Status:** planned in the
+[publication ownership roadmap](PUBLICATION_OWNERSHIP_ROADMAP.md).
+**Blocking:** candidate-dependent field additions and publication/rejection
+changes; not retrospective closure or independent compiler work.
+
+R02's [field inventory and decision](CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
+show that centralized rollback still requires a manually maintained field list.
+Retained error evidence can reference rejected declarations, so the output
+must not be mistaken for a closed executable program. This is an architectural
+follow-up, not a demonstrated new correctness defect.
+
+Implement owned selection and exhaustive assembly under the linked roadmap,
+using R03's rejection characterization. Preserve existing partial error output,
+identity allocation, class-family rejection and independent class survival.
+The implementation roadmap owns tasks and gates; this record tracks the risk
+without duplicating that implementation plan.
