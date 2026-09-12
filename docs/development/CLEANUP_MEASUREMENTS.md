@@ -30,7 +30,7 @@ writes two JSON files:
 Assembly compilation is repeated at least twice and must emit identical bytes.
 One separate untimed trace compilation records analysis requests,
 computations, same-snapshot repetitions, distinct callable-snapshot keys, and
-result-table activity for each requesting pass occurrence. This trace run does
+cache hits and result-table activity for each requesting pass occurrence. This trace run does
 not contribute to compiler wall-time or peak-RSS samples.
 Native workloads repeat the same exit status, standard output, and standard
 error digests. Paired variants alternate order during warmups and measured

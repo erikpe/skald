@@ -53,6 +53,7 @@ const ANALYSIS_QUERY: MirPassIdentity = MirPassIdentity::new(123);
 const ANALYSIS_QUERY_CHANGE: MirPassIdentity = MirPassIdentity::new(124);
 const ANALYSIS_QUERY_FAILURE: MirPassIdentity = MirPassIdentity::new(125);
 const TRANSITION_ANALYSIS_QUERY: MirPassIdentity = MirPassIdentity::new(126);
+const ANALYSIS_QUERY_ALL: MirPassIdentity = MirPassIdentity::new(127);
 const PIPELINE_DETERMINISM_CHILD: &str = "SKALD_MIR_PIPELINE_DETERMINISM_CHILD";
 const PIPELINE_FINGERPRINT_BEGIN: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_BEGIN";
 const PIPELINE_FINGERPRINT_END: &str = "SKALD_MIR_PIPELINE_FINGERPRINT_END";
@@ -136,7 +137,7 @@ const fn transition_registration(
     )
 }
 
-static TEST_REGISTRATIONS: [MirPassRegistration; 28] = [
+static TEST_REGISTRATIONS: [MirPassRegistration; 29] = [
     registration(UNCHANGED, "unchanged-pass", unchanged_pass),
     registration(
         DELETE_EQUIVALENT,
@@ -239,6 +240,11 @@ static TEST_REGISTRATIONS: [MirPassRegistration; 28] = [
         TRANSITION_ANALYSIS_QUERY,
         "transition-analysis-query-pass",
         transition_analysis_query_pass,
+    ),
+    registration(
+        ANALYSIS_QUERY_ALL,
+        "analysis-query-all-pass",
+        analysis_query_all_pass,
     ),
     whole_world_reachability::REGISTRATION,
 ];
@@ -1209,6 +1215,7 @@ fn analysis_usage_records_schedule_order_and_same_snapshot_repetition() {
         assert_eq!(kind, MirSnapshotAnalysisKind::LocalConstants);
         assert_eq!(usage.requests(), 1);
         assert_eq!(usage.computations(), 1);
+        assert_eq!(usage.hits(), 0);
         assert_eq!(usage.repeated_snapshot_requests(), repeated);
         assert_eq!(usage.results_before(), 0);
         assert_eq!(usage.results_inserted(), 0);
@@ -1233,6 +1240,135 @@ fn changed_outcome_starts_a_fresh_analysis_measurement_epoch() {
             .collect::<Vec<_>>(),
         [0, 1, 0]
     );
+}
+
+#[test]
+fn memoized_policy_reuses_results_across_unchanged_occurrences() {
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY]),
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+
+    assert!(measured.result.is_ok());
+    let first = measured.occurrences()[0].analysis_usage()[0].1;
+    assert_eq!(
+        (first.requests(), first.computations(), first.hits()),
+        (1, 1, 0)
+    );
+    assert_eq!((first.results_before(), first.results_inserted()), (0, 1));
+    let second = measured.occurrences()[1].analysis_usage()[0].1;
+    assert_eq!(
+        (second.requests(), second.computations(), second.hits()),
+        (1, 0, 1)
+    );
+    assert_eq!((second.results_before(), second.results_inserted()), (1, 0));
+    assert_eq!(second.results_discarded(), 0);
+
+    let usage = measured.statistics.analysis_usage().next().unwrap().1;
+    assert_eq!(
+        (usage.requests(), usage.computations(), usage.hits()),
+        (2, 1, 1)
+    );
+    assert_eq!(usage.results_discarded(), 1);
+}
+
+#[test]
+fn a_changed_callable_discards_the_complete_memoized_snapshot() {
+    let program = lower_source_to_final_mir(
+        "fn helper() -> i64 { return 4; } fn main() -> i64 { return 1 + 1; }",
+    );
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
+        program,
+        &test_schedule(&[
+            ANALYSIS_QUERY_ALL,
+            ANALYSIS_QUERY_CHANGE,
+            ANALYSIS_QUERY_ALL,
+        ]),
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+
+    assert!(measured.result.is_ok());
+    let records = measured.occurrences();
+    let first = records[0].analysis_usage()[0].1;
+    assert_eq!((first.computations(), first.results_inserted()), (2, 2));
+    let changed = records[1].analysis_usage()[0].1;
+    assert_eq!((changed.hits(), changed.results_before()), (1, 2));
+    assert_eq!(changed.results_discarded(), 2);
+    let fresh = records[2].analysis_usage()[0].1;
+    assert_eq!((fresh.computations(), fresh.hits()), (2, 0));
+    assert_eq!((fresh.results_before(), fresh.results_inserted()), (0, 2));
+}
+
+#[test]
+fn proof_normalization_discards_the_memoized_proof_session() {
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY, TRANSITION_ANALYSIS_QUERY]),
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+
+    assert!(measured.result.is_ok());
+    let transition = measured.occurrences()[1].analysis_usage()[0].1;
+    assert_eq!((transition.computations(), transition.hits()), (0, 1));
+    assert_eq!(
+        (transition.results_before(), transition.results_discarded()),
+        (1, 1)
+    );
+    assert!(measured
+        .occurrences()
+        .iter()
+        .all(|record| record.stage() != MirPassStage::Final || record.analysis_usage().is_empty()));
+}
+
+#[test]
+fn memoized_failures_remain_owned_by_the_requesting_occurrence() {
+    let measured = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY_FAILURE, LATER]),
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+
+    let error = measured.result.as_ref().unwrap_err();
+    assert_eq!(error.pass_identity(), Some(ANALYSIS_QUERY_FAILURE));
+    assert_eq!(error.pass_position(), Some(1));
+    assert_eq!(measured.occurrences().len(), 2);
+    let failure = measured.occurrences()[1].analysis_usage()[0].1;
+    assert_eq!(
+        (failure.requests(), failure.computations(), failure.hits()),
+        (1, 0, 1)
+    );
+}
+
+#[test]
+fn memoized_inspection_and_disabled_schedules_do_not_request_facts() {
+    let mut inspector = CheckpointCollector::default();
+    let inspected = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY]),
+        Some(&mut inspector),
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+    let plain = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &test_schedule(&[ANALYSIS_QUERY, ANALYSIS_QUERY]),
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+    assert_eq!(analysis_usage(&inspected), analysis_usage(&plain));
+    assert_eq!(inspector.dumps.len(), 5);
+
+    let disabled = run_mir_pipeline_with_analysis_policy_for_test(
+        lowered_program(),
+        &none_schedule(),
+        None,
+        MirSnapshotAnalysisPolicy::Memoized,
+    );
+    assert!(disabled.statistics.analysis_usage().next().is_none());
 }
 
 #[test]
@@ -2316,6 +2452,19 @@ fn analysis_query_pass(
         .local_constants(callable)
         .map_err(|error| MirPassFailure::execution(error.to_string()))?;
     Ok(context.unchanged())
+}
+
+fn analysis_query_all_pass(
+    mut context: MirProofPassContext,
+) -> Result<MirProofPassOutcome, MirPassFailure> {
+    let callables = context.executable_callables();
+    let processed = callables.len();
+    for callable in callables {
+        context
+            .local_constants(callable)
+            .map_err(|error| MirPassFailure::execution(error.to_string()))?;
+    }
+    context.unchanged_with(MirPassData::processed(processed))
 }
 
 fn analysis_query_change_pass(

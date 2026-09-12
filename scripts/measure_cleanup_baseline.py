@@ -33,7 +33,7 @@ PASS_PATTERN = re.compile(
     re.MULTILINE,
 )
 ANALYSIS_PATTERN = re.compile(
-    rb"^skac: trace analysis: ([^:]+): requests (\d+), computations (\d+), "
+    rb"^skac: trace analysis: ([^:]+): requests (\d+), computations (\d+), hits (\d+), "
     rb"repeated snapshot requests (\d+), results before (\d+), inserted (\d+), discarded (\d+)$"
 )
 
@@ -197,13 +197,14 @@ def parse_analysis_usage(stderr: bytes) -> list[dict[str, object]]:
             continue
         if current is None:
             raise MeasurementFailure("analysis usage preceded its MIR pass occurrence")
-        kind, requests, computations, repeated, before, inserted, discarded = match.groups()
+        kind, requests, computations, hits, repeated, before, inserted, discarded = match.groups()
         usage.append(
             {
                 **current,
                 "analysis": kind.decode("ascii"),
                 "requests": int(requests),
                 "computations": int(computations),
+                "hits": int(hits),
                 "repeated_snapshot_requests": int(repeated),
                 "distinct_callable_snapshot_keys": int(requests) - int(repeated),
                 "results_before": int(before),

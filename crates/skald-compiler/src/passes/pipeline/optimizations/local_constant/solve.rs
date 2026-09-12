@@ -204,6 +204,9 @@ impl RetainedCheckedFailure {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(in crate::passes::pipeline) enum LocalConstantAnalysisError {
+    UnknownExecutableCallable {
+        callable: CallableId,
+    },
     Rewrite(crate::mir::rewrite::MirRewriteError),
     InvalidValueIdentity {
         expected: ValueId,

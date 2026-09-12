@@ -5,7 +5,9 @@ mod session;
 mod usage;
 
 pub(in crate::passes::pipeline) use context::{MirProofPassContext, MirProofTransitionContext};
-pub(super) use session::MirProofSnapshotAnalysis;
+pub(super) use session::{
+    MirProofSnapshotAnalysis, MirSnapshotAnalysisCheckpoint, MirSnapshotAnalysisPolicy,
+};
 pub use usage::{MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage};
 
 #[cfg(test)]

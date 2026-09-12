@@ -19,6 +19,7 @@ impl MirSnapshotAnalysisKind {
 pub struct MirSnapshotAnalysisUsage {
     requests: u64,
     computations: u64,
+    hits: u64,
     repeated_snapshot_requests: u64,
     results_before: u64,
     results_inserted: u64,
@@ -31,6 +32,9 @@ impl MirSnapshotAnalysisUsage {
     }
     pub const fn computations(self) -> u64 {
         self.computations
+    }
+    pub const fn hits(self) -> u64 {
+        self.hits
     }
     pub const fn repeated_snapshot_requests(self) -> u64 {
         self.repeated_snapshot_requests
@@ -53,6 +57,7 @@ impl MirSnapshotAnalysisUsage {
         Self {
             requests: after.requests.saturating_sub(before.requests),
             computations: after.computations.saturating_sub(before.computations),
+            hits: after.hits.saturating_sub(before.hits),
             repeated_snapshot_requests: after
                 .repeated_snapshot_requests
                 .saturating_sub(before.repeated_snapshot_requests),
@@ -76,9 +81,34 @@ impl MirSnapshotAnalysisUsage {
             .saturating_add(u64::from(repeated));
     }
 
+    #[cfg(test)]
+    pub(super) fn record_cache_hit(&mut self) {
+        self.requests = self.requests.saturating_add(1);
+        self.hits = self.hits.saturating_add(1);
+        self.repeated_snapshot_requests = self.repeated_snapshot_requests.saturating_add(1);
+    }
+
+    #[cfg(test)]
+    pub(super) fn record_cache_miss(&mut self) {
+        self.requests = self.requests.saturating_add(1);
+        self.computations = self.computations.saturating_add(1);
+    }
+
+    #[cfg(test)]
+    pub(super) fn record_insertion(&mut self) {
+        self.results_inserted = self.results_inserted.saturating_add(1);
+    }
+
+    pub(super) fn record_discarded(&mut self, count: usize) {
+        self.results_discarded = self
+            .results_discarded
+            .saturating_add(u64::try_from(count).unwrap_or(u64::MAX));
+    }
+
     pub(crate) fn accumulate(&mut self, other: Self) {
         self.requests = self.requests.saturating_add(other.requests);
         self.computations = self.computations.saturating_add(other.computations);
+        self.hits = self.hits.saturating_add(other.hits);
         self.repeated_snapshot_requests = self
             .repeated_snapshot_requests
             .saturating_add(other.repeated_snapshot_requests);
@@ -92,6 +122,7 @@ impl MirSnapshotAnalysisUsage {
     pub(in crate::passes::pipeline) const fn is_empty(self) -> bool {
         self.requests == 0
             && self.computations == 0
+            && self.hits == 0
             && self.repeated_snapshot_requests == 0
             && self.results_before == 0
             && self.results_inserted == 0
@@ -102,6 +133,7 @@ impl MirSnapshotAnalysisUsage {
     pub(crate) const fn for_test(
         requests: u64,
         computations: u64,
+        hits: u64,
         repeated_snapshot_requests: u64,
         results_before: u64,
         results_inserted: u64,
@@ -110,6 +142,7 @@ impl MirSnapshotAnalysisUsage {
         Self {
             requests,
             computations,
+            hits,
             repeated_snapshot_requests,
             results_before,
             results_inserted,

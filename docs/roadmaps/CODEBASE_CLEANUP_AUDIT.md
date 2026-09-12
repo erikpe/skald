@@ -121,7 +121,7 @@ endpoint and names any deferred work.
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
-| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | In progress; Gate 1 go | P2 | 4 | L | High | C | C, M |
+| [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | In progress; S02 complete | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Open | P2 | 3 | M | Medium | O | M, R |
 | [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Open | P2 | 3 | M | Medium | O | M, E, R |
 | [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Open | P3 | 5 | XL | High | C | N, E |
@@ -868,7 +868,9 @@ lifetime.
 [default schedule](../../crates/skald-compiler/src/passes/pipeline/policy/profile.rs)
 contains repeated folding and cleanup passes. The uncached S01 baseline
 demonstrates 5,641 same-snapshot repeated local constant requests across the
-reviewed workload matrix. Individual
+reviewed workload matrix. S02 establishes a private typed result table with
+complete invalidation before changed-output verification and at proof
+normalization; production remains uncached until the S03 experiment. Individual
 [algebraic simplification](../../crates/skald-compiler/src/passes/pipeline/optimizations/primitive_algebraic_simplification.rs)
 and constant-folding plans compute local constant solutions; changed outputs
 are reverified by the

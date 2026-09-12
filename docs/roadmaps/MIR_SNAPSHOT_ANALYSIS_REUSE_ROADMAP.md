@@ -1,6 +1,6 @@
 # MIR Snapshot Analysis Reuse Roadmap
 
-Status: in progress; Gate 1 is go and S02 is next.
+Status: in progress; S02 is complete and S03 is next.
 
 This roadmap implements
 [cleanup finding A19](CODEBASE_CLEANUP_AUDIT.md#a19--reuse-analyses-within-an-immutable-mir-snapshot)
@@ -99,7 +99,7 @@ without a new design decision.
 ## Progress
 
 - [x] S01 — Instrument uncached requests and decide Gate 1
-- [ ] S02 — Establish snapshot-bound session ownership
+- [x] S02 — Establish snapshot-bound session ownership
 - [ ] S03 — Enable bounded reuse and decide Gate 2
 - [ ] S04 — Deliver or remove reuse and close A19
 
@@ -160,23 +160,23 @@ reuse any result.
 
 This task is performed only after a Gate 1 go decision.
 
-- [ ] Extend `pipeline::snapshot_analysis` with one lazy proof-rich session
+- [x] Extend `pipeline::snapshot_analysis` with one lazy proof-rich session
   containing a deterministic callable-keyed table of successful
   `Arc<LocalConstantSolution>` results. Keep solver construction and result
   semantics in the existing local constant module.
-- [ ] Let the proof-pass context resolve `CallableId` through its exact verified
+- [x] Let the proof-pass context resolve `CallableId` through its exact verified
   program before computing or returning a result. Reject unknown,
   non-executable, foreign, or mismatched identities deterministically.
-- [ ] Make the runner retain the session beside the verified product after an
+- [x] Make the runner retain the session beside the verified product after an
   unchanged outcome and drop it before verifying every changed result.
-- [ ] Drop the proof-rich session unconditionally at proof normalization. Do
+- [x] Drop the proof-rich session unconditionally at proof normalization. Do
   not introduce a final-stage session or duplicate final seal reachability.
-- [ ] Permit immutable result handles only inside the current transform. Keep
+- [x] Permit immutable result handles only inside the current transform. Keep
   all outcome and checkpoint types free of session/result handles, and consume
   the pass context before rewrite or unchanged handoff completes.
-- [ ] Add a private test policy which selects measurement-only or memoized
+- [x] Add a private test policy which selects measurement-only or memoized
   behavior. Production remains measurement-only throughout S02.
-- [ ] Count hits, insertions, entries present before an occurrence, and entries
+- [x] Count hits, insertions, entries present before an occurrence, and entries
   discarded on invalidation without changing existing pass-owned metrics.
 
 **Tests:** Use synthetic exact schedules rather than production heuristics to
@@ -194,6 +194,12 @@ Run focused pipeline ownership and local constant tests, then `make check`,
 on the exact unchanged proof-rich snapshot; every mutation and stage transition
 causes complete invalidation; production behavior is still uncached; and no
 new public or final-stage analysis surface exists.
+
+**Result:** the private memoized test policy shares one typed immutable result
+across unchanged occurrences. The runner clears the complete callable table
+before changed-output verification and at proof normalization, and the usage
+contract now reports cache hits and table lifecycle counts. Production remains
+on the measurement-only policy until S03 evaluates enabled reuse.
 
 ### S03 — Enable bounded reuse and decide Gate 2
 

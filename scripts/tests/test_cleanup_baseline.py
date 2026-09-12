@@ -18,7 +18,7 @@ class CleanupBaselineTests(unittest.TestCase):
             [
                 b"skac: trace: proof-rich MIR pass `fold` (pass identity 2, schedule position 3, occurrence 1) unchanged in 0.100 ms",
                 b"skac: trace stats: processed callables: 2",
-                b"skac: trace analysis: local-constants: requests 2, computations 2, repeated snapshot requests 1, results before 0, inserted 0, discarded 0",
+                b"skac: trace analysis: local-constants: requests 2, computations 2, hits 0, repeated snapshot requests 1, results before 0, inserted 0, discarded 0",
             ]
         )
 
@@ -33,6 +33,7 @@ class CleanupBaselineTests(unittest.TestCase):
                     "analysis": "local-constants",
                     "requests": 2,
                     "computations": 2,
+                    "hits": 0,
                     "repeated_snapshot_requests": 1,
                     "distinct_callable_snapshot_keys": 1,
                     "results_before": 0,
@@ -45,7 +46,7 @@ class CleanupBaselineTests(unittest.TestCase):
     def test_orphaned_analysis_usage_is_rejected(self) -> None:
         with self.assertRaisesRegex(MeasurementFailure, "preceded"):
             parse_analysis_usage(
-                b"skac: trace analysis: local-constants: requests 1, computations 1, repeated snapshot requests 0, results before 0, inserted 0, discarded 0"
+                b"skac: trace analysis: local-constants: requests 1, computations 1, hits 0, repeated snapshot requests 0, results before 0, inserted 0, discarded 0"
             )
 
 

@@ -22,7 +22,8 @@ pub(crate) use execution::{
 };
 #[cfg(test)]
 pub(in crate::passes::pipeline) use execution::{
-    run_mir_pipeline_measured_inspected, run_mir_pipeline_with_transition_and_occurrences_for_test,
+    run_mir_pipeline_measured_inspected, run_mir_pipeline_with_analysis_policy_for_test,
+    run_mir_pipeline_with_transition_and_occurrences_for_test,
     run_mir_pipeline_with_transition_for_test,
 };
 pub use execution::{
@@ -40,6 +41,8 @@ pub(crate) use policy::{
 };
 pub(crate) use seal::verify_proof_mir;
 pub use seal::{verify_final_mir, VerifiedFinalMirProgram, VerifiedProofMirProgram};
+#[cfg(test)]
+pub(in crate::passes::pipeline) use snapshot_analysis::MirSnapshotAnalysisPolicy;
 pub use snapshot_analysis::{MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage};
 
 /// Runs the target-independent MIR pass pipeline.

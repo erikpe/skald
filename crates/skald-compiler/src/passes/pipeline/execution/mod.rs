@@ -35,7 +35,8 @@ pub(crate) use runner::{
 };
 #[cfg(test)]
 pub(in crate::passes::pipeline) use runner::{
-    run_mir_pipeline_measured_inspected, run_mir_pipeline_with_transition_and_occurrences_for_test,
+    run_mir_pipeline_measured_inspected, run_mir_pipeline_with_analysis_policy_for_test,
+    run_mir_pipeline_with_transition_and_occurrences_for_test,
     run_mir_pipeline_with_transition_for_test,
 };
 pub(crate) use statistics::{MeasuredMirPipeline, MirPipelineStatistics};

@@ -179,10 +179,11 @@ fn render_mir_pass(rendered: &mut String, occurrence: &MirPassOccurrenceRecord) 
     for (kind, usage) in occurrence.analysis_usage() {
         let _ = writeln!(
             rendered,
-            "skac: trace analysis: {}: requests {}, computations {}, repeated snapshot requests {}, results before {}, inserted {}, discarded {}",
+            "skac: trace analysis: {}: requests {}, computations {}, hits {}, repeated snapshot requests {}, results before {}, inserted {}, discarded {}",
             kind.name(),
             usage.requests(),
             usage.computations(),
+            usage.hits(),
             usage.repeated_snapshot_requests(),
             usage.results_before(),
             usage.results_inserted(),

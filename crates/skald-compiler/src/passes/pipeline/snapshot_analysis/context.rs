@@ -7,6 +7,7 @@ use crate::{
         MirDefinitionRef, MirProgram,
     },
 };
+use std::sync::Arc;
 
 use super::{
     super::{
@@ -49,7 +50,7 @@ impl<'session> MirProofPassContext<'session> {
     pub(in crate::passes::pipeline) fn local_constants(
         &mut self,
         callable: CallableId,
-    ) -> Result<LocalConstantSolution, LocalConstantAnalysisError> {
+    ) -> Result<Arc<LocalConstantSolution>, LocalConstantAnalysisError> {
         self.analyses
             .local_constants(self.capability.verified().program(), callable)
     }
@@ -110,7 +111,7 @@ impl<'session> MirProofTransitionContext<'session> {
     pub(in crate::passes::pipeline) fn local_constants(
         &mut self,
         callable: CallableId,
-    ) -> Result<LocalConstantSolution, LocalConstantAnalysisError> {
+    ) -> Result<Arc<LocalConstantSolution>, LocalConstantAnalysisError> {
         self.analyses
             .local_constants(self.capability.verified().program(), callable)
     }
@@ -127,6 +128,7 @@ impl<'session> MirProofTransitionContext<'session> {
         optional_plan: Option<MirProofTransitionPlan>,
         data: MirPassData,
     ) -> Result<MirProofTransitionOutcome, MirProofTransitionFailure> {
+        self.analyses.reset();
         self.capability.normalize(optional_plan, data)
     }
 }

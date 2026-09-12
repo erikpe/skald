@@ -20,7 +20,8 @@ use crate::passes::pipeline::{
     seal::{reseal_final_mir, transition_proof_mir, MirProofTransitionError},
     snapshot_analysis::{
         MirProofPassContext, MirProofSnapshotAnalysis, MirProofTransitionContext,
-        MirSnapshotAnalysisKind, MirSnapshotAnalysisUsage,
+        MirSnapshotAnalysisCheckpoint, MirSnapshotAnalysisKind, MirSnapshotAnalysisPolicy,
+        MirSnapshotAnalysisUsage,
     },
     verify_proof_mir, MirPassOccurrence, MirPassSchedule,
 };
@@ -60,6 +61,7 @@ pub(crate) fn run_mir_pipeline_instrumented(
         record_occurrences,
         inspector,
         transition_proof_mir,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
     )
 }
 
@@ -70,7 +72,14 @@ pub(in crate::passes::pipeline) fn run_mir_pipeline_with_transition_for_test(
     inspector: Option<&mut dyn MirPipelineInspector>,
     transition: ProofNormalizationTransition,
 ) -> MeasuredMirPipeline {
-    run_mir_pipeline_with_transition(program, schedule, false, inspector, transition)
+    run_mir_pipeline_with_transition(
+        program,
+        schedule,
+        false,
+        inspector,
+        transition,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
+    )
 }
 
 #[cfg(test)]
@@ -80,7 +89,31 @@ pub(in crate::passes::pipeline) fn run_mir_pipeline_with_transition_and_occurren
     inspector: Option<&mut dyn MirPipelineInspector>,
     transition: ProofNormalizationTransition,
 ) -> MeasuredMirPipeline {
-    run_mir_pipeline_with_transition(program, schedule, true, inspector, transition)
+    run_mir_pipeline_with_transition(
+        program,
+        schedule,
+        true,
+        inspector,
+        transition,
+        MirSnapshotAnalysisPolicy::MeasureOnly,
+    )
+}
+
+#[cfg(test)]
+pub(in crate::passes::pipeline) fn run_mir_pipeline_with_analysis_policy_for_test(
+    program: MirProgram,
+    schedule: &MirPassSchedule,
+    inspector: Option<&mut dyn MirPipelineInspector>,
+    policy: MirSnapshotAnalysisPolicy,
+) -> MeasuredMirPipeline {
+    run_mir_pipeline_with_transition(
+        program,
+        schedule,
+        true,
+        inspector,
+        transition_proof_mir,
+        policy,
+    )
 }
 
 fn run_mir_pipeline_with_transition(
@@ -89,6 +122,7 @@ fn run_mir_pipeline_with_transition(
     record_occurrences: bool,
     inspector: Option<&mut dyn MirPipelineInspector>,
     transition: ProofNormalizationTransition,
+    analysis_policy: MirSnapshotAnalysisPolicy,
 ) -> MeasuredMirPipeline {
     let mut inspector = inspector;
     let mut statistics = MirPipelineStatistics::default();
@@ -113,7 +147,7 @@ fn run_mir_pipeline_with_transition(
         MirPipelineCheckpointLabel::ProofRichInput,
         &verified,
     );
-    let mut analyses = MirProofSnapshotAnalysis::default();
+    let mut analyses = MirProofSnapshotAnalysis::new(analysis_policy);
 
     for occurrence in schedule.proof_rich() {
         statistics.record_pass_execution();
@@ -126,11 +160,10 @@ fn run_mir_pipeline_with_transition(
             MirProofPassCapability::new(verified),
             &mut analyses,
         ));
-        let analysis_usage = analyses.usage_since(checkpoint);
-        statistics.record_analysis_usage(MirSnapshotAnalysisKind::LocalConstants, analysis_usage);
         let outcome = match result {
             Ok(outcome) => outcome,
             Err(MirPassFailure::Execution(error)) => {
+                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
                 record_failure(
                     &mut records,
                     occurrence,
@@ -144,6 +177,7 @@ fn run_mir_pipeline_with_transition(
                 );
             }
             Err(MirPassFailure::Rewrite(error)) => {
+                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
                 record_failure(
                     &mut records,
                     occurrence,
@@ -163,6 +197,7 @@ fn run_mir_pipeline_with_transition(
                 verified: unchanged,
                 data,
             } => {
+                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
                 debug_assert_eq!(data.changed_callables(), 0);
                 statistics.record_pass_data(occurrence, &data);
                 if let Some(started) = started {
@@ -185,6 +220,7 @@ fn run_mir_pipeline_with_transition(
             }
             MirProofPassOutcome::Changed { change, data } => {
                 analyses.reset();
+                let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
                 statistics.record_pass_data(occurrence, &data);
                 let (program, rewrite_changes) = match change {
                     MirProofPassChange::Rewrite(rewrite) => {
@@ -248,9 +284,8 @@ fn run_mir_pipeline_with_transition(
             MirProofTransitionCapability::with_transition(verified, transition),
             &mut analyses,
         ));
-        let analysis_usage = analyses.usage_since(checkpoint);
-        statistics.record_analysis_usage(MirSnapshotAnalysisKind::LocalConstants, analysis_usage);
         analyses.reset();
+        let analysis_usage = record_analysis_usage(&analyses, checkpoint, &mut statistics);
         let outcome = match result {
             Ok(outcome) => outcome,
             Err(failure) => {
@@ -303,7 +338,9 @@ fn run_mir_pipeline_with_transition(
         );
         (verified, normalization)
     } else {
+        let checkpoint = analyses.checkpoint();
         analyses.reset();
+        record_analysis_usage(&analyses, checkpoint, &mut statistics);
         statistics.record_normalization_execution();
         statistics.record_verification();
         match transition(verified, None) {
@@ -527,6 +564,16 @@ fn record_failure(
             analysis_usage,
         ));
     }
+}
+
+fn record_analysis_usage(
+    analyses: &MirProofSnapshotAnalysis,
+    checkpoint: MirSnapshotAnalysisCheckpoint,
+    statistics: &mut MirPipelineStatistics,
+) -> MirSnapshotAnalysisUsage {
+    let usage = analyses.usage_since(checkpoint);
+    statistics.record_analysis_usage(MirSnapshotAnalysisKind::LocalConstants, usage);
+    usage
 }
 
 fn analysis_records(

@@ -85,3 +85,20 @@ This decision does not establish a speedup. The operational observations above
 are an uncached reference only; Gate 2 requires paired cache-disabled and
 cache-enabled comparisons under its stricter correctness, timing, and RSS
 criteria.
+
+## Snapshot-bound session contract
+
+The pipeline now owns a lazy callable-keyed proof-rich session beside the
+verified MIR product. Successful local constant results use immutable shared
+handles. An unchanged pass preserves the session; every changed pass clears
+the complete table before output verification; and proof normalization clears
+it unconditionally. Unknown executable identities fail before a solver request
+is recorded. No session or result handle appears in pass outcomes, inspectors,
+final-stage MIR, or the public compiler API.
+
+A private test policy exercises memoized and measurement-only execution through
+the same runner and callbacks. Production remains measurement-only until the
+paired S03 experiment. Analysis observations now include cache hits, entries
+present before each occurrence, successful insertions, and entries discarded
+by complete invalidation. Consequently the original Gate 1 trace has an
+implicit hit count of zero and remains the authoritative uncached baseline.

@@ -330,6 +330,7 @@ fn pipeline_execution_metrics(statistics: &MirPipelineStatistics) -> Vec<ReportM
         metrics.extend([
             ReportMetric::pass_count(owner, "analysis requests", usage.requests()),
             ReportMetric::pass_count(owner, "analysis computations", usage.computations()),
+            ReportMetric::pass_count(owner, "analysis cache hits", usage.hits()),
             ReportMetric::pass_count(
                 owner,
                 "repeated snapshot requests",
