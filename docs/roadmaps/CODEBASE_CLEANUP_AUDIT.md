@@ -1,8 +1,11 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A34, A35, A38, and A43 are complete. Turn
-the remaining architectural findings into separate PR-sized implementation
-roadmaps. No implementation roadmap depends on this document yet.
+Status: actionable audit; A01–A12, A34, A35, A38, and A43 are recorded complete.
+Architectural acceptance of A08–A12 is pending the
+[bounded retrospective](CLEANUP_RETROSPECTIVE_ROADMAP.md), which depends on this
+audit. Existing delivery statuses remain unchanged until that review reaches
+its decisions. Turn remaining architectural findings into focused design
+decisions and PR-sized implementation roadmaps.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
 
@@ -1337,6 +1340,11 @@ runtime and documentation checks, 21 compile-fail documentation tests, and all
 628 golden leaves, plus the Rust 1.82.0 workspace all-target check.
 
 ## Recommended implementation order
+
+Before further work that depends on the delivered A08–A12 contracts, complete
+the relevant acceptance decisions in the
+[cleanup retrospective roadmap](CLEANUP_RETROSPECTIVE_ROADMAP.md). Independent
+narrow fixes may proceed; the retrospective does not reopen all early batches.
 
 This is a selection guide, not a promise that an entire tranche fits one PR.
 Each selected change should acquire an owner, focused test plan, measurable
