@@ -1,6 +1,6 @@
 # Phase Dump Renderer Ownership Roadmap
 
-Status: planned; D01 is next.
+Status: in progress; D01 is complete and D02 is next.
 
 This roadmap implements
 [cleanup finding A26](CODEBASE_CLEANUP_AUDIT.md#a26--split-large-dump-renderers-by-responsibility)
@@ -50,7 +50,7 @@ move must preserve their bytes and ordering.
 
 ## Progress
 
-- [ ] D01 — Establish the recursive layout with MIR dumping
+- [x] D01 — Establish the recursive layout with MIR dumping
 - [ ] D02 — Divide typed HIR dumping by structural responsibility
 - [ ] D03 — Divide resolved-program dumping by structural responsibility
 - [ ] D04 — Audit ownership, validate all phase observations, and close A26
@@ -63,25 +63,25 @@ move must preserve their bytes and ordering.
 exact-output coverage to establish the private recursive layout before moving
 the two stateful frontend dumpers.
 
-- [ ] Convert `mir/dump.rs` into a private recursive `mir/dump/` module while
+- [x] Convert `mir/dump.rs` into a private recursive `mir/dump/` module while
   preserving `mir::dump_mir` and `mir::dump_preliminary_mir` through the
   existing MIR facade.
-- [ ] Keep program entry and phase-heading coordination in `dump/mod.rs` and
+- [x] Keep program entry and phase-heading coordination in `dump/mod.rs` and
   extract cohesive owners for program/static-lifecycle metadata;
   classes/declarations/copy capabilities; executable bodies, blocks,
   instructions, and terminators; and operands, places, arrays, I/O, and object
   views. Adjust the exact grouping if review shows two adjacent families need
   the same context, but do not create one-function files.
-- [ ] Preserve free-function rendering where it remains clear. Introduce a
+- [x] Preserve free-function rendering where it remains clear. Introduce a
   private renderer context only if repeated state or dependencies demonstrate
   that it improves ownership.
-- [ ] Keep complete enum matching and explicit field formatting in the family
+- [x] Keep complete enum matching and explicit field formatting in the family
   that owns the MIR structure. Do not replace phase-specific formatting with
   debug output or a generic visitor.
-- [ ] Confirm exact preliminary/final headings, static lifecycle sections,
+- [x] Confirm exact preliminary/final headings, static lifecycle sections,
   declaration and definition order, block and instruction order, places,
   protocols, arrays, I/O, shared owners, object views, and spans.
-- [ ] Add a focused exact test only for a moved MIR family not represented by
+- [x] Add a focused exact test only for a moved MIR family not represented by
   the current MIR dump corpus.
 
 **Tests:** Run the exact MIR dump tests, representative MIR feature dump tests,

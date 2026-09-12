@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Phase dump renderer ownership](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md) | Planned | Split resolved, HIR, and MIR dump rendering into cohesive private modules with byte-identical deterministic output | D01 — establish the recursive layout with MIR dumping | Existing exact phase dumps and pipeline determinism coverage; A21 complete |
+| [Phase dump renderer ownership](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md) | In progress | Split resolved, HIR, and MIR dump rendering into cohesive private modules with byte-identical deterministic output | D02 — divide typed HIR dumping by structural responsibility | Existing exact phase dumps and pipeline determinism coverage; A21 and D01 complete |
 
 ## Pending discovery and planning records
 
