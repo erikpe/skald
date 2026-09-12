@@ -2710,9 +2710,12 @@ not a second type checker. In particular, an unselected primitive arithmetic
 expression provisionally inherits its left operand's kind, while authoritative
 operand validation remains in type checking. Missing declaration or interner
 metadata is invalid rather than context-dependent. Consumers that do not need
-the distinction explicitly request only a known candidate. Binding types are
-currently found through the resolver's lexical scopes; A25 owns replacing that
-lookup with an identity-indexed table.
+the distinction explicitly request only a known candidate. Lexical scope maps
+select source names to `BindingId`; a separate callable-local fact table indexes
+parameter and local types by those stable identities. Receiver type remains an
+explicit callable fact. Foreign-callable, out-of-range, or mismatched binding
+identities yield an invalid provisional result rather than falling back to a
+name or scanning visible scopes.
 
 A reachable canonical `std::ops` module additionally produces one atomic
 `ResolvedOperatorLanguageItem`. Its fixed canonical table records all

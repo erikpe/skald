@@ -13,6 +13,7 @@ use crate::{
 };
 
 mod allocation;
+mod binding_facts;
 mod call;
 mod dereference;
 mod indirect_call;
@@ -24,6 +25,7 @@ mod range;
 mod statement;
 mod structural_bracket;
 
+use binding_facts::BindingTypeFacts;
 use provisional_type::ProvisionalExpressionType;
 
 /// A selected ordinary class member after privacy and hierarchy lookup.
@@ -479,7 +481,6 @@ pub(super) enum BaseInitializationPolicy {
 #[derive(Clone, Copy)]
 struct BindingSymbol {
     id: BindingId,
-    ty: ResolvedTypeKind,
     name_span: Span,
 }
 
@@ -493,7 +494,7 @@ struct CallableResolver<'program, 'state> {
     diagnostics: &'state mut Diagnostics,
     base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
-    locals: Vec<ResolvedLocal>,
+    binding_types: BindingTypeFacts,
     next_loop_index: usize,
     active_loops: Vec<LoopId>,
 }
@@ -507,14 +508,14 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         address_taken_callables: &'state mut ResolvedAddressTakenCallableTable,
         diagnostics: &'state mut Diagnostics,
     ) -> Self {
-        let parameters = parameters
+        let binding_types = BindingTypeFacts::new(context.callable, parameters);
+        let parameter_scope = parameters
             .iter()
             .map(|parameter| {
                 (
                     parameter.name.clone(),
                     BindingSymbol {
                         id: BindingId::Parameter(parameter.id),
-                        ty: parameter.type_syntax.kind,
                         name_span: parameter.name_span,
                     },
                 )
@@ -529,8 +530,8 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             address_taken_callables,
             diagnostics,
             base_initialization: context.base_initialization,
-            scopes: vec![parameters],
-            locals: Vec::new(),
+            scopes: vec![parameter_scope],
+            binding_types,
             next_loop_index: 0,
             active_loops: Vec::new(),
         }
@@ -561,7 +562,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         }
         let body = self.resolve_block(body, false);
         ResolvedCallableBody {
-            locals: self.locals,
+            locals: self.binding_types.into_locals(),
             body,
         }
     }
@@ -577,7 +578,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             BaseInitializationPolicy::Forbidden
         ));
         let expression = self.resolve_expression(expression)?;
-        Some((self.locals, expression))
+        Some((self.binding_types.into_locals(), expression))
     }
 
     fn resolve_view_target(&mut self, named: &syntax::NamedTypeSyntax) -> Option<ResolvedType> {
@@ -1083,7 +1084,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         binding_kind: &'static str,
     ) -> ResolvedLocal {
         let local = ResolvedLocal {
-            id: LocalId::new(self.callable, self.locals.len()),
+            id: LocalId::new(self.callable, self.binding_types.local_count()),
             name: name.text.to_string(),
             name_span: name.span,
             type_syntax: ty,
@@ -1094,13 +1095,12 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             &local.name,
             BindingSymbol {
                 id: BindingId::Local(local.id),
-                ty: local.type_syntax.kind,
                 name_span: local.name_span,
             },
             binding_kind,
         );
         debug_assert!(declared, "a fresh scoped-local scope has no bindings");
-        self.locals.push(local.clone());
+        self.binding_types.record_local(&local);
         local
     }
 
@@ -1193,6 +1193,15 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             .iter()
             .rev()
             .find_map(|scope| scope.get(name).copied())
+    }
+
+    fn lookup_typed_binding(&self, name: &str) -> Option<(BindingSymbol, ResolvedTypeKind)> {
+        let binding = self.lookup_binding(name)?;
+        let ty = self
+            .binding_types
+            .get(binding.id)
+            .expect("visible binding identity must have a type fact");
+        Some((binding, ty))
     }
 
     fn cover(&self, start: Span, end: Span) -> Span {

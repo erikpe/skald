@@ -558,8 +558,10 @@ impl CallableResolver<'_, '_> {
         match callee {
             syntax::Expression::Identifier(identifier) => {
                 if !identifier.name.is_qualified() {
-                    if let Some(binding) = self.lookup_binding(&identifier.name.text) {
-                        let ResolvedTypeKind::Function(function_type) = binding.ty else {
+                    if let Some((binding, binding_type)) =
+                        self.lookup_typed_binding(&identifier.name.text)
+                    {
+                        let ResolvedTypeKind::Function(function_type) = binding_type else {
                             self.diagnostics.push(
                                 Diagnostic::error(
                                     INVALID_CALL_TARGET,
@@ -1063,8 +1065,8 @@ impl CallableResolver<'_, '_> {
                 self.interface_receiver_from_dereference(dereference)
             }
             syntax::Expression::Identifier(identifier) => {
-                let binding = self.lookup_binding(&identifier.name.text)?;
-                let interface = match binding.ty {
+                let (binding, binding_type) = self.lookup_typed_binding(&identifier.name.text)?;
+                let interface = match binding_type {
                     ResolvedTypeKind::Interface(interface) => interface,
                     ResolvedTypeKind::Shared(_) => return None,
                     _ => return None,

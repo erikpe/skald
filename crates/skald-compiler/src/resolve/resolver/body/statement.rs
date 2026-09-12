@@ -243,15 +243,14 @@ impl CallableResolver<'_, '_> {
         let ty = self.resolve_type(&local.type_syntax);
         let initializer = self.resolve_expression(&local.initializer);
         let ty = ty?;
-        let id = LocalId::new(self.callable, self.locals.len());
+        let id = LocalId::new(self.callable, self.binding_types.local_count());
         let symbol = BindingSymbol {
             id: BindingId::Local(id),
-            ty: ty.kind,
             name_span: local.name.span,
         };
         let declared = self.declare_binding(&local.name.text, symbol, "local binding");
         if declared {
-            self.locals.push(ResolvedLocal {
+            self.binding_types.record_local(&ResolvedLocal {
                 id,
                 name: local.name.text.to_string(),
                 name_span: local.name.span,
@@ -491,9 +490,10 @@ impl CallableResolver<'_, '_> {
         }
 
         if let Some(identifier) = binding_identifier_through_groups(&assignment.place) {
-            if let Some(binding) = self.lookup_binding(&identifier.name.text) {
+            if let Some((binding, binding_type)) = self.lookup_typed_binding(&identifier.name.text)
+            {
                 if matches!(
-                    binding.ty,
+                    binding_type,
                     ResolvedTypeKind::I64
                         | ResolvedTypeKind::U64
                         | ResolvedTypeKind::U8
@@ -513,7 +513,7 @@ impl CallableResolver<'_, '_> {
                         )
                     });
                 }
-                if matches!(binding.ty, ResolvedTypeKind::Array(_)) {
+                if matches!(binding_type, ResolvedTypeKind::Array(_)) {
                     let destination = self.resolve_expression(&assignment.place)?;
                     let source = self.resolve_expression(&assignment.value)?;
                     return Some(ResolvedStatement::ArrayAssignment(
@@ -525,7 +525,7 @@ impl CallableResolver<'_, '_> {
                         },
                     ));
                 }
-                if let ResolvedTypeKind::Shared(target) = binding.ty {
+                if let ResolvedTypeKind::Shared(target) = binding_type {
                     let source = self.resolve_expression(&assignment.value)?;
                     return Some(ResolvedStatement::SharedAssignment(
                         ResolvedSharedAssignment {
@@ -537,12 +537,12 @@ impl CallableResolver<'_, '_> {
                         },
                     ));
                 }
-                if matches!(binding.ty, ResolvedTypeKind::Optional(_)) {
+                if matches!(binding_type, ResolvedTypeKind::Optional(_)) {
                     let source = self.resolve_expression(&assignment.value)?;
                     return Some(ResolvedStatement::OptionalAssignment(
                         ResolvedOptionalAssignment {
                             destination: binding.id,
-                            target: binding.ty,
+                            target: binding_type,
                             equal_span: assignment.equal_span,
                             source,
                             span: assignment.span,

@@ -400,11 +400,11 @@ impl CallableResolver<'_, '_> {
         &mut self,
         identifier: &syntax::IdentifierExpr,
     ) -> Option<ResolvedObjectPlace> {
-        let Some(binding) = self.lookup_binding(&identifier.name.text) else {
+        let Some((binding, binding_type)) = self.lookup_typed_binding(&identifier.name.text) else {
             self.report_unknown(&identifier.name.text, identifier.span, "unknown object");
             return None;
         };
-        let class = match binding.ty {
+        let class = match binding_type {
             ResolvedTypeKind::Class(class) => class,
             ResolvedTypeKind::Shared(target) => {
                 self.report_implicit_shared_member_access(identifier.span, target);

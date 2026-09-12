@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A34, A35, A38, and A43 are complete within
+Status: actionable audit; A01–A12, A25, A34, A35, A38, and A43 are complete within
 the scopes recorded below. A09's stage products and owned publication
 selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
@@ -129,7 +129,7 @@ endpoint and names any deferred work.
 | [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Open | P3 | 5 | XL | High | C | N, E |
 | [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | Open | P3 | 5 | XL | High | C | N, E, R |
 | [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | Open | P2 | 3 | M | Medium | C | C, M |
-| [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Open | P2 | 3 | S–M | Low | O | C, M |
+| [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Complete | P2 | 3 | S–M | Low | O | C, M |
 | [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | Open | P2 | 3 | M | Low | O | M, E |
 | [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | Open | P3 | 2 | S | Low | O | C, M |
 | [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | Open | P2 | 3 | M | Low | O | M, E |
@@ -592,9 +592,8 @@ Rust 1.82.0 workspace all-target check also passed.
 ### A11 — Make provisional expression-type queries explicit
 
 **Retrospective acceptance (2026-09-12):** complete for the provisional query
-and its consumer distinctions. Binding facts still use lexical scope scans;
-identity-indexed storage belongs to A25. This explicit deferral is part of the
-accepted bounded outcome, not delivered caching.
+and its consumer distinctions. Binding facts still used lexical scope scans at
+that milestone; the identity-indexed storage deferred to A25 is now delivered.
 
 **Status:** Complete (2026-09-11).
 
@@ -633,9 +632,9 @@ states, zero/one/multiple operator candidates, failed operator receivers,
 contextual optional operands, selected overload outputs, and the existing
 primitive-intrinsic and class-witness generic specialization paths.
 
-Binding facts still come from the resolver's lexical scope maps. The
-architecture contract and this item explicitly leave replacement of that scan
-with an identity-indexed table to A25, avoiding a competing cache design.
+At this milestone, binding facts still came from the resolver's lexical scope
+maps. A25 subsequently replaced that scan with one callable-local
+identity-indexed fact table without changing this query's result contract.
 
 Validation passed through the focused 35-test operator-overloading suite and
 the provisional-query unit tests, then the full `make check` gate with 3,099
@@ -949,11 +948,13 @@ shortcut. No measured speedup is claimed.
 
 ### A25 — Use identity-indexed lookup for resolved bindings
 
+**Status:** Complete (2026-09-12).
+
 **Evidence:** the binding branch of
-[`resolved_expression_type`](../../crates/skald-compiler/src/resolve/resolver/body/call.rs)
-searches all scope-map values for an already selected `BindingId`. Name lookup
-and identity lookup are different responsibilities. This repeated scan sits
-on member/protocol resolution paths.
+[`provisional_expression_type`](../../crates/skald-compiler/src/resolve/resolver/body/provisional_type.rs)
+previously searched all scope-map values for an already selected `BindingId`.
+Name lookup and identity lookup are different responsibilities. This repeated
+scan sat on member/protocol resolution paths.
 
 **Change:** retain a callable-local table of parameter/local type facts indexed
 by their stable IDs; use scope maps only to select names. Keep receiver facts
@@ -965,6 +966,23 @@ replacement of vectors with maps.
 **First PR / validation:** index binding facts and check shadowing, nested
 scopes, generic substitutions, and invalid IDs. Preserve deterministic
 allocation and avoid duplicating authoritative mutable type state.
+
+**Delivered:** callable-body resolution now owns a private
+[`BindingTypeFacts`](../../crates/skald-compiler/src/resolve/resolver/body/binding_facts.rs)
+table with separate dense parameter and local identity spaces. Lexical scopes
+retain only name-to-identity selection and declaration spans. Every name-based
+type consumer resolves the selected identity through the table, and the
+provisional expression query performs the same direct lookup for retained
+binding expressions. Local facts are recorded atomically with accepted locals;
+receiver class remains an explicit callable fact. Exact identity checks reject
+foreign-callable, out-of-range, and mismatched entries without name fallback.
+
+Focused validation passed the three fact-table tests and all 351 resolver
+tests, including nested shadowing, indexed loop bindings, generic
+specialization, call targets, object places, assignments, and deterministic
+resolved dumps. The full `make check` gate passed with 3,110 compiler unit
+tests, integration and compile-fail documentation tests, runtime tests, and all
+629 golden leaves. The Rust 1.82.0 workspace all-target check also passed.
 
 ### A26 — Split large dump renderers by responsibility
 
@@ -1401,9 +1419,10 @@ exit criteria, and any necessary contract decisions in its own roadmap.
 3. **Fix dependency ownership before moving large implementations.** A07 is
    independent. Settle A08's neutral capability contract and A09's publication
    boundary together, but implement them in separate PRs. Add A43's checks.
-4. **Reduce repeated frontend and MIR work.** Use A09 to guide A10/A11/A12;
-   apply A25 locally. Implement A18 before cross-pass analysis reuse in A19.
-   Revisit A17 after the semantic capability owner is stable.
+4. **Reduce repeated frontend and MIR work.** A09 guided A10/A11/A12, and A25
+   completed their remaining callable-local binding lookup work. Implement A18
+   before cross-pass analysis reuse in A19. Revisit A17 after the semantic
+   capability owner is stable.
 5. **Decompose code along those established responsibilities.** A14, A20,
    A21, A26, A28, A29, and A33 should preserve current products and diagnostics.
    A13 must cooperate with the actual tree-depth fix rather than merely hiding

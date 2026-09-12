@@ -28,8 +28,8 @@ impl CallableResolver<'_, '_> {
             && cast.target.arguments.is_none()
             && !cast.target.name.is_qualified()
             && self
-                .lookup_binding(&cast.target.name.text)
-                .is_some_and(|binding| matches!(binding.ty, ResolvedTypeKind::Function(_)))
+                .lookup_typed_binding(&cast.target.name.text)
+                .is_some_and(|(_, ty)| matches!(ty, ResolvedTypeKind::Function(_)))
     }
 
     pub(super) fn report_grouped_function_value_call(&mut self, cast: &syntax::ObjectCastExpr) {

@@ -56,14 +56,7 @@ impl CallableResolver<'_, '_> {
                 .receiver_class
                 .filter(|_| binding.binding == BindingId::Receiver(self.callable))
                 .map(ResolvedTypeKind::Class)
-                .or_else(|| {
-                    self.scopes
-                        .iter()
-                        .rev()
-                        .flat_map(|scope| scope.values())
-                        .find(|symbol| symbol.id == binding.binding)
-                        .map(|symbol| symbol.ty)
-                })
+                .or_else(|| self.binding_types.get(binding.binding))
                 .map_or(Invalid, Known),
             ResolvedExpression::Dereference(dereference) => match dereference.target {
                 ResolvedSharedTarget::Obj => Known(ResolvedTypeKind::Obj),
