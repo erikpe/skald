@@ -34,6 +34,7 @@ pub(crate) struct FailedInterfaceSpecializationRequirement {
 pub(crate) struct GenericCapabilityQuery<'program> {
     program: &'program ResolvedProgram,
     lifecycle: OnceCell<ResolvedLifecycleCapabilities>,
+    declarations_complete: bool,
 }
 
 impl<'program> GenericCapabilityQuery<'program> {
@@ -41,6 +42,11 @@ impl<'program> GenericCapabilityQuery<'program> {
         Self {
             program,
             lifecycle: OnceCell::new(),
+            declarations_complete: program.generic_specializations.iter().all(|entry| {
+                entry
+                    .class()
+                    .is_none_or(|class| program.class(class).is_some())
+            }),
         }
     }
 
@@ -58,6 +64,19 @@ impl<'program> GenericCapabilityQuery<'program> {
                 (!supported).then_some(GenericRequirementFailure { requirement })
             })
             .collect()
+    }
+
+    // A rejected materialization retains closed type identities but no generated
+    // declarations. Structural requirements still explain the source failure;
+    // declaration-dependent queries must wait for a complete candidate graph.
+    fn can_validate(&self, requirement: &GenericRequirement) -> bool {
+        self.declarations_complete
+            || !matches!(
+                requirement.capability,
+                GenericCapability::DefaultConstructible
+                    | GenericCapability::CopyConstructible
+                    | GenericCapability::Assignable
+            )
     }
 
     pub(crate) fn supports(
@@ -236,6 +255,9 @@ pub(crate) fn failed_specialization_requirements(
             .zip(&specialization.closed_requirements)
             .enumerate()
         {
+            if !query.can_validate(requirement) {
+                continue;
+            }
             if !subject.is_some_and(|subject| query.supports(requirement, subject)) {
                 let lifecycle_path = subject
                     .and_then(|subject| requirement_failure_path(&query, requirement, subject))
@@ -273,6 +295,9 @@ pub(crate) fn failed_interface_specialization_requirements(
             .zip(&specialization.closed_requirements)
             .enumerate()
         {
+            if !query.can_validate(requirement) {
+                continue;
+            }
             if !subject.is_some_and(|subject| query.supports(requirement, subject)) {
                 failures.push(FailedInterfaceSpecializationRequirement {
                     interface,

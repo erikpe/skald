@@ -547,89 +547,96 @@ impl<'ast> ProgramResolver<'ast> {
             &literal_ids,
         );
 
-        let mut static_initializer_updates = Vec::new();
-        for unit in &self.units {
-            let lookup = lookups.for_unit(unit, &self.modules);
-            let unit_class_work = class_work
-                .iter()
-                .filter(|item| item.module == unit.module)
-                .cloned()
-                .collect::<Vec<_>>();
-            static_initializer_updates.extend(resolve_static_field_initializers(
-                unit.ast,
-                &unit_class_work,
-                &class_declarations,
-                body_stage.environment(
-                    lookup,
-                    BodyDeclarationEnvironment::new(
-                        &function_declarations,
-                        &class_declarations,
-                        &interfaces,
-                        &hierarchy,
+        // Failed materialization discards the entire generated declaration family.
+        // Ordinary bodies can still name its reserved identities, so they cannot
+        // be resolved against the remaining ordinary-only declaration tables.
+        let resolved_bodies = if specialized.valid {
+            let mut static_initializer_updates = Vec::new();
+            for unit in &self.units {
+                let lookup = lookups.for_unit(unit, &self.modules);
+                let unit_class_work = class_work
+                    .iter()
+                    .filter(|item| item.module == unit.module)
+                    .cloned()
+                    .collect::<Vec<_>>();
+                static_initializer_updates.extend(resolve_static_field_initializers(
+                    unit.ast,
+                    &unit_class_work,
+                    &class_declarations,
+                    body_stage.environment(
+                        lookup,
+                        BodyDeclarationEnvironment::new(
+                            &function_declarations,
+                            &class_declarations,
+                            &interfaces,
+                            &hierarchy,
+                        ),
                     ),
-                ),
+                    &mut self.type_interner,
+                    &mut self.address_taken_callables,
+                    &mut self.diagnostics,
+                ));
+            }
+            attach_static_field_initializers(&mut class_declarations, static_initializer_updates);
+
+            let specialized_bodies = specialize_bodies(
+                SpecializationBodyInput {
+                    units: &self.units,
+                    modules: &self.modules,
+                    lookups,
+                    semantics: &template_semantics,
+                    specializations: &generic_specializations,
+                    functions: &function_declarations,
+                    classes: &class_declarations,
+                    interfaces: &interfaces,
+                    hierarchy: &hierarchy,
+                    has_module_context: self.has_module_context,
+                    language_items: body_stage.language_items(),
+                },
                 &mut self.type_interner,
                 &mut self.address_taken_callables,
                 &mut self.diagnostics,
-            ));
-        }
-        attach_static_field_initializers(&mut class_declarations, static_initializer_updates);
-
-        let specialized_bodies = specialize_bodies(
-            SpecializationBodyInput {
-                units: &self.units,
-                modules: &self.modules,
-                lookups,
-                semantics: &template_semantics,
-                specializations: &generic_specializations,
-                functions: &function_declarations,
-                classes: &class_declarations,
-                interfaces: &interfaces,
-                hierarchy: &hierarchy,
-                has_module_context: self.has_module_context,
-                language_items: body_stage.language_items(),
-            },
-            &mut self.type_interner,
-            &mut self.address_taken_callables,
-            &mut self.diagnostics,
-        );
-        if specialized_bodies.valid {
-            attach_static_field_initializers(
-                &mut class_declarations,
-                specialized_bodies.static_initializers,
             );
-        }
+            if specialized_bodies.valid {
+                attach_static_field_initializers(
+                    &mut class_declarations,
+                    specialized_bodies.static_initializers,
+                );
+            }
 
-        let body_declarations = BodyDeclarationEnvironment::new(
-            &function_declarations,
-            &class_declarations,
-            &interfaces,
-            &hierarchy,
-        );
-        let function_definitions =
-            self.resolve_function_bodies(lookups, body_declarations, body_stage);
-        let mut class_definitions = Vec::with_capacity(class_declarations.len());
-        for unit in &self.units {
-            let lookup = lookups.for_unit(unit, &self.modules);
-            let unit_class_work = class_work
-                .iter()
-                .filter(|item| item.module == unit.module)
-                .cloned()
-                .collect::<Vec<_>>();
-            class_definitions.extend(resolve_class_bodies(
-                unit.ast,
-                &unit_class_work,
+            let body_declarations = BodyDeclarationEnvironment::new(
+                &function_declarations,
                 &class_declarations,
-                body_stage.environment(lookup, body_declarations),
-                &mut self.type_interner,
-                &mut self.address_taken_callables,
-                &mut self.diagnostics,
-            ));
-        }
-        if specialized_bodies.valid {
-            class_definitions.extend(specialized_bodies.definitions);
-        }
-        let resolved_bodies = ResolvedBodies::new(function_definitions, class_definitions);
+                &interfaces,
+                &hierarchy,
+            );
+            let function_definitions =
+                self.resolve_function_bodies(lookups, body_declarations, body_stage);
+            let mut class_definitions = Vec::with_capacity(class_declarations.len());
+            for unit in &self.units {
+                let lookup = lookups.for_unit(unit, &self.modules);
+                let unit_class_work = class_work
+                    .iter()
+                    .filter(|item| item.module == unit.module)
+                    .cloned()
+                    .collect::<Vec<_>>();
+                class_definitions.extend(resolve_class_bodies(
+                    unit.ast,
+                    &unit_class_work,
+                    &class_declarations,
+                    body_stage.environment(lookup, body_declarations),
+                    &mut self.type_interner,
+                    &mut self.address_taken_callables,
+                    &mut self.diagnostics,
+                ));
+            }
+            if specialized_bodies.valid {
+                class_definitions.extend(specialized_bodies.definitions);
+            }
+            ResolvedBodies::new(function_definitions, class_definitions)
+        } else {
+            ResolvedBodies::new(Vec::new(), Vec::new())
+        };
         let entry_unit = &self.units[self.modules.selected().index()];
         let entry_function =
             entry_unit

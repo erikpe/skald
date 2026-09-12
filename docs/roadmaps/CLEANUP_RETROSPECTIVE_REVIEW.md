@@ -1,7 +1,7 @@
 # Cleanup Retrospective Review
 
-Status: in progress; R01 evidence and R02 publication decision recorded. R03
-owns verification gaps and R04 owns final status reconciliation. Publication
+Status: in progress; R01 evidence, R02 publication decision, and R03 verification
+are complete. R04 owns final status reconciliation and closure. Publication
 ownership requires the separately planned implementation below. These proposals do not change the audit's delivery statuses.
 
 Reviewed: 2026-09-12, revision `64b6da73b41ed2ec6afe0e1401b3735484847e6d`.
@@ -434,3 +434,150 @@ R02 validation: field names were checked against the current struct; existing
 assertions and rejection/helper implementations were inspected. `make docs-check`
 and `git diff --check` passed. No compiler tests or benchmarks were run for
 this documentation-only design task; R03 owns execution and added coverage.
+
+
+## R03 — Verification progress and blocker
+
+Started from `f50e5596a04b6fb1a5483b4fc9faf1f8fe32fe59` with a clean tree.
+The focused [publication test module](../../crates/skald-compiler/src/resolve/resolver/program/specialization/publication_tests.rs)
+adds four behavioral cases, without changing production compiler code:
+
+| Test | Result and obligation |
+| --- | --- |
+| `class_rejection_clears_populated_dispatch_and_bodies_but_retains_evidence` | Passes. A valid control has populated dispatch/bodies; rejection clears them, restores the ordinary base relation, preserves entry/signatures and interned optional/array/function evidence, and remains dumpable. |
+| `contextual_class_rejection_rejects_dependent_interface_family_without_cascade` | Passes. Non-recursive contextual class failure rejects both dependent and independent members of the interface family and emits only the causal requirement diagnostic. |
+| `interface_rejection_preserves_class_dispatch_and_module_ordered_diagnostics` | Passes. Interface-only rejection preserves ordinary class dispatch/bodies and yields identical diagnostic/debug and resolved dumps under module source creation permutations. This does not establish closure of claims mentioning rejected interfaces. |
+| `class_rejection_preserves_canonical_string_fields_and_literal_bytes` | Fails with a compiler panic during semantic range probing, before publication. Intended string field/literal assertions remain enabled and unchanged. |
+
+The last case is a demonstrated failure, not an accepted partial-product
+behavior. Its backtrace and bounded repair scope are described in
+[discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md#prevent-range-probing-from-consuming-absent-class-declarations).
+The public compiler's internal test loader uses the real canonical library;
+no artificial missing class was injected. The source's invalid generic
+application should produce a diagnostic rather than panic.
+
+Focused execution: `cargo test --locked -p skald-compiler publication_tests --lib`
+reported three passed and one failed. The failing test was rerun with
+`RUST_BACKTRACE=1` to locate the probe/class-body/member-selection path.
+An initial fixture spelling error (`:` instead of `extends`) was corrected
+before these results; it was not a compiler regression.
+
+R03 remains incomplete. The capability, range, provisional-consumer and
+provenance acceptance questions remain subject to existing coverage and the
+remaining verification after repair. No benchmark or performance claim was
+added. Publication ownership migration and retrospective closure are blocked
+by the reproduced panic; independent fixes remain possible.
+
+
+Repository validation after correcting a needless-borrow Clippy finding:
+`make check` passed formatting, workspace all-target compilation, Clippy and
+documentation validation, then failed in compiler unit tests with **3,103 passed,
+1 failed, 0 ignored**. The sole failing compiler test is the retained probe-panic
+regression. Later integration/golden/runtime targets were not reached by this
+invocation. `make msrv-check` passed on Rust 1.82. Documentation and
+`git diff --check` also pass. These are current results, not inherited delivery
+claims; a green full gate and R03 acceptance still require the scoped repair.
+
+
+### Repair of the reproduced materialization failure
+
+The scoped repair follows the R03 discovery without implementing the separate
+publication ownership redesign. Investigation found two consumers of the
+incomplete declaration family: range probes and authoritative body resolution.
+The latter could also panic after the probe was skipped. Lifecycle requirement
+queries subsequently encountered missing generated classes in retained types.
+
+Both body stages now require successful generated declaration materialization.
+Structural closed requirements still report the original source error;
+default-construction, copy and assignment requirement checks are deferred when
+reserved class identities lack materialized declarations. Their absence is not
+interpreted as proof of unavailable lifecycle operations. The same policy is
+used for class and interface requirement validation. Publication's rejection
+policy remains unchanged.
+
+This intentionally changes early materialization-error output: address-taken
+facts and body-only diagnostics are not collected against missing declarations.
+The existing regression assertion was changed from nonempty address-taken
+metadata to empty metadata for this stage-specific reason. Valid compilation
+and errors discovered after successful materialization still run bodies.
+The string regression now includes a valid control exercising actual range
+probing, then verifies zero probe rounds/copies on failed materialization while
+retaining its exact single-diagnostic and canonical-field/literal assertions.
+
+R03 acceptance remains a separate verification task; repairing this blocker
+does not complete its remaining review obligations or the ownership roadmap.
+
+
+Repair validation (2026-09-12): `make check` passed, including 3,104 compiler
+unit tests, 53 process-determinism tests, runtime/doc checks, and all 629 golden
+cases. `make msrv-check` passed on Rust 1.82. Formatting, Clippy, documentation
+links and diff hygiene passed. The discovered panic is resolved; these results
+supersede the earlier failing execution for the repair, without retroactively
+changing the R03 discovery record. Remaining R03 acceptance review is pending.
+
+
+## R03 — Final coverage reconciliation
+
+The remaining review started at `4c3495e163e0601a38203a3a961d7ebfe6c6c87c`
+with a clean working tree, after the scoped panic repair. This section
+supersedes the earlier pending-gap statements for R03; the earlier failure
+record is retained as history. No further production behavior changes were
+needed during this final verification task.
+
+### Publication obligations
+
+The tests below are in [publication tests](../../crates/skald-compiler/src/resolve/resolver/program/specialization/publication_tests.rs)
+unless another owner is linked. The disposition is acceptance of the tested
+current behavior, not completion of the planned ownership redesign.
+
+| R02 obligation | Evidence and final disposition |
+| --- | --- |
+| Success identity/dump equivalence | Existing `cross_module_reuse_and_source_permutation_have_identical_dumps` and process determinism tests remain the current-behavior baseline. Historical pre-cleanup binary equivalence is not claimed. Before/after equivalence for the future representation migration belongs to its P01/P02 tasks, not a prerequisite to accept this test-only retrospective. |
+| Ordinary classes, hierarchy, signatures, entry and partial type evidence | `class_rejection_clears_populated_dispatch_and_bodies_but_retains_evidence` compares a valid control with rejection, checks restored base identity, signature count and entry, retained interned types, and safe dumping. Accepted. |
+| Non-recursive dependent and independent interface rejection | `contextual_class_rejection_rejects_dependent_interface_family_without_cascade` verifies the family-level policy and the single causal diagnostic. Accepted; individual interface salvage is not promised. |
+| Rejected interface claims in retained class products | New `rejected_interface_claims_remain_dumpable_partial_class_evidence` proves the retained claim names an absent interface while class bodies/dispatch remain and dumping succeeds. The added case in [driver reporting](../../crates/skald-compiler/src/driver/tests/reporting.rs) `singleton_source_failures_stop_after_the_owning_frontend_phase` verifies compilation stops at failed resolution without entering type checking, MIR or backend phases. Accepted as partial diagnostic evidence, explicitly not closed IR. |
+| Clearing populated dispatch and bodies | The valid control in `class_rejection_clears_populated_dispatch_and_bodies_but_retains_evidence` establishes these tables were populated before testing rejection behavior. Accepted. |
+| Canonical fields/literals, interned types and address-taken evidence | Repaired `class_rejection_preserves_canonical_string_fields_and_literal_bytes` checks exact retained canonical field IDs and literal bytes. The valid control probes ranges; rejected materialization does not. Early-failure address-taken facts are intentionally empty under the repaired contract, while the valid control's facts are populated. Existing interface-only rejection tests retain completed bodies. Accepted; no guarantee of arbitrary closed references in error output is inferred. |
+| Combined rejection diagnostic ownership and order across modules | New `dependent_rejection_diagnostics_and_products_ignore_module_creation_order` verifies exact diagnostic debug evidence and resolved dumps across source creation permutations, rejected class/interface tables and no cascade. `interface_rejection_preserves_class_dispatch_and_module_ordered_diagnostics` covers the interface-only case. Accepted. |
+
+The new driver case intentionally uses the same small rejected-claim scenario
+as the owner test: one observes the retained resolved product, the other the
+public compilation phase boundary. Neither calls type checking directly on an
+error-bearing program. The tests do not require arbitrary lower phases to
+accept diagnostic-only state.
+
+### Other frontend obligations
+
+| R01 question | Evidence and disposition |
+| --- | --- |
+| Recursive neutral lifecycle/HIR parity | Extended [capability tests](../../crates/skald-compiler/src/typeck/tests/capabilities.rs) `recursive_synthesis_terminates_and_marks_the_capability_unavailable` to invoke the existing parity helper. It now compares both operations and diagnostic paths for the recursive fixture, alongside the existing optional/array aggregate parity fixture. Accepted as focused parity coverage; exhaustive graph enumeration is not required. |
+| Ordinary/generic eligibility and provisional consumers | Reused closed-query role tests and the operator suite, including `generic_operator_bound_closes_to_primitive_intrinsic`, `failed_operator_selection_used_as_a_receiver_keeps_resolution_diagnostics`, `selected_operator_output_does_not_bypass_receiver_carrier_rules`, and `contextual_optional_rhs_does_not_supply_a_provisional_receiver_type`. R01 identified a limit to exhaustive coverage, not a specific untested semantic distinction beyond these cases. No additional mini type-checker or duplicated fixture matrix is warranted. |
+| Range termination, work and probe isolation | Existing range tests cover zero-work ordinary syntax, local bindings, nested fixed points, generated bodies, repeated source spans and probe-diagnostic suppression. The repaired publication fixture adds failed materialization versus a valid standard-library control. Accepted. The finite-work contract still relies on the existing specialization recursion controls; no new performance or universal termination proof is claimed. |
+| Explicit/implicit dependency provenance and cross-feature ordering | New [operator language-item test](../../crates/skald-compiler/src/resolve/tests/operator_language_item.rs) `malformed_protocol_diagnostics_preserve_requirement_order_across_modules` combines malformed iteration and operator protocols. It checks protocol diagnostic order, the explicit iteration import taking precedence over implicit `for` evidence, and identical diagnostic evidence across module creation order. Malformed iteration diagnostics intentionally label only the first requirement origin, not every origin. Existing graph tests cover retention of all edge evidence. Accepted. |
+| Disabled/replacement standard library and string/error cycle | Existing [driver pipeline test](../../crates/skald-compiler/src/driver/tests/pipeline.rs) `canonical_standard_library_cycle_obeys_default_replacement_and_disabled_selection` tests the actual driver selection options, supplementing graph/provider fixtures. This closes R01's distinction between absent-provider fixtures and disabled-library configuration. |
+| Automated neutral-service dependency guarding | The existing source scanner's limitation remains the explicit, separately scoped P2 discovery. Manual service inspection plus semantic tests support current ownership; extending the guard is future prevention work, not a missing behavior fix required by R03. |
+
+### Acceptance boundaries
+
+No demonstrated correctness blocker remains from this retrospective. The
+publication ownership implementation and neutral-service guard remain in their
+existing indexed follow-up records. A25's binding index and measurement-driven
+optimizations remain with their audit owners; they are not test-hardening tasks.
+R04 still owns final audit statuses, readiness and archival. Completing R03 does
+not declare all original architectural ambitions implemented.
+
+Focused checks passed: six publication tests, the new protocol provenance test,
+the recursive parity test, and the driver frontend-stop test. The initial
+provenance assertion was corrected to the inspected validator contract (one
+selected requirement label); it did not expose or conceal a production defect.
+Final validation (2026-09-12): `make check` passed with **3,107 compiler unit
+tests**, **53 process-determinism tests**, documentation/runtime checks and
+**629 golden cases**. The additional explicit retained-signature reference
+assertion was subsequently checked by its focused test; final `make static-check`
+and `make msrv-check` passed on that source state. Documentation and diff checks
+pass. No ignored/failing regression remains, and no production changes were
+introduced in this final coverage pass.
+
+**R03 is complete.** All detail checkboxes and the progress checkbox are now
+checked. R04 is next; acceptance of the remaining architectural follow-ups is
+not implied by these passing tests.

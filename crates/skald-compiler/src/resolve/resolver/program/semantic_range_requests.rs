@@ -50,12 +50,20 @@ pub(super) fn complete_semantic_range_specializations(
         ),
         &mut semantic_diagnostics,
     );
+    // Materialization rejects the whole generated declaration family on failure.
+    // Its reserved identities can still occur in ordinary signatures and bodies,
+    // so probing against only the ordinary classes would be an inconsistent view.
+    // Authoritative declaration and requirement validation own failure diagnostics.
+    if !provisional_specialized.valid {
+        return SemanticRangeCompletion {
+            discovery,
+            measurements,
+        };
+    }
     let mut semantic_classes = input.classes.clone();
     let mut semantic_symbols = input.class_symbols.to_vec();
-    if provisional_specialized.valid {
-        semantic_classes.extend(provisional_specialized.declarations);
-        semantic_symbols.extend(provisional_specialized.symbols);
-    }
+    semantic_classes.extend(provisional_specialized.declarations);
+    semantic_symbols.extend(provisional_specialized.symbols);
     let semantic_hierarchy = build_class_hierarchy(
         &semantic_classes,
         &semantic_symbols,

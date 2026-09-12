@@ -188,6 +188,7 @@ fn recursive_synthesis_terminates_and_marks_the_capability_unavailable() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
+    assert_resolved_lifecycle_matches_hir_plans(&resolved);
     let capabilities = CopyCapabilities::compute(&resolved);
     assert_eq!(
         capabilities.constructor(ClassId::new(0)),

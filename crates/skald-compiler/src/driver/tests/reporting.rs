@@ -1271,6 +1271,23 @@ fn singleton_source_failures_stop_after_the_owning_frontend_phase() {
             ],
         ),
         (
+            "rejected-interface.ska",
+            concat!(
+                "interface View {}\n",
+                "interface Consumer<T> { fn consume(value: T) -> unit; }\n",
+                "class Implementation implements Consumer<View> {\n",
+                "  fn consume(value: View) -> unit {}\n",
+                "  virtual fn read() -> i64 { return 1; }\n",
+                "}\n",
+                "fn main() -> i64 { return 0; }\n",
+            ),
+            vec![
+                (ReportPhase::Lexing, ReportOutcome::Completed),
+                (ReportPhase::Parsing, ReportOutcome::Completed),
+                (ReportPhase::Resolution, ReportOutcome::Failed),
+            ],
+        ),
+        (
             "typeck.ska",
             "fn main() -> i64 { return true; }",
             vec![

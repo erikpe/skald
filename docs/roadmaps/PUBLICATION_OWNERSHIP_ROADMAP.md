@@ -1,7 +1,8 @@
 # Resolver Publication Ownership Roadmap
 
-Status: planned; P01 is next after retrospective R03 verifies current rejection
-contracts. The implementation sequence is separate from the retrospective.
+Status: planned; P01 is next. Retrospective R03 verification is complete and
+the semantic range panic is repaired. The implementation sequence remains
+separate from the retrospective; final readiness is recorded through R04.
 
 The [publication decision](CLEANUP_RETROSPECTIVE_REVIEW.md#r02--publication-acceptance-decision)
 requires owned product selection and exhaustive final assembly to complete

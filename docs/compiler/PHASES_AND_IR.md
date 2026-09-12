@@ -148,6 +148,21 @@ Each invalid generated product family is replaced with its saved ordinary
 declaration and hierarchy product before the resolver returns the published
 program.
 
+Error-bearing resolved output retains diagnostic evidence, including interned
+types and signatures whose generated declarations may have been rejected. It
+is not a closed executable program. The driver stops before type checking when
+resolution diagnostics contain errors; diagnostic inspection must tolerate
+partial products.
+
+If generated class declaration materialization fails, the complete generated
+family is unavailable. Semantic range probes and authoritative body analysis
+then skip that incomplete environment. Closed requirement validation still
+checks structural eligibility to report the causal source error, but defers
+default-construction, copy and assignment checks that depend on materialized
+classes. This avoids treating absent declarations as negative lifecycle facts.
+Body-derived facts such as address-taken callables are not collected in this
+case. Other resolution errors do not by themselves disable body analysis.
+
 Before structural language-item validation, resolution collects one typed
 source-evidence product. It retains string-literal dependency spans and the
 ordered explicit-import, compiler-dependency, or canonical-entry origins for

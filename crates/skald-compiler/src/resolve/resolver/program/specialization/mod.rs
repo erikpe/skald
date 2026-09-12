@@ -33,6 +33,8 @@ mod function_values_tests;
 #[cfg(test)]
 mod interface_declaration_tests;
 #[cfg(test)]
+mod publication_tests;
+#[cfg(test)]
 mod tests;
 
 use super::*;

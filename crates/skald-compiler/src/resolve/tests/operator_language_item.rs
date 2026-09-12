@@ -438,3 +438,53 @@ fn qualified_protocol_use_authorizes_value_producing_class_punctuation() {
     crate::mir::verify_mir(&crate::mir::lower_hir(&hir))
         .expect("overloaded punctuation must lower through ordinary interface machinery");
 }
+
+#[test]
+fn malformed_protocol_diagnostics_preserve_requirement_order_across_modules() {
+    let app = concat!(
+        "import std::iter;\n",
+        "import std::ops;\n",
+        "fn main() -> i64 { for (item in 0) {} return 0; }\n",
+    );
+    let iterable = concat!(
+        "public interface Iterable<Item, State> {\n",
+        "fn iter_state() -> State;\n",
+        "fn iter_next(mut ref state: State) -> Item;\n",
+        "}\n",
+    );
+    let operators = CANONICAL_OPS_SOURCE.replace("fn op_add(", "fn renamed_add(");
+    assert_ne!(operators, CANONICAL_OPS_SOURCE);
+    let sources = [
+        ("app.ska", app),
+        ("std/iter.ska", iterable),
+        ("std/ops.ska", operators.as_str()),
+    ];
+    let mut evidence = Vec::new();
+    for order in [sources, [sources[2], sources[1], sources[0]]] {
+        let (_workspace, graph) = load_module_sources("app", &order);
+        let output = resolve_module_graph(&graph);
+        let diagnostics = output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| {
+                diagnostic.code == INVALID_ITERABLE_LANGUAGE_ITEM
+                    || diagnostic.code == INVALID_OPERATOR_LANGUAGE_ITEM
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(diagnostics.len(), 2, "{:?}", output.diagnostics);
+        assert_eq!(diagnostics[0].code, INVALID_ITERABLE_LANGUAGE_ITEM);
+        assert_eq!(diagnostics[1].code, INVALID_OPERATOR_LANGUAGE_ITEM);
+        let requirements = diagnostics[0]
+            .labels
+            .iter()
+            .filter(|label| label.message == "iteration language item required here")
+            .map(|label| &app[label.span.range().start()..label.span.range().end()])
+            .collect::<Vec<_>>();
+        // Malformed declarations label the first requiring origin. An explicit
+        // import must retain precedence over the implicit for-in dependency.
+        assert_eq!(requirements.len(), 1);
+        assert!(requirements[0].contains("std::iter"));
+        evidence.push(format!("{diagnostics:?}"));
+    }
+    assert_eq!(evidence[0], evidence[1]);
+}

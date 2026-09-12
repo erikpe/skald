@@ -1,9 +1,9 @@
 # Cleanup Architecture Retrospective Roadmap
 
-Status: in progress; R01 and R02 are complete and R03 is next. Outcome evidence and
-proposed dispositions are in the [review](CLEANUP_RETROSPECTIVE_REVIEW.md).
-The publication decision requires a separate ownership follow-up; verification
-and final status reconciliation remain pending.
+Status: in progress; R01–R03 are complete and R04 is next. Evidence,
+publication decisions and verification results are in the
+[review](CLEANUP_RETROSPECTIVE_REVIEW.md). The separate publication ownership
+follow-up remains planned; final status reconciliation and closure are pending.
 
 Created: 2026-09-12.
 
@@ -39,7 +39,7 @@ It preserves useful delivered changes while making their acceptance reviewable.
 
 - [x] R01 — Establish outcome and evidence traceability
 - [x] R02 — Decide the candidate-publication acceptance boundary
-- [ ] R03 — Close targeted verification gaps
+- [x] R03 — Close targeted verification gaps
 - [ ] R04 — Reconcile statuses and release dependent work
 
 ## PR-sized implementation sequence
@@ -119,15 +119,15 @@ unqualified Complete label.
 **Purpose:** verify the accepted contracts where the retrospective found missing
 evidence, without creating tests that merely mirror implementation details.
 
-- [ ] Select missing cases from the review matrix and add the narrowest tests
+- [x] Select missing cases from the review matrix and add the narrowest tests
   that observe a meaningful invariant. Reuse existing adequate coverage.
-- [ ] Cover any uncovered publication failure combination or stale-reference
+- [x] Cover any uncovered publication failure combination or stale-reference
   risk identified in R02. Verify diagnostic owner/order and deterministic
   products where selection or rejection interacts across modules.
-- [ ] Close demonstrated gaps in capability parity, range probe isolation and
+- [x] Close demonstrated gaps in capability parity, range probe isolation and
   termination, provisional query consumers, or language-item provenance only
   when R01 identifies them. Avoid duplicating every scenario across phases.
-- [ ] Record current focused test results and link new regressions in the review.
+- [x] Record current focused test results and link new regressions in the review.
   If a test exposes a production defect, retain the reproducer, record a blocker,
   and route the fix through a separately scoped task; do not weaken expectations
   or expand this task into an unreviewed redesign.

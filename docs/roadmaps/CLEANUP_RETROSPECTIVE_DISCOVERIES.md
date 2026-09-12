@@ -49,3 +49,55 @@ using R03's rejection characterization. Preserve existing partial error output,
 identity allocation, class-family rejection and independent class survival.
 The implementation roadmap owns tasks and gates; this record tracks the risk
 without duplicating that implementation plan.
+
+
+## Prevent range probing from consuming absent class declarations
+
+**Priority:** P0. **Owner:** resolver semantic range completion and provisional
+body environments. **Status:** resolved (2026-09-12); full repair gates passed.
+**Blocking:** resolved; R03 verification may resume. This was a demonstrated
+panic, distinct from the still-pending manual rollback work.
+
+The new `class_rejection_preserves_canonical_string_fields_and_literal_bytes`
+test in [publication tests](../../crates/skald-compiler/src/resolve/resolver/program/specialization/publication_tests.rs)
+loads the canonical standard library and resolves:
+
+```ska
+class Owner<T> { value: shared T; }
+fn use(ref value: Owner<i64>) -> unit {}
+fn main() -> i64 { "publication evidence"; return 0; }
+```
+
+Run `cargo test --locked -p skald-compiler class_rejection_preserves_canonical_string_fields_and_literal_bytes --lib`.
+The intended result is one unsatisfied requirement diagnostic and retained
+canonical string/literal evidence. Instead it panics with `resolved object
+place must reference a class` in body member selection. The backtrace reaches
+`semantic_range_requests::discover_semantic_range_requests` through class-body
+resolution, before final publication. The test remains enabled with its intended
+assertions, not converted into an expected panic or hidden with an ignore.
+
+**Separately scoped repair:** trace how provisional specialization failure and
+range-bearing standard-library bodies produce lookup identities absent from the
+probe's class/hierarchy inputs. Make the probe consume a consistent declaration
+view or skip unavailable work while preserving authoritative diagnostics and
+fixed-point discovery. Do not merely replace the assertion or suppress all body
+resolution after any error. First pin the failure mechanism with the retained
+fixture, then implement the smallest consistent-environment repair. Preserve
+valid range work and unrelated diagnostic owners.
+
+**Exit criteria/tests:** the retained regression passes without panic and with
+its exact intended diagnostic; existing nested/generated range and isolation
+suites pass; ordinary publication tests pass. Run `make check` and
+`make msrv-check` before unblocking R03. This repair is independent of replacing
+publication rollback and must not be absorbed into that representation change.
+
+
+**Repair delivered:** generated-family materialization failure now prevents
+range probing and authoritative body analysis against incomplete declarations.
+Structural requirement diagnostics still run; declaration-dependent capability
+queries are deferred while reserved class identities lack declarations. This
+also prevents the lifecycle-query panic exposed after bypassing the first
+probe failure. The canonical string regression and its valid control pass.
+Body-derived metadata is intentionally absent on early materialization failure;
+this is documented in the phase contract and review. Final gate results are
+recorded in the review's repair section.
