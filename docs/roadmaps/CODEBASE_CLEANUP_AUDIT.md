@@ -646,9 +646,10 @@ and diagnostic codes.
 
 Resolution now collects ordered requirement origins into one
 `LanguageItemRequirementOrigins` product and canonical declaration origins
-into one `LanguageItemDeclarationOrigins` product. This replaces the repeated
-per-feature graph scans and canonical-module unit lookup in the resolver
-orchestrator while preserving explicit-import spans, typed compiler-dependency
+into one `LanguageItemDeclarationOrigins` product. This replaces duplicated
+per-feature collection code and canonical-module unit lookup in the resolver
+orchestrator; requirement families still scan the graph separately. It
+preserves explicit-import spans, typed compiler-dependency
 spans, canonical-entry fallbacks, source order, and literal decoding identity.
 
 A09's `BodyResolutionStage` now assembles its validated string, iterable,

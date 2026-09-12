@@ -1,7 +1,8 @@
 # Cleanup Architecture Retrospective Roadmap
 
-Status: planned; R01 is next. Retrospective evidence gathering and acceptance
-decisions remain to be completed.
+Status: in progress; R01 is complete and R02 is next. Outcome evidence and
+proposed dispositions are in the [review](CLEANUP_RETROSPECTIVE_REVIEW.md);
+publication acceptance and final status reconciliation remain pending.
 
 Created: 2026-09-12.
 
@@ -35,7 +36,7 @@ It preserves useful delivered changes while making their acceptance reviewable.
 
 ## Progress
 
-- [ ] R01 — Establish outcome and evidence traceability
+- [x] R01 — Establish outcome and evidence traceability
 - [ ] R02 — Decide the candidate-publication acceptance boundary
 - [ ] R03 — Close targeted verification gaps
 - [ ] R04 — Reconcile statuses and release dependent work
@@ -47,25 +48,25 @@ It preserves useful delivered changes while making their acceptance reviewable.
 **Purpose:** distinguish delivered behavior from intended architecture before
 deciding whether further implementation is needed.
 
-- [ ] Record the reviewed revision and working-tree state. Inspect relevant
+- [x] Record the reviewed revision and working-tree state. Inspect relevant
   history to separate pre-existing behavior from cleanup changes.
-- [ ] Create a companion `CLEANUP_RETROSPECTIVE_REVIEW.md` in this directory and
+- [x] Create a companion `CLEANUP_RETROSPECTIVE_REVIEW.md` in this directory and
   index it as in progress. For each A08–A12 outcome, record the original promise,
   current owner/product, source links, exact test names, evidence limitations,
   residual risk, and proposed disposition: fulfilled, deliberately narrowed,
   or outstanding. Record command results separately from historical reports.
-- [ ] Review A08's neutral capability ownership, recursive lifecycle facts,
+- [x] Review A08's neutral capability ownership, recursive lifecycle facts,
   ordinary/generic parity, and HIR plan boundary. Review the actual scope and
   limitations of A43's dependency checks; absence of a forbidden import alone
   does not establish correct semantic ownership.
-- [ ] Review A09's collection/body/publication products and remaining ordering
+- [x] Review A09's collection/body/publication products and remaining ordering
   coupling. Review A10's delta/termination invariant, provisional-state
   isolation, counters, and no-range fast path. Identify whether evidence is
   structural, behavioral, or a comparable before/after performance measurement.
-- [ ] Review A11's known/unknown/invalid distinctions and diagnostic consumers;
+- [x] Review A11's known/unknown/invalid distinctions and diagnostic consumers;
   explicitly trace indexed binding lookup to A25. Review A12's canonical catalog,
   provenance ordering, validator separation, and shared body environment.
-- [ ] Correct A12's claim about replacing repeated graph scans: collection
+- [x] Correct A12's claim about replacing repeated graph scans: collection
   implementation is shared, but the current collector still scans separately
   for different requirement families. Do not infer a need to fuse scans.
 
