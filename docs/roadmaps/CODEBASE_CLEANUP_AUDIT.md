@@ -1126,6 +1126,8 @@ improvement, not an expected major compiler speedup.
 
 ### A28 — Restore concise facades in selected hotspots
 
+**Roadmap:** [Compiler Facade Ownership Roadmap](COMPILER_FACADE_OWNERSHIP_ROADMAP.md)
+
 **Evidence:** [`typeck/program/mod.rs`](../../crates/skald-compiler/src/typeck/program/mod.rs)
 mixes orchestration, diagnostic codes, type conversion, and declaration
 validation. Resolver child files often inherit implementation imports through
