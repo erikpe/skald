@@ -2,8 +2,10 @@
 
 use crate::{
     identity::{ArrayTypeId, ClassId, FieldId},
-    resolve::{ResolvedCopyOperation, ResolvedProgram, ResolvedTypeKind},
+    resolve::{ResolvedCopyOperation, ResolvedTypeKind},
 };
+
+use super::ResolvedCapabilityView;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum LifecyclePathElement {
@@ -20,7 +22,7 @@ pub(crate) struct ResolvedLifecycleCapabilities {
 }
 
 impl ResolvedLifecycleCapabilities {
-    pub(crate) fn compute(program: &ResolvedProgram) -> Self {
+    pub(crate) fn compute(program: &dyn ResolvedCapabilityView) -> Self {
         let mut constructors = CapabilitySet::compute(program, Operation::Constructor, None);
         loop {
             let array_copy =
@@ -93,17 +95,17 @@ struct CapabilitySet {
 
 impl CapabilitySet {
     fn compute(
-        program: &ResolvedProgram,
+        program: &dyn ResolvedCapabilityView,
         operation: Operation,
         constructors: Option<&Self>,
     ) -> Self {
         let mut capabilities = Self {
-            available: vec![false; program.classes.len()],
-            failure_paths: vec![None; program.classes.len()],
-            synthesized: vec![false; program.classes.len()],
+            available: vec![false; program.classes().len()],
+            failure_paths: vec![None; program.classes().len()],
+            synthesized: vec![false; program.classes().len()],
         };
-        let mut states = vec![VisitState::Unvisited; program.classes.len()];
-        for class in program.classes.iter() {
+        let mut states = vec![VisitState::Unvisited; program.classes().len()];
+        for class in program.classes().iter() {
             compute_class(
                 class.id,
                 program,
@@ -126,11 +128,11 @@ impl CapabilitySet {
 
     fn invalidate_array_dependencies(
         &mut self,
-        program: &ResolvedProgram,
+        program: &dyn ResolvedCapabilityView,
         arrays: &[bool],
     ) -> bool {
         let mut changed = false;
-        for class in program.classes.iter() {
+        for class in program.classes().iter() {
             if !self.available(class.id) || !self.synthesized[class.id.index()] {
                 continue;
             }
@@ -165,7 +167,7 @@ enum VisitState {
 
 fn compute_class(
     class: ClassId,
-    program: &ResolvedProgram,
+    program: &dyn ResolvedCapabilityView,
     operation: Operation,
     constructors: Option<&CapabilitySet>,
     capabilities: &mut CapabilitySet,
@@ -288,7 +290,7 @@ fn complete_unavailable(
 }
 
 fn field_class_dependency(
-    program: &ResolvedProgram,
+    program: &dyn ResolvedCapabilityView,
     kind: ResolvedTypeKind,
 ) -> Option<(ClassId, bool)> {
     match kind {
@@ -302,7 +304,7 @@ fn field_class_dependency(
 }
 
 fn field_array_dependency(
-    program: &ResolvedProgram,
+    program: &dyn ResolvedCapabilityView,
     kind: ResolvedTypeKind,
 ) -> Option<ArrayTypeId> {
     match kind {
@@ -315,7 +317,10 @@ fn field_array_dependency(
     }
 }
 
-fn optional_payload_is_invalid(program: &ResolvedProgram, kind: ResolvedTypeKind) -> bool {
+fn optional_payload_is_invalid(
+    program: &dyn ResolvedCapabilityView,
+    kind: ResolvedTypeKind,
+) -> bool {
     let ResolvedTypeKind::Optional(optional) = kind else {
         return false;
     };
@@ -329,12 +334,12 @@ fn optional_payload_is_invalid(program: &ResolvedProgram, kind: ResolvedTypeKind
 }
 
 fn optional_leaf(
-    program: &ResolvedProgram,
+    program: &dyn ResolvedCapabilityView,
     mut optional: crate::identity::OptionalTypeId,
 ) -> ResolvedTypeKind {
     loop {
         let kind = program
-            .optional_types
+            .optional_types()
             .get(optional)
             .expect("optional identity must name resolved metadata")
             .payload
@@ -347,13 +352,13 @@ fn optional_leaf(
 }
 
 fn array_capabilities(
-    program: &ResolvedProgram,
+    program: &dyn ResolvedCapabilityView,
     constructors: &CapabilitySet,
     assignments: Option<&CapabilitySet>,
     operation: Operation,
 ) -> Vec<bool> {
-    let mut arrays = Vec::with_capacity(program.array_types.len());
-    for array in program.array_types.iter() {
+    let mut arrays = Vec::with_capacity(program.array_types().len());
+    for array in program.array_types().iter() {
         arrays.push(type_lifecycle_available(
             program,
             constructors,
@@ -368,7 +373,7 @@ fn array_capabilities(
 }
 
 fn type_lifecycle_available(
-    program: &ResolvedProgram,
+    program: &dyn ResolvedCapabilityView,
     constructors: &CapabilitySet,
     assignments: Option<&CapabilitySet>,
     arrays: &[bool],
@@ -396,7 +401,7 @@ fn type_lifecycle_available(
             .expect("nested array identities must precede containing identities"),
         ResolvedTypeKind::Optional(optional) => {
             let payload = program
-                .optional_types
+                .optional_types()
                 .get(optional)
                 .expect("optional identity must name resolved metadata")
                 .payload

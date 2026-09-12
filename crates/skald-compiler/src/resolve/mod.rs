@@ -72,7 +72,8 @@ pub use ir::{
     ResolvedVisibility, ResolvedWhile,
 };
 pub(crate) use ir::{
-    ClosedGenericRequirementSubject, GenericSpecializationState, ResolvedTemplateSelection,
+    ClosedGenericRequirementSubject, GenericSpecializationState, GenericSpecializationTable,
+    ResolvedClassTemplateSemanticTable, ResolvedTemplateSelection,
 };
 pub(crate) use resolver::resolve_with_source_path;
 pub use resolver::{

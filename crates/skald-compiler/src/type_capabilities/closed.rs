@@ -6,11 +6,17 @@ use crate::{
     identity::{ClassId, InterfaceId},
     resolve::{
         ClosedGenericRequirementSubject, GenericCapability, GenericRequirement,
-        GenericRequirementReason, ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind,
+        GenericRequirementReason, ResolvedSharedTarget, ResolvedTypeKind,
     },
 };
 
-use super::{resolved_type_category, LifecyclePathElement, ResolvedLifecycleCapabilities};
+#[cfg(test)]
+use crate::resolve::ResolvedProgram;
+
+use super::{
+    resolved_type_category, LifecyclePathElement, ResolvedCapabilityView,
+    ResolvedLifecycleCapabilities,
+};
 
 #[cfg(test)]
 #[derive(Clone, Copy, Debug)]
@@ -32,17 +38,17 @@ pub(crate) struct FailedInterfaceSpecializationRequirement {
 }
 
 pub(crate) struct GenericCapabilityQuery<'program> {
-    program: &'program ResolvedProgram,
+    program: &'program dyn ResolvedCapabilityView,
     lifecycle: OnceCell<ResolvedLifecycleCapabilities>,
     declarations_complete: bool,
 }
 
 impl<'program> GenericCapabilityQuery<'program> {
-    pub(crate) fn new(program: &'program ResolvedProgram) -> Self {
+    pub(crate) fn new(program: &'program impl ResolvedCapabilityView) -> Self {
         Self {
             program,
             lifecycle: OnceCell::new(),
-            declarations_complete: program.generic_specializations.iter().all(|entry| {
+            declarations_complete: program.generic_specializations().iter().all(|entry| {
                 entry
                     .class()
                     .is_none_or(|class| program.class(class).is_some())
@@ -197,7 +203,7 @@ impl<'program> GenericCapabilityQuery<'program> {
         loop {
             match self
                 .program
-                .optional_types
+                .optional_types()
                 .get(optional)
                 .expect("optional identity must name resolved metadata")
                 .payload
@@ -236,17 +242,17 @@ impl<'program> GenericCapabilityQuery<'program> {
 }
 
 pub(crate) fn failed_specialization_requirements(
-    program: &ResolvedProgram,
+    program: &impl ResolvedCapabilityView,
 ) -> Vec<FailedSpecializationRequirement> {
     let query = GenericCapabilityQuery::new(program);
     let mut failures = Vec::new();
-    for specialization in program.generic_specializations.iter() {
+    for specialization in program.generic_specializations().iter() {
         let crate::resolve::GenericSpecializationState::Complete(class) = specialization.state
         else {
             continue;
         };
         let semantics = program
-            .template_semantics
+            .template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         for (requirement_index, (requirement, subject)) in semantics
@@ -275,18 +281,18 @@ pub(crate) fn failed_specialization_requirements(
 }
 
 pub(crate) fn failed_interface_specialization_requirements(
-    program: &ResolvedProgram,
+    program: &impl ResolvedCapabilityView,
 ) -> Vec<FailedInterfaceSpecializationRequirement> {
     let query = GenericCapabilityQuery::new(program);
     let mut failures = Vec::new();
-    for specialization in program.generic_interface_specializations.iter() {
+    for specialization in program.generic_interface_specializations().iter() {
         let crate::resolve::GenericInterfaceSpecializationState::Complete(interface) =
             specialization.state
         else {
             continue;
         };
         let semantics = program
-            .interface_template_semantics
+            .interface_template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references interface-template semantics");
         for (requirement_index, (requirement, subject)) in semantics
@@ -326,12 +332,15 @@ fn requirement_failure_path(
     Some(path.to_vec())
 }
 
-fn optional_payload_supports_alias(program: &ResolvedProgram, kind: ResolvedTypeKind) -> bool {
+fn optional_payload_supports_alias(
+    program: &dyn ResolvedCapabilityView,
+    kind: ResolvedTypeKind,
+) -> bool {
     let ResolvedTypeKind::Optional(optional) = kind else {
         return false;
     };
     let payload = program
-        .optional_types
+        .optional_types()
         .get(optional)
         .expect("optional identity must name resolved metadata")
         .payload
@@ -339,7 +348,7 @@ fn optional_payload_supports_alias(program: &ResolvedProgram, kind: ResolvedType
     super::supports_optional_payload(resolved_type_category(payload))
 }
 
-fn is_default_constructible(program: &ResolvedProgram, kind: ResolvedTypeKind) -> bool {
+fn is_default_constructible(program: &dyn ResolvedCapabilityView, kind: ResolvedTypeKind) -> bool {
     match kind {
         ResolvedTypeKind::I64
         | ResolvedTypeKind::U64
@@ -354,7 +363,7 @@ fn is_default_constructible(program: &ResolvedProgram, kind: ResolvedTypeKind) -
         }
         ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(_)) => true,
         ResolvedTypeKind::Shared(ResolvedSharedTarget::OptionalBox(target)) => program
-            .optional_box_types
+            .optional_box_types()
             .get(target)
             .is_some_and(|metadata| metadata.optional.is_some()),
         ResolvedTypeKind::Shared(
@@ -367,7 +376,10 @@ fn is_default_constructible(program: &ResolvedProgram, kind: ResolvedTypeKind) -
     }
 }
 
-fn has_unique_zero_argument_initializer(program: &ResolvedProgram, class: ClassId) -> bool {
+fn has_unique_zero_argument_initializer(
+    program: &dyn ResolvedCapabilityView,
+    class: ClassId,
+) -> bool {
     let Some(class) = program.class(class) else {
         return false;
     };

@@ -145,19 +145,21 @@ generated bodies receive that same context. The isolated semantic range probe
 uses the same stage constructor with its intentionally unavailable string
 product. The publication boundary groups candidate state into retained
 diagnostic evidence, class declarations and hierarchy, interface declarations,
-and executable bodies and dispatch. It exhaustively assembles those private
-products into the public resolved program before immutable publication
-validation. Validators receive a read-only publication view and cannot mutate
-candidate state. Each invalid generated product family is currently replaced
-with its saved ordinary declaration and hierarchy product before the resolver
-returns the published program; the publication owner alone performs that
-selection.
+and executable bodies and dispatch. Validators receive a read-only view of
+those products and cannot mutate candidate state. Class validation first
+selects either the candidate class/hierarchy and executable products or the
+saved ordinary class/hierarchy with empty executable products. Interface
+validation then reads that class-selected view and independently selects the
+candidate or saved ordinary interfaces. Failed specialization transitions are
+retained beside their selected declaration families. The publication owner
+moves the selected products into one exhaustive `ResolvedProgram` assembly.
 
 Error-bearing resolved output retains diagnostic evidence, including interned
 types and signatures whose generated declarations may have been rejected. It
 is not a closed executable program. The driver stops before type checking when
 resolution diagnostics contain errors; diagnostic inspection must tolerate
-partial products.
+partial products. Publication selection does not rebuild ordinary resolution,
+compact identities, or clone saved declaration snapshots into the result.
 
 If generated class declaration materialization fails, the complete generated
 family is unavailable. Semantic range probes and authoritative body analysis

@@ -1,13 +1,15 @@
-//! Contextual validation and atomic publication of generated interfaces.
+//! Contextual validation of generated interfaces before publication selection.
 
+use super::publication::PublicationValidationView;
 use super::*;
+use crate::type_capabilities::ResolvedCapabilityView;
 
 pub(super) fn validate_interface_specializations(
-    program: &ResolvedProgram,
+    program: &PublicationValidationView<'_>,
     diagnostics: &mut Diagnostics,
 ) -> bool {
     let has_unpublished_dependency = program
-        .generic_interface_specializations
+        .generic_interface_specializations()
         .iter()
         .flat_map(|specialization| specialization.closed_type_uses.iter().flatten())
         .any(|kind| !type_is_fully_published(program, *kind));
@@ -24,16 +26,16 @@ pub(super) fn validate_interface_specializations(
 
     for failure in failures {
         let specialization = program
-            .generic_interface_specializations
+            .generic_interface_specializations()
             .for_interface(failure.interface)
             .expect("contextual failures reference an interface specialization");
         let semantics = program
-            .interface_template_semantics
+            .interface_template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references interface template semantics");
         let requirement = &semantics.contextual_requirements[failure.requirement_index];
         let template = program
-            .interface_templates
+            .interface_templates()
             .get(specialization.key.template)
             .expect("specialization key references an interface template");
         let origin = specialization
@@ -65,15 +67,15 @@ pub(super) fn validate_interface_specializations(
 
     for (interface, first_index, duplicate_index) in duplicate_bound_failures {
         let specialization = program
-            .generic_interface_specializations
+            .generic_interface_specializations()
             .for_interface(interface)
             .expect("duplicate bounds reference an interface specialization");
         let semantics = program
-            .interface_template_semantics
+            .interface_template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references interface template semantics");
         let template = program
-            .interface_templates
+            .interface_templates()
             .get(specialization.key.template)
             .expect("specialization key references an interface template");
         let required = specialization.closed_interface_bounds[duplicate_index]
@@ -117,20 +119,20 @@ pub(super) fn validate_interface_specializations(
 
     for (interface, bound_index) in bound_failures {
         let specialization = program
-            .generic_interface_specializations
+            .generic_interface_specializations()
             .for_interface(interface)
             .expect("bound failures reference an interface specialization");
         let semantics = program
-            .interface_template_semantics
+            .interface_template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references interface template semantics");
         let bound = &semantics.bounds[bound_index];
         let template = program
-            .interface_templates
+            .interface_templates()
             .get(specialization.key.template)
             .expect("specialization key references an interface template");
         let parameter = program
-            .type_parameters
+            .type_parameters()
             .for_interface_template(specialization.key.template)
             .and_then(|parameters| {
                 parameters
@@ -184,14 +186,16 @@ pub(super) fn validate_interface_specializations(
     false
 }
 
-fn failed_exact_interface_bounds(program: &ResolvedProgram) -> Vec<(InterfaceId, usize)> {
+fn failed_exact_interface_bounds(
+    program: &PublicationValidationView<'_>,
+) -> Vec<(InterfaceId, usize)> {
     let mut failures = Vec::new();
-    for specialization in program.generic_interface_specializations.iter() {
+    for specialization in program.generic_interface_specializations().iter() {
         let GenericInterfaceSpecializationState::Complete(interface) = specialization.state else {
             continue;
         };
         let semantics = program
-            .interface_template_semantics
+            .interface_template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references interface template semantics");
         for (bound_index, bound) in semantics.bounds.iter().enumerate() {
@@ -215,15 +219,15 @@ fn failed_exact_interface_bounds(program: &ResolvedProgram) -> Vec<(InterfaceId,
 }
 
 fn duplicate_closed_interface_bounds(
-    program: &ResolvedProgram,
+    program: &PublicationValidationView<'_>,
 ) -> Vec<(InterfaceId, usize, usize)> {
     let mut failures = Vec::new();
-    for specialization in program.generic_interface_specializations.iter() {
+    for specialization in program.generic_interface_specializations().iter() {
         let GenericInterfaceSpecializationState::Complete(interface) = specialization.state else {
             continue;
         };
         let semantics = program
-            .interface_template_semantics
+            .interface_template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references interface template semantics");
         for duplicate in 0..semantics.bounds.len() {
@@ -240,13 +244,16 @@ fn duplicate_closed_interface_bounds(
     failures
 }
 
-fn type_is_fully_published(program: &ResolvedProgram, kind: ResolvedTypeKind) -> bool {
+fn type_is_fully_published(
+    program: &PublicationValidationView<'_>,
+    kind: ResolvedTypeKind,
+) -> bool {
     match kind {
         ResolvedTypeKind::Class(class) => program.class(class).is_some(),
         ResolvedTypeKind::Interface(interface) => program.interface(interface).is_some(),
         ResolvedTypeKind::Function(function) => {
             program
-                .function_types
+                .function_types()
                 .get(function)
                 .is_some_and(|signature| {
                     signature.parameters.iter().all(|parameter| {
@@ -255,22 +262,22 @@ fn type_is_fully_published(program: &ResolvedProgram, kind: ResolvedTypeKind) ->
                 })
         }
         ResolvedTypeKind::Array(array) => program
-            .array_types
+            .array_types()
             .get(array)
             .is_some_and(|array| type_is_fully_published(program, array.element.kind)),
         ResolvedTypeKind::Optional(optional) => program
-            .optional_types
+            .optional_types()
             .get(optional)
             .is_some_and(|optional| type_is_fully_published(program, optional.payload.kind)),
         ResolvedTypeKind::Shared(target) => match target {
             ResolvedSharedTarget::Class(class) => program.class(class).is_some(),
             ResolvedSharedTarget::Interface(interface) => program.interface(interface).is_some(),
             ResolvedSharedTarget::Array(array) => program
-                .array_types
+                .array_types()
                 .get(array)
                 .is_some_and(|array| type_is_fully_published(program, array.element.kind)),
             ResolvedSharedTarget::OptionalBox(box_type) => program
-                .optional_box_types
+                .optional_box_types()
                 .get(box_type)
                 .is_some_and(|metadata| {
                     metadata.optional.is_none_or(|optional| {

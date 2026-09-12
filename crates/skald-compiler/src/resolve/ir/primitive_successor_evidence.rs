@@ -2,7 +2,7 @@
 
 use super::{
     GenericInterfaceSpecializationTable, ResolvedPrimitiveBoundOperation, ResolvedPrimitiveType,
-    ResolvedProgram, ResolvedTypeKind,
+    ResolvedRangeLanguageItem, ResolvedTypeKind,
 };
 use crate::identity::{InterfaceId, InterfaceTemplateId};
 
@@ -78,16 +78,17 @@ const fn supports_successor(primitive: ResolvedPrimitiveType) -> bool {
 /// Finds evidence only for `T: std::range::Successor<T>` where `T` is one of
 /// the three compiler-supported integer primitives.
 pub(crate) fn primitive_successor_evidence(
-    program: &ResolvedProgram,
+    language_item: Option<&ResolvedRangeLanguageItem>,
+    applications: &GenericInterfaceSpecializationTable,
     receiver: ResolvedTypeKind,
     interface: InterfaceId,
 ) -> Option<ResolvedPrimitiveSuccessorEvidence> {
-    let language_item = program.range_language_item.as_ref()?;
+    let language_item = language_item?;
     primitive_successor_operation(
         receiver,
         interface,
         language_item.successor_template,
-        &program.generic_interface_specializations,
+        applications,
     )?;
     primitive_successor_registry()
         .iter()
@@ -114,14 +115,14 @@ pub(crate) fn primitive_successor_operation(
 }
 
 pub(crate) fn canonical_successor_application(
-    program: &ResolvedProgram,
+    language_item: Option<&ResolvedRangeLanguageItem>,
+    applications: &GenericInterfaceSpecializationTable,
     interface: InterfaceId,
 ) -> bool {
-    let Some(language_item) = program.range_language_item.as_ref() else {
+    let Some(language_item) = language_item else {
         return false;
     };
-    program
-        .generic_interface_specializations
+    applications
         .for_interface(interface)
         .is_some_and(|application| application.key.template == language_item.successor_template)
 }

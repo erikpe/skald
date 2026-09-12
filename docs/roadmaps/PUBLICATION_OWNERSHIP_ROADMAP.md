@@ -1,6 +1,6 @@
 # Resolver Publication Ownership Roadmap
 
-Status: in progress; P01 is complete and P02 is next. Retrospective R03
+Status: in progress; P01 and P02 are complete and P03 is next. Retrospective R03
 verification is complete and the semantic range panic is repaired. The
 implementation sequence remains separate from the completed retrospective;
 its archived R04 readiness table records this prerequisite for
@@ -29,7 +29,7 @@ alternatives, rejection policy, and consumer preconditions for this roadmap.
 ## Progress
 
 - [x] P01 — Partition candidate ownership without changing selection
-- [ ] P02 — Select products and assemble the result once
+- [x] P02 — Select products and assemble the result once
 - [ ] P03 — Verify extension obligations and close the migration
 
 ## PR-sized implementation sequence
@@ -90,15 +90,15 @@ and 629-case golden suites. `make msrv-check` also passes with Rust 1.82.0.
 
 **Purpose:** replace the hand-maintained rollback mutation list.
 
-- [ ] Validate the candidate class family, select candidate or saved ordinary
+- [x] Validate the candidate class family, select candidate or saved ordinary
   classes/hierarchy and the matching bodies/dispatch bundle, then validate
   interfaces against that selected view.
-- [ ] Preserve failed identity transitions and diagnostics without compacting
+- [x] Preserve failed identity transitions and diagnostics without compacting
   tables. Select ordinary or candidate interfaces independently as specified.
-- [ ] Move chosen owned products into one exhaustive final assembly. Remove
+- [x] Move chosen owned products into one exhaustive final assembly. Remove
   obsolete rejection mutators and avoid cloning saved products merely to move
   them into rejection output. Retain necessary pre-mutation snapshots.
-- [ ] Update living phase/publication documentation with the implemented model.
+- [x] Update living phase/publication documentation with the implemented model.
 
 **Tests:** the complete retrospective rejection matrix, exact diagnostics,
 ordinary preservation, dependent failure, independent survival, and populated
@@ -107,6 +107,30 @@ virtual-family clearing. Run `make check` and `make msrv-check`.
 **Exit criteria:** selection owns replacement coherently; no complete mutable
 candidate is incrementally rolled back. Error evidence and success products
 match the characterized policy.
+
+**Delivered:** `CandidateProgram` now owns unassembled publication products.
+Class validation borrows those products through `PublicationValidationView`,
+then moves either the candidate class/hierarchy product or the saved ordinary
+snapshot into the selected state. Class rejection records failed generated
+identities and selects an empty executable product as one coherent decision.
+Interface validation runs afterward against that class-selected view and
+independently moves candidate or ordinary interface declarations while
+retaining the specialization transition table.
+
+Closed capability queries now consume the narrow `ResolvedCapabilityView`
+contract. Both `ResolvedProgram` and the borrowed publication view implement
+it, so the neutral capability layer continues to operate on resolved facts
+without depending on resolver publication internals. Primitive bound evidence
+accepts the exact language-item and application tables it needs.
+
+The obsolete complete-program rejection mutators and restoration clones are
+removed. `CandidateProgramProducts::into_program` remains the single exhaustive
+assembly point after both selections, preserving identities, diagnostics,
+partial error evidence, successful output, and the characterized rejection
+policy. The focused publication rejection matrix and closed capability suites
+pass. `make check` passes, including 3,107 compiler tests, 53 process
+determinism tests, runtime tests, documentation validation, and 629 golden
+cases. `make msrv-check` also passes with Rust 1.82.0.
 
 ### P03 — Verify extension obligations and close the migration
 

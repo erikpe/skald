@@ -1,8 +1,8 @@
 //! Compiler-owned static evidence for canonical primitive operator protocols.
 
 use super::{
-    CanonicalOperatorProtocol, CanonicalOperatorProtocolShape, ResolvedPrimitiveType,
-    ResolvedProgram, ResolvedTypeKind,
+    CanonicalOperatorProtocol, CanonicalOperatorProtocolShape, GenericInterfaceSpecializationTable,
+    ResolvedOperatorLanguageItem, ResolvedPrimitiveType, ResolvedTypeKind,
 };
 use crate::identity::InterfaceId;
 
@@ -507,15 +507,14 @@ const fn primitive_types_equal(left: ResolvedPrimitiveType, right: ResolvedPrimi
 /// Finds static evidence only when `interface` is an exact closed application
 /// of one validated canonical operator template.
 pub(crate) fn primitive_operator_evidence(
-    program: &ResolvedProgram,
+    item: Option<&ResolvedOperatorLanguageItem>,
+    applications: &GenericInterfaceSpecializationTable,
     receiver: ResolvedTypeKind,
     interface: InterfaceId,
 ) -> Option<ResolvedPrimitiveOperatorEvidence> {
     let receiver = primitive_type(receiver)?;
-    let item = program.operator_language_item.as_ref()?;
-    let application = program
-        .generic_interface_specializations
-        .for_interface(interface)?;
+    let item = item?;
+    let application = applications.for_interface(interface)?;
     let protocol = item
         .iter()
         .find(|protocol| protocol.template == application.key.template)?;
@@ -550,16 +549,14 @@ pub(crate) fn primitive_operator_operation(
 }
 
 pub(crate) fn canonical_operator_application(
-    program: &ResolvedProgram,
+    item: Option<&ResolvedOperatorLanguageItem>,
+    applications: &GenericInterfaceSpecializationTable,
     interface: InterfaceId,
 ) -> bool {
-    let Some(item) = program.operator_language_item.as_ref() else {
+    let Some(item) = item else {
         return false;
     };
-    let Some(application) = program
-        .generic_interface_specializations
-        .for_interface(interface)
-    else {
+    let Some(application) = applications.for_interface(interface) else {
         return false;
     };
     item.iter()

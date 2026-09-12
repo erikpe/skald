@@ -13,6 +13,70 @@ pub(crate) use closed::{
 };
 pub(crate) use lifecycle::{LifecyclePathElement, ResolvedLifecycleCapabilities};
 
+use crate::{
+    identity::ClassId,
+    resolve::{
+        GenericInterfaceSpecializationTable, GenericSpecializationTable, ResolvedArrayTypeTable,
+        ResolvedClassDeclaration, ResolvedClassDeclarationTable,
+        ResolvedClassTemplateSemanticTable, ResolvedInterfaceTemplateSemanticTable,
+        ResolvedOptionalBoxTypeTable, ResolvedOptionalTypeTable, ResolvedProgram,
+    },
+};
+
+/// Resolved declaration and type facts needed by closed capability queries.
+///
+/// Publication implements this over borrowed candidate products so validation
+/// does not need a temporary `ResolvedProgram`. The public resolved program
+/// remains the ordinary adapter for later consumers.
+pub(crate) trait ResolvedCapabilityView {
+    fn classes(&self) -> &ResolvedClassDeclarationTable;
+    fn generic_specializations(&self) -> &GenericSpecializationTable;
+    fn generic_interface_specializations(&self) -> &GenericInterfaceSpecializationTable;
+    fn template_semantics(&self) -> &ResolvedClassTemplateSemanticTable;
+    fn interface_template_semantics(&self) -> &ResolvedInterfaceTemplateSemanticTable;
+    fn array_types(&self) -> &ResolvedArrayTypeTable;
+    fn optional_types(&self) -> &ResolvedOptionalTypeTable;
+    fn optional_box_types(&self) -> &ResolvedOptionalBoxTypeTable;
+
+    fn class(&self, id: ClassId) -> Option<&ResolvedClassDeclaration> {
+        self.classes().get(id)
+    }
+}
+
+impl ResolvedCapabilityView for ResolvedProgram {
+    fn classes(&self) -> &ResolvedClassDeclarationTable {
+        &self.classes
+    }
+
+    fn generic_specializations(&self) -> &GenericSpecializationTable {
+        &self.generic_specializations
+    }
+
+    fn generic_interface_specializations(&self) -> &GenericInterfaceSpecializationTable {
+        &self.generic_interface_specializations
+    }
+
+    fn template_semantics(&self) -> &ResolvedClassTemplateSemanticTable {
+        &self.template_semantics
+    }
+
+    fn interface_template_semantics(&self) -> &ResolvedInterfaceTemplateSemanticTable {
+        &self.interface_template_semantics
+    }
+
+    fn array_types(&self) -> &ResolvedArrayTypeTable {
+        &self.array_types
+    }
+
+    fn optional_types(&self) -> &ResolvedOptionalTypeTable {
+        &self.optional_types
+    }
+
+    fn optional_box_types(&self) -> &ResolvedOptionalBoxTypeTable {
+        &self.optional_box_types
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum TypeCategory {
     Primitive,

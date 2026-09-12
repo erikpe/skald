@@ -1,10 +1,12 @@
-//! Validation and atomic publication of closed specializations.
+//! Validation of closed class specializations before publication selection.
 
+use super::publication::PublicationValidationView;
 use super::*;
 use crate::identity::{ArrayTypeId, FunctionTypeId, OptionalBoxTypeId, OptionalTypeId};
+use crate::type_capabilities::ResolvedCapabilityView;
 
 pub(super) fn validate_specialization_requirements(
-    program: &ResolvedProgram,
+    program: &PublicationValidationView<'_>,
     diagnostics: &mut Diagnostics,
 ) -> bool {
     let bound_failures = failed_exact_bounds(program);
@@ -20,20 +22,20 @@ pub(super) fn validate_specialization_requirements(
 
     for (class, bound_index) in &bound_failures {
         let specialization = program
-            .generic_specializations
+            .generic_specializations()
             .for_class(*class)
             .expect("bound failures reference a specialization class");
         let semantics = program
-            .template_semantics
+            .template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         let bound = &semantics.bounds[*bound_index];
         let template = program
-            .class_templates
+            .class_templates()
             .get(specialization.key.template)
             .expect("specialization key references a template declaration");
         let parameter = program
-            .type_parameters
+            .type_parameters()
             .for_template(specialization.key.template)
             .and_then(|parameters| {
                 parameters
@@ -74,15 +76,15 @@ pub(super) fn validate_specialization_requirements(
 
     for (class, first_index, duplicate_index) in &duplicate_bound_failures {
         let specialization = program
-            .generic_specializations
+            .generic_specializations()
             .for_class(*class)
             .expect("duplicate bounds reference a specialization class");
         let semantics = program
-            .template_semantics
+            .template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         let template = program
-            .class_templates
+            .class_templates()
             .get(specialization.key.template)
             .expect("specialization key references a template declaration");
         let interface = specialization.closed_interface_bounds[*duplicate_index]
@@ -120,16 +122,16 @@ pub(super) fn validate_specialization_requirements(
     for failure in &requirement_failures {
         let class = failure.class;
         let specialization = program
-            .generic_specializations
+            .generic_specializations()
             .for_class(class)
             .expect("requirement failures reference a specialization class");
         let semantics = program
-            .template_semantics
+            .template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         let requirement = &semantics.requirements[failure.requirement_index];
         let template = program
-            .class_templates
+            .class_templates()
             .get(specialization.key.template)
             .expect("specialization key references a template declaration");
         let origin = specialization
@@ -165,9 +167,12 @@ pub(super) fn validate_specialization_requirements(
     false
 }
 
-fn application_name(program: &ResolvedProgram, specialization: &GenericSpecialization) -> String {
+fn application_name(
+    program: &PublicationValidationView<'_>,
+    specialization: &GenericSpecialization,
+) -> String {
     let template = program
-        .class_templates
+        .class_templates()
         .get(specialization.key.template)
         .expect("specialization keys reference collected templates");
     let context = ProgramTypeNameContext(program);
@@ -179,23 +184,23 @@ fn application_name(program: &ResolvedProgram, specialization: &GenericSpecializ
     )
 }
 
-struct ProgramTypeNameContext<'program>(&'program ResolvedProgram);
+struct ProgramTypeNameContext<'program>(&'program PublicationValidationView<'program>);
 
 impl ResolvedTypeNameContext for ProgramTypeNameContext<'_> {
     fn array(&self, id: ArrayTypeId) -> Option<&ResolvedArrayType> {
-        self.0.array_types.get(id)
+        self.0.array_types().get(id)
     }
 
     fn function(&self, id: FunctionTypeId) -> Option<&ResolvedFunctionType> {
-        self.0.function_types.get(id)
+        self.0.function_types().get(id)
     }
 
     fn optional(&self, id: OptionalTypeId) -> Option<&ResolvedOptionalType> {
-        self.0.optional_types.get(id)
+        self.0.optional_types().get(id)
     }
 
     fn optional_box(&self, id: OptionalBoxTypeId) -> Option<&ResolvedOptionalBoxType> {
-        self.0.optional_box_types.get(id)
+        self.0.optional_box_types().get(id)
     }
 
     fn direct_class_name(&self, id: ClassId) -> Option<String> {
@@ -206,14 +211,14 @@ impl ResolvedTypeNameContext for ProgramTypeNameContext<'_> {
 
     fn class_specialization(&self, id: ClassId) -> Option<&GenericClassInstanceKey> {
         self.0
-            .generic_specializations
+            .generic_specializations()
             .for_class(id)
             .map(|specialization| &specialization.key)
     }
 
     fn template_name(&self, id: ClassTemplateId) -> Option<String> {
         self.0
-            .class_templates
+            .class_templates()
             .get(id)
             .map(|template| qualified_name(self.0, template.module, &template.name))
     }
@@ -229,11 +234,11 @@ impl ResolvedTypeNameContext for ProgramTypeNameContext<'_> {
     }
 }
 
-fn qualified_name(program: &ResolvedProgram, module: ModuleId, name: &str) -> String {
-    if program.modules.len() == 1 || name.contains("::") {
+fn qualified_name(program: &PublicationValidationView<'_>, module: ModuleId, name: &str) -> String {
+    if program.modules().len() == 1 || name.contains("::") {
         return name.to_owned();
     }
-    program.modules.get(module).map_or_else(
+    program.modules().get(module).map_or_else(
         || name.to_owned(),
         |module| format!("{}::{name}", module.module_path()),
     )
@@ -254,7 +259,7 @@ fn add_repeated_application_origins(
 
 fn add_lifecycle_path(
     mut diagnostic: Diagnostic,
-    program: &ResolvedProgram,
+    program: &PublicationValidationView<'_>,
     path: &[crate::type_capabilities::LifecyclePathElement],
 ) -> Diagnostic {
     if path.is_empty() {
@@ -292,14 +297,14 @@ fn add_lifecycle_path(
     diagnostic
 }
 
-fn failed_exact_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
+fn failed_exact_bounds(program: &PublicationValidationView<'_>) -> Vec<(ClassId, usize)> {
     let mut failures = Vec::new();
-    for specialization in program.generic_specializations.iter() {
+    for specialization in program.generic_specializations().iter() {
         let GenericSpecializationState::Complete(class) = specialization.state else {
             continue;
         };
         let semantics = program
-            .template_semantics
+            .template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         for (bound_index, bound) in semantics.bounds.iter().enumerate() {
@@ -321,14 +326,16 @@ fn failed_exact_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
     failures
 }
 
-fn duplicate_closed_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize, usize)> {
+fn duplicate_closed_bounds(
+    program: &PublicationValidationView<'_>,
+) -> Vec<(ClassId, usize, usize)> {
     let mut failures = Vec::new();
-    for specialization in program.generic_specializations.iter() {
+    for specialization in program.generic_specializations().iter() {
         let GenericSpecializationState::Complete(class) = specialization.state else {
             continue;
         };
         let semantics = program
-            .template_semantics
+            .template_semantics()
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         for duplicate in 0..semantics.bounds.len() {
@@ -346,17 +353,17 @@ fn duplicate_closed_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize, us
 }
 
 pub(super) fn effective_nominal_conformance(
-    program: &ResolvedProgram,
+    program: &PublicationValidationView<'_>,
     class: ClassId,
     interface: InterfaceId,
 ) -> bool {
     program
-        .hierarchy
-        .has_effective_nominal_conformance(&program.classes, class, interface)
+        .hierarchy()
+        .has_effective_nominal_conformance(program.classes(), class, interface)
 }
 
 pub(super) fn exact_bound_is_satisfied(
-    program: &ResolvedProgram,
+    program: &PublicationValidationView<'_>,
     argument: ResolvedTypeKind,
     interface: InterfaceId,
 ) -> bool {
@@ -369,8 +376,20 @@ pub(super) fn exact_bound_is_satisfied(
         | ResolvedTypeKind::U8
         | ResolvedTypeKind::F64
         | ResolvedTypeKind::Bool => {
-            primitive_operator_evidence(program, argument, interface).is_some()
-                || primitive_successor_evidence(program, argument, interface).is_some()
+            primitive_operator_evidence(
+                program.operator_language_item(),
+                program.generic_interface_specializations(),
+                argument,
+                interface,
+            )
+            .is_some()
+                || primitive_successor_evidence(
+                    program.range_language_item(),
+                    program.generic_interface_specializations(),
+                    argument,
+                    interface,
+                )
+                .is_some()
         }
         ResolvedTypeKind::Unit
         | ResolvedTypeKind::Obj
@@ -387,7 +406,7 @@ pub(super) const fn bound_satisfaction_note() -> &'static str {
 }
 
 pub(super) fn bound_failure_label(
-    program: &ResolvedProgram,
+    program: &PublicationValidationView<'_>,
     argument: ResolvedTypeKind,
     interface_id: InterfaceId,
     interface: &str,
@@ -402,7 +421,11 @@ pub(super) fn bound_failure_label(
         | ResolvedTypeKind::U8
         | ResolvedTypeKind::F64
         | ResolvedTypeKind::Bool
-            if canonical_operator_application(program, interface_id) => format!(
+            if canonical_operator_application(
+                program.operator_language_item(),
+                program.generic_interface_specializations(),
+                interface_id,
+            ) => format!(
             "{} has no compiler-provided evidence for the exact canonical application `{interface}`",
             argument_kind_name(argument)
         ),
@@ -411,7 +434,11 @@ pub(super) fn bound_failure_label(
         | ResolvedTypeKind::U8
         | ResolvedTypeKind::F64
         | ResolvedTypeKind::Bool
-            if canonical_successor_application(program, interface_id) => format!(
+            if canonical_successor_application(
+                program.range_language_item(),
+                program.generic_interface_specializations(),
+                interface_id,
+            ) => format!(
             "{} has no compiler-provided evidence for the exact canonical successor application `{interface}`",
             argument_kind_name(argument)
         ),
