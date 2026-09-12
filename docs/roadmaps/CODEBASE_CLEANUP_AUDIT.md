@@ -131,7 +131,7 @@ endpoint and names any deferred work.
 | [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Complete | P2 | 3 | S–M | Low | O | C, M |
 | [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | Complete | P2 | 3 | M | Low | O | M, E |
 | [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | Open | P3 | 2 | S | Low | O | C, M |
-| [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | Open | P2 | 3 | M | Low | O | M, E |
+| [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | Complete | P2 | 3 | M | Low | O | M, E |
 | [A29](#a29--remove-obsolete-rollout-comments-and-broad-allowances) | Remove obsolete rollout comments and broad allowances | Open | P2 | 2 | S | Low | O | M, R |
 | [A30](#a30--share-standard-library-bounds-normalization) | Share standard-library bounds normalization | Open | P2 | 3 | S–M | Medium | O | M, R |
 | [A31](#a31--avoid-mandatory-string-to-array-copies-for-output) | Avoid mandatory string-to-array copies for output | Open | P2 | 4 | L | High | C | N, M |
@@ -1126,7 +1126,7 @@ improvement, not an expected major compiler speedup.
 
 ### A28 — Restore concise facades in selected hotspots
 
-**Roadmap:** [Compiler Facade Ownership Roadmap](COMPILER_FACADE_OWNERSHIP_ROADMAP.md)
+**Roadmap:** [Compiler Facade Ownership Roadmap](../archive/COMPILER_FACADE_OWNERSHIP_ROADMAP.md)
 
 **Evidence:** [`typeck/program/mod.rs`](../../crates/skald-compiler/src/typeck/program/mod.rs)
 mixes orchestration, diagnostic codes, type conversion, and declaration
@@ -1144,6 +1144,17 @@ to make a move compile.
 **First PR / validation:** extract program diagnostics/type conversion as one
 bounded change, or apply this during A09/A14. Compile all public paths and run
 owner tests. Do not impose one-type-per-file or zero-logic `mod.rs` rules.
+
+**Delivered:** the type-check program facade now presents the whole-program
+stage sequence while private owners contain diagnostic vocabulary, type and
+parameter conversion, capability categories, and declaration validation and
+lowering. The resolver program facade and its direct responsibility modules
+name their dependencies explicitly; local wildcard imports remain only inside
+the tightly coupled generic-template and specialization contexts and their
+tests. All existing public paths and diagnostic constants remain stable, no
+visibility was widened, and focused type-check, resolver, public API,
+phase-boundary, exact dump, and cross-process determinism coverage passed with
+the full repository and Rust 1.82.0 gates.
 
 ### A29 — Remove obsolete rollout comments and broad allowances
 

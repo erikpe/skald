@@ -37,6 +37,7 @@ Archived plans:
 - [Phase dump renderer ownership](PHASE_DUMP_RENDERER_OWNERSHIP_ROADMAP.md)
 - [Object-view planning design proposal](OBJECT_VIEW_PLANNING_DESIGN_PROPOSAL.md)
 - [Object-view planning](OBJECT_VIEW_PLANNING_ROADMAP.md)
+- [Compiler facade ownership](COMPILER_FACADE_OWNERSHIP_ROADMAP.md)
 
 - [First vertical slice](FIRST_VERTICAL_SLICE_ROADMAP.md)
 - [`i64` output and golden-test observability](I64_OUTPUT_ROADMAP.md)

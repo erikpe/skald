@@ -1,9 +1,9 @@
 # Compiler Facade Ownership Roadmap
 
-Status: active; F01–F03 are complete and F04 is next.
+Status: complete; archived after F04.
 
 This roadmap implements
-[cleanup finding A28](CODEBASE_CLEANUP_AUDIT.md#a28--restore-concise-facades-in-selected-hotspots)
+[cleanup finding A28](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a28--restore-concise-facades-in-selected-hotspots)
 by restoring clear ownership around the type-checking program facade and the
 resolver's program boundary. The result should make whole-program stage order,
 public compiler paths, and responsibility-specific dependencies easy to scan
@@ -52,7 +52,7 @@ counts are evidence for review, not repository-wide cleanup targets.
 - [x] F01 — Give type conversion and program diagnostics cohesive owners
 - [x] F02 — Isolate declaration validation behind the type-check program facade
 - [x] F03 — Make resolver program-boundary dependencies explicit
-- [ ] F04 — Audit the selected facades, validate behavior, and close A28
+- [x] F04 — Audit the selected facades, validate behavior, and close A28
 
 ## PR-sized implementation sequence
 
@@ -233,26 +233,26 @@ Rust 1.82.0 workspace check pass.
 migration scaffolding, and prove that improved navigation did not change phase
 behavior or create artificial module boundaries.
 
-- [ ] Review each touched `mod.rs` as a front door. Keep module documentation,
+- [x] Review each touched `mod.rs` as a front door. Keep module documentation,
   private module declarations, selective re-exports, small entry coordination,
   and central API types there; move remaining mixed implementation only when it
   has a demonstrated cohesive owner.
-- [ ] Review extracted files by responsibility rather than size. Merge trivial
+- [x] Review extracted files by responsibility rather than size. Merge trivial
   pass-through fragments, remove migration-only aliases and imports, and retain
   the narrowest practical visibility.
-- [ ] Audit public and crate-private paths, type-check stage order, resolver
+- [x] Audit public and crate-private paths, type-check stage order, resolver
   stage products, declaration-wide error collection, diagnostic ordering, and
   exact phase dumps against the pre-roadmap behavior.
-- [ ] Recount remaining production `use super::*` sites in the selected
+- [x] Recount remaining production `use super::*` sites in the selected
   resolver boundaries and document why any retained site is local and clearer.
   Do not use the count itself as an acceptance threshold.
-- [ ] Update living architecture or contributor documentation only if it needs
+- [x] Update living architecture or contributor documentation only if it needs
   a durable module-ownership rule beyond the existing facade-oriented policy;
   do not document private filenames as stable architecture.
-- [ ] Mark A28 complete with delivered ownership and validation evidence, mark
+- [x] Mark A28 complete with delivered ownership and validation evidence, mark
   this roadmap complete, archive it, and repair active/archive indexes and all
   incoming links.
-- [ ] Record valuable work outside the selected boundaries in an indexed
+- [x] Record valuable work outside the selected boundaries in an indexed
   discoveries document rather than expanding closure scope. Do not create the
   document when no actionable follow-up remains.
 
@@ -266,6 +266,34 @@ their APIs, stage order, and dependencies clearly; substantial implementation
 has cohesive private owners; no accidental public path, visibility, diagnostic,
 identity, phase product, dump, or executable behavior changed; no migration
 scaffolding remains; A28 is complete; and the roadmap is archived and indexed.
+
+Implemented: the closing review retained every touched facade and extracted
+owner at its current boundary. The type-check program facade is a 167-line
+whole-program stage outline, and its declaration, conversion, diagnostic, and
+capability-category responsibilities each have cohesive private owners. The
+resolver program facade is a 39-line front door with private responsibility
+modules, one selective internal re-export, and two entry coordinators. The
+larger generic-template and specialization facades define shared private
+contexts for tightly coupled descendants; splitting those contexts into
+pass-through modules would make their dependencies harder to follow. No
+migration alias, forwarding import, or visibility widening remains.
+
+The resolver recount found 22 production `use super::*` sites, all below the
+generic-template or specialization subtree facades, plus five test-local sites.
+These imports expose only the cohesive context declared by their immediate
+parent and do not inherit the whole-program orchestration namespace. Direct
+program responsibility modules and the program facade have none. The existing
+facade-oriented module policy already states the durable ownership rule, so no
+additional living architecture text or discoveries record was needed.
+
+A pre-roadmap comparison confirmed that all 45 public diagnostic constant
+names and values remain stable, the type-check stage sequence and resolver
+products retain their established owners, and no public or crate-private
+module was widened. The 526-test type-check suite, 351-test resolver suite,
+public API and phase-boundary integration tests, all 53 cross-process
+phase-product determinism tests, exact dump coverage, the full repository gate
+with 3,146 compiler tests and 629 golden cases, and the Rust 1.82.0 workspace
+check pass from the clean committed snapshot.
 
 ## Ordering and dependencies
 

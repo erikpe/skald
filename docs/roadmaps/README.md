@@ -8,9 +8,7 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-| Roadmap | Status | Purpose | Next task | Dependencies |
-| --- | --- | --- | --- | --- |
-| [Compiler facade ownership](COMPILER_FACADE_OWNERSHIP_ROADMAP.md) | Active; type conversion and program diagnostic ownership complete | Restore clear type-check program ownership and explicit resolver program-boundary dependencies | Isolate declaration validation behind the type-check program facade | Completed resolver stage-product and publication ownership work |
+There are currently no active implementation roadmaps.
 
 ## Pending discovery and planning records
 
