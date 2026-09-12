@@ -5,16 +5,16 @@
 
 use std::collections::BTreeMap;
 
-use crate::mir::BlockId;
+use crate::mir::{BlockId, MirCfgEdge};
 
-use super::{MirFinalCfgFacts, MirLocalCfgBlockFacts, MirLocalCfgEdge, MirLocalCfgTerminatorKind};
+use super::{MirFinalCfgFacts, MirLocalCfgBlockFacts, MirLocalCfgTerminatorKind};
 
 /// A block which can be removed by redirecting all incoming edges.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MirEmptyBlockForwardingCandidate {
     block: BlockId,
     direct_target: BlockId,
-    incoming_edges: Vec<MirLocalCfgEdge>,
+    incoming_edges: Vec<MirCfgEdge>,
 }
 
 impl MirEmptyBlockForwardingCandidate {
@@ -26,7 +26,7 @@ impl MirEmptyBlockForwardingCandidate {
         self.direct_target
     }
 
-    pub(crate) fn incoming_edges(&self) -> &[MirLocalCfgEdge] {
+    pub(crate) fn incoming_edges(&self) -> &[MirCfgEdge] {
         &self.incoming_edges
     }
 }
@@ -158,7 +158,7 @@ impl MirEmptyBlockForwardingAnalysis {
 #[derive(Clone, Debug)]
 struct LocallyForwardableBlock {
     direct_target: BlockId,
-    incoming_edges: Vec<MirLocalCfgEdge>,
+    incoming_edges: Vec<MirCfgEdge>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

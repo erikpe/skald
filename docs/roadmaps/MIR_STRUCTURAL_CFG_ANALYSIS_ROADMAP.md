@@ -1,6 +1,6 @@
 # MIR Structural CFG Analysis Roadmap
 
-Status: planned; C01 is next.
+Status: in progress; C01 is complete and C02 is next.
 
 This roadmap implements
 [cleanup finding A18](CODEBASE_CLEANUP_AUDIT.md#a18--reuse-structural-cfg-and-dominance-queries)
@@ -84,7 +84,7 @@ MIR while making malformed-ID queries fail closed.
 
 ## Progress
 
-- [ ] C01 — Establish neutral structural CFG facts
+- [x] C01 — Establish neutral structural CFG facts
 - [ ] C02 — Migrate predecessor and reachability consumers
 - [ ] C03 — Compute and reuse callable-local dominance
 
@@ -95,23 +95,23 @@ MIR while making malformed-ID queries fail closed.
 **Purpose:** Settle the ownership and malformed-input contract before any
 verifier or pass begins depending on the new analysis.
 
-- [ ] Add a concise `mir::analysis` facade with responsibility-specific CFG
+- [x] Add a concise `mir::analysis` facade with responsibility-specific CFG
   implementation and colocated tests.
-- [ ] Add `MirCfgTopology`, `MirCfgBlockTopology`, and `MirCfgEdge` with
+- [x] Add `MirCfgTopology`, `MirCfgBlockTopology`, and `MirCfgEdge` with
   explicit block-set and edge-occurrence APIs. Keep lookup deterministic and
   return `None` for block-oriented queries whose identity is not one
   unambiguous local declaration.
-- [ ] Provide one definition constructor and one MIR-private ordered-snapshot
+- [x] Provide one definition constructor and one MIR-private ordered-snapshot
   constructor so rewrite edits can reuse the implementation without exposing
   their sparse representation or adding a graph trait.
-- [ ] Centralize entry-rooted and caller-rooted reachability over known local
+- [x] Centralize entry-rooted and caller-rooted reachability over known local
   nodes. Invalid targets remain in raw edges but never become traversal nodes.
-- [ ] Move rewrite CFG edge construction and closure traversal onto the
+- [x] Move rewrite CFG edge construction and closure traversal onto the
   neutral implementation. Retain all strict rewrite validation and
   rewrite-only facts in `mir::rewrite`.
-- [ ] Remove the rewrite-owned edge type rather than maintaining aliases or
+- [x] Remove the rewrite-owned edge type rather than maintaining aliases or
   two structural edge vocabularies.
-- [ ] Document the neutral analysis owner, tolerant verifier input, strict
+- [x] Document the neutral analysis owner, tolerant verifier input, strict
   rewrite layer, edge identity, root policy, and snapshot lifetime in
   [`PHASES_AND_IR.md`](../compiler/PHASES_AND_IR.md).
 

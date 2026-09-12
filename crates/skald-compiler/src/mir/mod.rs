@@ -4,6 +4,7 @@
 //! termination explicit. It is not SSA, but value and block identities leave a
 //! clean path to SSA conversion later.
 
+mod analysis;
 mod build;
 mod dump;
 mod lower;
@@ -21,6 +22,7 @@ mod verify;
 #[cfg(test)]
 pub(crate) mod test_fixtures;
 
+pub(crate) use analysis::{MirCfgBlockTopology, MirCfgEdge, MirCfgTopology};
 pub use dump::{dump_mir, dump_preliminary_mir};
 pub use lower::{lower_hir, lower_preliminary_hir};
 pub(crate) use model::mir_execution_node_key;

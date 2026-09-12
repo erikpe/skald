@@ -737,19 +737,32 @@ reference form forces compiler review. Each new callable-local identity or
 reference form must update this traversal and its census coverage in the same
 change; individual passes may not maintain competing remapping inventories.
 
-The rewrite owner also provides one short-lived callable-local CFG snapshot
-for both dense definitions and sparse edit state. Its shared builder records
-each outgoing and incoming executable edge as a distinct occurrence in source
-block and semantic successor order, so parallel branch edges retain exact
-multiplicity. Per-block facts retain the existing successor targets and
-defined-value inventory while also identifying entry and protected roots,
-permanent publication attachments, instruction count, and a closed
-terminator kind. The terminator and attachment classifications are exhaustive
-maintenance points: new forms must choose their structural role before the
-compiler builds. Proof-rich snapshots retain consumable proof roots;
-normalized snapshots reject them and retain only executable entry and
-permanent semantic attachments. Facts are recomputed rather than cached after
-rewriting.
+The private `mir::analysis` facade owns one short-lived, callable-local
+structural CFG view. It records blocks in snapshot order and each executable
+edge as a distinct occurrence in block and semantic successor order, so
+parallel branch edges retain exact multiplicity while predecessor-block
+queries retain set semantics. Entry-rooted and caller-rooted closure enter
+only unambiguous local block declarations. Construction itself is tolerant:
+missing terminators contribute no edges, malformed targets remain observable
+as raw edge occurrences, and foreign, unknown, duplicate, or misindexed block
+identities cannot cause a panic or become traversal nodes. This lets initial
+verification inspect untrusted MIR without depending on rewrite validation.
+The facade is crate-private through `mir`; later phases do not import its
+implementation module. Facts describe one immutable snapshot and are rebuilt
+after mutation rather than cached across edits.
+
+The rewrite owner builds its stricter callable-local CFG snapshot on that
+neutral topology for both dense definitions and sparse edit state. It still
+rejects missing terminators and invalid local references before exposing
+facts. Per-block rewrite facts enrich the shared successor and predecessor
+edges with the defined-value inventory, entry and protected-root roles,
+permanent publication attachments, instruction count, and a closed terminator
+kind. Protected roots extend rewrite reachability but do not change ordinary
+entry reachability. The terminator and attachment classifications are
+exhaustive maintenance points: new forms must choose their structural role
+before the compiler builds. Proof-rich snapshots retain consumable proof
+roots; normalized snapshots reject them and retain only executable entry and
+permanent semantic attachments.
 
 Every future production transformation of valid final MIR must enter through
 the supported `mir::rewrite` facade and its atomic program coordinator. Direct

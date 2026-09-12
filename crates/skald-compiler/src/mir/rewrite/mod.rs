@@ -42,8 +42,8 @@ pub(crate) use cfg::{
     MirEmptyBlockForwardingAnalysis, MirEmptyBlockForwardingBarrier,
     MirEmptyBlockForwardingBarrierKind, MirEmptyBlockForwardingCandidate,
     MirEmptyBlockForwardingCounts, MirEmptyBlockForwardingPlan, MirEmptyBlockForwardingResolution,
-    MirFinalCfgFacts, MirLocalCfgBlockFacts, MirLocalCfgEdge, MirLocalCfgFacts,
-    MirLocalCfgTerminatorKind, MirProtectedBlockRoot,
+    MirFinalCfgFacts, MirLocalCfgBlockFacts, MirLocalCfgFacts, MirLocalCfgTerminatorKind,
+    MirProtectedBlockRoot,
 };
 pub(crate) use commit::{
     MirCommitMap, MirCommitMaps, MirEntityChangeCount, MirRewriteChangeSummary,

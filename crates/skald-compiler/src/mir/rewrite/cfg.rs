@@ -16,15 +16,15 @@ pub(crate) use canonicalization::{
 };
 
 use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
+    collections::{BTreeMap, BTreeSet},
     ops::Deref,
 };
 
 use crate::{
     identity::CallableId,
     mir::{
-        classify_local_identity_site, BlockId, MirBasicBlock, MirDefinitionRef,
-        MirIdentitySiteRole, MirTerminator, ValueId,
+        classify_local_identity_site, BlockId, MirBasicBlock, MirCfgBlockTopology, MirCfgEdge,
+        MirCfgTopology, MirDefinitionRef, MirIdentitySiteRole, MirTerminator, ValueId,
     },
 };
 
@@ -50,32 +50,6 @@ impl MirProtectedBlockRoot {
 
     pub(crate) const fn block(self) -> BlockId {
         self.block
-    }
-}
-
-/// One executable successor occurrence in a callable-local terminator.
-///
-/// `successor_index` is the stable position in [`MirTerminator::successors`]
-/// semantic order. Retaining the occurrence instead of only the endpoint keeps
-/// parallel edges distinct for later structural eligibility checks.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(crate) struct MirLocalCfgEdge {
-    source: BlockId,
-    target: BlockId,
-    successor_index: usize,
-}
-
-impl MirLocalCfgEdge {
-    pub(crate) const fn source(self) -> BlockId {
-        self.source
-    }
-
-    pub(crate) const fn target(self) -> BlockId {
-        self.target
-    }
-
-    pub(crate) const fn successor_index(self) -> usize {
-        self.successor_index
     }
 }
 
@@ -161,10 +135,7 @@ impl MirLocalCfgTerminatorKind {
 /// Structural shape, edges, and transient definitions owned by one block.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MirLocalCfgBlockFacts {
-    block: BlockId,
-    successors: Vec<BlockId>,
-    successor_edges: Vec<MirLocalCfgEdge>,
-    predecessor_edges: Vec<MirLocalCfgEdge>,
+    topology: MirCfgBlockTopology,
     defined_values: Vec<ValueId>,
     instruction_count: usize,
     terminator_kind: MirLocalCfgTerminatorKind,
@@ -175,19 +146,19 @@ pub(crate) struct MirLocalCfgBlockFacts {
 
 impl MirLocalCfgBlockFacts {
     pub(crate) const fn block(&self) -> BlockId {
-        self.block
+        self.topology.block()
     }
 
     pub(crate) fn successors(&self) -> &[BlockId] {
-        &self.successors
+        self.topology.successors()
     }
 
-    pub(crate) fn successor_edges(&self) -> &[MirLocalCfgEdge] {
-        &self.successor_edges
+    pub(crate) fn successor_edges(&self) -> &[MirCfgEdge] {
+        self.topology.successor_edges()
     }
 
-    pub(crate) fn predecessor_edges(&self) -> &[MirLocalCfgEdge] {
-        &self.predecessor_edges
+    pub(crate) fn predecessor_edges(&self) -> &[MirCfgEdge] {
+        self.topology.predecessor_edges()
     }
 
     pub(crate) fn defined_values(&self) -> &[ValueId] {
@@ -226,7 +197,7 @@ pub(crate) struct MirLocalCfgFacts {
     entry: BlockId,
     protected_roots: Vec<MirProtectedBlockRoot>,
     permanent_roots: Vec<MirProtectedBlockRoot>,
-    edges: Vec<MirLocalCfgEdge>,
+    edges: Vec<MirCfgEdge>,
     blocks: Vec<MirLocalCfgBlockFacts>,
     entry_reachable: Vec<BlockId>,
     reachable: Vec<BlockId>,
@@ -267,7 +238,7 @@ impl MirLocalCfgFacts {
         &self.permanent_roots
     }
 
-    pub(crate) fn edges(&self) -> &[MirLocalCfgEdge] {
+    pub(crate) fn edges(&self) -> &[MirCfgEdge] {
         &self.edges
     }
 
@@ -277,7 +248,7 @@ impl MirLocalCfgFacts {
 
     pub(crate) fn block(&self, block: BlockId) -> Option<&MirLocalCfgBlockFacts> {
         (block.callable() == self.callable)
-            .then(|| self.blocks.iter().find(|facts| facts.block == block))
+            .then(|| self.blocks.iter().find(|facts| facts.block() == block))
             .flatten()
     }
 
@@ -454,18 +425,21 @@ fn build_facts(
     snapshots: Vec<MirLocalCfgBlockSnapshot>,
     census: MirValueUseCensus,
 ) -> Result<MirLocalCfgFacts, MirRewriteError> {
-    let block_order = snapshots
+    let topology = MirCfgTopology::from_ordered_successors(
+        callable,
+        entry,
+        snapshots
+            .iter()
+            .map(|block| (block.block, block.successors.iter().copied())),
+    );
+    let block_order = topology
+        .blocks()
         .iter()
-        .map(|block| block.block)
+        .map(MirCfgBlockTopology::block)
         .collect::<Vec<_>>();
-    let adjacency_by_block = snapshots
-        .iter()
-        .map(|block| (block.block, block.successors.clone()))
-        .collect::<BTreeMap<_, _>>();
-    let entry_closure = closure([entry], &adjacency_by_block);
-    let all_closure = closure(
+    let entry_closure = topology.entry_reachable().clone();
+    let all_closure = topology.reachable_from(
         std::iter::once(entry).chain(protected_roots.iter().map(|root| root.block)),
-        &adjacency_by_block,
     );
 
     let mut definitions = BTreeMap::<BlockId, Vec<ValueId>>::new();
@@ -483,7 +457,7 @@ fn build_facts(
             });
         };
         let block = BlockId::new(callable, block);
-        if !adjacency_by_block.contains_key(&block) {
+        if topology.block(block).is_none() {
             return Err(MirRewriteError::InvalidReference {
                 expected: callable,
                 identity: MirLocalIdentity::Block(block),
@@ -510,46 +484,21 @@ fn build_facts(
         .map(|root| root.block)
         .collect::<BTreeSet<_>>();
 
-    let edges = snapshots
-        .iter()
-        .flat_map(|block| {
-            block
-                .successors
-                .iter()
-                .copied()
-                .enumerate()
-                .map(|(successor_index, target)| MirLocalCfgEdge {
-                    source: block.block,
-                    target,
-                    successor_index,
-                })
-        })
-        .collect::<Vec<_>>();
-    let mut successor_edges = BTreeMap::<BlockId, Vec<MirLocalCfgEdge>>::new();
-    let mut predecessor_edges = BTreeMap::<BlockId, Vec<MirLocalCfgEdge>>::new();
-    for edge in &edges {
-        successor_edges.entry(edge.source).or_default().push(*edge);
-        predecessor_edges
-            .entry(edge.target)
-            .or_default()
-            .push(*edge);
-    }
-
+    let edges = topology.edges().to_vec();
     let blocks = snapshots
         .into_iter()
-        .map(|snapshot| MirLocalCfgBlockFacts {
-            block: snapshot.block,
-            successors: snapshot.successors,
-            successor_edges: successor_edges.remove(&snapshot.block).unwrap_or_default(),
-            predecessor_edges: predecessor_edges
-                .remove(&snapshot.block)
-                .unwrap_or_default(),
-            defined_values: definitions.remove(&snapshot.block).unwrap_or_default(),
-            instruction_count: snapshot.instruction_count,
-            terminator_kind: snapshot.terminator_kind,
-            is_entry: snapshot.block == entry,
-            is_protected_root: protected_blocks.contains(&snapshot.block),
-            is_permanent_attachment: permanent_blocks.contains(&snapshot.block),
+        .zip(topology.into_blocks())
+        .map(|(snapshot, topology)| {
+            debug_assert_eq!(snapshot.block, topology.block());
+            MirLocalCfgBlockFacts {
+                topology,
+                defined_values: definitions.remove(&snapshot.block).unwrap_or_default(),
+                instruction_count: snapshot.instruction_count,
+                terminator_kind: snapshot.terminator_kind,
+                is_entry: snapshot.block == entry,
+                is_protected_root: protected_blocks.contains(&snapshot.block),
+                is_permanent_attachment: permanent_blocks.contains(&snapshot.block),
+            }
         })
         .collect();
     let select = |members: &BTreeSet<BlockId>| {
@@ -581,23 +530,6 @@ fn build_facts(
         protected_but_entry_unreachable: select(&protected_only),
         unreachable: select(&unreachable_set),
     })
-}
-
-fn closure(
-    roots: impl IntoIterator<Item = BlockId>,
-    adjacency: &BTreeMap<BlockId, Vec<BlockId>>,
-) -> BTreeSet<BlockId> {
-    let mut reachable = BTreeSet::new();
-    let mut pending = VecDeque::from_iter(roots);
-    while let Some(block) = pending.pop_front() {
-        if !reachable.insert(block) {
-            continue;
-        }
-        if let Some(successors) = adjacency.get(&block) {
-            pending.extend(successors.iter().copied());
-        }
-    }
-    reachable
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

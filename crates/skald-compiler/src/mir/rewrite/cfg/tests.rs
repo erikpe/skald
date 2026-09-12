@@ -546,12 +546,8 @@ fn root(site: MirLocalIdentitySite, block: BlockId) -> MirProtectedBlockRoot {
     MirProtectedBlockRoot { site, block }
 }
 
-fn edge(source: BlockId, target: BlockId, successor_index: usize) -> MirLocalCfgEdge {
-    MirLocalCfgEdge {
-        source,
-        target,
-        successor_index,
-    }
+fn edge(source: BlockId, target: BlockId, successor_index: usize) -> MirCfgEdge {
+    MirCfgEdge::new(source, target, successor_index)
 }
 
 fn simple_function() -> MirFunctionDefinition {
