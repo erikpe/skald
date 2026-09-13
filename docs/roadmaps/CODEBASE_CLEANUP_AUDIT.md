@@ -136,7 +136,7 @@ endpoint and names any deferred work.
 | [A30](#a30--share-standard-library-bounds-normalization) | Share standard-library bounds normalization | Open | P2 | 3 | S–M | Medium | O | M, R |
 | [A31](#a31--avoid-mandatory-string-to-array-copies-for-output) | Avoid mandatory string-to-array copies for output | Open | P2 | 4 | L | High | C | N, M |
 | [A32](#a32--measure-and-reduce-mapvec-copy-traffic) | Measure and reduce Map/Vec copy traffic | Open | P2 | 4 | L | High | C | N |
-| [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | Open | P2 | 4 | M | Medium | O | M, R, C |
+| [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | In progress | P2 | 4 | M | Medium | O | M, R, C |
 | [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | Complete | P1 | 4 | M | Low | O | C, N, R |
 | [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Complete | P2 | 2 | XS | Low | O | R |
 | [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Complete | P2 | 3 | S–M | Medium | O | R, M |
@@ -1279,6 +1279,9 @@ changes separate from generic optimizer work in the catalog.
 
 ### A33 — Consolidate test plumbing while preserving independent checks
 
+**Status:** In progress through the module-backed determinism migration
+(2026-09-13).
+
 **Design proposal:**
 [Test Plumbing Ownership Design Proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md).
 
@@ -1287,9 +1290,9 @@ changes separate from generic optimizer work in the catalog.
 
 **Evidence:** compiler
 [pipeline determinism tests](../../crates/skald-compiler/tests/pipeline_determinism.rs)
-span 2,913 lines; pipeline tests and reporting tests also contain large
-feature-specific fixture groups. Compiler
-[`test_support`](../../crates/skald-compiler/src/test_support.rs) and
+spanned 2,913 lines before the staged recursive-module split; pipeline tests
+and reporting tests also contain large feature-specific fixture groups.
+Compiler [`test_support`](../../crates/skald-compiler/src/test_support.rs) and
 [MIR fixtures](../../crates/skald-compiler/src/mir/test_fixtures.rs) already
 provide reusable foundations. Golden process tests retain additional temporary
 fixture and subprocess setup.

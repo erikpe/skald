@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md) | Planned | Restructure large compiler and golden test suites while preserving independent process, malformed-input, phase, and native observations | TP01 — establish the integration subprocess and resource boundary | Accepted [test plumbing ownership design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md); cleanup finding A33; completed A01–A06 robustness and gate work |
+| [Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md) | In progress | Restructure large compiler and golden test suites while preserving independent process, malformed-input, phase, and native observations | TP03 — move value and ownership determinism fixtures | Accepted [test plumbing ownership design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md); cleanup finding A33; TP01–TP02 complete |
 
 ## Pending discovery and planning records
 

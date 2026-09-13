@@ -1,6 +1,6 @@
 # Test Plumbing Ownership Roadmap
 
-Status: in progress; TP02 is next.
+Status: in progress; TP03 is next.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
@@ -55,7 +55,7 @@ finding can close.
 ## Progress
 
 - [x] TP01 — Establish the integration subprocess and resource boundary
-- [ ] TP02 — Move module-backed determinism fixtures behind owned generators
+- [x] TP02 — Move module-backed determinism fixtures behind owned generators
 - [ ] TP03 — Move value and ownership determinism fixtures
 - [ ] TP04 — Complete determinism-suite ownership and registry consolidation
 - [ ] TP05 — Split driver reporting tests by observation responsibility
@@ -225,30 +225,30 @@ workspace Clippy with warnings denied, `make check`, `make msrv-check`, and
 families with the most shared module-tree, provider-order, path-normalization,
 and permutation mechanics.
 
-- [ ] Keep `pipeline_determinism.rs` as the only Cargo integration-test entry
+- [x] Keep `pipeline_determinism.rs` as the only Cargo integration-test entry
   file. Introduce a private `pipeline_determinism/` tree with a concise harness
   facade and responsibility modules; do not create additional top-level
   integration binaries for feature families.
-- [ ] Introduce explicit root-level case registration for module graph,
+- [x] Introduce explicit root-level case registration for module graph,
   generic module, generic interface, generic operator, range, and general
   iteration cases. Use small declaration macros only where they preserve the
   existing leaf name and visibly state label, same-input versus permutation
   mode, and generator function.
-- [ ] Move module-tree creation, source writing, directory linking, provider
+- [x] Move module-tree creation, source writing, directory linking, provider
   permutation, fixture-path replacement, and span normalization to the
   narrowest module-backed support owner. Keep filesystem normalization separate
   from semantic dump generation.
-- [ ] Move module graph and closed generic generators into cohesive child
+- [x] Move module graph and closed generic generators into cohesive child
   modules. Keep range and iteration generators together only where they share
   the same canonical module/provider fixture; keep their diagnostic generators
   distinct from successful phase-product generation.
-- [ ] Preserve every emitted section, section order, trailing newline,
+- [x] Preserve every emitted section, section order, trailing newline,
   diagnostic, source/provider permutation, selected entry, and normalized byte
   comparison exactly.
-- [ ] Keep generator functions narrow and `pub(super)` only where the root case
+- [x] Keep generator functions narrow and `pub(super)` only where the root case
   registry must call them. Do not make fixture internals visible across
   unrelated determinism families.
-- [ ] Remove moved constants, imports, helpers, and source text from the root
+- [x] Remove moved constants, imports, helpers, and source text from the root
   file in the same task. Do not leave compatibility forwarding inside test
   modules.
 
@@ -264,6 +264,36 @@ clear private owners; the root integration file is the unchanged test binary
 and explicit registry; all moved leaf names, subprocess counts, permutations,
 and bytes match the baseline; and the remaining inline families continue to
 run through the same harness.
+
+#### TP02 delivery record
+
+`pipeline_determinism.rs` remains the sole Cargo integration entry and now
+registers the moved cases through declarations that expose each unchanged leaf
+name, label, execution mode, and generator. Its private recursive module tree
+has separate owners for the subprocess harness, module fixtures, filesystem
+and span normalization, module graph cases, closed generic contracts, ranges,
+and general iteration. Diagnostic generation remains distinct from successful
+phase-product generation. The remaining inline families use the same harness
+and module-fixture facade while their generators await TP03 and TP04.
+
+Rust requires an item re-exported through two private module levels to be
+declared crate-visible at its defining leaf. Those definitions sit behind
+private modules, and the facade exposes only the selected functions to its
+parent with `pub(super)`; no production or cross-binary API was added.
+
+The post-change sorted inventory retained all 53 names and the TP01 SHA-256
+`c04091410676bb92fc34d395ad06ec986502f726e84a3a03d8982e2287f2e1f0`.
+An isolated build of the TP01 revision produced every moved generator output
+for both permutation variants and one output for each same-input case. All 18
+artifacts, totaling 1,077,743 bytes, matched the new implementation
+byte-for-byte. The ten parent cases still make two independent child calls,
+including both variants for the eight permutation cases.
+
+Validation passed every focused module, generic-module, generic-interface,
+generic-operator, range, and iteration filter; complete default and
+eight-thread determinism runs; documentation links; formatting; all-target
+workspace Clippy with warnings denied; `make check`; `make msrv-check`; and
+`git diff --check`.
 
 ### TP03 — Move value and ownership determinism fixtures
 

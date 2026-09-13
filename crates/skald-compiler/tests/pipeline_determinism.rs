@@ -1,11 +1,5 @@
 //! Cross-process determinism coverage for representative complete pipelines.
 
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-    time::Duration,
-};
-
 use skald_compiler::{
     backend::{emit_assembly, BackendInput, Target},
     diagnostics::render_diagnostics,
@@ -28,22 +22,25 @@ use skald_compiler::{
     },
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
-    syntax::{dump_ast, parse, INVALID_RANGE_SYNTAX},
+    syntax::{dump_ast, parse},
     typeck::type_check,
 };
 
+#[path = "pipeline_determinism/mod.rs"]
+mod determinism;
 #[path = "../test_support/standard_library.rs"]
 mod standard_library;
 mod support;
 
-use standard_library::{canonical_standard_library_sources, CANONICAL_IO_SOURCE};
-use support::{
-    run_current_test_process, CurrentTestProcessRequest, TemporaryDirectory, TemporaryFile,
-    TestProcessPolicy, TestProcessTermination,
+use determinism::{
+    assert_cross_process_determinism, assert_cross_process_variants,
+    generic_interface_diagnostic_dump, generic_interface_module_phase_dump,
+    generic_module_phase_dump, generic_operator_module_phase_dump, iteration_diagnostic_dump,
+    iteration_module_phase_dump, link_directory, module_diagnostic_dump, module_phase_dump,
+    normalize_fixture_paths, range_module_phase_dump, range_syntax_diagnostic_dump, write_source,
+    ModuleFixture,
 };
-
-const HELPER_OUTPUT: &str = "SKALD_PIPELINE_DETERMINISM_HELPER_OUTPUT";
-const HELPER_TIMEOUT: Duration = Duration::from_secs(60);
+use standard_library::{canonical_standard_library_sources, CANONICAL_IO_SOURCE};
 
 const OBJECT_TEST_NAME: &str = "object_lifetime_phase_products_are_deterministic_across_processes";
 const POLYMORPHISM_TEST_NAME: &str =
@@ -107,24 +104,6 @@ const PRIVATE_CELL_DIAGNOSTIC_TEST_NAME: &str =
 const FINAL_FIELD_TEST_NAME: &str = "final_field_phase_products_are_deterministic_across_processes";
 const FINAL_FIELD_DIAGNOSTIC_TEST_NAME: &str =
     "final_field_diagnostics_are_deterministic_across_processes";
-const HELPER_VARIANT: &str = "SKALD_PIPELINE_DETERMINISM_HELPER_VARIANT";
-const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
-const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_across_processes";
-const GENERIC_MODULE_TEST_NAME: &str =
-    "generic_module_phase_products_are_deterministic_across_processes";
-const GENERIC_INTERFACE_TEST_NAME: &str =
-    "generic_interface_phase_products_are_deterministic_across_processes";
-const GENERIC_OPERATOR_TEST_NAME: &str =
-    "generic_operator_phase_products_are_deterministic_across_processes";
-const RANGE_TEST_NAME: &str = "range_phase_products_are_deterministic_across_processes";
-const RANGE_DIAGNOSTIC_TEST_NAME: &str =
-    "range_syntax_diagnostics_are_deterministic_across_processes";
-const GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME: &str =
-    "generic_interface_diagnostics_are_deterministic_across_processes";
-const ITERATION_TEST_NAME: &str =
-    "general_iteration_phase_products_are_deterministic_across_processes";
-const ITERATION_DIAGNOSTIC_TEST_NAME: &str =
-    "general_iteration_diagnostics_are_deterministic_across_processes";
 const FUNCTION_VALUE_COMPOSITION_TEST_NAME: &str =
     "function_value_composition_products_are_deterministic_across_processes";
 const STATIC_FIELD_TEST_NAME: &str =
@@ -141,6 +120,24 @@ const IMPORTED_UNUSED_STATIC_TEST_NAME: &str =
     "imported_unused_static_products_are_deterministic_across_processes";
 const MIR_CHECKPOINT_TEST_NAME: &str =
     "mir_pipeline_checkpoints_are_deterministic_across_processes";
+
+macro_rules! permutation_case {
+    ($name:ident, $label:literal, $generator:path) => {
+        #[test]
+        fn $name() {
+            assert_cross_process_variants($label, stringify!($name), $generator);
+        }
+    };
+}
+
+macro_rules! same_input_case {
+    ($name:ident, $label:literal, $generator:path) => {
+        #[test]
+        fn $name() {
+            assert_cross_process_determinism($label, stringify!($name), $generator);
+        }
+    };
+}
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
@@ -267,12 +264,11 @@ fn static_field_diagnostics_are_deterministic_across_processes() {
 
 #[test]
 fn static_field_module_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, static_field_module_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("static-field-modules", STATIC_FIELD_MODULE_TEST_NAME);
+    assert_cross_process_variants(
+        "static-field-modules",
+        STATIC_FIELD_MODULE_TEST_NAME,
+        static_field_module_phase_dump,
+    );
 }
 
 #[test]
@@ -421,40 +417,28 @@ fn short_circuit_source_products_are_deterministic_across_processes() {
 
 #[test]
 fn string_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, string_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("strings", STRING_TEST_NAME);
+    assert_cross_process_variants("strings", STRING_TEST_NAME, string_phase_dump);
 }
 
 #[test]
 fn string_language_item_diagnostics_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, string_diagnostic_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("string-diagnostics", STRING_DIAGNOSTIC_TEST_NAME);
+    assert_cross_process_variants(
+        "string-diagnostics",
+        STRING_DIAGNOSTIC_TEST_NAME,
+        string_diagnostic_dump,
+    );
 }
 
 #[test]
 fn io_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, io_phase_dump(variant, false)).unwrap();
-        return;
-    }
-    assert_cross_process_variants("io", IO_TEST_NAME);
+    assert_cross_process_variants("io", IO_TEST_NAME, |variant| io_phase_dump(variant, false));
 }
 
 #[test]
 fn io_provider_diagnostics_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, io_phase_dump(variant, true)).unwrap();
-        return;
-    }
-    assert_cross_process_variants("io-diagnostics", IO_DIAGNOSTIC_TEST_NAME);
+    assert_cross_process_variants("io-diagnostics", IO_DIAGNOSTIC_TEST_NAME, |variant| {
+        io_phase_dump(variant, true)
+    });
 }
 
 #[test]
@@ -511,106 +495,56 @@ fn final_field_diagnostics_are_deterministic_across_processes() {
     );
 }
 
-#[test]
-fn module_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, module_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("modules", MODULE_TEST_NAME);
-}
-
-#[test]
-fn module_diagnostics_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, module_diagnostic_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("module-diagnostics", MODULE_DIAGNOSTIC_TEST_NAME);
-}
-
-#[test]
-fn generic_module_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, generic_module_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("generic-modules", GENERIC_MODULE_TEST_NAME);
-}
-
-#[test]
-fn generic_interface_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, generic_interface_module_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("generic-interface-products", GENERIC_INTERFACE_TEST_NAME);
-}
-
-#[test]
-fn generic_operator_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, generic_operator_module_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("generic-operator-products", GENERIC_OPERATOR_TEST_NAME);
-}
-
-#[test]
-fn range_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, range_module_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("explicit-range-products", RANGE_TEST_NAME);
-}
-
-#[test]
-fn range_syntax_diagnostics_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "range-syntax-diagnostics",
-        RANGE_DIAGNOSTIC_TEST_NAME,
-        range_syntax_diagnostic_dump,
-    );
-}
-
-#[test]
-fn generic_interface_diagnostics_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "generic-interface-diagnostics",
-        GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME,
-        generic_interface_diagnostic_dump,
-    );
-}
-
-#[test]
-fn general_iteration_phase_products_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, iteration_module_phase_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants("general-iteration-products", ITERATION_TEST_NAME);
-}
-
-#[test]
-fn general_iteration_diagnostics_are_deterministic_across_processes() {
-    if let Some((output, variant)) = variant_helper_state() {
-        fs::write(output, iteration_diagnostic_dump(variant)).unwrap();
-        return;
-    }
-
-    assert_cross_process_variants(
-        "general-iteration-diagnostics",
-        ITERATION_DIAGNOSTIC_TEST_NAME,
-    );
-}
+permutation_case!(
+    module_phase_products_are_deterministic_across_processes,
+    "modules",
+    module_phase_dump
+);
+permutation_case!(
+    module_diagnostics_are_deterministic_across_processes,
+    "module-diagnostics",
+    module_diagnostic_dump
+);
+permutation_case!(
+    generic_module_phase_products_are_deterministic_across_processes,
+    "generic-modules",
+    generic_module_phase_dump
+);
+permutation_case!(
+    generic_interface_phase_products_are_deterministic_across_processes,
+    "generic-interface-products",
+    generic_interface_module_phase_dump
+);
+permutation_case!(
+    generic_operator_phase_products_are_deterministic_across_processes,
+    "generic-operator-products",
+    generic_operator_module_phase_dump
+);
+permutation_case!(
+    range_phase_products_are_deterministic_across_processes,
+    "explicit-range-products",
+    range_module_phase_dump
+);
+same_input_case!(
+    range_syntax_diagnostics_are_deterministic_across_processes,
+    "range-syntax-diagnostics",
+    range_syntax_diagnostic_dump
+);
+same_input_case!(
+    generic_interface_diagnostics_are_deterministic_across_processes,
+    "generic-interface-diagnostics",
+    generic_interface_diagnostic_dump
+);
+permutation_case!(
+    general_iteration_phase_products_are_deterministic_across_processes,
+    "general-iteration-products",
+    iteration_module_phase_dump
+);
+permutation_case!(
+    general_iteration_diagnostics_are_deterministic_across_processes,
+    "general-iteration-diagnostics",
+    iteration_diagnostic_dump
+);
 
 #[test]
 fn function_value_composition_products_are_deterministic_across_processes() {
@@ -619,988 +553,6 @@ fn function_value_composition_products_are_deterministic_across_processes() {
         FUNCTION_VALUE_COMPOSITION_TEST_NAME,
         function_value_composition_phase_dump,
     );
-}
-
-fn assert_cross_process_determinism(label: &str, test_name: &str, generate: fn() -> String) {
-    if let Some(output) = same_input_helper_output() {
-        fs::write(output, generate()).unwrap();
-        return;
-    }
-
-    let first = TemporaryFile::new(&format!("{label}-determinism-first"))
-        .expect("first determinism output must be creatable");
-    let second = TemporaryFile::new(&format!("{label}-determinism-second"))
-        .expect("second determinism output must be creatable");
-    run_helper_process(first.path(), test_name, None);
-    run_helper_process(second.path(), test_name, None);
-
-    assert_eq!(
-        first.read().unwrap(),
-        second.read().unwrap(),
-        "{label} phase products changed across independent compiler processes"
-    );
-}
-
-fn assert_cross_process_variants(label: &str, test_name: &str) {
-    let first = TemporaryFile::new(&format!("{label}-determinism-first"))
-        .expect("first determinism output must be creatable");
-    let second = TemporaryFile::new(&format!("{label}-determinism-second"))
-        .expect("second determinism output must be creatable");
-    run_helper_process(first.path(), test_name, Some(0));
-    run_helper_process(second.path(), test_name, Some(1));
-
-    assert_eq!(
-        first.read().unwrap(),
-        second.read().unwrap(),
-        "{label} products changed across independent compiler processes and input permutations"
-    );
-}
-
-fn run_helper_process(output: &Path, test_name: &str, variant: Option<usize>) {
-    let mut request = CurrentTestProcessRequest::new(
-        test_name,
-        TestProcessPolicy::with_default_diagnostic_limit(HELPER_TIMEOUT),
-    )
-    .with_environment(HELPER_OUTPUT, output);
-    if let Some(variant) = variant {
-        request = request.with_environment(HELPER_VARIANT, variant.to_string());
-    }
-
-    let observation = run_current_test_process(request)
-        .unwrap_or_else(|error| panic!("failed to run determinism helper {test_name:?}: {error}"));
-    let succeeded = matches!(
-        observation.termination,
-        TestProcessTermination::Completed(status) if status.success()
-    );
-    assert!(
-        succeeded && !observation.stdout.overflowed() && !observation.stderr.overflowed(),
-        "determinism helper {test_name:?} ended with {:?}\n\
-         stdout ({} bytes observed, {} retained):\n{}\n\
-         stderr ({} bytes observed, {} retained):\n{}",
-        observation.termination,
-        observation.stdout.observed_length(),
-        observation.stdout.retained().len(),
-        String::from_utf8_lossy(observation.stdout.retained()),
-        observation.stderr.observed_length(),
-        observation.stderr.retained().len(),
-        String::from_utf8_lossy(observation.stderr.retained()),
-    );
-}
-
-fn same_input_helper_output() -> Option<PathBuf> {
-    match (env::var_os(HELPER_OUTPUT), env::var_os(HELPER_VARIANT)) {
-        (None, None) => None,
-        (Some(output), None) => Some(output.into()),
-        (output, variant) => panic!(
-            "malformed determinism helper state for same-input case: \
-             {HELPER_OUTPUT}={output:?}, {HELPER_VARIANT}={variant:?}"
-        ),
-    }
-}
-
-fn variant_helper_state() -> Option<(PathBuf, usize)> {
-    match (env::var_os(HELPER_OUTPUT), env::var_os(HELPER_VARIANT)) {
-        (None, None) => None,
-        (Some(output), Some(variant)) => {
-            let variant = variant
-                .to_str()
-                .and_then(|variant| variant.parse().ok())
-                .filter(|variant| matches!(variant, 0 | 1))
-                .unwrap_or_else(|| {
-                    panic!("invalid determinism helper permutation {variant:?}; expected 0 or 1")
-                });
-            Some((output.into(), variant))
-        }
-        (output, variant) => panic!(
-            "malformed determinism helper state for permutation case: \
-             {HELPER_OUTPUT}={output:?}, {HELPER_VARIANT}={variant:?}"
-        ),
-    }
-}
-
-fn module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("module-products", variant);
-    let application = fixture.path().join("application");
-    let dependencies = fixture.path().join("dependencies");
-    let application_alias = fixture.path().join("application-alias");
-    link_directory(&application, &application_alias);
-
-    let imports = if variant == 0 {
-        "import first;\nimport second;\nfrom second import Item as SecondItem;\n"
-    } else {
-        "from second import Item as SecondItem;\nimport second;\nimport first;\n"
-    };
-    let sources = [
-        (
-            application.join("app.ska"),
-            format!(
-                "{imports}\n{}",
-                source_body_after_imports(include_str!(
-                    "../../../tests/golden/modules/cases/cycle/modules/app.ska"
-                ))
-            ),
-        ),
-        (
-            dependencies.join("first.ska"),
-            include_str!("../../../tests/golden/modules/cases/cycle/modules/first.ska").to_owned(),
-        ),
-        (
-            dependencies.join("second.ska"),
-            include_str!("../../../tests/golden/modules/cases/cycle/modules/second.ska").to_owned(),
-        ),
-    ];
-    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
-        write_source(&sources[index].0, &sources[index].1);
-    }
-
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::module_root(PathBuf::from("application-alias")),
-            ProviderRootConfiguration::module_root(PathBuf::from("./dependencies")),
-            ProviderRootConfiguration::module_root(PathBuf::from("application")),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(PathBuf::from("application")),
-            ProviderRootConfiguration::module_root(PathBuf::from("dependencies/.")),
-            ProviderRootConfiguration::module_root(PathBuf::from("./application-alias")),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let entry = if variant == 0 {
-        EntrySelector::Module("app".parse().unwrap())
-    } else {
-        EntrySelector::File(application_alias.join("app.ska"))
-    };
-    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty());
-    let hir = checked.hir.unwrap();
-    let mir = lower_final_hir(&hir);
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&mir),
-    )
-    .unwrap();
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
-            dump_module_graph(&graph),
-            render_diagnostics(graph.sources(), &resolved.diagnostics),
-            dump_resolved(&resolved.program),
-            dump_hir(&hir),
-            dump_mir(&mir),
-            assembly,
-        ),
-    )
-}
-
-fn module_diagnostic_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("module-diagnostics", variant);
-    let modules = fixture.path().join("modules");
-    let modules_alias = fixture.path().join("modules-alias");
-    let sources = [
-        (
-            modules.join("app.ska"),
-            include_str!("../../../tests/golden/modules/cases/cycle_diagnostics/modules/app.ska"),
-        ),
-        (
-            modules.join("left.ska"),
-            include_str!("../../../tests/golden/modules/cases/cycle_diagnostics/modules/left.ska"),
-        ),
-        (
-            modules.join("right.ska"),
-            include_str!("../../../tests/golden/modules/cases/cycle_diagnostics/modules/right.ska"),
-        ),
-    ];
-    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
-        write_source(&sources[index].0, sources[index].1);
-    }
-    link_directory(&modules, &modules_alias);
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::module_root(modules_alias.clone()),
-            ProviderRootConfiguration::module_root(modules.clone()),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(modules.clone()),
-            ProviderRootConfiguration::module_root(modules_alias),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let entry = EntrySelector::Module("app".parse().unwrap());
-    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(resolved.has_errors());
-
-    normalize_fixture_paths(
-        fixture.path(),
-        render_diagnostics(graph.sources(), &resolved.diagnostics),
-    )
-}
-
-fn generic_module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("generic-module-products", variant);
-    let modules = fixture.path().join("modules");
-    let modules_alias = fixture.path().join("modules-alias");
-    link_directory(&modules, &modules_alias);
-    let sources = [
-        (
-            modules.join("app.ska"),
-            "import model;\n\
-             from wrapper import Envelope;\n\
-             fn accept(\n\
-               ref cache: model::Cache<model::Item>,\n\
-               ref envelope: Envelope<model::Item>\n\
-             ) -> unit {}\n\
-             fn main() -> i64 {\n\
-               model::Cache<model::Item>.count = 42;\n\
-               return model::Cache<model::Item>.count;\n\
-             }\n",
-        ),
-        (
-            modules.join("model.ska"),
-            "public class Item {\n\
-               value: i64;\n\
-               init(value: i64) { self.value = value; }\n\
-               copy(ref source: Item) { self.value = source.value; }\n\
-               assign(ref source: Item) { self.value = source.value; }\n\
-             }\n\
-             public class Cache<T> {\n\
-               static cached: T?;\n\
-               static count: i64 = 0;\n\
-               value: T;\n\
-               init(ref value: T) { self.value = value; }\n\
-             }\n",
-        ),
-        (
-            modules.join("wrapper.ska"),
-            "import model;\n\
-             public class Envelope<T> {\n\
-               value: model::Cache<T>;\n\
-               init(ref value: model::Cache<T>) { self.value = value; }\n\
-             }\n",
-        ),
-    ];
-    for index in if variant == 0 { [0, 1, 2] } else { [2, 0, 1] } {
-        write_source(&sources[index].0, sources[index].1);
-    }
-
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::module_root(PathBuf::from("modules-alias")),
-            ProviderRootConfiguration::module_root(PathBuf::from("modules")),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(PathBuf::from("modules")),
-            ProviderRootConfiguration::module_root(PathBuf::from(
-                "modules-alias/..//modules-alias",
-            )),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let entry = EntrySelector::Module("app".parse().unwrap());
-    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let final_mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}",
-            dump_module_graph(&graph),
-            render_diagnostics(graph.sources(), &resolved.diagnostics),
-            dump_resolved(&resolved.program),
-            dump_hir(&hir),
-            planned_dump,
-            dump_mir(&final_mir),
-        ),
-    )
-}
-
-fn generic_interface_module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("generic-interface-products", variant);
-    let modules = fixture.path().join("modules");
-    let modules_alias = fixture.path().join("modules-alias");
-    link_directory(&modules, &modules_alias);
-    let sources = [
-        (
-            modules.join("app.ska"),
-            "import api;\n\
-             import model;\n\
-             from api import Value as ImportedValue;\n\
-             from model import Both as RenamedBoth;\n\
-             class Value { init() {} }\n\
-             fn inspect(ref value: Obj) -> i64 {\n\
-               var exact: bool = value is ImportedValue<i64>;\n\
-               var other: bool = value is api::Value<u64>;\n\
-               return ((ImportedValue<i64>) value).value();\n\
-             }\n\
-             fn nested(ref value: api::Value<model::Box<i64>>) -> unit {}\n\
-             fn cycles(ref left: api::Left<i64>, ref right: api::Right<i64>) -> unit {}\n\
-             fn main() -> i64 {\n\
-               var value: RenamedBoth = RenamedBoth(42);\n\
-               var reader: model::Reader<RenamedBoth> = model::Reader<RenamedBoth>();\n\
-               return reader.read(value) + value.name() - inspect(value) - 7;\n\
-             }\n",
-        ),
-        (
-            modules.join("api.ska"),
-            "public interface Value<T> { fn value() -> T; }\n\
-             public interface Named<T> { fn name() -> i64; }\n\
-             public interface Left<T> { fn cross(ref value: Right<T>) -> T; }\n\
-             public interface Right<T> { fn cross(ref value: Left<T>) -> T; }\n",
-        ),
-        (
-            modules.join("model.ska"),
-            "import api;\n\
-             public class Box<T> { value: T; init(value: T) { self.value = value; } }\n\
-             public class Both implements api::Value<i64>, api::Named<i64>, api::Named<u64> {\n\
-               amount: i64;\n\
-               init(amount: i64) { self.amount = amount; }\n\
-               fn value() -> i64 { return self.amount; }\n\
-               fn name() -> i64 { return 7; }\n\
-             }\n\
-             public class Reader<Source> where Source: api::Value<i64> {\n\
-               init() {}\n\
-               fn read(ref source: Source) -> i64 { return source.value(); }\n\
-             }\n",
-        ),
-    ];
-    for index in if variant == 0 { [0, 1, 2] } else { [2, 0, 1] } {
-        write_source(&sources[index].0, sources[index].1);
-    }
-
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::module_root(PathBuf::from("modules-alias")),
-            ProviderRootConfiguration::module_root(PathBuf::from("modules")),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(PathBuf::from("modules")),
-            ProviderRootConfiguration::module_root(PathBuf::from(
-                "modules-alias/..//modules-alias",
-            )),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let graph = load_module_graph(
-        &EntrySelector::Module("app".parse().unwrap()),
-        fixture.path(),
-        &providers,
-    )
-    .unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary_dump = dump_preliminary_mir(&preliminary);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let mir = run_mir_pipeline(synthesize_static_lifecycle(
-        verify_planned_mir(planned).unwrap(),
-    ))
-    .unwrap();
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::with_runtime_trace(&mir, graph.sources()),
-    )
-    .unwrap();
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
-            dump_module_graph(&graph),
-            dump_resolved(&resolved.program),
-            dump_hir(&hir),
-            preliminary_dump,
-            planned_dump,
-            dump_mir(&mir),
-            assembly,
-        ),
-    )
-}
-
-fn generic_operator_module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("generic-operator-products", variant);
-    let application = fixture.path().join("application");
-    let standard_library = fixture.path().join("standard-library");
-    let mut sources = vec![
-        (
-            application.join("app.ska"),
-            "import model;\n\
-             fn main() -> i64 {\n\
-               var primitive: model::Adder<u64> = model::Adder<u64>();\n\
-               var object_adder: model::Adder<model::Number> = model::Adder<model::Number>();\n\
-               var left: model::Number = model::Number(17);\n\
-               var right: model::Number = model::Number(25);\n\
-               var result: model::Number = object_adder.add(left, right);\n\
-               return (i64) primitive.add(17u, 25u) + result.value - 42;\n\
-             }\n",
-        ),
-        (
-            application.join("model.ska"),
-            "from std::ops import OpAdd;\n\
-             public class Number implements OpAdd<Number, Number> {\n\
-               value: i64;\n\
-               init(value: i64) { self.value = value; }\n\
-               fn op_add(ref rhs: Number) -> Number { return Number(self.value + rhs.value); }\n\
-             }\n\
-             public class Adder<T> where T: OpAdd<T, T> {\n\
-               init() {}\n\
-               fn add(ref left: T, ref right: T) -> T { return left + right; }\n\
-             }\n",
-        ),
-    ];
-    sources.extend(
-        canonical_standard_library_sources(&[])
-            .into_iter()
-            .map(|(relative, source)| (standard_library.join(relative), source)),
-    );
-    if variant != 0 {
-        sources.reverse();
-    }
-    for (path, source) in sources {
-        write_source(&path, source);
-    }
-
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::standard_library(standard_library.clone()),
-            ProviderRootConfiguration::module_root(application.clone()),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(application.clone()),
-            ProviderRootConfiguration::standard_library(standard_library.clone()),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let graph = load_module_graph(
-        &EntrySelector::Module("app".parse().unwrap()),
-        fixture.path(),
-        &providers,
-    )
-    .unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let resolved_dump = dump_resolved(&resolved.program);
-    assert!(
-        resolved_dump.contains("primitive-intrinsic AddU64"),
-        "{resolved_dump}"
-    );
-    assert!(resolved_dump.contains("class-witness"), "{resolved_dump}");
-
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let hir_dump = dump_hir(&hir);
-    assert!(hir_dump.contains("AddU64"), "{hir_dump}");
-    assert!(hir_dump.contains("ObjectCall interface"), "{hir_dump}");
-    assert!(!hir_dump.contains("OperatorSelection"), "{hir_dump}");
-
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary_dump = dump_preliminary_mir(&preliminary);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
-        verify_planned_mir(planned).unwrap(),
-    ))
-    .unwrap();
-    let final_dump = dump_mir(&final_mir);
-    assert!(!final_dump.contains("Operator"), "{final_dump}");
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&final_mir),
-    )
-    .unwrap();
-    assert!(!assembly.contains("ska_rt_operator"), "{assembly}");
-    let public_symbols = assembly
-        .lines()
-        .filter(|line| line.starts_with(".globl "))
-        .collect::<Vec<_>>();
-    let pre_operator_public_symbol_baseline = [".globl main"];
-    assert_eq!(
-        public_symbols, pre_operator_public_symbol_baseline,
-        "operator protocols must not change the public symbol surface:\n{assembly}"
-    );
-    let runtime_references = assembly
-        .lines()
-        .filter_map(|line| line.trim().strip_prefix("call ska_rt_"))
-        .collect::<Vec<_>>();
-    let pre_operator_runtime_reference_baseline = ["abi_v9"];
-    assert_eq!(
-        runtime_references, pre_operator_runtime_reference_baseline,
-        "operator protocols must not add a runtime ABI service:\n{assembly}"
-    );
-    assert!(assembly.contains(".method.op_add."), "{assembly}");
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
-            dump_module_graph(&graph),
-            resolved_dump,
-            hir_dump,
-            preliminary_dump,
-            planned_dump,
-            final_dump,
-            assembly,
-        ),
-    )
-}
-
-fn range_module_phase_dump(variant: usize) -> String {
-    const APP_SOURCE: &str = "import model;\n\
-         from std::range import Range;\n\
-         fn main() -> i64 {\n\
-           var primitive: model::Advance<u64> = model::Advance<u64>();\n\
-           var objects: model::Advance<model::Value> = model::Advance<model::Value>();\n\
-           var total: i64 = (i64) primitive.next(16u) + (i64) objects.next(model::Value(24u)).get();\n\
-           for (value in Range<u64>(2u, 5u)) { total = total + (i64) value; }\n\
-           for (value in Range<model::Value>(model::Value(6u), model::Value(8u))) { total = total + (i64) value.get(); }\n\
-           for (value in 8u .. 10u) { total = total + (i64) value; }\n\
-           for (value in model::Value(10u) .. model::Value(12u)) { total = total + (i64) value.get(); }\n\
-           return total;\n\
-         }\n";
-    const MODEL_SOURCE: &str = "from std::ops import OpLess;\n\
-         from std::range import Successor;\n\
-         public class Value implements OpLess<Value>, Successor<Value> {\n\
-           private value: u64;\n\
-           init(value: u64) { self.value = value; }\n\
-           fn op_less(ref rhs: Value) -> bool { return self.value < rhs.value; }\n\
-           fn successor() -> Value { return Value(self.value + 1u); }\n\
-           fn get() -> u64 { return self.value; }\n\
-         }\n\
-         public class Advance<T> where T: Successor<T> {\n\
-           init() {}\n\
-           fn next(value: T) -> T { return value.successor(); }\n\
-         }\n";
-
-    let fixture = ModuleFixture::new("range-products", variant);
-    let application = fixture.path().join("application");
-    let standard_library = fixture.path().join("standard-library");
-    let mut sources = vec![
-        (application.join("app.ska"), APP_SOURCE),
-        (application.join("model.ska"), MODEL_SOURCE),
-    ];
-    sources.extend(
-        canonical_standard_library_sources(&[])
-            .into_iter()
-            .map(|(relative, source)| (standard_library.join(relative), source)),
-    );
-    if variant != 0 {
-        sources.reverse();
-    }
-    for (path, source) in sources {
-        write_source(&path, source);
-    }
-
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::standard_library(standard_library),
-            ProviderRootConfiguration::module_root(application),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(application),
-            ProviderRootConfiguration::standard_library(standard_library),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let graph = load_module_graph(
-        &EntrySelector::Module("app".parse().unwrap()),
-        fixture.path(),
-        &providers,
-    )
-    .unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let resolved_dump = dump_resolved(&resolved.program);
-    assert!(
-        resolved_dump.contains("RangeSource template"),
-        "{resolved_dump}"
-    );
-    assert!(resolved_dump.contains("AddOneU64"), "{resolved_dump}");
-    assert!(
-        resolved_dump.contains("ClosedBoundSelection 0 class-witness"),
-        "{resolved_dump}"
-    );
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let hir_dump = dump_hir(&hir);
-    assert!(hir_dump.contains("RangeLoopEvidence"));
-    assert!(hir_dump.contains("PrimitiveRange endpoint=u64"));
-    assert!(hir_dump.contains("Protocol interface="));
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary_dump = dump_preliminary_mir(&preliminary);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
-        verify_planned_mir(planned).unwrap(),
-    ))
-    .unwrap();
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&final_mir),
-    )
-    .unwrap();
-    assert!(!assembly.contains("skald_rt_range"), "{assembly}");
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "{}GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
-            range_frontend_phase_dump(APP_SOURCE, MODEL_SOURCE),
-            dump_module_graph(&graph),
-            resolved_dump,
-            hir_dump,
-            preliminary_dump,
-            planned_dump,
-            dump_mir(&final_mir),
-            assembly,
-        ),
-    )
-}
-
-fn range_frontend_phase_dump(app_source: &str, model_source: &str) -> String {
-    let mut sources = SourceDatabase::new();
-    let source_ids = [
-        sources.add("app.ska", app_source),
-        sources.add("model.ska", model_source),
-    ];
-    let mut output = String::new();
-    for (label, source_id) in ["APP", "MODEL"].into_iter().zip(source_ids) {
-        let source = sources.get(source_id).unwrap();
-        let lexed = lex(source);
-        assert!(lexed.diagnostics.is_empty());
-        let parsed = parse(source, &lexed.tokens);
-        assert!(parsed.diagnostics.is_empty());
-        output.push_str(&format!(
-            "{label} TOKENS\n{}{label} AST\n{}",
-            dump_tokens(source, &lexed.tokens),
-            dump_ast(&parsed.ast),
-        ));
-    }
-    output
-}
-
-fn range_syntax_diagnostic_dump() -> String {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add(
-        "range-direct-source-only.ska",
-        include_str!("../../../tests/golden/ranges/direct_source_only.ska"),
-    );
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert_eq!(parsed.diagnostics.len(), 4, "{:?}", parsed.diagnostics);
-    assert!(
-        parsed
-            .diagnostics
-            .iter()
-            .all(|diagnostic| diagnostic.code == INVALID_RANGE_SYNTAX),
-        "{:?}",
-        parsed.diagnostics
-    );
-
-    format!(
-        "TOKENS\n{}AST\n{}DIAGNOSTICS\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        render_diagnostics(&sources, &parsed.diagnostics),
-    )
-}
-
-fn iteration_module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("general-iteration-products", variant);
-    let application = fixture.path().join("application");
-    let standard_library = fixture.path().join("standard-library");
-    let mut sources = vec![
-        (
-            application.join("app.ska"),
-            "import model;\n\
-             fn concrete(ref values: model::Values) -> i64 {\n\
-               var sum: i64 = 0;\n\
-               for (item in values) { sum = sum + item; }\n\
-               return sum;\n\
-             }\n\
-             fn generic(ref scanner: model::Scanner<model::Values>, ref values: model::Values) -> i64 {\n\
-               return scanner.scan(values);\n\
-             }\n\
-             fn main() -> i64 {\n\
-               var values: model::Values = model::Values();\n\
-               var scanner: model::Scanner<model::Values> = model::Scanner<model::Values>();\n\
-               return concrete(values) + generic(scanner, values);\n\
-             }\n",
-        ),
-        (
-            application.join("model.ska"),
-            "from std::iter import Iterable;\n\
-             public class Values implements Iterable<i64, u64> {\n\
-               init() {}\n\
-               fn iter_state() -> u64 { return 0u; }\n\
-               fn iter_next(mut ref state: u64) -> i64? { return none; }\n\
-             }\n\
-             public class Scanner<Source> where Source: Iterable<i64, u64> {\n\
-               init() {}\n\
-               fn scan(ref values: Source) -> i64 {\n\
-                 var sum: i64 = 0;\n\
-                 for (item in values) { sum = sum + item; }\n\
-                 return sum;\n\
-               }\n\
-             }\n",
-        ),
-    ];
-    sources.extend(
-        canonical_standard_library_sources(&[])
-            .into_iter()
-            .map(|(relative, source)| (standard_library.join(relative), source)),
-    );
-    if variant != 0 {
-        sources.reverse();
-    }
-    for (path, source) in sources {
-        write_source(&path, source);
-    }
-
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::standard_library(standard_library),
-            ProviderRootConfiguration::module_root(application),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(application),
-            ProviderRootConfiguration::standard_library(standard_library),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let graph = load_module_graph(
-        &EntrySelector::Module("app".parse().unwrap()),
-        fixture.path(),
-        &providers,
-    )
-    .unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary_dump = dump_preliminary_mir(&preliminary);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
-        verify_planned_mir(planned).unwrap(),
-    ))
-    .unwrap();
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&final_mir),
-    )
-    .unwrap();
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
-            dump_module_graph(&graph),
-            dump_resolved(&resolved.program),
-            dump_hir(&hir),
-            preliminary_dump,
-            planned_dump,
-            dump_mir(&final_mir),
-            assembly,
-        ),
-    )
-}
-
-fn iteration_diagnostic_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("general-iteration-diagnostics", variant);
-    let application = fixture.path().join("application");
-    let standard_library = fixture.path().join("standard-library");
-    let claims = if variant == 0 {
-        "Iterable<i64, u64>, Iterable<f64, i64>"
-    } else {
-        "Iterable<f64, i64>, Iterable<i64, u64>"
-    };
-    let app = format!(
-        "from std::iter import Iterable;\n\
-         class Both implements {claims} {{ init() {{}} }}\n\
-         fn scan(ref values: Both) -> unit {{ for (item in values) {{}} }}\n\
-         fn main() -> i64 {{ return 0; }}\n"
-    );
-    write_source(&application.join("app.ska"), &app);
-    for (relative, source) in canonical_standard_library_sources(&[]) {
-        write_source(&standard_library.join(relative), source);
-    }
-    let providers = normalize_provider_roots(
-        fixture.path(),
-        &[
-            ProviderRootConfiguration::module_root(application),
-            ProviderRootConfiguration::standard_library(standard_library),
-        ],
-    )
-    .unwrap();
-    let graph = load_module_graph(
-        &EntrySelector::Module("app".parse().unwrap()),
-        fixture.path(),
-        &providers,
-    )
-    .unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(resolved.diagnostics.has_errors());
-    let rendered = render_diagnostics(graph.sources(), &resolved.diagnostics).replace(
-        &format!("class Both implements {claims} {{ init() {{}} }}"),
-        "class Both implements <first-claim>, <second-claim> { init() {} }",
-    );
-    normalize_fixture_paths(fixture.path(), rendered)
-}
-
-fn generic_interface_diagnostic_dump() -> String {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add(
-        "generic-interface-specialization.ska",
-        "interface Chain<T> { fn next() -> Chain<T>; }\n\
-         interface Expand<T> { fn next() -> Expand<T[]>; }\n\
-         fn first(ref chain: Chain<(shared Item)?>, ref failed: Expand<i64>) -> unit {}\n\
-         fn second(ref chain: Chain<shared? Item>, ref failed: Expand<i64>) -> unit {}\n\
-         class Item {}\n\
-         fn main() -> i64 { return 0; }\n",
-    );
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}DIAGNOSTICS\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        render_diagnostics(&sources, &resolved.diagnostics),
-    )
-}
-
-fn source_body_after_imports(source: &str) -> &str {
-    source
-        .split_once("\n\n")
-        .expect("a reusable module fixture must separate imports from its body")
-        .1
-}
-
-fn write_source(path: &Path, text: &str) {
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, text).unwrap();
-}
-
-#[cfg(unix)]
-fn link_directory(target: &Path, link: &Path) {
-    std::os::unix::fs::symlink(target, link).unwrap();
-}
-
-#[cfg(windows)]
-fn link_directory(target: &Path, link: &Path) {
-    std::os::windows::fs::symlink_dir(target, link).unwrap();
-}
-
-fn normalize_fixture_paths(fixture: &Path, output: String) -> String {
-    let path_normalized = output.replace(fixture.to_str().unwrap(), "<fixture>");
-    path_normalized
-        .lines()
-        .map(|line| {
-            if line.trim_start().starts_with("display ") {
-                format!(
-                    "{}display <spelling>",
-                    &line[..line.len() - line.trim_start().len()]
-                )
-            } else {
-                normalize_spans(line)
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-        + "\n"
-}
-
-fn normalize_spans(line: &str) -> String {
-    let bytes = line.as_bytes();
-    let mut output = String::with_capacity(line.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'@' {
-            let start = index;
-            index += 1;
-            let first_digits = index;
-            while index < bytes.len() && bytes[index].is_ascii_digit() {
-                index += 1;
-            }
-            if index > first_digits && bytes.get(index..index + 2) == Some(b"..") {
-                index += 2;
-                let second_digits = index;
-                while index < bytes.len() && bytes[index].is_ascii_digit() {
-                    index += 1;
-                }
-                if index > second_digits {
-                    output.push_str("@<span>");
-                    continue;
-                }
-            }
-            output.push_str(&line[start..index]);
-        } else {
-            let character = line[index..].chars().next().unwrap();
-            output.push(character);
-            index += character.len_utf8();
-        }
-    }
-    output
 }
 
 fn object_phase_dump() -> String {
@@ -2654,21 +1606,5 @@ fn replace_standard_test_assertions(source: &mut String, declarations: &mut Stri
         if source.contains(&format!("{name}(")) {
             declarations.push_str(&format!("extern fn {name}({parameters}) -> unit;\n"));
         }
-    }
-}
-
-struct ModuleFixture {
-    directory: TemporaryDirectory,
-}
-
-impl ModuleFixture {
-    fn new(label: &str, variant: usize) -> Self {
-        let directory = TemporaryDirectory::new(&format!("{label}-{variant}"))
-            .expect("module fixture directory must be creatable");
-        Self { directory }
-    }
-
-    fn path(&self) -> &Path {
-        self.directory.path()
     }
 }
