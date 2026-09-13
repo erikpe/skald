@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     backend::target_by_name,
-    diagnostics::{render_diagnostic, Diagnostics, Severity},
+    diagnostics::{render_diagnostics_from_iter, Diagnostics, Severity},
     module::EntrySelector,
     reporting::{
         ReportArtifactKind, ReportDetail, ReportEvent, ReportObserver, ReportOutcome, ReportPhase,
@@ -268,14 +268,12 @@ fn render_selected_diagnostics(
     diagnostics: &Diagnostics,
     diagnostic_level: DiagnosticLevel,
 ) -> String {
-    diagnostics
-        .iter()
-        .filter(|diagnostic| {
+    render_diagnostics_from_iter(
+        sources,
+        diagnostics.iter().filter(|diagnostic| {
             diagnostic.severity == Severity::Error || diagnostic_level == DiagnosticLevel::Warning
-        })
-        .map(|diagnostic| render_diagnostic(sources, diagnostic))
-        .collect::<Vec<_>>()
-        .join("\n")
+        }),
+    )
 }
 
 fn paths_refer_to_same_file(input: &Path, output: &Path) -> io::Result<bool> {

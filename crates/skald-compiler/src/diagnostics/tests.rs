@@ -1,4 +1,4 @@
-use crate::source::SourceDatabase;
+use crate::source::{SourceDatabase, Span};
 
 use super::*;
 
@@ -54,4 +54,45 @@ fn rendering_uses_character_columns_for_utf8() {
         Diagnostic::error("LEX001", "unexpected").with_primary_label(span, "invalid here");
 
     assert!(render_diagnostic(&sources, &diagnostic).contains("unicode.ska:1:2"));
+}
+
+#[test]
+fn batch_rendering_uses_one_ordered_buffer_for_all_diagnostics() {
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("mixed.ska", "é\tbad\n");
+    let source = sources.get(source_id).unwrap();
+    let valid_span = source.span(3, 6).unwrap();
+    let invalid_span = Span::empty(source_id, source.len() + 1);
+    let diagnostics: Diagnostics = [
+        Diagnostic::warning("TEST001", "unicode and tab")
+            .with_primary_label(valid_span, "selected")
+            .with_note("first"),
+        Diagnostic::error("TEST002", "invalid location")
+            .with_primary_label(invalid_span, "not rendered"),
+    ]
+    .into_iter()
+    .collect();
+
+    assert_eq!(
+        render_diagnostics(&sources, &diagnostics),
+        concat!(
+            "warning[TEST001]: unicode and tab\n",
+            " --> mixed.ska:1:3\n",
+            "   |\n",
+            "1 | é\tbad\n",
+            "   |  \t^^^ selected\n",
+            "  = note: first\n",
+            "\n",
+            "error[TEST002]: invalid location\n",
+            " --> mixed.ska:<invalid span>\n",
+        )
+    );
+}
+
+#[test]
+fn rendering_empty_diagnostics_produces_an_empty_buffer() {
+    assert_eq!(
+        render_diagnostics(&SourceDatabase::new(), &Diagnostics::new()),
+        ""
+    );
 }

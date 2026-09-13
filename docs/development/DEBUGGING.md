@@ -36,6 +36,11 @@ for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
 Their text is a deterministic
 debugging and regression format, not a stable interchange format.
 
+`diagnostics::render_diagnostics` preserves diagnostic order and separates
+entries with one blank line. Batch rendering and the CLI's severity-filtered
+presentation append directly into one output buffer; single-diagnostic callers
+can use `diagnostics::render_diagnostic` with the same byte-stable format.
+
 The request-local `CompilationInspectors` service exposes the focused result after
 preliminary MIR and planned-MIR verification. Its `activation_dump` shows
 declared, active, and inactive fields; canonical first triggers and witnesses;

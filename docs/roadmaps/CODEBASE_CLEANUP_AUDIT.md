@@ -130,7 +130,7 @@ endpoint and names any deferred work.
 | [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | Open | P2 | 3 | M | Medium | C | C, M |
 | [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Complete | P2 | 3 | S–M | Low | O | C, M |
 | [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | Complete | P2 | 3 | M | Low | O | M, E |
-| [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | Open | P3 | 2 | S | Low | O | C, M |
+| [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | Complete | P3 | 2 | S | Low | O | C, M |
 | [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | Complete | P2 | 3 | M | Low | O | M, E |
 | [A29](#a29--remove-obsolete-rollout-comments-and-broad-allowances) | Remove obsolete rollout comments and broad allowances | Complete | P2 | 2 | S | Low | O | M, R |
 | [A30](#a30--share-standard-library-bounds-normalization) | Share standard-library bounds normalization | Open | P2 | 3 | S–M | Medium | O | M, R |
@@ -1111,6 +1111,8 @@ tests, full repository gate, and Rust 1.82.0 workspace check passed.
 
 ### A27 — Render diagnostics into one output buffer
 
+**Status:** Complete (2026-09-13).
+
 **Evidence:** [`render_diagnostics`](../../crates/skald-compiler/src/diagnostics/render.rs)
 renders each diagnostic into a separate `String`, collects a vector, then
 joins it. All renderers already use `fmt::Write` internally.
@@ -1123,6 +1125,21 @@ additional caches.
 **First PR / validation:** exact multi-diagnostic output, UTF-8, tabs, empty
 diagnostics, and invalid-span fallback. This is a small allocation/readability
 improvement, not an expected major compiler speedup.
+
+**Delivered:** single and batch rendering now share one private append path.
+Batch rendering writes diagnostics and separators directly into one `String`
+without a per-diagnostic `String` vector, and label indentation and markers no
+longer allocate temporary strings. The CLI's severity-filtered presentation
+uses the same iterator-based crate-private boundary while the public
+`render_diagnostic` and `render_diagnostics` APIs and their exact text remain
+unchanged.
+
+Exact owner tests cover ordered multi-diagnostic output, UTF-8 character
+columns, tab-preserving marker alignment, empty diagnostics, and invalid-span
+fallback. Focused diagnostics and CLI tests, public API coverage,
+cross-process diagnostic determinism, all-target Clippy, the complete
+repository gate, all 629 golden observations, and the Rust 1.82.0 workspace
+check pass.
 
 ### A28 — Restore concise facades in selected hotspots
 

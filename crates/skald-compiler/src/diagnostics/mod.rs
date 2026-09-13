@@ -9,6 +9,7 @@ mod render;
 mod wording;
 
 pub use model::{Diagnostic, Diagnostics, Label, LabelStyle, Severity};
+pub(crate) use render::render_diagnostics_from_iter;
 pub use render::{render_diagnostic, render_diagnostics};
 pub(crate) use wording::format_type_list;
 
