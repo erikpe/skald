@@ -8,7 +8,9 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-No implementation roadmap is currently active.
+| Roadmap | Status | Purpose | Next task | Dependencies |
+| --- | --- | --- | --- | --- |
+| [Structural AST walking](STRUCTURAL_AST_WALKING_ROADMAP.md) | Planned | Give source-shaped structural traversal one private iterative syntax owner while preserving phase-owned meaning | W01 — Establish the iterative syntax traversal contract | Accepted structural-walking design; completed A01 and A09–A12 boundaries |
 
 ## Pending discovery and planning records
 

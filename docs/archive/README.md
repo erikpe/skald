@@ -41,6 +41,7 @@ Archived plans:
 - [Raw compiler stderr observation](GOLDEN_COMPILER_STDERR_OBSERVATION_ROADMAP.md)
 - [Test plumbing ownership design proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
 - [Test plumbing ownership](TEST_PLUMBING_OWNERSHIP_ROADMAP.md)
+- [Structural AST walking design proposal](STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md)
 
 - [First vertical slice](FIRST_VERTICAL_SLICE_ROADMAP.md)
 - [`i64` output and golden-test observability](I64_OUTPUT_ROADMAP.md)

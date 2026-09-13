@@ -6,7 +6,8 @@ publication selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
 The [completed retrospective](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
 records accepted boundaries, explicit narrowing, and prerequisites for further
-work. A14's accepted object-view planning design is fully implemented;
+work. A14's accepted object-view planning design is fully implemented. A13 has
+an accepted structural-walking design and staged implementation roadmap;
 remaining architectural changes need focused designs and PR-sized tasks.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
@@ -97,10 +98,11 @@ Skald's cleanup.
 
 Identifiers are finding references within this audit, not implementation tasks.
 Status is `Complete` only after the corresponding section records delivered
-work and its validation; findings without that record remain `Open`. `Partial`
-means a delivered improvement still has an outstanding original obligation.
-`Complete (bounded)` means the detailed entry explicitly accepts a narrower
-endpoint and names any deferred work.
+work and its validation. `Planned` means an accepted design and active
+implementation roadmap exist; findings without either record remain `Open`.
+`Partial` means a delivered improvement still has an outstanding original
+obligation. `Complete (bounded)` means the detailed entry explicitly accepts a
+narrower endpoint and names any deferred work.
 
 | ID | Improvement | Status | Priority | Impact | Effort | Risk | Evidence | Benefits |
 | --- | --- | --- | --- | ---: | --- | --- | --- | --- |
@@ -116,7 +118,7 @@ endpoint and names any deferred work.
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete (bounded) | P2 | 4 | M–L | High | C | M, C |
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete (bounded) | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
-| [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Open | P2 | 3 | M | Medium | O | M, E, R |
+| [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Planned | P2 | 3 | M | Medium | O | M, E, R |
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Complete | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
@@ -706,6 +708,14 @@ documentation checks, 21 compiler compile-fail documentation tests, and all
 
 ### A13 — Share structural AST walking where responsibilities repeat
 
+**Status:** Planned; the iterative syntax traversal contract is next.
+
+**Accepted design:**
+[Structural AST Walking Design Proposal](../archive/STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md).
+
+**Implementation plan:**
+[Structural AST Walking Roadmap](STRUCTURAL_AST_WALKING_ROADMAP.md).
+
 **Evidence:**
 [compiler dependency collection](../../crates/skald-compiler/src/module/graph/compiler_dependencies.rs),
 [expression-depth validation](../../crates/skald-compiler/src/syntax/parser/expression_depth.rs),
@@ -719,10 +729,12 @@ order and prune/continue control where at least two consumers agree. Keep
 binding scopes, depth accounting, and dependency meaning with the consumer.
 Prefer iterative traversal where it also addresses A01.
 
-**First PR / validation:** migrate two non-semantic walkers and use a source
-containing every current child-bearing expression/statement family. Preserve
-lexical origin order and source spans. Avoid a generic visitor framework for
-all compiler IRs.
+**Next step:** establish the crate-private iterative node/event walker and its
+all-shapes, source-order, span, balanced-event, and pruning tests before any
+production consumer migrates. The roadmap then moves both non-semantic walkers,
+isolates the resolver's local annotation/initializer ordering correction, and
+finally migrates specialization discovery. Avoid a generic visitor framework
+for all compiler IRs.
 
 ### A14 — Separate object-view planning from alias-argument checking
 
