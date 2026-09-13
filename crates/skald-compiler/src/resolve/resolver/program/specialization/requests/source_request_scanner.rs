@@ -1,4 +1,8 @@
 //! Source-order discovery of explicit generic applications in the AST.
+//!
+//! Source types are closed where they are written. In particular, a local's
+//! declared type is closed before its initializer is scanned; binding scope is
+//! owned by ordinary body resolution and does not affect request discovery.
 
 use super::syntax_type_closer::SyntaxTypeCloser;
 
@@ -135,8 +139,8 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
                 self.visit_expressions(&statement.arguments)
             }
             syntax::Statement::Local(statement) => {
-                self.visit_expression(&statement.initializer);
                 self.visit_type(&statement.type_syntax);
+                self.visit_expression(&statement.initializer);
             }
             syntax::Statement::Return(statement) => {
                 if let Some(value) = &statement.value {

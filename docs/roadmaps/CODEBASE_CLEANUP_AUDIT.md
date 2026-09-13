@@ -712,7 +712,9 @@ documentation checks, 21 compiler compile-fail documentation tests, and all
 all-shapes, ordering, span, opaque-type, balanced-event, and pruning coverage
 were delivered on 2026-09-13. Parser depth measurement and compiler dependency
 collection now use that contract while retaining phase-owned policy. The
-specialization source-order correction is next.
+specialization scanner now closes local annotations before their initializers,
+with exact identity, provenance, dump-order, and downstream regression
+coverage. Specialization discovery still uses its old recursive scanner.
 
 **Accepted design:**
 [Structural AST Walking Design Proposal](../archive/STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md).
@@ -733,11 +735,9 @@ order and prune/continue control where at least two consumers agree. Keep
 binding scopes, depth accounting, and dependency meaning with the consumer.
 Prefer iterative traversal where it also addresses A01.
 
-**Next step:** restore and freeze type-before-initializer source order for
-specialization requests while the existing recursive scanner remains in place.
-After that isolated behavioral correction, migrate specialization discovery
-onto the established walker. Avoid a generic visitor framework for all
-compiler IRs.
+**Next step:** migrate specialization discovery onto the established walker
+against the frozen source-order baseline. Avoid a generic visitor framework
+for all compiler IRs.
 
 ### A14 — Separate object-view planning from alias-argument checking
 

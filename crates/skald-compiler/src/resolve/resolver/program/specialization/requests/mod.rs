@@ -6,6 +6,9 @@
 mod source_request_scanner;
 mod syntax_type_closer;
 
+#[cfg(test)]
+mod tests;
+
 use source_request_scanner::SourceRequestScanner;
 use syntax_type_closer::SyntaxTypeCloser;
 

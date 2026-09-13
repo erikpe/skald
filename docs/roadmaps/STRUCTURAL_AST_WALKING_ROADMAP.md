@@ -1,6 +1,6 @@
 # Structural AST Walking Roadmap
 
-Status: in progress; W01 and W02 are complete and W03 is next.
+Status: in progress; W01 through W03 are complete and W04 is next.
 
 This roadmap implements
 [cleanup finding A13](CODEBASE_CLEANUP_AUDIT.md#a13--share-structural-ast-walking-where-responsibilities-repeat)
@@ -58,7 +58,7 @@ phase product remain with their current owners.
 
 - [x] W01 — Establish the iterative syntax traversal contract
 - [x] W02 — Migrate non-semantic structural consumers
-- [ ] W03 — Restore and freeze specialization source order
+- [x] W03 — Restore and freeze specialization source order
 - [ ] W04 — Migrate specialization discovery
 - [ ] W05 — Audit the boundary and close A13
 
@@ -197,25 +197,25 @@ tests, all 53 process-determinism cases, and all 629 golden executions;
 **Purpose:** isolate the resolver's one intentional ordering correction before
 its recursive scanner is mechanically replaced.
 
-- [ ] Add a focused specialization fixture with distinct closed generic class
+- [x] Add a focused specialization fixture with distinct closed generic class
   and interface applications in a local annotation and its initializer. Record
   current keys, allocated identities, provenance spans, diagnostics, and
   resolved dump order.
-- [ ] Confirm all other source-request locations already follow source spelling
+- [x] Confirm all other source-request locations already follow source spelling
   order, including parameters/results, class headers, fields/static
   initializers, casts/tests, allocations, arrays, calls, conditionals, both
   loop sources, assignments, and projections.
-- [ ] Change the existing scanner so a local type annotation is closed before
+- [x] Change the existing scanner so a local type annotation is closed before
   its initializer is scanned. Keep local bindings out of their own initializer;
   semantic range inference already belongs to the later semantic request pass.
-- [ ] Update only assertions or deterministic snapshots whose identity order
+- [x] Update only assertions or deterministic snapshots whose identity order
   demonstrably follows from that correction. Preserve accepted programs,
   diagnostics and labels, provenance contents, HIR/MIR, native behavior, and
   ownership traces.
-- [ ] State the corrected type-before-initializer rule in the specialization
+- [x] State the corrected type-before-initializer rule in the specialization
   scanner's module documentation and the existing generic compiler contract,
   without turning internal identity numbers into a language promise.
-- [ ] Keep this change on the existing recursive scanner. Do not adopt the
+- [x] Keep this change on the existing recursive scanner. Do not adopt the
   shared walker in the same PR.
 
 **Tests:** Run focused specialization coordinator, declaration, body, interface,
@@ -228,6 +228,37 @@ local annotations and initializers; the intended identity/dump delta is
 explicit and fully characterized; every other result remains unchanged; and
 the old scanner remains otherwise structurally intact for a clean W04
 comparison.
+
+#### W03 delivery record
+
+The existing recursive source-request scanner now closes a local's declared
+type before scanning its initializer. Its module documentation and the generic
+compiler contract state that written order, keep binding scope with ordinary
+body resolution, and describe numeric specialization identities as internal
+compiler details. No shared-walker migration was included.
+
+A focused fixture freezes the complete ordering delta for distinct nested
+generic class and interface applications: canonical template/argument keys,
+allocated class and interface identities, exact application-origin byte
+ranges, empty diagnostics, and resolved-dump specialization order. Before the
+correction, the initializer reserved `View<bool>` as `i0` and `Derived<...>` as
+`c0`; afterward, the annotation reserves `View<i64>` as `i0` and `Base<...>` as
+`c0`, with the initializer applications following as `i1` and `c1`.
+Provenance contents and spans are unchanged. A second valid fixture proves that
+the corrected class order continues through type checking to verified
+preliminary MIR. Review of every remaining scanner branch confirmed source
+spelling order for parameters and results, class headers, fields and static
+initializers, casts and tests, allocations, arrays, calls, conditionals,
+iterable and range loops, assignments, and projections.
+
+Focused validation passed all 55 specialization tests, 26 generic-class tests,
+22 interface tests, 25 range-language-item tests, and six generic/range
+cross-process determinism cases. Full determinism passed for 36 selected
+generic-class, generic-interface, and range golden leaves. No existing
+expectation required an identity, diagnostic, HIR, MIR, native-behavior, or
+ownership-trace update. The full `make check` gate passed with 3,159 compiler
+unit tests, all 53 process-determinism cases, and all 629 golden executions;
+`make msrv-check` passed with Rust 1.82.0.
 
 ### W04 — Migrate specialization discovery
 

@@ -268,6 +268,10 @@ Failed keys remain cached so repeated applications do not allocate new IDs or
 emit independently ordered cascades. Queue traversal, ID assignment,
 diagnostics, dumps, static planning, and emitted artifacts follow stable
 module, declaration, member, and argument order rather than hash iteration.
+Within each source construct, discovery follows spelling order. A local's
+declared type is closed before its initializer is scanned. This ordering keeps
+compiler products deterministic, but the resulting numeric specialization
+identities are internal compiler details rather than a language-level ABI.
 
 When an unsatisfied bound leaves a definition-site bound selection without a
 closed witness, specialized body resolution stops that dependent operation
