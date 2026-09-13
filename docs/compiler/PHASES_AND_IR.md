@@ -2727,7 +2727,10 @@ treats complete type and named-type occurrences as opaque leaves. The walker
 defines only parent/child structure: depth policy, dependency meaning, name
 resolution, scopes, diagnostics, identities, and later-phase construction stay
 with their phase owners. This traversal surface is internal to the compiler
-and is not part of the workspace-facing syntax API.
+and is not part of the workspace-facing syntax API. Parser expression-depth
+measurement and compiler dependency discovery use this shared structure while
+retaining their limits, dependency kinds, and evidence policy in their owning
+modules.
 
 Optional AST nodes retain separate payload, `shared`, `?`, `!`, `is`, and
 presence-target spans. `none`, presence tests, and unwrap are distinct

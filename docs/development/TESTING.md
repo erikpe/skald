@@ -1441,6 +1441,7 @@ the separate expression-depth process watchdog are directly selectable:
 ```text
 cargo test --locked -p skald-compiler --test test_plumbing
 cargo test --locked -p skald-compiler --test expression_depth_robustness
+cargo test --locked --release -p skald-compiler --test expression_depth_robustness
 ```
 
 Module determinism cases additionally permute root option order, equivalent

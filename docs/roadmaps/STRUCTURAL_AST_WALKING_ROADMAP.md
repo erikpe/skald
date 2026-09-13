@@ -1,6 +1,6 @@
 # Structural AST Walking Roadmap
 
-Status: in progress; W01 is complete and W02 is next.
+Status: in progress; W01 and W02 are complete and W03 is next.
 
 This roadmap implements
 [cleanup finding A13](CODEBASE_CLEANUP_AUDIT.md#a13--share-structural-ast-walking-where-responsibilities-repeat)
@@ -57,7 +57,7 @@ phase product remain with their current owners.
 ## Progress
 
 - [x] W01 — Establish the iterative syntax traversal contract
-- [ ] W02 — Migrate non-semantic structural consumers
+- [x] W02 — Migrate non-semantic structural consumers
 - [ ] W03 — Restore and freeze specialization source order
 - [ ] W04 — Migrate specialization discovery
 - [ ] W05 — Audit the boundary and close A13
@@ -130,28 +130,28 @@ executions, and `make msrv-check` passes with Rust 1.82.0.
 **Purpose:** prove the walker serves both expression-root and whole-unit
 observation while preserving parser robustness and module dependency meaning.
 
-- [ ] Replace the private expression-child match in parser depth measurement
+- [x] Replace the private expression-child match in parser depth measurement
   with a visitor over one expression root. Keep current and maximum expression
   and logical depths as parser-owned state updated on paired expression
   enter/leave events.
-- [ ] Demonstrate exact equivalence at root depth one and across unary, postfix,
+- [x] Demonstrate exact equivalence at root depth one and across unary, postfix,
   binary, logical, call, construction, optional, and projection shapes before
   deleting the old pending-expression implementation.
-- [ ] Replace declaration/member/block/statement recursion in compiler
+- [x] Replace declaration/member/block/statement recursion in compiler
   dependency range collection with a whole-unit visitor. Match the enclosing
   `ForIn` statement to record `RangeForSource`, prune expression subtrees, and
   ignore type/import leaves.
-- [ ] Keep lexer-token collection for `StringLiteral` and `GeneralIteration`
+- [x] Keep lexer-token collection for `StringLiteral` and `GeneralIteration`
   unchanged. Do not infer those dependencies from AST events.
-- [ ] Add module-graph coverage for ordered direct range sources inside
+- [x] Add module-graph coverage for ordered direct range sources inside
   functions, every body-bearing class member, generic class bodies,
   conditionals, loops, and explicit nested blocks.
-- [ ] Remove only the superseded structural recursion and imports. Keep the
+- [x] Remove only the superseded structural recursion and imports. Keep the
   `Depths` result, dependency map, kinds, spans, canonical paths, and consumers
   in their existing modules.
-- [ ] Remove the transition-only dead-code and unused-re-export allowances from
+- [x] Remove the transition-only dead-code and unused-re-export allowances from
   the syntax facade once the new traversal API has production consumers.
-- [ ] Update living parser or module documentation only if implementation
+- [x] Update living parser or module documentation only if implementation
   reveals a structural guarantee not already stated by the accepted design and
   phase documentation.
 
@@ -166,6 +166,31 @@ collection use the shared iterative engine; no duplicated statement or
 expression child enumeration remains in either consumer; A01 boundaries and
 all dependency evidence are unchanged; and the shared module still owns no
 consumer policy.
+
+#### W02 delivery record
+
+Parser expression-depth measurement now keeps its current and maximum depth
+state in a visitor over one expression root. Exact focused assertions cover
+leaf, unary, postfix, binary, logical, call, allocation, optional-box, array,
+cast, and projection forms at root depth one. Both debug and release external
+process watchdogs retain the bounded rejection and stack-safety guarantee.
+
+Compiler dependency collection now observes `ForIn` statements through one
+whole-unit traversal, prunes expression subtrees, and continues to derive
+string-literal and general-iteration evidence exclusively from lexer tokens.
+Focused graph coverage proves exact range-operator spans and source order
+through functions, all five body-bearing class members, a generic class,
+conditional arms, `while` and `for` loops, and an explicit nested block. The
+superseded consumer recursions, imports, and syntax-facade transition
+allowances have been removed.
+
+Focused validation passed 22 syntax-nesting tests, six short-circuit parser
+tests, two exact depth-equivalence tests, both debug and release process
+watchdogs, 35 module-graph tests, 24 resolver iteration tests, 19 type-checker
+iteration tests, and nine selected module/range/iteration/short-circuit process
+determinism cases. The full `make check` gate passed with 3,157 compiler unit
+tests, all 53 process-determinism cases, and all 629 golden executions;
+`make msrv-check` passed with Rust 1.82.0.
 
 ### W03 — Restore and freeze specialization source order
 

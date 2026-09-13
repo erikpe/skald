@@ -16,11 +16,18 @@ pub(crate) fn walk<'ast>(
     root: impl Into<SyntaxNode<'ast>>,
     visitor: &mut impl SyntaxVisitor<'ast>,
 ) {
-    let mut pending = vec![WorkItem::Enter(root.into())];
+    let root = root.into();
+    let source_id = root.span().source_id();
+    let mut pending = vec![WorkItem::Enter(root)];
 
     while let Some(item) = pending.pop() {
         match item {
             WorkItem::Enter(node) => {
+                debug_assert_eq!(
+                    node.span().source_id(),
+                    source_id,
+                    "syntax traversal must remain within its root source"
+                );
                 let control = visitor.enter(node);
                 pending.push(WorkItem::Leave(node));
                 if control == WalkControl::Continue {

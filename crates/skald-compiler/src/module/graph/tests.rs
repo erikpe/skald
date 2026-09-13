@@ -693,6 +693,73 @@ fn direct_range_sources_alone_add_typed_std_range_evidence() {
 }
 
 #[test]
+fn direct_range_evidence_follows_all_nested_bodies_in_source_order() {
+    let workspace = directory("graph-nested-range-dependencies");
+    let root = workspace.join("modules");
+    let app_text = concat!(
+        "class EveryBody {\n",
+        "  init() { for (item in 1u .. 2u) {} }\n",
+        "  copy(ref other: EveryBody) {\n",
+        "    if (true) { for (item in 2u .. 3u) {} }\n",
+        "    elif (false) { for (item in 3u .. 4u) {} }\n",
+        "    else { for (item in 4u .. 5u) {} }\n",
+        "  }\n",
+        "  assign(ref other: EveryBody) {\n",
+        "    while (false) { for (item in 5u .. 6u) {} }\n",
+        "  }\n",
+        "  destroy { { for (item in 6u .. 7u) {} } }\n",
+        "  fn scan() -> unit { for (item in 7u .. 8u) {} }\n",
+        "}\n",
+        "class Generic<T> { init() { for (item in 8u .. 9u) {} } }\n",
+        "fn main() -> i64 { for (item in 9u .. 10u) {} return 0; }\n",
+    );
+    source(&root, "app.ska", app_text);
+    source(
+        &root,
+        "std/iter.ska",
+        "public interface Iterable<Item, State> {}\n",
+    );
+    source(&root, "std/range.ska", "public class Range {}\n");
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+    let app = graph.find(&"app".parse().unwrap()).unwrap();
+    let range = app
+        .imports()
+        .iter()
+        .find(|edge| {
+            graph
+                .module(edge.target())
+                .expect("import edge target belongs to graph")
+                .provenance()
+                .module_path()
+                == &"std::range".parse().unwrap()
+        })
+        .expect("direct range sources should load std::range");
+
+    let actual_starts = range
+        .compiler_dependency_spans(CompilerDependencyKind::RangeForSource)
+        .iter()
+        .map(|span| span.range().start())
+        .collect::<Vec<_>>();
+    let expected_starts = app_text
+        .match_indices("..")
+        .map(|(start, _)| start)
+        .collect::<Vec<_>>();
+    assert_eq!(actual_starts, expected_starts);
+
+    let source = graph.sources().get(app.ast().span.source_id()).unwrap();
+    assert!(range
+        .compiler_dependency_spans(CompilerDependencyKind::RangeForSource)
+        .iter()
+        .all(|span| source.slice(span.range()) == Some("..")));
+}
+
+#[test]
 fn rejected_value_range_does_not_mask_its_syntax_error_with_a_module_error() {
     let workspace = directory("graph-rejected-value-range");
     let root = workspace.join("modules");
