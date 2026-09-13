@@ -8,7 +8,9 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-There are currently no active implementation roadmaps.
+| Roadmap | Status | Purpose | Next task | Dependencies |
+| --- | --- | --- | --- | --- |
+| [Raw compiler stderr observation](GOLDEN_COMPILER_STDERR_OBSERVATION_ROADMAP.md) | Planned | Preserve exact compiler process stderr while keeping portable diagnostic matching, determinism, and reports | G01 — separate raw capture from compiler diagnostic comparison | Completed bounded-process work from A01–A04; existing golden comparison and report contracts |
 
 ## Pending discovery and planning records
 

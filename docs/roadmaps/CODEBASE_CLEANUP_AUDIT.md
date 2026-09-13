@@ -1356,6 +1356,9 @@ Rust 1.82.0 check, and all 628 golden leaves pass.
 
 ### A36 — Preserve raw compiler stderr in golden observations
 
+**Roadmap:**
+[Raw compiler stderr observation roadmap](GOLDEN_COMPILER_STDERR_OBSERVATION_ROADMAP.md).
+
 **Evidence:** compile-fail handling in
 [`compile/invoke.rs`](../../crates/skald-golden/src/compile/invoke.rs) mutates
 `ProcessObservation` through `strip_stderr_prefix`. The
