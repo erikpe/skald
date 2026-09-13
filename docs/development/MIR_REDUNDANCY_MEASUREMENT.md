@@ -107,6 +107,13 @@ Saturation is sticky across workload aggregation: overflow in any structure,
 candidate, or overlap count marks its checkpoint and the top-level totals even
 when later workloads contribute zero to that count.
 
+Compiler revision and dirty state are best-effort invocation context sampled
+when a report starts. Structural determinism comparisons cover configuration,
+schedule, workloads, snapshots, examples, and totals; they treat the compiler
+identity separately because repository state can change between two
+invocations. Comparisons between retained reports should first require the
+compiler identities to match when that identity is part of the experiment.
+
 Schema version two extends the archived version-one contract with the
 `dead_path_activations` family, a common
 `removable_storages_upper_bound`, and storage-centered examples whose block and
