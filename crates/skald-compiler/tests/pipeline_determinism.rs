@@ -3,7 +3,7 @@
 use std::{
     env, fs,
     path::{Path, PathBuf},
-    process::Command,
+    time::Duration,
 };
 
 use skald_compiler::{
@@ -34,190 +34,123 @@ use skald_compiler::{
 
 #[path = "../test_support/standard_library.rs"]
 mod standard_library;
-use standard_library::{canonical_standard_library_sources, CANONICAL_IO_SOURCE};
+mod support;
 
-const OBJECT_HELPER_OUTPUT: &str = "SKALD_OBJECT_DETERMINISM_OUTPUT";
+use standard_library::{canonical_standard_library_sources, CANONICAL_IO_SOURCE};
+use support::{
+    run_current_test_process, CurrentTestProcessRequest, TemporaryDirectory, TemporaryFile,
+    TestProcessPolicy, TestProcessTermination,
+};
+
+const HELPER_OUTPUT: &str = "SKALD_PIPELINE_DETERMINISM_HELPER_OUTPUT";
+const HELPER_TIMEOUT: Duration = Duration::from_secs(60);
+
 const OBJECT_TEST_NAME: &str = "object_lifetime_phase_products_are_deterministic_across_processes";
-const POLYMORPHISM_HELPER_OUTPUT: &str = "SKALD_POLYMORPHISM_DETERMINISM_OUTPUT";
 const POLYMORPHISM_TEST_NAME: &str =
     "polymorphism_phase_products_are_deterministic_across_processes";
-const PRODUCED_ALIAS_HELPER_OUTPUT: &str = "SKALD_PRODUCED_ALIAS_DETERMINISM_OUTPUT";
 const PRODUCED_ALIAS_TEST_NAME: &str =
     "produced_alias_phase_products_are_deterministic_across_processes";
-const PRODUCED_RECEIVER_HELPER_OUTPUT: &str = "SKALD_PRODUCED_RECEIVER_DETERMINISM_OUTPUT";
 const PRODUCED_RECEIVER_TEST_NAME: &str =
     "produced_receiver_phase_products_are_deterministic_across_processes";
-const PRODUCED_FIELD_HELPER_OUTPUT: &str = "SKALD_PRODUCED_FIELD_DETERMINISM_OUTPUT";
 const PRODUCED_FIELD_TEST_NAME: &str =
     "produced_field_phase_products_are_deterministic_across_processes";
-const SHARED_HELPER_OUTPUT: &str = "SKALD_SHARED_DETERMINISM_OUTPUT";
 const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
-const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
 const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
-const ARRAY_HELPER_OUTPUT: &str = "SKALD_ARRAY_DETERMINISM_OUTPUT";
 const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_processes";
-const ARRAY_ELEMENT_LIST_HELPER_OUTPUT: &str = "SKALD_ARRAY_ELEMENT_LIST_DETERMINISM_OUTPUT";
 const ARRAY_ELEMENT_LIST_TEST_NAME: &str =
     "array_element_list_phase_products_are_deterministic_across_processes";
-const INDEXED_ARRAY_FRONTEND_HELPER_OUTPUT: &str =
-    "SKALD_INDEXED_ARRAY_FRONTEND_DETERMINISM_OUTPUT";
 const INDEXED_ARRAY_FRONTEND_TEST_NAME: &str =
     "indexed_array_frontend_products_are_deterministic_across_processes";
-const INTEGER_OPERATION_HELPER_OUTPUT: &str = "SKALD_INTEGER_OPERATION_DETERMINISM_OUTPUT";
 const INTEGER_OPERATION_TEST_NAME: &str =
     "integer_operation_phase_products_are_deterministic_across_processes";
-const INTEGER_BITWISE_SHIFT_HELPER_OUTPUT: &str = "SKALD_INTEGER_BITWISE_SHIFT_DETERMINISM_OUTPUT";
 const INTEGER_BITWISE_SHIFT_TEST_NAME: &str =
     "integer_bitwise_and_shift_phase_products_are_deterministic_across_processes";
-const INTEGER_BITWISE_SHIFT_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_INTEGER_BITWISE_SHIFT_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const INTEGER_BITWISE_SHIFT_DIAGNOSTIC_TEST_NAME: &str =
     "integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes";
-const INTEGER_DIVISION_HELPER_OUTPUT: &str = "SKALD_INTEGER_DIVISION_DETERMINISM_OUTPUT";
 const INTEGER_DIVISION_TEST_NAME: &str =
     "integer_division_phase_products_are_deterministic_across_processes";
-const INTEGER_DIVISION_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_INTEGER_DIVISION_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const INTEGER_DIVISION_DIAGNOSTIC_TEST_NAME: &str =
     "integer_division_diagnostics_are_deterministic_across_processes";
-const FLOATING_DIVISION_HELPER_OUTPUT: &str = "SKALD_FLOATING_DIVISION_DETERMINISM_OUTPUT";
 const FLOATING_DIVISION_TEST_NAME: &str =
     "floating_division_phase_products_are_deterministic_across_processes";
-const FLOATING_DIVISION_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_FLOATING_DIVISION_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const FLOATING_DIVISION_DIAGNOSTIC_TEST_NAME: &str =
     "floating_division_diagnostics_are_deterministic_across_processes";
-const FLOATING_COMPARISON_HELPER_OUTPUT: &str = "SKALD_FLOATING_COMPARISON_DETERMINISM_OUTPUT";
 const FLOATING_COMPARISON_TEST_NAME: &str =
     "floating_comparison_phase_products_are_deterministic_across_processes";
-const FLOATING_COMPARISON_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_FLOATING_COMPARISON_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const FLOATING_COMPARISON_DIAGNOSTIC_TEST_NAME: &str =
     "floating_comparison_diagnostics_are_deterministic_across_processes";
-const PRIMITIVE_OPERATOR_PROFILE_HELPER_OUTPUT: &str =
-    "SKALD_PRIMITIVE_OPERATOR_PROFILE_DETERMINISM_OUTPUT";
 const PRIMITIVE_OPERATOR_PROFILE_TEST_NAME: &str =
     "primitive_operator_profile_phase_products_are_deterministic_across_processes";
-const PRIMITIVE_CAST_HELPER_OUTPUT: &str = "SKALD_PRIMITIVE_CAST_DETERMINISM_OUTPUT";
 const PRIMITIVE_CAST_TEST_NAME: &str =
     "primitive_cast_phase_products_are_deterministic_across_processes";
-const PRIMITIVE_CAST_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_PRIMITIVE_CAST_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const PRIMITIVE_CAST_DIAGNOSTIC_TEST_NAME: &str =
     "primitive_cast_diagnostics_are_deterministic_across_processes";
-const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_TEST_NAME: &str =
     "eager_boolean_phase_products_are_deterministic_across_processes";
-const EAGER_BOOLEAN_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_EAGER_BOOLEAN_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_DIAGNOSTIC_TEST_NAME: &str =
     "eager_boolean_diagnostics_are_deterministic_across_processes";
-const SHORT_CIRCUIT_SOURCE_HELPER_OUTPUT: &str = "SKALD_SHORT_CIRCUIT_SOURCE_DETERMINISM_OUTPUT";
 const SHORT_CIRCUIT_SOURCE_TEST_NAME: &str =
     "short_circuit_source_products_are_deterministic_across_processes";
-const STRING_HELPER_OUTPUT: &str = "SKALD_STRING_DETERMINISM_OUTPUT";
 const STRING_TEST_NAME: &str = "string_phase_products_are_deterministic_across_processes";
-const STRING_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_STRING_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STRING_DIAGNOSTIC_TEST_NAME: &str =
     "string_language_item_diagnostics_are_deterministic_across_processes";
-const IO_HELPER_OUTPUT: &str = "SKALD_IO_DETERMINISM_OUTPUT";
 const IO_TEST_NAME: &str = "io_phase_products_are_deterministic_across_processes";
-const IO_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_IO_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const IO_DIAGNOSTIC_TEST_NAME: &str = "io_provider_diagnostics_are_deterministic_across_processes";
-const PRIVATE_INITIALIZER_HELPER_OUTPUT: &str = "SKALD_PRIVATE_INITIALIZER_DETERMINISM_OUTPUT";
 const PRIVATE_INITIALIZER_TEST_NAME: &str =
     "private_initializer_phase_products_are_deterministic_across_processes";
-const PRIVATE_INITIALIZER_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_PRIVATE_INITIALIZER_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME: &str =
     "private_initializer_diagnostics_are_deterministic_across_processes";
-const PRIVATE_CELL_HELPER_OUTPUT: &str = "SKALD_PRIVATE_CELL_DETERMINISM_OUTPUT";
 const PRIVATE_CELL_TEST_NAME: &str =
     "private_cell_phase_products_are_deterministic_across_processes";
-const PRIVATE_CELL_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_PRIVATE_CELL_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const PRIVATE_CELL_DIAGNOSTIC_TEST_NAME: &str =
     "private_cell_diagnostics_are_deterministic_across_processes";
-const FINAL_FIELD_HELPER_OUTPUT: &str = "SKALD_FINAL_FIELD_DETERMINISM_OUTPUT";
 const FINAL_FIELD_TEST_NAME: &str = "final_field_phase_products_are_deterministic_across_processes";
-const FINAL_FIELD_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_FINAL_FIELD_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const FINAL_FIELD_DIAGNOSTIC_TEST_NAME: &str =
     "final_field_diagnostics_are_deterministic_across_processes";
-const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
-const PERMUTATION_HELPER_VARIANT: &str = "SKALD_DETERMINISM_VARIANT";
+const HELPER_VARIANT: &str = "SKALD_PIPELINE_DETERMINISM_HELPER_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
-const MODULE_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_MODULE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_across_processes";
-const GENERIC_MODULE_HELPER_OUTPUT: &str = "SKALD_GENERIC_MODULE_DETERMINISM_OUTPUT";
 const GENERIC_MODULE_TEST_NAME: &str =
     "generic_module_phase_products_are_deterministic_across_processes";
-const GENERIC_INTERFACE_HELPER_OUTPUT: &str = "SKALD_GENERIC_INTERFACE_DETERMINISM_OUTPUT";
 const GENERIC_INTERFACE_TEST_NAME: &str =
     "generic_interface_phase_products_are_deterministic_across_processes";
-const GENERIC_OPERATOR_HELPER_OUTPUT: &str = "SKALD_GENERIC_OPERATOR_DETERMINISM_OUTPUT";
 const GENERIC_OPERATOR_TEST_NAME: &str =
     "generic_operator_phase_products_are_deterministic_across_processes";
-const RANGE_HELPER_OUTPUT: &str = "SKALD_RANGE_DETERMINISM_OUTPUT";
 const RANGE_TEST_NAME: &str = "range_phase_products_are_deterministic_across_processes";
-const RANGE_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_RANGE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const RANGE_DIAGNOSTIC_TEST_NAME: &str =
     "range_syntax_diagnostics_are_deterministic_across_processes";
-const GENERIC_INTERFACE_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_GENERIC_INTERFACE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME: &str =
     "generic_interface_diagnostics_are_deterministic_across_processes";
-const ITERATION_HELPER_OUTPUT: &str = "SKALD_ITERATION_DETERMINISM_OUTPUT";
 const ITERATION_TEST_NAME: &str =
     "general_iteration_phase_products_are_deterministic_across_processes";
-const ITERATION_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_ITERATION_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const ITERATION_DIAGNOSTIC_TEST_NAME: &str =
     "general_iteration_diagnostics_are_deterministic_across_processes";
-const FUNCTION_VALUE_COMPOSITION_HELPER_OUTPUT: &str =
-    "SKALD_FUNCTION_VALUE_COMPOSITION_DETERMINISM_OUTPUT";
 const FUNCTION_VALUE_COMPOSITION_TEST_NAME: &str =
     "function_value_composition_products_are_deterministic_across_processes";
-const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
 const STATIC_FIELD_TEST_NAME: &str =
     "static_field_phase_products_are_deterministic_across_processes";
-const STATIC_INITIALIZER_LIFECYCLE_HELPER_OUTPUT: &str =
-    "SKALD_STATIC_INITIALIZER_LIFECYCLE_DETERMINISM_OUTPUT";
 const STATIC_INITIALIZER_LIFECYCLE_TEST_NAME: &str =
     "static_initializer_lifecycle_products_are_deterministic_across_processes";
-const STATIC_LIFETIME_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_STATIC_LIFETIME_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STATIC_LIFETIME_DIAGNOSTIC_TEST_NAME: &str =
     "static_lifetime_cycle_diagnostics_are_deterministic_across_processes";
-const STATIC_FIELD_DIAGNOSTIC_HELPER_OUTPUT: &str =
-    "SKALD_STATIC_FIELD_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
     "static_field_diagnostics_are_deterministic_across_processes";
-const STATIC_FIELD_MODULE_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_MODULE_DETERMINISM_OUTPUT";
 const STATIC_FIELD_MODULE_TEST_NAME: &str =
     "static_field_module_products_are_deterministic_across_processes";
-const IMPORTED_UNUSED_STATIC_HELPER_OUTPUT: &str =
-    "SKALD_IMPORTED_UNUSED_STATIC_DETERMINISM_OUTPUT";
 const IMPORTED_UNUSED_STATIC_TEST_NAME: &str =
     "imported_unused_static_products_are_deterministic_across_processes";
-const MIR_CHECKPOINT_HELPER_OUTPUT: &str = "SKALD_MIR_CHECKPOINT_DETERMINISM_OUTPUT";
 const MIR_CHECKPOINT_TEST_NAME: &str =
     "mir_pipeline_checkpoints_are_deterministic_across_processes";
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "object",
-        OBJECT_HELPER_OUTPUT,
-        OBJECT_TEST_NAME,
-        object_phase_dump,
-    );
+    assert_cross_process_determinism("object", OBJECT_TEST_NAME, object_phase_dump);
 }
 
 #[test]
 fn mir_pipeline_checkpoints_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "mir-pipeline-checkpoints",
-        MIR_CHECKPOINT_HELPER_OUTPUT,
         MIR_CHECKPOINT_TEST_NAME,
         mir_pipeline_checkpoint_dump,
     );
@@ -227,7 +160,6 @@ fn mir_pipeline_checkpoints_are_deterministic_across_processes() {
 fn polymorphism_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "polymorphism",
-        POLYMORPHISM_HELPER_OUTPUT,
         POLYMORPHISM_TEST_NAME,
         polymorphism_phase_dump,
     );
@@ -237,7 +169,6 @@ fn polymorphism_phase_products_are_deterministic_across_processes() {
 fn produced_alias_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "produced-aliases",
-        PRODUCED_ALIAS_HELPER_OUTPUT,
         PRODUCED_ALIAS_TEST_NAME,
         produced_alias_phase_dump,
     );
@@ -247,7 +178,6 @@ fn produced_alias_phase_products_are_deterministic_across_processes() {
 fn produced_receiver_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "produced-receivers",
-        PRODUCED_RECEIVER_HELPER_OUTPUT,
         PRODUCED_RECEIVER_TEST_NAME,
         produced_receiver_phase_dump,
     );
@@ -257,7 +187,6 @@ fn produced_receiver_phase_products_are_deterministic_across_processes() {
 fn produced_field_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "produced-fields",
-        PRODUCED_FIELD_HELPER_OUTPUT,
         PRODUCED_FIELD_TEST_NAME,
         produced_field_phase_dump,
     );
@@ -267,7 +196,6 @@ fn produced_field_phase_products_are_deterministic_across_processes() {
 fn shared_ownership_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "shared-ownership",
-        SHARED_HELPER_OUTPUT,
         SHARED_TEST_NAME,
         shared_ownership_phase_dump,
     );
@@ -275,29 +203,18 @@ fn shared_ownership_phase_products_are_deterministic_across_processes() {
 
 #[test]
 fn optional_value_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "optional-values",
-        OPTIONAL_HELPER_OUTPUT,
-        OPTIONAL_TEST_NAME,
-        optional_phase_dump,
-    );
+    assert_cross_process_determinism("optional-values", OPTIONAL_TEST_NAME, optional_phase_dump);
 }
 
 #[test]
 fn array_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "arrays",
-        ARRAY_HELPER_OUTPUT,
-        ARRAY_TEST_NAME,
-        array_phase_dump,
-    );
+    assert_cross_process_determinism("arrays", ARRAY_TEST_NAME, array_phase_dump);
 }
 
 #[test]
 fn array_element_list_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "array-element-lists",
-        ARRAY_ELEMENT_LIST_HELPER_OUTPUT,
         ARRAY_ELEMENT_LIST_TEST_NAME,
         array_element_list_phase_dump,
     );
@@ -307,7 +224,6 @@ fn array_element_list_phase_products_are_deterministic_across_processes() {
 fn indexed_array_frontend_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "indexed-array-frontend",
-        INDEXED_ARRAY_FRONTEND_HELPER_OUTPUT,
         INDEXED_ARRAY_FRONTEND_TEST_NAME,
         indexed_array_frontend_phase_dump,
     );
@@ -317,7 +233,6 @@ fn indexed_array_frontend_products_are_deterministic_across_processes() {
 fn static_field_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "static-fields",
-        STATIC_FIELD_HELPER_OUTPUT,
         STATIC_FIELD_TEST_NAME,
         static_field_phase_dump,
     );
@@ -327,7 +242,6 @@ fn static_field_phase_products_are_deterministic_across_processes() {
 fn static_initializer_lifecycle_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "static-initializer-lifecycle",
-        STATIC_INITIALIZER_LIFECYCLE_HELPER_OUTPUT,
         STATIC_INITIALIZER_LIFECYCLE_TEST_NAME,
         static_initializer_lifecycle_phase_dump,
     );
@@ -337,7 +251,6 @@ fn static_initializer_lifecycle_products_are_deterministic_across_processes() {
 fn static_lifetime_cycle_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "static-lifetime-diagnostics",
-        STATIC_LIFETIME_DIAGNOSTIC_HELPER_OUTPUT,
         STATIC_LIFETIME_DIAGNOSTIC_TEST_NAME,
         static_lifetime_cycle_diagnostic_dump,
     );
@@ -347,7 +260,6 @@ fn static_lifetime_cycle_diagnostics_are_deterministic_across_processes() {
 fn static_field_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "static-field-diagnostics",
-        STATIC_FIELD_DIAGNOSTIC_HELPER_OUTPUT,
         STATIC_FIELD_DIAGNOSTIC_TEST_NAME,
         static_field_diagnostic_dump,
     );
@@ -355,28 +267,18 @@ fn static_field_diagnostics_are_deterministic_across_processes() {
 
 #[test]
 fn static_field_module_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(STATIC_FIELD_MODULE_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, static_field_module_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "static-field-modules",
-        STATIC_FIELD_MODULE_HELPER_OUTPUT,
-        STATIC_FIELD_MODULE_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("static-field-modules", STATIC_FIELD_MODULE_TEST_NAME);
 }
 
 #[test]
 fn imported_unused_static_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "imported-unused-static-products",
-        IMPORTED_UNUSED_STATIC_HELPER_OUTPUT,
         IMPORTED_UNUSED_STATIC_TEST_NAME,
         imported_unused_static_phase_dump,
     );
@@ -386,7 +288,6 @@ fn imported_unused_static_products_are_deterministic_across_processes() {
 fn integer_operation_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "integer-operations",
-        INTEGER_OPERATION_HELPER_OUTPUT,
         INTEGER_OPERATION_TEST_NAME,
         integer_operation_phase_dump,
     );
@@ -396,7 +297,6 @@ fn integer_operation_phase_products_are_deterministic_across_processes() {
 fn integer_bitwise_and_shift_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "integer-bitwise-shifts",
-        INTEGER_BITWISE_SHIFT_HELPER_OUTPUT,
         INTEGER_BITWISE_SHIFT_TEST_NAME,
         integer_bitwise_and_shift_phase_dump,
     );
@@ -406,7 +306,6 @@ fn integer_bitwise_and_shift_phase_products_are_deterministic_across_processes()
 fn integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "integer-bitwise-shift-diagnostics",
-        INTEGER_BITWISE_SHIFT_DIAGNOSTIC_HELPER_OUTPUT,
         INTEGER_BITWISE_SHIFT_DIAGNOSTIC_TEST_NAME,
         integer_bitwise_and_shift_diagnostic_dump,
     );
@@ -416,7 +315,6 @@ fn integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes() {
 fn integer_division_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "integer-division",
-        INTEGER_DIVISION_HELPER_OUTPUT,
         INTEGER_DIVISION_TEST_NAME,
         integer_division_phase_dump,
     );
@@ -426,7 +324,6 @@ fn integer_division_phase_products_are_deterministic_across_processes() {
 fn integer_division_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "integer-division-diagnostics",
-        INTEGER_DIVISION_DIAGNOSTIC_HELPER_OUTPUT,
         INTEGER_DIVISION_DIAGNOSTIC_TEST_NAME,
         integer_division_diagnostic_dump,
     );
@@ -436,7 +333,6 @@ fn integer_division_diagnostics_are_deterministic_across_processes() {
 fn floating_division_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "floating-division",
-        FLOATING_DIVISION_HELPER_OUTPUT,
         FLOATING_DIVISION_TEST_NAME,
         floating_division_phase_dump,
     );
@@ -446,7 +342,6 @@ fn floating_division_phase_products_are_deterministic_across_processes() {
 fn floating_division_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "floating-division-diagnostics",
-        FLOATING_DIVISION_DIAGNOSTIC_HELPER_OUTPUT,
         FLOATING_DIVISION_DIAGNOSTIC_TEST_NAME,
         floating_division_diagnostic_dump,
     );
@@ -456,7 +351,6 @@ fn floating_division_diagnostics_are_deterministic_across_processes() {
 fn floating_comparison_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "floating-comparisons",
-        FLOATING_COMPARISON_HELPER_OUTPUT,
         FLOATING_COMPARISON_TEST_NAME,
         floating_comparison_phase_dump,
     );
@@ -466,7 +360,6 @@ fn floating_comparison_phase_products_are_deterministic_across_processes() {
 fn floating_comparison_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "floating-comparison-diagnostics",
-        FLOATING_COMPARISON_DIAGNOSTIC_HELPER_OUTPUT,
         FLOATING_COMPARISON_DIAGNOSTIC_TEST_NAME,
         floating_comparison_diagnostic_dump,
     );
@@ -476,7 +369,6 @@ fn floating_comparison_diagnostics_are_deterministic_across_processes() {
 fn primitive_operator_profile_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "primitive-operator-profile",
-        PRIMITIVE_OPERATOR_PROFILE_HELPER_OUTPUT,
         PRIMITIVE_OPERATOR_PROFILE_TEST_NAME,
         primitive_operator_profile_phase_dump,
     );
@@ -486,7 +378,6 @@ fn primitive_operator_profile_phase_products_are_deterministic_across_processes(
 fn primitive_cast_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "primitive-casts",
-        PRIMITIVE_CAST_HELPER_OUTPUT,
         PRIMITIVE_CAST_TEST_NAME,
         primitive_cast_phase_dump,
     );
@@ -496,7 +387,6 @@ fn primitive_cast_phase_products_are_deterministic_across_processes() {
 fn primitive_cast_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "primitive-cast-diagnostics",
-        PRIMITIVE_CAST_DIAGNOSTIC_HELPER_OUTPUT,
         PRIMITIVE_CAST_DIAGNOSTIC_TEST_NAME,
         primitive_cast_diagnostic_dump,
     );
@@ -506,7 +396,6 @@ fn primitive_cast_diagnostics_are_deterministic_across_processes() {
 fn eager_boolean_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "eager-booleans",
-        EAGER_BOOLEAN_HELPER_OUTPUT,
         EAGER_BOOLEAN_TEST_NAME,
         eager_boolean_phase_dump,
     );
@@ -516,7 +405,6 @@ fn eager_boolean_phase_products_are_deterministic_across_processes() {
 fn eager_boolean_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "eager-boolean-diagnostics",
-        EAGER_BOOLEAN_DIAGNOSTIC_HELPER_OUTPUT,
         EAGER_BOOLEAN_DIAGNOSTIC_TEST_NAME,
         eager_boolean_diagnostic_dump,
     );
@@ -526,7 +414,6 @@ fn eager_boolean_diagnostics_are_deterministic_across_processes() {
 fn short_circuit_source_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "short-circuit-source",
-        SHORT_CIRCUIT_SOURCE_HELPER_OUTPUT,
         SHORT_CIRCUIT_SOURCE_TEST_NAME,
         short_circuit_source_phase_dump,
     );
@@ -534,83 +421,46 @@ fn short_circuit_source_products_are_deterministic_across_processes() {
 
 #[test]
 fn string_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(STRING_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, string_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "strings",
-        STRING_HELPER_OUTPUT,
-        STRING_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("strings", STRING_TEST_NAME);
 }
 
 #[test]
 fn string_language_item_diagnostics_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(STRING_DIAGNOSTIC_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, string_diagnostic_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "string-diagnostics",
-        STRING_DIAGNOSTIC_HELPER_OUTPUT,
-        STRING_DIAGNOSTIC_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("string-diagnostics", STRING_DIAGNOSTIC_TEST_NAME);
 }
 
 #[test]
 fn io_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(IO_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, io_phase_dump(variant, false)).unwrap();
         return;
     }
-    assert_cross_process_variants(
-        "io",
-        IO_HELPER_OUTPUT,
-        IO_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("io", IO_TEST_NAME);
 }
 
 #[test]
 fn io_provider_diagnostics_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(IO_DIAGNOSTIC_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, io_phase_dump(variant, true)).unwrap();
         return;
     }
-    assert_cross_process_variants(
-        "io-diagnostics",
-        IO_DIAGNOSTIC_HELPER_OUTPUT,
-        IO_DIAGNOSTIC_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("io-diagnostics", IO_DIAGNOSTIC_TEST_NAME);
 }
 
 #[test]
 fn private_initializer_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "private-initializers",
-        PRIVATE_INITIALIZER_HELPER_OUTPUT,
         PRIVATE_INITIALIZER_TEST_NAME,
         private_initializer_phase_dump,
     );
@@ -620,7 +470,6 @@ fn private_initializer_phase_products_are_deterministic_across_processes() {
 fn private_initializer_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "private-initializer-diagnostics",
-        PRIVATE_INITIALIZER_DIAGNOSTIC_HELPER_OUTPUT,
         PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME,
         private_initializer_diagnostic_dump,
     );
@@ -630,7 +479,6 @@ fn private_initializer_diagnostics_are_deterministic_across_processes() {
 fn private_cell_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "private-cells",
-        PRIVATE_CELL_HELPER_OUTPUT,
         PRIVATE_CELL_TEST_NAME,
         private_cell_phase_dump,
     );
@@ -640,7 +488,6 @@ fn private_cell_phase_products_are_deterministic_across_processes() {
 fn private_cell_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "private-cell-diagnostics",
-        PRIVATE_CELL_DIAGNOSTIC_HELPER_OUTPUT,
         PRIVATE_CELL_DIAGNOSTIC_TEST_NAME,
         private_cell_diagnostic_dump,
     );
@@ -650,7 +497,6 @@ fn private_cell_diagnostics_are_deterministic_across_processes() {
 fn final_field_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "final-fields",
-        FINAL_FIELD_HELPER_OUTPUT,
         FINAL_FIELD_TEST_NAME,
         final_field_phase_dump,
     );
@@ -660,7 +506,6 @@ fn final_field_phase_products_are_deterministic_across_processes() {
 fn final_field_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "final-field-diagnostics",
-        FINAL_FIELD_DIAGNOSTIC_HELPER_OUTPUT,
         FINAL_FIELD_DIAGNOSTIC_TEST_NAME,
         final_field_diagnostic_dump,
     );
@@ -668,123 +513,68 @@ fn final_field_diagnostics_are_deterministic_across_processes() {
 
 #[test]
 fn module_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(MODULE_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, module_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "modules",
-        MODULE_HELPER_OUTPUT,
-        MODULE_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("modules", MODULE_TEST_NAME);
 }
 
 #[test]
 fn module_diagnostics_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(MODULE_DIAGNOSTIC_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, module_diagnostic_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "module-diagnostics",
-        MODULE_DIAGNOSTIC_HELPER_OUTPUT,
-        MODULE_DIAGNOSTIC_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("module-diagnostics", MODULE_DIAGNOSTIC_TEST_NAME);
 }
 
 #[test]
 fn generic_module_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(GENERIC_MODULE_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, generic_module_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "generic-modules",
-        GENERIC_MODULE_HELPER_OUTPUT,
-        GENERIC_MODULE_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("generic-modules", GENERIC_MODULE_TEST_NAME);
 }
 
 #[test]
 fn generic_interface_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(GENERIC_INTERFACE_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, generic_interface_module_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "generic-interface-products",
-        GENERIC_INTERFACE_HELPER_OUTPUT,
-        GENERIC_INTERFACE_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("generic-interface-products", GENERIC_INTERFACE_TEST_NAME);
 }
 
 #[test]
 fn generic_operator_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(GENERIC_OPERATOR_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, generic_operator_module_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "generic-operator-products",
-        GENERIC_OPERATOR_HELPER_OUTPUT,
-        GENERIC_OPERATOR_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("generic-operator-products", GENERIC_OPERATOR_TEST_NAME);
 }
 
 #[test]
 fn range_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(RANGE_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, range_module_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "explicit-range-products",
-        RANGE_HELPER_OUTPUT,
-        RANGE_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("explicit-range-products", RANGE_TEST_NAME);
 }
 
 #[test]
 fn range_syntax_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "range-syntax-diagnostics",
-        RANGE_DIAGNOSTIC_HELPER_OUTPUT,
         RANGE_DIAGNOSTIC_TEST_NAME,
         range_syntax_diagnostic_dump,
     );
@@ -794,7 +584,6 @@ fn range_syntax_diagnostics_are_deterministic_across_processes() {
 fn generic_interface_diagnostics_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "generic-interface-diagnostics",
-        GENERIC_INTERFACE_DIAGNOSTIC_HELPER_OUTPUT,
         GENERIC_INTERFACE_DIAGNOSTIC_TEST_NAME,
         generic_interface_diagnostic_dump,
     );
@@ -802,39 +591,24 @@ fn generic_interface_diagnostics_are_deterministic_across_processes() {
 
 #[test]
 fn general_iteration_phase_products_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(ITERATION_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, iteration_module_phase_dump(variant)).unwrap();
         return;
     }
 
-    assert_cross_process_variants(
-        "general-iteration-products",
-        ITERATION_HELPER_OUTPUT,
-        ITERATION_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
-    );
+    assert_cross_process_variants("general-iteration-products", ITERATION_TEST_NAME);
 }
 
 #[test]
 fn general_iteration_diagnostics_are_deterministic_across_processes() {
-    if let Some(output) = env::var_os(ITERATION_DIAGNOSTIC_HELPER_OUTPUT) {
-        let variant = env::var(PERMUTATION_HELPER_VARIANT)
-            .unwrap()
-            .parse()
-            .unwrap();
+    if let Some((output, variant)) = variant_helper_state() {
         fs::write(output, iteration_diagnostic_dump(variant)).unwrap();
         return;
     }
 
     assert_cross_process_variants(
         "general-iteration-diagnostics",
-        ITERATION_DIAGNOSTIC_HELPER_OUTPUT,
         ITERATION_DIAGNOSTIC_TEST_NAME,
-        PERMUTATION_HELPER_VARIANT,
     );
 }
 
@@ -842,101 +616,113 @@ fn general_iteration_diagnostics_are_deterministic_across_processes() {
 fn function_value_composition_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "function-value-composition",
-        FUNCTION_VALUE_COMPOSITION_HELPER_OUTPUT,
         FUNCTION_VALUE_COMPOSITION_TEST_NAME,
         function_value_composition_phase_dump,
     );
 }
 
-fn assert_cross_process_determinism(
-    label: &str,
-    helper_output: &str,
-    test_name: &str,
-    generate: fn() -> String,
-) {
-    if let Some(output) = env::var_os(helper_output) {
+fn assert_cross_process_determinism(label: &str, test_name: &str, generate: fn() -> String) {
+    if let Some(output) = same_input_helper_output() {
         fs::write(output, generate()).unwrap();
         return;
     }
 
-    let artifacts = TemporaryArtifacts::new(label);
-    run_helper_process(&artifacts.first, helper_output, test_name);
-    run_helper_process(&artifacts.second, helper_output, test_name);
+    let first = TemporaryFile::new(&format!("{label}-determinism-first"))
+        .expect("first determinism output must be creatable");
+    let second = TemporaryFile::new(&format!("{label}-determinism-second"))
+        .expect("second determinism output must be creatable");
+    run_helper_process(first.path(), test_name, None);
+    run_helper_process(second.path(), test_name, None);
 
     assert_eq!(
-        fs::read(&artifacts.first).unwrap(),
-        fs::read(&artifacts.second).unwrap(),
+        first.read().unwrap(),
+        second.read().unwrap(),
         "{label} phase products changed across independent compiler processes"
     );
 }
 
-fn run_helper_process(output: &Path, helper_output: &str, test_name: &str) {
-    let result = Command::new(env::current_exe().unwrap())
-        .args(["--exact", test_name, "--nocapture"])
-        .env(helper_output, output)
-        .output()
-        .unwrap();
-    assert!(
-        result.status.success(),
-        "determinism helper failed:\n{}",
-        String::from_utf8_lossy(&result.stderr)
-    );
-}
-
-fn assert_cross_process_variants(
-    label: &str,
-    helper_output: &str,
-    test_name: &str,
-    variant_environment: &str,
-) {
-    let artifacts = TemporaryArtifacts::new(label);
-    run_variant_helper_process(
-        &artifacts.first,
-        helper_output,
-        test_name,
-        variant_environment,
-        0,
-    );
-    run_variant_helper_process(
-        &artifacts.second,
-        helper_output,
-        test_name,
-        variant_environment,
-        1,
-    );
+fn assert_cross_process_variants(label: &str, test_name: &str) {
+    let first = TemporaryFile::new(&format!("{label}-determinism-first"))
+        .expect("first determinism output must be creatable");
+    let second = TemporaryFile::new(&format!("{label}-determinism-second"))
+        .expect("second determinism output must be creatable");
+    run_helper_process(first.path(), test_name, Some(0));
+    run_helper_process(second.path(), test_name, Some(1));
 
     assert_eq!(
-        fs::read(&artifacts.first).unwrap(),
-        fs::read(&artifacts.second).unwrap(),
+        first.read().unwrap(),
+        second.read().unwrap(),
         "{label} products changed across independent compiler processes and input permutations"
     );
 }
 
-fn run_variant_helper_process(
-    output: &Path,
-    helper_output: &str,
-    test_name: &str,
-    variant_environment: &str,
-    variant: usize,
-) {
-    let result = Command::new(env::current_exe().unwrap())
-        .args(["--exact", test_name, "--nocapture"])
-        .env(helper_output, output)
-        .env(variant_environment, variant.to_string())
-        .output()
-        .unwrap();
-    assert!(
-        result.status.success(),
-        "determinism helper failed:\n{}",
-        String::from_utf8_lossy(&result.stderr)
+fn run_helper_process(output: &Path, test_name: &str, variant: Option<usize>) {
+    let mut request = CurrentTestProcessRequest::new(
+        test_name,
+        TestProcessPolicy::with_default_diagnostic_limit(HELPER_TIMEOUT),
+    )
+    .with_environment(HELPER_OUTPUT, output);
+    if let Some(variant) = variant {
+        request = request.with_environment(HELPER_VARIANT, variant.to_string());
+    }
+
+    let observation = run_current_test_process(request)
+        .unwrap_or_else(|error| panic!("failed to run determinism helper {test_name:?}: {error}"));
+    let succeeded = matches!(
+        observation.termination,
+        TestProcessTermination::Completed(status) if status.success()
     );
+    assert!(
+        succeeded && !observation.stdout.overflowed() && !observation.stderr.overflowed(),
+        "determinism helper {test_name:?} ended with {:?}\n\
+         stdout ({} bytes observed, {} retained):\n{}\n\
+         stderr ({} bytes observed, {} retained):\n{}",
+        observation.termination,
+        observation.stdout.observed_length(),
+        observation.stdout.retained().len(),
+        String::from_utf8_lossy(observation.stdout.retained()),
+        observation.stderr.observed_length(),
+        observation.stderr.retained().len(),
+        String::from_utf8_lossy(observation.stderr.retained()),
+    );
+}
+
+fn same_input_helper_output() -> Option<PathBuf> {
+    match (env::var_os(HELPER_OUTPUT), env::var_os(HELPER_VARIANT)) {
+        (None, None) => None,
+        (Some(output), None) => Some(output.into()),
+        (output, variant) => panic!(
+            "malformed determinism helper state for same-input case: \
+             {HELPER_OUTPUT}={output:?}, {HELPER_VARIANT}={variant:?}"
+        ),
+    }
+}
+
+fn variant_helper_state() -> Option<(PathBuf, usize)> {
+    match (env::var_os(HELPER_OUTPUT), env::var_os(HELPER_VARIANT)) {
+        (None, None) => None,
+        (Some(output), Some(variant)) => {
+            let variant = variant
+                .to_str()
+                .and_then(|variant| variant.parse().ok())
+                .filter(|variant| matches!(variant, 0 | 1))
+                .unwrap_or_else(|| {
+                    panic!("invalid determinism helper permutation {variant:?}; expected 0 or 1")
+                });
+            Some((output.into(), variant))
+        }
+        (output, variant) => panic!(
+            "malformed determinism helper state for permutation case: \
+             {HELPER_OUTPUT}={output:?}, {HELPER_VARIANT}={variant:?}"
+        ),
+    }
 }
 
 fn module_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("module-products", variant);
-    let application = fixture.path.join("application");
-    let dependencies = fixture.path.join("dependencies");
-    let application_alias = fixture.path.join("application-alias");
+    let application = fixture.path().join("application");
+    let dependencies = fixture.path().join("dependencies");
+    let application_alias = fixture.path().join("application-alias");
     link_directory(&application, &application_alias);
 
     let imports = if variant == 0 {
@@ -980,13 +766,13 @@ fn module_phase_dump(variant: usize) -> String {
             ProviderRootConfiguration::module_root(PathBuf::from("./application-alias")),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let entry = if variant == 0 {
         EntrySelector::Module("app".parse().unwrap())
     } else {
         EntrySelector::File(application_alias.join("app.ska"))
     };
-    let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
+    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
     let resolved = resolve_module_graph(&graph);
     assert!(resolved.diagnostics.is_empty());
     let checked = type_check(&resolved.program);
@@ -1000,7 +786,7 @@ fn module_phase_dump(variant: usize) -> String {
     .unwrap();
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -1015,8 +801,8 @@ fn module_phase_dump(variant: usize) -> String {
 
 fn module_diagnostic_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("module-diagnostics", variant);
-    let modules = fixture.path.join("modules");
-    let modules_alias = fixture.path.join("modules-alias");
+    let modules = fixture.path().join("modules");
+    let modules_alias = fixture.path().join("modules-alias");
     let sources = [
         (
             modules.join("app.ska"),
@@ -1046,22 +832,22 @@ fn module_diagnostic_dump(variant: usize) -> String {
             ProviderRootConfiguration::module_root(modules_alias),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let entry = EntrySelector::Module("app".parse().unwrap());
-    let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
+    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
     let resolved = resolve_module_graph(&graph);
     assert!(resolved.has_errors());
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         render_diagnostics(graph.sources(), &resolved.diagnostics),
     )
 }
 
 fn generic_module_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("generic-module-products", variant);
-    let modules = fixture.path.join("modules");
-    let modules_alias = fixture.path.join("modules-alias");
+    let modules = fixture.path().join("modules");
+    let modules_alias = fixture.path().join("modules-alias");
     link_directory(&modules, &modules_alias);
     let sources = [
         (
@@ -1118,9 +904,9 @@ fn generic_module_phase_dump(variant: usize) -> String {
             )),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let entry = EntrySelector::Module("app".parse().unwrap());
-    let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
+    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
     let resolved = resolve_module_graph(&graph);
     assert!(
         resolved.diagnostics.is_empty(),
@@ -1137,7 +923,7 @@ fn generic_module_phase_dump(variant: usize) -> String {
     let final_mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}",
             dump_module_graph(&graph),
@@ -1152,8 +938,8 @@ fn generic_module_phase_dump(variant: usize) -> String {
 
 fn generic_interface_module_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("generic-interface-products", variant);
-    let modules = fixture.path.join("modules");
-    let modules_alias = fixture.path.join("modules-alias");
+    let modules = fixture.path().join("modules");
+    let modules_alias = fixture.path().join("modules-alias");
     link_directory(&modules, &modules_alias);
     let sources = [
         (
@@ -1216,10 +1002,10 @@ fn generic_interface_module_phase_dump(variant: usize) -> String {
             )),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -1248,7 +1034,7 @@ fn generic_interface_module_phase_dump(variant: usize) -> String {
     .unwrap();
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -1264,8 +1050,8 @@ fn generic_interface_module_phase_dump(variant: usize) -> String {
 
 fn generic_operator_module_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("generic-operator-products", variant);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let mut sources = vec![
         (
             application.join("app.ska"),
@@ -1316,10 +1102,10 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
             ProviderRootConfiguration::standard_library(standard_library.clone()),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -1382,7 +1168,7 @@ fn generic_operator_module_phase_dump(variant: usize) -> String {
     assert!(assembly.contains(".method.op_add."), "{assembly}");
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -1424,8 +1210,8 @@ fn range_module_phase_dump(variant: usize) -> String {
          }\n";
 
     let fixture = ModuleFixture::new("range-products", variant);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let mut sources = vec![
         (application.join("app.ska"), APP_SOURCE),
         (application.join("model.ska"), MODEL_SOURCE),
@@ -1453,10 +1239,10 @@ fn range_module_phase_dump(variant: usize) -> String {
             ProviderRootConfiguration::standard_library(standard_library),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -1500,7 +1286,7 @@ fn range_module_phase_dump(variant: usize) -> String {
     assert!(!assembly.contains("skald_rt_range"), "{assembly}");
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "{}GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
             range_frontend_phase_dump(APP_SOURCE, MODEL_SOURCE),
@@ -1567,8 +1353,8 @@ fn range_syntax_diagnostic_dump() -> String {
 
 fn iteration_module_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("general-iteration-products", variant);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let mut sources = vec![
         (
             application.join("app.ska"),
@@ -1628,10 +1414,10 @@ fn iteration_module_phase_dump(variant: usize) -> String {
             ProviderRootConfiguration::standard_library(standard_library),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -1660,7 +1446,7 @@ fn iteration_module_phase_dump(variant: usize) -> String {
     .unwrap();
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -1676,8 +1462,8 @@ fn iteration_module_phase_dump(variant: usize) -> String {
 
 fn iteration_diagnostic_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("general-iteration-diagnostics", variant);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let claims = if variant == 0 {
         "Iterable<i64, u64>, Iterable<f64, i64>"
     } else {
@@ -1694,7 +1480,7 @@ fn iteration_diagnostic_dump(variant: usize) -> String {
         write_source(&standard_library.join(relative), source);
     }
     let providers = normalize_provider_roots(
-        &fixture.path,
+        fixture.path(),
         &[
             ProviderRootConfiguration::module_root(application),
             ProviderRootConfiguration::standard_library(standard_library),
@@ -1703,7 +1489,7 @@ fn iteration_diagnostic_dump(variant: usize) -> String {
     .unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -1713,7 +1499,7 @@ fn iteration_diagnostic_dump(variant: usize) -> String {
         &format!("class Both implements {claims} {{ init() {{}} }}"),
         "class Both implements <first-claim>, <second-claim> { init() {} }",
     );
-    normalize_fixture_paths(&fixture.path, rendered)
+    normalize_fixture_paths(fixture.path(), rendered)
 }
 
 fn generic_interface_diagnostic_dump() -> String {
@@ -2054,8 +1840,8 @@ fn static_field_diagnostic_dump() -> String {
 
 fn static_field_module_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("static-field-modules", variant);
-    let modules = fixture.path.join("modules");
-    let modules_alias = fixture.path.join("modules-alias");
+    let modules = fixture.path().join("modules");
+    let modules_alias = fixture.path().join("modules-alias");
     let sources = [
         (
             modules.join("app.ska"),
@@ -2097,13 +1883,13 @@ fn static_field_module_phase_dump(variant: usize) -> String {
             ProviderRootConfiguration::module_root(modules_alias),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let entry = if variant == 0 {
         EntrySelector::Module("app".parse().unwrap())
     } else {
-        EntrySelector::File(fixture.path.join("modules-alias/app.ska"))
+        EntrySelector::File(fixture.path().join("modules-alias/app.ska"))
     };
-    let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
+    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
     let resolved = resolve_module_graph(&graph);
     assert!(resolved.diagnostics.is_empty());
     let checked = type_check(&resolved.program);
@@ -2117,7 +1903,7 @@ fn static_field_module_phase_dump(variant: usize) -> String {
     .unwrap();
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -2131,8 +1917,8 @@ fn static_field_module_phase_dump(variant: usize) -> String {
 
 fn imported_unused_static_phase_dump() -> String {
     let fixture = ModuleFixture::new("imported-unused-static-products", 0);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let mut sources = vec![
         (
             application.join("app.ska"),
@@ -2156,7 +1942,7 @@ fn imported_unused_static_phase_dump() -> String {
         write_source(&path, source);
     }
     let providers = normalize_provider_roots(
-        &fixture.path,
+        fixture.path(),
         &[
             ProviderRootConfiguration::module_root(application),
             ProviderRootConfiguration::standard_library(standard_library),
@@ -2165,7 +1951,7 @@ fn imported_unused_static_phase_dump() -> String {
     .unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -2201,7 +1987,7 @@ fn imported_unused_static_phase_dump() -> String {
     assert!(!assembly.contains("marker"));
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -2423,8 +2209,8 @@ fn type_error_phase_dump(name: &str, text: &str) -> String {
 
 fn string_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("string-products", variant);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let mut sources = vec![(
         application.join("app.ska"),
         include_str!("../../../tests/golden/primitive_strings/string_values.ska"),
@@ -2451,10 +2237,10 @@ fn string_phase_dump(variant: usize) -> String {
             ProviderRootConfiguration::standard_library(standard_library),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -2471,7 +2257,7 @@ fn string_phase_dump(variant: usize) -> String {
     .unwrap();
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -2486,8 +2272,8 @@ fn string_phase_dump(variant: usize) -> String {
 
 fn io_phase_dump(variant: usize, malformed: bool) -> String {
     let fixture = ModuleFixture::new("io-products", variant);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let mut io_source = CANONICAL_IO_SOURCE.to_owned();
     if malformed {
         io_source = io_source.replace("intrinsic fn _io_close", "public intrinsic fn _io_close");
@@ -2529,10 +2315,10 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
             ProviderRootConfiguration::standard_library(standard_library),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -2570,13 +2356,13 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
             assembly,
         )
     };
-    normalize_fixture_paths(&fixture.path, phases)
+    normalize_fixture_paths(fixture.path(), phases)
 }
 
 fn string_diagnostic_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("string-diagnostics", variant);
-    let application = fixture.path.join("application");
-    let standard_library = fixture.path.join("standard-library");
+    let application = fixture.path().join("application");
+    let standard_library = fixture.path().join("standard-library");
     let malformed_string = concat!(
         "public class Str {\n",
         "  private _storage: shared u64[];\n",
@@ -2624,10 +2410,10 @@ fn string_diagnostic_dump(variant: usize) -> String {
             ProviderRootConfiguration::standard_library(standard_library),
         ]
     };
-    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
+        fixture.path(),
         &providers,
     )
     .unwrap();
@@ -2635,7 +2421,7 @@ fn string_diagnostic_dump(variant: usize) -> String {
     assert!(resolved.diagnostics.has_errors());
 
     normalize_fixture_paths(
-        &fixture.path,
+        fixture.path(),
         format!(
             "GRAPH\n{}DIAGNOSTICS\n{}",
             dump_module_graph(&graph),
@@ -2871,43 +2657,18 @@ fn replace_standard_test_assertions(source: &mut String, declarations: &mut Stri
     }
 }
 
-struct TemporaryArtifacts {
-    first: PathBuf,
-    second: PathBuf,
-}
-
 struct ModuleFixture {
-    path: PathBuf,
+    directory: TemporaryDirectory,
 }
 
 impl ModuleFixture {
     fn new(label: &str, variant: usize) -> Self {
-        let path = env::temp_dir().join(format!("skald-{label}-{}-{variant}", std::process::id()));
-        fs::create_dir(&path).unwrap();
-        Self { path }
+        let directory = TemporaryDirectory::new(&format!("{label}-{variant}"))
+            .expect("module fixture directory must be creatable");
+        Self { directory }
     }
-}
 
-impl Drop for ModuleFixture {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
-
-impl TemporaryArtifacts {
-    fn new(label: &str) -> Self {
-        let stem = format!("skald-{label}-determinism-{}", std::process::id());
-        let directory = env::temp_dir();
-        Self {
-            first: directory.join(format!("{stem}-first.txt")),
-            second: directory.join(format!("{stem}-second.txt")),
-        }
-    }
-}
-
-impl Drop for TemporaryArtifacts {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.first);
-        let _ = fs::remove_file(&self.second);
+    fn path(&self) -> &Path {
+        self.directory.path()
     }
 }

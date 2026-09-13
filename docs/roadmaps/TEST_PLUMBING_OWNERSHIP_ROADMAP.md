@@ -1,6 +1,6 @@
 # Test Plumbing Ownership Roadmap
 
-Status: planned; TP01 is next.
+Status: in progress; TP02 is next.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
@@ -54,7 +54,7 @@ finding can close.
 
 ## Progress
 
-- [ ] TP01 — Establish the integration subprocess and resource boundary
+- [x] TP01 — Establish the integration subprocess and resource boundary
 - [ ] TP02 — Move module-backed determinism fixtures behind owned generators
 - [ ] TP03 — Move value and ownership determinism fixtures
 - [ ] TP04 — Complete determinism-suite ownership and registry consolidation
@@ -71,44 +71,44 @@ finding can close.
 unbounded current-test-executable mechanics with one narrow compiler-integration
 foundation before moving any large fixture family.
 
-- [ ] Record the starting revision and working-tree state. Capture sorted Rust
+- [x] Record the starting revision and working-tree state. Capture sorted Rust
   test inventories for the compiler library, compiler determinism integration
   binary, and golden integration binaries. Record the 53 determinism leaf names
   and every living Makefile, script, and documentation reference to focused
   test paths.
-- [ ] Add a private `crates/skald-compiler/tests/support/` facade with only the
+- [x] Add a private `crates/skald-compiler/tests/support/` facade with only the
   temporary-resource and current-test-process responsibilities demonstrated by
   current integration consumers. Do not add a general source pipeline module
   until a later task identifies at least two exact consumers.
-- [ ] Give temporary files and directories collision-resistant ownership,
+- [x] Give temporary files and directories collision-resistant ownership,
   create-new semantics, path access without public mutation, and cleanup on
   normal return and unwinding. Keep resources under the host temporary
   directory and make cleanup failure non-fatal during unwinding.
-- [ ] Define a current-test-process request that names the selected test,
+- [x] Define a current-test-process request that names the selected test,
   explicit environment, timeout, and diagnostic-output limit. Redirect stdout
   and stderr to owned temporary files so parent waiting cannot deadlock on full
   pipes. Poll to the caller-provided deadline, kill and reap on timeout, and
   return bounded output plus a typed completion or timeout observation rather
   than asserting a compiler result inside the utility. Keep spawn, wait,
   kill/reap, and output-read failures distinguishable with their source errors.
-- [ ] Use a 64 KiB default diagnostic limit only through an explicitly named
+- [x] Use a 64 KiB default diagnostic limit only through an explicitly named
   test-process policy; callers may select a different finite limit. Report the
   complete file length when output exceeds the retained prefix so overflow is
   never mistaken for complete diagnostics.
-- [ ] Add focused support coverage for parallel resource creation, cleanup on
+- [x] Add focused support coverage for parallel resource creation, cleanup on
   unwind, successful and failed child status, timeout and reap, bounded
   stdout/stderr overflow, and concurrent invocations with isolated environment
   and outputs. Helper children must have their own finite fallback lifetime so
   a broken timeout test cannot hang the repository gate.
-- [ ] Migrate `expression_depth_robustness` and the determinism suite's child
+- [x] Migrate `expression_depth_robustness` and the determinism suite's child
   launching to the shared process primitive. Preserve the expression suite's
   15-second watchdog and failure context. Preserve two independent children
   per determinism case.
-- [ ] Replace the determinism suite's per-case output environment variables
+- [x] Replace the determinism suite's per-case output environment variables
   with one private helper-output key and one optional permutation key. An
   absent helper-output key selects the parent path; malformed helper state is
   an explicit test failure.
-- [ ] Keep all generators and test registrations in their current file during
+- [x] Keep all generators and test registrations in their current file during
   this task except for small moves required to give the harness one owner.
 
 **Tests:** Add a focused integration support test binary or equally isolated
@@ -124,6 +124,100 @@ primitive and one owned temporary-resource implementation; expression-depth and
 all determinism children use it; all 53 determinism leaf names and observations
 remain intact; helper failures cannot hang on a pipe or wait beyond the chosen
 deadline; and no production visibility or dependency changed.
+
+#### TP01 baseline and delivery record
+
+The starting revision was
+`f1bdae7171a7a2219cd4d33c5ffdb1828a871b48`, with a clean working tree. Sorted
+Cargo inventories captured before editing had these counts and SHA-256 hashes:
+
+| Inventory | Tests | SHA-256 |
+| --- | ---: | --- |
+| `skald-compiler --lib` | 3,148 | `7736a44dc47b03db98eccdae074b7ca6c50f9faf2e65f424a2df714d528a0f0f` |
+| `pipeline_determinism` | 53 | `c04091410676bb92fc34d395ad06ec986502f726e84a3a03d8982e2287f2e1f0` |
+| `skald-golden --tests`, including the library harness Cargo runs for this target selection | 112 | `dd391f6d459f5f0222e7ef0e04b5f25dd979eddbd2f3455e9b0a9b9cd01e53c2` |
+| Golden integration binaries only | 79 | `6b2c168d09b26666397729c2c76ca8f7642f453cc43c5a6b9543c4921a8f3649` |
+
+The 53 determinism leaf names were:
+
+```text
+array_element_list_phase_products_are_deterministic_across_processes
+array_phase_products_are_deterministic_across_processes
+eager_boolean_diagnostics_are_deterministic_across_processes
+eager_boolean_phase_products_are_deterministic_across_processes
+final_field_diagnostics_are_deterministic_across_processes
+final_field_phase_products_are_deterministic_across_processes
+floating_comparison_diagnostics_are_deterministic_across_processes
+floating_comparison_phase_products_are_deterministic_across_processes
+floating_division_diagnostics_are_deterministic_across_processes
+floating_division_phase_products_are_deterministic_across_processes
+function_value_composition_products_are_deterministic_across_processes
+general_iteration_diagnostics_are_deterministic_across_processes
+general_iteration_phase_products_are_deterministic_across_processes
+generic_interface_diagnostics_are_deterministic_across_processes
+generic_interface_phase_products_are_deterministic_across_processes
+generic_module_phase_products_are_deterministic_across_processes
+generic_operator_phase_products_are_deterministic_across_processes
+imported_unused_static_products_are_deterministic_across_processes
+indexed_array_frontend_products_are_deterministic_across_processes
+integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes
+integer_bitwise_and_shift_phase_products_are_deterministic_across_processes
+integer_division_diagnostics_are_deterministic_across_processes
+integer_division_phase_products_are_deterministic_across_processes
+integer_operation_phase_products_are_deterministic_across_processes
+io_phase_products_are_deterministic_across_processes
+io_provider_diagnostics_are_deterministic_across_processes
+mir_pipeline_checkpoints_are_deterministic_across_processes
+module_diagnostics_are_deterministic_across_processes
+module_phase_products_are_deterministic_across_processes
+object_lifetime_phase_products_are_deterministic_across_processes
+optional_value_phase_products_are_deterministic_across_processes
+polymorphism_phase_products_are_deterministic_across_processes
+primitive_cast_diagnostics_are_deterministic_across_processes
+primitive_cast_phase_products_are_deterministic_across_processes
+primitive_operator_profile_phase_products_are_deterministic_across_processes
+private_cell_diagnostics_are_deterministic_across_processes
+private_cell_phase_products_are_deterministic_across_processes
+private_initializer_diagnostics_are_deterministic_across_processes
+private_initializer_phase_products_are_deterministic_across_processes
+produced_alias_phase_products_are_deterministic_across_processes
+produced_field_phase_products_are_deterministic_across_processes
+produced_receiver_phase_products_are_deterministic_across_processes
+range_phase_products_are_deterministic_across_processes
+range_syntax_diagnostics_are_deterministic_across_processes
+shared_ownership_phase_products_are_deterministic_across_processes
+short_circuit_source_products_are_deterministic_across_processes
+static_field_diagnostics_are_deterministic_across_processes
+static_field_module_products_are_deterministic_across_processes
+static_field_phase_products_are_deterministic_across_processes
+static_initializer_lifecycle_products_are_deterministic_across_processes
+static_lifetime_cycle_diagnostics_are_deterministic_across_processes
+string_language_item_diagnostics_are_deterministic_across_processes
+string_phase_products_are_deterministic_across_processes
+```
+
+The living focused-reference scan recorded 65 matches with SHA-256
+`42560e4b8adf547f35d42ef898aa87d2bea79f7198792acab695c0ef62f47e0e`.
+Its owners were the `Makefile`, `scripts/README.md`, development `README.md`,
+`TESTING.md`, and `DEBUGGING.md`, the range, generic-interface, and operator
+test matrices, `GENERIC_INTERFACES.md`, and the active cleanup audit, design,
+and roadmap. The concrete determinism filters in `DEBUGGING.md` select generic
+modules, generic interfaces, function values, private initializers, strings,
+and private cells. No living focused path changed in TP01.
+
+TP01 introduced one private compiler-integration support facade with separate
+process and temporary-resource owners. The process request makes its selected
+test, environment, deadline, and diagnostic limit explicit; stdout and stderr
+go to owned files, and completion, timeout, overflow, and system errors remain
+typed observations for the calling suite. The expression-depth suite retains
+its 15-second watchdog. Determinism uses a 60-second child deadline, two child
+processes per case, and one output key plus one optional permutation key. Its
+post-change sorted inventory was byte-identical to the 53-name baseline.
+
+Validation passed the focused support and expression-depth suites, complete
+determinism with default and eight-thread scheduling, formatting, all-target
+workspace Clippy with warnings denied, `make check`, `make msrv-check`, and
+`git diff --check`.
 
 ### TP02 — Move module-backed determinism fixtures behind owned generators
 

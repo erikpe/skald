@@ -1,17 +1,18 @@
 //! Process-isolated regressions for expression shapes that formerly aborted
 //! the compiler with a stack overflow.
 
-use std::{
-    io::Read,
-    process::{Command, Stdio},
-    thread,
-    time::{Duration, Instant},
-};
+use std::time::Duration;
 
 use skald_compiler::{
     backend::Target,
     diagnostics::render_diagnostics,
     driver::{compile_source_to_assembly, CompilationError},
+};
+
+mod support;
+use support::{
+    run_current_test_process, CurrentTestProcessObservation, CurrentTestProcessRequest,
+    TestProcessPolicy, TestProcessTermination,
 };
 
 const HELPER_CASE: &str = "SKALD_EXPRESSION_DEPTH_HELPER_CASE";
@@ -62,50 +63,37 @@ fn expression_depth_subprocess_helper() {
 }
 
 fn run_helper_with_watchdog(case: &str) {
-    let mut child =
-        Command::new(std::env::current_exe().expect("test executable must have a path"))
-            .args([
-                "--exact",
-                "expression_depth_subprocess_helper",
-                "--nocapture",
-            ])
-            .env(HELPER_CASE, case)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap_or_else(|error| panic!("failed to spawn expression-depth helper: {error}"));
+    let request = CurrentTestProcessRequest::new(
+        "expression_depth_subprocess_helper",
+        TestProcessPolicy::with_default_diagnostic_limit(TIMEOUT),
+    )
+    .with_environment(HELPER_CASE, case);
+    let observation = run_current_test_process(request)
+        .unwrap_or_else(|error| panic!("failed to run expression-depth helper {case:?}: {error}"));
+    let context = helper_failure_context(&observation);
 
-    let started = Instant::now();
-    let status = loop {
-        if let Some(status) = child
-            .try_wait()
-            .unwrap_or_else(|error| panic!("failed to poll expression-depth helper: {error}"))
-        {
-            break status;
+    match observation.termination {
+        TestProcessTermination::TimedOut => {
+            panic!("expression-depth helper {case:?} exceeded {TIMEOUT:?}:{context}")
         }
-        if started.elapsed() >= TIMEOUT {
-            child.kill().expect("timed-out helper must be killable");
-            let _ = child.wait();
-            panic!("expression-depth helper {case:?} exceeded {TIMEOUT:?}");
-        }
-        thread::sleep(Duration::from_millis(10));
-    };
+        TestProcessTermination::Completed(status) => assert!(
+            status.success()
+                && !observation.stdout.overflowed()
+                && !observation.stderr.overflowed(),
+            "expression-depth helper {case:?} failed with {status}:{context}"
+        ),
+    }
+}
 
-    let mut output = String::new();
-    child
-        .stdout
-        .take()
-        .expect("helper stdout must be piped")
-        .read_to_string(&mut output)
-        .expect("helper stdout must be readable");
-    child
-        .stderr
-        .take()
-        .expect("helper stderr must be piped")
-        .read_to_string(&mut output)
-        .expect("helper stderr must be readable");
-    assert!(
-        status.success(),
-        "expression-depth helper {case:?} failed with {status}:\n{output}"
-    );
+fn helper_failure_context(observation: &CurrentTestProcessObservation) -> String {
+    format!(
+        "\nstdout ({} bytes observed, {} retained):\n{}\n\
+         stderr ({} bytes observed, {} retained):\n{}",
+        observation.stdout.observed_length(),
+        observation.stdout.retained().len(),
+        String::from_utf8_lossy(observation.stdout.retained()),
+        observation.stderr.observed_length(),
+        observation.stderr.retained().len(),
+        String::from_utf8_lossy(observation.stderr.retained()),
+    )
 }

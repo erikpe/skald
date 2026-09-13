@@ -1388,8 +1388,12 @@ Phase dump tests call the same renderer repeatedly and compare exact text.
 `pipeline_determinism` compares tokens, AST, resolved, HIR, MIR, and assembly
 products for representative object-lifetime, polymorphism, shared-ownership,
 optional-value, array, primitive-integer-operation, and string programs from
-two independent test processes. Its module cases additionally permute root
-option order, equivalent root spellings, source creation order, import
+two independent test processes. Compiler integration child processes run with
+an explicit deadline and environment, write stdout and stderr to owned
+temporary files, and retain at most 64 KiB from each diagnostic stream while
+reporting the complete observed length. This keeps a full child pipe or a
+stalled child from hanging the test gate. Its module cases additionally permute
+root option order, equivalent root spellings, source creation order, import
 declaration order, and logical versus positional selection of the same rooted
 entry, then compare canonical graph, resolved, HIR, MIR, assembly, and
 diagnostic products. The ordinary golden target invokes each compiler and
