@@ -585,8 +585,12 @@ Driver tests are divided by responsibility:
 - CLI tests cover help, version, selectors, roots, argument rejection, report
   and diagnostic levels, output defaults, suffix, target, trace omission, and
   OS-string rules;
-- pipeline tests compose singleton and request-based whole-program phases,
-  trace policy/source handoff, and structured failures;
+- pipeline request tests cover provider roots, reached-source closure,
+  standard-library and optimization selection, target artifacts, and
+  structured failure categories; composition and feature groups cover the
+  singleton and request-based whole-program path through backend emission,
+  while robustness tests cover source-phase cutoffs and recoverable malformed
+  inputs;
 - artifact tests cover assembly output, source alias rejection, preservation,
   and temporary cleanup;
 - toolchain tests cover missing archives, process failures, full pipes in both

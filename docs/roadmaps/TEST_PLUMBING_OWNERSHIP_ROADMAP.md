@@ -1,6 +1,6 @@
 # Test Plumbing Ownership Roadmap
 
-Status: in progress; TP06 is next.
+Status: in progress; TP07 is next.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
@@ -59,7 +59,7 @@ finding can close.
 - [x] TP03 — Move value and ownership determinism fixtures
 - [x] TP04 — Complete determinism-suite ownership and registry consolidation
 - [x] TP05 — Split driver reporting tests by observation responsibility
-- [ ] TP06 — Split driver pipeline tests by compilation responsibility
+- [x] TP06 — Split driver pipeline tests by compilation responsibility
 - [ ] TP07 — Consolidate golden integration resources by dependency level
 - [ ] TP08 — Reconcile inventories, validate every boundary, and close A33
 
@@ -530,30 +530,30 @@ documentation links, `make check` with 629 golden cases, `make msrv-check`, and
 and malformed-source robustness so new driver behavior has an obvious test
 owner without collapsing complete-pipeline checks into earlier phase tests.
 
-- [ ] Capture the pipeline test inventory, fully qualified filters, source
+- [x] Capture the pipeline test inventory, fully qualified filters, source
   fixture groups, and incoming references before moving code.
-- [ ] Convert `driver/tests/pipeline.rs` into a recursive module with owners for
+- [x] Convert `driver/tests/pipeline.rs` into a recursive module with owners for
   request and provider selection, complete source-to-backend composition,
   malformed/excessive-source robustness, and cohesive feature-composition
   groups where needed.
-- [ ] Keep request-local filesystem setup and provider roots with request tests.
+- [x] Keep request-local filesystem setup and provider roots with request tests.
   Share source-to-assembly adapters through existing driver/test-support
   boundaries rather than rebuilding the compilation pipeline in the suite.
-- [ ] Preserve configuration-versus-source failure categories, disabled and
+- [x] Preserve configuration-versus-source failure categories, disabled and
   replacement standard-library behavior, unreachable-source behavior,
   artifact contents, target selection, optimization profiles, and exact
   diagnostic rendering.
-- [ ] Preserve `catch_unwind` tests that protect recoverable malformed inputs,
+- [x] Preserve `catch_unwind` tests that protect recoverable malformed inputs,
   and keep the process-isolated expression-depth watchdog as a distinct
   integration test for abort/nontermination behavior that `catch_unwind`
   cannot observe.
-- [ ] Retain complete feature-composition tests even where a golden or phase
+- [x] Retain complete feature-composition tests even where a golden or phase
   test uses similar source. Move a case to golden ownership only as a separate
   reviewed behavioral change with equivalent observations, never as part of
   this structural task.
-- [ ] Use explicit child imports and narrow helper visibility. Remove obsolete
+- [x] Use explicit child imports and narrow helper visibility. Remove obsolete
   forwarding and broad parent imports after all consumers move.
-- [ ] Update living focused commands and record any reviewed module-prefix
+- [x] Update living focused commands and record any reviewed module-prefix
   changes.
 
 **Tests:** Run every new pipeline child module, the complete
@@ -566,6 +566,43 @@ and exact diagnostics/artifacts. Run all-target Clippy, `make check`,
 composition tests have clear owners; every prior case remains mapped and
 equally strong; process-isolated robustness remains independent; and the
 driver test facade contains only shared orchestration and module declarations.
+
+#### TP06 delivery record
+
+The former 1,279-line pipeline module is now a concise recursive facade. Its
+42 tests have explicit owners: 12 request/provider cases, three general
+source-to-backend composition canaries, seven recoverable source-robustness
+cases, and 20 feature-composition cases divided between arrays, objects, and
+statics. Request-local filesystem and canonical-standard-library helpers live
+only with request tests. Every child imports its production dependencies
+directly, and obsolete pipeline-only imports were removed from the driver test
+facade.
+
+The baseline and result each contain 42 tests. Their sorted leaf-name
+inventories have the same SHA-256
+`dcdc6033886035b7f2a5b0ca92382eb11d977d48b9f5e1bc01c0357e18b43a64`.
+No living command selected an individual fully qualified pipeline leaf, so no
+compatibility wrapper was needed. The stable aggregate remains
+`driver::tests::pipeline`; the reviewed prefix changes are:
+
+| New owner prefix | Preserved responsibility | Tests |
+| --- | --- | ---: |
+| `request` | Provider roots, standard-library policy, optimization selection, reached sources, request artifacts, and failure categories | 12 |
+| `composition` | General public source-to-backend canaries | 3 |
+| `robustness` | Rendered source failures, phase cutoff, malformed input, and excessive nesting | 7 |
+| `features::arrays` | Inline, owner, optional, nested, and indexed array composition | 8 |
+| `features::objects` | Object construction, inheritance, copying, cells, final values, and pruned lifecycle bodies | 8 |
+| `features::statics` | Static fields, synthesis, and lifecycle-cycle diagnostics | 4 |
+
+The source text, target selection, optimization profiles, `catch_unwind`
+guards, exact diagnostics, source counts, metrics, and assembly assertions are
+unchanged. The independent `expression_depth_robustness` integration binary
+continues to own process abort and nontermination detection. Living testing
+and driver documentation now describes the owner filters. Validation passed
+every child and the 42-test aggregate, expression-depth robustness, public API,
+phase-boundary, and 53-case cross-process determinism suites, formatting,
+all-target workspace Clippy with warnings denied, documentation links,
+`make check` with 629 golden cases, `make msrv-check`, and `git diff --check`.
 
 ### TP07 — Consolidate golden integration resources by dependency level
 

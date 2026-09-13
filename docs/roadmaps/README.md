@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md) | In progress | Restructure large compiler and golden test suites while preserving independent process, malformed-input, phase, and native observations | TP06 — split driver pipeline tests by compilation responsibility | Accepted [test plumbing ownership design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md); cleanup finding A33; TP01–TP05 complete |
+| [Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md) | In progress | Restructure large compiler and golden test suites while preserving independent process, malformed-input, phase, and native observations | TP07 — consolidate golden integration resources by dependency level | Accepted [test plumbing ownership design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md); cleanup finding A33; TP01–TP06 complete |
 
 ## Pending discovery and planning records
 

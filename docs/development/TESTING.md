@@ -589,6 +589,24 @@ cargo test --locked -p skald-compiler driver::tests::reporting::metrics
 cargo test --locked -p skald-compiler driver::tests::reporting::failures
 ```
 
+Driver pipeline tests use the same responsibility-based layout. Request and
+provider selection owns filesystem roots, standard-library policy,
+optimization selection, reached-source closure, and structured failure
+categories. Composition owns small public source-to-backend canaries;
+robustness owns rendered source failures and recoverable malformed-input
+cases. Feature composition remains grouped under array, object, and static
+owners because those cases intentionally cross every compiler phase. The
+process-isolated expression-depth watchdog remains an integration test because
+an in-process unwind guard cannot observe aborts or nontermination. Select the
+stable aggregate or a precise owner with:
+
+```text
+cargo test --locked -p skald-compiler driver::tests::pipeline
+cargo test --locked -p skald-compiler driver::tests::pipeline::request
+cargo test --locked -p skald-compiler driver::tests::pipeline::robustness
+cargo test --locked -p skald-compiler driver::tests::pipeline::features::arrays
+```
+
 Module-loader tests own real discovery/final execution counts across duplicate,
 compiler-injected, cyclic, malformed, and UTF-8 sources. MIR model and pass
 tests own definition/block/instruction and verification/pass counts. Option,

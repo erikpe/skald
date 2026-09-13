@@ -4,12 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    backend::Target,
-    diagnostics::render_diagnostics,
-    syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
-    test_support::{canonical_standard_library_sources, TemporaryDirectory},
-};
+use crate::{backend::Target, test_support::TemporaryDirectory};
 
 use super::*;
 
