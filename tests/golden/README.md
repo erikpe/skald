@@ -192,6 +192,15 @@ limit remain valid, while an oversized file fails without loading its complete
 contents. `serial = true` requests exclusive execution; equal names in
 `resources = ["..."]` prevent only those nodes from overlapping.
 
+Compiler output is captured before any portability adjustment. For a
+compile-fail invocation whose resolved module or standard-library roots share
+a fixture-owned parent, the runner removes every non-overlapping occurrence of
+that absolute parent prefix from the stderr view used for expectations,
+compiler determinism, and reports. It preserves all other bytes, including
+non-UTF-8 data, and keeps the raw capture available to the runner API. Capture
+overflow and pipe failures are based on the raw process and remain failures
+even when retained diagnostic bytes are normalized.
+
 The runtime is prepared once when a selection contains native tests.
 Independent compiler, linker, and run nodes share the bounded worker pool.
 Failed prerequisites cancel dependents without stopping unrelated work unless

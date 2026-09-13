@@ -1,6 +1,6 @@
 # Raw Compiler Stderr Observation Roadmap
 
-Status: in progress; G02 is next.
+Status: complete; G01 and G02 delivered the raw compiler stderr boundary.
 
 Before G01, the golden runner removed the fixture path prefix directly from a
 `ProcessObservation` after the compiler exited. That made the process model
@@ -44,7 +44,7 @@ compile-fail expectations, determinism policy, or report schemas.
 ## Progress
 
 - [x] G01 — Separate raw capture from compiler diagnostic comparison
-- [ ] G02 — Harden reporting, compatibility, and documentation
+- [x] G02 — Harden reporting, compatibility, and documentation
 
 ## PR-sized implementation sequence
 
@@ -108,31 +108,48 @@ method remains.
 **Purpose:** prove the new ownership boundary across public observations and
 all report formats, then leave A36 closed with current documentation.
 
-- [ ] Add an end-to-end compile-fail fixture whose stderr contains the absolute
+- [x] Add an end-to-end compile-fail fixture whose stderr contains the absolute
   diagnostic prefix more than once, matching message text, and binary bytes.
   Assert raw `ProcessObservation` bytes separately from normalized comparison
   and report bytes.
-- [ ] Cover two compiler repetitions whose raw diagnostic paths differ only in
+- [x] Cover two compiler repetitions whose raw diagnostic paths differ only in
   normalized occurrences. Confirm the existing determinism policy compares the
   normalized views and still detects differences outside those occurrences.
-- [ ] Verify human, JSON, and JUnit reporting retain normalized portable output,
+- [x] Verify human, JSON, and JUnit reporting retain normalized portable output,
   matching policies, matcher order, and offsets without changing serialized
   report field names or structure.
-- [ ] Verify raw capture overflow and pipe failures are still reported from the
+- [x] Verify raw capture overflow and pipe failures are still reported from the
   process observation and cannot be erased by normalization.
-- [ ] Update golden-runner testing documentation to name the raw observation
+- [x] Update golden-runner testing documentation to name the raw observation
   and normalized compiler-diagnostic views, their byte-removal semantics, and
   their roles in matching, determinism, and reporting.
-- [ ] Remove obsolete names and comments, record the delivered implementation
+- [x] Remove obsolete names and comments, record the delivered implementation
   and validation under A36 in the cleanup audit, and mark every roadmap
   checkbox complete only after the full gates pass.
-- [ ] When all exit criteria hold, archive this completed roadmap, update the
+- [x] When all exit criteria hold, archive this completed roadmap, update the
   active and archive indexes, and repair incoming links.
+
+**Delivered:** a binary diagnostic integration fixture now exercises repeated,
+adjacent, and message-embedded absolute path occurrences across two compiler
+processes. It proves raw observations remain distinct while their normalized
+views compare equally, and a paired case proves non-path differences still
+fail determinism. Human, JSON, and JUnit projections retain portable bytes and
+the existing matcher schema, ordering, policies, and offsets. A bounded
+compiler run proves raw capture overflow remains visible in the process and
+stage report; compiler pipe failures continue to be copied from that same raw
+observation before normalization.
+
+**Validation:** the focused compiler-diagnostic reporting suite and complete
+`skald-golden` suite pass. Workspace all-target Clippy passes with warnings
+denied, `make check` passes with all 629 golden leaves, and the Rust 1.82
+workspace check passes. Formatting, documentation links, and diff hygiene also
+pass.
 
 **Tests:** Run `cargo test --locked -p skald-golden`, `make check`, `make
 msrv-check`, `cargo fmt --all -- --check`, the documentation checker, and `git
-diff --check`. Run the focused compile-determinism case with the real report
-projection in each supported format.
+diff --check`. Run `cargo test --locked -p skald-golden --test
+compiler_diagnostic_reporting` for the focused compile-determinism case with
+the real report projection in each supported format.
 
 **Exit criteria:** public process observations preserve exact child stderr;
 portable matcher and report behavior remains stable; determinism compares the

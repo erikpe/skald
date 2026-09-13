@@ -769,6 +769,19 @@ reports, `--slowest N` ranks completed leaves with stable ID tie-breaking, and
 `--keep-all-artifacts` retains passing run sandboxes. Ordinary execution never
 updates expectations.
 
+Completed compiler processes retain those bounded pipe bytes unchanged in
+`ProcessObservation`. For compile-fail module-provider invocations, planning
+may derive an absolute fixture-owned diagnostic path prefix from the resolved
+module and standard-library roots. `CompilerObservation::stderr_for_comparison`
+exposes a byte-oriented view that removes every non-overlapping occurrence of
+that prefix, including adjacent occurrences and occurrences in diagnostic
+message text. Missing, empty, and unmatched prefixes borrow the raw stderr
+without copying; surrounding non-UTF-8 bytes remain unchanged. Compile-fail
+matching, diagnostic determinism, and compiler-stage reports use this portable
+view, while `CompilerObservation::process()` exposes the raw capture. Capture
+limits and pipe failures are determined from the raw process before diagnostic
+normalization, so normalization cannot hide either defect.
+
 The focused orchestration suites use bounded fake compiler, runtime, linker,
 and native processes:
 
@@ -776,6 +789,7 @@ and native processes:
 cargo test --locked -p skald-golden --test sequential_execution
 cargo test --locked -p skald-golden --test parallel_execution
 cargo test --locked -p skald-golden --test reporting
+cargo test --locked -p skald-golden --test compiler_diagnostic_reporting
 ```
 
 ## Fixtures and expectations

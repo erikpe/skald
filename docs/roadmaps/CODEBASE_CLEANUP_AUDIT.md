@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A14, A18–A21, A25, A34, A35, A38, and A43
+Status: actionable audit; A01–A12, A14, A18–A21, A25, A34–A36, A38, and A43
 are complete within the scopes recorded below. A09's stage products and owned
 publication selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
@@ -139,7 +139,7 @@ endpoint and names any deferred work.
 | [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | Open | P2 | 4 | M | Medium | O | M, R, C |
 | [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | Complete | P1 | 4 | M | Low | O | C, N, R |
 | [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Complete | P2 | 2 | XS | Low | O | R |
-| [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Open | P2 | 3 | S–M | Medium | O | R, M |
+| [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Complete | P2 | 3 | S–M | Medium | O | R, M |
 | [A37](#a37--simplify-literal-selection-and-bound-glob-matching) | Simplify literal selection and bound glob matching | Open | P3 | 2 | S | Low | O | C, R |
 | [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | Complete | P1 | 4 | S–M | Low | O | M, E |
 | [A39](#a39--define-and-test-the-documentation-checkers-markdown-subset) | Define and test the documentation checker's Markdown subset | Open | P2 | 3 | S–M | Low | O | R, M |
@@ -1356,15 +1356,16 @@ Rust 1.82.0 check, and all 628 golden leaves pass.
 
 ### A36 — Preserve raw compiler stderr in golden observations
 
-**Roadmap:**
-[Raw compiler stderr observation roadmap](GOLDEN_COMPILER_STDERR_OBSERVATION_ROADMAP.md).
+**Status:** Complete (2026-09-13).
 
-**Evidence:** compile-fail handling in
-[`compile/invoke.rs`](../../crates/skald-golden/src/compile/invoke.rs) mutates
-`ProcessObservation` through `strip_stderr_prefix`. The
-[implementation](../../crates/skald-golden/src/process/model.rs) replaces every
-non-overlapping occurrence of the bytes, rather than just one leading prefix.
-The stored observation therefore loses the original child bytes.
+**Roadmap:**
+[Raw compiler stderr observation roadmap](../archive/GOLDEN_COMPILER_STDERR_OBSERVATION_ROADMAP.md).
+
+**Evidence:** before this cleanup, compile-fail handling in
+[`compile/invoke.rs`](../../crates/skald-golden/src/compile/invoke.rs) mutated
+`ProcessObservation` through `strip_stderr_prefix`. Its process-layer helper
+replaced every non-overlapping occurrence of the bytes, rather than just one
+leading prefix, so the stored observation lost the original child bytes.
 
 **Change:** preserve raw process output and make normalized comparison bytes
 an explicit expectation-layer view. Give the replacement operation an honest
@@ -1374,6 +1375,23 @@ Do not silently change existing matcher semantics during the ownership move.
 **First PR / validation:** repeat path occurrences, binary bytes, matching text
 inside diagnostic messages, and raw versus normalized report views. Preserve
 current golden expectations and deterministic comparison behavior.
+
+**Delivered:** `ProcessObservation` now retains the compiler's exact bounded
+stderr. Each `CompilerObservation` owns a private diagnostic view that borrows
+unchanged bytes or stores a normalized result only when the planned absolute
+fixture path occurs. Compile-fail matching, diagnostic determinism, and
+compiler reports use that explicit view; successful compilation, capture
+overflow, and pipe failures continue to inspect the raw process. The planned
+input and explain output now call this operation a diagnostic path prefix and
+document that every non-overlapping occurrence is removed.
+
+Binary integration coverage separates raw and normalized bytes across repeated
+and adjacent prefixes, a path embedded in message text, two compiler
+repetitions, all report formats, matcher metadata and offsets, a non-path
+determinism difference, and capture overflow. The complete `skald-golden`
+suite, workspace all-target Clippy, `make check` with all 629 golden leaves,
+the Rust 1.82 workspace check, formatting, documentation links, and diff
+hygiene pass.
 
 ### A37 — Simplify literal selection and bound glob matching
 

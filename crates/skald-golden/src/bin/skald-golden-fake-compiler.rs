@@ -96,6 +96,11 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
             drop(activity);
             process::exit(1)
         }
+        "compile-fail-paths" => {
+            write_path_diagnostic(&arguments, repeated)?;
+            drop(activity);
+            process::exit(1)
+        }
         "nondeterministic-diagnostic" => {
             eprintln!(
                 "error[FAKE001]: {} diagnostic",
@@ -117,6 +122,36 @@ fn option<'a>(arguments: &'a [OsString], name: &str) -> Option<&'a OsStr> {
         .windows(2)
         .find(|pair| pair[0] == name)
         .map(|pair| pair[1].as_os_str())
+}
+
+fn write_path_diagnostic(arguments: &[OsString], repeated: bool) -> Result<(), String> {
+    let module_root = option(arguments, "--module-root")
+        .map(Path::new)
+        .ok_or_else(|| "compile-fail-paths requires --module-root".to_owned())?;
+    let owner = module_root
+        .parent()
+        .ok_or_else(|| "compile-fail-paths module root has no parent".to_owned())?;
+    let prefix = format!("{}{}", owner.display(), std::path::MAIN_SEPARATOR);
+    let mut diagnostic = Vec::new();
+    diagnostic.extend_from_slice(b"\xfferror[FAKE001]: rejected module");
+    if arguments
+        .iter()
+        .any(|argument| argument == "--fake-vary-diagnostic")
+    {
+        diagnostic.extend_from_slice(if repeated { b" repeat" } else { b" first" });
+    }
+    diagnostic.extend_from_slice(b"\n --> ");
+    diagnostic.extend_from_slice(prefix.as_bytes());
+    if repeated {
+        diagnostic.extend_from_slice(prefix.as_bytes());
+    }
+    diagnostic.extend_from_slice(b"application/app.ska:1:1\nnote: rejected path ");
+    diagnostic.extend_from_slice(prefix.as_bytes());
+    diagnostic.extend_from_slice(b"dependencies/value.ska\0\n");
+    std::io::stderr()
+        .lock()
+        .write_all(&diagnostic)
+        .map_err(display)
 }
 
 fn append_arguments(path: &Path, arguments: &[OsString]) -> Result<(), String> {
