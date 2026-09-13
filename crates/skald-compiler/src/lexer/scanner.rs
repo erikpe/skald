@@ -30,8 +30,6 @@ pub const UNEXPECTED_CHARACTER: &str = "LEX001";
 pub const MALFORMED_NUMERIC_LITERAL: &str = "LEX002";
 pub const MALFORMED_STRING_LITERAL: &str = "LEX003";
 pub const MALFORMED_BYTE_LITERAL: &str = "LEX004";
-/// Compatibility name retained for clients of the earlier integer-only lexer.
-pub const MALFORMED_INTEGER_LITERAL: &str = MALFORMED_NUMERIC_LITERAL;
 
 #[derive(Debug)]
 pub struct LexOutput {

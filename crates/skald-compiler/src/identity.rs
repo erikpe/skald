@@ -135,21 +135,9 @@ macro_rules! callable_local_id {
     };
 }
 
-global_id!(
-    #[allow(dead_code)]
-    ModuleId,
-    "m"
-);
-global_id!(
-    #[allow(dead_code)]
-    ProviderId,
-    "provider"
-);
-global_id!(
-    #[allow(dead_code)]
-    PackageId,
-    "package"
-);
+global_id!(ModuleId, "m");
+global_id!(ProviderId, "provider");
+global_id!(PackageId, "package");
 global_id!(FunctionId, "f");
 global_id!(FunctionTypeId, "ft");
 global_id!(ExternalLinkId, "ext");
@@ -390,12 +378,7 @@ impl fmt::Display for CallableId {
 
 callable_local_id!(ParameterId, "p");
 callable_local_id!(LocalId, "l");
-// Resolution begins allocating these when source loops are activated.
-callable_local_id!(
-    #[allow(dead_code)]
-    LoopId,
-    "loop"
-);
+callable_local_id!(LoopId, "loop");
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BindingId {

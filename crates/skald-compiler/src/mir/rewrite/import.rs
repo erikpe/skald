@@ -10,9 +10,8 @@ mod mapper;
 mod model;
 mod prepare;
 
-pub(crate) use model::{
-    MirImportMap, MirImportMaps, MirImportRequest, MirImportResult, MirImportSource,
-};
+#[cfg(test)]
+pub(crate) use model::{MirImportRequest, MirImportSource};
 
 #[cfg(test)]
 mod tests;

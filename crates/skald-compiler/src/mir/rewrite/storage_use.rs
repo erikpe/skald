@@ -86,6 +86,7 @@ impl MirStorageUseCensusEntry {
         self.kind
     }
 
+    #[cfg(test)]
     pub(crate) const fn declaration(&self) -> MirLocalIdentitySite {
         self.declaration
     }

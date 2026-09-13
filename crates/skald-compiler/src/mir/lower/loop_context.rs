@@ -34,10 +34,6 @@ impl LoopContext {
         })
     }
 
-    pub(super) const fn loop_id(self) -> LoopId {
-        self.loop_id
-    }
-
     pub(super) const fn exit_target(self) -> BlockId {
         self.exit_target
     }

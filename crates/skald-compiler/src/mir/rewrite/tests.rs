@@ -17,10 +17,9 @@ use crate::mir::{
     MirObjectOrigin, MirObjectView, MirOptionalBoxViewEnd, MirOptionalViewBegin, MirPathCondition,
     MirPathConditionValue, MirPlace, MirPlaceProjection, MirPrimitiveCastRangeCheck, MirRvalue,
     MirRvalueKind, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
-    MirSharedAllocationTarget, MirSharedCopy, MirSharedTarget, MirStaticInitializerBody,
-    MirStaticPublication, MirStorage, MirStorageKind, MirStorageLive, MirTerminator, MirType,
-    MirValue, MirViewProvenance, MirViewTarget, OptionalGuardId, PathConditionId, StorageId,
-    ValueId,
+    MirSharedAllocationTarget, MirSharedCopy, MirStaticInitializerBody, MirStaticPublication,
+    MirStorage, MirStorageKind, MirStorageLive, MirTerminator, MirType, MirValue,
+    MirViewProvenance, MirViewTarget, OptionalGuardId, PathConditionId, StorageId, ValueId,
 };
 
 #[derive(Default)]

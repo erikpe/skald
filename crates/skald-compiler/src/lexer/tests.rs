@@ -879,7 +879,7 @@ fn malformed_numeric_spellings_are_single_invalid_tokens() {
     assert!(output
         .diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
+        .all(|diagnostic| diagnostic.code == MALFORMED_NUMERIC_LITERAL));
 }
 
 #[test]
@@ -901,7 +901,7 @@ fn malformed_hexadecimal_spellings_recover_as_complete_tokens() {
     assert!(output
         .diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
+        .all(|diagnostic| diagnostic.code == MALFORMED_NUMERIC_LITERAL));
     assert_eq!(output.tokens[spellings.len()].kind, TokenKind::Return);
 }
 
@@ -921,7 +921,7 @@ fn malformed_f64_spellings_recover_as_complete_tokens() {
     assert!(output
         .diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
+        .all(|diagnostic| diagnostic.code == MALFORMED_NUMERIC_LITERAL));
     assert_eq!(output.tokens[4].kind, TokenKind::Return);
 }
 

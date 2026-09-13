@@ -24,40 +24,56 @@ mod callable;
 mod census;
 mod cfg;
 mod commit;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "allocation operations remain part of the tested rewrite capability"
+    )
+)]
 mod edit;
 mod error;
 mod identity;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "cross-callable import remains a tested rewrite capability without a current pass"
+    )
+)]
 mod import;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "mutable whole-definition traversal remains covered for rewrite ownership"
+    )
+)]
 mod map;
 mod program;
 mod snapshot;
 mod storage_use;
 mod value_use;
 
-pub(crate) use census::{value_use_census_for_definition, MirValueCensusEntry, MirValueUseCensus};
+pub(crate) use census::{value_use_census_for_definition, MirValueUseCensus};
 pub(crate) use cfg::{
     analyze_basic_block_merging, analyze_empty_block_forwarding, final_cfg_facts_for_definition,
-    local_cfg_facts_for_definition, MirBasicBlockMergeAnalysis, MirBasicBlockMergeBarrier,
-    MirBasicBlockMergeBarrierKind, MirBasicBlockMergeCandidate, MirBasicBlockMergeCounts,
-    MirEmptyBlockForwardingAnalysis, MirEmptyBlockForwardingBarrier,
-    MirEmptyBlockForwardingBarrierKind, MirEmptyBlockForwardingCandidate,
-    MirEmptyBlockForwardingCounts, MirEmptyBlockForwardingPlan, MirEmptyBlockForwardingResolution,
-    MirFinalCfgFacts, MirLocalCfgBlockFacts, MirLocalCfgFacts, MirLocalCfgTerminatorKind,
-    MirProtectedBlockRoot,
+    local_cfg_facts_for_definition, MirBasicBlockMergeAnalysis, MirBasicBlockMergeBarrierKind,
+    MirBasicBlockMergeCandidate, MirEmptyBlockForwardingBarrierKind, MirEmptyBlockForwardingPlan,
+    MirFinalCfgFacts, MirLocalCfgFacts,
 };
-pub(crate) use commit::{
-    MirCommitMap, MirCommitMaps, MirEntityChangeCount, MirRewriteChangeSummary,
-};
-pub(crate) use edit::{BlockPlacement, LogicalRecordIndex, MirCallableEdit};
+pub(crate) use commit::MirRewriteChangeSummary;
+#[cfg(test)]
+pub(crate) use edit::BlockPlacement;
+pub(crate) use edit::{LogicalRecordIndex, MirCallableEdit};
 pub(crate) use error::{MirReferenceFailure, MirRewriteError};
 
+#[cfg(test)]
+pub(crate) use identity::MirLocalIdentityOwnershipError;
 pub(crate) use identity::{
-    MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentityObserver,
-    MirLocalIdentityOwnershipError, MirLocalIdentitySite,
+    MirLocalIdentity, MirLocalIdentityMapper, MirLocalIdentityObserver, MirLocalIdentitySite,
 };
-pub(crate) use import::{
-    MirImportMap, MirImportMaps, MirImportRequest, MirImportResult, MirImportSource,
-};
+#[cfg(test)]
 pub(crate) use map::{
     map_function_local_identities, map_member_local_identities,
     map_static_initializer_local_identities, validate_function_local_identity_owners,
@@ -66,12 +82,12 @@ pub(crate) use map::{
 pub(crate) use program::{rewrite_program, MirCallableRewriteResult, MirProgramRewriteResult};
 pub(crate) use snapshot::MirCallableEditSnapshot;
 pub(crate) use storage_use::{
-    storage_use_census_for_definition, MirStoragePlaceUse, MirStorageUseCensus,
-    MirStorageUseCensusEntry, MirStorageUseRole, MirStorageUseSite, MirStorageWriteAuthorization,
+    storage_use_census_for_definition, MirStoragePlaceUse, MirStorageUseCensusEntry,
+    MirStorageUseRole, MirStorageUseSite, MirStorageWriteAuthorization,
 };
 pub(crate) use value_use::{
     value_use_site_index_for_definition, value_use_sites_for_definition, MirCallValueUse,
-    MirScalarValueUse, MirValueUseRole, MirValueUseSite, MirValueUseSiteIndex, MirValueUseSites,
+    MirScalarValueUse, MirValueUseRole, MirValueUseSiteIndex, MirValueUseSites,
 };
 
 #[cfg(test)]

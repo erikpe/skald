@@ -9,12 +9,9 @@ mod canonicalization;
 
 pub(crate) use canonicalization::{
     analyze_basic_block_merging, analyze_empty_block_forwarding, MirBasicBlockMergeAnalysis,
-    MirBasicBlockMergeBarrier, MirBasicBlockMergeBarrierKind, MirBasicBlockMergeCandidate,
-    MirBasicBlockMergeCounts, MirEmptyBlockForwardingAnalysis, MirEmptyBlockForwardingBarrier,
-    MirEmptyBlockForwardingBarrierKind, MirEmptyBlockForwardingCandidate,
-    MirEmptyBlockForwardingCounts, MirEmptyBlockForwardingPlan, MirEmptyBlockForwardingResolution,
+    MirBasicBlockMergeBarrierKind, MirBasicBlockMergeCandidate, MirEmptyBlockForwardingBarrierKind,
+    MirEmptyBlockForwardingPlan,
 };
-
 use std::{
     collections::{BTreeMap, BTreeSet},
     ops::Deref,
@@ -149,6 +146,7 @@ impl MirLocalCfgBlockFacts {
         self.topology.block()
     }
 
+    #[cfg(test)]
     pub(crate) fn successors(&self) -> &[BlockId] {
         self.topology.successors()
     }
@@ -181,6 +179,7 @@ impl MirLocalCfgBlockFacts {
         self.is_entry
     }
 
+    #[cfg(test)]
     pub(crate) const fn is_protected_root(&self) -> bool {
         self.is_protected_root
     }
@@ -226,6 +225,7 @@ impl Deref for MirFinalCfgFacts {
 }
 
 impl MirLocalCfgFacts {
+    #[cfg(test)]
     pub(crate) const fn callable(&self) -> CallableId {
         self.callable
     }
@@ -238,10 +238,12 @@ impl MirLocalCfgFacts {
         &self.protected_roots
     }
 
+    #[cfg(test)]
     pub(crate) fn permanent_roots(&self) -> &[MirProtectedBlockRoot] {
         &self.permanent_roots
     }
 
+    #[cfg(test)]
     pub(crate) fn edges(&self) -> &[MirCfgEdge] {
         &self.edges
     }

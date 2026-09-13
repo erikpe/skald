@@ -18,14 +18,17 @@ pub(crate) struct MirEmptyBlockForwardingCandidate {
 }
 
 impl MirEmptyBlockForwardingCandidate {
+    #[cfg(test)]
     pub(crate) const fn block(&self) -> BlockId {
         self.block
     }
 
+    #[cfg(test)]
     pub(crate) const fn direct_target(&self) -> BlockId {
         self.direct_target
     }
 
+    #[cfg(test)]
     pub(crate) fn incoming_edges(&self) -> &[MirCfgEdge] {
         &self.incoming_edges
     }
@@ -59,6 +62,7 @@ impl MirEmptyBlockForwardingPlan {
         &self.resolutions
     }
 
+    #[cfg(test)]
     pub(crate) fn target_for(&self, block: BlockId) -> Option<BlockId> {
         self.resolutions
             .iter()
@@ -93,10 +97,12 @@ pub(crate) struct MirEmptyBlockForwardingBarrier {
 }
 
 impl MirEmptyBlockForwardingBarrier {
+    #[cfg(test)]
     pub(crate) const fn block(self) -> BlockId {
         self.block
     }
 
+    #[cfg(test)]
     pub(crate) const fn kind(self) -> MirEmptyBlockForwardingBarrierKind {
         self.kind
     }
@@ -111,14 +117,17 @@ pub(crate) struct MirEmptyBlockForwardingCounts {
 }
 
 impl MirEmptyBlockForwardingCounts {
+    #[cfg(test)]
     pub(crate) const fn examined_blocks(&self) -> usize {
         self.examined_blocks
     }
 
+    #[cfg(test)]
     pub(crate) const fn candidates(&self) -> usize {
         self.candidates
     }
 
+    #[cfg(test)]
     pub(crate) fn barriers(&self) -> usize {
         self.barriers.values().sum()
     }
@@ -138,6 +147,7 @@ pub(crate) struct MirEmptyBlockForwardingAnalysis {
 }
 
 impl MirEmptyBlockForwardingAnalysis {
+    #[cfg(test)]
     pub(crate) fn candidates(&self) -> &[MirEmptyBlockForwardingCandidate] {
         &self.candidates
     }
@@ -146,6 +156,7 @@ impl MirEmptyBlockForwardingAnalysis {
         &self.plan
     }
 
+    #[cfg(test)]
     pub(crate) fn barriers(&self) -> &[MirEmptyBlockForwardingBarrier] {
         &self.barriers
     }
@@ -412,18 +423,17 @@ pub(crate) struct MirBasicBlockMergeBarrier {
 }
 
 impl MirBasicBlockMergeBarrier {
+    #[cfg(test)]
     pub(crate) const fn predecessor(self) -> BlockId {
         self.predecessor
     }
 
-    pub(crate) const fn successor(self) -> Option<BlockId> {
-        self.successor
-    }
-
+    #[cfg(test)]
     pub(crate) const fn kind(self) -> MirBasicBlockMergeBarrierKind {
         self.kind
     }
 
+    #[cfg(test)]
     pub(crate) const fn incoming_edge_count(self) -> Option<usize> {
         self.incoming_edge_count
     }
@@ -438,14 +448,17 @@ pub(crate) struct MirBasicBlockMergeCounts {
 }
 
 impl MirBasicBlockMergeCounts {
+    #[cfg(test)]
     pub(crate) const fn examined_blocks(&self) -> usize {
         self.examined_blocks
     }
 
+    #[cfg(test)]
     pub(crate) const fn candidates(&self) -> usize {
         self.candidates
     }
 
+    #[cfg(test)]
     pub(crate) fn barriers(&self) -> usize {
         self.barriers.values().sum()
     }
@@ -472,6 +485,7 @@ impl MirBasicBlockMergeAnalysis {
         self.candidates.first().copied()
     }
 
+    #[cfg(test)]
     pub(crate) fn barriers(&self) -> &[MirBasicBlockMergeBarrier] {
         &self.barriers
     }

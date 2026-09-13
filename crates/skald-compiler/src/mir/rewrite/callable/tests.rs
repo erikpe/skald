@@ -3,7 +3,7 @@ use crate::{
     mir::{
         BlockId, MirBasicBlock, MirBody, MirFunctionDefinition, MirMemberDefinition,
         MirStaticInitializerBody, MirStaticPublication, MirStorage, MirStorageKind, MirTerminator,
-        MirType, PathConditionId, StorageId,
+        MirType, StorageId,
     },
     test_support::lower_source_to_mir,
 };

@@ -238,6 +238,10 @@ impl MirImportRequest {
         self.block_substitutions.push((source, destination));
     }
 
+    #[expect(
+        dead_code,
+        reason = "proof-metadata substitution is reserved by the bounded import contract"
+    )]
     pub(crate) fn substitute_path_condition(
         &mut self,
         source: PathConditionId,
@@ -247,6 +251,10 @@ impl MirImportRequest {
             .push((source, destination));
     }
 
+    #[expect(
+        dead_code,
+        reason = "proof-metadata substitution is reserved by the bounded import contract"
+    )]
     pub(crate) fn substitute_optional_guard(
         &mut self,
         source: OptionalGuardId,
@@ -274,10 +282,6 @@ impl<I: MirLocalId> MirImportMap<I> {
             .ok_or(MirRewriteError::UnknownIdentity {
                 identity: source.local_identity(),
             })
-    }
-
-    pub(crate) const fn destination_callable(&self) -> CallableId {
-        self.destination
     }
 
     pub(super) fn empty(source: CallableId, destination: CallableId) -> Self {

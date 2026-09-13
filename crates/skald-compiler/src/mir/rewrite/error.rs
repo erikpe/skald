@@ -16,6 +16,15 @@ pub(crate) enum MirReferenceFailure {
 
 /// A deterministic internal failure while editing or committing a callable.
 #[derive(Clone, Debug, Eq, PartialEq)]
+// Rust 1.82 and current Rust differ on whether unused variants trigger this
+// lint, so an expectation cannot remain warning-free on both toolchains.
+#[cfg_attr(
+    not(test),
+    allow(
+        dead_code,
+        reason = "the closed error vocabulary also covers tested rewrite operations awaiting passes"
+    )
+)]
 pub(crate) enum MirRewriteError {
     ForeignIdentity {
         expected: CallableId,

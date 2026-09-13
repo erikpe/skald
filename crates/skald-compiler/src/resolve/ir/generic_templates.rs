@@ -666,7 +666,6 @@ impl ResolvedClassTemplateSemanticTable {
         self.entries.iter()
     }
 
-    #[allow(dead_code)] // Closed specialization will query templates by identity.
     pub(crate) fn get(&self, template: ClassTemplateId) -> Option<&ResolvedClassTemplateSemantics> {
         self.entries.get(template, |entry| entry.template)
     }

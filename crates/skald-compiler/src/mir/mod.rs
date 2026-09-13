@@ -15,7 +15,6 @@ mod model;
 pub(crate) mod retain;
 // The final-MIR pass runner is the only production owner permitted to consume
 // this atomic rewrite boundary.
-#[allow(dead_code, unused_imports)]
 pub(crate) mod rewrite;
 mod verify;
 

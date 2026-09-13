@@ -80,7 +80,6 @@ impl MirBodyBuilder {
     }
 
     /// Register path-condition metadata in deterministic callable-local order.
-    #[allow(dead_code)]
     pub(super) fn register_path_condition(
         &mut self,
         condition: MirPathCondition,

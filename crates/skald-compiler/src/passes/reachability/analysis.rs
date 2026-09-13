@@ -86,10 +86,6 @@ impl MirReachableOutgoingDependencies {
         }
     }
 
-    pub(crate) const fn source(&self) -> MirExecutionNode {
-        self.source
-    }
-
     pub(crate) fn dependencies(&self) -> &[MirDependencyEdge] {
         &self.dependencies
     }
@@ -215,10 +211,12 @@ impl MirReachabilityAnalysis {
         &self.reachable_callables
     }
 
+    #[cfg(test)]
     pub(crate) fn retained_definitions(&self) -> &[MirRetainedDefinition] {
         &self.retained_definitions
     }
 
+    #[cfg(test)]
     pub(crate) fn has_retained_definition(&self, callable: CallableId) -> bool {
         self.retained_definitions
             .binary_search_by_key(
@@ -237,6 +235,7 @@ impl MirReachabilityAnalysis {
             .map_or(&[], |index| self.outgoing[index].dependencies())
     }
 
+    #[cfg(test)]
     pub(crate) fn outgoing(&self) -> &[MirReachableOutgoingDependencies] {
         &self.outgoing
     }
@@ -274,6 +273,7 @@ impl MirReachabilityAnalysis {
         &self.function_values
     }
 
+    #[cfg(test)]
     pub(crate) fn candidates_for_function_type(
         &self,
         function_type: FunctionTypeId,

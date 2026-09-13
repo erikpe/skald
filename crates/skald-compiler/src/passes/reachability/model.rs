@@ -2,8 +2,8 @@
 
 use crate::{
     identity::{
-        CallableId, ClassId, ExternalLinkId, FunctionTypeId, InterfaceId, InterfaceRequirementId,
-        LiteralDataId, OptionalBoxTypeId, OptionalTypeId, StaticFieldId, VirtualFamilyId,
+        CallableId, ClassId, ExternalLinkId, FunctionTypeId, InterfaceRequirementId, LiteralDataId,
+        OptionalBoxTypeId, OptionalTypeId, StaticFieldId, VirtualFamilyId,
     },
     intrinsic::Intrinsic,
     mir::{MirExecutionNode, StaticAccessKind},
@@ -39,20 +39,6 @@ pub(crate) enum MirRuntimeEntity {
     LiteralBacking(LiteralDataId),
 }
 
-/// A stable semantic declaration retained in the closed-world program model.
-///
-/// Reachability may eventually remove a definition without removing the
-/// declaration named here. This initial vocabulary names declaration kinds
-/// needed to express that distinction; it is not a global metadata-pruning
-/// API.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(crate) enum MirSemanticDeclaration {
-    Callable(CallableId),
-    Class(ClassId),
-    Interface(InterfaceId),
-    StaticField(StaticFieldId),
-}
-
 /// Identity of a callable body physically present in one MIR product.
 ///
 /// This wrapper records a retention fact. It grants no mutation capability and
@@ -65,6 +51,7 @@ impl MirRetainedDefinition {
         Self(callable)
     }
 
+    #[cfg(test)]
     pub(crate) const fn callable(self) -> CallableId {
         self.0
     }

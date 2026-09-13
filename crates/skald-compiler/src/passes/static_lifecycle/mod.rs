@@ -6,7 +6,6 @@
 mod analysis;
 // Activation witnesses remain an internal planning/reporting detail; the
 // compact exact field set crosses phase boundaries in the lifecycle proof.
-#[allow(dead_code)]
 mod activation;
 mod inspection;
 mod plan;

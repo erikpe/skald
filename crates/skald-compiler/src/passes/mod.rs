@@ -8,11 +8,8 @@ pub mod static_lifecycle;
 mod graph;
 mod integer_cast;
 mod pipeline;
-mod redundancy;
-// Reachability is seal-bound but remains compiler-internal until its first
-// retention and backend consumers land.
-#[allow(dead_code, unused_imports)]
 pub(crate) mod reachability;
+mod redundancy;
 
 pub use pipeline::{
     available_mir_passes, run_mir_pipeline, run_mir_pipeline_inspected, verify_final_mir,

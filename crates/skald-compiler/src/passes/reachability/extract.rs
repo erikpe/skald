@@ -43,6 +43,7 @@ impl MirDependencyExtraction {
         &self.static_accesses
     }
 
+    #[cfg(test)]
     pub(crate) fn static_accesses_from(&self, source: MirExecutionNode) -> &[MirStaticAccess] {
         let source_key = mir_execution_node_key(source);
         let start = self

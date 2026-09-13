@@ -1,4 +1,7 @@
-use std::{convert::Infallible, fmt};
+use std::fmt;
+
+#[cfg(test)]
+use std::convert::Infallible;
 
 use crate::identity::CallableId;
 
@@ -275,19 +278,23 @@ pub(crate) trait MirLocalIdentityObserver {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
+#[cfg(test)]
 pub(super) struct PreserveLocalIdentities;
 
+#[cfg(test)]
 impl MirLocalIdentityMapper for PreserveLocalIdentities {
     type Error = Infallible;
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg(test)]
 pub(crate) struct MirLocalIdentityOwnershipError {
     pub expected: CallableId,
     pub identity: MirLocalIdentity,
     pub site: MirLocalIdentitySite,
 }
 
+#[cfg(test)]
 impl fmt::Display for MirLocalIdentityOwnershipError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -301,12 +308,15 @@ impl fmt::Display for MirLocalIdentityOwnershipError {
     }
 }
 
+#[cfg(test)]
 impl std::error::Error for MirLocalIdentityOwnershipError {}
 
+#[cfg(test)]
 pub(super) struct LocalIdentityOwnerValidator {
     expected: CallableId,
 }
 
+#[cfg(test)]
 impl LocalIdentityOwnerValidator {
     pub(super) const fn new(expected: CallableId) -> Self {
         Self { expected }
@@ -329,6 +339,7 @@ impl LocalIdentityOwnerValidator {
     }
 }
 
+#[cfg(test)]
 impl MirLocalIdentityObserver for LocalIdentityOwnerValidator {
     type Error = MirLocalIdentityOwnershipError;
 

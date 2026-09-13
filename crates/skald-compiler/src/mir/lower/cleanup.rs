@@ -405,7 +405,6 @@ impl CleanupPlanner {
         self.scopes.push(LexicalScope::default());
     }
 
-    #[allow(dead_code)]
     pub(super) fn retained_scope_depth(&self) -> RetainedScopeDepth {
         RetainedScopeDepth(self.scopes.len())
     }

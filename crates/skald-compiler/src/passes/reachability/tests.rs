@@ -6,9 +6,8 @@ use crate::{
     identity::{ClassId, ExternalLinkId, FunctionId, StaticFieldId},
     intrinsic::Intrinsic,
     mir::{
-        MirArrayLifecycleOperation, MirCallTarget, MirClassLifecycleOperation, MirExecutionNode,
-        MirFunctionLinkage, MirInstruction, MirPlaceBase, MirRvalueKind, StaticAccessKind,
-        StaticLifecycleRootAuthority,
+        MirArrayLifecycleOperation, MirCallTarget, MirExecutionNode, MirFunctionLinkage,
+        MirInstruction, MirPlaceBase, MirRvalueKind, StaticAccessKind,
     },
     test_support::{lower_generic_source_to_final_mir, lower_generic_source_to_preliminary_mir},
 };
@@ -150,11 +149,10 @@ fn dependency_types_keep_execution_metadata_and_leaf_targets_distinct() {
 }
 
 #[test]
-fn roots_declarations_and_retained_definitions_are_separate_roles() {
+fn roots_and_retained_definitions_are_separate_roles() {
     let fixture = reachability_identity_fixture();
     let node = MirExecutionNode::Callable(fixture.ordinary_function);
     let definition = MirRetainedDefinition::new(fixture.ordinary_function);
-    let declaration = MirSemanticDeclaration::Callable(fixture.ordinary_function);
     let root = MirReachabilityRoot::new(
         MirReachabilityRootTarget::Execution(node),
         MirReachabilityRootReason::Entry,
@@ -170,10 +168,6 @@ fn roots_declarations_and_retained_definitions_are_separate_roles() {
 
     assert_eq!(definition.callable(), fixture.ordinary_function);
     assert_eq!(definition.execution_node(), node);
-    assert_eq!(
-        declaration,
-        MirSemanticDeclaration::Callable(definition.callable())
-    );
     assert_eq!(root.target(), MirReachabilityRootTarget::Execution(node));
     assert_eq!(root.reason(), MirReachabilityRootReason::Entry);
     assert_eq!(root.span(), fixture.span);

@@ -30,6 +30,7 @@ pub(crate) struct MirCommitMap<I> {
 }
 
 impl<I: MirLocalId> MirCommitMap<I> {
+    #[cfg(test)]
     pub(crate) fn committed(&self, identity: I) -> Result<I, MirRewriteError> {
         if identity.callable() != self.owner {
             return Err(MirRewriteError::ForeignIdentity {
@@ -266,6 +267,7 @@ pub(super) struct MirCallableCommit {
     pub(super) changes: MirRewriteChangeSummary,
 }
 
+#[cfg(test)]
 pub(super) fn commit(edit: MirCallableEdit) -> Result<MirCallableCommit, MirRewriteError> {
     commit_with_attachments(edit, (), |(), _mapper| Ok(())).map(|(commit, ())| commit)
 }

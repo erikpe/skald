@@ -132,7 +132,7 @@ endpoint and names any deferred work.
 | [A26](#a26--split-large-dump-renderers-by-responsibility) | Split large dump renderers by responsibility | Complete | P2 | 3 | M | Low | O | M, E |
 | [A27](#a27--render-diagnostics-into-one-output-buffer) | Render diagnostics into one output buffer | Open | P3 | 2 | S | Low | O | C, M |
 | [A28](#a28--restore-concise-facades-in-selected-hotspots) | Restore concise facades in selected hotspots | Complete | P2 | 3 | M | Low | O | M, E |
-| [A29](#a29--remove-obsolete-rollout-comments-and-broad-allowances) | Remove obsolete rollout comments and broad allowances | Open | P2 | 2 | S | Low | O | M, R |
+| [A29](#a29--remove-obsolete-rollout-comments-and-broad-allowances) | Remove obsolete rollout comments and broad allowances | Complete | P2 | 2 | S | Low | O | M, R |
 | [A30](#a30--share-standard-library-bounds-normalization) | Share standard-library bounds normalization | Open | P2 | 3 | S–M | Medium | O | M, R |
 | [A31](#a31--avoid-mandatory-string-to-array-copies-for-output) | Avoid mandatory string-to-array copies for output | Open | P2 | 4 | L | High | C | N, M |
 | [A32](#a32--measure-and-reduce-mapvec-copy-traffic) | Measure and reduce Map/Vec copy traffic | Open | P2 | 4 | L | High | C | N |
@@ -1158,6 +1158,8 @@ the full repository and Rust 1.82.0 gates.
 
 ### A29 — Remove obsolete rollout comments and broad allowances
 
+**Status:** Complete (2026-09-13).
+
 **Evidence:** [`passes/mod.rs`](../../crates/skald-compiler/src/passes/mod.rs)
 says reachability is awaiting its first retention/backend consumers, which
 already exist. It and [`mir/mod.rs`](../../crates/skald-compiler/src/mir/mod.rs)
@@ -1175,6 +1177,32 @@ is repository-internal, but downstream workspace tools still matter.
 **First PR / validation:** one owner at a time, all-target Clippy and public API
 tests. Preserve diagnostic codes and documented names even when internal Rust
 names change. Historical wording in archives should remain historical.
+
+**Delivered:** the pass facade no longer describes whole-program reachability
+as awaiting consumers or suppresses warnings across that active subsystem.
+Reachability facade exports now contain only production consumers, while
+test-only query helpers compile only with their owning tests. The unused
+future-only semantic-declaration vocabulary and obsolete array-capability
+forwarder were removed.
+
+The MIR facade no longer suppresses unused imports recursively. Unused rewrite
+re-exports and observation-only accessors were removed or made test-only.
+Remaining `dead_code` expectations are scoped to the edit, import, and
+mutable-map owners that support fully tested rewrite operations awaiting a
+production transformation, plus individual reserved operations and
+conservative value-use roles. The closed rewrite-error enum has one reasoned,
+item-scoped allowance because Rust 1.82 and current Rust disagree on its unused
+variant lint. Active loop, path-condition, cleanup, specialization, template,
+static-activation, provider, module, and package owners no longer carry
+rollout-era dead-code annotations or comments.
+
+The undocumented `MALFORMED_INTEGER_LITERAL` compatibility alias had no
+workspace production caller and was removed. Lexer tests now use the current
+`MALFORMED_NUMERIC_LITERAL` name; the stable `LEX002` diagnostic code and all
+documented lexer names remain unchanged. Focused lexer, identity, MIR rewrite,
+reachability, static-lifecycle, public API, and phase-boundary suites pass, as
+do workspace all-target Clippy with warnings denied, the complete repository
+gate, and the Rust 1.82.0 compatibility gate.
 
 ## Standard library, tests, and repository tools
 

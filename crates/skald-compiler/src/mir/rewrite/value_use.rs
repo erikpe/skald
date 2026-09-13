@@ -28,6 +28,13 @@ pub(crate) enum MirScalarValueUse {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(crate) enum MirCallValueUse {
     Target,
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "receiver values are reserved by the closed call-use classification"
+        )
+    )]
     Receiver,
     Argument(usize),
 }
@@ -49,6 +56,13 @@ pub(crate) enum MirValueUseRole {
     ProofMetadata,
     OwnershipOrLifecycle,
     InputOutput,
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "unknown uses remain an explicit conservative forwarding barrier"
+        )
+    )]
     Unknown,
 }
 
@@ -113,6 +127,7 @@ pub(crate) struct MirValueUseSiteIndex {
 }
 
 impl MirValueUseSiteIndex {
+    #[cfg(test)]
     pub(crate) const fn callable(&self) -> CallableId {
         self.callable
     }
@@ -127,10 +142,12 @@ impl MirValueUseSiteIndex {
 }
 
 impl MirValueUseSites {
+    #[cfg(test)]
     pub(crate) const fn callable(&self) -> CallableId {
         self.callable
     }
 
+    #[cfg(test)]
     pub(crate) const fn value(&self) -> ValueId {
         self.value
     }

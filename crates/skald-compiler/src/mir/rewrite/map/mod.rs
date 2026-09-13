@@ -18,13 +18,13 @@ use self::{
     terminator::define_terminator_traversal,
 };
 use super::super::*;
-use super::{
-    identity::LocalIdentityOwnerValidator, MirLocalIdentityMapper, MirLocalIdentityObserver,
-    MirLocalIdentityOwnershipError, MirLocalIdentitySite,
-};
+use super::MirLocalIdentityObserver;
 
 #[cfg(test)]
-use super::identity::PreserveLocalIdentities;
+use super::{
+    identity::{LocalIdentityOwnerValidator, PreserveLocalIdentities},
+    MirLocalIdentityOwnershipError,
+};
 
 mod body;
 mod definition;
@@ -138,6 +138,7 @@ pub(super) use mapping::{
     map_instruction, map_logical_expression, map_member_attachments, map_path_condition_metadata,
     map_static_publication_attachment, map_terminator,
 };
+#[cfg(test)]
 pub(crate) use mapping::{
     map_function_local_identities, map_member_local_identities,
     map_static_initializer_local_identities,
@@ -173,6 +174,7 @@ pub(crate) fn observe_definition_local_identities<O: MirLocalIdentityObserver>(
     }
 }
 
+#[cfg(test)]
 pub(crate) fn validate_function_local_identity_owners(
     definition: &MirFunctionDefinition,
 ) -> Result<(), MirLocalIdentityOwnershipError> {
@@ -180,6 +182,7 @@ pub(crate) fn validate_function_local_identity_owners(
     observe_function_local_identities(definition, &mut validator)
 }
 
+#[cfg(test)]
 pub(crate) fn validate_member_local_identity_owners(
     definition: &MirMemberDefinition,
 ) -> Result<(), MirLocalIdentityOwnershipError> {
@@ -187,6 +190,7 @@ pub(crate) fn validate_member_local_identity_owners(
     observe_member_local_identities(definition, &mut validator)
 }
 
+#[cfg(test)]
 pub(crate) fn validate_static_initializer_local_identity_owners(
     definition: &MirStaticInitializerBody,
 ) -> Result<(), MirLocalIdentityOwnershipError> {

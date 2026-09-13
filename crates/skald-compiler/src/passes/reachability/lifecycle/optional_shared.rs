@@ -17,7 +17,6 @@ use super::{
         extract::MirDependencyExtractor, MirDependencyEdgeKind, MirDependencyExtractionError,
         MirDependencyRegion, MirDependencyTarget, MirRuntimeEntity,
     },
-    class::class_finalizer_target,
     MirLifecycleDependency,
 };
 

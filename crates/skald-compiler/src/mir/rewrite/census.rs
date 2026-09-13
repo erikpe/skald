@@ -59,10 +59,12 @@ impl MirValueUseCensus {
         self.entries.iter().filter_map(Option::as_ref)
     }
 
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.iter().count()
     }
 
+    #[cfg(test)]
     pub(crate) fn is_empty(&self) -> bool {
         self.len() == 0
     }

@@ -212,6 +212,7 @@ impl StaticActivationField {
         &self.witness
     }
 
+    #[cfg(test)]
     pub(crate) fn first_trigger(&self) -> StaticActivationEdge {
         *self
             .witness
@@ -348,6 +349,7 @@ impl StaticActivationAnalysis {
             .is_ok()
     }
 
+    #[cfg(test)]
     pub(crate) fn field(&self, field: StaticFieldId) -> Option<&StaticActivationField> {
         self.active_fields
             .binary_search_by_key(&field_key(field), |active| field_key(active.field))
@@ -359,6 +361,7 @@ impl StaticActivationAnalysis {
         &self.reachable_execution
     }
 
+    #[cfg(test)]
     pub(crate) fn is_execution_reachable(&self, node: MirExecutionNode) -> bool {
         self.reachable_execution
             .binary_search_by_key(&crate::mir::mir_execution_node_key(node), |execution| {
@@ -367,6 +370,7 @@ impl StaticActivationAnalysis {
             .is_ok()
     }
 
+    #[cfg(test)]
     pub(crate) fn execution(&self, node: MirExecutionNode) -> Option<&StaticActivationExecution> {
         self.reachable_execution
             .binary_search_by_key(&crate::mir::mir_execution_node_key(node), |execution| {
@@ -376,6 +380,7 @@ impl StaticActivationAnalysis {
             .map(|index| &self.reachable_execution[index])
     }
 
+    #[cfg(test)]
     pub(crate) fn edges(&self) -> &[StaticActivationEdge] {
         &self.edges
     }
@@ -397,6 +402,7 @@ impl StaticActivationAnalysis {
         &self.target_counts
     }
 
+    #[cfg(test)]
     pub(crate) fn target_count(&self, kind: MirDependencyEdgeKind) -> usize {
         self.target_counts
             .binary_search_by_key(&mir_dependency_edge_kind_key(kind), |count| {

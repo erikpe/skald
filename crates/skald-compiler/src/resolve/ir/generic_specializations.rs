@@ -147,7 +147,6 @@ impl GenericSpecializationTable {
 
     /// Used by declaration specialization to publish the complete class behind
     /// an already allocated specialization identity.
-    #[allow(dead_code)]
     pub(crate) fn for_class(&self, class: ClassId) -> Option<&GenericSpecialization> {
         self.entries
             .iter()
