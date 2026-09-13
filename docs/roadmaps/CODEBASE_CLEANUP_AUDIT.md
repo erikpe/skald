@@ -1282,6 +1282,9 @@ changes separate from generic optimizer work in the catalog.
 **Design proposal:**
 [Test Plumbing Ownership Design Proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md).
 
+**Roadmap:**
+[Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md).
+
 **Evidence:** compiler
 [pipeline determinism tests](../../crates/skald-compiler/tests/pipeline_determinism.rs)
 span 2,913 lines; pipeline tests and reporting tests also contain large

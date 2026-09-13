@@ -1,7 +1,8 @@
 # Test Plumbing Ownership Design Proposal
 
-Status: proposed; awaiting acceptance before an implementation roadmap is
-created.
+Status: frozen decision record. Accepted on 2026-09-13; implementation is
+planned in the
+[Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md).
 
 This proposal addresses
 [cleanup finding A33](CODEBASE_CLEANUP_AUDIT.md#a33--consolidate-test-plumbing-while-preserving-independent-checks).

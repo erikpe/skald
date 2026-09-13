@@ -8,7 +8,9 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-No implementation roadmaps are currently active.
+| Roadmap | Status | Purpose | Next task | Dependencies |
+| --- | --- | --- | --- | --- |
+| [Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md) | Planned | Restructure large compiler and golden test suites while preserving independent process, malformed-input, phase, and native observations | TP01 — establish the integration subprocess and resource boundary | Accepted [test plumbing ownership design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md); cleanup finding A33; completed A01–A06 robustness and gate work |
 
 ## Pending discovery and planning records
 
@@ -19,7 +21,6 @@ No implementation roadmaps are currently active.
 | [Codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) | Actionable audit | Rank repository-wide robustness, ownership, maintainability, and efficiency improvements | Select work using the accepted retrospective readiness table and per-finding prerequisites | Dependencies are recorded per finding; publication ownership is complete |
 | [Optimization candidate catalog](OPTIMIZATION_CANDIDATE_CATALOG.md) | Living inventory | Track implemented and plausible optimizations, placement, effort, value, prerequisites, and risks | Use measurements and architecture evidence to promote a candidate into a design or roadmap | [Optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md) and candidate-specific measurements or contracts |
 | [Optimization architecture discoveries](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md) | Three constraints remain unplanned | Record architectural limits on modular target-independent and target-specific optimization and their sequencing | Design a remaining constraint only when a measured optimization need justifies its prerequisite work | Existing pipeline, reachability, normalization, and MIR identity foundations |
-| [Test plumbing ownership design proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md) | Proposed | Consolidate repeated test setup while preserving owner-local, cross-process, malformed-input, and native checks | Review and accept the ownership decisions, then create a PR-sized implementation roadmap | Cleanup finding A33; completed A01–A06 robustness and gate work |
 
 The status matrix and focused language documents own feature maturity and open
 language questions. The optimization catalog owns candidate lifecycle status.
