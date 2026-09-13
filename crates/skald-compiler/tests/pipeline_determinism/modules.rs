@@ -21,7 +21,7 @@ use skald_compiler::{
 
 use super::{
     fixture::{link_directory, write_source, ModuleFixture},
-    normalization::normalize_fixture_paths,
+    normalization::normalize_module_fixture_output,
 };
 
 pub(crate) fn module_phase_dump(variant: usize) -> String {
@@ -106,7 +106,7 @@ pub(crate) fn module_phase_dump(variant: usize) -> String {
     )
     .unwrap();
 
-    normalize_fixture_paths(
+    normalize_module_fixture_output(
         fixture.path(),
         format!(
             "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
@@ -168,7 +168,7 @@ pub(crate) fn module_diagnostic_dump(variant: usize) -> String {
     let resolved = resolve_module_graph(&graph);
     assert!(resolved.has_errors());
 
-    normalize_fixture_paths(
+    normalize_module_fixture_output(
         fixture.path(),
         render_diagnostics(graph.sources(), &resolved.diagnostics),
     )

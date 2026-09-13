@@ -1396,7 +1396,24 @@ stalled child from hanging the test gate. Its module cases additionally permute
 root option order, equivalent root spellings, source creation order, import
 declaration order, and logical versus positional selection of the same rooted
 entry, then compare canonical graph, resolved, HIR, MIR, assembly, and
-diagnostic products. The ordinary golden target invokes each compiler and
+diagnostic products.
+
+The suite remains one Cargo integration binary. Its root file is the explicit
+53-case registry, while private responsibility modules own module graphs,
+generics, values and ownership, primitive operations, standard-library
+services, and MIR checkpoint generation. Every registry case launches two
+independent children; permutation cases give those children distinct provider
+or source orders. Select a responsibility without depending on private module
+paths:
+
+```text
+cargo test --locked -p skald-compiler --test pipeline_determinism integer_division
+cargo test --locked -p skald-compiler --test pipeline_determinism string
+cargo test --locked -p skald-compiler --test pipeline_determinism io_
+cargo test --locked -p skald-compiler --test pipeline_determinism mir_pipeline_checkpoints
+```
+
+The ordinary golden target invokes each compiler and
 native process once using the optimized assertion-enabled Cargo `golden`
 profile. That profile retains debug assertions and overflow checks while
 reducing the host compiler cost. `make golden-determinism-test` invokes the

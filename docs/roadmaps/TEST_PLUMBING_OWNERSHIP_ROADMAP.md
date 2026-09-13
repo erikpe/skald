@@ -1,6 +1,6 @@
 # Test Plumbing Ownership Roadmap
 
-Status: in progress; TP04 is next.
+Status: in progress; TP05 is next.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
@@ -57,7 +57,7 @@ finding can close.
 - [x] TP01 — Establish the integration subprocess and resource boundary
 - [x] TP02 — Move module-backed determinism fixtures behind owned generators
 - [x] TP03 — Move value and ownership determinism fixtures
-- [ ] TP04 — Complete determinism-suite ownership and registry consolidation
+- [x] TP04 — Complete determinism-suite ownership and registry consolidation
 - [ ] TP05 — Split driver reporting tests by observation responsibility
 - [ ] TP06 — Split driver pipeline tests by compilation responsibility
 - [ ] TP07 — Consolidate golden integration resources by dependency level
@@ -374,23 +374,23 @@ denied; `make check`; `make msrv-check`; and `git diff --check`.
 generators, leaving one navigable case registry and removing obsolete plumbing
 only after every family uses the recursive structure.
 
-- [ ] Group integer and floating operations, casts, eager and short-circuit
+- [x] Group integer and floating operations, casts, eager and short-circuit
   booleans, strings, I/O, and MIR checkpoint generators by semantic
   responsibility. Keep successful phase products and diagnostic products
   separate where their pipelines differ.
-- [ ] Reassess any compiler-integration source-to-phase helper introduced in
+- [x] Reassess any compiler-integration source-to-phase helper introduced in
   TP03 against these final consumers. Retain it only when the prerequisite
   sequence and policy are exact; otherwise prefer small family-local helpers.
-- [ ] Finish the root case registry while preserving all 53 leaf test names,
+- [x] Finish the root case registry while preserving all 53 leaf test names,
   labels, same-input/permutation modes, and generator associations. Remove all
   superseded constants, imports, source text, and inline harness mechanics.
-- [ ] Review every remaining normalization operation. Each retained path,
+- [x] Review every remaining normalization operation. Each retained path,
   spelling, or span normalization must name the deliberate instability it
   removes and must not conceal semantic output differences.
-- [ ] Confirm the recursive module facades use explicit, narrow imports and
+- [x] Confirm the recursive module facades use explicit, narrow imports and
   `pub(super)` visibility only where the registry or a sibling responsibility
   requires it.
-- [ ] Document the resulting determinism layout and focused selection examples
+- [x] Document the resulting determinism layout and focused selection examples
   in the testing and debugging guides without exposing internal helper names as
   stable production API.
 
@@ -407,6 +407,41 @@ every generator and fixture has a cohesive private owner; the suite retains one
 integration binary, all 53 names, two-process execution, permutation semantics,
 and byte-identical observations; and no broad helper hides phase or feature
 policy.
+
+#### TP04 delivery record
+
+`pipeline_determinism.rs` is now a 53-case registry with no compiler pipeline,
+fixture, source, or normalization implementation. Primitive numeric, cast, and
+boolean generators live under one recursive primitive facade; standard string
+and I/O integration has a separate service facade; and MIR checkpoint
+inspection has its own owner. Successful and diagnostic generators remain
+separate. The I/O family shares only module-fixture construction between its
+successful compilation and provider-diagnostic pipelines.
+
+The single-source phase helpers introduced in TP03 remain limited to the exact
+successful, type-error, and planned-lifecycle sequences used across semantic
+families. Module-backed generators continue to own their provider policy. The
+normalization helper is now named for module-fixture output and documents the
+three deliberate instabilities it removes: temporary roots, equivalent path
+spellings, and global source offsets rendered as spans. No semantic name or
+other phase evidence is normalized.
+
+The root registry contains 40 same-input declarations and 13 permutation
+declarations. The harness gives every declaration two independent child calls,
+for 106 child processes across a complete run, and every permutation case
+selects variants zero and one. The sorted inventory retains all 53 leaf names
+and the TP01 SHA-256
+`c04091410676bb92fc34d395ad06ec986502f726e84a3a03d8982e2287f2e1f0`.
+All 24 distinct artifacts from the 20 moved cases, totaling 10,325,323 bytes,
+matched the pre-change implementation byte-for-byte.
+
+The testing and debugging guides describe the resulting ownership layout and
+stable semantic filters without exposing internal helper paths. Validation
+passed every focused primitive, cast, boolean, string, I/O, and checkpoint
+filter; every determinism command in living documentation; public API tests;
+complete default and eight-thread determinism runs; formatting; all-target
+workspace Clippy with warnings denied; documentation links; `make check` with
+629 golden cases; `make msrv-check`; and `git diff --check`.
 
 ### TP05 — Split driver reporting tests by observation responsibility
 

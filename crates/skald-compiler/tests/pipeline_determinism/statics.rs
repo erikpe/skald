@@ -25,7 +25,7 @@ use crate::standard_library::canonical_standard_library_sources;
 
 use super::{
     fixture::{link_directory, write_source, ModuleFixture},
-    normalization::normalize_fixture_paths,
+    normalization::normalize_module_fixture_output,
     source::{
         lower_final_hir, single_source_full_phase_dump, single_source_planned_lifecycle_dump,
         single_source_type_error_dump, StandardLibraryInput,
@@ -187,7 +187,7 @@ pub(crate) fn static_field_module_phase_dump(variant: usize) -> String {
 
     // Module loading records the temporary provider root and source identities
     // derived from it; their displayed spellings and spans vary with that root.
-    normalize_fixture_paths(
+    normalize_module_fixture_output(
         fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
@@ -275,7 +275,7 @@ pub(crate) fn imported_unused_static_phase_dump() -> String {
 
     // The temporary application and standard-library roots flow into the
     // module graph and the source identities printed by later phase dumps.
-    normalize_fixture_paths(
+    normalize_module_fixture_output(
         fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",

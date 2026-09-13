@@ -147,6 +147,23 @@ public renderer from a nearby test, print with `eprintln!`, and add
 `-- --nocapture`. Keep the final regression as an exact or focused structural
 assertion and remove temporary output.
 
+For a difference that appears only between compiler processes, select the
+cross-process registry by semantic leaf name. The suite keeps generators in
+private responsibility modules, so these root filters remain stable when its
+internal layout changes:
+
+```text
+cargo test --locked -p skald-compiler --test pipeline_determinism primitive_cast
+cargo test --locked -p skald-compiler --test pipeline_determinism eager_boolean
+cargo test --locked -p skald-compiler --test pipeline_determinism io_
+cargo test --locked -p skald-compiler --test pipeline_determinism mir_pipeline_checkpoints
+```
+
+Each selected parent launches two independent child processes. String, I/O,
+module, generic, range, and iteration permutation cases also vary source or
+provider order. Compare the first divergent phase product before following the
+difference into later MIR or assembly.
+
 ## Follow the pipeline
 
 The intentional public phase paths are exercised by

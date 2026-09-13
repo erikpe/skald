@@ -22,7 +22,7 @@ use crate::standard_library::canonical_standard_library_sources;
 
 use super::{
     fixture::{write_source, ModuleFixture},
-    normalization::normalize_fixture_paths,
+    normalization::normalize_module_fixture_output,
 };
 
 pub(crate) fn iteration_module_phase_dump(variant: usize) -> String {
@@ -119,7 +119,7 @@ pub(crate) fn iteration_module_phase_dump(variant: usize) -> String {
     )
     .unwrap();
 
-    normalize_fixture_paths(
+    normalize_module_fixture_output(
         fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
@@ -173,5 +173,5 @@ pub(crate) fn iteration_diagnostic_dump(variant: usize) -> String {
         &format!("class Both implements {claims} {{ init() {{}} }}"),
         "class Both implements <first-claim>, <second-claim> { init() {} }",
     );
-    normalize_fixture_paths(fixture.path(), rendered)
+    normalize_module_fixture_output(fixture.path(), rendered)
 }

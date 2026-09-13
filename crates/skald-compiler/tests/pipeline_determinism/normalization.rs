@@ -1,6 +1,12 @@
 use std::path::Path;
 
-pub(crate) fn normalize_fixture_paths(fixture: &Path, output: String) -> String {
+/// Canonicalizes identities that deliberately depend on a temporary module fixture.
+///
+/// Module and provider permutations can change the temporary root, selected
+/// path spelling, and global source offsets used by rendered spans. Semantic
+/// names and all other output remain unchanged so the determinism comparison
+/// still observes meaningful differences.
+pub(crate) fn normalize_module_fixture_output(fixture: &Path, output: String) -> String {
     let path_normalized = output.replace(fixture.to_str().unwrap(), "<fixture>");
     path_normalized
         .lines()

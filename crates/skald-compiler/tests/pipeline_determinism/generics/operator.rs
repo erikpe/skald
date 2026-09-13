@@ -21,7 +21,7 @@ use crate::standard_library::canonical_standard_library_sources;
 
 use super::super::{
     fixture::{write_source, ModuleFixture},
-    normalization::normalize_fixture_paths,
+    normalization::normalize_module_fixture_output,
 };
 
 pub(crate) fn generic_operator_module_phase_dump(variant: usize) -> String {
@@ -143,7 +143,7 @@ pub(crate) fn generic_operator_module_phase_dump(variant: usize) -> String {
     );
     assert!(assembly.contains(".method.op_add."), "{assembly}");
 
-    normalize_fixture_paths(
+    normalize_module_fixture_output(
         fixture.path(),
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",

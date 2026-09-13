@@ -17,7 +17,7 @@ use skald_compiler::{
 
 use super::super::{
     fixture::{link_directory, write_source, ModuleFixture},
-    normalization::normalize_fixture_paths,
+    normalization::normalize_module_fixture_output,
 };
 
 pub(crate) fn generic_module_phase_dump(variant: usize) -> String {
@@ -98,7 +98,7 @@ pub(crate) fn generic_module_phase_dump(variant: usize) -> String {
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
 
-    normalize_fixture_paths(
+    normalize_module_fixture_output(
         fixture.path(),
         format!(
             "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}",
