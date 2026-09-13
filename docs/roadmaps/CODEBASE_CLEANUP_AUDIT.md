@@ -1279,7 +1279,7 @@ changes separate from generic optimizer work in the catalog.
 
 ### A33 — Consolidate test plumbing while preserving independent checks
 
-**Status:** In progress; determinism-suite ownership is complete
+**Status:** In progress; driver reporting test ownership is complete
 (2026-09-13).
 
 **Design proposal:**

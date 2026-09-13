@@ -777,6 +777,16 @@ Implemented tests follow existing ownership:
 - repeated and concurrent library/driver invocations prove that observers and
   destinations do not leak across requests.
 
+The driver reporting suite is grouped by observed responsibility. Run the
+complete boundary or narrow to phase order, metric attribution, inspection,
+failure cutoffs, or observer isolation through its stable module filters:
+
+```text
+cargo test --locked -p skald-compiler driver::tests::reporting
+cargo test --locked -p skald-compiler driver::tests::reporting::inspection
+cargo test --locked -p skald-compiler driver::tests::reporting::observers
+```
+
 The disabled path performs no monotonic timing, event construction, string
 formatting, path cloning or rendering, metric sorting, heap allocation solely
 for report events, or extra IR traversal. Compiler and driver run timers,

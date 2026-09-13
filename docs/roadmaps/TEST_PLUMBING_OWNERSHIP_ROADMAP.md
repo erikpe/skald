@@ -1,6 +1,6 @@
 # Test Plumbing Ownership Roadmap
 
-Status: in progress; TP05 is next.
+Status: in progress; TP06 is next.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
@@ -58,7 +58,7 @@ finding can close.
 - [x] TP02 — Move module-backed determinism fixtures behind owned generators
 - [x] TP03 — Move value and ownership determinism fixtures
 - [x] TP04 — Complete determinism-suite ownership and registry consolidation
-- [ ] TP05 — Split driver reporting tests by observation responsibility
+- [x] TP05 — Split driver reporting tests by observation responsibility
 - [ ] TP06 — Split driver pipeline tests by compilation responsibility
 - [ ] TP07 — Consolidate golden integration resources by dependency level
 - [ ] TP08 — Reconcile inventories, validate every boundary, and close A33
@@ -449,28 +449,28 @@ workspace Clippy with warnings denied; documentation links; `make check` with
 contracts while preserving exact phase, metric, inspection, failure, and
 observer assertions.
 
-- [ ] Capture the reporting test names, fully qualified filters, and incoming
+- [x] Capture the reporting test names, fully qualified filters, and incoming
   references before moving code. Identify actively documented focused commands
   that need a root wrapper or an updated authoritative path.
-- [ ] Convert `driver/tests/reporting.rs` into a recursive module with a concise
+- [x] Convert `driver/tests/reporting.rs` into a recursive module with a concise
   facade. Give separate owners to phase lifecycle/order, phase- and pass-owned
   metrics, inspection and writer behavior, failure boundaries, and observer
   isolation/determinism.
-- [ ] Keep the success-phase vocabulary and checkpoint expectations with the
+- [x] Keep the success-phase vocabulary and checkpoint expectations with the
   phase/metric owners that interpret them. Avoid a global constants file that
   recreates implicit parent imports.
-- [ ] Place request construction, phase-pair assertions, metric lookup, event
+- [x] Place request construction, phase-pair assertions, metric lookup, event
   normalization, and malformed target inputs beside their narrowest common
   consumers. Use explicit imports in child modules rather than `use super::*`
   when that would hide production dependencies.
-- [ ] Preserve every exact phase sequence, outcome, metric owner/name/value,
+- [x] Preserve every exact phase sequence, outcome, metric owner/name/value,
   event order, writer error, panic propagation, artifact, and source diagnostic
   assertion. Structural moves do not justify rewriting broad expectations into
   weaker containment checks.
-- [ ] Keep malformed MIR/backend fixtures direct and defect-specific. Do not
+- [x] Keep malformed MIR/backend fixtures direct and defect-specific. Do not
   construct them through final verification or inspection seals that the test
   is intended to reject.
-- [ ] Update living references to moved test paths and record the reviewed
+- [x] Update living references to moved test paths and record the reviewed
   rename map for any fully qualified name that cannot remain unchanged.
 
 **Tests:** Run every new reporting child module separately, then
@@ -484,6 +484,45 @@ Clippy, `make check`, `make msrv-check`, documentation checks, and
 shared helpers remain mechanical and local; exact reporting behavior and
 negative fixtures are unchanged; every previous test has a traceable
 destination; and focused documentation selects the intended tests.
+
+#### TP05 delivery record
+
+The former 1,704-line reporting module is now a concise recursive facade with
+five test owners: phase lifecycle and order, phase- and pass-owned metrics,
+inspection and report-writer behavior, failure boundaries, and observer
+isolation. A sixth 25-line module owns only the request construction shared by
+the successful request and provider-failure cases. Child modules import their
+production dependencies explicitly; no broad parent import remains.
+
+Phase vocabulary and phase-sequence assertions stay with the lifecycle owner.
+MIR checkpoint expectations and elapsed-event normalization stay with the
+inspection owner. Metric lookup stays with the metric owner and is visible only
+to reporting siblings. The report-writer stub is local to inspection. Failure
+tests retain direct missing-terminator mutation and a separately verified,
+target-independent recursive inline layout that only backend emission rejects;
+their helper names now state those defects directly.
+
+The baseline and result each contain 18 tests, and their sorted leaf-name
+inventories have the same SHA-256
+`2d85e398c8e0bd9a6518fab2c4c8ccb6b25956eae70643d28bffc248c72a9c2f`.
+No living command selected an individual fully qualified reporting leaf, so no
+root wrapper was needed. The stable aggregate remains
+`driver::tests::reporting`; the reviewed prefix changes are:
+
+| New owner prefix | Preserved leaf tests |
+| --- | --- |
+| `phases` | `singleton_success_observes_every_owned_phase_and_compilation_total`, `request_success_observes_loading_and_the_shared_compiler_pipeline` |
+| `metrics` | `details_publish_deterministic_phase_owned_metrics`, `details_publish_productive_local_simplification_measurements`, `details_publish_productive_post_proof_cleanup_measurements`, `details_attribute_checked_integer_folding_and_followup_cfg_cleanup`, `details_attribute_checked_f64_to_integer_folding_and_followup_cleanup` |
+| `inspection` | `activation_metrics_and_inspection_keep_distinct_observation_boundaries`, `mir_only_inspection_preserves_artifacts_reports_and_reporting`, `report_writer_failure_does_not_block_activation_inspection_or_compilation`, `inactive_initializer_errors_remain_source_diagnostics_without_inspection` |
+| `failures` | `provider_and_loading_failures_stop_at_their_existing_boundaries`, `singleton_source_failures_stop_after_the_owning_frontend_phase`, `lifecycle_planning_diagnostics_stop_before_planned_mir_verification`, `malformed_mir_and_backend_errors_receive_failed_phase_outcomes`, `phase_observation_does_not_convert_panics_into_compilation_failures` |
+| `observers` | `observation_preserves_success_artifacts_and_failure_diagnostics`, `independent_observers_do_not_share_events_across_repeated_or_parallel_calls` |
+
+Living testing and reporting documentation now describes the responsibility
+filters, and incoming file links point to the owning child. Validation passed
+each child module, the 18-test aggregate, public API and pipeline determinism
+tests, formatting, all-target workspace Clippy with warnings denied,
+documentation links, `make check` with 629 golden cases, `make msrv-check`, and
+`git diff --check`.
 
 ### TP06 — Split driver pipeline tests by compilation responsibility
 

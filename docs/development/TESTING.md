@@ -579,6 +579,16 @@ owns intentional reporting and observed driver facade paths. Driver reporting
 tests own request/singleton phase order, source and internal failure cutoffs,
 compilation totals, result compatibility, panic policy, independent caller
 composition, exact metric order, detail gating, and trace module events.
+Those driver tests use a recursive responsibility layout for phase lifecycle,
+metrics, inspection and writer behavior, failure boundaries, and observer
+isolation. Select the stable aggregate or one responsibility directly:
+
+```text
+cargo test --locked -p skald-compiler driver::tests::reporting
+cargo test --locked -p skald-compiler driver::tests::reporting::metrics
+cargo test --locked -p skald-compiler driver::tests::reporting::failures
+```
+
 Module-loader tests own real discovery/final execution counts across duplicate,
 compiler-injected, cyclic, malformed, and UTF-8 sources. MIR model and pass
 tests own definition/block/instruction and verification/pass counts. Option,
