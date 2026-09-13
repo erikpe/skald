@@ -1279,6 +1279,9 @@ changes separate from generic optimizer work in the catalog.
 
 ### A33 — Consolidate test plumbing while preserving independent checks
 
+**Design proposal:**
+[Test Plumbing Ownership Design Proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md).
+
 **Evidence:** compiler
 [pipeline determinism tests](../../crates/skald-compiler/tests/pipeline_determinism.rs)
 span 2,913 lines; pipeline tests and reporting tests also contain large
@@ -1295,10 +1298,12 @@ corruption; tests must not become consumers of the same production proof that
 they are supposed to challenge. Use complete golden behavior for cross-phase
 contracts and local tests for phase invariants.
 
-**First PR / validation:** migrate one repeated fixture family and compare the
-discovered test count. Add subprocess crash/nontermination cases from A01–A05.
-Preserve intentionally independent-process determinism and native equivalence
-checks; do not delete similar-looking tests solely to shorten the suite.
+**First PR / validation:** migrate the determinism subprocess harness and one
+fixture family, then compare the discovered test inventory. Preserve the
+delivered A01–A05 crash, nontermination, pipe, capture, and overflow regressions;
+add focused characterization only for new shared helper behavior. Preserve
+intentionally independent-process determinism and native equivalence checks;
+do not delete similar-looking tests solely to shorten the suite.
 
 ### A34 — Establish reproducible cleanup measurements
 
