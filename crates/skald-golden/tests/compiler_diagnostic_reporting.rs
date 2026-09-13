@@ -1,10 +1,15 @@
-mod support;
+#[path = "support/fake_tools.rs"]
+mod fake_tools;
+#[path = "support/fixture.rs"]
+mod fixture;
+#[path = "support/temporary.rs"]
+mod temporary;
 
+use fixture::Fixture;
 use skald_golden::{
     render_report, select, CompilationIssue, Determinism, Report, ReportFormat, ReportOptions,
     SelectionOptions, SequentialOptions,
 };
-use support::Fixture;
 
 #[test]
 fn compiler_reports_use_normalized_stderr_without_replacing_raw_capture() {

@@ -1,3 +1,6 @@
+#[path = "support/temporary.rs"]
+mod temporary;
+
 use skald_golden::{
     build_plan, select, PlannedLeafKind, ResolvedArgs, ResolvedByteSource,
     ResolvedWorkingDirectory, SelectionOptions, TestPlan,
@@ -6,12 +9,11 @@ use std::{
     ffi::{OsStr, OsString},
     fs,
     path::PathBuf,
-    sync::atomic::{AtomicUsize, Ordering},
 };
-
-static NEXT_FIXTURE: AtomicUsize = AtomicUsize::new(0);
+use temporary::TemporaryWorkspace;
 
 struct Fixture {
+    workspace: TemporaryWorkspace,
     base: PathBuf,
     root: PathBuf,
     artifacts: PathBuf,
@@ -19,16 +21,13 @@ struct Fixture {
 
 impl Fixture {
     fn new() -> Self {
-        let sequence = NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed);
-        let base = std::env::temp_dir().join(format!(
-            "skald-golden-planning-{}-{sequence}",
-            std::process::id()
-        ));
-        let root = base.join("golden");
-        let artifacts = base.join("artifacts");
-        fs::create_dir_all(&root).unwrap();
-        fs::write(root.join("config.toml"), "schema = 1\n").unwrap();
+        let workspace = TemporaryWorkspace::new("planning", &[]);
+        let base = workspace.root().to_owned();
+        let root = workspace.create_directory("golden");
+        let artifacts = workspace.path("artifacts");
+        workspace.write("golden/config.toml", "schema = 1\n");
         Self {
+            workspace,
             base,
             root,
             artifacts,
@@ -36,23 +35,22 @@ impl Fixture {
     }
 
     fn write(&self, relative: &str, contents: &str) {
-        let path = self.root.join(relative);
-        fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(path, contents).unwrap();
+        self.workspace
+            .write(PathBuf::from("golden").join(relative), contents);
     }
 
     fn bytes(&self, relative: &str, contents: &[u8]) {
-        let path = self.root.join(relative);
-        fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(path, contents).unwrap();
+        self.workspace
+            .write(PathBuf::from("golden").join(relative), contents);
     }
 
     fn directory(&self, relative: &str) {
-        fs::create_dir_all(self.root.join(relative)).unwrap();
+        self.workspace
+            .create_directory(PathBuf::from("golden").join(relative));
     }
 
     fn configure(&self, contents: &str) {
-        fs::write(self.root.join("config.toml"), contents).unwrap();
+        self.workspace.write("golden/config.toml", contents);
     }
 
     fn plan(&self) -> TestPlan {
@@ -64,13 +62,8 @@ impl Fixture {
     }
 
     fn canonical(&self, relative: &str) -> PathBuf {
-        fs::canonicalize(self.root.join(relative)).unwrap()
-    }
-}
-
-impl Drop for Fixture {
-    fn drop(&mut self) {
-        fs::remove_dir_all(&self.base).unwrap();
+        self.workspace
+            .canonical(PathBuf::from("golden").join(relative))
     }
 }
 

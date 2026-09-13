@@ -8,8 +8,9 @@ use skald_golden::{
 };
 use std::{ffi::OsString, fs, time::Duration};
 use support::{
-    fake_compiler, fake_linker, fake_process, lines, write_compile_fail_spec, write_native_spec,
-    Fixture,
+    fake_tools::{fake_compiler, fake_linker, fake_process},
+    fixture::lines,
+    write_compile_fail_spec, write_native_spec, Fixture,
 };
 
 #[cfg(unix)]

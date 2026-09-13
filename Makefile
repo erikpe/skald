@@ -38,7 +38,7 @@ help:
 	@echo "  make golden-runner-test Run skald-golden schema and runner-library tests"
 	@echo "  make mir-measure-test Run local final-MIR measurement tool tests"
 	@echo "  make golden-test      Run all goldens once with optimized assertion-enabled tools"
-	@echo "  make golden-expectations-test Run focused byte, ownership, and report tests"
+	@echo "  make golden-expectations-test Run focused support, byte, ownership, and report tests"
 	@echo "  make golden-filter GOLDEN_FILTER='syntax/**'  Run matching golden leaves"
 	@echo "  make golden-exact GOLDEN_ID='calls/functions::direct_call::default::return_value'  Run one leaf"
 	@echo "  make runtime-test     Build and run C runtime tests"
@@ -113,7 +113,7 @@ measurement-support-test:
 	python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 
 golden-expectations-test:
-	cargo test --locked -p skald-golden --test planning --test process_execution --test reporting
+	cargo test --locked -p skald-golden --test planning --test process_execution --test reporting --test test_support
 
 golden-tools:
 	cargo build --locked --profile $(GOLDEN_PROFILE) -p skac -p skald-golden

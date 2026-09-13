@@ -1,6 +1,6 @@
 # Test Plumbing Ownership Roadmap
 
-Status: in progress; TP07 is next.
+Status: in progress; TP08 is next.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
@@ -60,7 +60,7 @@ finding can close.
 - [x] TP04 — Complete determinism-suite ownership and registry consolidation
 - [x] TP05 — Split driver reporting tests by observation responsibility
 - [x] TP06 — Split driver pipeline tests by compilation responsibility
-- [ ] TP07 — Consolidate golden integration resources by dependency level
+- [x] TP07 — Consolidate golden integration resources by dependency level
 - [ ] TP08 — Reconcile inventories, validate every boundary, and close A33
 
 ## PR-sized implementation sequence
@@ -610,34 +610,34 @@ all-target workspace Clippy with warnings denied, documentation links,
 writers across golden integration binaries without making planning or process
 tests depend on the high-level execution harness they are meant to test.
 
-- [ ] Capture all golden integration test names, test-binary boundaries,
+- [x] Capture all golden integration test names, test-binary boundaries,
   temporary path shapes, cleanup behavior, fake-tool dependencies, and focused
   Make targets before changing support.
-- [ ] Split `crates/skald-golden/tests/support/` into cohesive temporary,
+- [x] Split `crates/skald-golden/tests/support/` into cohesive temporary,
   high-level fixture, fake-tool, and spec-writer responsibilities. Keep a
   concise facade for widely shared primitives and allow low-level tests to
   include a purpose-specific support file without compiling the complete
   execution fixture.
-- [ ] Extract one collision-resistant temporary workspace primitive supporting
+- [x] Extract one collision-resistant temporary workspace primitive supporting
   owned roots, required associated artifact paths, file/tree writing, and
   cleanup on normal return and unwind. Preserve absolute/canonical path
   behavior used by diagnostic normalization and sandbox assertions.
-- [ ] Compose the existing high-level `Fixture` from the temporary primitive
+- [x] Compose the existing high-level `Fixture` from the temporary primitive
   while preserving compiler, runtime, linker, selection, timeout, environment,
   determinism, counter, assembly-log, and retention configuration exactly.
-- [ ] Migrate the planning fixture to the temporary primitive while retaining
+- [x] Migrate the planning fixture to the temporary primitive while retaining
   direct `build_plan` and `select` calls. Do not initialize execution state.
-- [ ] Migrate the process-execution fixture while retaining direct
+- [x] Migrate the process-execution fixture while retaining direct
   `run_process` and `execute_run` calls, explicit limits and deadlines, and
   access to fake-process behavior. Do not route process tests through
   `execute_sequential`.
-- [ ] Keep report, sequential, parallel, and compiler-diagnostic fixtures on
+- [x] Keep report, sequential, parallel, and compiler-diagnostic fixtures on
   the high-level composition they already exercise. Split spec writers and
   fake binary paths only where multiple such consumers exist.
-- [ ] Remove or narrow the broad test-support `dead_code` allowance after each
+- [x] Remove or narrow the broad test-support `dead_code` allowance after each
   integration root compiles only the support it needs. Do not add dummy uses to
   satisfy lints.
-- [ ] Preserve the A02–A04 full-pipe, descendant, timeout, binary capture,
+- [x] Preserve the A02–A04 full-pipe, descendant, timeout, binary capture,
   overflow, signal, failure precedence, raw diagnostic, and cleanup
   regressions exactly.
 
@@ -652,6 +652,49 @@ sharing higher-level policy; every test still calls the intended library
 boundary; temporary and cleanup behavior is characterized; the broad support
 allowance is removed or narrowly justified; and all process robustness
 observations remain intact.
+
+#### TP07 delivery record
+
+The golden integration support now has four focused owners behind a nine-line
+high-level facade: collision-resistant temporary workspaces, fake binary paths,
+the complete execution fixture, and shared spec writers. The temporary owner
+creates roots atomically, rejects undeclared sibling paths and escaping relative
+paths, preserves the existing absolute root layouts, and removes its root plus
+declared sibling files or directories on normal return and unwinding. Cleanup
+is best-effort so a failure while unwinding cannot cause a second panic.
+
+Planning retains its existing `.../planning-<pid>-<sequence>/golden` root and
+child artifact directory, includes only the temporary owner, and continues to
+call `build_plan` and `select` directly. Process execution retains its
+`.../process-<pid>-<sequence>` root and sibling artifact/temporary paths,
+includes only the temporary and fake-tool owners, and continues to call
+`run_process` and `execute_run` directly with explicit limits and deadlines.
+Compiler-diagnostic, sequential, parallel, and reporting tests still use the
+complete fixture configuration. Shared native and compile-fail spec writers
+remain available only to the three consumers that use them.
+
+The blanket support-module `dead_code` allowance was removed. The remaining
+allowances are attached to individual methods or fake binaries whose use
+intentionally varies by integration-test crate. All support types and exports
+are crate-visible at most. The focused `golden-expectations-test` target now
+also selects the direct temporary-workspace contract.
+
+The starting revision was `ef95c4ed`. The original golden Rust inventory had
+112 tests with SHA-256
+`0f24f23c190769e15ed9d76325f0cf6834e36429a9d20f907efdff954180bcee`.
+All 112 names remain unchanged. The result has 115 tests with SHA-256
+`7e4ca0b69e34b2c50faff3a9d5d0a3272d6e47b87192a941666cdf2ec45cf681`;
+the only additions directly verify parallel workspace uniqueness, owned-tree
+and canonical-path behavior, and cleanup on normal drop and unwind.
+
+Focused planning, process execution, compiler diagnostics, sequential,
+parallel, reporting, support, and complete `skald-golden` tests passed. The
+full-pipe, descendant, timeout, binary capture, overflow, signal, failure
+precedence, raw diagnostic, artifact retention, and cleanup cases remain in
+their original binaries. Validation also passed `make golden-expectations-test`,
+formatting, all-target workspace Clippy with warnings denied, documentation
+links, `make check` with 629 golden cases, `make msrv-check`, and
+`git diff --check`.
 
 ### TP08 — Reconcile inventories, validate every boundary, and close A33
 

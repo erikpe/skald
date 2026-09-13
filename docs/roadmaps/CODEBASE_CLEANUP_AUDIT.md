@@ -1279,8 +1279,9 @@ changes separate from generic optimizer work in the catalog.
 
 ### A33 — Consolidate test plumbing while preserving independent checks
 
-**Status:** In progress; driver reporting and pipeline test ownership are
-complete (2026-09-13).
+**Status:** In progress; compiler determinism, driver reporting/pipeline, and
+golden integration support ownership are complete (2026-09-13). Final
+inventory reconciliation remains.
 
 **Design proposal:**
 [Test Plumbing Ownership Design Proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md).

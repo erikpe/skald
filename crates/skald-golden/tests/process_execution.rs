@@ -1,3 +1,8 @@
+#[path = "support/fake_tools.rs"]
+mod fake_tools;
+#[path = "support/temporary.rs"]
+mod temporary;
+
 use skald_golden::{
     allowlisted_environment, build_plan, decode_arguments, execute_run, run_process,
     ExecutionOptions, MatcherOutcome, OutputFileOverflowKind, PlannedLeafKind, PlannedRun,
@@ -7,17 +12,16 @@ use std::{
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicUsize, Ordering},
     thread,
     time::Duration,
 };
+use temporary::TemporaryWorkspace;
 
 #[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
 
-static NEXT_FIXTURE: AtomicUsize = AtomicUsize::new(0);
-
 struct Fixture {
+    workspace: TemporaryWorkspace,
     root: PathBuf,
     artifacts: PathBuf,
     temporary: PathBuf,
@@ -25,28 +29,18 @@ struct Fixture {
 
 impl Fixture {
     fn new() -> Self {
-        let sequence = NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!(
-            "skald-golden-process-{}-{sequence}",
-            std::process::id()
-        ));
-        let artifacts = root.with_extension("artifacts");
-        let temporary = root.with_extension("temporary");
-        fs::create_dir_all(&root).unwrap();
-        fs::write(root.join("config.toml"), "schema = 1\n").unwrap();
+        let workspace = TemporaryWorkspace::new("process", &["artifacts", "temporary"]);
+        workspace.write("config.toml", "schema = 1\n");
         Self {
-            root,
-            artifacts,
-            temporary,
+            root: workspace.root().to_owned(),
+            artifacts: workspace.associated_path("artifacts"),
+            temporary: workspace.associated_path("temporary"),
+            workspace,
         }
     }
 
     fn write(&self, relative: &str, contents: impl AsRef<[u8]>) {
-        let path = self.root.join(relative);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).unwrap();
-        }
-        fs::write(path, contents).unwrap();
+        self.workspace.write(relative, contents);
     }
 
     fn plan(&self) -> skald_golden::TestPlan {
@@ -54,18 +48,8 @@ impl Fixture {
     }
 }
 
-impl Drop for Fixture {
-    fn drop(&mut self) {
-        for path in [&self.root, &self.artifacts, &self.temporary] {
-            if path.exists() {
-                fs::remove_dir_all(path).unwrap();
-            }
-        }
-    }
-}
-
 fn fake_process() -> &'static Path {
-    Path::new(env!("CARGO_BIN_EXE_skald-golden-fake-process"))
+    fake_tools::fake_process()
 }
 
 fn process(fake_arguments: &[OsString], stdin: Vec<u8>, cwd: &Path) -> ProcessCommand {
@@ -529,9 +513,8 @@ expect={stdout={ignore=true}, stderr={ignore=true}}
 "#,
     );
     let relative_root = PathBuf::from(format!(
-        "target/skald-golden-relative-temporary-{}-{}",
-        std::process::id(),
-        NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+        "target/skald-golden-relative-temporary-{}",
+        fixture.root.file_name().unwrap().to_string_lossy()
     ));
     assert!(!relative_root.is_absolute());
 

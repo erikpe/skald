@@ -767,6 +767,21 @@ the direct child exits:
 cargo test --locked -p skald-golden --test process_execution
 ```
 
+Golden integration support is layered by the production boundary under test.
+Planning tests include only the shared temporary-workspace primitive and call
+`build_plan` and `select` directly. Process tests include that primitive and
+the fake-process path while continuing to call `run_process` and `execute_run`
+directly. Compiler diagnostics, sequential scheduling, parallel scheduling,
+and reporting compose the high-level `Fixture`, whose compiler, runtime,
+linker, environment, timeout, determinism, counter, assembly-log, and artifact
+retention configuration stays explicit. Temporary roots use collision-safe
+creation, own their declared sibling artifact paths, and perform best-effort
+cleanup on both normal return and unwinding. Run its direct contract tests with:
+
+```text
+cargo test --locked -p skald-golden --test test_support
+```
+
 Execution defaults to determinism `off`. Use `--determinism compile` to compare
 two compiler products or `--determinism full` to compare both compiler and
 native-process observations. Native selections prepare the runtime once,
