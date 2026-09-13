@@ -189,10 +189,6 @@ pub struct ProcessObservation {
 }
 
 impl ProcessObservation {
-    pub(crate) fn strip_stderr_prefix(&mut self, prefix: &[u8]) {
-        self.stderr = replace_bytes(&self.stderr, prefix, b"");
-    }
-
     pub fn termination(&self) -> ProcessTermination {
         self.termination
     }
@@ -215,34 +211,5 @@ impl ProcessObservation {
 
     pub fn capture_overflows(&self) -> &[ProcessCaptureOverflow] {
         &self.capture_overflows
-    }
-}
-
-fn replace_bytes(input: &[u8], needle: &[u8], replacement: &[u8]) -> Vec<u8> {
-    if needle.is_empty() {
-        return input.to_owned();
-    }
-    let mut output = Vec::with_capacity(input.len());
-    let mut remaining = input;
-    while let Some(index) = remaining
-        .windows(needle.len())
-        .position(|window| window == needle)
-    {
-        output.extend_from_slice(&remaining[..index]);
-        output.extend_from_slice(replacement);
-        remaining = &remaining[index + needle.len()..];
-    }
-    output.extend_from_slice(remaining);
-    output
-}
-
-#[cfg(test)]
-mod tests {
-    use super::replace_bytes;
-
-    #[test]
-    fn byte_replacement_removes_every_non_overlapping_prefix() {
-        assert_eq!(replace_bytes(b"/case/a\n/case/b", b"/case/", b""), b"a\nb");
-        assert_eq!(replace_bytes(b"unchanged", b"", b"x"), b"unchanged");
     }
 }

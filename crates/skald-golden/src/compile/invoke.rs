@@ -33,6 +33,13 @@ impl CompilationPurpose<'_> {
             Self::CompileFail(_) => 1,
         }
     }
+
+    fn diagnostic_path_prefix(&self) -> Option<&[u8]> {
+        match self {
+            Self::Success => None,
+            Self::CompileFail(expectation) => expectation.diagnostic_path_prefix(),
+        }
+    }
 }
 
 pub(crate) fn compile_build(
@@ -80,19 +87,20 @@ pub(crate) fn compile_build(
             .with_environment(config.environment().clone())
             .with_capture_limit(config.capture_limit())
             .with_timeout(timeout);
-        let mut process = match run_process(&command) {
+        let process = match run_process(&command) {
             Ok(process) => process,
             Err(error) => {
                 issues.push(CompilationIssue::Process(error.to_string()));
-                observations.push(CompilerObservation::new(command, None, assembly_path, None));
+                observations.push(CompilerObservation::new(
+                    command,
+                    None,
+                    purpose.diagnostic_path_prefix(),
+                    assembly_path,
+                    None,
+                ));
                 break;
             }
         };
-        if let CompilationPurpose::CompileFail(expectation) = &purpose {
-            if let Some(prefix) = expectation.stderr_prefix_to_strip() {
-                process.strip_stderr_prefix(prefix);
-            }
-        }
         check_process(&process, &purpose, &mut issues);
         let assembly = if matches!(purpose, CompilationPurpose::Success)
             && process.termination() == ProcessTermination::Code(0)
@@ -129,6 +137,7 @@ pub(crate) fn compile_build(
         observations.push(CompilerObservation::new(
             command,
             Some(process),
+            purpose.diagnostic_path_prefix(),
             assembly_path,
             assembly,
         ));
@@ -140,21 +149,28 @@ pub(crate) fn compile_build(
     let mut stdout_comparison = None;
     let mut stderr_comparison = None;
     if let CompilationPurpose::CompileFail(expectation) = &purpose {
-        if let Some(process) = observations.first().and_then(CompilerObservation::process) {
-            let stdout = compare_stream(expectation.stdout(), process.stdout());
-            issues.extend(map_stream_failures(
-                &stdout,
-                CompilationIssue::StdoutExpectation,
-                CompilationIssue::StdoutExpectationLoad,
-            ));
-            stdout_comparison = Some(stdout);
-            let stderr = compare_stream(expectation.stderr(), process.stderr());
-            issues.extend(map_stream_failures(
-                &stderr,
-                CompilationIssue::StderrExpectation,
-                CompilationIssue::StderrExpectationLoad,
-            ));
-            stderr_comparison = Some(stderr);
+        if let Some(observation) = observations.first() {
+            if let Some(process) = observation.process() {
+                let stdout = compare_stream(expectation.stdout(), process.stdout());
+                issues.extend(map_stream_failures(
+                    &stdout,
+                    CompilationIssue::StdoutExpectation,
+                    CompilationIssue::StdoutExpectationLoad,
+                ));
+                stdout_comparison = Some(stdout);
+                let stderr = compare_stream(
+                    expectation.stderr(),
+                    observation
+                        .stderr_for_comparison()
+                        .expect("completed compiler process must have a stderr comparison view"),
+                );
+                issues.extend(map_stream_failures(
+                    &stderr,
+                    CompilationIssue::StderrExpectation,
+                    CompilationIssue::StderrExpectationLoad,
+                ));
+                stderr_comparison = Some(stderr);
+            }
         }
     }
     CompilationExecution::new(
@@ -209,22 +225,25 @@ fn check_determinism(
     purpose: &CompilationPurpose<'_>,
     issues: &mut Vec<CompilationIssue>,
 ) {
-    let Some(first) = observations[0].process() else {
+    let first_observation = &observations[0];
+    let second_observation = &observations[1];
+    let Some(first) = first_observation.process() else {
         return;
     };
-    let Some(second) = observations[1].process() else {
+    let Some(second) = second_observation.process() else {
         return;
     };
     match purpose {
         CompilationPurpose::Success => {
-            if observations[0].assembly() != observations[1].assembly() {
+            if first_observation.assembly() != second_observation.assembly() {
                 issues.push(CompilationIssue::NondeterministicAssembly);
             }
         }
         CompilationPurpose::CompileFail(_) => {
             if first.termination() != second.termination()
                 || first.stdout() != second.stdout()
-                || first.stderr() != second.stderr()
+                || first_observation.stderr_for_comparison()
+                    != second_observation.stderr_for_comparison()
                 || first.pipe_failures() != second.pipe_failures()
                 || first.capture_overflows() != second.capture_overflows()
             {

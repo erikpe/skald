@@ -1,5 +1,6 @@
 //! Real-compiler location, invocation, observation, and determinism checks.
 
+mod diagnostics;
 mod invoke;
 mod locate;
 mod model;

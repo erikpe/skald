@@ -293,3 +293,72 @@ expect.stderr = { inline = "failure stderr\n" }
     assert!(human.contains("stdout: 16 bytes, b\"failure stdout\\x00\\xff\""));
     assert!(human.contains("matcher 1 \"text fragment\": matched, policy contains"));
 }
+
+#[test]
+fn compiler_reports_use_normalized_stderr_without_replacing_raw_capture() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "diagnostics/case/application/app.ska",
+        "fn main() -> i64 { return missing(); }\n",
+    );
+    fixture.write(
+        "diagnostics/case/dependencies/value.ska",
+        "public fn value() -> i64 { return 0; }\n",
+    );
+    fixture.write(
+        "diagnostics/paths.golden.toml",
+        r#"
+schema = 1
+[[test]]
+name = "paths"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "case/application",
+  "--module-root", "case/dependencies",
+  "--no-stdlib",
+  "--fake-mode", "compile-fail-path",
+]
+expect.stderr = { match = "exact", inline = "error[FAKE001]: rejected module\n --> application/app.ska:1:1\n" }
+"#,
+    );
+
+    let plan = fixture.plan();
+    let selected = select(&plan, &SelectionOptions::default()).unwrap();
+    let execution =
+        skald_golden::execute_sequential(&selected, &fixture.options(Determinism::Off, "success"));
+    assert!(execution.passed());
+
+    let compilation = execution.builds()[0].compilation();
+    let observation = &compilation.observations()[0];
+    let raw = observation.process().unwrap().stderr();
+    let normalized = b"error[FAKE001]: rejected module\n --> application/app.ska:1:1\n";
+    let prefix = format!(
+        "{}{}",
+        fixture.root.join("diagnostics/case").display(),
+        std::path::MAIN_SEPARATOR
+    );
+    assert!(raw
+        .windows(prefix.len())
+        .any(|window| window == prefix.as_bytes()));
+    assert_ne!(raw, normalized);
+    assert_eq!(observation.stderr_for_comparison(), Some(&normalized[..]));
+    assert_eq!(
+        compilation.stderr_comparison().unwrap().actual(),
+        normalized
+    );
+
+    let report = Report::new(
+        &selected,
+        &execution,
+        Determinism::Off,
+        ReportOptions::default().with_show_output(true),
+    );
+    let stderr = report.cases[0].stages[0].processes[0]
+        .stderr
+        .as_ref()
+        .unwrap();
+    assert_eq!(stderr.length, normalized.len());
+    assert!(stderr.escaped.contains("application/app.ska"));
+    assert!(!stderr.escaped.contains(&fixture.root.to_string_lossy()[..]));
+}

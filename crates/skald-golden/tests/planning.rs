@@ -524,7 +524,7 @@ expect.stdout.matches = [
 }
 
 #[test]
-fn derives_module_diagnostic_prefix_from_the_common_provider_owner() {
+fn derives_module_diagnostic_path_prefix_from_the_common_provider_owner() {
     let fixture = Fixture::new();
     fixture.write(
         "modules/case/application/app.ska",
@@ -561,7 +561,7 @@ expect = { stderr = { inline = "error" } }
         std::path::MAIN_SEPARATOR
     );
     assert_eq!(
-        expectation.stderr_prefix_to_strip(),
+        expectation.diagnostic_path_prefix(),
         Some(expected.as_bytes())
     );
 }

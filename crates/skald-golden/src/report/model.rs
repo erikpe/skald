@@ -365,18 +365,17 @@ fn compilation_stage(build: &BuildExecution, artifact_directory: &std::path::Pat
         .iter()
         .enumerate()
         .map(|(index, observation)| {
-            let mut report =
-                process_report(observation.command(), observation.process(), index + 1);
+            let mut report = compiler_process_report(observation, index + 1);
             if index == 0 {
-                if let (Some(process), Some(comparison)) =
-                    (observation.process(), compilation.stdout_comparison())
-                {
-                    report.stdout = Some(stream_comparison(process.stdout(), comparison));
+                if let Some(comparison) = compilation.stdout_comparison() {
+                    report.stdout = Some(stream_comparison(comparison.actual(), comparison));
                 }
-                if let (Some(process), Some(comparison)) =
-                    (observation.process(), compilation.stderr_comparison())
-                {
-                    report.stderr = Some(stream_comparison(process.stderr(), comparison));
+                if let Some(comparison) = compilation.stderr_comparison() {
+                    debug_assert_eq!(
+                        observation.stderr_for_comparison(),
+                        Some(comparison.actual())
+                    );
+                    report.stderr = Some(stream_comparison(comparison.actual(), comparison));
                 }
             }
             report
@@ -419,6 +418,17 @@ fn compilation_stage(build: &BuildExecution, artifact_directory: &std::path::Pat
                 .collect()
         },
     }
+}
+
+fn compiler_process_report(
+    observation: &crate::CompilerObservation,
+    repetition: usize,
+) -> ProcessReport {
+    let mut report = process_report(observation.command(), observation.process(), repetition);
+    if let Some(stderr) = observation.stderr_for_comparison() {
+        report.stderr = Some(stream(stderr, None, Vec::new()));
+    }
+    report
 }
 
 fn process_report(

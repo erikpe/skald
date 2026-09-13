@@ -79,7 +79,10 @@ impl<'a> FixturePaths<'a> {
         Ok(resolved)
     }
 
-    pub(super) fn compiler_diagnostic_prefix(&self, arguments: &[OsString]) -> Option<Vec<u8>> {
+    pub(super) fn compiler_diagnostic_path_prefix(
+        &self,
+        arguments: &[OsString],
+    ) -> Option<Vec<u8>> {
         let mut directories = arguments
             .windows(2)
             .filter(|pair| is_fixture_directory_option(&pair[0]))

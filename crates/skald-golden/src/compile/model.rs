@@ -1,3 +1,4 @@
+use super::diagnostics::CompilerStderrView;
 use crate::process::DEFAULT_TIMEOUT;
 use crate::{
     MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCaptureOverflow, ProcessCommand,
@@ -126,6 +127,7 @@ pub enum CompilationKind {
 pub struct CompilerObservation {
     command: ProcessCommand,
     process: Option<ProcessObservation>,
+    stderr_view: CompilerStderrView,
     assembly_path: PathBuf,
     assembly: Option<Vec<u8>>,
 }
@@ -134,12 +136,19 @@ impl CompilerObservation {
     pub(super) fn new(
         command: ProcessCommand,
         process: Option<ProcessObservation>,
+        diagnostic_path_prefix: Option<&[u8]>,
         assembly_path: PathBuf,
         assembly: Option<Vec<u8>>,
     ) -> Self {
+        let stderr_view = process
+            .as_ref()
+            .map_or_else(CompilerStderrView::default, |process| {
+                CompilerStderrView::from_raw(process.stderr(), diagnostic_path_prefix)
+            });
         Self {
             command,
             process,
+            stderr_view,
             assembly_path,
             assembly,
         }
@@ -151,6 +160,16 @@ impl CompilerObservation {
 
     pub fn process(&self) -> Option<&ProcessObservation> {
         self.process.as_ref()
+    }
+
+    /// Compiler stderr after portable diagnostic-path normalization.
+    ///
+    /// The raw bytes remain available through [`Self::process`]. Matching,
+    /// diagnostic determinism, and compiler-stage reports use this view.
+    pub fn stderr_for_comparison(&self) -> Option<&[u8]> {
+        self.process
+            .as_ref()
+            .map(|process| self.stderr_view.bytes(process.stderr()))
     }
 
     pub fn assembly_path(&self) -> &std::path::Path {

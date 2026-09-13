@@ -1,10 +1,10 @@
 # Raw Compiler Stderr Observation Roadmap
 
-Status: planned; G01 is next.
+Status: in progress; G02 is next.
 
-The golden runner currently removes the fixture path prefix directly from a
-`ProcessObservation` after the compiler exits. That makes the process model
-look raw while silently replacing its stderr bytes, and it gives reporting no
+Before G01, the golden runner removed the fixture path prefix directly from a
+`ProcessObservation` after the compiler exited. That made the process model
+look raw while silently replacing its stderr bytes, and it gave reporting no
 way to distinguish captured output from the bytes used for portable diagnostic
 matching. This roadmap preserves the exact bounded child output and moves path
 normalization into an explicit compiler-comparison view without changing
@@ -43,7 +43,7 @@ compile-fail expectations, determinism policy, or report schemas.
 
 ## Progress
 
-- [ ] G01 — Separate raw capture from compiler diagnostic comparison
+- [x] G01 — Separate raw capture from compiler diagnostic comparison
 - [ ] G02 — Harden reporting, compatibility, and documentation
 
 ## PR-sized implementation sequence
@@ -53,30 +53,43 @@ compile-fail expectations, determinism policy, or report schemas.
 **Purpose:** establish one honest ownership boundary from captured compiler
 bytes through normalization, matching, determinism, and report projection.
 
-- [ ] Add a private compiler-diagnostic view beside compiler invocation and
+- [x] Add a private compiler-diagnostic view beside compiler invocation and
   observation. Represent an unchanged raw view without copying where practical,
   and own normalized bytes only when path removal changes the stream.
-- [ ] Rename the planned normalization input and its explain output around an
+- [x] Rename the planned normalization input and its explain output around an
   absolute diagnostic path prefix. Document that all non-overlapping byte
   occurrences are removed; do not describe the operation as stripping one
   leading prefix.
-- [ ] Remove `ProcessObservation::strip_stderr_prefix` and the process-layer
+- [x] Remove `ProcessObservation::strip_stderr_prefix` and the process-layer
   byte replacement helper. Process observations must be immutable after
   `run_process` returns.
-- [ ] Build the diagnostic comparison view for every completed compiler
+- [x] Build the diagnostic comparison view for every completed compiler
   repetition. Use it for compile-fail stderr matching and normalized diagnostic
   determinism while leaving status, stdout, pipe-failure, overflow, successful
   compilation, and assembly checks unchanged.
-- [ ] Make `CompilerObservation` expose raw process stderr through `process()`
+- [x] Make `CompilerObservation` expose raw process stderr through `process()`
   and the explicit comparison bytes through a narrowly named accessor. Keep
   normalization state attached to its owning observation rather than relying
   on positional state in `CompilationExecution`.
-- [ ] Project compiler stderr reports from the comparison view. Assert that the
+- [x] Project compiler stderr reports from the comparison view. Assert that the
   first reported comparison uses the same bytes as `StreamComparison::actual()`
   so matcher offsets cannot be paired with raw bytes accidentally.
-- [ ] Add focused binary-safe tests for absent and empty prefixes, repeated and
+- [x] Add focused binary-safe tests for absent and empty prefixes, repeated and
   adjacent path occurrences, path text embedded in a diagnostic message,
   non-UTF-8 surrounding bytes, and inputs with no matching occurrence.
+
+**Delivered:** compiler observations now retain immutable raw process output
+and attach a private diagnostic stderr view that borrows unchanged bytes or
+owns normalized bytes only when the planned absolute path occurs. Compile-fail
+matching, diagnostic determinism, and compiler-stage reporting consume that
+view; `StreamComparison::actual()` remains the source of reported matcher
+bytes and offsets. Focused byte-level coverage exercises identity operations,
+repeated, adjacent, embedded, and non-UTF-8 cases, while an integration test
+separately verifies raw capture and normalized comparison/report output.
+
+**Validation:** the complete `skald-golden` test suite, workspace all-target
+Clippy with warnings denied, `make check`, `make msrv-check`, formatting,
+documentation links, and diff hygiene all pass.
 
 **Tests:** Run `cargo test --locked -p skald-golden process::`, the focused
 compiler invocation/model tests, `cargo test --locked -p skald-golden --test

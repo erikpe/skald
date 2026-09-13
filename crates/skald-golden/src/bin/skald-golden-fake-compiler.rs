@@ -86,6 +86,16 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
             drop(activity);
             process::exit(1)
         }
+        "compile-fail-path" => {
+            let module_root = option(&arguments, "--module-root")
+                .ok_or_else(|| "compile-fail-path requires --module-root".to_owned())?;
+            eprintln!(
+                "error[FAKE001]: rejected module\n --> {}/app.ska:1:1",
+                Path::new(module_root).display()
+            );
+            drop(activity);
+            process::exit(1)
+        }
         "nondeterministic-diagnostic" => {
             eprintln!(
                 "error[FAKE001]: {} diagnostic",

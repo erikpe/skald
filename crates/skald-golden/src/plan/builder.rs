@@ -107,7 +107,7 @@ pub(super) fn build(
                     .chain(&command_line_args)
                     .cloned()
                     .collect();
-                let compiler_diagnostic_prefix = paths.compiler_diagnostic_prefix(&base_args);
+                let diagnostic_path_prefix = paths.compiler_diagnostic_path_prefix(&base_args);
 
                 let mut build = PlannedBuild {
                     id: build_id.clone(),
@@ -176,7 +176,7 @@ pub(super) fn build(
                                     &format!("{test_field}.expect.stderr"),
                                     true,
                                 )?,
-                                stderr_prefix_to_strip: compiler_diagnostic_prefix,
+                                diagnostic_path_prefix,
                             }),
                         });
                     }

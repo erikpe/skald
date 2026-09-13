@@ -370,7 +370,7 @@ impl ResolvedRunExpectation {
 pub struct ResolvedCompileExpectation {
     pub(super) stdout: ResolvedStreamExpectation,
     pub(super) stderr: ResolvedStreamExpectation,
-    pub(super) stderr_prefix_to_strip: Option<Vec<u8>>,
+    pub(super) diagnostic_path_prefix: Option<Vec<u8>>,
 }
 
 impl ResolvedCompileExpectation {
@@ -382,10 +382,10 @@ impl ResolvedCompileExpectation {
         &self.stderr
     }
 
-    /// An absolute fixture prefix removed before diagnostics are checked for
-    /// determinism or compared with their expectation.
-    pub fn stderr_prefix_to_strip(&self) -> Option<&[u8]> {
-        self.stderr_prefix_to_strip.as_deref()
+    /// An absolute fixture path prefix removed wherever it occurs before
+    /// diagnostics are checked for determinism or matched with expectations.
+    pub fn diagnostic_path_prefix(&self) -> Option<&[u8]> {
+        self.diagnostic_path_prefix.as_deref()
     }
 }
 

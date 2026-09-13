@@ -43,8 +43,8 @@ impl TestPlan {
                 writeln!(output, "kind = compile").unwrap();
                 write_stream(&mut output, "stdout", expectation.stdout());
                 write_stream(&mut output, "stderr", expectation.stderr());
-                if let Some(prefix) = expectation.stderr_prefix_to_strip() {
-                    write!(output, "stderr-prefix-to-strip = ").unwrap();
+                if let Some(prefix) = expectation.diagnostic_path_prefix() {
+                    write!(output, "diagnostic-path-prefix = ").unwrap();
                     write_bytes_literal(&mut output, prefix);
                     output.push('\n');
                 }
