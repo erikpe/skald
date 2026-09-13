@@ -4,25 +4,16 @@ use skald_compiler::{
     backend::{emit_assembly, BackendInput, Target},
     diagnostics::render_diagnostics,
     driver::EntrySelector,
-    hir::{dump_hir, HirProgram},
-    lexer::{dump_tokens, lex},
-    mir::{
-        dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir, verify_preliminary_mir,
-    },
+    hir::dump_hir,
+    lexer::lex,
+    mir::{dump_mir, lower_hir},
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
-    passes::{
-        run_mir_pipeline, run_mir_pipeline_inspected,
-        static_lifecycle::{
-            dump_planned_mir, plan_static_lifetimes, synthesize_static_lifecycle,
-            verify_planned_mir,
-        },
-        MirPipelineCheckpoint, VerifiedFinalMirProgram,
-    },
+    passes::{run_mir_pipeline_inspected, MirPipelineCheckpoint},
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
-    syntax::{dump_ast, parse},
+    syntax::parse,
     typeck::type_check,
 };
 
@@ -33,31 +24,24 @@ mod standard_library;
 mod support;
 
 use determinism::{
-    assert_cross_process_determinism, assert_cross_process_variants,
-    generic_interface_diagnostic_dump, generic_interface_module_phase_dump,
-    generic_module_phase_dump, generic_operator_module_phase_dump, iteration_diagnostic_dump,
-    iteration_module_phase_dump, link_directory, module_diagnostic_dump, module_phase_dump,
-    normalize_fixture_paths, range_module_phase_dump, range_syntax_diagnostic_dump, write_source,
-    ModuleFixture,
+    array_element_list_phase_dump, array_phase_dump, assert_cross_process_determinism,
+    assert_cross_process_variants, final_field_diagnostic_dump, final_field_phase_dump,
+    function_value_composition_phase_dump, generic_interface_diagnostic_dump,
+    generic_interface_module_phase_dump, generic_module_phase_dump,
+    generic_operator_module_phase_dump, imported_unused_static_phase_dump,
+    indexed_array_frontend_phase_dump, iteration_diagnostic_dump, iteration_module_phase_dump,
+    lower_final_hir, module_diagnostic_dump, module_phase_dump, normalize_fixture_paths,
+    object_phase_dump, optional_phase_dump, polymorphism_phase_dump, private_cell_diagnostic_dump,
+    private_cell_phase_dump, private_initializer_diagnostic_dump, private_initializer_phase_dump,
+    produced_alias_phase_dump, produced_field_phase_dump, produced_receiver_phase_dump,
+    range_module_phase_dump, range_syntax_diagnostic_dump, shared_ownership_phase_dump,
+    single_source_full_phase_dump, single_source_type_error_dump, static_field_diagnostic_dump,
+    static_field_module_phase_dump, static_field_phase_dump,
+    static_initializer_lifecycle_phase_dump, static_lifetime_cycle_diagnostic_dump, write_source,
+    ModuleFixture, StandardLibraryInput,
 };
 use standard_library::{canonical_standard_library_sources, CANONICAL_IO_SOURCE};
 
-const OBJECT_TEST_NAME: &str = "object_lifetime_phase_products_are_deterministic_across_processes";
-const POLYMORPHISM_TEST_NAME: &str =
-    "polymorphism_phase_products_are_deterministic_across_processes";
-const PRODUCED_ALIAS_TEST_NAME: &str =
-    "produced_alias_phase_products_are_deterministic_across_processes";
-const PRODUCED_RECEIVER_TEST_NAME: &str =
-    "produced_receiver_phase_products_are_deterministic_across_processes";
-const PRODUCED_FIELD_TEST_NAME: &str =
-    "produced_field_phase_products_are_deterministic_across_processes";
-const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
-const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
-const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_processes";
-const ARRAY_ELEMENT_LIST_TEST_NAME: &str =
-    "array_element_list_phase_products_are_deterministic_across_processes";
-const INDEXED_ARRAY_FRONTEND_TEST_NAME: &str =
-    "indexed_array_frontend_products_are_deterministic_across_processes";
 const INTEGER_OPERATION_TEST_NAME: &str =
     "integer_operation_phase_products_are_deterministic_across_processes";
 const INTEGER_BITWISE_SHIFT_TEST_NAME: &str =
@@ -93,31 +77,6 @@ const STRING_DIAGNOSTIC_TEST_NAME: &str =
     "string_language_item_diagnostics_are_deterministic_across_processes";
 const IO_TEST_NAME: &str = "io_phase_products_are_deterministic_across_processes";
 const IO_DIAGNOSTIC_TEST_NAME: &str = "io_provider_diagnostics_are_deterministic_across_processes";
-const PRIVATE_INITIALIZER_TEST_NAME: &str =
-    "private_initializer_phase_products_are_deterministic_across_processes";
-const PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME: &str =
-    "private_initializer_diagnostics_are_deterministic_across_processes";
-const PRIVATE_CELL_TEST_NAME: &str =
-    "private_cell_phase_products_are_deterministic_across_processes";
-const PRIVATE_CELL_DIAGNOSTIC_TEST_NAME: &str =
-    "private_cell_diagnostics_are_deterministic_across_processes";
-const FINAL_FIELD_TEST_NAME: &str = "final_field_phase_products_are_deterministic_across_processes";
-const FINAL_FIELD_DIAGNOSTIC_TEST_NAME: &str =
-    "final_field_diagnostics_are_deterministic_across_processes";
-const FUNCTION_VALUE_COMPOSITION_TEST_NAME: &str =
-    "function_value_composition_products_are_deterministic_across_processes";
-const STATIC_FIELD_TEST_NAME: &str =
-    "static_field_phase_products_are_deterministic_across_processes";
-const STATIC_INITIALIZER_LIFECYCLE_TEST_NAME: &str =
-    "static_initializer_lifecycle_products_are_deterministic_across_processes";
-const STATIC_LIFETIME_DIAGNOSTIC_TEST_NAME: &str =
-    "static_lifetime_cycle_diagnostics_are_deterministic_across_processes";
-const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
-    "static_field_diagnostics_are_deterministic_across_processes";
-const STATIC_FIELD_MODULE_TEST_NAME: &str =
-    "static_field_module_products_are_deterministic_across_processes";
-const IMPORTED_UNUSED_STATIC_TEST_NAME: &str =
-    "imported_unused_static_products_are_deterministic_across_processes";
 const MIR_CHECKPOINT_TEST_NAME: &str =
     "mir_pipeline_checkpoints_are_deterministic_across_processes";
 
@@ -139,10 +98,11 @@ macro_rules! same_input_case {
     };
 }
 
-#[test]
-fn object_lifetime_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism("object", OBJECT_TEST_NAME, object_phase_dump);
-}
+same_input_case!(
+    object_lifetime_phase_products_are_deterministic_across_processes,
+    "object",
+    object_phase_dump
+);
 
 #[test]
 fn mir_pipeline_checkpoints_are_deterministic_across_processes() {
@@ -153,132 +113,81 @@ fn mir_pipeline_checkpoints_are_deterministic_across_processes() {
     );
 }
 
-#[test]
-fn polymorphism_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "polymorphism",
-        POLYMORPHISM_TEST_NAME,
-        polymorphism_phase_dump,
-    );
-}
-
-#[test]
-fn produced_alias_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "produced-aliases",
-        PRODUCED_ALIAS_TEST_NAME,
-        produced_alias_phase_dump,
-    );
-}
-
-#[test]
-fn produced_receiver_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "produced-receivers",
-        PRODUCED_RECEIVER_TEST_NAME,
-        produced_receiver_phase_dump,
-    );
-}
-
-#[test]
-fn produced_field_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "produced-fields",
-        PRODUCED_FIELD_TEST_NAME,
-        produced_field_phase_dump,
-    );
-}
-
-#[test]
-fn shared_ownership_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "shared-ownership",
-        SHARED_TEST_NAME,
-        shared_ownership_phase_dump,
-    );
-}
-
-#[test]
-fn optional_value_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism("optional-values", OPTIONAL_TEST_NAME, optional_phase_dump);
-}
-
-#[test]
-fn array_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism("arrays", ARRAY_TEST_NAME, array_phase_dump);
-}
-
-#[test]
-fn array_element_list_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "array-element-lists",
-        ARRAY_ELEMENT_LIST_TEST_NAME,
-        array_element_list_phase_dump,
-    );
-}
-
-#[test]
-fn indexed_array_frontend_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "indexed-array-frontend",
-        INDEXED_ARRAY_FRONTEND_TEST_NAME,
-        indexed_array_frontend_phase_dump,
-    );
-}
-
-#[test]
-fn static_field_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "static-fields",
-        STATIC_FIELD_TEST_NAME,
-        static_field_phase_dump,
-    );
-}
-
-#[test]
-fn static_initializer_lifecycle_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "static-initializer-lifecycle",
-        STATIC_INITIALIZER_LIFECYCLE_TEST_NAME,
-        static_initializer_lifecycle_phase_dump,
-    );
-}
-
-#[test]
-fn static_lifetime_cycle_diagnostics_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "static-lifetime-diagnostics",
-        STATIC_LIFETIME_DIAGNOSTIC_TEST_NAME,
-        static_lifetime_cycle_diagnostic_dump,
-    );
-}
-
-#[test]
-fn static_field_diagnostics_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "static-field-diagnostics",
-        STATIC_FIELD_DIAGNOSTIC_TEST_NAME,
-        static_field_diagnostic_dump,
-    );
-}
-
-#[test]
-fn static_field_module_products_are_deterministic_across_processes() {
-    assert_cross_process_variants(
-        "static-field-modules",
-        STATIC_FIELD_MODULE_TEST_NAME,
-        static_field_module_phase_dump,
-    );
-}
-
-#[test]
-fn imported_unused_static_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "imported-unused-static-products",
-        IMPORTED_UNUSED_STATIC_TEST_NAME,
-        imported_unused_static_phase_dump,
-    );
-}
+same_input_case!(
+    polymorphism_phase_products_are_deterministic_across_processes,
+    "polymorphism",
+    polymorphism_phase_dump
+);
+same_input_case!(
+    produced_alias_phase_products_are_deterministic_across_processes,
+    "produced-aliases",
+    produced_alias_phase_dump
+);
+same_input_case!(
+    produced_receiver_phase_products_are_deterministic_across_processes,
+    "produced-receivers",
+    produced_receiver_phase_dump
+);
+same_input_case!(
+    produced_field_phase_products_are_deterministic_across_processes,
+    "produced-fields",
+    produced_field_phase_dump
+);
+same_input_case!(
+    shared_ownership_phase_products_are_deterministic_across_processes,
+    "shared-ownership",
+    shared_ownership_phase_dump
+);
+same_input_case!(
+    optional_value_phase_products_are_deterministic_across_processes,
+    "optional-values",
+    optional_phase_dump
+);
+same_input_case!(
+    array_phase_products_are_deterministic_across_processes,
+    "arrays",
+    array_phase_dump
+);
+same_input_case!(
+    array_element_list_phase_products_are_deterministic_across_processes,
+    "array-element-lists",
+    array_element_list_phase_dump
+);
+same_input_case!(
+    indexed_array_frontend_products_are_deterministic_across_processes,
+    "indexed-array-frontend",
+    indexed_array_frontend_phase_dump
+);
+same_input_case!(
+    static_field_phase_products_are_deterministic_across_processes,
+    "static-fields",
+    static_field_phase_dump
+);
+same_input_case!(
+    static_initializer_lifecycle_products_are_deterministic_across_processes,
+    "static-initializer-lifecycle",
+    static_initializer_lifecycle_phase_dump
+);
+same_input_case!(
+    static_lifetime_cycle_diagnostics_are_deterministic_across_processes,
+    "static-lifetime-diagnostics",
+    static_lifetime_cycle_diagnostic_dump
+);
+same_input_case!(
+    static_field_diagnostics_are_deterministic_across_processes,
+    "static-field-diagnostics",
+    static_field_diagnostic_dump
+);
+permutation_case!(
+    static_field_module_products_are_deterministic_across_processes,
+    "static-field-modules",
+    static_field_module_phase_dump
+);
+same_input_case!(
+    imported_unused_static_products_are_deterministic_across_processes,
+    "imported-unused-static-products",
+    imported_unused_static_phase_dump
+);
 
 #[test]
 fn integer_operation_phase_products_are_deterministic_across_processes() {
@@ -441,59 +350,36 @@ fn io_provider_diagnostics_are_deterministic_across_processes() {
     });
 }
 
-#[test]
-fn private_initializer_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "private-initializers",
-        PRIVATE_INITIALIZER_TEST_NAME,
-        private_initializer_phase_dump,
-    );
-}
-
-#[test]
-fn private_initializer_diagnostics_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "private-initializer-diagnostics",
-        PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME,
-        private_initializer_diagnostic_dump,
-    );
-}
-
-#[test]
-fn private_cell_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "private-cells",
-        PRIVATE_CELL_TEST_NAME,
-        private_cell_phase_dump,
-    );
-}
-
-#[test]
-fn private_cell_diagnostics_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "private-cell-diagnostics",
-        PRIVATE_CELL_DIAGNOSTIC_TEST_NAME,
-        private_cell_diagnostic_dump,
-    );
-}
-
-#[test]
-fn final_field_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "final-fields",
-        FINAL_FIELD_TEST_NAME,
-        final_field_phase_dump,
-    );
-}
-
-#[test]
-fn final_field_diagnostics_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "final-field-diagnostics",
-        FINAL_FIELD_DIAGNOSTIC_TEST_NAME,
-        final_field_diagnostic_dump,
-    );
-}
+same_input_case!(
+    private_initializer_phase_products_are_deterministic_across_processes,
+    "private-initializers",
+    private_initializer_phase_dump
+);
+same_input_case!(
+    private_initializer_diagnostics_are_deterministic_across_processes,
+    "private-initializer-diagnostics",
+    private_initializer_diagnostic_dump
+);
+same_input_case!(
+    private_cell_phase_products_are_deterministic_across_processes,
+    "private-cells",
+    private_cell_phase_dump
+);
+same_input_case!(
+    private_cell_diagnostics_are_deterministic_across_processes,
+    "private-cell-diagnostics",
+    private_cell_diagnostic_dump
+);
+same_input_case!(
+    final_field_phase_products_are_deterministic_across_processes,
+    "final-fields",
+    final_field_phase_dump
+);
+same_input_case!(
+    final_field_diagnostics_are_deterministic_across_processes,
+    "final-field-diagnostics",
+    final_field_diagnostic_dump
+);
 
 permutation_case!(
     module_phase_products_are_deterministic_across_processes,
@@ -546,438 +432,41 @@ permutation_case!(
     iteration_diagnostic_dump
 );
 
-#[test]
-fn function_value_composition_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
-        "function-value-composition",
-        FUNCTION_VALUE_COMPOSITION_TEST_NAME,
-        function_value_composition_phase_dump,
-    );
-}
-
-fn object_phase_dump() -> String {
-    let text = concat!(
-        "class Box { value: i64; init(value: i64) { self.value = value; } ",
-        "copy(ref other: Box) { self.value = other.value; } ",
-        "assign(ref other: Box) { self.value = other.value; } ",
-        "mut fn set(value: i64) -> unit { self.value = value; } ",
-        "fn get() -> i64 { return self.value; } destroy {} }\n",
-        "class Snapshot { box: Box; init(ref source: Box) { self.box = Box(read(source)); } ",
-        "destroy {} }\n",
-        "fn read(ref value: Box) -> i64 { return value.get(); }\n",
-        "fn write(mut ref value: Box, amount: i64) -> unit { value.set(amount); }\n",
-        "fn forward(mut ref value: Box) -> unit { write(value, read(value) + 1); }\n",
-        "fn produce(value: i64) -> Box { return Box(value); }\n",
-        "fn choose(ref source: Box, first: bool) -> Box { ",
-        "if (first) { return source; } else { return (Box(source.get())); } }\n",
-        "fn consume(value: Box, ref alias: Box) -> i64 { ",
-        "value = produce(alias.get()); return value.get(); }\n",
-        "fn main() -> i64 { var value: Box = Box(1); forward(value); ",
-        "var grouped: Box = (Box(2)); grouped = produce(read(value)); ",
-        "var copied: Box = value; var result: Box = choose(copied, false); ",
-        "var snapshot: Snapshot = Snapshot(result); ",
-        "return consume(produce(snapshot.box.get()), grouped); }\n",
-    );
-    complete_phase_dump(text)
-}
-
-fn polymorphism_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/polymorphism/polymorphism.ska"
-    ))
-}
-
-fn produced_alias_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/aliases/produced_alias_arguments.ska"
-    ))
-}
-
-fn produced_receiver_phase_dump() -> String {
-    complete_phase_dump(concat!(
-        "class Item { value: i64; init(value: i64) { self.value = value; } ",
-        "fn next(amount: i64) -> Item { return Item(self.value + amount); } ",
-        "fn read() -> i64 { return self.value; } }\n",
-        "fn produce(value: i64) -> Item { return Item(value); }\n",
-        "fn main() -> i64 { return produce(40).next(2).read(); }\n",
-    ))
-}
-
-fn produced_field_phase_dump() -> String {
-    complete_phase_dump(include_str!(
-        "../../../tests/golden/produced_fields/primitive_and_inline_consumers.ska"
-    ))
-}
-
-fn shared_ownership_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/shared_ownership/shared_copy_allocation.ska"
-    ))
-}
-
-fn optional_phase_dump() -> String {
-    format!(
-        "BASELINE\n{}COMPOSITIONAL\n{}SHARED OPTIONAL BOXES\n{}",
-        complete_golden_phase_dump(include_str!(
-            "../../../tests/golden/optionals/optional_shared_profile.ska"
-        )),
-        complete_phase_dump(concat!(
-            "interface Forward { fn forward(values: i64[]?) -> i64[]?; }\n",
-            "class Holder implements Forward {\n",
-            "  static current: i64[]?; values: i64[]?;\n",
-            "  init(values: i64[]?) { self.values = values; }\n",
-            "  fn forward(values: i64[]?) -> i64[]? { return values; }\n",
-            "}\n",
-            "fn mutate(mut ref values: i64[]) -> unit { values[0] = 42; }\n",
-            "fn inspect(deep: i64?????, values: i64[]?[]) -> unit {}\n",
-            "fn main() -> i64 {\n",
-            "  var holder: Holder = Holder(i64[]{1});\n",
-            "  var nested: i64[]?[] = i64[]?[]{none, holder.values};\n",
-            "  mutate(holder.values!); Holder.current = nested[1]; return holder.values![0];\n",
-            "}\n",
-        )),
-        planned_lifecycle_phase_dump(include_str!(
-            "../../../tests/golden/optionals/optional_boxes_profile.ska"
-        ))
-    )
-}
-
-fn array_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!("../../../tests/golden/arrays/array_views.ska"))
-}
-
-fn array_element_list_phase_dump() -> String {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add(
-        "array-element-lists.ska",
-        concat!(
-            "class Item { value: i64; init(value: i64) { self.value = value; } ",
-            "copy(ref other: Item) { self.value = other.value; } }\n",
-            "class Holder { values: i64[]; init(first: i64, values: i64[]) { self.values = values; } }\n",
-            "fn consume(values: i64[]) -> i64 { return values[0]; }\n",
-            "fn produce() -> i64[] { return i64[]{8, 9}; }\n",
-            "fn main() -> i64 {\n",
-            "  var primitives: i64[] = i64[]{};\n",
-            "  primitives = i64[]{1, 2};\n",
-            "  var objects: Item[] = Item[]{Item(1), Item(2)};\n",
-            "  var optional_values: i64?[] = i64?[]{none, 3};\n",
-            "  var optional_objects: Item?[] = Item?[]{none, Item(4)};\n",
-            "  var rows: i64[][] = i64[][]{i64[]{1, 2}, i64[]{3}};\n",
-            "  var owners: (shared Item)[] = (shared Item)[]{new Item(5)};\n",
-            "  var optional_owners: (shared? Item)[] = (shared? Item)[]{none, new Item(6)};\n",
-            "  var shared_outer: shared i64[] = new i64[]{10, 11};\n",
-            "  var holder: Holder = Holder(12, i64[]{6, 7});\n",
-            "  return consume(produce()) + i64[]{4, 5}[0] + shared_outer->[0];\n",
-            "}\n",
-        ),
-    );
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let mir = lower_hir(&hir);
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}MIR\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        dump_hir(&hir),
-        dump_mir(&mir),
-    )
-}
-
-fn indexed_array_frontend_phase_dump() -> String {
-    complete_phase_dump(concat!(
-        "class Item { value: i64; init(value: i64) { self.value = value; } ",
-        "copy(ref other: Item) { self.value = other.value; } }\n",
-        "fn main() -> i64 {\n",
-        "  var length: u64 = 2u;\n",
-        "  var rows: i64[][] = i64[][](length; row =>\n",
-        "    i64[](2u; column => row + column));\n",
-        "  var items: Item[] = Item[](length; index => Item(index));\n",
-        "  var owner: shared Item[] = new Item[](length; index => Item(index));\n",
-        "  return rows[1][1] + items[0].value + owner->[1].value;\n",
-        "}\n",
-    ))
-}
-
-fn static_field_phase_dump() -> String {
-    complete_phase_dump(concat!(
-        "fn increment(mut ref value: i64) -> unit { value = value + 1; }\n",
-        "class Base { static count: i64; static maybe: i64?; static values: i64[]; init() {} }\n",
-        "class Derived extends Base { static owner: shared? Item; init() { super(); } }\n",
-        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
-        "fn main() -> i64 { Derived.count = 40; increment(Base.count); ",
-        "Derived.maybe = Base.count; Derived.values = i64[](1u); ",
-        "Derived.values[0] = Derived.maybe!; Derived.owner = new Item(1); ",
-        "return Base.values[0] + Derived.owner!->value; }\n",
-    ))
-}
-
-fn static_initializer_lifecycle_phase_dump() -> String {
-    planned_lifecycle_phase_dump(concat!(
-        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
-        "class State {\n",
-        "  static count: i64 = combine(20, 22);\n",
-        "  static item: Item = Item(State.count);\n",
-        "  static owner: shared Item = new Item(1);\n",
-        "  static owner_copy: shared Item = State.owner;\n",
-        "  static values: i64[] = i64[]{1, 2};\n",
-        "  init() {}\n",
-        "}\n",
-        "fn combine(left: i64, right: i64) -> i64 { return left + right; }\n",
-        "fn main() -> i64 {\n",
-        "  State.count = 42; State.item = Item(42);\n",
-        "  State.owner = new Item(1); State.owner_copy = State.owner;\n",
-        "  State.values = i64[]{1, 2}; return 0;\n",
-        "}\n",
-    ))
-}
-
-fn static_lifetime_cycle_diagnostic_dump() -> String {
-    let text = concat!(
-        "fn read_left() -> i64 { return State.left; }\n",
-        "fn read_right() -> i64 { return State.right; }\n",
-        "class State {\n",
-        "  static left: i64 = read_right();\n",
-        "  static right: i64 = read_left();\n",
-        "  init() {}\n",
-        "}\n",
-        "fn main() -> i64 { return State.left; }\n",
-    );
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("static-lifetime-diagnostics.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let diagnostics = plan_static_lifetimes(preliminary)
-        .unwrap_err()
-        .into_diagnostics();
-
-    render_diagnostics(&sources, &diagnostics)
-}
-
-fn static_field_diagnostic_dump() -> String {
-    type_error_phase_dump(
-        "static-field-diagnostics.ska",
-        concat!(
-            "class Item { init() {} }\n",
-            "class Invalid {\n",
-            "  private static seed: i64 = 40;\n",
-            "  static answer: i64 = add(Invalid.seed, 2);\n",
-            "  static item: Item;\n",
-            "  static owner: shared Item;\n",
-            "  init() {}\n",
-            "}\n",
-            "fn add(left: i64, right: i64) -> i64 { return left + right; }\n",
-            "fn main() -> i64 { return 0; }\n",
-        ),
-    )
-}
-
-fn static_field_module_phase_dump(variant: usize) -> String {
-    let fixture = ModuleFixture::new("static-field-modules", variant);
-    let modules = fixture.path().join("modules");
-    let modules_alias = fixture.path().join("modules-alias");
-    let sources = [
-        (
-            modules.join("app.ska"),
-            concat!(
-                "import state;\n",
-                "fn main() -> i64 { state::Derived.count = 42; ",
-                "return state::Base.count; }\n",
-            ),
-        ),
-        (
-            modules.join("state.ska"),
-            concat!(
-                "import helper;\n",
-                "public class Base { static count: i64; init() {} }\n",
-                "public class Derived extends Base { init() { super(); } }\n",
-                "public fn helper_value() -> i64 { return helper::value(); }\n",
-            ),
-        ),
-        (
-            modules.join("helper.ska"),
-            concat!(
-                "import state;\n",
-                "public fn value() -> i64 { return state::Base.count; }\n",
-            ),
-        ),
-    ];
-    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
-        write_source(&sources[index].0, sources[index].1);
-    }
-    link_directory(&modules, &modules_alias);
-    let configurations = if variant == 0 {
-        vec![
-            ProviderRootConfiguration::module_root(modules_alias),
-            ProviderRootConfiguration::module_root(modules),
-        ]
-    } else {
-        vec![
-            ProviderRootConfiguration::module_root(modules),
-            ProviderRootConfiguration::module_root(modules_alias),
-        ]
-    };
-    let providers = normalize_provider_roots(fixture.path(), &configurations).unwrap();
-    let entry = if variant == 0 {
-        EntrySelector::Module("app".parse().unwrap())
-    } else {
-        EntrySelector::File(fixture.path().join("modules-alias/app.ska"))
-    };
-    let graph = load_module_graph(&entry, fixture.path(), &providers).unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty());
-    let hir = checked.hir.unwrap();
-    let mir = lower_final_hir(&hir);
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&mir),
-    )
-    .unwrap();
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
-            dump_module_graph(&graph),
-            dump_resolved(&resolved.program),
-            dump_hir(&hir),
-            dump_mir(&mir),
-            assembly,
-        ),
-    )
-}
-
-fn imported_unused_static_phase_dump() -> String {
-    let fixture = ModuleFixture::new("imported-unused-static-products", 0);
-    let application = fixture.path().join("application");
-    let standard_library = fixture.path().join("standard-library");
-    let mut sources = vec![
-        (
-            application.join("app.ska"),
-            include_str!(
-                "../../../tests/golden/static_fields/cases/imported_unused_static/modules/app.ska"
-            ),
-        ),
-        (
-            application.join("dormant.ska"),
-            include_str!(
-                "../../../tests/golden/static_fields/cases/imported_unused_static/modules/dormant.ska"
-            ),
-        ),
-    ];
-    sources.extend(
-        canonical_standard_library_sources(&[])
-            .into_iter()
-            .map(|(relative, source)| (standard_library.join(relative), source)),
-    );
-    for (path, source) in sources {
-        write_source(&path, source);
-    }
-    let providers = normalize_provider_roots(
-        fixture.path(),
-        &[
-            ProviderRootConfiguration::module_root(application),
-            ProviderRootConfiguration::standard_library(standard_library),
-        ],
-    )
-    .unwrap();
-    let graph = load_module_graph(
-        &EntrySelector::Module("app".parse().unwrap()),
-        fixture.path(),
-        &providers,
-    )
-    .unwrap();
-    let resolved = resolve_module_graph(&graph);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary_dump = dump_preliminary_mir(&preliminary);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
-        verify_planned_mir(planned).unwrap(),
-    ))
-    .unwrap();
-    let final_dump = dump_mir(&final_mir);
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&final_mir),
-    )
-    .unwrap();
-
-    assert!(preliminary_dump.contains("marker"));
-    assert!(planned_dump.contains("marker"));
-    assert!(final_dump.contains("\"marker\""));
-    assert!(!final_dump.contains("Dormant.marker"));
-    assert!(!assembly.contains("marker"));
-
-    normalize_fixture_paths(
-        fixture.path(),
-        format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
-            dump_module_graph(&graph),
-            dump_resolved(&resolved.program),
-            dump_hir(&hir),
-            preliminary_dump,
-            planned_dump,
-            final_dump,
-            assembly,
-        ),
-    )
-}
+same_input_case!(
+    function_value_composition_products_are_deterministic_across_processes,
+    "function-value-composition",
+    function_value_composition_phase_dump
+);
 
 fn integer_operation_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/primitives/integer_string_range_guards.ska"
-    ))
+    single_source_full_phase_dump(
+        include_str!("../../../tests/golden/primitives/integer_string_range_guards.ska"),
+        StandardLibraryInput::GoldenCallsAsExternalStubs,
+    )
 }
 
 fn integer_bitwise_and_shift_phase_dump() -> String {
-    complete_phase_dump(concat!(
-        "class Bits { value: u8; count: u64; ",
-        "init(value: u8, count: u64) { self.value = value; self.count = count; } }\n",
-        "class Trace { value: u64; init(value: u64) { self.value = value; } ",
-        "fn read() -> u64 { return self.value; } destroy {} }\n",
-        "fn make(value: u64) -> shared Trace { return new Trace(value); }\n",
-        "fn mix(ref bits: Bits, optional: u8?, values: u8[]) -> bool { ",
-        "return (((~bits.value + 0x01u8 << bits.count) >> 1u) & values[0] ",
-        "^ optional! | 0x01u8) == 0x07u8 && true; }\n",
-        "fn cleanup() -> u64 { return make(0x10u)->read() >> make(2u)->read(); }\n",
-        "fn main() -> i64 { var bits: Bits = Bits(0x03u8, 2u); ",
-        "var optional: u8? = 0x04u8; var values: u8[] = u8[](1u); values[0] = 0x07u8; ",
-        "if (mix(bits, optional, values) || cleanup() == 0x04u) { return 0; } return 1; }\n",
-    ))
+    single_source_full_phase_dump(
+        concat!(
+            "class Bits { value: u8; count: u64; ",
+            "init(value: u8, count: u64) { self.value = value; self.count = count; } }\n",
+            "class Trace { value: u64; init(value: u64) { self.value = value; } ",
+            "fn read() -> u64 { return self.value; } destroy {} }\n",
+            "fn make(value: u64) -> shared Trace { return new Trace(value); }\n",
+            "fn mix(ref bits: Bits, optional: u8?, values: u8[]) -> bool { ",
+            "return (((~bits.value + 0x01u8 << bits.count) >> 1u) & values[0] ",
+            "^ optional! | 0x01u8) == 0x07u8 && true; }\n",
+            "fn cleanup() -> u64 { return make(0x10u)->read() >> make(2u)->read(); }\n",
+            "fn main() -> i64 { var bits: Bits = Bits(0x03u8, 2u); ",
+            "var optional: u8? = 0x04u8; var values: u8[] = u8[](1u); values[0] = 0x07u8; ",
+            "if (mix(bits, optional, values) || cleanup() == 0x04u) { return 0; } return 1; }\n",
+        ),
+        StandardLibraryInput::None,
+    )
 }
 
 fn integer_bitwise_and_shift_diagnostic_dump() -> String {
-    type_error_phase_dump(
+    single_source_type_error_dump(
         "integer-bitwise-shift-diagnostics.ska",
         concat!(
             "class Item { init() {} }\n",
@@ -990,30 +479,34 @@ fn integer_bitwise_and_shift_diagnostic_dump() -> String {
             "}\n",
             "fn main() -> i64 { return 0; }\n",
         ),
+        StandardLibraryInput::None,
     )
 }
 
 fn integer_division_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/operators/integer_division_operators.ska"
-    ))
+    single_source_full_phase_dump(
+        include_str!("../../../tests/golden/operators/integer_division_operators.ska"),
+        StandardLibraryInput::GoldenCallsAsExternalStubs,
+    )
 }
 
 fn integer_division_diagnostic_dump() -> String {
-    type_error_phase_dump(
+    single_source_type_error_dump(
         "integer-division-diagnostics.ska",
         include_str!("../../../tests/golden/operators/integer_division_operator_types.ska"),
+        StandardLibraryInput::None,
     )
 }
 
 fn floating_division_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/operators/floating_division.ska"
-    ))
+    single_source_full_phase_dump(
+        include_str!("../../../tests/golden/operators/floating_division.ska"),
+        StandardLibraryInput::GoldenCallsAsExternalStubs,
+    )
 }
 
 fn floating_division_diagnostic_dump() -> String {
-    type_error_phase_dump(
+    single_source_type_error_dump(
         "floating-division-diagnostics.ska",
         concat!(
             "class Item { init() {} }\n",
@@ -1024,17 +517,19 @@ fn floating_division_diagnostic_dump() -> String {
             "}\n",
             "fn main() -> i64 { return 0; }\n",
         ),
+        StandardLibraryInput::None,
     )
 }
 
 fn floating_comparison_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/operators/floating_comparisons.ska"
-    ))
+    single_source_full_phase_dump(
+        include_str!("../../../tests/golden/operators/floating_comparisons.ska"),
+        StandardLibraryInput::GoldenCallsAsExternalStubs,
+    )
 }
 
 fn floating_comparison_diagnostic_dump() -> String {
-    type_error_phase_dump(
+    single_source_type_error_dump(
         "floating-comparison-diagnostics.ska",
         concat!(
             "fn invalid(left: f64, integer: i64, flag: bool, optional: f64?) -> bool {\n",
@@ -1044,118 +539,58 @@ fn floating_comparison_diagnostic_dump() -> String {
             "}\n",
             "fn main() -> i64 { return 0; }\n",
         ),
+        StandardLibraryInput::None,
     )
 }
 
 fn primitive_operator_profile_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/operators/primitive_operator_profile.ska"
-    ))
+    single_source_full_phase_dump(
+        include_str!("../../../tests/golden/operators/primitive_operator_profile.ska"),
+        StandardLibraryInput::GoldenCallsAsExternalStubs,
+    )
 }
 
 fn primitive_cast_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/primitives/primitive_cast_matrix.ska"
-    ))
+    single_source_full_phase_dump(
+        include_str!("../../../tests/golden/primitives/primitive_cast_matrix.ska"),
+        StandardLibraryInput::GoldenCallsAsExternalStubs,
+    )
 }
 
 fn primitive_cast_diagnostic_dump() -> String {
-    type_error_phase_dump(
+    single_source_type_error_dump(
         "primitive-cast-diagnostics.ska",
         concat!(
             "fn invalid(values: i64[]) -> u64 { return (u64) values; }\n",
             "fn implicit(value: f64) -> i64 { return value; }\n",
             "fn main() -> i64 { return 0; }\n",
         ),
+        StandardLibraryInput::None,
     )
 }
 
 fn eager_boolean_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/operators/eager_boolean_operators.ska"
-    ))
+    single_source_full_phase_dump(
+        include_str!("../../../tests/golden/operators/eager_boolean_operators.ska"),
+        StandardLibraryInput::GoldenCallsAsExternalStubs,
+    )
 }
 
 fn eager_boolean_diagnostic_dump() -> String {
-    type_error_phase_dump(
+    single_source_type_error_dump(
         "eager-boolean-diagnostics.ska",
         include_str!("../../../tests/golden/operators/eager_boolean_operator_types.ska"),
+        StandardLibraryInput::None,
     )
 }
 
 fn short_circuit_source_phase_dump() -> String {
-    complete_phase_dump(concat!(
-        "fn selected(a: bool, b: bool, c: bool) -> bool { return (a || b) && !c; }\n",
-        "fn main() -> i64 { return 0; }\n",
-    ))
-}
-
-fn private_initializer_phase_dump() -> String {
-    complete_phase_dump(concat!(
-        "class Secret { value: i64; init(value: i64) { self.value = value; } ",
-        "private init(flag: bool) { self.value = 42; } ",
-        "static fn make(flag: bool) -> Secret { return Secret(flag); } ",
-        "fn reveal() -> i64 { return self.value; } }\n",
-        "fn main() -> i64 { var public: Secret = Secret(1); ",
-        "var private: Secret = Secret.make(true); return public.reveal() + private.reveal(); }\n",
-    ))
-}
-
-fn private_initializer_diagnostic_dump() -> String {
-    let text = concat!(
-        "interface Named {}\n",
-        "class Key implements Named { init() {} }\n",
-        "class Choice { init(ref value: Obj) {} private init(ref value: Named) {} }\n",
-        "fn main() -> i64 { var key: Key = Key(); ",
-        "var choice: Choice = Choice(key); return 0; }\n",
-    );
-    type_error_phase_dump("private-initializer-diagnostic.ska", text)
-}
-
-fn private_cell_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/objects/private_cell_dispatch_composition.ska"
-    ))
-}
-
-fn private_cell_diagnostic_dump() -> String {
-    type_error_phase_dump(
-        "private-cell-diagnostics.ska",
-        include_str!("../../../tests/golden/objects/private_cell_exclusions.ska"),
-    )
-}
-
-fn final_field_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/objects/final_field_composition.ska"
-    ))
-}
-
-fn final_field_diagnostic_dump() -> String {
-    type_error_phase_dump(
-        "final-field-diagnostics.ska",
-        include_str!("../../../tests/golden/objects/final_field_alias_rebinding.ska"),
-    )
-}
-
-fn type_error_phase_dump(name: &str, text: &str) -> String {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add(name, text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.hir.is_none());
-
-    format!(
-        "AST\n{}RESOLVED\n{}DIAGNOSTICS\n{}",
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        render_diagnostics(&sources, &checked.diagnostics),
+    single_source_full_phase_dump(
+        concat!(
+            "fn selected(a: bool, b: bool, c: bool) -> bool { return (a || b) && !c; }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        StandardLibraryInput::None,
     )
 }
 
@@ -1382,38 +817,6 @@ fn string_diagnostic_dump(variant: usize) -> String {
     )
 }
 
-fn complete_phase_dump(text: &str) -> String {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("determinism.ska", text);
-    let source = sources.get(source_id).unwrap();
-
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty());
-    let hir = checked.hir.unwrap();
-    let mir = lower_final_hir(&hir);
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&mir),
-    )
-    .unwrap();
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        dump_hir(&hir),
-        dump_mir(&mir),
-        assembly,
-    )
-}
-
 fn mir_pipeline_checkpoint_dump() -> String {
     let text = "fn removed_target() -> i64 { return 99; }\n\
                 fn identity(value: i64) -> i64 { return value + 0; }\n\
@@ -1458,153 +861,4 @@ fn mir_pipeline_checkpoint_dump() -> String {
             )
         })
         .collect()
-}
-
-fn function_value_composition_phase_dump() -> String {
-    let text = include_str!("../../../tests/golden/function_values/composition.ska");
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("function-value-composition-determinism.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary_dump = dump_preliminary_mir(&preliminary);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let mir = run_mir_pipeline(synthesize_static_lifecycle(
-        verify_planned_mir(planned).unwrap(),
-    ))
-    .unwrap();
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::with_runtime_trace(&mir, &sources),
-    )
-    .unwrap();
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}MIR\n{}ASSEMBLY\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        dump_hir(&hir),
-        preliminary_dump,
-        planned_dump,
-        dump_mir(&mir),
-        assembly,
-    )
-}
-
-fn lower_final_hir(hir: &HirProgram) -> VerifiedFinalMirProgram {
-    let preliminary = lower_preliminary_hir(hir);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let mir = synthesize_static_lifecycle(verify_planned_mir(planned).unwrap());
-    run_mir_pipeline(mir).unwrap()
-}
-
-fn planned_lifecycle_phase_dump(text: &str) -> String {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("typed-hir-determinism.ska", text);
-    let source = sources.get(source_id).unwrap();
-
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let preliminary = lower_preliminary_hir(&hir);
-    let preliminary = verify_preliminary_mir(preliminary).unwrap();
-    let planned = plan_static_lifetimes(preliminary).unwrap();
-    let planned_dump = dump_planned_mir(&planned);
-    let final_mir = run_mir_pipeline(synthesize_static_lifecycle(
-        verify_planned_mir(planned).unwrap(),
-    ))
-    .unwrap();
-    let assembly = emit_assembly(
-        Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&final_mir),
-    )
-    .unwrap();
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        dump_hir(&hir),
-        planned_dump,
-        dump_mir(&final_mir),
-        assembly,
-    )
-}
-
-fn complete_golden_phase_dump(text: &str) -> String {
-    let mut source = text
-        .lines()
-        .filter(|line| line != &"import std::io;")
-        .collect::<Vec<_>>()
-        .join("\n");
-    let mut declarations = String::new();
-    for (public_name, recorder_name, parameter_type) in [
-        ("std::io::println_bool", "test_record_bool", "bool"),
-        ("std::io::println_i64", "test_record_i64", "i64"),
-        ("std::io::println_u64", "test_record_u64", "u64"),
-        ("std::io::println_u8", "test_record_u8", "u8"),
-        ("std::io::println_f64", "test_record_f64", "f64"),
-    ] {
-        if source.contains(public_name) {
-            declarations.push_str(&format!(
-                "extern fn {recorder_name}(value: {parameter_type}) -> unit;\n"
-            ));
-            source = source.replace(public_name, recorder_name);
-        }
-    }
-    replace_standard_test_assertions(&mut source, &mut declarations);
-    declarations.push_str(&source);
-    complete_phase_dump(&declarations)
-}
-
-fn replace_standard_test_assertions(source: &mut String, declarations: &mut String) {
-    let imports_assertions = source
-        .lines()
-        .any(|line| line == "import std::test;" || line.starts_with("from std::test import "));
-    if !imports_assertions {
-        return;
-    }
-
-    *source = source
-        .lines()
-        .filter(|line| line != &"import std::test;" && !line.starts_with("from std::test import "))
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    for (name, parameters) in [
-        ("assert_eq_f64", "left: f64, right: f64"),
-        ("assert_eq_i64", "left: i64, right: i64"),
-        ("assert_eq_u64", "left: u64, right: u64"),
-        ("assert_eq_u8", "left: u8, right: u8"),
-        ("assert_false", "value: bool"),
-        ("assert_true", "value: bool"),
-    ] {
-        *source = source.replace(&format!("std::test::{name}"), name);
-        if source.contains(&format!("{name}(")) {
-            declarations.push_str(&format!("extern fn {name}({parameters}) -> unit;\n"));
-        }
-    }
 }

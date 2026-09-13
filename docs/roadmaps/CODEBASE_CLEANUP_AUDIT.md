@@ -1279,7 +1279,7 @@ changes separate from generic optimizer work in the catalog.
 
 ### A33 — Consolidate test plumbing while preserving independent checks
 
-**Status:** In progress through the module-backed determinism migration
+**Status:** In progress through the value and ownership determinism migration
 (2026-09-13).
 
 **Design proposal:**

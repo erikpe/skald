@@ -1,6 +1,6 @@
 # Test Plumbing Ownership Roadmap
 
-Status: in progress; TP03 is next.
+Status: in progress; TP04 is next.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
@@ -56,7 +56,7 @@ finding can close.
 
 - [x] TP01 — Establish the integration subprocess and resource boundary
 - [x] TP02 — Move module-backed determinism fixtures behind owned generators
-- [ ] TP03 — Move value and ownership determinism fixtures
+- [x] TP03 — Move value and ownership determinism fixtures
 - [ ] TP04 — Complete determinism-suite ownership and registry consolidation
 - [ ] TP05 — Split driver reporting tests by observation responsibility
 - [ ] TP06 — Split driver pipeline tests by compilation responsibility
@@ -301,24 +301,24 @@ workspace Clippy with warnings denied; `make check`; `make msrv-check`; and
 families as one semantic group while the proven harness continues to serve
 both moved and inline generators.
 
-- [ ] Group the remaining object, polymorphism, produced-view, ownership,
+- [x] Group the remaining object, polymorphism, produced-view, ownership,
   optional, array, static, private-initializer, private-cell, final-field, and
   function-value generators by semantic responsibility. Prefer a few cohesive
   family modules over one file per test or a miscellaneous remainder module.
-- [ ] Keep successful phase products and diagnostic-only products separate when
+- [x] Keep successful phase products and diagnostic-only products separate when
   they run different pipelines or normalize different evidence.
-- [ ] Extract a compiler-integration source-to-phase helper only where at least
+- [x] Extract a compiler-integration source-to-phase helper only where at least
   two moved generators perform the exact same prerequisite sequence. Give the
   helper a boundary-specific name, explicit standard-library inputs, and a
   returned product or observation; do not create a second general compiler
   driver in test support.
-- [ ] Keep test source text and feature-specific output composition beside the
+- [x] Keep test source text and feature-specific output composition beside the
   generator that owns their semantic purpose. Do not deduplicate source solely
   because two layers happen to start from the same spelling.
-- [ ] Review every normalization operation. Retain only normalization required
+- [x] Review every normalization operation. Retain only normalization required
   for deliberately unstable filesystem paths, source spellings, or spans; each
   retained normalization must name the instability it removes.
-- [ ] Remove moved constants, imports, helpers, and source text from the root
+- [x] Remove moved constants, imports, helpers, and source text from the root
   registry. Leave primitive, service, and checkpoint generators runnable in
   place for TP04.
 
@@ -335,6 +335,38 @@ the root registry no longer contains their implementation; all 53 tests remain
 discoverable; every moved case retains its exact two-process or permutation
 behavior and bytes; and the remaining inline generators still use the same
 harness.
+
+#### TP03 delivery record
+
+The private determinism tree now gives object and private-member behavior,
+produced views, ownership and optional values, arrays, statics, and function
+values cohesive owners. Successful products and diagnostic observations remain
+separate functions wherever their prerequisite pipelines differ. Source text
+and feature-specific output composition stay with those owners.
+
+Repeated single-source preparation and phase sequences use one private,
+boundary-specific source module. Each call explicitly chooses whether it has no
+standard library input or replaces golden-library calls with external stubs;
+the helper returns the requested phase product and does not expose a general
+compiler driver. Filesystem and span normalization remains only in the two
+module-backed static fixtures, where temporary fixture roots and their derived
+source spans are deliberately unstable. No other moved family normalizes its
+evidence.
+
+The root integration file now contains the explicit case registry plus only
+the primitive, standard-service, and checkpoint generators assigned to TP04.
+All moved constants, source text, helpers, and obsolete imports were removed.
+The post-change sorted inventory retains all 53 names and the TP01 SHA-256
+`c04091410676bb92fc34d395ad06ec986502f726e84a3a03d8982e2287f2e1f0`.
+The 23 moved parent cases still make 46 independent child calls, including both
+provider-order variants for the static-module case. All 24 distinct artifacts,
+totaling 7,973,333 bytes, matched the pre-change implementation byte-for-byte.
+
+Validation passed the focused object, polymorphism, produced-value, ownership,
+optional, array, static, private-member, final-field, and function-value
+filters; public API tests; complete default and eight-thread determinism runs;
+documentation links; formatting; all-target workspace Clippy with warnings
+denied; `make check`; `make msrv-check`; and `git diff --check`.
 
 ### TP04 — Complete determinism-suite ownership and registry consolidation
 
