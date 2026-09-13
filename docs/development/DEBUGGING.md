@@ -173,6 +173,14 @@ later products are not created after diagnostics from an earlier source phase.
 For successful typed HIR, inspect MIR before assembly so semantic lowering and
 target realization remain distinguishable.
 
+For a suspected frontend abort, stack overflow, or nontermination, keep the
+reproducer outside the compiler process and use the bounded integration owner:
+
+```text
+cargo test --locked -p skald-compiler --test expression_depth_robustness
+cargo test --locked -p skald-compiler --test test_plumbing
+```
+
 For generic classes, inspect the products in this order: AST parameter and
 application structure; resolved `ClassTemplates` and `TemplateSemantics`;
 `GenericSpecializations` keys, transitions, origins, and recursion paths;

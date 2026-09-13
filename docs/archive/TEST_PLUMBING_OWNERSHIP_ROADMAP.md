@@ -1,10 +1,10 @@
 # Test Plumbing Ownership Roadmap
 
-Status: in progress; TP08 is next.
+Status: complete; all tasks and acceptance gates passed on 2026-09-13.
 
 This roadmap implements the accepted
 [Test Plumbing Ownership Design](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
-for [cleanup finding A33](CODEBASE_CLEANUP_AUDIT.md#a33--consolidate-test-plumbing-while-preserving-independent-checks).
+for [cleanup finding A33](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a33--consolidate-test-plumbing-while-preserving-independent-checks).
 It restructures Skald's largest Rust test suites and consolidates repeated
 mechanical setup while retaining the independent boundaries that detect phase,
 process, ownership, determinism, and native-execution defects.
@@ -61,7 +61,7 @@ finding can close.
 - [x] TP05 — Split driver reporting tests by observation responsibility
 - [x] TP06 — Split driver pipeline tests by compilation responsibility
 - [x] TP07 — Consolidate golden integration resources by dependency level
-- [ ] TP08 — Reconcile inventories, validate every boundary, and close A33
+- [x] TP08 — Reconcile inventories, validate every boundary, and close A33
 
 ## PR-sized implementation sequence
 
@@ -702,31 +702,31 @@ links, `make check` with 629 golden cases, `make msrv-check`, and
 coverage, remove migration residue, update authoritative guidance, and close
 the audit finding only after the complete independent checks pass.
 
-- [ ] Compare final sorted compiler library, determinism integration, and golden
+- [x] Compare final sorted compiler library, determinism integration, and golden
   integration inventories with TP01. For every count or fully qualified name
   change, record the old-to-new mapping and reason. Restore any missing or
   accidentally weakened test before proceeding.
-- [ ] Confirm all 53 determinism leaf names remain unchanged, all cases launch
+- [x] Confirm all 53 determinism leaf names remain unchanged, all cases launch
   two independent processes, and every permutation case still uses distinct
   source/provider input order.
-- [ ] Audit the touched support and suite facades for mixed responsibilities,
+- [x] Audit the touched support and suite facades for mixed responsibilities,
   broad imports, broad lint allowances, unused compatibility forwarding,
   hidden defaults, and helpers with only one trivial consumer. Resolve small
   local issues; record larger unrelated work in an indexed discoveries file.
-- [ ] Audit `mir::test_fixtures` by responsibility. Retain its existing
+- [x] Audit `mir::test_fixtures` by responsibility. Retain its existing
   corruption-capable boundary and recursive child modules; split an additional
   family only if the completed test moves reveal a concrete mixed owner. File
   size alone is not a reason to churn it.
-- [ ] Confirm A01–A06 coverage remains selected by the ordinary gate: expression
+- [x] Confirm A01–A06 coverage remains selected by the ordinary gate: expression
   depth, full-duplex linker I/O, deadlines through pipe completion, bounded
   captures/files, capacity arithmetic, and manifest-derived workspace tests.
-- [ ] Update `docs/development/TESTING.md`, debugging commands, and any focused
+- [x] Update `docs/development/TESTING.md`, debugging commands, and any focused
   compiler test matrices to describe current ownership and paths. Remove
   rollout language and roadmap task codes from living documentation.
-- [ ] Update A33 in the cleanup audit with its completion status, delivered
+- [x] Update A33 in the cleanup audit with its completion status, delivered
   ownership, preserved coverage evidence, test inventory results, and exact
   validation commands.
-- [ ] Mark every roadmap checkbox complete only after its exit criteria pass.
+- [x] Mark every roadmap checkbox complete only after its exit criteria pass.
   Set the design and roadmap status to complete, move both documents to
   `docs/archive/`, update the active and archive indexes, and repair all links.
 
@@ -752,6 +752,79 @@ process, malformed-input, optimization, golden, and native observations remain;
 all focused and repository gates pass; living documentation describes the new
 layout; the design and roadmap are archived; and A33 is marked complete with
 evidence.
+
+#### TP08 delivery record
+
+The final inventories were generated from Cargo discovery at the TP01 revision
+`f1bdae7171a7a2219cd4d33c5ffdb1828a871b48` and from the completed worktree,
+retaining Cargo's `: test` suffix before sorting and hashing:
+
+| Inventory | TP01 | Final | Reconciliation |
+| --- | --- | --- | --- |
+| `skald-compiler --lib` | 3,148; `7736a44dc47b03db98eccdae074b7ca6c50f9faf2e65f424a2df714d528a0f0f` | 3,148; `3c6591b76fbb0af4047388a85069035af344e9ce95e5761ba41ce793451e594e` | No leaf added or removed; 60 fully qualified names gained an ownership prefix. |
+| `pipeline_determinism` | 53; `c04091410676bb92fc34d395ad06ec986502f726e84a3a03d8982e2287f2e1f0` | 53; `c04091410676bb92fc34d395ad06ec986502f726e84a3a03d8982e2287f2e1f0` | Byte-identical inventory. |
+| `skald-golden --tests` | 112; `dd391f6d459f5f0222e7ef0e04b5f25dd979eddbd2f3455e9b0a9b9cd01e53c2` | 115; `ef5f5ba119e832398c6852afe7ddf50fafaeaaaf57ebbf53e710865b259af584` | Three direct temporary-workspace tests added; no existing name changed. |
+| Golden integration binaries only | 79; `6b2c168d09b26666397729c2c76ca8f7642f453cc43c5a6b9543c4921a8f3649` | 82; `2c691238954e5cd98aff0911aeff139e824f6a4cb233b49f015ab5e54b52838a` | The same three additions; no existing name changed. |
+
+For the compiler library, each old name
+`driver::tests::pipeline::<leaf>` became
+`driver::tests::pipeline::<owner>::<leaf>`. The complete pipeline mapping is:
+
+| Owner | Preserved leaf names |
+| --- | --- |
+| `composition` | `composes_the_complete_frontend_and_backend_pipeline`, `function_values_compile_through_the_public_driver`, `typed_alias_syntax_reaches_the_backend_pipeline` |
+| `features::arrays` | `exact_class_array_element_lists_cross_the_complete_driver_pipeline`, `indexed_shared_owner_arrays_reach_backend_lowering`, `inline_optional_array_element_lists_cross_the_complete_driver_pipeline`, `nested_inline_array_element_lists_cross_the_complete_driver_pipeline`, `owner_element_list_families_cross_the_complete_driver_pipeline`, `primitive_array_element_lists_cross_the_complete_driver_pipeline`, `primitive_inline_array_locals_cross_the_complete_driver_pipeline`, `verified_primitive_optional_boxes_reach_native_assembly` |
+| `features::objects` | `composes_the_complete_object_frontend_and_backend_pipeline`, `emits_complete_assignment_of_direct_and_transitively_final_values`, `executes_final_instance_construction_and_reads`, `local_copy_operations_reach_the_backend`, `static_inheritance_composes_through_the_complete_pipeline`, `unused_copy_lifecycle_bodies_are_pruned_from_published_assembly`, `unused_destructor_bodies_are_pruned_from_published_assembly`, `verified_cell_writes_reach_backend_lowering` |
+| `features::statics` | `emits_final_static_fields_through_verified_lifecycle_and_backend_paths`, `primitive_static_programs_cross_the_complete_driver_pipeline`, `static_lifetime_cycles_are_reported_as_source_diagnostics_before_synthesis`, `synthesized_static_initializers_cross_the_complete_driver_pipeline` |
+| `request` | `canonical_io_obeys_default_replacement_and_disabled_selection`, `canonical_standard_library_cycle_obeys_default_replacement_and_disabled_selection`, `installed_process_arguments_reach_verified_assembly_as_ordinary_library_source`, `invalid_request_optimization_is_rejected_before_provider_or_source_io`, `literal_program_reaches_target_emission`, `replacement_standard_library_validates_the_canonical_panic_intrinsic`, `request_pipeline_accepts_a_positional_entry_outside_all_roots`, `request_pipeline_compiles_the_reachable_multi_module_program`, `request_pipeline_emits_closed_generic_classes_across_modules`, `request_pipeline_ignores_malformed_sources_outside_the_reachable_closure`, `request_pipeline_preserves_configuration_and_source_failure_categories`, `request_selection_matrix_reaches_quiet_and_observed_pipelines` |
+| `robustness` | `excessive_syntax_nesting_is_a_source_error_not_a_panic`, `malformed_and_excluded_alias_sources_never_reach_mir_or_backend_panics`, `malformed_and_excluded_destructor_sources_fail_before_backend_lowering`, `malformed_and_excluded_inline_field_sources_fail_before_backend_lowering`, `malformed_supported_sources_never_panic`, `source_diagnostics_are_rendered_and_return_compilation_failure`, `stops_before_semantic_phases_after_a_source_error` |
+
+The 18 reporting changes follow the same exact rule from
+`driver::tests::reporting::<leaf>` to
+`driver::tests::reporting::<owner>::<leaf>`; the TP05 delivery table records
+every preserved leaf under `phases`, `metrics`, `inspection`, `failures`, or
+`observers`. These 42 pipeline and 18 reporting moves account for every one of
+the 60 changed compiler names. The three golden additions are
+`temporary_workspaces_are_unique_during_parallel_creation`,
+`temporary_workspace_writes_owned_trees_and_canonical_paths`, and
+`temporary_workspace_cleans_roots_and_associated_paths_on_drop_and_unwind`.
+
+The determinism registry has 40 same-input and 13 permutation declarations.
+Both harness paths create two output resources and call the bounded current-test
+process twice. Permutations select variants zero and one, and every permutation
+generator uses that value to change source creation, provider-root, import, or
+claim order. Default and eight-thread complete runs both passed all 53 cases.
+
+The final ownership audit removed the only trivial one-consumer golden helper,
+which counted linker-log lines on behalf of one assertion. Support facades have
+cohesive process, temporary-resource, fixture, fake-tool, and spec-writer
+owners; remaining item-level lint allowances document integration binaries
+that intentionally consume different subsets. No compatibility forwarding,
+implicit standard-library injection, optimization selection, runtime tracing,
+normalization, deadline, or success policy was found. No unrelated discovery
+record was needed.
+
+`mir::test_fixtures` still owns explicit corruption-capable MIR constructors.
+Its checked division, shift, primitive-cast, and I/O families already have
+recursive child owners. The completed moves exposed no additional mixed owner,
+so the 994-line common constructor facade remains intact rather than being
+split solely by size.
+
+The manifest-derived `workspace-test` remains part of `make check` and selects
+all Rust members, including `skald-binary64`. That gate also ran the A01
+expression-depth process watchdog, A02 full-duplex linker test, A03 descendant
+pipe-completion deadlines, A04 stream/file/assembly bounds, and the A05 Map and
+Vec maximum-capacity goldens. Living testing and debugging guides name the
+current integration, determinism, reporting, pipeline, and golden owners with
+stable commands and no rollout task codes.
+
+Focused validation ran every responsibility filter and aggregate named by
+TP01–TP07. Final validation passed `cargo fmt --all -- --check`,
+`cargo clippy --locked --workspace --all-targets -- -D warnings`, `make check`
+with 629 golden leaves, `make golden-determinism-test` with 1,032 compiler
+processes and 922 native executions, `make msrv-check`,
+`cargo run --quiet --locked -p skald-docs-check -- .`, and
+`git diff --check`.
 
 ## Ordering and dependencies
 

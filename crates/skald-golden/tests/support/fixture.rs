@@ -8,7 +8,7 @@ use skald_golden::{
     ProcessCommand, ProcessEnvironment, RuntimePreparation, SelectionOptions, SequentialExecution,
     SequentialOptions,
 };
-use std::{ffi::OsString, fs, path::PathBuf, time::Duration};
+use std::{ffi::OsString, path::PathBuf, time::Duration};
 
 const ASSOCIATED_PATHS: &[&str] = &[
     "artifacts",
@@ -124,9 +124,4 @@ impl Fixture {
             self.root.join(format!(".{name}.peak")),
         )
     }
-}
-
-#[allow(dead_code)] // Only sequential orchestration checks counter cardinality.
-pub(crate) fn lines(path: &std::path::Path) -> usize {
-    fs::read_to_string(path).unwrap().lines().count()
 }

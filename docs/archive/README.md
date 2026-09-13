@@ -39,6 +39,8 @@ Archived plans:
 - [Object-view planning](OBJECT_VIEW_PLANNING_ROADMAP.md)
 - [Compiler facade ownership](COMPILER_FACADE_OWNERSHIP_ROADMAP.md)
 - [Raw compiler stderr observation](GOLDEN_COMPILER_STDERR_OBSERVATION_ROADMAP.md)
+- [Test plumbing ownership design proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md)
+- [Test plumbing ownership](TEST_PLUMBING_OWNERSHIP_ROADMAP.md)
 
 - [First vertical slice](FIRST_VERTICAL_SLICE_ROADMAP.md)
 - [`i64` output and golden-test observability](I64_OUTPUT_ROADMAP.md)

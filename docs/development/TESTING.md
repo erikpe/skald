@@ -1435,11 +1435,18 @@ two independent test processes. Compiler integration child processes run with
 an explicit deadline and environment, write stdout and stderr to owned
 temporary files, and retain at most 64 KiB from each diagnostic stream while
 reporting the complete observed length. This keeps a full child pipe or a
-stalled child from hanging the test gate. Its module cases additionally permute
-root option order, equivalent root spellings, source creation order, import
-declaration order, and logical versus positional selection of the same rooted
-entry, then compare canonical graph, resolved, HIR, MIR, assembly, and
-diagnostic products.
+stalled child from hanging the test gate. The integration support contract and
+the separate expression-depth process watchdog are directly selectable:
+
+```text
+cargo test --locked -p skald-compiler --test test_plumbing
+cargo test --locked -p skald-compiler --test expression_depth_robustness
+```
+
+Module determinism cases additionally permute root option order, equivalent
+root spellings, source creation order, import declaration order, and logical
+versus positional selection of the same rooted entry, then compare canonical
+graph, resolved, HIR, MIR, assembly, and diagnostic products.
 
 The suite remains one Cargo integration binary. Its root file is the explicit
 53-case registry, while private responsibility modules own module graphs,

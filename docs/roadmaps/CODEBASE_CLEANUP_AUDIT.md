@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A12, A14, A18–A21, A25, A34–A36, A38, and A43
+Status: actionable audit; A01–A12, A14, A18–A21, A25, A33–A36, A38, and A43
 are complete within the scopes recorded below. A09's stage products and owned
 publication selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
@@ -136,7 +136,7 @@ endpoint and names any deferred work.
 | [A30](#a30--share-standard-library-bounds-normalization) | Share standard-library bounds normalization | Open | P2 | 3 | S–M | Medium | O | M, R |
 | [A31](#a31--avoid-mandatory-string-to-array-copies-for-output) | Avoid mandatory string-to-array copies for output | Open | P2 | 4 | L | High | C | N, M |
 | [A32](#a32--measure-and-reduce-mapvec-copy-traffic) | Measure and reduce Map/Vec copy traffic | Open | P2 | 4 | L | High | C | N |
-| [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | In progress | P2 | 4 | M | Medium | O | M, R, C |
+| [A33](#a33--consolidate-test-plumbing-while-preserving-independent-checks) | Consolidate test plumbing while preserving independent checks | Complete | P2 | 4 | M | Medium | O | M, R, C |
 | [A34](#a34--establish-reproducible-cleanup-measurements) | Establish reproducible cleanup measurements | Complete | P1 | 4 | M | Low | O | C, N, R |
 | [A35](#a35--preserve-snapshot-aggregations-saturation-flag) | Preserve snapshot aggregation's saturation flag | Complete | P2 | 2 | XS | Low | O | R |
 | [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Complete | P2 | 3 | S–M | Medium | O | R, M |
@@ -1279,15 +1279,13 @@ changes separate from generic optimizer work in the catalog.
 
 ### A33 — Consolidate test plumbing while preserving independent checks
 
-**Status:** In progress; compiler determinism, driver reporting/pipeline, and
-golden integration support ownership are complete (2026-09-13). Final
-inventory reconciliation remains.
+**Status:** Complete (2026-09-13).
 
 **Design proposal:**
-[Test Plumbing Ownership Design Proposal](TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md).
+[Test Plumbing Ownership Design Proposal](../archive/TEST_PLUMBING_OWNERSHIP_DESIGN_PROPOSAL.md).
 
 **Roadmap:**
-[Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md).
+[Test Plumbing Ownership Roadmap](../archive/TEST_PLUMBING_OWNERSHIP_ROADMAP.md).
 
 **Evidence:** compiler
 [pipeline determinism tests](../../crates/skald-compiler/tests/pipeline_determinism.rs)
@@ -1311,6 +1309,39 @@ delivered A01–A05 crash, nontermination, pipe, capture, and overflow regressio
 add focused characterization only for new shared helper behavior. Preserve
 intentionally independent-process determinism and native equivalence checks;
 do not delete similar-looking tests solely to shorten the suite.
+
+**Delivered:** compiler integration tests now own one bounded subprocess and
+temporary-resource boundary. The determinism binary is a concise 53-case
+registry over recursive semantic generators; every case still launches two
+independent processes, and all 13 permutation cases still supply distinct
+source or provider orders. Driver reporting and pipeline tests have explicit
+responsibility modules while retaining their 18 and 42 tests. Golden planning
+and process tests depend only on low-level resources, while compiler,
+scheduler, and reporting tests compose the high-level fixture. The golden
+support facade has focused temporary, fake-tool, fixture, and spec-writer
+owners. MIR test fixtures retain their independent corruption-capable
+constructors and existing recursive checked-operation and I/O families.
+
+The final sorted inventories were compared directly with revision
+`f1bdae7171a7a2219cd4d33c5ffdb1828a871b48`. The compiler library remains at
+3,148 tests; exactly 60 fully qualified names gained the reviewed reporting or
+pipeline responsibility prefix, with every leaf name preserved. The
+determinism inventory is byte-identical at 53 names and SHA-256
+`c04091410676bb92fc34d395ad06ec986502f726e84a3a03d8982e2287f2e1f0`.
+Golden integration binaries retain all 79 original names and add three direct
+temporary-workspace contract tests, for 82 integration tests; the complete
+`skald-golden --tests` selection rises from 112 to 115 for the same additions.
+The archived roadmap records the complete prefix map and inventory hashes.
+
+The ordinary manifest-derived workspace gate continues to select the A01–A06
+expression-depth process watchdog, full-duplex linker regression,
+deadline-through-pipe-completion cases, bounded stream and file captures,
+Map/Vec capacity goldens, and all `skald-binary64` tests. Validation passed all
+focused owner suites plus `cargo fmt --all -- --check`,
+`cargo clippy --locked --workspace --all-targets -- -D warnings`, `make check`
+with 629 golden leaves, `make golden-determinism-test` with 1,032 compiler and
+922 native processes, `make msrv-check`, the documentation checker, and
+`git diff --check`.
 
 ### A34 — Establish reproducible cleanup measurements
 

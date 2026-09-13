@@ -9,7 +9,6 @@ use skald_golden::{
 use std::{ffi::OsString, fs, time::Duration};
 use support::{
     fake_tools::{fake_compiler, fake_linker, fake_process},
-    fixture::lines,
     write_compile_fail_spec, write_native_spec, Fixture,
 };
 
@@ -111,7 +110,13 @@ fn determinism_modes_control_compiler_and_native_repetitions() {
         );
         assert_eq!(execution.leaves()[0].repetitions().len(), run_count);
         assert_eq!(fs::read_to_string(&fixture.runtime_counter).unwrap(), "1");
-        assert_eq!(lines(&fixture.link_counter), 1);
+        assert_eq!(
+            fs::read_to_string(&fixture.link_counter)
+                .unwrap()
+                .lines()
+                .count(),
+            1
+        );
         assert_eq!(
             fs::read(&fixture.link_assembly).unwrap(),
             execution.builds()[0]

@@ -1,11 +1,11 @@
 # Test Plumbing Ownership Design Proposal
 
-Status: frozen decision record. Accepted on 2026-09-13; implementation is
-planned in the
+Status: complete frozen decision record. Accepted and fully implemented on
+2026-09-13 through the archived
 [Test Plumbing Ownership Roadmap](TEST_PLUMBING_OWNERSHIP_ROADMAP.md).
 
 This proposal addresses
-[cleanup finding A33](CODEBASE_CLEANUP_AUDIT.md#a33--consolidate-test-plumbing-while-preserving-independent-checks).
+[cleanup finding A33](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a33--consolidate-test-plumbing-while-preserving-independent-checks).
 It makes Skald's largest Rust test suites easier to navigate and removes
 repeated mechanical setup while preserving the independent observations that
 catch compiler, process, and ownership defects. The change is internal to test
