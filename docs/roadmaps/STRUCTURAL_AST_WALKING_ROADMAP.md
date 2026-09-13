@@ -1,6 +1,6 @@
 # Structural AST Walking Roadmap
 
-Status: planned; W01 is next.
+Status: in progress; W01 is complete and W02 is next.
 
 This roadmap implements
 [cleanup finding A13](CODEBASE_CLEANUP_AUDIT.md#a13--share-structural-ast-walking-where-responsibilities-repeat)
@@ -56,7 +56,7 @@ phase product remain with their current owners.
 
 ## Progress
 
-- [ ] W01 — Establish the iterative syntax traversal contract
+- [x] W01 — Establish the iterative syntax traversal contract
 - [ ] W02 — Migrate non-semantic structural consumers
 - [ ] W03 — Restore and freeze specialization source order
 - [ ] W04 — Migrate specialization discovery
@@ -69,34 +69,34 @@ phase product remain with their current owners.
 **Purpose:** create and characterize the shared structural boundary before a
 production consumer depends on it.
 
-- [ ] Add private `syntax::walk` facade and implementation modules. Selectively
+- [x] Add private `syntax::walk` facade and implementation modules. Selectively
   re-export only `SyntaxNode`, `WalkControl`, `SyntaxVisitor`, and the traversal
   entry point as `pub(crate)` through `syntax`.
-- [ ] Represent compilation units, imports, declarations, class members,
+- [x] Represent compilation units, imports, declarations, class members,
   blocks, statements, expressions, type occurrences, and named-type
   occurrences as borrowed copyable node events.
-- [ ] Implement traversal with an explicit heap work stack. Emit enter, push
+- [x] Implement traversal with an explicit heap work stack. Emit enter, push
   leave, then push children in reverse so observations remain in declared
   forward order.
-- [ ] Make `Continue` and `Prune` behavior explicit. Always emit leave for an
+- [x] Make `Continue` and `Prune` behavior explicit. Always emit leave for an
   entered node and make leave return unit so pruning decisions occur only on
   enter.
-- [ ] Keep `TopLevelDeclaration`, `ClassMember`, `Statement`, `ForInSource`,
+- [x] Keep `TopLevelDeclaration`, `ClassMember`, `Statement`, `ForInSource`,
   `Expression`, call-argument, array-construction, optional-initializer, and
   bracket-bound child matches exhaustive. Do not use a wildcard that lets a
   child-bearing variant silently become a leaf.
-- [ ] Emit imports, complete types, and complete named types as opaque leaves.
+- [x] Emit imports, complete types, and complete named types as opaque leaves.
   Preserve declaration, member, statement, expression, conditional-arm,
   argument, element, endpoint, and projection source order exactly as frozen
   by the accepted design.
-- [ ] Add a parsed all-shapes fixture covering every current child-bearing
+- [x] Add a parsed all-shapes fixture covering every current child-bearing
   statement and expression family, both `for-in` sources, each array
   constructor and call-argument form, both optional-box initializers, and
   index/slice projections.
-- [ ] Add focused tests for exact compact event/source-slice order, source
+- [x] Add focused tests for exact compact event/source-slice order, source
   spans, balanced nesting, pruning at multiple node levels, continuation with
   later siblings, and absent optional children.
-- [ ] Document the private structural owner and its non-semantic boundary in
+- [x] Document the private structural owner and its non-semantic boundary in
   [`PHASES_AND_IR.md`](../compiler/PHASES_AND_IR.md), linking to living syntax
   and phase contracts rather than copying the variant inventory.
 
@@ -109,6 +109,21 @@ Clippy with warnings denied, `make check`, `make msrv-check`, and `git diff
 syntax-node and child-order contract; it has no production consumer yet; every
 current statement/expression family and pruning rule is covered; no semantic
 type or policy enters the module; and all existing outputs remain unchanged.
+
+#### W01 delivery record
+
+The syntax facade now exposes a crate-private borrowed node vocabulary,
+continue/prune control, balanced visitor events, and one iterative traversal
+engine. Exhaustive source-shaped child enumeration lives in the private
+`syntax::walk` implementation; complete types remain opaque and no production
+consumer has migrated early.
+
+Six focused walker tests cover the parsed all-shapes inventory, exact event and
+span order, composite child order, opaque types, absent optionals, and balanced
+local pruning at declaration, member, block, and expression boundaries. The
+231 syntax tests and all 53 independent-process phase determinism tests pass.
+`make check` passes with 3,154 compiler unit tests and all 629 selected golden
+executions, and `make msrv-check` passes with Rust 1.82.0.
 
 ### W02 — Migrate non-semantic structural consumers
 
@@ -134,6 +149,8 @@ observation while preserving parser robustness and module dependency meaning.
 - [ ] Remove only the superseded structural recursion and imports. Keep the
   `Depths` result, dependency map, kinds, spans, canonical paths, and consumers
   in their existing modules.
+- [ ] Remove the transition-only dead-code and unused-re-export allowances from
+  the syntax facade once the new traversal API has production consumers.
 - [ ] Update living parser or module documentation only if implementation
   reveals a structural guarantee not already stated by the accepted design and
   phase documentation.

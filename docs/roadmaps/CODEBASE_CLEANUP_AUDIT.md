@@ -6,8 +6,8 @@ publication selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
 The [completed retrospective](../archive/CLEANUP_RETROSPECTIVE_REVIEW.md#r04--final-acceptance-and-readiness)
 records accepted boundaries, explicit narrowing, and prerequisites for further
-work. A14's accepted object-view planning design is fully implemented. A13 has
-an accepted structural-walking design and staged implementation roadmap;
+work. A14's accepted object-view planning design is fully implemented. A13's
+accepted structural-walking design is in progress through its staged roadmap;
 remaining architectural changes need focused designs and PR-sized tasks.
 
 Audited: 2026-09-09, revision `ad4feb920d4b`.
@@ -118,7 +118,7 @@ narrower endpoint and names any deferred work.
 | [A10](#a10--isolate-and-measure-semantic-range-discovery) | Isolate and measure semantic range discovery | Complete (bounded) | P2 | 4 | M–L | High | C | M, C |
 | [A11](#a11--make-provisional-expression-type-queries-explicit) | Make provisional expression-type queries explicit | Complete (bounded) | P2 | 4 | M | Medium | O | M, E, R, C |
 | [A12](#a12--consolidate-language-item-discovery-plumbing) | Consolidate language-item discovery plumbing | Complete | P2 | 4 | M | Medium | O | M, E |
-| [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Planned | P2 | 3 | M | Medium | O | M, E, R |
+| [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Partial | P2 | 3 | M | Medium | O | M, E, R |
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Complete | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
@@ -708,7 +708,10 @@ documentation checks, 21 compiler compile-fail documentation tests, and all
 
 ### A13 — Share structural AST walking where responsibilities repeat
 
-**Status:** Planned; the iterative syntax traversal contract is next.
+**Status:** Partial. The private iterative syntax traversal contract and its
+all-shapes, ordering, span, opaque-type, balanced-event, and pruning coverage
+were delivered on 2026-09-13. The two non-semantic consumer migrations are
+next.
 
 **Accepted design:**
 [Structural AST Walking Design Proposal](../archive/STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md).
@@ -729,12 +732,12 @@ order and prune/continue control where at least two consumers agree. Keep
 binding scopes, depth accounting, and dependency meaning with the consumer.
 Prefer iterative traversal where it also addresses A01.
 
-**Next step:** establish the crate-private iterative node/event walker and its
-all-shapes, source-order, span, balanced-event, and pruning tests before any
-production consumer migrates. The roadmap then moves both non-semantic walkers,
-isolates the resolver's local annotation/initializer ordering correction, and
-finally migrates specialization discovery. Avoid a generic visitor framework
-for all compiler IRs.
+**Next step:** migrate parser expression-depth measurement and module compiler
+dependency collection onto the established walker while preserving their
+phase-owned policies and all existing outputs. The roadmap then isolates the
+resolver's local annotation/initializer ordering correction before migrating
+specialization discovery. Avoid a generic visitor framework for all compiler
+IRs.
 
 ### A14 — Separate object-view planning from alias-argument checking
 

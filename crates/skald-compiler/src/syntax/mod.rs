@@ -9,6 +9,10 @@
 mod ast;
 mod dump;
 mod parser;
+// The traversal contract is established before production consumers migrate.
+// Remove this transition-only allowance when the first consumer adopts it.
+#[allow(dead_code)]
+mod walk;
 
 pub use ast::{
     AbsentExpr, AllocationExpr, ArrayConstructionArguments, ArrayConstructionExpr,
@@ -41,6 +45,8 @@ pub use parser::{
     INVALID_OPTIONAL_TYPE, INVALID_RANGE_SYNTAX, INVALID_TYPE_TEST, INVALID_VISIBILITY,
     MAX_LOGICAL_EXPRESSION_DEPTH, MAX_SYNTAX_NESTING, MISPLACED_IMPORT,
 };
+#[allow(unused_imports)]
+pub(crate) use walk::{walk, SyntaxNode, SyntaxVisitor, WalkControl};
 
 #[cfg(test)]
 mod nesting_tests;

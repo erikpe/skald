@@ -2720,6 +2720,15 @@ recursion. The precise accepted source shape, common syntax/expression limit,
 and separate logical-expression limit are owned by the
 [implemented grammar](../language/GRAMMAR.md).
 
+Syntax owns a crate-private immutable structural walker for source AST
+observers. It emits balanced enter/leave events in source spelling order using
+an explicit heap work stack, supports pruning one node's descendants, and
+treats complete type and named-type occurrences as opaque leaves. The walker
+defines only parent/child structure: depth policy, dependency meaning, name
+resolution, scopes, diagnostics, identities, and later-phase construction stay
+with their phase owners. This traversal surface is internal to the compiler
+and is not part of the workspace-facing syntax API.
+
 Optional AST nodes retain separate payload, `shared`, `?`, `!`, `is`, and
 presence-target spans. `none`, presence tests, and unwrap are distinct
 expression nodes; malformed and reserved optional type combinations recover
