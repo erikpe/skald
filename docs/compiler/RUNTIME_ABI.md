@@ -17,6 +17,15 @@ The runtime is a C11 static library built as
 entry points; the trace records and hidden TLS declaration in the same header
 form a compiler/runtime-private data contract.
 
+The build writes `build/runtime/build-config.txt` beside the archive. This
+versioned record contains the selected C compiler, archiver, and effective C
+flags. `CFLAGS` supplies the caller-controlled prefix; the Makefile always
+appends its required C11, warning, and include flags. Every runtime object and
+test harness depends on the record. An identical invocation preserves it and
+stays incremental, while changing the compiler, archiver, or effective flags
+replaces the record and invalidates all products built with the prior
+configuration. `make clean` removes both the products and this record.
+
 Optional values add no runtime entry point or ABI-version change. The
 `(shared T)?` zero niche is handled entirely by generated branches; zero is
 never passed to allocation, deallocation, finalization, or ordinary

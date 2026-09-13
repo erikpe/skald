@@ -2,9 +2,10 @@ CC ?= cc
 AR ?= ar
 NM ?= nm
 CFLAGS ?= -O2
-CFLAGS += -std=c11 -Wall -Wextra -Werror -Iinclude
+RUNTIME_CFLAGS := $(CFLAGS) -std=c11 -Wall -Wextra -Werror -Iinclude
 
 BUILD_DIR ?= ../build/runtime
+BUILD_CONFIGURATION := $(BUILD_DIR)/build-config.txt
 RUNTIME_OBJECT := $(BUILD_DIR)/skald_runtime.o
 PANIC_OBJECT := $(BUILD_DIR)/panic.o
 IO_OBJECT := $(BUILD_DIR)/io.o
@@ -18,6 +19,7 @@ TEST_SUPPORT_OBJECT := $(BUILD_DIR)/runtime_test_support.o
 CONTRACT_TEST_SOURCE := $(TEST_DIR)/test_runtime_contract.c
 CONTRACT_TEST_BINARY := $(BUILD_DIR)/test_runtime_contract
 SYMBOL_TEST_SCRIPT := $(TEST_DIR)/check_runtime_symbols.sh
+BUILD_CONFIGURATION_TEST_SCRIPT := $(TEST_DIR)/check_runtime_build_configuration.sh
 PANIC_TEST_SOURCE := $(TEST_DIR)/test_runtime_panic.c
 PANIC_TEST_BINARY := $(BUILD_DIR)/test_runtime_panic
 PANIC_NO_ALLOCATION_TEST_SOURCE := $(TEST_DIR)/test_runtime_panic_no_allocation.c
@@ -34,52 +36,71 @@ TEST_BINARIES := $(CONTRACT_TEST_BINARY) $(ALLOCATION_TEST_BINARY) \
 	$(ALLOCATION_FAILURE_TEST_BINARY) $(IO_TEST_BINARY) $(IO_DEFECTS_TEST_BINARY) \
 	$(PANIC_TEST_BINARY) $(PANIC_NO_ALLOCATION_TEST_BINARY)
 
-.PHONY: all test clean
+.PHONY: all test clean FORCE
 
 all: $(ARCHIVE)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(RUNTIME_OBJECT): src/skald_runtime.c include/skald_runtime.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c src/skald_runtime.c -o $(RUNTIME_OBJECT)
+FORCE:
 
-$(PANIC_OBJECT): src/panic.c include/skald_runtime.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c src/panic.c -o $(PANIC_OBJECT)
+$(BUILD_CONFIGURATION): FORCE | $(BUILD_DIR)
+	@temporary="$@.$$$$.tmp"; \
+	trap 'rm -f "$$temporary"' 0 1 2 3 15; \
+	{ \
+		printf 'format=%s\n' '1'; \
+		printf 'cc=%s\n' "$(CC)"; \
+		printf 'ar=%s\n' "$(AR)"; \
+		printf 'cflags=%s\n' "$(RUNTIME_CFLAGS)"; \
+	} > "$$temporary"; \
+	if test -r "$@" && cmp -s "$@" "$$temporary"; then \
+		:; \
+	else \
+		rm -f $(OBJECTS) $(ARCHIVE) $(TEST_SUPPORT_OBJECT) $(TEST_BINARIES); \
+		mv -f "$$temporary" "$@"; \
+	fi
 
-$(IO_OBJECT): src/io.c include/skald_runtime.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c src/io.c -o $(IO_OBJECT)
+$(RUNTIME_OBJECT): src/skald_runtime.c include/skald_runtime.h $(BUILD_CONFIGURATION) | $(BUILD_DIR)
+	$(CC) $(RUNTIME_CFLAGS) -c src/skald_runtime.c -o $(RUNTIME_OBJECT)
+
+$(PANIC_OBJECT): src/panic.c include/skald_runtime.h $(BUILD_CONFIGURATION) | $(BUILD_DIR)
+	$(CC) $(RUNTIME_CFLAGS) -c src/panic.c -o $(PANIC_OBJECT)
+
+$(IO_OBJECT): src/io.c include/skald_runtime.h $(BUILD_CONFIGURATION) | $(BUILD_DIR)
+	$(CC) $(RUNTIME_CFLAGS) -c src/io.c -o $(IO_OBJECT)
 
 $(ARCHIVE): $(OBJECTS)
 	$(AR) rcs $(ARCHIVE) $(OBJECTS)
 
-$(TEST_SUPPORT_OBJECT): $(TEST_SUPPORT_SOURCE) $(TEST_SUPPORT_HEADER) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $(TEST_SUPPORT_SOURCE) -o $(TEST_SUPPORT_OBJECT)
+$(TEST_SUPPORT_OBJECT): $(TEST_SUPPORT_SOURCE) $(TEST_SUPPORT_HEADER) $(BUILD_CONFIGURATION) | $(BUILD_DIR)
+	$(CC) $(RUNTIME_CFLAGS) -c $(TEST_SUPPORT_SOURCE) -o $(TEST_SUPPORT_OBJECT)
 
 $(CONTRACT_TEST_BINARY): $(CONTRACT_TEST_SOURCE) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(CONTRACT_TEST_SOURCE) $(ARCHIVE) -o $(CONTRACT_TEST_BINARY)
+	$(CC) $(RUNTIME_CFLAGS) $(CONTRACT_TEST_SOURCE) $(ARCHIVE) -o $(CONTRACT_TEST_BINARY)
 
 $(ALLOCATION_TEST_BINARY): $(ALLOCATION_TEST_SOURCE) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(ALLOCATION_TEST_SOURCE) $(ARCHIVE) -o $(ALLOCATION_TEST_BINARY)
+	$(CC) $(RUNTIME_CFLAGS) $(ALLOCATION_TEST_SOURCE) $(ARCHIVE) -o $(ALLOCATION_TEST_BINARY)
 
 $(ALLOCATION_FAILURE_TEST_BINARY): $(ALLOCATION_FAILURE_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(ALLOCATION_FAILURE_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(ALLOCATION_FAILURE_TEST_BINARY)
+	$(CC) $(RUNTIME_CFLAGS) $(ALLOCATION_FAILURE_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(ALLOCATION_FAILURE_TEST_BINARY)
 
 $(IO_TEST_BINARY): $(IO_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(IO_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(IO_TEST_BINARY)
+	$(CC) $(RUNTIME_CFLAGS) $(IO_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(IO_TEST_BINARY)
 
 $(IO_DEFECTS_TEST_BINARY): $(IO_DEFECTS_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(IO_DEFECTS_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(IO_DEFECTS_TEST_BINARY)
+	$(CC) $(RUNTIME_CFLAGS) $(IO_DEFECTS_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(IO_DEFECTS_TEST_BINARY)
 
 $(PANIC_TEST_BINARY): $(PANIC_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(PANIC_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -Wl,--wrap=write -o $(PANIC_TEST_BINARY)
+	$(CC) $(RUNTIME_CFLAGS) $(PANIC_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -Wl,--wrap=write -o $(PANIC_TEST_BINARY)
 
 $(PANIC_NO_ALLOCATION_TEST_BINARY): $(PANIC_NO_ALLOCATION_TEST_SOURCE) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(PANIC_NO_ALLOCATION_TEST_SOURCE) $(ARCHIVE) \
+	$(CC) $(RUNTIME_CFLAGS) $(PANIC_NO_ALLOCATION_TEST_SOURCE) $(ARCHIVE) \
 		-Wl,--wrap=malloc,--wrap=calloc,--wrap=realloc,--wrap=free \
 		-o $(PANIC_NO_ALLOCATION_TEST_BINARY)
 
 test: $(TEST_BINARIES)
+	sh $(BUILD_CONFIGURATION_TEST_SCRIPT)
 	sh $(SYMBOL_TEST_SCRIPT) "$(NM)" "$(ARCHIVE)"
 	$(CONTRACT_TEST_BINARY)
 	$(ALLOCATION_TEST_BINARY)
@@ -90,4 +111,4 @@ test: $(TEST_BINARIES)
 	$(PANIC_NO_ALLOCATION_TEST_BINARY)
 
 clean:
-	rm -f $(OBJECTS) $(ARCHIVE) $(TEST_SUPPORT_OBJECT) $(TEST_BINARIES)
+	rm -f $(BUILD_CONFIGURATION) $(OBJECTS) $(ARCHIVE) $(TEST_SUPPORT_OBJECT) $(TEST_BINARIES)

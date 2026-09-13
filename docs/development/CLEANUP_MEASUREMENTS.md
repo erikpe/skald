@@ -20,10 +20,12 @@ unique ignored directory below `build/measurements/cleanup-baseline/` and
 writes two JSON files:
 
 - `deterministic.json` contains compiler revision and dirty state, compiler
-  profile, target, MIR profile and exclusions, the resolved pass schedule,
-  repetition policy, source inventory and byte size, compiler arguments,
-  runtime-trace policy, per-occurrence proof-snapshot analysis usage, artifact
-  sizes and hashes, and repeated native-result digests;
+  profile, runtime archive path and SHA-256, the runtime build-configuration
+  record and its compiler, archiver, and effective C flags, target, MIR profile
+  and exclusions, the resolved pass schedule, repetition policy, source
+  inventory and byte size, compiler arguments, runtime-trace policy,
+  per-occurrence proof-snapshot analysis usage, artifact sizes and hashes, and
+  repeated native-result digests;
 - `report.json` contains that projection plus compiler wall time and peak RSS,
   executable-build observations, native wall time, and the unique run path.
 

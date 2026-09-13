@@ -17,6 +17,7 @@ from typing import Iterable, Sequence
 REPOSITORY = Path(__file__).resolve().parents[1]
 DEFAULT_TIMEOUT_SECONDS = 30.0
 GNU_TIME = Path("/usr/bin/time")
+DEFAULT_RUNTIME_ARCHIVE = REPOSITORY / "build/runtime/libskald_runtime.a"
 
 
 class MeasurementFailure(RuntimeError):
@@ -154,6 +155,57 @@ def source_inventory(paths: Iterable[Path]) -> dict[str, object]:
         "files": [str(path.relative_to(REPOSITORY)) for path in files],
         "bytes": sum(path.stat().st_size for path in files),
     }
+
+
+def runtime_artifact_identity(archive: str | Path | None = None) -> dict[str, object]:
+    selected = archive or os.environ.get("SKALD_RUNTIME_ARCHIVE", DEFAULT_RUNTIME_ARCHIVE)
+    archive_path = resolve_repository_path(selected)
+    configuration_path = archive_path.parent / "build-config.txt"
+    if not archive_path.is_file():
+        raise MeasurementFailure(f"runtime archive does not exist: {archive_path}")
+    try:
+        lines = configuration_path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise MeasurementFailure(
+            f"could not read runtime build configuration {configuration_path}: {error}"
+        ) from error
+
+    configuration: dict[str, str] = {}
+    for line in lines:
+        if "=" not in line:
+            raise MeasurementFailure(
+                f"invalid runtime build configuration line in {configuration_path}: {line!r}"
+            )
+        name, value = line.split("=", 1)
+        if name in configuration:
+            raise MeasurementFailure(
+                f"duplicate runtime build configuration field {name!r} in {configuration_path}"
+            )
+        configuration[name] = value
+
+    expected = {"format", "cc", "ar", "cflags"}
+    if set(configuration) != expected or configuration["format"] != "1":
+        raise MeasurementFailure(
+            f"unsupported runtime build configuration in {configuration_path}"
+        )
+    return {
+        "archive": display_path(archive_path),
+        "archive_sha256": sha256_bytes(archive_path.read_bytes()),
+        "configuration_file": display_path(configuration_path),
+        "configuration": {
+            "format": 1,
+            "cc": configuration["cc"],
+            "ar": configuration["ar"],
+            "cflags": configuration["cflags"],
+        },
+    }
+
+
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPOSITORY))
+    except ValueError:
+        return str(path)
 
 
 def repository_identity(timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS) -> dict[str, object]:

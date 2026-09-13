@@ -13,6 +13,7 @@ from measurement_support import (
     REPOSITORY,
     alternating_order,
     run_checked,
+    runtime_artifact_identity,
     timed_process,
     timing_summary,
     unique_run_directory,
@@ -385,11 +386,22 @@ def main() -> int:
         )
         for workload in selected
     ]
+    runtime = runtime_artifact_identity()
 
     if arguments.json:
-        print(json.dumps([asdict(measurement) for measurement in measurements], indent=2))
+        print(
+            json.dumps(
+                {
+                    "runtime": runtime,
+                    "measurements": [asdict(measurement) for measurement in measurements],
+                },
+                indent=2,
+            )
+        )
     else:
         print(f"artifacts: {build_directory.relative_to(REPOSITORY)}")
+        print(f"runtime: {runtime['archive']}")
+        print(f"runtime_sha256: {runtime['archive_sha256']}")
         print_table(measurements)
     return 0
 

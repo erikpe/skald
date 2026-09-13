@@ -35,9 +35,11 @@ python3 scripts/measure_range_loops.py \
 The script validates every exit status with a subprocess watchdog, reports
 median/median-absolute-deviation/minimum/maximum wall time, compilation time,
 assembly and executable byte counts, and the source `main` function's mnemonic
-profile. Generated artifacts remain in a unique run directory under ignored
-`build/measurements/range-loop/`. Inspect the emitted source functions without
-freezing addresses or labels, for example:
+profile. Its output also identifies the runtime archive by path and SHA-256 and
+records the compiler, archiver, and effective C flags from the archive's build
+configuration. Generated artifacts remain in a unique run directory under
+ignored `build/measurements/range-loop/`. Inspect the emitted source functions
+without freezing addresses or labels, for example:
 
 ```sh
 diff -u build/measurements/range-loop/run-*/u64_while.s \

@@ -18,6 +18,7 @@ from measurement_support import (
     repository_identity,
     resolve_repository_path,
     run_checked,
+    runtime_artifact_identity,
     sha256_bytes,
     source_inventory,
     timed_process,
@@ -467,6 +468,7 @@ def main() -> int:
             "label": arguments.compiler_label,
             "executable_sha256": sha256_bytes(compiler.read_bytes()),
         },
+        "runtime": runtime_artifact_identity(),
         "configuration": {
             "target": "x86_64-sysv",
             "mir_profile": "default",

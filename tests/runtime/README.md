@@ -13,7 +13,14 @@ make runtime-test
 ```
 
 The suite first compares the runtime archive's complete defined global symbol
-set with the version-9 ABI, then runs seven focused executables:
+set with the version-9 ABI, checks configuration-sensitive rebuilds, then runs
+seven focused executables. The build check uses an isolated temporary output
+directory and counting compiler/archiver wrappers to prove that an identical
+invocation stays incremental while changes to `CC` or `CFLAGS` rebuild the
+archive. The ordinary products and their effective configuration remain in
+`build/runtime/` for compiler and measurement use.
+
+The focused executables are:
 
 - `test_runtime_contract.c` checks link/version compatibility and platform
   requirements;

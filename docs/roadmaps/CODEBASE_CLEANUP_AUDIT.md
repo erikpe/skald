@@ -144,7 +144,7 @@ endpoint and names any deferred work.
 | [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | Complete | P1 | 4 | S–M | Low | O | M, E |
 | [A39](#a39--define-and-test-the-documentation-checkers-markdown-subset) | Define and test the documentation checker's Markdown subset | Complete | P2 | 3 | S–M | Low | O | R, M |
 | [A40](#a40--reconsider-the-measurement-tools-private-sha-256) | Reconsider the measurement tool's private SHA-256 | Open | P3 | 2 | S | Low | C | M, R |
-| [A41](#a41--make-runtime-build-configuration-visible-in-artifacts) | Make runtime build configuration visible in artifacts | Open | P2 | 3 | S–M | Low | O | R, M |
+| [A41](#a41--make-runtime-build-configuration-visible-in-artifacts) | Make runtime build configuration visible in artifacts | Complete | P2 | 3 | S–M | Low | O | R, M |
 | [A42](#a42--rename-sequential-execution-products-used-by-both-schedulers) | Rename sequential execution products used by both schedulers | Open | P3 | 2 | S | Low | O | M |
 | [A43](#a43--add-narrow-automated-phase-dependency-checks) | Add narrow automated phase-dependency checks | Complete | P1 | 4 | M | Low | C | M, E, R |
 
@@ -1564,6 +1564,8 @@ a dependency.
 
 ### A41 — Make runtime build configuration visible in artifacts
 
+**Status:** Complete (2026-09-13).
+
 **Evidence:** [`runtime/Makefile`](../../runtime/Makefile) builds objects and
 the archive under one default directory, with prerequisites based on source
 and header timestamps. Changing `CC`/`CFLAGS` does not itself make existing
@@ -1580,6 +1582,28 @@ an identical invocation should stay incremental. Retain existing ABI version,
 symbol inventory, C layout assertions, allocation-failure, I/O, and
 allocation-free panic tests. Do not centralize the deliberately different
 panic and ordinary I/O error policies just because both use `write`.
+
+**Delivered:** the runtime build now writes a versioned `build-config.txt`
+beside its archive with the selected compiler, archiver, and effective flags.
+Every compiled runtime and test product depends on that record. The recipe
+preserves the record's timestamp when its contents are unchanged and removes
+products before replacing a changed record, so compiler or flag changes
+cannot reuse stale objects even on filesystems with coarse timestamps. The
+runtime's required language, warning, and include flags remain effective when
+callers override `CFLAGS`.
+
+The shared measurement support validates the configuration record and reports
+its path and fields together with the runtime archive path and SHA-256 digest.
+Cleanup-baseline, generic-Vec, panic-trace, and range-loop measurements all
+include that identity, including when `SKALD_RUNTIME_ARCHIVE` selects a custom
+archive. Runtime and measurement documentation describes the record and the
+panic-trace JSON object's updated shape. An isolated regression test uses
+compiler and archiver wrappers to prove that identical invocations remain
+incremental while changed flags or compiler commands rebuild all three
+runtime objects and the archive. The focused runtime suite, nine measurement
+support tests, four small benchmark smoke runs, and the full `make check` gate
+pass; the latter includes 3,148 compiler unit tests, seven runtime harnesses,
+and 629 golden cases. The Rust 1.82 MSRV check also passes.
 
 ### A42 — Rename sequential execution products used by both schedulers
 

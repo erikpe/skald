@@ -49,7 +49,12 @@ The report contract and comparison procedure are documented in
 [Cleanup Measurement Baseline](../docs/development/CLEANUP_MEASUREMENTS.md).
 `measurement_support.py` owns the small shared subprocess, watchdog, unique
 directory, alternating-order, timing-summary, hashing, and repository-identity
-helpers. Its focused tests run through `make measurement-support-test`.
+helpers. Every native benchmark report also records the selected runtime
+archive and configuration-record paths, the archive SHA-256, and the
+configuration format, compiler, archiver, and effective C flags. A runtime
+selected with `SKALD_RUNTIME_ARCHIVE` must have its `build-config.txt` sibling;
+this prevents measurements from silently using an artifact of unknown origin.
+The helper's focused tests run through `make measurement-support-test`.
 
 `measure_generic_vec.py` compiles the representative generic-vector growth,
 copy, pop, and clear workload under `tests/benchmarks/generic_vec/`, then

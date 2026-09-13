@@ -13,6 +13,7 @@ from measurement_support import (
     alternating_order,
     repository_identity,
     resolve_repository_path,
+    runtime_artifact_identity,
     timed_process,
     timing_summary,
     unique_run_directory,
@@ -179,6 +180,7 @@ def main() -> None:
                 **repository_identity(arguments.timeout_seconds),
                 "profile": arguments.compiler_profile,
             },
+            "runtime": runtime_artifact_identity(),
             "target": "x86_64-sysv",
             "runtime_trace": "omitted",
             "warmups": arguments.warmups,
@@ -191,6 +193,8 @@ def main() -> None:
     else:
         print(f"repeats: {result['repeats']}")
         print(f"run_directory: {result['run_directory']}")
+        print(f"runtime: {result['runtime']['archive']}")
+        print(f"runtime_sha256: {result['runtime']['archive_sha256']}")
         print(f"maximum_range_overhead_percent: {result['maximum_range_overhead_percent']}")
         for integer, row in result["integer_types"].items():
             print(
