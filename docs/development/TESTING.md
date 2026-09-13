@@ -151,7 +151,7 @@ over-budget syntax diagnostics.
 | Binary integration tests | `crates/skac/tests/` | The real `skac` entry point and process-visible CLI behavior |
 | Golden tests | `tests/golden/` | Complete source-to-diagnostic or source-to-native-observation behavior |
 | Runtime tests | `tests/runtime/` | The C runtime contract independently of compiler code generation |
-| Documentation tests | `crates/skald-docs-check/` | Repository-local Markdown links, anchors, and required indexes |
+| Documentation tests | `crates/skald-docs-check/` | Repository-local links and anchors in the [checked Markdown subset](../README.md#checked-markdown-subset), plus required indexes |
 
 Colocated `mir::rewrite::cfg` tests pin the common dense/sparse CFG snapshot.
 They cover zero-, one-, two-, and three-successor terminator families, exact

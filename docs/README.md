@@ -157,6 +157,36 @@ or a clearly named, indexed discovery backlog under `docs/roadmaps/`.
 - Repair links in archived roadmaps when authorities move, but do not rewrite
   their historical task descriptions or milestone vocabulary.
 
+### Checked Markdown subset
+
+The repository documentation checker deliberately recognizes the Markdown
+constructs used for local navigation rather than implementing every CommonMark
+extension:
+
+- ATX headings use one through six `#` markers and no more than three leading
+  spaces. Generated anchors lowercase text, retain letters, numbers, `-`, and
+  `_`, turn whitespace into `-`, omit inline punctuation and HTML tags, and add
+  `-1`, `-2`, and subsequent suffixes to duplicate slugs in source order.
+- Inline links and images use `[label](destination)` syntax. Labels may contain
+  nested brackets and backslash-escaped punctuation. Destinations may use angle
+  brackets, balanced parentheses, backslash-escaped punctuation, and an
+  optional title after whitespace.
+- Full `[text][label]`, collapsed `[label][]`, and defined shortcut `[label]`
+  references resolve against definitions in the same document, including
+  definitions that occur later. Labels compare case-insensitively with
+  whitespace collapsed, and the first duplicate definition wins. An undefined
+  full or collapsed reference is reported at its use; unused definitions do
+  not create links to validate.
+- Backtick and tilde fences use at least three matching markers and no more than
+  three leading spaces. A closing fence must use the same marker, contain at
+  least as many markers as its opener, and have only whitespace afterward.
+  Links and headings inside fences or single-line backtick code spans are
+  ignored.
+
+Setext headings, indented code blocks, raw HTML links, and multiline inline
+constructs are outside this checked subset. Use the forms above for repository-
+local links and linkable headings so `make docs-check` can validate them.
+
 Planned and active work, including dependencies, is listed in the
 [roadmap index](roadmaps/README.md). Completed plans are listed in the
 [archive index](archive/README.md).

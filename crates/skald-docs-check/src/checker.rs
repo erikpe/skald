@@ -58,6 +58,13 @@ pub fn check_repository(root: impl AsRef<Path>) -> io::Result<Vec<Diagnostic>> {
 
     let mut diagnostics = Vec::new();
     for path in &markdown_paths {
+        for issue in &documents[path].issues {
+            diagnostics.push(Diagnostic::link(
+                relative(&root, path),
+                issue.line,
+                issue.message.clone(),
+            ));
+        }
         let links = documents[path].links.clone();
         for link in &links {
             check_link(

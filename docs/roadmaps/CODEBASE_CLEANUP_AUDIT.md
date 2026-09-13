@@ -142,7 +142,7 @@ endpoint and names any deferred work.
 | [A36](#a36--preserve-raw-compiler-stderr-in-golden-observations) | Preserve raw compiler stderr in golden observations | Complete | P2 | 3 | S–M | Medium | O | R, M |
 | [A37](#a37--simplify-literal-selection-and-bound-glob-matching) | Simplify literal selection and bound glob matching | Open | P3 | 2 | S | Low | O | C, R |
 | [A38](#a38--refresh-current-behavior-and-shorten-active-indexes) | Refresh current behavior and shorten active indexes | Complete | P1 | 4 | S–M | Low | O | M, E |
-| [A39](#a39--define-and-test-the-documentation-checkers-markdown-subset) | Define and test the documentation checker's Markdown subset | Open | P2 | 3 | S–M | Low | O | R, M |
+| [A39](#a39--define-and-test-the-documentation-checkers-markdown-subset) | Define and test the documentation checker's Markdown subset | Complete | P2 | 3 | S–M | Low | O | R, M |
 | [A40](#a40--reconsider-the-measurement-tools-private-sha-256) | Reconsider the measurement tool's private SHA-256 | Open | P3 | 2 | S | Low | C | M, R |
 | [A41](#a41--make-runtime-build-configuration-visible-in-artifacts) | Make runtime build configuration visible in artifacts | Open | P2 | 3 | S–M | Low | O | R, M |
 | [A42](#a42--rename-sequential-execution-products-used-by-both-schedulers) | Rename sequential execution products used by both schedulers | Open | P3 | 2 | S | Low | O | M |
@@ -1509,6 +1509,8 @@ gate pass, including all 628 golden leaves.
 
 ### A39 — Define and test the documentation checker's Markdown subset
 
+**Status:** Complete (2026-09-13).
+
 **Evidence:** [`markdown.rs`](../../crates/skald-docs-check/src/markdown.rs)
 implements its own link/fence/heading parser. Fence state remembers only the
 marker character, so three backticks can close a four-backtick fence; closing
@@ -1524,6 +1526,24 @@ should be justified by less maintenance, not merely completeness.
 markers with trailing text, escaped/nested labels, reference uses, and duplicate
 heading slugs. The checker must neither invent links inside code nor silently
 skip real repository links.
+
+**Delivered:** the dependency-free parser now retains each fence's marker and
+opening width, accepts only whitespace after a closing fence, and keeps shorter
+or trailing-text marker runs inside the fenced block. A document-level second
+pass resolves forward, full, collapsed, and defined shortcut reference links
+through normalized labels while reporting undefined explicit references at
+their use sites. Balanced and escaped label delimiters and escaped destination
+punctuation are handled without weakening inline-code exclusion. Duplicate ATX
+headings continue to receive deterministic source-order suffixes. The living
+[documentation guide](../README.md#checked-markdown-subset) defines the exact
+checked subset and its exclusions.
+
+Focused tests cover both fence failures, nested and escaped labels, every
+supported reference form, undefined and missing reference destinations,
+duplicate headings, code exclusion, encoded destinations, local anchors, and
+required indexes. `make check` passed with 3,148 compiler unit tests, 14
+documentation-checker tests, runtime coverage, and all 629 golden cases. The
+Rust 1.82.0 workspace all-target check also passed.
 
 ### A40 — Reconsider the measurement tool's private SHA-256
 

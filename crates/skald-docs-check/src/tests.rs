@@ -111,7 +111,106 @@ fn ignores_links_inside_code() {
 }
 
 #[test]
-fn validates_reference_link_destinations() {
+fn a_shorter_marker_does_not_close_a_longer_fence() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "README.md",
+        "````markdown\n[hidden](first.md)\n```\n[still hidden](second.md)\n````\n[visible](missing.md)\n",
+    );
+
+    let diagnostics = fixture.check();
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(
+        diagnostics[0].to_string(),
+        "README.md:6: missing file `missing.md`"
+    );
+}
+
+#[test]
+fn trailing_text_prevents_a_fence_from_closing() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "README.md",
+        "~~~markdown\n[hidden](first.md)\n~~~ trailing text\n[still hidden](second.md)\n~~~\n[visible](missing.md)\n",
+    );
+
+    let diagnostics = fixture.check();
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(
+        diagnostics[0].to_string(),
+        "README.md:6: missing file `missing.md`"
+    );
+}
+
+#[test]
+fn recognizes_nested_and_escaped_link_labels() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "README.md",
+        "\\[literal](ignored.md)\n[outer [inner]](nested.md)\n[escaped \\] label](escaped.md)\n",
+    );
+
+    let diagnostics = fixture.check();
+    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(
+        diagnostics[0].to_string(),
+        "README.md:2: missing file `nested.md`"
+    );
+    assert_eq!(
+        diagnostics[1].to_string(),
+        "README.md:3: missing file `escaped.md`"
+    );
+}
+
+#[test]
+fn unescapes_destination_punctuation_and_ignores_link_titles() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "README.md",
+        "[escaped](guide\\(one\\).md \"title\")\n[angle](<guide two.md> \"title\")\n",
+    );
+    fixture.write("guide(one).md", "# Escaped\n");
+    fixture.write("guide two.md", "# Angle\n");
+
+    assert_eq!(fixture.check(), []);
+}
+
+#[test]
+fn resolves_forward_full_collapsed_and_shortcut_references() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "README.md",
+        "[Forward][  GUIDE label ]\n[Collapsed][]\n[Shortcut]\n\n[guide   LABEL]: guide.md\n[GUIDE LABEL]: ignored-duplicate.md\n[collapsed]: collapsed.md\n[shortcut]: shortcut.md\n",
+    );
+    fixture.write("guide.md", "# Guide\n");
+    fixture.write("collapsed.md", "# Collapsed\n");
+    fixture.write("shortcut.md", "# Shortcut\n");
+
+    assert_eq!(fixture.check(), []);
+}
+
+#[test]
+fn reports_undefined_explicit_reference_links() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "README.md",
+        "[full][missing full]\n[collapsed][]\n[ordinary brackets]\n",
+    );
+
+    let diagnostics = fixture.check();
+    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(
+        diagnostics[0].to_string(),
+        "README.md:1: undefined reference link `[missing full]`"
+    );
+    assert_eq!(
+        diagnostics[1].to_string(),
+        "README.md:2: undefined reference link `[collapsed]`"
+    );
+}
+
+#[test]
+fn validates_reference_destinations_at_the_use_site() {
     let fixture = Fixture::new();
     fixture.write(
         "README.md",
@@ -120,5 +219,20 @@ fn validates_reference_link_destinations() {
 
     let diagnostics = fixture.check();
     assert_eq!(diagnostics.len(), 1);
-    assert!(diagnostics[0].message().contains("missing file"));
+    assert_eq!(
+        diagnostics[0].to_string(),
+        "README.md:1: missing file `missing.md`"
+    );
+}
+
+#[test]
+fn assigns_stable_suffixes_to_duplicate_heading_anchors() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "README.md",
+        "[first](guide.md#repeated)\n[second](guide.md#repeated-1)\n[third](guide.md#repeated-2)\n",
+    );
+    fixture.write("guide.md", "# Repeated\n\n## Repeated\n\n### Repeated\n");
+
+    assert_eq!(fixture.check(), []);
 }
