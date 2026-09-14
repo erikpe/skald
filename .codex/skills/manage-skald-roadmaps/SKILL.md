@@ -11,15 +11,23 @@ documentation.
 
 ## Establish context
 
-1. Read the repository guidance, living architecture, implemented grammar,
+1. Inspect `git status` and recent history before interpreting the current
+   diff. Skald roadmap tasks are normally committed locally between PR-sized
+   steps, so completed prerequisite work may be present in `HEAD` without
+   appearing in the working-tree diff.
+2. Identify the semantic baseline for the selected task from the roadmap and
+   commit history. Review both the current working-tree change and the
+   cumulative change since that baseline when checking scope, dependencies,
+   retained scaffolding, or behavior that a later task must replace.
+3. Read the repository guidance, living architecture, implemented grammar,
    relevant specification sections, active roadmap index, and related tests.
-2. Inspect the implementation before proposing boundaries. Base tasks on actual
+4. Inspect the implementation before proposing boundaries. Base tasks on actual
    ownership, dependencies, invariants, and validation commands.
-3. Inspect the sibling Niflheim repository when available. Use its roadmaps,
+5. Inspect the sibling Niflheim repository when available. Use its roadmaps,
    specifications, diagnostics, tests, and architecture for inspiration where
    they are clearer, but treat Skald as authoritative and do not copy its
    implementation blindly.
-4. Separate current behavior, desired outcome, exclusions, and open design
+6. Separate current behavior, desired outcome, exclusions, and open design
    decisions. Resolve representation-level decisions before scheduling code
    that depends on them.
 
@@ -100,24 +108,36 @@ Apply these rules:
 
 ## Implement a roadmap task
 
-1. Read the whole roadmap and the selected task before editing. Confirm its
-   dependencies are complete and keep the task's purpose as the scope boundary.
-2. Inspect all affected owners, callers, tests, and living documentation.
-3. Implement in coherent increments. Refactoring that materially improves
+1. Recheck repository status and history, then read the whole roadmap and the
+   selected task before editing. Confirm its dependencies are complete and
+   identify their commits; do not infer completion only from the current diff.
+2. Choose the semantic baseline that owns the behavior being changed. Inspect
+   committed prerequisite changes, current source, and uncommitted work as one
+   implementation sequence while preserving their PR-sized boundaries.
+3. Inspect all affected owners, callers, tests, and living documentation.
+4. Implement in coherent increments. Refactoring that materially improves
    long-term clarity and maintainability is encouraged when it supports the
    task and preserves behavior.
-4. Mark detail checkboxes as their results are actually completed. Mark the
+5. Mark detail checkboxes as their results are actually completed. Mark the
    progress-summary checkbox only after tests and exit criteria pass.
-5. Put additional candidates in the roadmap's discoveries document instead of
+6. Put additional candidates in the roadmap's discoveries document instead of
    expanding the reviewed task. Record the problem, evidence, likely owner,
    priority, and a useful boundary for later work.
-6. Keep tests with their owner: implementation-private phase tests colocated,
+7. Keep tests with their owner: implementation-private phase tests colocated,
    public/cross-phase Rust tests in the crate integration-test directory,
    reusable non-Rust corpora under the top-level test tree, and complete
    source-to-observation behavior in golden tests.
-7. Run proportionate focused checks during implementation, then the documented
+8. Run proportionate focused checks during implementation, then the documented
    full repository gate. Run the MSRV target when Rust targets, manifests, or
    supported syntax may be affected.
+
+For experimental tasks with a revert or no-go branch, treat commits as
+milestone boundaries rather than assuming the experiment is contained in the
+working tree. Identify the last accepted implementation commit, restore only
+the rejected implementation and migration scaffolding from the appropriate
+committed boundary, and retain independently useful tests, measurements,
+guards, and decision records. Avoid broad history rewrites or whole-tree resets
+that would discard accepted evidence or unrelated work.
 
 ## Keep documentation current
 
@@ -149,3 +169,5 @@ Apply these rules:
 7. Leave pending discoveries under `docs/roadmaps/`; archive or remove a
    discoveries document only when no actionable item remains.
 8. Verify formatting, links, repository status, and diff hygiene before handoff.
+   Review the cumulative roadmap diff as well as the working-tree diff when
+   earlier tasks have already been committed.
