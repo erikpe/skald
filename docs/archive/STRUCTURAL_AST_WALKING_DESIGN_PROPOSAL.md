@@ -1,8 +1,7 @@
 # Structural AST Walking Design Proposal
 
-Status: frozen decision record. Accepted on 2026-09-13; implementation is
-tracked by the
-[Structural AST Walking Roadmap](../roadmaps/STRUCTURAL_AST_WALKING_ROADMAP.md).
+Status: frozen decision record. Accepted on 2026-09-13 and implemented by the
+completed [Structural AST Walking Roadmap](STRUCTURAL_AST_WALKING_ROADMAP.md).
 
 This proposal gives source-shaped syntax traversal one narrow owner. It
 centralizes the structural child relationships that compiler-dependency

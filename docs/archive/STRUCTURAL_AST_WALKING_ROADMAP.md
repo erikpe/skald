@@ -1,17 +1,17 @@
 # Structural AST Walking Roadmap
 
-Status: in progress; W01 through W04 are complete and W05 is next.
+Status: complete as of 2026-09-14; all tasks and repository gates passed.
 
 This roadmap implements
-[cleanup finding A13](CODEBASE_CLEANUP_AUDIT.md#a13--share-structural-ast-walking-where-responsibilities-repeat)
+[cleanup finding A13](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a13--share-structural-ast-walking-where-responsibilities-repeat)
 through the accepted
-[structural AST walking design](../archive/STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md).
+[structural AST walking design](STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md).
 It gives source-shaped structural traversal one private syntax owner, proves
 the contract with non-semantic consumers, restores the resolver's stated
 source-order guarantee, and then migrates specialization discovery without
 moving semantic authority into syntax.
 
-The completed work will leave `syntax::walk` responsible only for immutable
+The completed work leaves `syntax::walk` responsible only for immutable
 node relationships, source order, balanced enter/leave events, and
 continue/prune control. Parser depth policy, module dependencies, resolver type
 closing, specialization identities, diagnostics, scopes, and every transformed
@@ -60,7 +60,7 @@ phase product remain with their current owners.
 - [x] W02 — Migrate non-semantic structural consumers
 - [x] W03 — Restore and freeze specialization source order
 - [x] W04 — Migrate specialization discovery
-- [ ] W05 — Audit the boundary and close A13
+- [x] W05 — Audit the boundary and close A13
 
 ## PR-sized implementation sequence
 
@@ -334,26 +334,26 @@ passed with Rust 1.82.0.
 surface without attracting unrelated semantic traversal, then leave accurate
 living and historical documentation.
 
-- [ ] Inventory remaining production matches over syntax declarations,
+- [x] Inventory remaining production matches over syntax declarations,
   statements, expressions, call arguments, array arguments, optional
   initializers, and bracket bounds. Classify each as structural observation,
   semantic transformation/query, rendering, or parser construction.
-- [ ] Migrate a remaining observer only when it repeats the accepted immutable
+- [x] Migrate a remaining observer only when it repeats the accepted immutable
   event contract and the change is small. Keep transformations, scoped
   semantic walks, short-circuit queries, and renderers explicit.
-- [ ] Confirm `syntax::walk` has one concise facade, cohesive work-stack
+- [x] Confirm `syntax::walk` has one concise facade, cohesive work-stack
   implementation, exhaustive structural matches, narrow visibility, and no
   obsolete adapters or parallel child enumerators for migrated consumers.
-- [ ] Confirm the all-shapes fixture covers the current AST and that adding a
+- [x] Confirm the all-shapes fixture covers the current AST and that adding a
   child-bearing statement or expression variant makes the central structural
   match require an explicit decision.
-- [ ] Update [`PHASES_AND_IR.md`](../compiler/PHASES_AND_IR.md), the testing and
+- [x] Update [`PHASES_AND_IR.md`](../compiler/PHASES_AND_IR.md), the testing and
   debugging guides, and source module documentation to describe only the final
   living boundary and focused commands.
-- [ ] Record any substantial additional candidate in a clearly named indexed
+- [x] Record any substantial additional candidate in a clearly named indexed
   discoveries document with evidence, owner, priority, and boundary. Do not
   widen the closure task to absorb it.
-- [ ] Mark A13 complete with delivered behavior and validation, mark every
+- [x] Mark A13 complete with delivered behavior and validation, mark every
   roadmap checkbox complete, archive this roadmap, update active/archive
   indexes, and repair all relative links.
 
@@ -369,6 +369,48 @@ boundaries remain explicit; the source-order correction is the only accepted
 observable delta; no superseded traversal remains in the migrated owners; all
 quality gates pass; A13 is complete; and the accepted design and completed
 roadmap are archived and indexed.
+
+#### W05 boundary audit
+
+The remaining production matches over raw syntax fall into four intentional
+owners:
+
+- `syntax::parser` constructs nodes and performs parsing-time shape checks;
+- `syntax::dump` renders punctuation, labels, indentation, and stable dump
+  structure;
+- ordinary resolution and generic-template body analysis transform syntax
+  while managing scopes, lookup, diagnostics, inferred facts, and later-phase
+  products; and
+- semantic range and generic-template helpers perform targeted semantic
+  queries, including short-circuit containment and dependency checks.
+
+None is another immutable whole-tree observer with the accepted event
+contract. The three intended structural consumers are therefore expression
+depth measurement, compiler-dependency range evidence, and explicit
+specialization request discovery, and all three use `syntax::walk`. No further
+migration is justified by A13.
+
+The syntax facade selectively exposes only the borrowed node vocabulary,
+continue/prune control, visitor contract, and traversal entry point inside the
+compiler crate. One private traversal file owns the work stack and exhaustive
+declaration, member, statement, expression, call-argument, array-argument,
+optional-initializer, and bracket-bound child matches. The parsed all-shapes
+fixture exercises every current child-bearing statement and expression family;
+Rust's exhaustive matches force an explicit structural decision when those
+enums gain a variant. Searches found no obsolete adapters or parallel child
+enumerators in the three migrated consumers.
+
+The phase, testing, debugging, syntax-walker, dependency-owner, parser-depth,
+and specialization-request documentation all describe the final boundary and
+focused commands without rollout terminology. The audit found no substantial
+additional cleanup candidate, so no discoveries record is needed.
+
+Focused closure validation passed all 3,160 compiler unit tests, all 53
+independent-process determinism cases, and both release-profile
+expression-depth process tests. From an artifact-free copied source snapshot,
+`make check` passed formatting, workspace checks, Clippy with warnings denied,
+documentation checks, every workspace test, runtime tests, and all 629 golden
+leaves. `make msrv-check` passed with Rust 1.82.0.
 
 ## Ordering and dependencies
 
