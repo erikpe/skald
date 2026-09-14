@@ -849,9 +849,9 @@ evidence.
 
 ### A17 — Reduce copy-capability fixed-point reconstruction
 
-**Status:** In progress; CP01 established the structural and operational
-baseline, Gate 1 is go, CP02 established the request-local neutral authority,
-and CP03 is next.
+**Status:** In progress; CP03 met the structural and correctness goals but Gate
+2 is no-go because one workload exceeded the operational threshold in two of
+three pairs. CP04 reversion is next.
 
 **Accepted design:**
 [Copy-Capability Materialization Design Proposal](COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md).
@@ -863,14 +863,15 @@ The accepted design reassesses the original borrow-only first-PR sketch after
 A08: neutral lifecycle facts become the availability authority and HIR plans
 become a separate one-pass materialization, subject to two evidence gates.
 The accepted
-[CP01 measurement baseline](../development/COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
-demonstrates repeated provisional class-plan cloning and HIR array-table
-construction while preserving exact neutral/HIR agreement.
+[measurement record](../development/COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
+demonstrates repeated baseline reconstruction, the successful one-pass
+structural result, unchanged deterministic behavior, and the repeatable
+operational threshold failure that selects the no-go branch.
 
-**Evidence:** [`CopyCapabilities::compute`](../../crates/skald-compiler/src/typeck/capabilities.rs)
-clones capability sets and rebuilds array lifecycle tables in separate
-constructor/assignment convergence loops. Generic requirement queries can
-compute this information before ordinary HIR checking computes it again.
+**Evidence:** the CP01 baseline records 72 provisional class-plan clones and 20
+provisional HIR array entries. CP03 reduced both to zero and built each class
+operation once, but the accepted retention policy requires the original path
+to be restored after its paired operational no-go result.
 
 **Original direction:** after A08 fixes ownership, expose immutable capability views so
 provisional array analysis does not require owned clones. Measure iterations

@@ -183,9 +183,9 @@ plus recursive resolved lifecycle availability for classes and aggregates.
 Resolver candidate validation keeps its result lazy and local to the borrowed
 candidate view. Type checking computes a fresh neutral result from the final
 selected resolved program, retains it for failure diagnostics, and constructs
-concrete HIR copy and assignment plans. The completed capability facade checks
-plan availability and failure paths against the neutral authority without
-making resolution depend on HIR.
+each concrete HIR copy and assignment plan once from the neutral availability
+facts. The completed capability facade checks plan availability against the
+neutral authority without making resolution depend on HIR.
 
 The implemented query facade accepts already-closed subjects from the
 specialization owner. That owner is responsible for structural

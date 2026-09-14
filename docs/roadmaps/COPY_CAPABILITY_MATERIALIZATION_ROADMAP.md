@@ -1,6 +1,7 @@
 # Copy-Capability Materialization Roadmap
 
-Status: active; CP01 and CP02 are complete and CP03 is next.
+Status: active; CP01–CP03 are complete, Gate 2 is no-go, and CP04 reversion is
+next.
 
 This roadmap implements
 [cleanup finding A17](CODEBASE_CLEANUP_AUDIT.md#a17--reduce-copy-capability-fixed-point-reconstruction)
@@ -127,7 +128,7 @@ assessment.
 
 - [x] CP01 — Measure reconstruction and freeze capability behavior
 - [x] CP02 — Establish the request-local neutral authority
-- [ ] CP03 — Materialize concrete HIR plans once and decide Gate 2
+- [x] CP03 — Materialize concrete HIR plans once and decide Gate 2
 - [ ] CP04 — Retain or remove the migration and close A17
 
 ## PR-sized implementation sequence
@@ -220,31 +221,46 @@ selected ownership split is simpler and operationally acceptable.
 
 This task is performed only after CP02 and a Gate 1 go decision.
 
-- [ ] Replace the recursive availability-and-plan `CapabilitySet::compute`
+- [x] Replace the recursive availability-and-plan `CapabilitySet::compute`
   with an identity-indexed HIR materializer guided exclusively by neutral
   availability facts.
-- [ ] Materialize unavailable, user, and synthesized constructor plans once,
+- [x] Materialize unavailable, user, and synthesized constructor plans once,
   preserving direct-base-first and declaration-ordered field operations.
-- [ ] Materialize assignment plans once after constructors, preserving
+- [x] Materialize assignment plans once after constructors, preserving
   optional-class constructor requirements and direct final-field order.
-- [ ] Treat an available synthesized dependency cycle or missing selected
+- [x] Treat an available synthesized dependency cycle or missing selected
   operation as a compiler consistency defect. Do not add a second availability
   fallback.
-- [ ] Adapt array lifecycle construction to consult neutral array facts and
+- [x] Adapt array lifecycle construction to consult neutral array facts and
   completed class plans, then build the final table once in canonical identity
   order. Preserve default and destruction construction independently.
-- [ ] Consume `CopyCapabilities` after checking and move its final array table
+- [x] Consume `CopyCapabilities` after checking and move its final array table
   into `HirProgram`.
-- [ ] Remove provisional `CopyCapabilities` values, set clones, per-round HIR
+- [x] Remove provisional `CopyCapabilities` values, set clones, per-round HIR
   array builds, invalidation loops, duplicate failure paths, and obsolete
   helpers. Organize the remaining private materializer behind a concise
   type-check capability facade if the responsibility warrants a submodule.
-- [ ] Replace implementation-parity-only tests with explicit expected neutral
+- [x] Replace implementation-parity-only tests with explicit expected neutral
   facts and HIR plans plus exhaustive boundary consistency checks. Do not keep
   the old solver as test-only code.
-- [ ] Capture post-change structural counts and paired cleanup measurements,
+- [x] Capture post-change structural counts and paired cleanup measurements,
   compare them with CP01, and apply Gate 2 exactly as written. Record the
   decision and selected CP04 branch immediately.
+
+**Gate 2 decision:** No-go. All structural, ownership, correctness, phase, and
+complexity conditions pass: provisional snapshots and array tables are gone,
+each class plan is built once per family, the final array table is built once
+and moved, exact observations are unchanged, and the owning implementation is
+132 lines smaller. Three complete paired cleanup measurements found one
+repeatable threshold failure. Compiler time for
+`native/runtime-trace-call-recursion-omitted` changed by -2.6%, +11.4%, and
++17.5%; the latter two are the two agreeing outcomes required by the gate.
+Peak RSS stayed within +0.6% for that workload, and no other compiler-time or
+RSS regression crossed five percent twice. The complete evidence is recorded
+in the
+[copy-capability materialization measurements](../development/COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md).
+CP04 must follow the Gate 2 no-go branch and use the CP01/CP02 commits as the
+restoration boundary.
 
 **Tests:** Run the complete neutral lifecycle and type-check capability suites;
 generic class/interface validation; array, optional, inheritance, copy,

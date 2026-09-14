@@ -5,12 +5,15 @@ use crate::{
         HirBaseCopy, HirCopyCapability, HirSelectedCopyOperation, HirSynthesizedFieldCopy,
     },
     identity::{ArrayTypeId, ClassId, CopyAssignmentId, CopyConstructorId, FieldId},
-    resolve::ResolvedCopyOperation,
+    resolve::{ResolvedCopyOperation, ResolvedTypeKind},
     type_capabilities::{
         LifecycleComputationReport, LifecyclePathElement, ResolvedLifecycleCapabilities,
     },
     typeck::{
-        capabilities::{CopyCapabilities, CopyCapabilityComputationReport},
+        capabilities::{
+            materialize_constructor_plans_for_test, CopyCapabilities,
+            CopyCapabilityComputationReport,
+        },
         type_check, COPY_OPERATION_UNAVAILABLE,
     },
 };
@@ -56,48 +59,11 @@ fn capability_baseline_fixture() -> crate::resolve::ResolvedProgram {
     program
 }
 
-fn assert_resolved_lifecycle_matches_hir_plans(program: &crate::resolve::ResolvedProgram) {
-    let resolved = ResolvedLifecycleCapabilities::compute(program);
-    let hir = CopyCapabilities::compute(program);
-    for class in program.classes.iter() {
-        assert_eq!(
-            resolved.constructor(class.id),
-            hir.constructor(class.id).selected().is_some(),
-            "copy-constructor capability diverged for {}",
-            class.name
-        );
-        assert_eq!(
-            resolved.assignment(class.id),
-            hir.assignment(class.id).selected().is_some(),
-            "copy-assignment capability diverged for {}",
-            class.name
-        );
-        assert_eq!(
-            resolved.constructor_failure(class.id),
-            hir.constructor_failure(class.id)
-        );
-        assert_eq!(
-            resolved.assignment_failure(class.id),
-            hir.assignment_failure(class.id)
-        );
-    }
-    for array in program.array_types.iter() {
-        assert_eq!(
-            resolved.array_copy(array.id),
-            hir.array(array.id).lifecycle.copy.is_some()
-        );
-        assert_eq!(
-            resolved.array_assignment(array.id),
-            hir.array(array.id).lifecycle.assignment.is_some()
-        );
-    }
-}
-
 #[test]
-fn capability_baseline_records_reconstruction_without_global_instrumentation() {
+fn capability_materialization_records_one_pass_construction() {
     let program = capability_baseline_fixture();
     let (hir, mut hir_report) = CopyCapabilities::compute_with_report(&program);
-    let published_arrays = hir.array_types_with_report(&mut hir_report);
+    let published_arrays = hir.into_array_types_with_report(&mut hir_report);
     let (_, neutral_report) = ResolvedLifecycleCapabilities::compute_with_report(&program);
 
     assert_eq!(published_arrays.len(), 5);
@@ -112,18 +78,20 @@ fn capability_baseline_records_reconstruction_without_global_instrumentation() {
                 assignment_array_entry_evaluations: 10,
                 final_array_entry_evaluations: 10,
             },
-            constructor_rounds: 2,
-            assignment_rounds: 2,
-            cloned_constructor_records: 36,
-            cloned_assignment_records: 36,
-            provisional_array_builds: 4,
-            provisional_array_entries: 20,
+            constructor_rounds: 0,
+            assignment_rounds: 0,
+            cloned_constructor_records: 0,
+            cloned_assignment_records: 0,
+            provisional_array_builds: 0,
+            provisional_array_entries: 0,
             final_array_builds: 1,
             final_array_entries: 5,
-            final_publication_clones: 1,
-            final_publication_entries: 5,
+            final_publication_clones: 0,
+            final_publication_entries: 0,
+            final_publication_moves: 1,
+            final_publication_moved_entries: 5,
             constructor_plan_constructions: 9,
-            assignment_plan_constructions: 18,
+            assignment_plan_constructions: 9,
         }
     );
     assert_eq!(
@@ -136,6 +104,36 @@ fn capability_baseline_records_reconstruction_without_global_instrumentation() {
             final_array_entry_evaluations: 10,
         }
     );
+}
+
+#[test]
+#[should_panic(
+    expected = "neutral lifecycle marked unavailable resolved copy constructor available"
+)]
+fn materialization_rejects_an_available_fact_without_a_resolved_operation() {
+    let mut program = resolve_text(concat!(
+        "class Value { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let lifecycle = ResolvedLifecycleCapabilities::compute(&program);
+    program.classes.entries_mut_for_test()[0].copy_constructor = ResolvedCopyOperation::Unavailable;
+
+    materialize_constructor_plans_for_test(&program, &lifecycle);
+}
+
+#[test]
+#[should_panic(expected = "available through recursive class dependency")]
+fn materialization_rejects_an_available_synthesized_dependency_cycle() {
+    let mut program = resolve_text(concat!(
+        "class Value { value: i64; init() { self.value = 0; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let lifecycle = ResolvedLifecycleCapabilities::compute(&program);
+    program.classes.entries_mut_for_test()[0].fields[0]
+        .type_syntax
+        .kind = ResolvedTypeKind::Class(ClassId::new(0));
+
+    materialize_constructor_plans_for_test(&program, &lifecycle);
 }
 
 #[test]
@@ -469,32 +467,6 @@ fn capability_baseline_freezes_exact_facts_failure_paths_and_hir_plans() {
         .is_some());
     assert!(hir.array(ArrayTypeId::new(4)).lifecycle.copy.is_some());
     assert_eq!(hir.array(ArrayTypeId::new(4)).lifecycle.assignment, None);
-    assert_resolved_lifecycle_matches_hir_plans(&program);
-}
-
-#[test]
-fn phase_neutral_lifecycle_facts_match_hir_plan_availability() {
-    let mut resolved = resolve_text(concat!(
-        "class Good { init() {} }\n",
-        "class Bad { init() {} }\n",
-        "class Aggregate {\n",
-        "  direct: Good; optional: Good??; values: Good?[]; bad: Bad?[];\n",
-        "  init() {}\n",
-        "}\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-    let bad = resolved
-        .classes
-        .iter()
-        .find(|class| class.name == "Bad")
-        .unwrap()
-        .id;
-    resolved.classes.entries_mut_for_test()[bad.index()].copy_constructor =
-        ResolvedCopyOperation::Unavailable;
-    resolved.classes.entries_mut_for_test()[bad.index()].copy_assignment =
-        ResolvedCopyOperation::Unavailable;
-
-    assert_resolved_lifecycle_matches_hir_plans(&resolved);
 }
 
 #[test]
@@ -616,7 +588,6 @@ fn recursive_synthesis_terminates_and_marks_the_capability_unavailable() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert_resolved_lifecycle_matches_hir_plans(&resolved);
     let capabilities = CopyCapabilities::compute(&resolved);
     assert_eq!(
         capabilities.constructor(ClassId::new(0)),

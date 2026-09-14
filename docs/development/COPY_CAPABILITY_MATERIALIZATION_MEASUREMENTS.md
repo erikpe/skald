@@ -1,12 +1,13 @@
 # Copy-Capability Materialization Measurements
 
-Status: CP01 baseline accepted and CP02 transition recorded on 2026-09-14.
-Gate 1 is **go**; CP03 is next.
+Status: CP01–CP03 measured on 2026-09-14. Gate 1 is **go** and Gate 2 is
+**no-go**; CP04 reversion is next.
 
 This document records the structural and operational baseline for the
 [copy-capability materialization roadmap](../roadmaps/COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
-The structural report measures the current duplicate availability solvers and
-HIR reconstruction directly. The ordinary
+The structural report measures the baseline duplicate availability solvers,
+the CP02 transition, and the experimental one-pass materializer directly. The
+ordinary
 [cleanup measurement baseline](CLEANUP_MEASUREMENTS.md) supplies the broader
 compiler-time and peak-memory reference for the later retention decision.
 
@@ -166,3 +167,76 @@ completed facade discards those duplicate paths.
 Resolver candidate queries remain unchanged: their lazy neutral result is
 owned by `GenericCapabilityQuery` over its borrowed candidate view and is
 never stored in or transferred through `ResolvedProgram`.
+
+## CP03 structural result
+
+The neutral-guided materializer removes the type-check availability solver and
+uses identity-indexed visit state only to order construction and reject an
+available dependency cycle as an internal consistency defect. The maintained
+nine-class, five-array fixture reports:
+
+| Type-check materialization | CP01/CP02 | CP03 |
+| --- | ---: | ---: |
+| Legacy constructor convergence rounds | 2 | 0 |
+| Legacy assignment convergence rounds | 2 | 0 |
+| Class plan records cloned into provisional views | 72 | 0 |
+| Provisional HIR array-table builds | 4 | 0 |
+| Provisional HIR array entries | 20 | 0 |
+| Constructor class-plan constructions | 9 | 9 |
+| Assignment class-plan constructions | 18 | 9 |
+| Final HIR array-table builds | 1 | 1 |
+| Final HIR array entries | 5 | 5 |
+| Final publication clones / entries | 1 / 5 | 0 / 0 |
+| Final publication moves / entries | 0 / 0 | 1 / 5 |
+
+The neutral computation remains one result with the same two constructor and
+two assignment rounds and the same 30 total array-entry evaluations. Exact
+expected facts, failure paths, selected operations, base and field order,
+final fields, and array lifecycle slots remain unchanged. Focused defect tests
+also confirm that a stale available fact with no resolved operation or with a
+new synthesized dependency cycle terminates as a compiler consistency defect.
+The materializer implementation reduces `typeck/capabilities.rs` from 688 to
+556 lines while removing the second availability algorithm and its failure
+paths.
+
+## Gate 2 operational comparison
+
+Three complete pairs used the same `golden` profile, 19-workload inventory,
+three compiler samples, one native warmup, five native samples, 30-second
+timeout, 17-occurrence MIR schedule, target, and runtime-trace policies. The
+clean CP02 compiler was preserved before editing and paired with the CP03
+compiler in these ignored reports:
+
+| Pair | CP02 report | CP03 report |
+| ---: | --- | --- |
+| 1 | `run-57b9ma8t/report.json` | `run-f2zw02lm/report.json` |
+| 2 | `run-scxvxdou/report.json` | `run-44mtmjyb/report.json` |
+| 3 | `run-n78i_9aa/report.json` | `run-2vg3zqk1/report.json` |
+
+Every workload retained identical deterministic compiler arguments, source
+inventory, pass observations, assembly artifacts, and native semantic
+observations. Peak RSS stayed within the five-percent threshold in every pair.
+The four compile-pressure workloads also stayed within the compiler-time
+threshold in all three pairs:
+
+| Workload | Pair 1 | Pair 2 | Pair 3 |
+| --- | ---: | ---: | ---: |
+| `compile/small-source` | +3.0% | +4.2% | -0.4% |
+| `compile/many-modules-large-cfg` | -0.5% | +1.1% | +1.6% |
+| `compile/many-generic-applications` | -0.7% | -2.0% | -0.7% |
+| `compile/nested-ownership` | +1.1% | +0.6% | +1.8% |
+
+One short compiler workload crossed the threshold in two pairs. For
+`native/runtime-trace-call-recursion-omitted`, the compiler-time medians were
+3.121 to 3.039 ms (-2.6%), 2.915 to 3.247 ms (+11.4%), and 2.887 to 3.393 ms
+(+17.5%). Its corresponding peak-RSS deltas were +0.4%, +0.1%, and +0.6%.
+No other workload crossed the same compiler-time or RSS threshold in two
+pairs.
+
+Gate 2 is therefore **no-go** under the accepted rule, despite the structural,
+ownership, correctness, and complexity conditions passing. The second and
+third pairs are the required two agreeing outcomes for a repeatable
+compiler-time regression above five percent. CP04 must restore the original
+type-check solver and final array-table publication, remove migration-only
+CP02/CP03 authority wiring, and retain only independently useful measurements,
+fixtures, and guards.

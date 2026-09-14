@@ -7,6 +7,7 @@ use crate::{
     },
     identity::ClassId,
     resolve::{ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind},
+    type_capabilities::ResolvedLifecycleCapabilities,
 };
 
 use super::super::{capabilities::CopyCapabilityPlans, conversion::lower_type};
@@ -14,6 +15,7 @@ use super::super::{capabilities::CopyCapabilityPlans, conversion::lower_type};
 pub(in crate::typeck) fn lower_array_types(
     program: &ResolvedProgram,
     class_capabilities: &CopyCapabilityPlans,
+    lifecycle: &ResolvedLifecycleCapabilities,
 ) -> HirArrayTypeTable {
     let mut entries = Vec::with_capacity(program.array_types.len());
     for array in program.array_types.iter() {
@@ -23,13 +25,14 @@ pub(in crate::typeck) fn lower_array_types(
             element,
             lifecycle: HirArrayLifecycle {
                 default: default_element(program, array.element.kind),
-                copy: copy_element(program, class_capabilities, &entries, array.element.kind),
-                assignment: assignment_element(
-                    program,
-                    class_capabilities,
-                    &entries,
-                    array.element.kind,
-                ),
+                copy: lifecycle.array_copy(array.id).then(|| {
+                    copy_element(program, class_capabilities, &entries, array.element.kind)
+                        .expect("neutral-available array copy must have a concrete HIR plan")
+                }),
+                assignment: lifecycle.array_assignment(array.id).then(|| {
+                    assignment_element(program, class_capabilities, &entries, array.element.kind)
+                        .expect("neutral-available array assignment must have a concrete HIR plan")
+                }),
                 destruction: destruction_element(program, array.element.kind),
             },
         });

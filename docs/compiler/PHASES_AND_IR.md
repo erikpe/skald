@@ -186,10 +186,12 @@ storage eligibility and recursive class, optional, and array lifecycle
 availability, including diagnostic failure paths. Resolution never imports
 type checking or HIR to answer those questions. Each type-check request
 computes and retains one fresh neutral result from the final selected resolved
-program, borrows its failure paths for diagnostics, and separately constructs
-concrete HIR lifecycle plans. The completed private capability facade asserts
-class, array, and failure-path agreement at this boundary. Resolver-local lazy
-results remain confined to candidate validation and do not cross publication.
+program, borrows its failure paths for diagnostics, and uses its availability
+facts to materialize each concrete HIR class lifecycle plan once. Type checking
+then builds one canonical HIR array lifecycle table and moves it into the
+completed `HirProgram`. The private capability facade asserts exhaustive class
+and array agreement at the construction boundary. Resolver-local lazy results
+remain confined to candidate validation and do not cross publication.
 This is a supporting semantic service rather than a compiler phase. Its
 implementation may depend directly on source and resolved products, while
 resolution and type checking are its explicit phase consumers. The
