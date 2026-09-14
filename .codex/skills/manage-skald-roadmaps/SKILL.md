@@ -11,15 +11,14 @@ documentation.
 
 ## Establish context
 
-1. Inspect `git status` and recent history before interpreting the current
-   diff. Skald roadmap tasks are normally committed locally between PR-sized
-   steps, so completed prerequisite work may be present in `HEAD` without
-   appearing in the working-tree diff.
-2. Identify the semantic baseline for the selected task from the roadmap and
-   commit history. Review both the current working-tree change and the
-   cumulative change since that baseline when checking scope, dependencies,
-   retained scaffolding, or behavior that a later task must replace.
-3. Read the repository guidance, living architecture, implemented grammar,
+1. Inspect repository status and history. The user normally commits locally
+   between PR-sized tasks; a clean working tree says nothing about whether
+   earlier scaffolding still needs removal.
+2. Record the roadmap baseline: the last commit before implementation began.
+   Recover it from history for an existing roadmap, and distinguish unrelated
+   intervening changes from roadmap work. Use a task-specific baseline as well
+   when following behavior introduced or replaced by an earlier task.
+3. Read the repository guidance, relevant living architecture, grammar,
    relevant specification sections, active roadmap index, and related tests.
 4. Inspect the implementation before proposing boundaries. Base tasks on actual
    ownership, dependencies, invariants, and validation commands.
@@ -52,6 +51,7 @@ Use this shape without referring to another roadmap as the template:
 # <Outcome> Roadmap
 
 Status: planned; <TASK0> is next.
+Implementation baseline: <commit hash; record before the first code change>.
 
 <Why the outcome matters and what durable state it creates.>
 
@@ -64,6 +64,7 @@ Status: planned; <TASK0> is next.
 
 - [ ] <TASK0> — <semantic task name>
 - [ ] <TASK1> — <semantic task name>
+- [ ] <FINAL> — Cumulative review, cleanup, and closure
 
 ## PR-sized implementation sequence
 
@@ -93,9 +94,15 @@ Apply these rules:
 - Make every named task fit one reviewable PR with one primary purpose. Split a
   large finding across multiple tasks; combine small findings only when they
   share ownership and validation.
-- Give every task an explicit purpose, implementation checklist, focused test
-  plan, and objective exit criteria. Include documentation work in the task
-  that changes the documented behavior.
+- Give every task a purpose, implementation checklist, test plan, and objective
+  exit criteria. Include documentation with the behavior change. Make the final
+  task the cumulative review described under "Close a roadmap"; include its
+  cleanup and validation work before archival.
+- When introducing temporary code, keep a compact artifact ledger in the
+  roadmap: file/symbol, introducing task and commit when available, intended
+  removal task, and final disposition. Cover bridges, aliases, gates, lint
+  allowances, exploratory code, and instrumentation. Any retained artifact
+  needs a continuing purpose and an explicit retention criterion.
 - Preserve important behavior and exclusions explicitly: diagnostics, dumps,
   evaluation order, ownership, IDs, ABI, public paths, and deterministic output
   where relevant.
@@ -108,36 +115,30 @@ Apply these rules:
 
 ## Implement a roadmap task
 
-1. Recheck repository status and history, then read the whole roadmap and the
-   selected task before editing. Confirm its dependencies are complete and
-   identify their commits; do not infer completion only from the current diff.
-2. Choose the semantic baseline that owns the behavior being changed. Inspect
-   committed prerequisite changes, current source, and uncommitted work as one
-   implementation sequence while preserving their PR-sized boundaries.
-3. Inspect all affected owners, callers, tests, and living documentation.
-4. Implement in coherent increments. Refactoring that materially improves
-   long-term clarity and maintainability is encouraged when it supports the
-   task and preserves behavior.
-5. Mark detail checkboxes as their results are actually completed. Mark the
+1. Establish context as above, read the whole roadmap, and verify the selected
+   task's prerequisites against their commits and current source.
+2. Inspect affected owners, callers, tests, documentation, and the artifact
+   ledger. Remove transitions due in this task even when already committed.
+3. Implement in coherent increments, including small maintainability fixes that
+   support the task. Update the ledger as artifacts are introduced or retired.
+4. Mark detail checkboxes as their results are actually completed. Mark the
    progress-summary checkbox only after tests and exit criteria pass.
-6. Put additional candidates in the roadmap's discoveries document instead of
+5. Put additional candidates in the roadmap's discoveries document instead of
    expanding the reviewed task. Record the problem, evidence, likely owner,
    priority, and a useful boundary for later work.
-7. Keep tests with their owner: implementation-private phase tests colocated,
+6. Keep tests with their owner: implementation-private phase tests colocated,
    public/cross-phase Rust tests in the crate integration-test directory,
    reusable non-Rust corpora under the top-level test tree, and complete
    source-to-observation behavior in golden tests.
-8. Run proportionate focused checks during implementation, then the documented
+7. Run proportionate focused checks during implementation, then the documented
    full repository gate. Run the MSRV target when Rust targets, manifests, or
    supported syntax may be affected.
 
-For experimental tasks with a revert or no-go branch, treat commits as
-milestone boundaries rather than assuming the experiment is contained in the
-working tree. Identify the last accepted implementation commit, restore only
-the rejected implementation and migration scaffolding from the appropriate
-committed boundary, and retain independently useful tests, measurements,
-guards, and decision records. Avoid broad history rewrites or whole-tree resets
-that would discard accepted evidence or unrelated work.
+On an experimental no-go, identify the last accepted implementation commit and
+selectively restore rejected code and scaffolding from the appropriate boundary.
+Retain independently useful tests, measurements, guards, and decision records;
+record their disposition in the ledger. Preserve unrelated work and local commit
+history rather than resetting the whole tree.
 
 ## Keep documentation current
 
@@ -155,19 +156,30 @@ that would discard accepted evidence or unrelated work.
 
 ## Close a roadmap
 
-1. Confirm every task checkbox, test plan, and exit criterion is complete.
-2. Audit remaining large files and functions by responsibility rather than
-   size alone. Resolve high-priority hotspots; place lower-priority findings in
-   the indexed discoveries document.
-3. Remove roadmap codes and stale rollout language from living code and docs.
-   Do not rewrite historical vocabulary in existing archived roadmaps.
-4. Run the full repository quality gate from an artifact-free snapshot or clean
-   checkout, plus any separate supported-toolchain gates.
-5. Set the roadmap status to complete and mark its progress summary complete.
-6. Move it from `docs/roadmaps/` to `docs/archive/`, remove it from the active
-   index, add it to the archive index, and repair incoming links.
-7. Leave pending discoveries under `docs/roadmaps/`; archive or remove a
-   discoveries document only when no actionable item remains.
-8. Verify formatting, links, repository status, and diff hygiene before handoff.
-   Review the cumulative roadmap diff as well as the working-tree diff when
-   earlier tasks have already been committed.
+Review the complete implementation before marking it complete or archiving it.
+
+1. Review `git diff <baseline>..HEAD` (including its `--stat` and `--name-status`
+   views), then include staged, unstaged, and untracked work in the review. Read
+   the resulting code as one change, checking the accepted design, ownership,
+   interfaces, invariants, and behavior across task boundaries.
+2. Reconcile every ledger entry with current source and history; use symbol
+   searches and `git log -S` when needed. Check beyond the ledger for duplicate
+   implementations, leftover adapters, unnecessary exports, allowances, and
+   stale names, comments, or diagnostics. Verify retained test or measurement
+   machinery has a continuing purpose and appropriate visibility or test gates.
+3. Make small cleanup and consistency fixes in the closing change. Resolve
+   substantial design or correctness gaps in an explicit implementation task
+   before closure; record independent improvements in indexed discoveries.
+4. Verify tests exercise the final interfaces and documentation describes the
+   final behavior. Reconcile the design, roadmap, audit entries, and indexes;
+   remove task codes and rollout language from living code and documentation.
+5. After fixups, run the full repository quality gate from an artifact-free
+   snapshot or clean checkout, plus required supported-toolchain gates. Confirm
+   all task checkboxes and exit criteria, including this review, are satisfied.
+6. Record the reviewed baseline and endpoint, residual changes awaiting commit,
+   artifact dispositions, and validation results concisely in the roadmap.
+   Mark it complete, move it to `docs/archive/`, update both indexes, and repair
+   links. Keep discoveries active while actionable work remains.
+7. Check the final cumulative and closing diffs, formatting, links, and status.
+   Prepare a reviewable closing change; leave committing to the user unless
+   explicitly requested.
