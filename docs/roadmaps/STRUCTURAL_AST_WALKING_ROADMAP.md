@@ -1,6 +1,6 @@
 # Structural AST Walking Roadmap
 
-Status: in progress; W01 through W03 are complete and W04 is next.
+Status: in progress; W01 through W04 are complete and W05 is next.
 
 This roadmap implements
 [cleanup finding A13](CODEBASE_CLEANUP_AUDIT.md#a13--share-structural-ast-walking-where-responsibilities-repeat)
@@ -59,7 +59,7 @@ phase product remain with their current owners.
 - [x] W01 — Establish the iterative syntax traversal contract
 - [x] W02 — Migrate non-semantic structural consumers
 - [x] W03 — Restore and freeze specialization source order
-- [ ] W04 — Migrate specialization discovery
+- [x] W04 — Migrate specialization discovery
 - [ ] W05 — Audit the boundary and close A13
 
 ## PR-sized implementation sequence
@@ -266,24 +266,24 @@ unit tests, all 53 process-determinism cases, and all 629 golden executions;
 identity-sensitive semantic contract and the shared traversal contract are
 both stable.
 
-- [ ] Implement the shared visitor at the specialization request owner and
+- [x] Implement the shared visitor at the specialization request owner and
   start it once for each `ModuleUnit` in the existing canonical module order.
-- [ ] On generic class or interface declaration entry, retain the current rule
+- [x] On generic class or interface declaration entry, retain the current rule
   that applications inside an unrequested template are discovered only after
   substitution closes that template, and prune the complete declaration.
-- [ ] Close each emitted `TypeSyntax` or `NamedTypeSyntax` occurrence once with
+- [x] Close each emitted `TypeSyntax` or `NamedTypeSyntax` occurrence once with
   `SyntaxTypeCloser`. Keep lookup, diagnostic suppression/reporting choices,
   interning, recursion handling, request activation, and provenance in
   resolution.
-- [ ] Preserve corrected source order across declarations, class members,
+- [x] Preserve corrected source order across declarations, class members,
   statements, expressions, arguments, conditional arms, loop sources, and
   projections. Preserve module order separately from within-unit order.
-- [ ] Remove superseded `visit_declaration`, `visit_member`, `visit_block`,
+- [x] Remove superseded `visit_declaration`, `visit_member`, `visit_block`,
   `visit_statement`, `visit_expression`, call-argument, and expression-list
   recursion. Remove no semantic closing or coordinator logic.
-- [ ] Keep ordinary resolver, generic-template body, and semantic range walks
+- [x] Keep ordinary resolver, generic-template body, and semantic range walks
   explicit. Do not route them through events as part of this migration.
-- [ ] Update specialization owner documentation and focused debugging/testing
+- [x] Update specialization owner documentation and focused debugging/testing
   guidance for the final boundary where useful.
 
 **Tests:** Run the all-shapes walker fixture together with specialization tests
@@ -299,6 +299,34 @@ and owns only semantic reactions to node events; its old structural recursion
 is gone; exact request order, identities, origins, diagnostics, and downstream
 behavior match the W03 baseline; and no resolver authority has moved into
 syntax.
+
+#### W04 delivery record
+
+Explicit closed-application discovery now starts the shared iterative syntax
+walk once for each module in the existing canonical module order. Its
+resolver-owned visitor has only three semantic reactions: prune an unrequested
+generic class or interface declaration, close a complete `TypeSyntax`, or
+close a complete `NamedTypeSyntax`. Lookup, diagnostic policy, interning,
+request activation, recursion handling, provenance, and identity allocation
+remain in `SyntaxTypeCloser` and the specialization coordinator.
+
+The old declaration, member, block, statement, expression, call-argument, and
+expression-list recursion has been removed. A focused valid fixture repeats
+`Box<i64>` through class headers, fields, static initialization, function and
+member signatures, locals, casts and tests, construction forms, calls,
+conditionals, both loop sources, assignments, and projections. It asserts that
+every written occurrence contributes exactly one ordered provenance span and
+that `Box<bool>` inside an unrequested template remains undiscovered. The W03
+identity and resolved-dump baseline remains unchanged.
+
+Focused validation passed six walker-contract tests, all 56 specialization
+tests, 26 generic-class tests, 22 interface tests, 25 semantic-range tests, six
+bounded generative robustness tests, and 110 full-determinism golden leaves
+covering generics, interfaces, arrays, ranges, function values, static fields,
+and object casts. The release-profile expression-depth process tests also
+passed. The full `make check` gate passed with 3,160 compiler unit tests, all
+53 process-determinism cases, and all 629 golden executions; `make msrv-check`
+passed with Rust 1.82.0.
 
 ### W05 — Audit the boundary and close A13
 

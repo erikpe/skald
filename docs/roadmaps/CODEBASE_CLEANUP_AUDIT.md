@@ -714,7 +714,9 @@ were delivered on 2026-09-13. Parser depth measurement and compiler dependency
 collection now use that contract while retaining phase-owned policy. The
 specialization scanner now closes local annotations before their initializers,
 with exact identity, provenance, dump-order, and downstream regression
-coverage. Specialization discovery still uses its old recursive scanner.
+coverage. Explicit specialization discovery now uses the shared iterative
+walker while retaining template pruning, type closing, lookup, diagnostics,
+provenance, and identity allocation in resolution.
 
 **Accepted design:**
 [Structural AST Walking Design Proposal](../archive/STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md).
@@ -727,17 +729,17 @@ coverage. Specialization discovery still uses its old recursive scanner.
 [expression-depth validation](../../crates/skald-compiler/src/syntax/parser/expression_depth.rs),
 and the specialization
 [source request scanner](../../crates/skald-compiler/src/resolve/resolver/program/specialization/requests/source_request_scanner.rs)
-each traverse source structure. Every new statement/expression form expands
-the review surface for omissions.
+now share the syntax-owned structural traversal while retaining their distinct
+phase policy.
 
 **Change:** provide small syntax-owned structural walkers with explicit child
 order and prune/continue control where at least two consumers agree. Keep
 binding scopes, depth accounting, and dependency meaning with the consumer.
 Prefer iterative traversal where it also addresses A01.
 
-**Next step:** migrate specialization discovery onto the established walker
-against the frozen source-order baseline. Avoid a generic visitor framework
-for all compiler IRs.
+**Next step:** audit the final structural boundary, remaining AST matches, and
+living guidance; then close A13 if the abstraction remains narrow and no
+superseded structural traversal remains.
 
 ### A14 — Separate object-view planning from alias-argument checking
 

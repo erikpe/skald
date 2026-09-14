@@ -2728,9 +2728,10 @@ defines only parent/child structure: depth policy, dependency meaning, name
 resolution, scopes, diagnostics, identities, and later-phase construction stay
 with their phase owners. This traversal surface is internal to the compiler
 and is not part of the workspace-facing syntax API. Parser expression-depth
-measurement and compiler dependency discovery use this shared structure while
-retaining their limits, dependency kinds, and evidence policy in their owning
-modules.
+measurement, compiler dependency discovery, and explicit closed-specialization
+request discovery use this shared structure. Their owning modules retain depth
+limits, dependency kinds and evidence, template pruning, type closing, lookup,
+diagnostics, provenance, and identity allocation.
 
 Optional AST nodes retain separate payload, `shared`, `?`, `!`, `is`, and
 presence-target spans. `none`, presence tests, and unwrap are distinct

@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Structural AST walking](STRUCTURAL_AST_WALKING_ROADMAP.md) | In progress | Give source-shaped structural traversal one private iterative syntax owner while preserving phase-owned meaning | W04 — Migrate specialization discovery | Accepted structural-walking design; completed A01 and A09–A12 boundaries |
+| [Structural AST walking](STRUCTURAL_AST_WALKING_ROADMAP.md) | In progress | Give source-shaped structural traversal one private iterative syntax owner while preserving phase-owned meaning | W05 — Audit the boundary and close A13 | Accepted structural-walking design; completed A01 and A09–A12 boundaries |
 
 ## Pending discovery and planning records
 

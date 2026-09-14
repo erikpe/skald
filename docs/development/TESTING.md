@@ -1581,6 +1581,13 @@ overrides, generic class/interface bounds, definition-site template
 requirement selection, explicit closed requirement mappings, ordinary bound
 dispatch, ownership-sensitive results, diagnostics, modules, and dumps.
 
+The specialization request owner composes that semantic coverage with the
+shared structural walker. A focused source fixture repeats one closed
+application through every type-bearing declaration, member, statement, and
+expression family, then compares its complete ordered provenance with the
+source occurrences. It also proves that an unrequested generic template is
+pruned before its internal application is observed.
+
 `tests/golden/standard_vec/` owns `std::vec::Vec<T>` behavior. The matrix covers
 primitives, `Str`, nested optionals, exact inline lifecycle, nested arrays,
 shared strings, shared interface and heterogeneous `shared Obj` owners,

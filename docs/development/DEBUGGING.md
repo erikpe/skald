@@ -191,6 +191,17 @@ same across selective imports, aliases, provider-root spellings, and process
 runs. Numeric IDs remain beside those names wherever identity relationships
 matter.
 
+Explicit closed-application discovery observes the shared source-order syntax
+walk, while the specialization request owner retains template pruning, lookup,
+type closing, diagnostics, provenance, and identity allocation. When a request
+is missing or reordered, compare the opaque type-event contract with the
+request-owner regressions before following the generated declaration:
+
+```text
+cargo test --locked -p skald-compiler syntax::walk
+cargo test --locked -p skald-compiler specialization::requests::tests
+```
+
 For generic interfaces, first inspect `Interface` AST nodes for
 `TypeParameters` and `WhereClause`, then inspect resolved
 `ModuleDeclarations`, `InterfaceTemplates`, `InterfaceTemplateSemantics`, and

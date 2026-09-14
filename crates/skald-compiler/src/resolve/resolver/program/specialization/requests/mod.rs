@@ -1,7 +1,8 @@
 //! Canonical source-order discovery of explicit closed applications.
 //!
-//! This facade owns discovery inputs and coordinates syntax closing with the
-//! source-order AST scanner. Each traversal remains private to this module.
+//! This facade owns discovery inputs and coordinates resolver-owned type
+//! closing with the shared source-order AST walker. Template pruning, lookup,
+//! diagnostics, and identity allocation remain private to resolution.
 
 mod source_request_scanner;
 mod syntax_type_closer;
