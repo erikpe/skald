@@ -5,20 +5,12 @@ use crate::{
         HirBaseCopy, HirCopyCapability, HirSelectedCopyOperation, HirSynthesizedFieldCopy,
     },
     identity::{ArrayTypeId, ClassId, CopyAssignmentId, CopyConstructorId, FieldId},
-    resolve::{ResolvedCopyOperation, ResolvedTypeKind},
-    type_capabilities::{
-        LifecycleComputationReport, LifecyclePathElement, ResolvedLifecycleCapabilities,
-    },
-    typeck::{
-        capabilities::{
-            materialize_constructor_plans_for_test, CopyCapabilities,
-            CopyCapabilityComputationReport,
-        },
-        type_check, COPY_OPERATION_UNAVAILABLE,
-    },
+    resolve::ResolvedCopyOperation,
+    type_capabilities::{LifecyclePathElement, ResolvedLifecycleCapabilities},
+    typeck::{capabilities::CopyCapabilities, type_check, COPY_OPERATION_UNAVAILABLE},
 };
 
-fn capability_baseline_fixture() -> crate::resolve::ResolvedProgram {
+fn lifecycle_capability_fixture() -> crate::resolve::ResolvedProgram {
     let mut program = resolve_text(concat!(
         "class Empty { init() {} }\n",
         "class User {\n",
@@ -60,85 +52,8 @@ fn capability_baseline_fixture() -> crate::resolve::ResolvedProgram {
 }
 
 #[test]
-fn capability_materialization_records_one_pass_construction() {
-    let program = capability_baseline_fixture();
-    let (hir, mut hir_report) = CopyCapabilities::compute_with_report(&program);
-    let published_arrays = hir.into_array_types_with_report(&mut hir_report);
-    let (_, neutral_report) = ResolvedLifecycleCapabilities::compute_with_report(&program);
-
-    assert_eq!(published_arrays.len(), 5);
-    assert_eq!(
-        hir_report,
-        CopyCapabilityComputationReport {
-            neutral_computations: 1,
-            neutral_lifecycle: LifecycleComputationReport {
-                constructor_rounds: 2,
-                assignment_rounds: 2,
-                constructor_array_entry_evaluations: 10,
-                assignment_array_entry_evaluations: 10,
-                final_array_entry_evaluations: 10,
-            },
-            constructor_rounds: 0,
-            assignment_rounds: 0,
-            cloned_constructor_records: 0,
-            cloned_assignment_records: 0,
-            provisional_array_builds: 0,
-            provisional_array_entries: 0,
-            final_array_builds: 1,
-            final_array_entries: 5,
-            final_publication_clones: 0,
-            final_publication_entries: 0,
-            final_publication_moves: 1,
-            final_publication_moved_entries: 5,
-            constructor_plan_constructions: 9,
-            assignment_plan_constructions: 9,
-        }
-    );
-    assert_eq!(
-        neutral_report,
-        LifecycleComputationReport {
-            constructor_rounds: 2,
-            assignment_rounds: 2,
-            constructor_array_entry_evaluations: 10,
-            assignment_array_entry_evaluations: 10,
-            final_array_entry_evaluations: 10,
-        }
-    );
-}
-
-#[test]
-#[should_panic(
-    expected = "neutral lifecycle marked unavailable resolved copy constructor available"
-)]
-fn materialization_rejects_an_available_fact_without_a_resolved_operation() {
-    let mut program = resolve_text(concat!(
-        "class Value { init() {} }\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-    let lifecycle = ResolvedLifecycleCapabilities::compute(&program);
-    program.classes.entries_mut_for_test()[0].copy_constructor = ResolvedCopyOperation::Unavailable;
-
-    materialize_constructor_plans_for_test(&program, &lifecycle);
-}
-
-#[test]
-#[should_panic(expected = "available through recursive class dependency")]
-fn materialization_rejects_an_available_synthesized_dependency_cycle() {
-    let mut program = resolve_text(concat!(
-        "class Value { value: i64; init() { self.value = 0; } }\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-    let lifecycle = ResolvedLifecycleCapabilities::compute(&program);
-    program.classes.entries_mut_for_test()[0].fields[0]
-        .type_syntax
-        .kind = ResolvedTypeKind::Class(ClassId::new(0));
-
-    materialize_constructor_plans_for_test(&program, &lifecycle);
-}
-
-#[test]
-fn capability_baseline_freezes_exact_facts_failure_paths_and_hir_plans() {
-    let program = capability_baseline_fixture();
+fn copy_capability_facts_failure_paths_and_hir_plans_are_exact() {
+    let program = lifecycle_capability_fixture();
     let neutral = ResolvedLifecycleCapabilities::compute(&program);
     let hir = CopyCapabilities::compute(&program);
 
@@ -279,18 +194,19 @@ fn capability_baseline_freezes_exact_facts_failure_paths_and_hir_plans() {
             .as_slice()
         )
     );
-    assert!(std::ptr::eq(
-        hir.constructor_failure(ClassId::new(6)).unwrap(),
-        hir.lifecycle_for_test()
-            .constructor_failure(ClassId::new(6))
-            .unwrap(),
-    ));
-    assert!(std::ptr::eq(
-        hir.assignment_failure(ClassId::new(6)).unwrap(),
-        hir.lifecycle_for_test()
-            .assignment_failure(ClassId::new(6))
-            .unwrap(),
-    ));
+    for index in 0..program.classes.len() {
+        let class = ClassId::new(index);
+        assert_eq!(
+            hir.constructor_failure(class),
+            neutral.constructor_failure(class),
+            "constructor failure path c{index}",
+        );
+        assert_eq!(
+            hir.assignment_failure(class),
+            neutral.assignment_failure(class),
+            "assignment failure path c{index}",
+        );
+    }
 
     let HirCopyCapability::Synthesized(constructor) = hir.constructor(ClassId::new(3)) else {
         panic!("derived constructor should be synthesized");

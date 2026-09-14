@@ -180,12 +180,9 @@ origins retain the exact source span and enclosing template construct.
 After substitution, evaluation uses the phase-neutral `type_capabilities`
 service. It owns stored, alias, optional, array, and shared-target eligibility
 plus recursive resolved lifecycle availability for classes and aggregates.
-Resolver candidate validation keeps its result lazy and local to the borrowed
-candidate view. Type checking computes a fresh neutral result from the final
-selected resolved program, retains it for failure diagnostics, and constructs
-each concrete HIR copy and assignment plan once from the neutral availability
-facts. The completed capability facade checks plan availability against the
-neutral authority without making resolution depend on HIR.
+Type checking consumes the same resolved program to construct concrete HIR
+copy and assignment plans; parity tests keep plan availability aligned with
+the neutral facts without making resolution depend on HIR.
 
 The implemented query facade accepts already-closed subjects from the
 specialization owner. That owner is responsible for structural

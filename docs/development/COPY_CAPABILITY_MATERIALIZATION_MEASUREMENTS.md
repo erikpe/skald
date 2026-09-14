@@ -1,29 +1,30 @@
 # Copy-Capability Materialization Measurements
 
-Status: CP01–CP03 measured on 2026-09-14. Gate 1 is **go** and Gate 2 is
-**no-go**; CP04 reversion is next.
+Status: complete on 2026-09-14. Gate 1 was **go**, Gate 2 was **no-go**, and
+the original type-check implementation was restored.
 
 This document records the structural and operational baseline for the
-[copy-capability materialization roadmap](../roadmaps/COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
+[archived copy-capability materialization roadmap](../archive/COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
 The structural report measures the baseline duplicate availability solvers,
 the CP02 transition, and the experimental one-pass materializer directly. The
 ordinary
 [cleanup measurement baseline](CLEANUP_MEASUREMENTS.md) supplies the broader
 compiler-time and peak-memory reference for the later retention decision.
 
-## Reproducing the baseline
+## Reproducing the retained behavior
 
 From the repository root, run:
 
 ```text
-cargo test --locked -p skald-compiler capability_baseline --no-fail-fast
+cargo test --locked -p skald-compiler copy_capability_facts --no-fail-fast
 make cleanup-baseline
 ```
 
-The focused report is request-local and compiled only for Rust unit tests. It
-does not use process-global counters and is absent from the compiler's public
-API, diagnostics, dumps, driver output, and release build. Saturating counters
-record completed structural work without affecting capability decisions.
+The focused test retains the exact semantic fixture without measurement
+instrumentation. The structural counts below were captured through temporary,
+request-local test probes in CP01–CP03. CP04 removed those probes from both
+solvers after the retention decision; the recorded counts remain the durable
+evidence.
 
 The accepted baseline used repository revision
 `7a19c16de1713e390b771dee43565365c01efdd9`. The working tree was dirty with
@@ -41,7 +42,7 @@ target, and a 30-second subprocess timeout.
 
 ## Structural fixture
 
-The maintained `capability_baseline` fixture assigns nine class identities and
+The maintained lifecycle-capability fixture assigns nine class identities and
 five canonical array identities in a fixed order:
 
 | Shape | Fixture coverage |
@@ -100,11 +101,11 @@ The compact phase-neutral computation reports:
 These neutral counts describe boolean availability evaluation. They do not
 construct or clone HIR operation plans.
 
-## Operational context
+## Operational baseline
 
-The operational baseline is observational. CP03 must capture paired runs under
-the roadmap's matching-host policy before applying Gate 2. The four compile
-pressure workloads began at:
+The operational baseline is observational. CP03 captured paired runs under the
+roadmap's matching-host policy before applying Gate 2. The four compile-pressure
+workloads began at:
 
 | Workload | Median compiler time | Median peak RSS |
 | --- | ---: | ---: |
@@ -133,13 +134,13 @@ Gate 1 is **go**. Every mandatory condition is satisfied:
   recursive, and independently unavailable shapes all terminate without an
   arbitrary cap.
 
-CP02 may therefore establish one immutable neutral result at the type-check
-request boundary while retaining the current HIR construction for transition
-assertions.
+This result authorized CP02 to establish one immutable neutral result at the
+type-check request boundary while retaining the current HIR construction for
+transition assertions.
 
 ## CP02 transition cost
 
-The type-check capability facade now computes and retains one fresh neutral
+During CP02, the type-check capability facade computed and retained one fresh neutral
 result from the final selected `ResolvedProgram`. Its test-only report embeds
 exactly one neutral computation report. On the maintained fixture that adds:
 
@@ -154,17 +155,15 @@ exactly one neutral computation report. On the maintained fixture that adds:
 The CP01 HIR reconstruction counts remain unchanged during this transition:
 72 class capability records are still cloned, 20 provisional HIR array entries
 are still constructed, and assignment plans are still constructed twice.
-This temporary combined cost is accepted only to keep the old HIR builder as
-an exhaustive transition oracle. CP03 must remove that duplicate solver and
-provisional construction before Gate 2 can retain the design.
+This temporary combined cost was accepted only to keep the old HIR builder as
+an exhaustive transition oracle. CP03 removed that duplicate solver and
+provisional construction before Gate 2 was evaluated.
 
-Failure diagnostics now borrow their paths from the retained neutral result.
-The fixture checks pointer identity for representative constructor and
-assignment failures as well as exact path contents. Completed-boundary
-assertions compare every class availability, every array availability, and
-every transient old-solver failure path with the neutral authority before the
-completed facade discards those duplicate paths.
-Resolver candidate queries remain unchanged: their lazy neutral result is
+During CP02, failure diagnostics borrowed their paths from the retained neutral
+result. The fixture checked pointer identity for representative failures as
+well as exact path contents, while completed-boundary assertions compared every
+class and array availability and every transient old-solver failure path.
+Resolver candidate queries remained unchanged: their lazy neutral result is
 owned by `GenericCapabilityQuery` over its borrowed candidate view and is
 never stored in or transferred through `ResolvedProgram`.
 
@@ -233,10 +232,32 @@ One short compiler workload crossed the threshold in two pairs. For
 No other workload crossed the same compiler-time or RSS threshold in two
 pairs.
 
-Gate 2 is therefore **no-go** under the accepted rule, despite the structural,
+Gate 2 was therefore **no-go** under the accepted rule, despite the structural,
 ownership, correctness, and complexity conditions passing. The second and
 third pairs are the required two agreeing outcomes for a repeatable
-compiler-time regression above five percent. CP04 must restore the original
-type-check solver and final array-table publication, remove migration-only
-CP02/CP03 authority wiring, and retain only independently useful measurements,
-fixtures, and guards.
+compiler-time regression above five percent.
+
+## Final retained state
+
+CP04 restored the original type-check solver and final array-table publication
+path byte-for-byte from the pre-experiment implementation revision
+`7a19c16de1713e390b771dee43565365c01efdd9`. The request-local CP01 counters,
+CP02 neutral-authority wiring and parity assertions, CP03 materializer, and
+materializer-only defect tests were removed. The maintained explicit fixture
+continues to protect neutral facts and failure paths, concrete HIR operations
+and order, and every array lifecycle slot.
+
+The final repository intentionally contains two lifecycle computations with
+different phase-owned products. Resolver generic candidate validation lazily
+computes compact neutral facts within `GenericCapabilityQuery`. Type checking
+separately computes concrete HIR plans, owns their failure paths, rebuilds
+provisional HIR array tables during convergence, and clones the final table
+into `HirProgram`. No lifecycle result crosses resolver publication and the
+neutral service retains its phase-dependency guard.
+
+No additional operational comparison was needed after restoration because the
+five production files are identical to the pre-experiment revision measured by
+the baseline. This document is the final retained measurement and decision
+record; it does not claim a speedup. Final acceptance from an artifact-free
+snapshot passed `make check`, all 629 golden leaves, and the Rust 1.82.0
+workspace all-target check.

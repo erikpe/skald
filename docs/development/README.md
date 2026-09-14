@@ -136,9 +136,10 @@ directories, subprocess watchdogs, repeated artifact and semantic checks, and
 paired native execution order. It remains outside both validation gates; see
 [Cleanup Measurement Baseline](CLEANUP_MEASUREMENTS.md).
 
-The [copy-capability materialization baseline](COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
-records test-only structural reconstruction counts, exact lifecycle behavior,
-and the accepted Gate 1 decision for the active A17 roadmap.
+The [copy-capability materialization measurement record](COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
+preserves structural reconstruction counts, exact lifecycle behavior, the
+Gate 2 no-go decision, and the restored final state for completed cleanup
+finding A17.
 
 ## Minimum supported Rust version
 

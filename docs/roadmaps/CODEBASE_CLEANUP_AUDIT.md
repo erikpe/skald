@@ -122,7 +122,7 @@ narrower endpoint and names any deferred work.
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Complete | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Complete (bounded) | P2 | 3 | M | Medium | C | M, E |
-| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | In progress | P2 | 4 | M–L | Medium | C | C, M |
+| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Complete (measured no-go) | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Complete | P2 | 3 | M | Medium | O | M, R |
@@ -849,15 +849,16 @@ evidence.
 
 ### A17 — Reduce copy-capability fixed-point reconstruction
 
-**Status:** In progress; CP03 met the structural and correctness goals but Gate
-2 is no-go because one workload exceeded the operational threshold in two of
-three pairs. CP04 reversion is next.
+**Status:** Complete (measured no-go, 2026-09-14). The one-pass materializer met
+its structural and correctness goals but exceeded the operational threshold in
+two of three measurement pairs. The original type-check implementation and
+publication path are restored.
 
 **Accepted design:**
-[Copy-Capability Materialization Design Proposal](COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md).
+[archived Copy-Capability Materialization Design Proposal](../archive/COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md).
 
 **Implementation plan:**
-[Copy-Capability Materialization Roadmap](COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
+[archived Copy-Capability Materialization Roadmap](../archive/COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
 
 The accepted design reassesses the original borrow-only first-PR sketch after
 A08: neutral lifecycle facts become the availability authority and HIR plans
@@ -868,10 +869,17 @@ demonstrates repeated baseline reconstruction, the successful one-pass
 structural result, unchanged deterministic behavior, and the repeatable
 operational threshold failure that selects the no-go branch.
 
-**Evidence:** the CP01 baseline records 72 provisional class-plan clones and 20
+**Evidence:** the CP01 baseline recorded 72 provisional class-plan clones and 20
 provisional HIR array entries. CP03 reduced both to zero and built each class
-operation once, but the accepted retention policy requires the original path
-to be restored after its paired operational no-go result.
+operation once, but its repeated +11.4% and +17.5% compiler-time regressions on
+one reviewed workload selected the accepted no-go branch. CP04 restored the
+five production files exactly to the pre-experiment revision, removed all
+temporary probes and migration-only tests, and retained the explicit semantic
+fixture and measurement record. The final repository keeps resolver-local
+neutral facts and type-check-owned HIR capability analysis separate.
+
+The narrower borrowed-provisional-view candidate remains deferred in the
+[copy-capability materialization discoveries](COPY_CAPABILITY_MATERIALIZATION_DISCOVERIES.md).
 
 **Original direction:** after A08 fixes ownership, expose immutable capability views so
 provisional array analysis does not require owned clones. Measure iterations
@@ -1759,9 +1767,9 @@ exit criteria, and any necessary contract decisions in its own roadmap.
    independent. Settle A08's neutral capability contract and A09's publication
    boundary together, but implement them in separate PRs. Add A43's checks.
 4. **Reduce repeated frontend and MIR work.** A09 guided A10/A11/A12, and A25
-   completed their remaining callable-local binding lookup work. Implement A18
-   before cross-pass analysis reuse in A19. Revisit A17 after the semantic
-   capability owner is stable.
+   completed their remaining callable-local binding lookup work. A18 preceded
+   the completed cross-pass analysis reuse in A19. A17 is closed with its
+   measured no-go result and narrower follow-up recorded separately.
 5. **Decompose code along those established responsibilities.** A14, A20, and
    A21 established patterns that A26, A28, A29, and A33 should follow while
    preserving current products and diagnostics.

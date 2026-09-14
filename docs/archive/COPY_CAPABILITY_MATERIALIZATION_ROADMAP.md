@@ -1,10 +1,9 @@
 # Copy-Capability Materialization Roadmap
 
-Status: active; CP01–CP03 are complete, Gate 2 is no-go, and CP04 reversion is
-next.
+Status: complete; archived after CP04 with the Gate 2 no-go branch applied.
 
 This roadmap implements
-[cleanup finding A17](CODEBASE_CLEANUP_AUDIT.md#a17--reduce-copy-capability-fixed-point-reconstruction)
+[cleanup finding A17](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a17--reduce-copy-capability-fixed-point-reconstruction)
 through the accepted
 [copy-capability materialization design](COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md).
 It measures the current type-check reconstruction first, establishes one
@@ -129,7 +128,7 @@ assessment.
 - [x] CP01 — Measure reconstruction and freeze capability behavior
 - [x] CP02 — Establish the request-local neutral authority
 - [x] CP03 — Materialize concrete HIR plans once and decide Gate 2
-- [ ] CP04 — Retain or remove the migration and close A17
+- [x] CP04 — Retain or remove the migration and close A17
 
 ## PR-sized implementation sequence
 
@@ -279,7 +278,7 @@ reversion rather than further generalization.
 **Purpose:** leave one coherent repository state and durable evidence after the
 experiment.
 
-- [ ] Follow exactly one closure branch:
+- [x] Follow exactly one closure branch:
   - **Gate 2 go:** retain neutral-guided one-pass materialization; remove
     temporary probes with no continuing regression value; retain concise
     structural assertions or counters only where they protect the boundary.
@@ -289,17 +288,17 @@ experiment.
   - **Gate 2 no-go:** revert CP03 and migration-only CP02 authority wiring;
     restore the original solver and publication path; retain only independently
     useful facts, tests, guards, and measurements.
-- [ ] Audit production lifecycle availability decisions, failure-path owners,
+- [x] Audit production lifecycle availability decisions, failure-path owners,
   provisional snapshots, array-table construction, public products, and phase
   dependencies. Record any remaining intentional duplication precisely.
-- [ ] Update the accepted design with the delivered or rejected outcome and
+- [x] Update the accepted design with the delivered or rejected outcome and
   link the measurement evidence. Put any narrower actionable follow-up in a
   separate indexed discoveries document rather than expanding A17.
-- [ ] Update living compiler and testing documentation to describe only the
+- [x] Update living compiler and testing documentation to describe only the
   final retained behavior.
-- [ ] Mark A17 complete with its bounded outcome and validation. Do not claim a
+- [x] Mark A17 complete with its bounded outcome and validation. Do not claim a
   runtime or compiler speedup beyond the recorded workloads.
-- [ ] Mark this roadmap complete, archive it with the design when no task
+- [x] Mark this roadmap complete, archive it with the design when no task
   remains, update active/archive indexes, and repair every incoming link.
 
 **Tests:** On the final retained repository state, rerun all focused affected
@@ -312,6 +311,31 @@ HIR materialization path or the restored original solver with a documented
 no-go result. Experimental machinery without continuing value is absent; all
 observable behavior and phase boundaries are preserved; the evidence and
 decision are durable; and A17 is closed accurately.
+
+Implemented: CP04 followed the Gate 2 no-go branch. The type-check lifecycle
+solver, provisional array convergence, failure-path ownership, and cloned final
+array publication were restored byte-for-byte from the pre-experiment
+implementation revision. The temporary reports in both lifecycle solvers,
+CP02 neutral-authority wiring and parity assertions, CP03 one-pass materializer,
+and materializer-only defect tests were removed.
+
+The retained nine-class, five-array fixture directly asserts neutral facts and
+failure paths, HIR availability and selected operations, base and declaration
+order, final-field assignment permissions, and all array lifecycle slots. The
+neutral service remains confined to resolved inputs and resolver candidate
+validation; no neutral result crosses publication or enters HIR construction.
+The remaining duplicate type-check analysis and final array-table clone are
+intentional consequences of the measured no-go result. A narrower borrowed-view
+candidate is recorded in the
+[copy-capability materialization discoveries](../roadmaps/COPY_CAPABILITY_MATERIALIZATION_DISCOVERIES.md)
+with a fresh-evidence requirement and explicit stop condition.
+
+Final acceptance started from a snapshot containing no `.git`, `target`, or
+`build` directory. `make check` passed formatting, workspace checks, Clippy
+with warnings denied, documentation validation, 3,160 compiler unit tests,
+runtime checks, and all 629 golden leaves. The separate Rust 1.82.0 workspace
+all-target check passed. Focused capability, neutral-service, phase-boundary,
+type-check, and cross-process determinism suites also passed.
 
 ## Ordering and dependencies
 

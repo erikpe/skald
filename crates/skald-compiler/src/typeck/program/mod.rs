@@ -103,7 +103,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
             modules: program.modules.clone(),
             external_links: program.external_links.clone(),
             function_types,
-            array_types: copy_capabilities.into_array_types(),
+            array_types: copy_capabilities.array_types(),
             optional_types,
             optional_box_types,
             string_language_item: program.string_language_item.as_ref().map(|item| {

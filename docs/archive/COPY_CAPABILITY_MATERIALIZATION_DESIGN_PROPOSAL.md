@@ -1,11 +1,11 @@
 # Copy-Capability Materialization Design Proposal
 
-Status: frozen accepted design. Accepted on 2026-09-14; implementation is
-tracked by the
-[Copy-Capability Materialization Roadmap](COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
+Status: frozen accepted experiment; closed as a measured no-go on 2026-09-14.
+The outcome is recorded by the
+[archived Copy-Capability Materialization Roadmap](COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
 
 This proposal addresses
-[A17](CODEBASE_CLEANUP_AUDIT.md#a17--reduce-copy-capability-fixed-point-reconstruction).
+[A17](../roadmaps/CODEBASE_CLEANUP_AUDIT.md#a17--reduce-copy-capability-fixed-point-reconstruction).
 It defines how type checking should construct concrete HIR copy and array
 lifecycle plans from the phase-neutral lifecycle availability authority added
 by A08. The change is internal: source semantics, diagnostics, resolved IR,
@@ -17,6 +17,18 @@ on every convergence round. Resolution separately uses a compact
 phase-neutral solver for the same availability question. The selected design
 makes that neutral result authoritative for availability and turns type
 checking into a one-pass materializer of phase-owned HIR plans.
+
+## Experiment outcome
+
+The implementation satisfied the design's structural, ownership, correctness,
+phase, and complexity conditions, but Gate 2 rejected it after one reviewed
+workload showed repeatable compiler-time regressions above five percent. CP04
+therefore restored the original type-check solver and publication path and
+removed the migration machinery. The explicit semantic fixture, phase guard,
+and
+[measurement evidence](../development/COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
+remain. The selected design below is preserved as the reviewed experimental
+contract rather than a description of current compiler behavior.
 
 ## Intended outcome
 

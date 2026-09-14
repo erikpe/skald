@@ -7,15 +7,13 @@ use crate::{
     },
     identity::ClassId,
     resolve::{ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind},
-    type_capabilities::ResolvedLifecycleCapabilities,
 };
 
-use super::super::{capabilities::CopyCapabilityPlans, conversion::lower_type};
+use super::super::{capabilities::CopyCapabilities, conversion::lower_type};
 
 pub(in crate::typeck) fn lower_array_types(
     program: &ResolvedProgram,
-    class_capabilities: &CopyCapabilityPlans,
-    lifecycle: &ResolvedLifecycleCapabilities,
+    class_capabilities: &CopyCapabilities,
 ) -> HirArrayTypeTable {
     let mut entries = Vec::with_capacity(program.array_types.len());
     for array in program.array_types.iter() {
@@ -25,14 +23,13 @@ pub(in crate::typeck) fn lower_array_types(
             element,
             lifecycle: HirArrayLifecycle {
                 default: default_element(program, array.element.kind),
-                copy: lifecycle.array_copy(array.id).then(|| {
-                    copy_element(program, class_capabilities, &entries, array.element.kind)
-                        .expect("neutral-available array copy must have a concrete HIR plan")
-                }),
-                assignment: lifecycle.array_assignment(array.id).then(|| {
-                    assignment_element(program, class_capabilities, &entries, array.element.kind)
-                        .expect("neutral-available array assignment must have a concrete HIR plan")
-                }),
+                copy: copy_element(program, class_capabilities, &entries, array.element.kind),
+                assignment: assignment_element(
+                    program,
+                    class_capabilities,
+                    &entries,
+                    array.element.kind,
+                ),
                 destruction: destruction_element(program, array.element.kind),
             },
         });
@@ -91,7 +88,7 @@ fn zero_argument_initializer(
 
 fn copy_element(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilityPlans,
+    capabilities: &CopyCapabilities,
     arrays: &[HirArrayType],
     element: ResolvedTypeKind,
 ) -> Option<HirArrayCopyElement> {
@@ -151,7 +148,7 @@ fn copy_element(
 
 fn assignment_element(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilityPlans,
+    capabilities: &CopyCapabilities,
     arrays: &[HirArrayType],
     element: ResolvedTypeKind,
 ) -> Option<HirArrayAssignElement> {
@@ -218,7 +215,7 @@ fn assignment_element(
 
 fn optional_copy_available(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilityPlans,
+    capabilities: &CopyCapabilities,
     arrays: &[HirArrayType],
     optional: crate::identity::OptionalTypeId,
 ) -> bool {
@@ -245,7 +242,7 @@ fn optional_copy_available(
 
 fn optional_assignment_available(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilityPlans,
+    capabilities: &CopyCapabilities,
     arrays: &[HirArrayType],
     optional: crate::identity::OptionalTypeId,
 ) -> bool {

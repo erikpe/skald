@@ -11,8 +11,6 @@ mod lifecycle;
 pub(crate) use closed::{
     failed_interface_specialization_requirements, failed_specialization_requirements,
 };
-#[cfg(test)]
-pub(crate) use lifecycle::LifecycleComputationReport;
 pub(crate) use lifecycle::{LifecyclePathElement, ResolvedLifecycleCapabilities};
 
 use crate::{

@@ -43,6 +43,8 @@ Archived plans:
 - [Test plumbing ownership](TEST_PLUMBING_OWNERSHIP_ROADMAP.md)
 - [Structural AST walking design proposal](STRUCTURAL_AST_WALKING_DESIGN_PROPOSAL.md)
 - [Structural AST walking](STRUCTURAL_AST_WALKING_ROADMAP.md)
+- [Copy-capability materialization design proposal](COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md)
+- [Copy-capability materialization](COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md)
 
 - [First vertical slice](FIRST_VERTICAL_SLICE_ROADMAP.md)
 - [`i64` output and golden-test observability](I64_OUTPUT_ROADMAP.md)
