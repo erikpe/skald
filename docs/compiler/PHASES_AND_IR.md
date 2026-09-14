@@ -184,13 +184,17 @@ Closed generic contextual validation uses the phase-neutral
 `type_capabilities` service over `ResolvedProgram`. That service owns resolved
 storage eligibility and recursive class, optional, and array lifecycle
 availability, including diagnostic failure paths. Resolution never imports
-type checking or HIR to answer those questions. Type checking separately turns
-the resolved facts into concrete HIR lifecycle plans, with parity coverage for
-class and aggregate availability. This is a supporting semantic service rather
-than a compiler phase. Its implementation may depend directly on source and
-resolved products, while resolution and type checking are its explicit phase
-consumers. The phase-boundary integration policy rejects direct service
-dependencies on HIR, type-check, MIR, pass, and backend products.
+type checking or HIR to answer those questions. Each type-check request
+computes and retains one fresh neutral result from the final selected resolved
+program, borrows its failure paths for diagnostics, and separately constructs
+concrete HIR lifecycle plans. The completed private capability facade asserts
+class, array, and failure-path agreement at this boundary. Resolver-local lazy
+results remain confined to candidate validation and do not cross publication.
+This is a supporting semantic service rather than a compiler phase. Its
+implementation may depend directly on source and resolved products, while
+resolution and type checking are its explicit phase consumers. The
+phase-boundary integration policy rejects direct service dependencies on HIR,
+type-check, MIR, pass, and backend products.
 
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus

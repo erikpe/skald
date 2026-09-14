@@ -1,6 +1,6 @@
 # Copy-Capability Materialization Roadmap
 
-Status: active; CP01 is complete and CP02 is next.
+Status: active; CP01 and CP02 are complete and CP03 is next.
 
 This roadmap implements
 [cleanup finding A17](CODEBASE_CLEANUP_AUDIT.md#a17--reduce-copy-capability-fixed-point-reconstruction)
@@ -126,7 +126,7 @@ assessment.
 ## Progress
 
 - [x] CP01 — Measure reconstruction and freeze capability behavior
-- [ ] CP02 — Establish the request-local neutral authority
+- [x] CP02 — Establish the request-local neutral authority
 - [ ] CP03 — Materialize concrete HIR plans once and decide Gate 2
 - [ ] CP04 — Retain or remove the migration and close A17
 
@@ -182,23 +182,23 @@ boundary before deleting reconstruction logic.
 
 This task is performed only after a Gate 1 go decision.
 
-- [ ] Expose only the immutable class/array availability and failure-path
+- [x] Expose only the immutable class/array availability and failure-path
   queries needed by type checking. Keep vectors, mutation, convergence state,
   and operation-kind internals private to `type_capabilities`.
-- [ ] Make `CopyCapabilities::compute` obtain one neutral result from the final
+- [x] Make `CopyCapabilities::compute` obtain one neutral result from the final
   selected `ResolvedProgram` and retain it for the type-check request.
-- [ ] Delegate capability failure-path queries to the neutral result, removing
+- [x] Delegate capability failure-path queries to the neutral result, removing
   the type checker's duplicate failure-path ownership while preserving exact
   diagnostic paths.
-- [ ] During this transition, keep the existing HIR constructor/assignment and
+- [x] During this transition, keep the existing HIR constructor/assignment and
   array construction intact and assert exhaustive availability parity at the
   completed `CopyCapabilities` boundary.
-- [ ] Ensure generic publication queries continue to compute against their
+- [x] Ensure generic publication queries continue to compute against their
   borrowed candidate view. Do not expose, move, or reuse their lazy cache.
-- [ ] Extend the phase-boundary guard if needed so neutral lifecycle code may
+- [x] Extend the phase-boundary guard if needed so neutral lifecycle code may
   depend on resolved products but cannot acquire HIR, MIR, pass, backend, or
   driver dependencies.
-- [ ] Update the measurement report with the temporary cost of the explicit
+- [x] Update the measurement report with the temporary cost of the explicit
   neutral authority and confirm CP03, rather than CP02 alone, is the intended
   retained state.
 

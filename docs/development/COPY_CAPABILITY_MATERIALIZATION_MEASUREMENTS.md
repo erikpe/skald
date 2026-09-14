@@ -1,7 +1,7 @@
 # Copy-Capability Materialization Measurements
 
-Status: CP01 baseline accepted on 2026-09-14. Gate 1 is **go**; CP02 may
-establish the request-local neutral authority.
+Status: CP01 baseline accepted and CP02 transition recorded on 2026-09-14.
+Gate 1 is **go**; CP03 is next.
 
 This document records the structural and operational baseline for the
 [copy-capability materialization roadmap](../roadmaps/COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
@@ -135,3 +135,34 @@ Gate 1 is **go**. Every mandatory condition is satisfied:
 CP02 may therefore establish one immutable neutral result at the type-check
 request boundary while retaining the current HIR construction for transition
 assertions.
+
+## CP02 transition cost
+
+The type-check capability facade now computes and retains one fresh neutral
+result from the final selected `ResolvedProgram`. Its test-only report embeds
+exactly one neutral computation report. On the maintained fixture that adds:
+
+| Added neutral work while the old HIR solver remains | Count |
+| --- | ---: |
+| Neutral computations per type-check capability request | 1 |
+| Constructor availability rounds | 2 |
+| Assignment availability rounds | 2 |
+| Array-entry evaluations during convergence | 20 |
+| Final array-entry evaluations | 10 |
+
+The CP01 HIR reconstruction counts remain unchanged during this transition:
+72 class capability records are still cloned, 20 provisional HIR array entries
+are still constructed, and assignment plans are still constructed twice.
+This temporary combined cost is accepted only to keep the old HIR builder as
+an exhaustive transition oracle. CP03 must remove that duplicate solver and
+provisional construction before Gate 2 can retain the design.
+
+Failure diagnostics now borrow their paths from the retained neutral result.
+The fixture checks pointer identity for representative constructor and
+assignment failures as well as exact path contents. Completed-boundary
+assertions compare every class availability, every array availability, and
+every transient old-solver failure path with the neutral authority before the
+completed facade discards those duplicate paths.
+Resolver candidate queries remain unchanged: their lazy neutral result is
+owned by `GenericCapabilityQuery` over its borrowed candidate view and is
+never stored in or transferred through `ResolvedProgram`.

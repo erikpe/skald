@@ -6,19 +6,30 @@ use crate::{
     },
     identity::{ClassId, CopyAssignmentId, CopyConstructorId},
     resolve::{ResolvedClassDeclaration, ResolvedCopyOperation, ResolvedProgram, ResolvedTypeKind},
-    type_capabilities::LifecyclePathElement,
+    type_capabilities::{LifecyclePathElement, ResolvedLifecycleCapabilities},
 };
+
+#[cfg(test)]
+use crate::type_capabilities::LifecycleComputationReport;
 
 #[derive(Clone, Debug)]
 pub(super) struct CopyCapabilities {
+    lifecycle: ResolvedLifecycleCapabilities,
+    plans: CopyCapabilityPlans,
+    array_types: crate::hir::HirArrayTypeTable,
+}
+
+#[derive(Clone, Debug)]
+pub(in crate::typeck) struct CopyCapabilityPlans {
     constructors: CapabilitySet<CopyConstructorId>,
     assignments: CapabilitySet<CopyAssignmentId>,
-    array_types: crate::hir::HirArrayTypeTable,
 }
 
 #[cfg(test)]
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(super) struct CopyCapabilityComputationReport {
+    pub(super) neutral_computations: usize,
+    pub(super) neutral_lifecycle: LifecycleComputationReport,
     pub(super) constructor_rounds: usize,
     pub(super) assignment_rounds: usize,
     pub(super) cloned_constructor_records: usize,
@@ -58,6 +69,19 @@ impl CopyCapabilities {
         program: &ResolvedProgram,
         #[cfg(test)] mut report: Option<&mut CopyCapabilityComputationReport>,
     ) -> Self {
+        #[cfg(test)]
+        let lifecycle = if let Some(report) = report.as_deref_mut() {
+            let (lifecycle, lifecycle_report) =
+                ResolvedLifecycleCapabilities::compute_with_report(program);
+            report.neutral_computations = report.neutral_computations.saturating_add(1);
+            report.neutral_lifecycle = lifecycle_report;
+            lifecycle
+        } else {
+            ResolvedLifecycleCapabilities::compute(program)
+        };
+        #[cfg(not(test))]
+        let lifecycle = ResolvedLifecycleCapabilities::compute(program);
+
         let mut constructors =
             CapabilitySet::compute(program, |class| class.copy_constructor, None);
         #[cfg(test)]
@@ -82,10 +106,9 @@ impl CopyCapabilities {
                 program.array_types.len(),
                 ArrayOperation::Copy,
             );
-            let provisional = Self {
+            let provisional = CopyCapabilityPlans {
                 constructors: constructors.clone(),
                 assignments: provisional_assignments.clone(),
-                array_types: crate::hir::HirArrayTypeTable::default(),
             };
             let arrays = crate::typeck::arrays::lower_array_types(program, &provisional);
             if !constructors.invalidate_array_dependencies(program, &arrays, ArrayOperation::Copy) {
@@ -109,10 +132,9 @@ impl CopyCapabilities {
                 program.array_types.len(),
                 ArrayOperation::Assignment,
             );
-            let provisional = Self {
+            let provisional = CopyCapabilityPlans {
                 constructors: constructors.clone(),
                 assignments: assignments.clone(),
-                array_types: crate::hir::HirArrayTypeTable::default(),
             };
             let arrays = crate::typeck::arrays::lower_array_types(program, &provisional);
             if !assignments.invalidate_array_dependencies(
@@ -124,10 +146,9 @@ impl CopyCapabilities {
             }
         }
 
-        let mut capabilities = Self {
+        let plans = CopyCapabilityPlans {
             constructors,
             assignments,
-            array_types: crate::hir::HirArrayTypeTable::default(),
         };
         #[cfg(test)]
         {
@@ -138,16 +159,23 @@ impl CopyCapabilities {
                 program.array_types.len(),
             );
         }
-        capabilities.array_types = crate::typeck::arrays::lower_array_types(program, &capabilities);
+        let array_types = crate::typeck::arrays::lower_array_types(program, &plans);
+        let mut capabilities = Self {
+            lifecycle,
+            plans,
+            array_types,
+        };
+        capabilities.assert_consistent(program);
+        capabilities.plans.discard_failure_paths();
         capabilities
     }
 
     pub(super) fn constructor(&self, class: ClassId) -> &HirCopyCapability<CopyConstructorId> {
-        self.constructors.capability(class)
+        self.plans.constructor(class)
     }
 
     pub(super) fn assignment(&self, class: ClassId) -> &HirCopyCapability<CopyAssignmentId> {
-        self.assignments.capability(class)
+        self.plans.assignment(class)
     }
 
     pub(super) fn array(&self, array: crate::identity::ArrayTypeId) -> &crate::hir::HirArrayType {
@@ -173,11 +201,84 @@ impl CopyCapabilities {
     }
 
     pub(crate) fn constructor_failure(&self, class: ClassId) -> Option<&[LifecyclePathElement]> {
-        self.constructors.failure(class)
+        self.lifecycle.constructor_failure(class)
     }
 
     pub(crate) fn assignment_failure(&self, class: ClassId) -> Option<&[LifecyclePathElement]> {
-        self.assignments.failure(class)
+        self.lifecycle.assignment_failure(class)
+    }
+
+    fn assert_consistent(&self, program: &ResolvedProgram) {
+        for class in program.classes.iter() {
+            assert_eq!(
+                self.lifecycle.constructor(class.id),
+                self.constructor(class.id).selected().is_some(),
+                "neutral and HIR copy-constructor availability diverged for {}",
+                class.id,
+            );
+            assert_eq!(
+                self.lifecycle.assignment(class.id),
+                self.assignment(class.id).selected().is_some(),
+                "neutral and HIR copy-assignment availability diverged for {}",
+                class.id,
+            );
+            assert_eq!(
+                self.lifecycle.constructor_failure(class.id),
+                self.plans.constructors.failure(class.id),
+                "neutral and HIR copy-constructor failure paths diverged for {}",
+                class.id,
+            );
+            assert_eq!(
+                self.lifecycle.assignment_failure(class.id),
+                self.plans.assignments.failure(class.id),
+                "neutral and HIR copy-assignment failure paths diverged for {}",
+                class.id,
+            );
+        }
+        for array in program.array_types.iter() {
+            let hir = self.array(array.id);
+            assert_eq!(
+                self.lifecycle.array_copy(array.id),
+                hir.lifecycle.copy.is_some(),
+                "neutral and HIR array copy availability diverged for {}",
+                array.id,
+            );
+            assert_eq!(
+                self.lifecycle.array_assignment(array.id),
+                hir.lifecycle.assignment.is_some(),
+                "neutral and HIR array assignment availability diverged for {}",
+                array.id,
+            );
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn lifecycle_for_test(&self) -> &ResolvedLifecycleCapabilities {
+        &self.lifecycle
+    }
+}
+
+impl CopyCapabilityPlans {
+    pub(in crate::typeck) fn constructor(
+        &self,
+        class: ClassId,
+    ) -> &HirCopyCapability<CopyConstructorId> {
+        self.constructors.capability(class)
+    }
+
+    pub(in crate::typeck) fn assignment(
+        &self,
+        class: ClassId,
+    ) -> &HirCopyCapability<CopyAssignmentId> {
+        self.assignments.capability(class)
+    }
+
+    fn discard_failure_paths(&mut self) {
+        // The legacy builder needs these paths only while it acts as the
+        // transition oracle. The neutral result is the completed facade's
+        // sole retained owner.
+        self.constructors.failure_paths = Vec::new();
+        self.assignments.failure_paths = Vec::new();
     }
 }
 

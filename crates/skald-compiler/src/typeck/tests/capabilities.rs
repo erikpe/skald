@@ -104,6 +104,14 @@ fn capability_baseline_records_reconstruction_without_global_instrumentation() {
     assert_eq!(
         hir_report,
         CopyCapabilityComputationReport {
+            neutral_computations: 1,
+            neutral_lifecycle: LifecycleComputationReport {
+                constructor_rounds: 2,
+                assignment_rounds: 2,
+                constructor_array_entry_evaluations: 10,
+                assignment_array_entry_evaluations: 10,
+                final_array_entry_evaluations: 10,
+            },
             constructor_rounds: 2,
             assignment_rounds: 2,
             cloned_constructor_records: 36,
@@ -273,6 +281,18 @@ fn capability_baseline_freezes_exact_facts_failure_paths_and_hir_plans() {
             .as_slice()
         )
     );
+    assert!(std::ptr::eq(
+        hir.constructor_failure(ClassId::new(6)).unwrap(),
+        hir.lifecycle_for_test()
+            .constructor_failure(ClassId::new(6))
+            .unwrap(),
+    ));
+    assert!(std::ptr::eq(
+        hir.assignment_failure(ClassId::new(6)).unwrap(),
+        hir.lifecycle_for_test()
+            .assignment_failure(ClassId::new(6))
+            .unwrap(),
+    ));
 
     let HirCopyCapability::Synthesized(constructor) = hir.constructor(ClassId::new(3)) else {
         panic!("derived constructor should be synthesized");

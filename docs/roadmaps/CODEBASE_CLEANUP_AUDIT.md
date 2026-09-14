@@ -850,7 +850,8 @@ evidence.
 ### A17 — Reduce copy-capability fixed-point reconstruction
 
 **Status:** In progress; CP01 established the structural and operational
-baseline, Gate 1 is go, and CP02 is next.
+baseline, Gate 1 is go, CP02 established the request-local neutral authority,
+and CP03 is next.
 
 **Accepted design:**
 [Copy-Capability Materialization Design Proposal](COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md).

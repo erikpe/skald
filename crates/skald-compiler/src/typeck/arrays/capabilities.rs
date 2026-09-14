@@ -9,11 +9,11 @@ use crate::{
     resolve::{ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind},
 };
 
-use super::super::{capabilities::CopyCapabilities, conversion::lower_type};
+use super::super::{capabilities::CopyCapabilityPlans, conversion::lower_type};
 
 pub(in crate::typeck) fn lower_array_types(
     program: &ResolvedProgram,
-    class_capabilities: &CopyCapabilities,
+    class_capabilities: &CopyCapabilityPlans,
 ) -> HirArrayTypeTable {
     let mut entries = Vec::with_capacity(program.array_types.len());
     for array in program.array_types.iter() {
@@ -88,7 +88,7 @@ fn zero_argument_initializer(
 
 fn copy_element(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilities,
+    capabilities: &CopyCapabilityPlans,
     arrays: &[HirArrayType],
     element: ResolvedTypeKind,
 ) -> Option<HirArrayCopyElement> {
@@ -148,7 +148,7 @@ fn copy_element(
 
 fn assignment_element(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilities,
+    capabilities: &CopyCapabilityPlans,
     arrays: &[HirArrayType],
     element: ResolvedTypeKind,
 ) -> Option<HirArrayAssignElement> {
@@ -215,7 +215,7 @@ fn assignment_element(
 
 fn optional_copy_available(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilities,
+    capabilities: &CopyCapabilityPlans,
     arrays: &[HirArrayType],
     optional: crate::identity::OptionalTypeId,
 ) -> bool {
@@ -242,7 +242,7 @@ fn optional_copy_available(
 
 fn optional_assignment_available(
     program: &ResolvedProgram,
-    capabilities: &CopyCapabilities,
+    capabilities: &CopyCapabilityPlans,
     arrays: &[HirArrayType],
     optional: crate::identity::OptionalTypeId,
 ) -> bool {
