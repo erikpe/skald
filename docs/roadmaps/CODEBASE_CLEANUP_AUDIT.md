@@ -122,7 +122,7 @@ narrower endpoint and names any deferred work.
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Complete | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Complete (bounded) | P2 | 3 | M | Medium | C | M, E |
-| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
+| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Planned | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Complete | P2 | 3 | M | Medium | O | M, R |
@@ -849,17 +849,29 @@ evidence.
 
 ### A17 — Reduce copy-capability fixed-point reconstruction
 
+**Status:** Planned; CP01 is next.
+
+**Accepted design:**
+[Copy-Capability Materialization Design Proposal](COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md).
+
+**Implementation plan:**
+[Copy-Capability Materialization Roadmap](COPY_CAPABILITY_MATERIALIZATION_ROADMAP.md).
+
+The accepted design reassesses the original borrow-only first-PR sketch after
+A08: neutral lifecycle facts become the availability authority and HIR plans
+become a separate one-pass materialization, subject to two evidence gates.
+
 **Evidence:** [`CopyCapabilities::compute`](../../crates/skald-compiler/src/typeck/capabilities.rs)
 clones capability sets and rebuilds array lifecycle tables in separate
 constructor/assignment convergence loops. Generic requirement queries can
 compute this information before ordinary HIR checking computes it again.
 
-**Change:** after A08 fixes ownership, expose immutable capability views so
+**Original direction:** after A08 fixes ownership, expose immutable capability views so
 provisional array analysis does not require owned clones. Measure iterations
 and cloned records; consider dependency-driven invalidation only if chains of
 classes, arrays, and optionals make repeated full reconstruction material.
 
-**First PR / validation:** remove avoidable provisional ownership while keeping
+**Original first-PR sketch:** remove avoidable provisional ownership while keeping
 the current solver, then compare facts and failure paths on recursive/missing
 copy operations. Preserve deterministic diagnostic paths and constructor-before-
 assignment dependencies. Do not introduce an arbitrary iteration cap.
