@@ -122,7 +122,7 @@ narrower endpoint and names any deferred work.
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Complete | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
 | [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Complete (bounded) | P2 | 3 | M | Medium | C | M, E |
-| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Planned | P2 | 4 | M–L | Medium | C | C, M |
+| [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | In progress | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Complete | P2 | 3 | M | Medium | O | M, R |
@@ -849,7 +849,8 @@ evidence.
 
 ### A17 — Reduce copy-capability fixed-point reconstruction
 
-**Status:** Planned; CP01 is next.
+**Status:** In progress; CP01 established the structural and operational
+baseline, Gate 1 is go, and CP02 is next.
 
 **Accepted design:**
 [Copy-Capability Materialization Design Proposal](COPY_CAPABILITY_MATERIALIZATION_DESIGN_PROPOSAL.md).
@@ -860,6 +861,10 @@ evidence.
 The accepted design reassesses the original borrow-only first-PR sketch after
 A08: neutral lifecycle facts become the availability authority and HIR plans
 become a separate one-pass materialization, subject to two evidence gates.
+The accepted
+[CP01 measurement baseline](../development/COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
+demonstrates repeated provisional class-plan cloning and HIR array-table
+construction while preserving exact neutral/HIR agreement.
 
 **Evidence:** [`CopyCapabilities::compute`](../../crates/skald-compiler/src/typeck/capabilities.rs)
 clones capability sets and rebuilds array lifecycle tables in separate

@@ -16,13 +16,72 @@ pub(super) struct CopyCapabilities {
     array_types: crate::hir::HirArrayTypeTable,
 }
 
+#[cfg(test)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(super) struct CopyCapabilityComputationReport {
+    pub(super) constructor_rounds: usize,
+    pub(super) assignment_rounds: usize,
+    pub(super) cloned_constructor_records: usize,
+    pub(super) cloned_assignment_records: usize,
+    pub(super) provisional_array_builds: usize,
+    pub(super) provisional_array_entries: usize,
+    pub(super) final_array_builds: usize,
+    pub(super) final_array_entries: usize,
+    pub(super) final_publication_clones: usize,
+    pub(super) final_publication_entries: usize,
+    pub(super) constructor_plan_constructions: usize,
+    pub(super) assignment_plan_constructions: usize,
+}
+
 impl CopyCapabilities {
     pub(super) fn compute(program: &ResolvedProgram) -> Self {
+        #[cfg(test)]
+        {
+            Self::compute_internal(program, None)
+        }
+        #[cfg(not(test))]
+        {
+            Self::compute_internal(program)
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn compute_with_report(
+        program: &ResolvedProgram,
+    ) -> (Self, CopyCapabilityComputationReport) {
+        let mut report = CopyCapabilityComputationReport::default();
+        let capabilities = Self::compute_internal(program, Some(&mut report));
+        (capabilities, report)
+    }
+
+    fn compute_internal(
+        program: &ResolvedProgram,
+        #[cfg(test)] mut report: Option<&mut CopyCapabilityComputationReport>,
+    ) -> Self {
         let mut constructors =
             CapabilitySet::compute(program, |class| class.copy_constructor, None);
+        #[cfg(test)]
+        record_count(
+            &mut report,
+            |report| &mut report.constructor_plan_constructions,
+            program.classes.len(),
+        );
         let provisional_assignments =
             CapabilitySet::compute(program, |class| class.copy_assignment, Some(&constructors));
+        #[cfg(test)]
+        record_count(
+            &mut report,
+            |report| &mut report.assignment_plan_constructions,
+            program.classes.len(),
+        );
         loop {
+            #[cfg(test)]
+            record_provisional_round(
+                &mut report,
+                program.classes.len(),
+                program.array_types.len(),
+                ArrayOperation::Copy,
+            );
             let provisional = Self {
                 constructors: constructors.clone(),
                 assignments: provisional_assignments.clone(),
@@ -36,7 +95,20 @@ impl CopyCapabilities {
 
         let mut assignments =
             CapabilitySet::compute(program, |class| class.copy_assignment, Some(&constructors));
+        #[cfg(test)]
+        record_count(
+            &mut report,
+            |report| &mut report.assignment_plan_constructions,
+            program.classes.len(),
+        );
         loop {
+            #[cfg(test)]
+            record_provisional_round(
+                &mut report,
+                program.classes.len(),
+                program.array_types.len(),
+                ArrayOperation::Assignment,
+            );
             let provisional = Self {
                 constructors: constructors.clone(),
                 assignments: assignments.clone(),
@@ -57,6 +129,15 @@ impl CopyCapabilities {
             assignments,
             array_types: crate::hir::HirArrayTypeTable::default(),
         };
+        #[cfg(test)]
+        {
+            record_count(&mut report, |report| &mut report.final_array_builds, 1);
+            record_count(
+                &mut report,
+                |report| &mut report.final_array_entries,
+                program.array_types.len(),
+            );
+        }
         capabilities.array_types = crate::typeck::arrays::lower_array_types(program, &capabilities);
         capabilities
     }
@@ -79,6 +160,18 @@ impl CopyCapabilities {
         self.array_types.clone()
     }
 
+    #[cfg(test)]
+    pub(super) fn array_types_with_report(
+        &self,
+        report: &mut CopyCapabilityComputationReport,
+    ) -> crate::hir::HirArrayTypeTable {
+        report.final_publication_clones = report.final_publication_clones.saturating_add(1);
+        report.final_publication_entries = report
+            .final_publication_entries
+            .saturating_add(self.array_types.len());
+        self.array_types()
+    }
+
     pub(crate) fn constructor_failure(&self, class: ClassId) -> Option<&[LifecyclePathElement]> {
         self.constructors.failure(class)
     }
@@ -86,6 +179,44 @@ impl CopyCapabilities {
     pub(crate) fn assignment_failure(&self, class: ClassId) -> Option<&[LifecyclePathElement]> {
         self.assignments.failure(class)
     }
+}
+
+#[cfg(test)]
+fn record_count(
+    report: &mut Option<&mut CopyCapabilityComputationReport>,
+    select: impl FnOnce(&mut CopyCapabilityComputationReport) -> &mut usize,
+    count: usize,
+) {
+    if let Some(report) = report.as_deref_mut() {
+        let value = select(report);
+        *value = value.saturating_add(count);
+    }
+}
+
+#[cfg(test)]
+fn record_provisional_round(
+    report: &mut Option<&mut CopyCapabilityComputationReport>,
+    class_count: usize,
+    array_count: usize,
+    operation: ArrayOperation,
+) {
+    let Some(report) = report.as_deref_mut() else {
+        return;
+    };
+    match operation {
+        ArrayOperation::Copy => {
+            report.constructor_rounds = report.constructor_rounds.saturating_add(1)
+        }
+        ArrayOperation::Assignment => {
+            report.assignment_rounds = report.assignment_rounds.saturating_add(1)
+        }
+    }
+    report.cloned_constructor_records = report
+        .cloned_constructor_records
+        .saturating_add(class_count);
+    report.cloned_assignment_records = report.cloned_assignment_records.saturating_add(class_count);
+    report.provisional_array_builds = report.provisional_array_builds.saturating_add(1);
+    report.provisional_array_entries = report.provisional_array_entries.saturating_add(array_count);
 }
 
 #[derive(Clone, Debug)]

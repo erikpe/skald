@@ -136,6 +136,10 @@ directories, subprocess watchdogs, repeated artifact and semantic checks, and
 paired native execution order. It remains outside both validation gates; see
 [Cleanup Measurement Baseline](CLEANUP_MEASUREMENTS.md).
 
+The [copy-capability materialization baseline](COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
+records test-only structural reconstruction counts, exact lifecycle behavior,
+and the accepted Gate 1 decision for the active A17 roadmap.
+
 ## Minimum supported Rust version
 
 `Cargo.toml` is authoritative for `workspace.package.rust-version`, currently

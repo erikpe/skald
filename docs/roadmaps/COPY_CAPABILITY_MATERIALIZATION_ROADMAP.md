@@ -1,6 +1,6 @@
 # Copy-Capability Materialization Roadmap
 
-Status: planned; CP01 is next.
+Status: active; CP01 is complete and CP02 is next.
 
 This roadmap implements
 [cleanup finding A17](CODEBASE_CLEANUP_AUDIT.md#a17--reduce-copy-capability-fixed-point-reconstruction)
@@ -125,7 +125,7 @@ assessment.
 
 ## Progress
 
-- [ ] CP01 — Measure reconstruction and freeze capability behavior
+- [x] CP01 — Measure reconstruction and freeze capability behavior
 - [ ] CP02 — Establish the request-local neutral authority
 - [ ] CP03 — Materialize concrete HIR plans once and decide Gate 2
 - [ ] CP04 — Retain or remove the migration and close A17
@@ -137,28 +137,34 @@ assessment.
 **Purpose:** demonstrate the actual reconstruction cost and preserve the
 semantic boundary before changing either solver.
 
-- [ ] Add a temporary test-only computation report around the current
+- [x] Add a temporary test-only computation report around the current
   `CopyCapabilities::compute`. Count constructor and assignment convergence
   rounds, cloned capability records, provisional and final HIR array-table
   builds and entries, final publication clones, and class plan constructions.
-- [ ] Add equivalent compact counts for neutral availability rounds and array
+- [x] Add equivalent compact counts for neutral availability rounds and array
   entry evaluations without changing production query behavior.
-- [ ] Keep instrumentation request-local, deterministic, saturating where
+- [x] Keep instrumentation request-local, deterministic, saturating where
   counts can accumulate, and absent from public APIs, driver reporting, dumps,
   diagnostics, and release behavior.
-- [ ] Establish maintained fixtures for empty, direct, inherited, nested
+- [x] Establish maintained fixtures for empty, direct, inherited, nested
   class, optional, nested optional, class-array, nested-array, recursive, and
   independently unavailable constructor/assignment shapes.
-- [ ] Freeze exact neutral availability, failure paths, HIR selected
+- [x] Freeze exact neutral availability, failure paths, HIR selected
   operations, base/field/final-field order, and array lifecycle slots for those
   fixtures. Retain explicit expectations rather than only comparing the two
   implementations with each other.
-- [ ] Add
+- [x] Add
   `docs/development/COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md` with the
   commands, revision and dirty state, fixture inventory, structural counts,
   cleanup-measurement context, and Gate 1 decision.
-- [ ] Run the measurement corpus and apply Gate 1 exactly as written. Record
-  the decision in this roadmap before starting another task.
+- [x] Run the measurement corpus and apply Gate 1 exactly as written. Record
+    the decision in this roadmap before starting another task.
+
+**Gate 1 decision:** Go. The maintained nine-class, five-array fixture records
+two constructor and two assignment rounds, 72 cloned class capability records,
+20 provisional HIR array entries, and exact neutral/HIR agreement across the
+required dependency shapes. The reproducible evidence is recorded in the
+[copy-capability materialization measurements](../development/COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md).
 
 **Tests:** Run focused neutral lifecycle and type-check capability suites,
 generic class/interface requirement tests, affected array/optional/inheritance

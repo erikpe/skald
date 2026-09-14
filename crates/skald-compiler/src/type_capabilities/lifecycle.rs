@@ -21,10 +21,49 @@ pub(crate) struct ResolvedLifecycleCapabilities {
     array_assignment: Vec<bool>,
 }
 
+#[cfg(test)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct LifecycleComputationReport {
+    pub(crate) constructor_rounds: usize,
+    pub(crate) assignment_rounds: usize,
+    pub(crate) constructor_array_entry_evaluations: usize,
+    pub(crate) assignment_array_entry_evaluations: usize,
+    pub(crate) final_array_entry_evaluations: usize,
+}
+
 impl ResolvedLifecycleCapabilities {
     pub(crate) fn compute(program: &dyn ResolvedCapabilityView) -> Self {
+        #[cfg(test)]
+        {
+            Self::compute_internal(program, None)
+        }
+        #[cfg(not(test))]
+        {
+            Self::compute_internal(program)
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn compute_with_report(
+        program: &dyn ResolvedCapabilityView,
+    ) -> (Self, LifecycleComputationReport) {
+        let mut report = LifecycleComputationReport::default();
+        let capabilities = Self::compute_internal(program, Some(&mut report));
+        (capabilities, report)
+    }
+
+    fn compute_internal(
+        program: &dyn ResolvedCapabilityView,
+        #[cfg(test)] mut report: Option<&mut LifecycleComputationReport>,
+    ) -> Self {
         let mut constructors = CapabilitySet::compute(program, Operation::Constructor, None);
         loop {
+            #[cfg(test)]
+            record_array_round(
+                &mut report,
+                Operation::Constructor,
+                program.array_types().len(),
+            );
             let array_copy =
                 array_capabilities(program, &constructors, None, Operation::Constructor);
             if !constructors.invalidate_array_dependencies(program, &array_copy) {
@@ -35,6 +74,12 @@ impl ResolvedLifecycleCapabilities {
         let mut assignments =
             CapabilitySet::compute(program, Operation::Assignment, Some(&constructors));
         loop {
+            #[cfg(test)]
+            record_array_round(
+                &mut report,
+                Operation::Assignment,
+                program.array_types().len(),
+            );
             let array_assignment = array_capabilities(
                 program,
                 &constructors,
@@ -53,6 +98,12 @@ impl ResolvedLifecycleCapabilities {
             Some(&assignments),
             Operation::Assignment,
         );
+        #[cfg(test)]
+        if let Some(report) = report {
+            report.final_array_entry_evaluations = report
+                .final_array_entry_evaluations
+                .saturating_add(program.array_types().len().saturating_mul(2));
+        }
         Self {
             constructors,
             assignments,
@@ -84,6 +135,29 @@ impl ResolvedLifecycleCapabilities {
     pub(crate) fn array_assignment(&self, array: ArrayTypeId) -> bool {
         self.array_assignment[array.index()]
     }
+}
+
+#[cfg(test)]
+fn record_array_round(
+    report: &mut Option<&mut LifecycleComputationReport>,
+    operation: Operation,
+    array_count: usize,
+) {
+    let Some(report) = report.as_deref_mut() else {
+        return;
+    };
+    let (rounds, entries) = match operation {
+        Operation::Constructor => (
+            &mut report.constructor_rounds,
+            &mut report.constructor_array_entry_evaluations,
+        ),
+        Operation::Assignment => (
+            &mut report.assignment_rounds,
+            &mut report.assignment_array_entry_evaluations,
+        ),
+    };
+    *rounds = rounds.saturating_add(1);
+    *entries = entries.saturating_add(array_count);
 }
 
 #[derive(Clone, Debug)]
