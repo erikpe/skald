@@ -58,14 +58,7 @@ fn lower_manually_selected_floating_comparison(
     right.kind = HirExpressionKind::F64Bits(2.0_f64.to_bits());
     right.ty = Type::F64;
 
-    let predicate = match operation.predicate {
-        crate::hir::HirComparisonPredicate::Equal => MirComparisonPredicate::Equal,
-        crate::hir::HirComparisonPredicate::NotEqual => MirComparisonPredicate::NotEqual,
-        crate::hir::HirComparisonPredicate::LessThan => MirComparisonPredicate::LessThan,
-        crate::hir::HirComparisonPredicate::LessEqual => MirComparisonPredicate::LessEqual,
-        crate::hir::HirComparisonPredicate::GreaterThan => MirComparisonPredicate::GreaterThan,
-        crate::hir::HirComparisonPredicate::GreaterEqual => MirComparisonPredicate::GreaterEqual,
-    };
+    let predicate = operation.predicate;
     let mir = lower_hir(&hir);
     (mir, predicate)
 }

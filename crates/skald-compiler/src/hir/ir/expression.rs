@@ -8,6 +8,8 @@ use crate::{
     source::Span,
 };
 
+pub use crate::primitive_comparison::PrimitiveComparisonPredicate as HirComparisonPredicate;
+
 use super::{
     object::{
         HirCheckedObjectView, HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource,
@@ -373,29 +375,6 @@ impl HirIntegerType {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum HirComparisonPredicate {
-    Equal,
-    NotEqual,
-    LessThan,
-    LessEqual,
-    GreaterThan,
-    GreaterEqual,
-}
-
-impl HirComparisonPredicate {
-    pub const fn mnemonic(self) -> &'static str {
-        match self {
-            Self::Equal => "eq",
-            Self::NotEqual => "ne",
-            Self::LessThan => "lt",
-            Self::LessEqual => "le",
-            Self::GreaterThan => "gt",
-            Self::GreaterEqual => "ge",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum HirComparisonOperand {
     Integer(HirIntegerType),
     F64,
@@ -422,10 +401,7 @@ impl HirComparisonOperand {
     pub const fn supports_predicate(self, predicate: HirComparisonPredicate) -> bool {
         match self {
             Self::Integer(_) | Self::F64 => true,
-            Self::Bool => matches!(
-                predicate,
-                HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
-            ),
+            Self::Bool => predicate.is_equality(),
         }
     }
 }

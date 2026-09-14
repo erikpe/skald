@@ -2,9 +2,8 @@
 
 use super::*;
 use crate::hir::{
-    HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate, HirExpression,
-    HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerType, HirPrimitiveComparison,
-    HirUnaryOperation,
+    HirBinaryOperation, HirComparisonOperand, HirExpression, HirExpressionKind,
+    HirIntegerBitwiseOperation, HirIntegerType, HirPrimitiveComparison, HirUnaryOperation,
 };
 
 impl BodyLowerer<'_> {
@@ -225,14 +224,7 @@ impl BodyLowerer<'_> {
         right: &HirExpression,
     ) -> Option<ValueId> {
         let operation = MirPrimitiveComparison {
-            predicate: match operation.predicate {
-                HirComparisonPredicate::Equal => MirComparisonPredicate::Equal,
-                HirComparisonPredicate::NotEqual => MirComparisonPredicate::NotEqual,
-                HirComparisonPredicate::LessThan => MirComparisonPredicate::LessThan,
-                HirComparisonPredicate::LessEqual => MirComparisonPredicate::LessEqual,
-                HirComparisonPredicate::GreaterThan => MirComparisonPredicate::GreaterThan,
-                HirComparisonPredicate::GreaterEqual => MirComparisonPredicate::GreaterEqual,
-            },
+            predicate: operation.predicate,
             operand: match operation.operand {
                 HirComparisonOperand::Integer(integer) => {
                     MirComparisonOperand::Integer(lower_integer_type(integer))

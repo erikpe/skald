@@ -22,6 +22,7 @@ pub mod mir;
 pub mod module;
 mod object_path;
 pub mod passes;
+mod primitive_comparison;
 pub mod reporting;
 pub mod resolve;
 pub mod source;

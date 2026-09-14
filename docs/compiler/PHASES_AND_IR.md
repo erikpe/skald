@@ -76,7 +76,8 @@ Production phase-root imports follow an automated direct-dependency policy:
 | `driver` | every phase root, as the composition owner |
 
 Neutral support modules such as diagnostics, identities, intrinsics, literal
-handling, and external-link metadata are outside this phase-root matrix. The
+handling, primitive comparison predicates, and external-link metadata are
+outside this phase-root matrix. The
 integration guard scans crate-root paths, including grouped imports, and
 relative `super` paths that escape the owning phase root. It excludes test and
 fixture files by the repository conventions documented in the testing guide.
@@ -2374,6 +2375,15 @@ pure, non-failing scalar rvalue with exact `f64` operands and a canonical
 type mismatches before target lowering. Source type checking selects this
 flavor only for two exact `f64` operands and rejects mixed primitive types and
 boolean ordering before HIR.
+
+The HIR and MIR facade names for comparison predicates re-export one private,
+phase-neutral descriptor. It owns only the six relations, their stable dump
+mnemonics, and the equality classification used to admit boolean operands.
+HIR and MIR comparison operands and operations remain distinct because they
+refer to phase-specific types, while source-operator selection, MIR
+verification, constant evaluation, and target condition-code selection stay
+with their existing owners. HIR-to-MIR lowering can therefore preserve the
+selected predicate directly without a duplicate semantic mapping.
 
 MIR lowers eager primitive operations to target-independent scalar operations.
 It preserves:

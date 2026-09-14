@@ -258,6 +258,8 @@ fn intentional_phase_and_dump_paths_compose() {
         predicate: HirComparisonPredicate::LessThan,
         operand: HirComparisonOperand::Integer(HirIntegerType::U64),
     };
+    let shared_predicate: MirComparisonPredicate = hir_comparison.predicate;
+    assert_eq!(shared_predicate, MirComparisonPredicate::LessThan);
     assert_eq!(hir_comparison.operand_type(), Type::U64);
     assert_eq!(hir_comparison.result_type(), Type::Bool);
     let hir_cast = HirPrimitiveCast::new(HirPrimitiveType::U64, HirPrimitiveType::U8);

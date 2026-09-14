@@ -1,6 +1,6 @@
 # Codebase Cleanup Audit
 
-Status: actionable audit; A01–A14, A18–A21, A25, A33–A36, A38, and A43
+Status: actionable audit; A01–A14, A16, A18–A21, A25, A33–A36, A38, and A43
 are complete within the scopes recorded below. A09's stage products and owned
 publication selection are delivered; its implementation record is the
 [archived publication ownership roadmap](../archive/PUBLICATION_OWNERSHIP_ROADMAP.md).
@@ -121,7 +121,7 @@ narrower endpoint and names any deferred work.
 | [A13](#a13--share-structural-ast-walking-where-responsibilities-repeat) | Share structural AST walking where responsibilities repeat | Complete | P2 | 3 | M | Medium | O | M, E, R |
 | [A14](#a14--separate-object-view-planning-from-alias-argument-checking) | Separate object-view planning from alias-argument checking | Complete | P1 | 4 | M–L | Medium | O | M, E, R |
 | [A15](#a15--reassess-overlapping-optionalplace-families) | Reassess overlapping optional/place families | Open | P2 | 5 | XL | High | C | M, E, R |
-| [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Open | P2 | 3 | M | Medium | C | M, E |
+| [A16](#a16--share-identical-primitive-semantic-descriptors) | Share identical primitive semantic descriptors | Complete (bounded) | P2 | 3 | M | Medium | C | M, E |
 | [A17](#a17--reduce-copy-capability-fixed-point-reconstruction) | Reduce copy-capability fixed-point reconstruction | Open | P2 | 4 | M–L | Medium | C | C, M |
 | [A18](#a18--reuse-structural-cfg-and-dominance-queries) | Reuse structural CFG and dominance queries | Complete | P1 | 4 | M | Medium | O | M, C, R |
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
@@ -802,6 +802,12 @@ Do not hide ownership differences inside a universal untyped place enum.
 
 ### A16 — Share identical primitive semantic descriptors
 
+**Status:** Complete (bounded, 2026-09-14). The comparison-predicate experiment
+was retained. One private phase-neutral descriptor now owns the six relations,
+their stable mnemonics, and equality classification. The existing
+`HirComparisonPredicate` and `MirComparisonPredicate` facade names are explicit
+aliases, so HIR-to-MIR lowering preserves a selected predicate directly.
+
 **Evidence:** HIR and MIR each define primitive cast kinds, integer kinds,
 comparison predicates, shift direction, and division semantics; see
 [HIR primitives](../../crates/skald-compiler/src/hir/ir/primitive.rs),
@@ -819,6 +825,27 @@ a successful example of one semantic authority.
 predicate or shift direction, and confirm exhaustive coverage. Keep integer
 wrapping, checked failure behavior, NaN handling, and dump spellings unchanged.
 Stop if the abstraction increases coupling more than it removes duplication.
+
+**Experiment outcome:** the retention condition is satisfied. The shared
+descriptor has no HIR, MIR, source, verification, pass, or backend dependency.
+It removes both enum and mnemonic implementations, repeated equality
+classification, and the production and test-only six-arm lowering mappings.
+HIR and MIR retain separate operands and operations, and neither phase depends
+on the other through the descriptor. Focused public-path, phase-boundary,
+type-checking, MIR, optimization, verifier, and backend comparison coverage
+preserves all six predicates, boolean rejection, signed and unsigned integer
+selection, unordered binary64 behavior, deterministic dump mnemonics, and
+canonical boolean results.
+
+The complete `make check` gate passed with 3,160 compiler unit tests, 53
+cross-process determinism tests, runtime and documentation checks, 21 compiler
+compile-fail documentation tests, and all 629 golden leaves. The Rust 1.82.0
+workspace all-target check also passed.
+
+Shift direction, primitive cast kinds, integer kinds, and division semantics
+remain phase-specific. Their smaller payoff or additional phase-owned type and
+control-flow behavior does not justify widening this experiment without new
+evidence.
 
 ### A17 — Reduce copy-capability fixed-point reconstruction
 

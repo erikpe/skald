@@ -52,10 +52,7 @@ impl CallableChecker<'_, '_> {
         left_type: Type,
         right_type: Type,
     ) {
-        let equality = matches!(
-            predicate,
-            HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
-        );
+        let equality = predicate.is_equality();
         let spelling = comparison_spelling(predicate);
         let (message, type_description, type_names) = if equality {
             (
@@ -108,12 +105,7 @@ fn comparison_operand(
     if left == Type::F64 {
         return Some(HirComparisonOperand::F64);
     }
-    (left == Type::Bool
-        && matches!(
-            predicate,
-            HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
-        ))
-    .then_some(HirComparisonOperand::Bool)
+    (left == Type::Bool && predicate.is_equality()).then_some(HirComparisonOperand::Bool)
 }
 
 const fn comparison_spelling(predicate: HirComparisonPredicate) -> &'static str {

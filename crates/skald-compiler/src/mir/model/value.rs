@@ -9,6 +9,8 @@ use crate::{
     source::Span,
 };
 
+pub use crate::primitive_comparison::PrimitiveComparisonPredicate as MirComparisonPredicate;
+
 use super::ids::{PathConditionId, StorageId, ValueId};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -462,29 +464,6 @@ impl MirIntegerType {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum MirComparisonPredicate {
-    Equal,
-    NotEqual,
-    LessThan,
-    LessEqual,
-    GreaterThan,
-    GreaterEqual,
-}
-
-impl MirComparisonPredicate {
-    pub const fn mnemonic(self) -> &'static str {
-        match self {
-            Self::Equal => "eq",
-            Self::NotEqual => "ne",
-            Self::LessThan => "lt",
-            Self::LessEqual => "le",
-            Self::GreaterThan => "gt",
-            Self::GreaterEqual => "ge",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirComparisonOperand {
     Integer(MirIntegerType),
     F64,
@@ -511,10 +490,7 @@ impl MirComparisonOperand {
     pub const fn supports_predicate(self, predicate: MirComparisonPredicate) -> bool {
         match self {
             Self::Integer(_) | Self::F64 => true,
-            Self::Bool => matches!(
-                predicate,
-                MirComparisonPredicate::Equal | MirComparisonPredicate::NotEqual
-            ),
+            Self::Bool => predicate.is_equality(),
         }
     }
 }
