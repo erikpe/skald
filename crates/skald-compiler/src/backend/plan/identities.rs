@@ -89,6 +89,7 @@ pub(in crate::backend) enum RuntimeService {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum DataKey {
+    FailureMessage(crate::backend::failure::FailureMessage),
     Table(usize),
     Literal(LiteralDataId),
     Static(StaticFieldId),

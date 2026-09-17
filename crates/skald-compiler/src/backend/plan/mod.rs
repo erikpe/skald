@@ -8,6 +8,7 @@
 mod check;
 mod facts;
 mod identities;
+mod services;
 mod view;
 
 #[cfg_attr(not(test), allow(unused_imports))]
@@ -32,3 +33,6 @@ mod tests;
 
 #[cfg(test)]
 pub(in crate::backend) mod test_fixtures;
+
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use services::service_effects;

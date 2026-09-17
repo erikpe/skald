@@ -313,6 +313,7 @@ fn owner_private_fixtures_can_challenge_verification_without_a_builder_success_p
         .push(Instruction {
             operation: Operation::Constant(Constant::I64(42)),
             results: vec![reserved.id(), reserved.id()],
+            effects: crate::backend::effects::Effects::default(),
         });
     draft.values.get_mut(reserved).unwrap().definition = Some(Definition::InstructionResult {
         instruction: InstructionLocation {

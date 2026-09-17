@@ -10,6 +10,8 @@ use crate::{
     identity::CallableId, mir::MirProgram, passes::VerifiedFinalMirProgram, source::SourceDatabase,
 };
 
+mod effects;
+mod failure;
 mod graph;
 mod lir;
 mod plan;

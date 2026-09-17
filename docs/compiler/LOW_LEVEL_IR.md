@@ -1,9 +1,9 @@
 # Low-Level Execution Drafts
 
-Status: private checked declarations and lowered scalar/object drafts are
-implemented. Production emission still uses the [current backend](BACKEND.md).
-Calls/effects/traces, independent verification/publication, selected graphs,
-edits, placement and native consumption remain planned.
+Status: private checked declarations and the complete lowered draft vocabulary
+are implemented. Production emission still uses the [current backend](BACKEND.md).
+Independent verification/publication, selected graphs, edits, placement and
+native consumption remain planned.
 
 ## Ownership and checking
 
@@ -29,7 +29,8 @@ Unit/nonreturning signatures have no result; scalar returns have one typed resul
 aggregate returns have a matching address-valued destination and no scalar result.
 Receiver triples and optional alias-origin pairs must be complete and address
 typed. Component roles are independent of list position and physical ABI location.
-Service effect summaries and independent operation verification remain planned.
+Runtime services have checked logical shapes and conservative mandatory effects;
+independent operation verification remains planned.
 
 The profile vocabulary includes x86-64 System V and AArch64 AAPCS64 fact shapes,
 with 64-bit addresses and capability checks for binary64, indirect calls and
@@ -104,25 +105,73 @@ nonzero divisor, count below integer width and finite truncated binary64 in an
 integer range. Evidence names a check terminator or an exact constant value.
 These records grant no proof: operand identity, constant validity and success-edge
 protection still require independent verification. The builder also leaves
-cross-block use ordering, forward-edge reconciliation, object extents and effects
-to that verification. `finish` returns a draft even when reservations or blocks
+cross-block use ordering, forward-edge reconciliation, object extents and
+independent effect/provenance recomputation to that verification. `finish` returns a draft even when reservations or blocks
 remain incomplete; it creates no seal or emission authority.
 
 Owner-private storage supports independently malformed test fixtures without
 exposing an unchecked verified constructor. Arithmetic descriptors specify
 meaning; native recipe equivalence is a separate target obligation.
 
+## Calls, effects and tracing
+
+Calls name a typed callable/runtime/external declaration or a secured
+`CodeAddress(SignatureId)` value. Ordered arguments carry the exact logical roles
+and types from the checked signature. Entry, call and return use that signature;
+aggregate destinations and receiver/alias triples are inputs, with no fabricated
+scalar result. Arguments and indirect targets remain value IDs across later calls.
+
+The runtime catalog checks all nine service shapes against their fixed contracts.
+Calls always retain a call barrier. Internal, external and indirect calls
+conservatively read/write unknown memory and may allocate, free, report, hard-fail
+and touch trace state; the closed runtime catalog supplies reviewed service effects.
+Nonreporting/hard-defect attribution cannot narrow a reporting contract.
+
+Every instruction and terminator records mandatory effects. Ordinary loads/stores
+use object/static/unknown provenance derived from address formation and constant
+offsets. Loaded pointers, alias inputs, dynamic offsets and unresolved merges
+remain unknown; origin spans confer no alias authority. Optional summaries must
+cover every mandatory effect; unknown reads/writes cover known regions, while a
+known object cannot cover unknown memory. Pure operations have empty effects.
+Verification must recompute these facts independently before publication.
+
+Call attribution distinguishes source operations, inherited boundaries, source
+bodies entered from omitted helpers, nonreporting calls, hard defects and process
+boundaries. Enabled trace plans bind local record ownership, frame eligibility,
+context and permitted locations to the checked catalog. Ineligible helpers have
+no local frame record. Explicit push/location-replacement/pop actions retain
+ordering and associated instruction/terminal sites; attribution emits no action
+implicitly. Omitted tracing rejects plans, actions and trace references, while a
+compiler-defect span remains ordinary metadata. Association/path parity and
+physical marshalling order still require independent/native checks.
+
+`ReportFailure` contains its checked nonreturning panic call and a typed failure
+message artifact with exact byte length. The shared failure catalog is also used
+by current native emission, preventing a second message list. Arbitrary
+nonreturning calls retain an explicit terminal call without inventing a reason.
+Hard trap is a separate terminal with no reporter. These terminals have no
+cleanup/unwind edges; target selection later exposes the defensive trap if a
+nonreturning callee violates its contract. Data initializer/inventory publication
+and native lowering remain future responsibilities.
+
+The shared-release fixture uses ordinary loads/stores and branches for immortal,
+ordinary and last-owner paths, then an indirect finalizer call and free of the
+original header value. Enabled helper attribution and omitted tracing exercise
+the same graph. It is representation evidence, not native finalizer equivalence.
+
 ## Regression ownership
 
 Declaration tests are colocated under the plan owner; arena tests under the
 arena owner; lowered tests under the draft owner, grouped by graph, scalar and
-memory contracts. They challenge foreign live contexts, wrong targets/owners, bounds and overflow, signature roles/results, sparse body
+memory/call/trace contracts. They challenge foreign live contexts, wrong
+targets/owners, bounds and overflow, signature roles/results, sparse body
 dispositions, artifact categories, trace omission and stable domain/dispatch
 handling. Public compile-fail examples protect private paths.
 
 The maintained phase-boundary test also guards these narrower core scopes:
 frontend/MIR execution and pass inputs, source lookup and physical x86 owners
 cannot enter the declaration/arena/lowered core. Private APIs without native
-consumers temporarily have item-scoped non-test lint allowances. Their removal obligations
+consumers temporarily have item-scoped non-test lint allowances. Their removal
+obligations
 are tracked in the [model roadmap](../roadmaps/LOW_LEVEL_IR_MODEL_ROADMAP.md);
 the ordinary test build retains dead-code/import checking.

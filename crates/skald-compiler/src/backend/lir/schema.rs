@@ -68,6 +68,12 @@ impl<'p> DraftBuilder<'p> {
         use ScalarType::*;
         let mut results = Vec::new();
         let normalized = match operation {
+            Call(call) => {
+                let (call, types) = self.normalize_call(call, false)?;
+                results = types;
+                Call(call)
+            }
+            Trace(action) => Trace(self.normalize_trace(action)?),
             Constant(constant) => {
                 let ty = constant.scalar_type()?;
                 self.check_type(ty)?;

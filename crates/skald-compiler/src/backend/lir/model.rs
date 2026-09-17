@@ -1,9 +1,11 @@
 //! Callable-owned draft storage and explicit definition/edge identities.
 
 use super::{
-    AddressStride, BinaryOperation, Constant, Conversion, DivisionResult, MemoryRepresentation,
-    ShiftDirection, UnaryOperation,
+    AddressProvenance, AddressStride, BinaryOperation, Call, Constant, Conversion, DivisionResult,
+    MemoryRepresentation, ShiftDirection, TraceAction, TracePlan, UnaryOperation,
 };
+use crate::backend::effects::Effects;
+use crate::backend::failure::FailureMessage;
 use crate::backend::graph::{
     LocalHandle, LoweredBlockId, LoweredObjectId, LoweredValueId, OwnedArena,
 };
@@ -49,6 +51,7 @@ pub(in crate::backend) struct Value {
     pub ty: ScalarType,
     pub definition: Option<Definition>,
     pub origin: Option<Span>,
+    pub provenance: AddressProvenance,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(not(test), allow(dead_code))]
@@ -101,6 +104,8 @@ pub(in crate::backend) enum ScalarDomainEvidence<V = LoweredValueId, B = Lowered
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum Operation<V = LoweredValueId, O = LoweredObjectId, B = LoweredBlockId> {
+    Call(Call<V>),
+    Trace(TraceAction<O, B>),
     Constant(Constant),
     Unary {
         operation: UnaryOperation,
@@ -184,6 +189,11 @@ pub(in crate::backend) enum Terminator<V = LoweredValueId, B = LoweredBlockId> {
         failure: Edge<V, B>,
     },
     Return(Vec<V>),
+    ReportFailure {
+        call: Call<V>,
+        reason: FailureMessage,
+    },
+    NonReturningCall(Call<V>),
     HardTrap,
 }
 #[derive(Clone, Debug)]
@@ -191,6 +201,7 @@ pub(in crate::backend) enum Terminator<V = LoweredValueId, B = LoweredBlockId> {
 pub(in crate::backend) struct Instruction {
     pub operation: Operation,
     pub results: Vec<LoweredValueId>,
+    pub effects: Effects<LoweredObjectId>,
 }
 #[derive(Clone, Debug, Default)]
 #[cfg_attr(not(test), allow(dead_code))]
@@ -199,12 +210,14 @@ pub(in crate::backend) struct Block {
     pub parameters: Option<Vec<LoweredValueId>>,
     pub instructions: Vec<Instruction>,
     pub terminator: Option<Terminator>,
+    pub terminal_effects: Option<Effects<LoweredObjectId>>,
 }
 /// Mutable construction product. It grants no seal, receipt or emission authority.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct CallableDraft<'p> {
     pub(super) owner: CallableBinding<'p>,
     pub(super) entry: Option<LoweredBlockId>,
+    pub(super) trace_plan: Option<TracePlan>,
     pub(super) inputs: Vec<LoweredValueId>,
     pub(super) blocks: OwnedArena<'p, LoweredBlockId, Block>,
     pub(super) values: OwnedArena<'p, LoweredValueId, Value>,
@@ -212,6 +225,9 @@ pub(in crate::backend) struct CallableDraft<'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> CallableDraft<'p> {
+    pub(in crate::backend) fn trace_plan(&self) -> Option<&TracePlan> {
+        self.trace_plan.as_ref()
+    }
     pub(in crate::backend) fn owner(&self) -> CallableBinding<'p> {
         self.owner
     }
@@ -272,7 +288,10 @@ impl Terminator {
             Self::ScalarCheck {
                 success, failure, ..
             } => [Some(success), Some(failure)],
-            Self::Return(_) | Self::HardTrap => [None, None],
+            Self::Return(_)
+            | Self::HardTrap
+            | Self::ReportFailure { .. }
+            | Self::NonReturningCall(_) => [None, None],
         };
         edges
             .into_iter()

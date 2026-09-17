@@ -5,6 +5,8 @@ use super::model::{
     LifetimeDisposition, Object, ObjectHandle, ObjectRole, Operation, Terminator, Value,
     ValueHandle,
 };
+use super::AddressProvenance;
+use crate::backend::effects::{Effect, Effects};
 use crate::backend::graph::OwnedArena;
 use crate::backend::plan::{CallableBinding, LayoutDisposition, PlanError, ScalarType};
 use crate::source::Span;
@@ -27,6 +29,9 @@ pub(in crate::backend) enum BuildError {
     ResultMismatch,
     EdgeMismatch,
     InvalidReturn,
+    InvalidCall,
+    NarrowedEffects,
+    InvalidTrace,
 }
 impl From<PlanError> for BuildError {
     fn from(error: PlanError) -> Self {
@@ -45,6 +50,7 @@ impl<'p> DraftBuilder<'p> {
             draft: CallableDraft {
                 owner,
                 entry: None,
+                trace_plan: None,
                 inputs: Vec::new(),
                 blocks: OwnedArena::new(owner),
                 values: OwnedArena::new(owner),
@@ -56,6 +62,7 @@ impl<'p> DraftBuilder<'p> {
                 ty: input.ty,
                 definition: Some(Definition::EntryInput { component }),
                 origin: None,
+                provenance: AddressProvenance::Unknown,
             })?;
             builder.draft.inputs.push(value.id());
         }
@@ -78,6 +85,7 @@ impl<'p> DraftBuilder<'p> {
             ty,
             definition: None,
             origin,
+            provenance: AddressProvenance::Unknown,
         })?)
     }
     pub(in crate::backend) fn define_block(
@@ -180,11 +188,14 @@ impl<'p> DraftBuilder<'p> {
     ) -> Result<(), BuildError> {
         let ordinal = self.draft.blocks.get(block)?.instructions.len();
         ordinal.checked_add(1).ok_or(BuildError::SizeOverflow)?;
+        let effects = self.operation_effects(&operation)?;
+        let provenance = self.result_provenance(&operation)?;
         let instruction = InstructionLocation {
             block: block.id(),
             ordinal,
         };
         for (ordinal, result) in results.iter().copied().enumerate() {
+            self.draft.values.get_mut(result)?.provenance = provenance;
             self.draft.values.get_mut(result)?.definition = Some(Definition::InstructionResult {
                 instruction,
                 ordinal,
@@ -197,6 +208,7 @@ impl<'p> DraftBuilder<'p> {
             .push(Instruction {
                 operation,
                 results: results.iter().map(|value| value.id()).collect(),
+                effects,
             });
         Ok(())
     }
@@ -220,7 +232,7 @@ impl<'p> DraftBuilder<'p> {
         }
         Ok(())
     }
-    fn writable(&self, block: BlockHandle<'p>) -> Result<(), BuildError> {
+    pub(super) fn writable(&self, block: BlockHandle<'p>) -> Result<(), BuildError> {
         let block = self.draft.blocks.get(block)?;
         if block.parameters.is_none() {
             return Err(BuildError::UndefinedBlock);
@@ -308,9 +320,35 @@ impl<'p> DraftBuilder<'p> {
                     .collect::<Result<_, _>>()?;
                 Terminator::Return(values)
             }
+            Terminator::ReportFailure { call, reason } => {
+                if !matches!(
+                    &call.target,
+                    super::CallTarget::Direct(crate::backend::plan::ArtifactId::Runtime(
+                        crate::backend::plan::RuntimeService::Panic
+                    ))
+                ) {
+                    return Err(BuildError::InvalidCall);
+                }
+                let (call, _) = self.normalize_call(call, true)?;
+                self.check_failure_message(&call, reason)?;
+                Terminator::ReportFailure { call, reason }
+            }
+            Terminator::NonReturningCall(call) => {
+                let (call, _) = self.normalize_call(call, true)?;
+                Terminator::NonReturningCall(call)
+            }
             Terminator::HardTrap => Terminator::HardTrap,
         };
-        self.draft.blocks.get_mut(block)?.terminator = Some(terminator);
+        let effects = match &terminator {
+            Terminator::ReportFailure { call, .. } | Terminator::NonReturningCall(call) => {
+                self.call_effects(call)?
+            }
+            Terminator::HardTrap => Effects::new([Effect::HardTrap]),
+            _ => Effects::default(),
+        };
+        let record = self.draft.blocks.get_mut(block)?;
+        record.terminator = Some(terminator);
+        record.terminal_effects = Some(effects);
         Ok(())
     }
     pub(in crate::backend) fn finish(self) -> CallableDraft<'p> {

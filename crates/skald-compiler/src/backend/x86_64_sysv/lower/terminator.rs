@@ -9,41 +9,9 @@ use super::{
     block_label, call, runtime_trace, value, FrameLayout, InstructionSelector,
 };
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[repr(usize)]
-enum PanicMessage {
-    ObjectCastFailure,
-    OptionalAccessFailure,
-    OptionalGuardOverflow,
-    OptionalPinnedMutation,
-    ArrayAllocationFailure,
-    ArrayIndexOutOfBounds,
-    ArrayInvalidSliceBounds,
-    ArraySliceLengthMismatch,
-    OwnershipCountOverflow,
-    ShiftCountOutOfRange,
-    IntegerDivisionByZero,
-    IntegerRemainderByZero,
-    PrimitiveCastOutOfRange,
-}
+use crate::backend::failure::FailureMessage;
 
-impl PanicMessage {
-    const ALL: [Self; 13] = [
-        Self::ObjectCastFailure,
-        Self::OptionalAccessFailure,
-        Self::OptionalGuardOverflow,
-        Self::OptionalPinnedMutation,
-        Self::ArrayAllocationFailure,
-        Self::ArrayIndexOutOfBounds,
-        Self::ArrayInvalidSliceBounds,
-        Self::ArraySliceLengthMismatch,
-        Self::OwnershipCountOverflow,
-        Self::ShiftCountOutOfRange,
-        Self::IntegerDivisionByZero,
-        Self::IntegerRemainderByZero,
-        Self::PrimitiveCastOutOfRange,
-    ];
-
+impl FailureMessage {
     const fn for_reason(reason: MirTerminationReason) -> Option<Self> {
         match reason {
             MirTerminationReason::ObjectCastFailure => Some(Self::ObjectCastFailure),
@@ -63,24 +31,6 @@ impl PanicMessage {
 
     const fn index(self) -> usize {
         self as usize
-    }
-
-    const fn bytes(self) -> &'static [u8] {
-        match self {
-            Self::ObjectCastFailure => b"checked object cast failed",
-            Self::OptionalAccessFailure => b"optional value is absent",
-            Self::OptionalGuardOverflow => b"optional presence guard overflow",
-            Self::OptionalPinnedMutation => b"cannot mutate a guarded optional value",
-            Self::ArrayAllocationFailure => b"array allocation failed",
-            Self::ArrayIndexOutOfBounds => b"array index out of bounds",
-            Self::ArrayInvalidSliceBounds => b"array slice bounds are invalid",
-            Self::ArraySliceLengthMismatch => b"array slice length mismatch",
-            Self::OwnershipCountOverflow => b"ownership count overflow",
-            Self::ShiftCountOutOfRange => b"shift count out of range",
-            Self::IntegerDivisionByZero => b"integer division by zero",
-            Self::IntegerRemainderByZero => b"integer remainder by zero",
-            Self::PrimitiveCastOutOfRange => b"floating-point cast out of range",
-        }
     }
 
     const fn symbol(self) -> &'static str {
@@ -103,18 +53,18 @@ impl PanicMessage {
 }
 
 pub(super) struct PanicMessagePool {
-    used: [bool; PanicMessage::ALL.len()],
+    used: [bool; FailureMessage::ALL.len()],
 }
 
 impl PanicMessagePool {
     pub(super) fn build(functions: &[AssemblyFunction]) -> Self {
-        let mut used = [false; PanicMessage::ALL.len()];
+        let mut used = [false; FailureMessage::ALL.len()];
         for function in functions {
             for instruction in &function.instructions {
                 let Instruction::LoadSymbolAddress { symbol, .. } = instruction else {
                     continue;
                 };
-                if let Some(message) = PanicMessage::ALL
+                if let Some(message) = FailureMessage::ALL
                     .into_iter()
                     .find(|message| message.symbol() == symbol)
                 {
@@ -126,7 +76,7 @@ impl PanicMessagePool {
     }
 
     pub(super) fn into_assembly(self) -> Vec<AssemblyPanicMessage> {
-        PanicMessage::ALL
+        FailureMessage::ALL
             .into_iter()
             .filter(|message| self.used[message.index()])
             .map(|message| AssemblyPanicMessage {
@@ -142,7 +92,7 @@ pub(super) fn emit_ownership_overflow(
     location: Option<&runtime_trace::LocationReplacement>,
     output: &mut Vec<Instruction>,
 ) {
-    emit_static_panic_arguments(PanicMessage::OwnershipCountOverflow, output);
+    emit_static_panic_arguments(FailureMessage::OwnershipCountOverflow, output);
     if let Some(location) = location {
         location.emit(output);
     }
@@ -160,7 +110,7 @@ impl InstructionSelector<'_, '_> {
                 Ok(true)
             }
             MirTerminator::Terminate { reason, span } => {
-                let Some(message) = PanicMessage::for_reason(*reason) else {
+                let Some(message) = FailureMessage::for_reason(*reason) else {
                     return Err(crate::backend::BackendError::new(
                         crate::backend::Target::X86_64SysV,
                         Some(self.function.callable()),
@@ -231,7 +181,7 @@ impl InstructionSelector<'_, '_> {
 
     fn select_static_panic(
         &mut self,
-        message: PanicMessage,
+        message: FailureMessage,
         span: crate::source::Span,
     ) -> Result<(), crate::backend::BackendError> {
         emit_static_panic_arguments(message, self.output);
@@ -241,7 +191,7 @@ impl InstructionSelector<'_, '_> {
     }
 }
 
-fn emit_static_panic_arguments(message: PanicMessage, output: &mut Vec<Instruction>) {
+fn emit_static_panic_arguments(message: FailureMessage, output: &mut Vec<Instruction>) {
     output.push(Instruction::LoadSymbolAddress {
         symbol: message.symbol().to_owned(),
         destination: Register::Rdi,
@@ -327,7 +277,7 @@ mod tests {
 
     #[test]
     fn primitive_cast_failure_maps_to_the_frozen_static_message() {
-        let message = PanicMessage::for_reason(MirTerminationReason::PrimitiveCastOutOfRange)
+        let message = FailureMessage::for_reason(MirTerminationReason::PrimitiveCastOutOfRange)
             .expect("primitive cast failure must use the common reporter");
         assert_eq!(message.bytes(), b"floating-point cast out of range");
         assert_eq!(message.symbol(), ".Lska_panic_message_12");

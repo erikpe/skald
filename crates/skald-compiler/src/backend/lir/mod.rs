@@ -1,9 +1,12 @@
 //! Lowered executable drafts. Construction is not verification or publication.
 
 mod builder;
+mod call;
 mod model;
+mod observable;
 mod scalar;
 mod schema;
+mod trace;
 
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use builder::{BuildError, DraftBuilder};
@@ -21,3 +24,10 @@ pub(in crate::backend) use scalar::{
 
 #[cfg(test)]
 mod tests;
+
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use call::{Call, CallArgument, CallAttribution, CallTarget};
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use observable::AddressProvenance;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use trace::{TraceAction, TracePlan, TraceSite};

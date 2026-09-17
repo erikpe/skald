@@ -51,3 +51,78 @@ pub(in crate::backend) fn facts() -> PlanFacts {
         dispatch: vec![],
     }
 }
+
+/// Runtime header shapes as an independent fixture table; checking and effect
+/// classification stay in the production service-contract owner.
+pub(in crate::backend) fn runtime_declarations(
+    facts: &mut PlanFacts,
+) -> std::collections::BTreeMap<RuntimeService, SignatureId> {
+    use ScalarType::*;
+    let cases: [(RuntimeService, &[ScalarType], ReturnShape); 9] = [
+        (
+            RuntimeService::Allocate,
+            &[U64],
+            ReturnShape::Scalar(DataAddress),
+        ),
+        (RuntimeService::Free, &[DataAddress], ReturnShape::Unit),
+        (
+            RuntimeService::Panic,
+            &[DataAddress, U64],
+            ReturnShape::Never,
+        ),
+        (
+            RuntimeService::IoStandardHandle,
+            &[U8],
+            ReturnShape::Scalar(I64),
+        ),
+        (
+            RuntimeService::IoOpen,
+            &[DataAddress, U64, U8],
+            ReturnShape::Scalar(I64),
+        ),
+        (
+            RuntimeService::IoRead,
+            &[I64, DataAddress, U64],
+            ReturnShape::Scalar(I64),
+        ),
+        (
+            RuntimeService::IoWrite,
+            &[I64, DataAddress, U64],
+            ReturnShape::Scalar(I64),
+        ),
+        (RuntimeService::IoClose, &[I64], ReturnShape::Scalar(I64)),
+        (RuntimeService::AbiMarker, &[], ReturnShape::Unit),
+    ];
+    cases
+        .into_iter()
+        .map(|(service, inputs, returns)| {
+            let signature = facts
+                .add_signature(SignatureFact {
+                    convention: Convention::Runtime,
+                    inputs: inputs
+                        .iter()
+                        .enumerate()
+                        .map(|(index, ty)| Component {
+                            ty: *ty,
+                            role: ComponentRole::RuntimeParameter(index),
+                        })
+                        .collect(),
+                    results: match returns {
+                        ReturnShape::Scalar(ty) => vec![Component {
+                            ty,
+                            role: ComponentRole::Result,
+                        }],
+                        _ => vec![],
+                    },
+                    returns,
+                })
+                .unwrap();
+            facts.artifacts.push(ArtifactDeclaration {
+                key: ArtifactId::Runtime(service),
+                signature: Some(signature),
+                layout: None,
+            });
+            (service, signature)
+        })
+        .collect()
+}

@@ -464,23 +464,7 @@ fn runtime_external_and_literal_declarations_keep_distinct_contracts() {
     let mut external = runtime.clone();
     external.convention = Convention::ExternC;
     supplied.signatures.extend([runtime, external]);
-    for service in [
-        RuntimeService::Allocate,
-        RuntimeService::Free,
-        RuntimeService::Panic,
-        RuntimeService::IoStandardHandle,
-        RuntimeService::IoOpen,
-        RuntimeService::IoRead,
-        RuntimeService::IoWrite,
-        RuntimeService::IoClose,
-        RuntimeService::AbiMarker,
-    ] {
-        supplied.artifacts.push(ArtifactDeclaration {
-            key: ArtifactId::Runtime(service),
-            signature: Some(SignatureId::new(1)),
-            layout: None,
-        });
-    }
+    super::test_fixtures::runtime_declarations(&mut supplied);
     supplied.artifacts.extend([
         ArtifactDeclaration {
             key: ArtifactId::External(ExternalLinkId::new(0)),

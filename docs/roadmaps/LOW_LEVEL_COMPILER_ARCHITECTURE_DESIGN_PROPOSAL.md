@@ -8,8 +8,8 @@ The [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-n
 now informs the accepted, frozen and promoted
 [LIR model, construction and verification design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
 Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) is in progress;
-LI01/LI02 delivered checked declarations/identities and lowered scalar/object
-drafts; LI03 is next.
+LI01–LI03 delivered checked declarations/identities and the complete lowered
+execution vocabulary, including calls, effects and tracing; LI04 is next.
 Common model contracts are frozen; concrete target counterparts remain
 LA03 decisions before dependent native implementation. Later child designs
 and roadmaps remain pending.
@@ -297,7 +297,7 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 | Workstream | Focused design | Required handoff | Dependencies |
 | --- | --- | --- | --- |
 | LA01 | **[Phase architecture and backend ownership](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md):** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
-| LA02 | **[LIR model, construction, and verification](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md):** identities, values, memory, CFG/edges, effects, call representation, mutation rules, and dumps | Accepted/frozen design; [roadmap in progress](LOW_LEVEL_IR_MODEL_ROADMAP.md), LI01/LI02 complete, LI03 next. Lowered scalar/object drafts delivered; verification/selected delivery pending. Required handoff: supported construction/transformation APIs and exact selected-stage requirements | LA01 and common declaration readiness complete; selected synthetic checks pending; concrete native counterparts remain LA03 |
+| LA02 | **[LIR model, construction, and verification](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md):** identities, values, memory, CFG/edges, effects, call representation, mutation rules, and dumps | Accepted/frozen design; [roadmap in progress](LOW_LEVEL_IR_MODEL_ROADMAP.md), LI01–LI03 complete, LI04 next. Complete lowered execution vocabulary delivered; verification/selected delivery pending. Required handoff: supported construction/transformation APIs and exact selected-stage requirements | LA01 and common declaration readiness complete; selected synthetic checks pending; concrete native counterparts remain LA03 |
 | LA03 | **Target selection and physical realization:** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | End-to-end executable scalar/control-flow/call pilot through every new phase, without a production register allocator | LA01–LA02; jointly settle selection/placement/frame contracts before implementation |
 | LA04 | **Complete lowering migration:** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | Complete supported x86 behavior through LIR and stack placement; explicit operation/helper coverage and native parity | LA03; may split into lifecycle/helper and observation/artifact proposals |
 | LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04; portability review and full foundation validation |
@@ -428,7 +428,7 @@ An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
 delivery decisions. Phase preparation has qualified existing-boundary witnesses
 and complete baseline inputs; noisy cost gates remain inconclusive. The immediate
-next step is LI03 of the
+next step is LI04 of the
 [LA02 model roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md), implementing the
 [frozen model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) using the
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)

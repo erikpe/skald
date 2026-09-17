@@ -336,6 +336,9 @@ fn check_artifact(facts: &PlanFacts, d: &ArtifactDeclaration) -> Result<(), Plan
             } else {
                 Convention::ExternC
             };
+            if let ArtifactId::Runtime(service) = d.key {
+                super::services::check_service(service, s)?;
+            }
             if s.convention != expected {
                 return Err(PlanError::InvalidArtifact);
             }
@@ -344,7 +347,12 @@ fn check_artifact(facts: &PlanFacts, d: &ArtifactDeclaration) -> Result<(), Plan
             }
         }
         ArtifactId::Data(_) | ArtifactId::TraceTls => {
-            addressable_layout(facts, d.layout.ok_or(PlanError::InvalidArtifact)?)?;
+            let layout = addressable_layout(facts, d.layout.ok_or(PlanError::InvalidArtifact)?)?;
+            if let ArtifactId::Data(DataKey::FailureMessage(message)) = d.key {
+                if layout.size != message.bytes().len() || layout.alignment != 1 {
+                    return Err(PlanError::InvalidArtifact);
+                }
+            }
             if d.signature.is_some() {
                 return Err(PlanError::InvalidArtifact);
             }

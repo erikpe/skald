@@ -181,6 +181,8 @@ fn is_low_level_core(path: &Path) -> bool {
     path.starts_with("backend/plan")
         || path.starts_with("backend/graph")
         || path.starts_with("backend/lir")
+        || path == Path::new("backend/effects.rs")
+        || path == Path::new("backend/failure.rs")
 }
 
 fn low_level_dependency_allowed(dependency: &str) -> bool {
