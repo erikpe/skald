@@ -1,14 +1,16 @@
 # Low-Level Phase Architecture and Backend Ownership Roadmap
 
-Status: planned; LP01 is next. Implements LA01 of the
+Status: in progress; LP01 is complete and LP02 is next. Implements LA01 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen as of 2026-09-17.
 
-Planning baseline: `97fdaf49`. Implementation baseline: record the last commit
-before LP01 starts; the planning baseline is not a claim that implementation
-has begun. Record the overarching program baseline at the same point if no
-earlier implementation exists, and preserve it across subsequent child roadmaps.
+Planning baseline: `97fdaf49`. Implementation baseline: `495debd3`, the last
+commit before LP01 began. The overarching program shares this baseline; no
+earlier implementation exists. Preserve it across subsequent child roadmaps.
+The initial tree was clean; `97fdaf49..495debd3` contains only design freeze,
+roadmap creation and related documentation/index updates, with no compiler
+scaffolding or unrelated implementation changes.
 
 This workstream turns the accepted boundaries into an auditable migration
 contract, regression protection, and reproducible before-change evidence.
@@ -47,7 +49,7 @@ behavior; do not implement the illustrative future directory tree in advance.
 
 ## Progress
 
-- [ ] LP01 — Establish the migration contract and coverage inventory
+- [x] LP01 — Establish the migration contract and coverage inventory
 - [ ] LP02 — Protect existing backend boundaries and behavioral witnesses
 - [ ] LP03 — Make the foundation measurement protocol reproducible
 - [ ] LP04 — Capture and qualify the pre-migration baseline
@@ -64,13 +66,13 @@ behavior; do not implement the illustrative future directory tree in advance.
 | Timing, identities, digests and workload selection | [Cleanup measurement script](../../scripts/measure_cleanup_baseline.py), [support tests](../../scripts/tests/test_cleanup_baseline.py) | Reproducible foundation manifest/procedure and any narrowly necessary harness support |
 | Current compiler/test contracts | [Backend guide](../compiler/BACKEND.md), [reporting](../compiler/REPORTING.md), [testing](../development/TESTING.md) | Accurate current behavior and links to planned work, without claiming LIR exists |
 
-LP01 creates `docs/roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md` as the
-program-wide migration record and indexes it. Keep it active through LA05;
+The [migration coverage record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
+program-wide migration record created by LP01. Keep it active through LA05;
 LA01 closure does not archive pending migration obligations. LP03 creates
 `docs/development/LOW_LEVEL_COMPILER_MEASUREMENTS.md` for the reproducible
 procedure and evidence, referring to the generic
 [cleanup measurement contract](../development/CLEANUP_MEASUREMENTS.md).
-These names designate future deliverables, not files already present.
+The measurement document remains a future deliverable.
 
 ## PR-sized implementation sequence
 
@@ -79,30 +81,30 @@ These names designate future deliverables, not files already present.
 **Purpose:** turn architectural categories into concrete obligations before
 choosing LIR schemas or moving lowering code.
 
-- [ ] Record implementation/program baselines and inspect intervening commits.
+- [x] Record implementation/program baselines and inspect intervening commits.
   Read the frozen design against current source; document discrepancies rather
   than silently changing an accepted contract.
-- [ ] Enumerate every final-MIR instruction and terminator variant reaching the
+- [x] Enumerate every final-MIR instruction and terminator variant reaching the
   backend, plus generated helper families, entry/static lifecycle, runtime
   calls, trace actions, data and artifact roots. Distinguish executable bodies
   from retained declarations and layout-only visits.
-- [ ] For each entry record current owner, proposed phase owner, source/ABI/
+- [x] For each entry record current owner, proposed phase owner, source/ABI/
   failure invariants, existing test identifiers, missing witness, and delivery
   owner. Mark all new-pipeline delivery pending. A shared family row must name
   its member variants; no catch-all row can imply coverage of an unreviewed case.
-- [ ] Map the five phase products and planning context to their producers,
+- [x] Map the five phase products and planning context to their producers,
   permitted inputs, publication checks, consumers, observation and error
   obligations. Assign executable seal/constraint/verifier work to LA02/LA03.
   Keep the accepted design authoritative rather than copying its prose.
-- [ ] Record the five design walkthroughs as downstream acceptance witnesses:
+- [x] Record the five design walkthroughs as downstream acceptance witnesses:
   live input with x86 ties, loop/join/division CFG, hidden result/receiver call,
   shared release across a finalizer, and target resource/width constraints.
   AArch64 mappings remain design witnesses, not implemented ABI support.
-- [ ] Record the concrete observation, error and artifact-retention handoffs
+- [x] Record the concrete observation, error and artifact-retention handoffs
   without extending public APIs prematurely. Identify any required joint
   LA02/LA03 decisions, including helper inventories, frame scratch resources,
   and selected-stage edge transfers.
-- [ ] Index the coverage record and update this roadmap's progress/evidence.
+- [x] Index the coverage record and update this roadmap's progress/evidence.
 
 **Tests:** `make docs-check`; manually reconcile the inventory against the MIR
 enums, selector dispatch, helper constructors and existing tests. Include the
@@ -113,6 +115,24 @@ implementation is needed to test a documentation inventory.
 disposition and future owner. The next steps have a bounded list of missing
 current-behavior tests and measurement capabilities. No detailed schema decision
 is disguised as an already-implemented phase contract.
+
+**Completion evidence (2026-09-17):** the
+[migration record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) reconciles 42
+instructions, 20 terminators, 29 array operations, five I/O operations, all 12
+termination reasons, and 19 rvalues (including the excluded proof-rich
+`PathCondition`). It also covers place forms, generated bodies, runtime/data
+families, phase publication, trace/report/error authority, and joint downstream
+decisions. All new-pipeline delivery remains pending. Five bounded LP02 witness
+handoffs and six LP03 measurement capability gaps are recorded there.
+
+An independent one-off enum/table comparison confirmed each instruction,
+terminator, array operation and rvalue appears exactly once in its inventory;
+I/O/reason members are present. A source check resolved all 74 named witness
+functions to their linked owners. Manual selector/helper/retention review found
+no frozen-contract conflict or demonstrated semantic defect. `make docs-check`
+and whitespace checks passed. This documentation-only task introduces no Rust
+code, test fixtures or transitional implementation artifacts; current behavior
+suites were inspected, not rerun. Changes remain uncommitted for the user.
 
 ### LP02 — Protect existing backend boundaries and behavioral witnesses
 
@@ -294,12 +314,13 @@ frozen policy is an explicit design amendment with rationale and affected owners
 
 ## Transition ledger and discoveries
 
-No transitional implementation artifact exists at planning time. Update this
-ledger as work proceeds; the user normally commits between tasks.
+LP01 introduced no transitional implementation artifact. Update this ledger
+as work proceeds; the user normally commits between tasks. The maintained
+migration record carries pending program obligations through LA05.
 
 | Artifact/file or symbol | Introducing task/commit | Removal or transfer owner | Final disposition and evidence |
 | --- | --- | --- | --- |
-| None yet | — | — | Planning only |
+| No bridge, gate, exception or exploratory code introduced | LP01; commit pending | — | Documentation inventory only; source/history review recorded above |
 
 Carry continuing program obligations into the migration record with explicit
 owners; do not reset their history at a child-roadmap boundary. Shared baseline

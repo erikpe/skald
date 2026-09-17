@@ -3,9 +3,10 @@
 Status: accepted architectural direction, prepared 2026-09-17. The first child
 [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen, with its
-[implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) planned.
+[implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) in progress.
 Later child designs and roadmaps remain pending. Repository assessment baseline:
-`f97a9e51`; record the program implementation baseline when work starts.
+`f97a9e51`. Program implementation baseline: `495debd3`, before the migration
+contract/coverage work began. Child roadmaps retain their own task baselines.
 
 This proposal defines a new low-level compiler architecture between verified
 final MIR and native assembly. Its purpose is to establish explicit phases,
@@ -294,7 +295,8 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 | LA06 | **Register allocation:** allocator selection, liveness, constraints, preserved registers, splitting/spilling, coalescing scope, checking, and measured adoption | Proper allocation implemented through the existing placement contract; separate acceptance evidence and explicit disposition of baseline placement | LA05; own design and implementation roadmap |
 
 LA01 is accepted and frozen; its [roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
-is planned. The foundation is LA01–LA05; LA06 is the final
+has an initial [coverage/handoff inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md).
+The foundation is LA01–LA05; LA06 is the final
 planned consumer. Early contract exercises can reason about allocation without
 building its algorithm. If a contract problem appears later, amend the owning
 design explicitly rather than adding hidden exceptions across phases.
@@ -413,5 +415,7 @@ contract. Exact Rust schemas, executable seals, operation inventories, and
 target interfaces remain with LA02/LA03.
 An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
-delivery decisions. The immediate next step is the migration contract and
-coverage inventory in the [LA01 roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md).
+delivery decisions. The initial
+[migration coverage inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is
+reconciled; the immediate next step is existing-boundary and behavioral
+protection in the [LA01 roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md).

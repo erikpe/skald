@@ -1,13 +1,14 @@
 # Optimization Architecture Discoveries
 
-Status: three architectural constraints remain; backend preparation is planned;
+Status: three architectural constraints remain; backend preparation is in progress;
 proof-provenance normalization is implemented and archived.
 The native backend constraint now has an accepted
 [overarching design proposal](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
 for explicit LIR phases, backend ownership, migration, and consolidation,
 followed by a separate final register-allocation workstream. Its first focused
 [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-is frozen, with a [preparatory implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md).
+is frozen, with a [preparatory implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
+and initial [migration coverage inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md).
 The reachability constraint is resolved by the completed
 [target-independent whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
 [implementation roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
