@@ -1078,7 +1078,8 @@ and promoted from that handoff. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_
 is in progress; LI01–LI03 delivered checked declarations/identities, common
 readiness and the complete lowered execution vocabulary; LI04 added independent
 graph/value-flow verification. LI05 delivered full lowered callable verification,
-private immutable publication and genuine snapshot receipts. LI06 is next; selected synthetic checks and concrete
+private immutable publication and genuine snapshot receipts. LI06 added program
+inventory closure and parent-bound target declarations. LI07 is next; selected synthetic checks and concrete
 native agreements/implementation remain pending.
 A22 remains in progress: verified LIR, native migration, adoption and allocation
 are pending.

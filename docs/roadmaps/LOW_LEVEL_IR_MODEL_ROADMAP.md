@@ -1,6 +1,6 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01–LI05 are complete, LI06 is next.
+Status: in progress, 2026-09-17; LI01–LI06 are complete, LI07 is next.
 Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
@@ -61,7 +61,7 @@ the illustrative directory sketch.
 - [x] LI03 — Calls, effects, tracing and terminal operations
 - [x] LI04 — CFG and single-definition verification
 - [x] LI05 — Scalar domains, memory checks and lowered publication
-- [ ] LI06 — Generated inventories and complete-program authority
+- [x] LI06 — Generated inventories and complete-program authority
 - [ ] LI07 — Selected payload and resource description contracts
 - [ ] LI08 — Selected verification and portability witnesses
 - [ ] LI09 — Consuming edits, remaps and snapshot-bound analyses
@@ -329,8 +329,8 @@ deterministic reason/location assertions. Run the task quality gates.
 Verified meaningful graphs and genuine receipts exist; invalid inputs fail
 without unchecked constructors, indexing panics or runtime/source-error fallback.
 
-**Completion evidence:** implemented against the user's LI04 commit `eecdb4cc`;
-this task's source changes remain uncommitted for the user. Added 20 publication
+**Completion evidence:** implemented against the user's LI04 commit `eecdb4cc`,
+then committed by the user as `e87fa392`. Added 20 publication
 regressions and two public private-path compile-fail examples. The existing
 shared-release, enabled-trace and reported/nonreturning/hard-trap fixtures now
 pass full verification. Finite evidence, rooted dead regions, independently
@@ -354,20 +354,20 @@ their later owners. Measurements and production emission are unchanged.
 **Purpose:** extend valid individual callables to a finalized, context-bound
 program without retaining every intermediate body.
 
-- [ ] Implement canonical declared/building/verified worklists and staged
+- [x] Implement canonical declared/building/verified worklists and staged
   inventory finalization over already checked declaration catalogs.
-- [ ] Predeclare recursive helper keys; prohibit reentering a building body,
+- [x] Predeclare recursive helper keys; prohibit reentering a building body,
   conflicting definitions and synthesizing absent semantic bodies.
-- [ ] Reconcile required definitions, typed dependencies and exact snapshot-bound
+- [x] Reconcile required definitions, typed dependencies and exact snapshot-bound
   completion/derivation receipts at complete-program publication.
-- [ ] Implement parent-bound target declaration extension/freeze rules. Existing
+- [x] Implement parent-bound target declaration extension/freeze rules. Existing
   layout/signature facts cannot be replaced; new facts require replanning.
   LI07 adds resource/ABI catalogs and LI08 completes selected publication;
   do not introduce placeholder descriptors or a provisional selected seal here.
-- [ ] Preserve authorized external/null dispatch dispositions and existing
+- [x] Preserve authorized external/null dispatch dispositions and existing
   complete-mode helper roots. Demonstrate streaming completion bookkeeping
   without a requirement to retain every predecessor-stage body.
-- [ ] Update the program handoff with model inventory evidence and pending
+- [x] Update the program handoff with model inventory evidence and pending
   production planner/helper/target-discovery ownership.
 
 **Tests:** mutual recursion, duplicate/conflicting/unfinished requests, unknown
@@ -379,6 +379,30 @@ request arrival to challenge canonical inventories. Run the task quality gates.
 **Exit criteria:** complete-program authority proves actual inventory closure
 with genuine receipts. Test catalogs exercise the contract; production discovery
 and helper generation remain explicitly pending.
+
+**Completion evidence:** implemented against the user's LI05 commit `e87fa392`;
+this task remains uncommitted for the user. Added 14 owner regressions and two
+public private-path compile-fail examples. The canonical worklist stores a real
+receipt inside each verified entry, rejects building reentry/conflicting
+completion, and retains exact chosen snapshots after body release. Consuming
+finalization checks all required bodies and explicit byte/zero/address data,
+including categories/addends, active static domains and intrinsic failure bytes.
+The complete program receives a private publication witness. Target declaration
+freeze binds that exact parent witness and existing immutable pools; it cannot
+overwrite facts or fabricate selected authority.
+
+The final fixed-source `make check` passed (3,254 compiler unit tests, 12 boundary
+tests, workspace/documentation/runtime tests and 650 golden observations), then
+`make msrv-check` passed serially on Rust 1.82.0. The focused inventory suite
+passed 14 tests. An earlier run encountered stale Rustdoc dependency artifacts
+following an overlapping rebuild; the testing guide now states fixed-source,
+sequential validation. No design amendment, compatibility bridge, provisional
+selected seal, production event/switch or new independent discovery was needed.
+Scoped allowances and durable fixtures are ledgered below. Resource/ABI catalogs
+and selected authority remain LI07/LI08; consuming edits remain LI09; production
+discovery and native streaming/selection remain LA03. Receipts do not reconstruct
+released bodies. Public backend paths, native emission and measurements are
+unchanged.
 
 ### LI07 — Selected payload and resource description contracts
 
@@ -558,9 +582,11 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 | `backend/graph/verify/{model,check,analysis}.rs`: item-scoped non-test dead-code allowances on structural descriptions, failures, shared checking and borrowed analysis; explicit graph facade imports | LI04; `eecdb4cc`, based on `68dec8ed` | LA03 first native structural consumer; LI07/LI08 exercise selected APIs; LI11 transfers any outstanding allowances | Durable shared algorithm; remove allowances per consumed item, preserving ordinary compilation and unsuppressed test linting |
 | `backend/lir/graph/{storage,operands}.rs`: item-scoped non-test allowances on stored-draft adapter impls | LI04; `eecdb4cc` | LI05 full verification now consumes the adapter; LA03 native consumer; LI11 reviews | Retain independent ID/schema adapter; trim allowances as callers land; graph success cannot publish |
 | Graph-owner malformed selected-shape tables, lowered malformed tables and graph assertions in earlier loop/diamond/trace/release fixtures | LI04; `eecdb4cc` | Retain; LI07/LI08 connect real selected descriptions; LI11 reviews | Durable structural/type/dataflow witnesses, with no provisional selected storage or seal |
-| `backend/lir/read.rs` and borrowed scalar/object/call/effect/trace checks | LI05; uncommitted, based on `eecdb4cc` | Retain; LI11 reviews | Durable shared local legality rules, replacing builder-only ownership without cloning contexts or trusting builder history; mutation remains with the builder |
-| `backend/lir/verify/`: item-scoped non-test dead-code allowances on full verification, failures, private publication and receipt APIs; explicit lowered facade import groups | LI05; uncommitted | LA03 first native lowered consumer; LI06/LI09 exercise program/edit APIs; LI11 transfers outstanding allowances | Genuine immutable authority, with no provisional seal or emission switch; remove allowances per consumed item; test linting remains unsuppressed |
-| Lowered malformed publication fixtures, full verification of trace/shared-release witnesses, and public compile-fail publication examples | LI05; uncommitted | Retain; LI11 reviews | Durable guard/memory/effect/reference/trace/snapshot/privacy regressions; no exploratory production path |
+| `backend/lir/read.rs` and borrowed scalar/object/call/effect/trace checks | LI05; `e87fa392`, based on `eecdb4cc` | Retain; LI11 reviews | Durable shared local legality rules, replacing builder-only ownership without cloning contexts or trusting builder history; mutation remains with the builder |
+| `backend/lir/verify/`: item-scoped non-test dead-code allowances on full verification, failures, private publication and receipt APIs; explicit lowered facade import groups | LI05; `e87fa392` | LA03 first native lowered consumer; LI06/LI09 exercise program/edit APIs; LI11 transfers outstanding allowances | Genuine immutable authority, with no provisional seal or emission switch; remove allowances per consumed item; test linting remains unsuppressed |
+| Lowered malformed publication fixtures, full verification of trace/shared-release witnesses, and public compile-fail publication examples | LI05; `e87fa392` | Retain; LI11 reviews | Durable guard/memory/effect/reference/trace/snapshot/privacy regressions; no exploratory production path |
+| `backend/lir/program/{inventory,data,target}.rs`: item-scoped non-test dead-code allowances; explicit lowered facade re-exports | LI06; uncommitted, based on `e87fa392` | LA03 first production inventory/target discovery consumer; LI07/LI08 selected catalogs and publication; LI09 consuming edits; LI11 transfers outstanding allowances | Genuine lower-program closure and parent-bound declaration freeze; no selected seal or native switch. Remove allowances per consumed API, preserving unsuppressed test lints |
+| Program-owner worklist/data/target tests and public private-path program/extension examples | LI06; uncommitted | Retain; LI11 reviews | Durable recursion, exact receipt, streaming, data dependency/addend and parent-freeze regressions; no exploratory target emitter |
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation
 and lint allowances as they arise. Genuine draft builders and synthetic

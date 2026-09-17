@@ -708,6 +708,12 @@ tests and require no compiler-specific box fixture.
 
 ## Focused commands
 
+Run repository gates sequentially against a fixed source snapshot. Avoid
+concurrent Cargo rebuilds in the same target directory while tests and Rustdoc
+are running: rebuilt shared dependencies can invalidate the running checks'
+artifacts. Golden invocations also share build outputs; their internal parallel
+scheduler does not isolate separate runner invocations.
+
 `make help` is the complete command inventory. Useful focused forms include:
 
 ```text

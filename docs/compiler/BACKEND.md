@@ -4,7 +4,7 @@ Status: authoritative for the current backend interface, supported target
 registry, target legality, x86-64 System V realization, and generated assembly
 boundary. Explicitly marked frozen additions define selected future target
 boundaries without claiming current backend support.
-The implemented private [low-level execution and callable verification](LOW_LEVEL_IR.md)
+The implemented private [low-level execution and publication](LOW_LEVEL_IR.md)
 provide checked facts, stage-owned identities and the complete lowered execution vocabulary, including
 calls, effects and tracing, plus independent callable verification and immutable
 publication; production

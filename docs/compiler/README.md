@@ -73,7 +73,7 @@ optimization.
 
 Target legality, layout, calling conventions, and code generation are defined
 by the [backend and target contract](BACKEND.md). Private
-[low-level execution and callable verification](LOW_LEVEL_IR.md) supply checked contexts,
+[low-level execution and publication](LOW_LEVEL_IR.md) supply checked contexts,
 logical signatures, stage-owned identities and the complete lowered execution
 vocabulary with independent callable verification and immutable publication; native consumers
 remain planned. The public runtime C surface

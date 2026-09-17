@@ -332,7 +332,8 @@ exist. Do not add public mutable products just for inspection.
 
 This table records responsibilities; names are conceptual, not new Rust types.
 Private checked construction and full lowered callable publication are implemented.
-Complete-program and selected authority, and native consumption, remain downstream work.
+Complete lowered-program closure and parent-bound target declarations are implemented.
+Selected authority and native consumption remain downstream work.
 
 | Product | Producer and permitted inputs | Publication obligations | Consumer authority | Observation/error obligation | Implementation owner |
 | --- | --- | --- | --- | --- | --- |
@@ -423,7 +424,7 @@ it does not certify a production final-MIR projection.
 | Logical shape versus physical ABI | Explicit convention, scalar/address component roles and return shape; positive hidden-destination, receiver/origin and seven-integer/nine-float fixtures on both profile shapes | LI03 delivered logical call checks; LA03 freezes actual incoming/outgoing bindings and indirect-target timing; LA04 migrates full native pressure witness |
 | Selected representation and operands | Distinct stage/local IDs and checked owner arenas; frozen ordered opcode-derived operand/tie/clobber interface can express fixed division resources, destructive add and three-address shapes | LI07/LI08 implement synthetic payload/resource/timing validation; LA03 confirms early-clobber, call-result ordering and canonicalization in real x86 recipes |
 | Flags and edges | Frozen atomic flag bundles and explicit edge occurrences/arguments represent current conditional labels and simultaneous loop transfers without hiding branches | LI02 constructed loop/diamond/parallel-edge drafts; LI04 delivered independent CFG/definition/dominance checks; LI07/LI08 check bundles/correction blocks; LA03 implements critical-edge policy and independent swap/cycle transfer checking |
-| Inventories and publication | Typed source/helper/coordinator/entry/thunk keys, canonical declaration lookup, absent-source rejection and context-bound handles; equal live plans do not share authority | LI05 delivered genuine callable seals/receipts; LI06 adds worklists, program closure and parent-bound extensions; LA03 freezes streaming target discovery and verified thunk construction |
+| Inventories and publication | Typed source/helper/coordinator/entry/thunk keys, canonical declaration lookup, absent-source rejection and context-bound handles; equal live plans do not share authority | LI05 delivered genuine callable seals/receipts; LI06 delivered worklists, program closure and parent-bound extensions; LA03 freezes streaming target discovery and verified thunk construction |
 | Symbolic objects and scratch | Checked addressable/zero-size versus elided layouts; no value home or frame offset; frozen role separation represents semantic/trace/ABI and later placement requirements | LI02 delivered size-zero/elided objects and checked lifetime sites; LI07/LI08 describe scratch/ABI areas; LA03 freezes actual slot shapes and bounded frame legalization |
 | Inspection and errors | Immutable borrowed fact views, stable structural declaration failure reasons and public private-path compile-fail tests; omitted policy rejects trace inventory | LI03 delivered effects and trace construction checks; LI04 delivered structured graph failures; LI05 delivered full callable failures; LI10 supplies canonical phase dumps; LA03/LA05 wire real observations and native error conversion |
 
@@ -489,7 +490,7 @@ involving unreachable blocks is unknown. Graph success cannot mint a seal or
 receipt. `make check` passed serially (3,220 compiler unit tests, 12 boundary tests,
 runtime tests and 650 golden observations); Rust 1.82.0 checking passed.
 Full callable verification/publication is delivered below. Complete-program
-publication remains LI06 work; native delivery and preserved measurements are unchanged.
+publication is delivered below; native delivery and preserved measurements are unchanged.
 
 ### Full lowered callable verification/publication (LI05)
 
@@ -511,8 +512,37 @@ the private publication paths.
 
 This is supplied-model authority, not certification of real MIR lowering or
 native trace-path/recipe equivalence. Complete-program inventory reconciliation
-is LI06; native planning/selection/emission remain LA03/LA04. Production public
+is delivered below; native planning/selection/emission remain LA03/LA04. Production public
 paths and preserved measurements are unchanged.
+
+### Finalized inventories and parent-bound declarations (LI06)
+
+The private lowered program owner supplies canonical declared/building/verified
+worklists, genuine chosen-snapshot completion registration and consuming
+complete-program finalization. All required bodies and data initializers must
+complete; reserved recursive helper references never reenter construction.
+Receipts retain witnesses/dependencies without retaining predecessor graphs;
+input reconciliation rejects stale replacements, other owners and foreign live
+contexts/targets. Explicit byte/zero/address data definitions check extent,
+category, addend, executable/static domain and intrinsic failure catalog bytes.
+Authorized externals/runtime services and null dispatch slots require no body.
+
+Target declaration extensions borrow the exact finalized parent inventory and
+freeze target thunk signatures/constant layouts from existing immutable pools.
+They cannot overwrite parent declarations or create new layout/signature facts,
+semantic bodies or trace policy. This is declaration/data freeze, not a selected
+seal: resource/ABI catalogs and selected thunk completion remain LI07/LI08.
+
+Owner regressions cover recursive helpers, randomized arrival, missing/conflicting
+completion, streaming receipt retention, stale/foreign witnesses, data cycles,
+invalid categories/addends/initializers, active/inactive statics, legal external
+and null dispositions, and parent-bound target extensions. Program and extension
+public-path compile-fail examples preserve privacy. Production helper/data/target
+discovery, native lowering/selection, physical relocations and adoption remain
+LA03/LA04/LA05. LA03 must specify discovery/freeze and selection order relative
+to input-body release; the model proves streaming bookkeeping, not reconstruction
+of a released input or an implemented native streaming pipeline. Preserved
+measurements and public backend APIs are unchanged.
 
 | Decision to specify | Primary owner / required counterpart | Concrete required output |
 | --- | --- | --- |
@@ -588,7 +618,7 @@ maintained through LA05, which reconciles its obligations and archives it.
 
 The [LA02 model/construction/verification design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
 is accepted, frozen and promoted. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-is in progress; LI01–LI05 are complete and LI06 is next. The
+is in progress; LI01–LI06 are complete and LI07 is next. The
 [common readiness record](#common-model-readiness-li01) covers the inherited
 walkthroughs and the implemented declaration/identity foundation. LA03's
 concrete target-selection and physical-realization
@@ -621,7 +651,7 @@ Carry these accepted constraints into both designs:
 
 | Owner | Remaining deliverable / exit obligation |
 | --- | --- |
-| LA02 | Checked declarations/identities and complete lowered execution vocabulary delivered by LI01–LI03, independent graph/value-flow verification by LI04 and full callable scalar/memory/effect/trace verification, immutable publication and genuine receipts by LI05; program closure, remapping, selected interfaces, editing and phase inspection/dumps still pending |
+| LA02 | Checked declarations/identities and complete lowered execution vocabulary delivered by LI01–LI03, independent graph/value-flow verification by LI04 and full callable scalar/memory/effect/trace verification, immutable publication and genuine receipts by LI05; program closure and parent-bound target declarations delivered by LI06; remapping, selected interfaces, editing and phase inspection/dumps still pending |
 | LA03 | Target resources and overlap/tie/operand timing, ABI plans and complete selection, parallel transfers, checked stack placement, symbolic frames and physical legalization; end-to-end scalar/control-flow/call pilot plus native x86 and synthetic AArch64 contract witnesses |
 | LA04 | Full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, I/O, traces, entry/statics and complete/reachable artifacts; update each inventory row with delivery evidence |
 | LA05 | One production LIR pipeline, reporting/determinism parity, legacy-path removal, portability/cumulative review and frozen foundation cost acceptance |

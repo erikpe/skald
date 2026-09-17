@@ -5,6 +5,7 @@ mod call;
 mod graph;
 mod model;
 mod observable;
+mod program;
 mod read;
 mod scalar;
 mod verify;
@@ -39,4 +40,10 @@ pub(in crate::backend) use trace::{TraceAction, TracePlan, TraceSite};
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use verify::{
     verify_callable, CompletionReceipt, VerificationFailure, VerificationReason, VerifiedCallable,
+};
+
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use program::{
+    DataDefinition, DataInitializer, InventoryState, ProgramBuilder, ProgramError,
+    TargetDeclarations, TargetExtension, VerifiedProgram,
 };

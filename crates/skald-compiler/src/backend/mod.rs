@@ -101,6 +101,14 @@ pub enum RuntimeTracePolicy {
 /// ```compile_fail
 /// use skald_compiler::backend::lir::CompletionReceipt;
 /// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::lir::VerifiedProgram;
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::lir::TargetExtension;
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {
     verified: &'input VerifiedFinalMirProgram,

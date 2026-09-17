@@ -1,9 +1,10 @@
-# Low-Level Execution and Callable Verification
+# Low-Level Execution and Publication
 
 Status: private checked declarations and the complete lowered draft vocabulary
 are implemented. Production emission still uses the [current backend](BACKEND.md).
 Independent graph/value-flow and full lowered callable verification are implemented.
-Complete-program publication, selected graphs, edits, placement and native
+Complete lowered-program inventory publication and parent-bound target
+declarations are implemented. Selected graphs, edits, placement and native
 consumption remain planned.
 
 ## Ownership and checking
@@ -194,8 +195,8 @@ by current native emission, preventing a second message list. Arbitrary
 nonreturning calls retain an explicit terminal call without inventing a reason.
 Hard trap is a separate terminal with no reporter. These terminals have no
 cleanup/unwind edges; target selection later exposes the defensive trap if a
-nonreturning callee violates its contract. Data initializer/inventory publication
-and native lowering remain future responsibilities.
+nonreturning callee violates its contract. Explicit data initializers and inventory closure are checked during program
+publication. Production discovery and native lowering remain future responsibilities.
 
 The shared-release fixture uses ordinary loads/stores and branches for immortal,
 ordinary and last-owner paths, then an indirect finalizer call and free of the
@@ -225,7 +226,7 @@ its live context/callable owner, checked typed dependencies and a private unique
 snapshot witness; equal bodies or equal live plans do not share authority.
 Cloning a receipt preserves that exact witness without retaining the body.
 These are genuine lowered callable receipts, not complete-program closure or
-selected-stage authority. Program inventory reconciliation remains planned.
+selected-stage authority. Program inventory reconciliation checks these against the chosen completion records.
 
 Failures are ordered by local storage position and stable reason, with stage,
 target/profile, source or generated callable identity and available origin spans.
@@ -237,6 +238,51 @@ This verifier checks supplied low-level execution, not the final-MIR projection,
 source initialization or alias/lifetime correctness. Dynamic memory bounds,
 physical ABI, native recipe equivalence and full trace-path parity remain with
 their upstream or target owners. No native emitter consumes these products yet.
+
+## Program inventories and target declarations
+
+`ProgramBuilder` starts from the immutable checked declaration catalog. All
+required source/generated bodies remain construction roots, including unused
+complete-mode helpers; absent sources cannot be requested or built. `next`
+chooses canonically. Discovery can request an already reserved helper, including
+one currently building, without recursively constructing it. `begin` rejects
+reentry and completed definitions. A verified state contains its receipt, so
+completion state cannot diverge from its witness.
+
+`complete` checks the chosen verified body and supplied receipt against the live
+parent and exact snapshot before recording completion. Bodies may then be
+released: bookkeeping retains receipts and typed dependencies rather than every
+predecessor graph. Receipts certify completion; they do not reconstruct released
+input bodies or implement the native streaming schedule. `finish` consumes construction state and checks all required
+bodies and data definitions before producing `VerifiedProgram`. Consumers use
+`require_input` to reconcile a chosen input witness; receipts from replacements,
+other callables, other live contexts or other targets cannot substitute. Future
+consuming edits must invalidate and republish program authority.
+
+Data definitions explicitly contain byte, zero-fill and typed address
+initializers. Their checked total width must exactly match the declared extent.
+References must name the declared category and executable domain. Data addends
+must fit the referenced extent (including a one-past address); code/TLS addends
+are zero. Forward and cyclic data references require prior declarations, not
+initializer construction order. Intrinsic failure bytes must match the shared
+message catalog. Active statics require definitions in both artifact policies;
+inactive complete-mode static declarations remain inspectable and cannot be
+initialized or referenced. Runtime/external declarations and authorized null
+dispatch slots require no fabricated body.
+
+`TargetDeclarations` borrows the exact finalized parent inventory. It can declare
+target thunks with existing logical signatures and constant data with existing
+layouts, then define that data and freeze a `TargetExtension`. It cannot replace
+parent declarations, introduce source/helper bodies or trace policy, or allocate
+new layout/signature facts. New facts require replanning. Catalogs and initializer
+iteration are canonical; the extension checks its parent publication witness,
+separate from equality of declarations or callable receipts.
+
+This freeze certifies declarations and data only. Resource/ABI catalogs and
+selected thunk construction/verification remain planned; a frozen extension
+creates no selected seal, placement result or native emission authority. The
+supplied catalog remains the inventory authority: these checks do not rediscover
+semantic reachability, build real helpers or certify production MIR projection.
 
 ## Regression ownership
 
