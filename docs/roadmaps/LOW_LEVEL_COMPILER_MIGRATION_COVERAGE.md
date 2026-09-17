@@ -570,6 +570,10 @@ handoff for target selection and physical realization. Concrete native agreement
 remain pending before dependent implementation. The architecture program and
 cleanup audit's A22 remain in progress: private model delivery does not deliver
 production native lowering, placement, adoption or allocation.
+The [native target design draft](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+proposes the next pilot and an explicit plan-bound target catalog / final receipt
+reconciliation amendment for streaming. That amendment is pending review;
+the current implemented finalized-parent contract remains authoritative.
 
 Carry these accepted constraints into the native design:
 

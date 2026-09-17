@@ -9,13 +9,14 @@ not by roadmap history.
 ## Implementation roadmaps
 
 No implementation roadmap is currently active. The next architecture workstream
-needs a target-selection and physical-realization design before implementation.
+has a target-selection and physical-realization draft under review.
 
 ## Pending discovery and planning records
 
 | Record | Status | Purpose | Next step | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Low-level compiler architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md) | Accepted direction; phase preparation complete; executable LIR model complete | Establish explicit LIR phases and shared/target backend ownership, then implement register allocation as a separate final workstream | Prepare the target-selection and physical-realization design against the completed model handoff | Verified final MIR; archived frozen phase design; existing backend/runtime contracts; AArch64 and future placement requirements |
+| [Low-level compiler architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md) | Accepted direction; phase preparation complete; executable LIR model complete | Establish explicit LIR phases and shared/target backend ownership, then implement register allocation as a separate final workstream | Review the target-selection and physical-realization draft, including its explicit streaming model amendment | Verified final MIR; archived frozen phase design; existing backend/runtime contracts; AArch64 and future placement requirements |
+| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md) | Draft LA03 design | Deliver the complete native scalar/control-flow/call pilot through the new phases, with independent placement and physical checks | Review streaming model amendment, checker rules and native target contracts; freeze before creating a roadmap | Completed model handoff and inherited frozen designs; full migration/adoption/allocation remain separate |
 | [Low-level compiler migration coverage](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) | Preparation and executable model complete; native pipeline delivery pending | Maintain operation/helper coverage, phase authority, witnesses and baseline handoff through foundation adoption | Use the completed-model handoff to freeze target contracts; carry retained-artifact removal obligations into native roadmaps | Frozen model and archived phase design; qualified current-boundary witnesses and durable baseline; adoption cost clearance remains pending |
 | [Low-level compiler architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md) | One actionable follow-up | Record independent maintenance findings encountered during phase-model implementation | Isolate golden build artifacts across concurrent invocations, or reject conflicting runs | Existing golden planner/compiler/native execution owners; independent of model publication |
 | [Auric port feasibility](AURIC_PORT_FEASIBILITY.md) | Actionable investigation | Assess a silent Oric emulator in Skald, including CPU/VIA/AY keyboard behavior, video, tape loading, and comparison with Doom | Select firmware/game images and validate CPU/bus throughput plus the shared framebuffer bridge | Existing byte arithmetic, arrays and aliases; proposed shared-array native bridge; external firmware and game images |
