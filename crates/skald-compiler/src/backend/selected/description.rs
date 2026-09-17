@@ -109,6 +109,14 @@ pub(in crate::backend) enum Bundle<'a> {
         scratch: Cow<'a, [Scratch<'a>]>,
     },
 }
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) enum Flow {
+    Instruction,
+    Branch,
+    Return,
+    Never,
+}
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct Description<'a> {
     pub operands: Cow<'a, [Operand<'a>]>,
@@ -124,6 +132,9 @@ pub(in crate::backend) struct Description<'a> {
     pub bundle: Option<Bundle<'a>>,
     /// Zero for instructions/returns; all branch successors live in graph storage.
     pub successors: usize,
+    pub flow: Flow,
+    pub call_signature: Option<SignatureId>,
+    pub call_attribution: Option<&'a crate::backend::lir::CallAttribution>,
 }
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) trait Payload {

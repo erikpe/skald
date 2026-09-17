@@ -300,7 +300,7 @@ view derives ordered operands and results from opcode fields and borrows ties,
 clobbers, mandatory effects, typed artifact references, objects and ABI component
 bindings. Transient owned operand descriptions are permitted; independent
 editable use/def lists are absent. Shared structural analysis consumes this view
-without matching target enums. Terminal payloads expose their successor count,
+without matching target enums. Terminal payloads expose their flow kind and successor count,
 and graph storage contains every ordered edge and argument list.
 
 Operand constraints distinguish legal resource views with a memory alternative,
@@ -328,9 +328,29 @@ all effects and successors remain in the enclosing description and graph. The
 synthetic tests exercise two-address and three-address descriptions, fixed call
 results, early clobbers, flag branches and hidden ABI components. They establish
 structural contracts, not native instruction completeness or ABI preservation.
-Selected drafts grant no seal or placement authority. Independent shared/target
-descriptor verification and immutable selected publication are the next step;
-real target opcodes, ABI catalogs and physical realization remain future work.
+Selected drafts grant no seal or placement authority. `verify_selected` composes
+shared context, graph, representation, resource, tie/timing, effect/reference,
+ABI and bounded-recipe checks with a required target verifier. Calls retain their
+logical signature and attribution; a secured indirect target is a separate early
+use. Entry/call/return bindings preserve exact component order. Trace effects
+require enabled policy and an explicit TLS dependency. Symbolic objects are
+checked for layout, role and ABI-area extent.
+
+Only successful shared and target checks publish an immutable
+`VerifiedSelectedCallable`. Its receipt binds the live selection context, exact
+selected snapshot, checked references and chosen lower input; generated thunks
+have no fictitious lower input. A selected program closes every finalized source
+body and declared target thunk using those receipts. Bodies may be released after
+completion; foreign-context, stale and duplicate completions fail.
+
+Targets must independently check opcode completeness, mandatory effects and
+references, real resource footprints and target-specific control-flow rules.
+There is no default accepting verifier. Synthetic tests demonstrate guard and
+correction graphs, simultaneous edges, secured indirect calls, inherited helper
+attribution, partial resource preservation and receipt binding. They prove the
+shared interface is usable across two target shapes, not physical preservation.
+Real target opcodes, ABI catalogs, placement and frame realization remain future
+work.
 
 ## Regression ownership
 

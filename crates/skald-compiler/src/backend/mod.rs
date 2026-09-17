@@ -96,6 +96,12 @@ pub enum RuntimeTracePolicy {
 /// use skald_compiler::backend::selected::SelectedDraft;
 /// ```
 ///
+/// Selected publication and receipt constructors remain verification-private:
+///
+/// ```compile_fail
+/// use skald_compiler::backend::selected::{VerifiedSelectedCallable, SelectedReceipt, VerifiedSelectedProgram};
+/// ```
+///
 /// Verified low-level callables and completion receipts also have no public
 /// unchecked construction path:
 ///

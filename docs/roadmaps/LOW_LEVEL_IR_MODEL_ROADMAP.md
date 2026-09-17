@@ -1,6 +1,6 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01–LI07 are complete, LI08 is next.
+Status: in progress, 2026-09-17; LI01–LI08 are complete, LI09 is next.
 Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
@@ -63,7 +63,7 @@ the illustrative directory sketch.
 - [x] LI05 — Scalar domains, memory checks and lowered publication
 - [x] LI06 — Generated inventories and complete-program authority
 - [x] LI07 — Selected payload and resource description contracts
-- [ ] LI08 — Selected verification and portability witnesses
+- [x] LI08 — Selected verification and portability witnesses
 - [ ] LI09 — Consuming edits, remaps and snapshot-bound analyses
 - [ ] LI10 — Immutable inspection and deterministic phase dumps
 - [ ] LI11 — Cumulative review, cleanup, downstream handoff and closure
@@ -452,16 +452,16 @@ uncommitted for the user. No discovery or frozen-design amendment was needed.
 **Purpose:** verify the selected interface independently before native adapters
 or placement rely on it.
 
-- [ ] Compose shared context/graph/value/effect checks with descriptor/resource/
+- [x] Compose shared context/graph/value/effect checks with descriptor/resource/
   representation/ABI/bundle consistency checks and a target-verifier hook.
-- [ ] Require both shared and target checks for immutable selected publication;
+- [x] Require both shared and target checks for immutable selected publication;
   bind input snapshot, selection extension and generated-thunk receipts.
-- [ ] Complete all six frozen worked cases in synthetic targets: live tied input,
+- [x] Complete all six frozen worked cases in synthetic targets: live tied input,
   guarded diamond with correction blocks, loop/swap/critical edges, hidden
   destination and mixed pressure, release/trace omission, resource extensions.
-- [ ] Challenge descriptor mistakes independently of normal payload constructors.
+- [x] Challenge descriptor mistakes independently of normal payload constructors.
   Expose target-created CFG and temporaries, and reject leftover lower-stage IDs.
-- [ ] Record selected readiness and the exact real x86/AArch64 obligations still
+- [x] Record selected readiness and the exact real x86/AArch64 obligations still
   owned by LA03. Do not claim structural tests prove physical preservation.
 
 **Tests:** malformed slots/ties/timing/resource footprints, incompatible fixed
@@ -473,6 +473,32 @@ two distinct synthetic target shapes. Run the task quality gates.
 **Exit criteria:** synthetic selected products satisfy both verification layers;
 the shared interface has portability witnesses and no target-specific defaults.
 No placeholder placement/checker or production target registration exists.
+
+**Completion record (2026-09-17):** implemented against LI07's committed endpoint
+`63291d6d`, preserving model baseline `f1053782`. Shared verification independently
+checks descriptors and composes graph failures; a required target hook checks
+opcode completeness and target-specific legality. Explicit flow, call signature
+and retained attribution close information gaps in the borrowed description.
+ABI verification distinguishes incoming, outgoing and result slot areas. Only
+joint success publishes immutable selected products and exact snapshot/context/
+input receipts; complete inventories cover finalized source bodies and frozen
+extension thunks without retaining callable storage.
+
+The six worked cases and independent malformed mutations are covered by the
+selected owner tests. Two synthetic target shapes express destructive and
+three-address recipes, independent bank pressure, explicit correction/loop CFG,
+original-header release, enabled/inherited and omitted trace, extended resources
+and generated thunks. The handoff records real x86/AArch64 recipe, resource, ABI,
+transfer, frame and physical-preservation obligations for LA03. No native
+registration, placeholder placement/checker or provisional seal was introduced.
+Earlier construction-only fixtures remain durable draft regressions; outstanding
+native-consumer lint allowances and new authority APIs are reconciled in the
+ledger. No separate discovery or frozen-design amendment was required.
+
+Validation: final fixed-source `make check` passed, including 3,271 compiler unit
+tests (17 selected owner tests), boundary/privacy suites, runtime tests and all
+650 native golden observations. `make msrv-check` passed serially on Rust 1.82.0.
+Changes remain uncommitted for the user's manual commit; LI09 is next.
 
 ### LI09 — Consuming edits, remaps and snapshot-bound analyses
 
@@ -604,8 +630,10 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 | Lowered malformed publication fixtures, full verification of trace/shared-release witnesses, and public compile-fail publication examples | LI05; `e87fa392` | Retain; LI11 reviews | Durable guard/memory/effect/reference/trace/snapshot/privacy regressions; no exploratory production path |
 | `backend/lir/program/{inventory,data,target}.rs`: item-scoped non-test dead-code allowances; explicit lowered facade re-exports | LI06; `ddc5a97d`, based on `e87fa392` | LA03 first production inventory/target discovery consumer; LI07/LI08 selected catalogs and publication; LI09 consuming edits; LI11 transfers outstanding allowances | Genuine lower-program closure and parent-bound declaration freeze; no selected seal or native switch. Remove allowances per consumed API, preserving unsuppressed test lints |
 | Program-owner worklist/data/target tests and public private-path program/extension examples | LI06; `ddc5a97d` | Retain; LI11 reviews | Durable recursion, exact receipt, streaming, data dependency/addend and parent-freeze regressions; no exploratory target emitter |
-| Selected model/context/builder/graph/ABI/resource/description owners and explicit facade imports: item-scoped non-test lint allowances; selection-scoped binding and checked extension draft lookup | LI07; uncommitted, based on `ddc5a97d` | LI08 exercises independent descriptor/publication APIs; LA03 first native selected consumer; LI11 transfers remaining allowances | Durable selected contracts, not transitional native code; remove allowances per consumed item with test linting unsuppressed |
-| Selected synthetic opcode fixtures, origin/context/program/thunk/resource/ABI/timing/CFG regressions, private-path example and selected dependency guard | LI07; uncommitted | Retain; LI08 extends malformed/portability witnesses; LI11 reviews | Durable opcode-derived structural tests; fixtures remain test-only |
+| Selected model/context/builder/graph/ABI/resource/description owners and explicit facade imports: item-scoped non-test lint allowances; selection-scoped binding and checked extension draft lookup | LI07; `63291d6d`, based on `ddc5a97d` | LI08 exercises independent descriptor/publication APIs; LA03 first native selected consumer; LI11 transfers remaining allowances | Durable selected contracts, not transitional native code; remove allowances per consumed item with test linting unsuppressed |
+| Selected synthetic opcode fixtures, origin/context/program/thunk/resource/ABI/timing/CFG regressions, private-path example and selected dependency guard | LI07; `63291d6d` | Retain; LI08 extends malformed/portability witnesses; LI11 reviews | Durable opcode-derived structural tests; fixtures remain test-only |
+| `backend/selected/verify/` and explicit selected facade exports: scoped non-test dead-code/import allowances on verification/publication/receipt/program APIs | LI08; uncommitted, based on `63291d6d` | LA03 first native selected consumer; LI09 exercises edit/republication; LI11 transfers remaining allowances | Genuine selected authority requiring shared and target success; remove per consumed item, keeping test linting unsuppressed |
+| Selected verification synthetic target and private malformed-descriptor witnesses | LI08; uncommitted | Retain; LI11 reviews | Durable test-only portability and authority regressions; no target registration or accepting production hook |
 
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation

@@ -1,7 +1,7 @@
 //! Checked structural writes; semantic descriptor verification precedes publication.
 use super::{
     storage::{Block, Object, ObjectRole, Terminal, Value},
-    AbiBindings, OperandRole, Payload, Representation, SelectedDraft, SelectionContext,
+    AbiBindings, Flow, OperandRole, Payload, Representation, SelectedDraft, SelectionContext,
 };
 use crate::{
     backend::{
@@ -208,7 +208,7 @@ impl<'p, P: Payload> SelectedBuilder<'p, P> {
         if b.terminal.is_some() {
             return Err(SelectedBuildError::Terminated);
         }
-        if payload.describe().successors != 0 {
+        if payload.describe().flow != Flow::Instruction || payload.describe().successors != 0 {
             return Err(SelectedBuildError::InvalidFlow);
         }
         let instruction = b.instructions.len();
@@ -259,7 +259,10 @@ impl<'p, P: Payload> SelectedBuilder<'p, P> {
         if self.draft.blocks.get(block)?.terminal.is_some() {
             return Err(SelectedBuildError::Terminated);
         }
-        if payload.describe().successors != edges.len() {
+        if payload.describe().flow == Flow::Instruction
+            || (payload.describe().flow == Flow::Branch && edges.is_empty())
+            || payload.describe().successors != edges.len()
+        {
             return Err(SelectedBuildError::InvalidFlow);
         }
         for op in &*payload.describe().operands {

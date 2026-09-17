@@ -532,7 +532,7 @@ freeze target thunk signatures/constant layouts from existing immutable pools.
 They cannot overwrite parent declarations or create new layout/signature facts,
 semantic bodies or trace policy. This is declaration/data freeze, not a selected
 seal. LI07 delivered resource/ABI catalogs and selected thunk drafts; selected
-thunk completion remains LI08.
+thunk completion is delivered by LI08.
 
 Owner regressions cover recursive helpers, randomized arrival, missing/conflicting
 completion, streaming receipt retention, stale/foreign witnesses, data cycles,
@@ -615,24 +615,49 @@ Future changes must record their introducing commit and removal/transfer owner
 in the child and program ledgers, even after local commits. This record is
 maintained through LA05, which reconciles its obligations and archives it.
 
+### Selected verification readiness (LI08)
+
+Shared descriptor checking and a mandatory target hook jointly publish immutable
+selected callable snapshots. Completion receipts bind the exact lower input,
+selection context/frozen extension and selected snapshot; declared target thunks
+carry no fabricated input. Selected inventory closure rejects missing, stale,
+duplicate and foreign-context completions.
+
+| Synthetic witness | Delivered evidence | Concrete target obligation (LA03) |
+| --- | --- | --- |
+| Destructive / three-address add | Separate input/result IDs; tied input remains a later call use; both target shapes publish | Actual instruction constraints, canonicalization and preservation of the live input |
+| Division correction diamond | Explicit guard, quotient/remainder temporaries, correction block and join; unsecured division rejected by target hook | Zero and overflow handling, signed-floor recipes, fixed registers and remapping |
+| Loop / swap / parallel / critical edges | Shared graph checks ordered simultaneous arguments and individual edge occurrences | Independent cycle-breaking transfers and real critical-edge policy |
+| Hidden destination / receiver / mixed banks | Twenty ordered components, independent banks and secured signature-typed indirect target outside arguments | SysV/AAPCS entry/call/return assignment, bank exhaustion and marshalling interference |
+| Release and trace | Explicit count load and ownership branches; original header remains the free argument after finalizer; omitted trace effects/objects rejected; enabled dependencies and inherited helper attribution retained | Real count/header loads and ownership paths, service footprints and frame/location updates |
+| Extended resources and thunks | Overlapping narrow/wide views, partial unit preservation, frozen thunk publication and context/snapshot-bound receipts | Actual resource catalog, reservations, preservation, native thunk discovery and legalization |
+
+Private mutations challenge slot/tie/timing, fixed width, scratch, flow, ABI,
+reference/effect and clobber mistakes independently of checked append. Wrong
+profiles, explicit target rejection and malformed edge arguments fail. Lowered
+IDs cannot inhabit selected operand storage. Earlier construction regressions
+remain useful; they certify drafts only. No native target registration, placer,
+checker or physical-preservation claim is introduced. Consuming edits and analysis
+snapshot borrowing remain LI09; canonical inspection remains LI10.
+
 ### Selected contract readiness (LI07)
 
 Implemented against the user's LI06 commit `ddc5a97d`, with the model baseline
 `f1053782`. `backend::selected` compiles in ordinary builds and gives shared graph
-consumers fresh arenas and borrowed opcode-derived descriptions. No target enum,
-MIR execution record, native selection switch, selected seal or placer enters the
-shared owner.
+consumers fresh arenas and borrowed opcode-derived descriptions. Construction
+alone confers no selected seal or placement authority; no native selection switch
+or physical instruction enum enters the shared owner.
 
 | Joint counterpart | Present structural evidence | Remaining obligation |
 | --- | --- | --- |
-| Logical versus physical ABI | Exact component/representation checks; hidden destination and receiver bindings; fixed resources and checked symbolic slots | LI08 independently challenges payload bindings and input/result agreement; LA03 freezes real entry/call/return areas and indirect-target timing |
-| Representations and operands | Nonzero widths, signature-qualified addresses, opcode-derived use/def slots, destructive tie with separate IDs, three-address shape and frozen event iteration | LI08 validates slot/tie/constraint legality independently; LA03 confirms actual opcodes and canonicalization |
-| Flags and edges | Atomic synthetic terminal bundle names two actual stored edges; shared CFG/dominance checking consumes target descriptions | LI08 completes correction/critical-edge/loop portability cases and rejects hidden or malformed control flow; LA03 supplies actual flag recipes/transfers |
-| Inventories and publication | Source draft admission checks finalized parent receipts; thunk drafts resolve only frozen extension declarations; distinct selection contexts reject foreign handles | LI08 issues immutable products only after shared and target checks and binds extension/thunk receipts; LA03 supplies native discovery |
-| Objects, resources and scratch | Semantic/trace/ABI symbolic object roles, explicit origin maps, bounded recipe scratch; same/cross-bank overlap, reservation and partial-width preservation tests | LI08 checks effects/object references, scratch and resource consistency; LA03 supplies real footprints, preservation and frame legalization |
-| Inspection and failures | Shared `GraphView` projection over selected storage; structured construction errors; private-path compile-fail and selected-core dependency guard | LI08 composes descriptor failures with target verification; LI10 canonicalizes phase inspection; LA03/LA05 wire production observations |
+| Logical versus physical ABI | Exact component/representation checks; hidden destination and receiver bindings; fixed resources and checked symbolic slots | LA03 freezes real entry/call/return areas and indirect-target timing |
+| Representations and operands | Nonzero widths, signature-qualified addresses, opcode-derived use/def slots, destructive tie with separate IDs, three-address shape and frozen event iteration | LA03 confirms actual opcodes and canonicalization |
+| Flags and edges | Atomic synthetic terminal bundle names two actual stored edges; shared CFG/dominance checking consumes target descriptions | LA03 supplies actual flag recipes/transfers |
+| Inventories and publication | Source draft admission checks finalized parent receipts; thunk drafts resolve only frozen extension declarations; distinct selection contexts reject foreign handles | LA03 supplies native discovery |
+| Objects, resources and scratch | Semantic/trace/ABI symbolic object roles, explicit origin maps, bounded recipe scratch; same/cross-bank overlap, reservation and partial-width preservation tests | LA03 supplies real footprints, preservation and frame legalization |
+| Inspection and failures | Shared `GraphView` projection over selected storage; structured construction errors; private-path compile-fail and selected-core dependency guard | LI10 canonicalizes phase inspection; LA03/LA05 wire production observations |
 
-The structural interface is ready for LI08. Native preservation and allocator
+The construction interface is now independently checked by LI08. Native preservation and allocator
 correctness are not established by these witnesses. No separate discovery or
 accepted-design amendment was required; scoped non-test allowances remain
 tracked in the model artifact ledger and expire with native consumers.
@@ -641,7 +666,7 @@ tracked in the model artifact ledger and expire with native consumers.
 
 The [LA02 model/construction/verification design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
 is accepted, frozen and promoted. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-is in progress; LI01–LI07 are complete and LI08 is next. The
+is in progress; LI01–LI08 are complete and LI09 is next. The
 [common readiness record](#common-model-readiness-li01) covers the inherited
 walkthroughs and the implemented declaration/identity foundation. LA03's
 concrete target-selection and physical-realization

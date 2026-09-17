@@ -50,7 +50,18 @@ fn lower(plan: &CheckedPlan, key: plan::LirCallableId) -> lir::VerifiedCallable<
         }),
     )
     .unwrap();
-    b.terminate(exit, lir::Terminator::Return(vec![])).unwrap();
+    let results = match plan
+        .view()
+        .callable(key)
+        .unwrap()
+        .signature()
+        .unwrap()
+        .returns
+    {
+        plan::ReturnShape::Scalar(plan::ScalarType::I64) => vec![constant],
+        _ => vec![],
+    };
+    b.terminate(exit, lir::Terminator::Return(results)).unwrap();
     lir::verify_callable(b.finish()).unwrap()
 }
 
@@ -59,6 +70,7 @@ mod abi;
 mod graphs;
 mod payloads;
 mod resources;
+mod verification;
 
 fn origin() -> crate::source::Span {
     let mut sources = crate::source::SourceDatabase::new();

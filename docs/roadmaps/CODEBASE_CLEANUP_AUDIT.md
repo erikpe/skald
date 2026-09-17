@@ -1080,8 +1080,9 @@ readiness and the complete lowered execution vocabulary; LI04 added independent
 graph/value-flow verification. LI05 delivered full lowered callable verification,
 private immutable publication and genuine snapshot receipts. LI06 added program
 inventory closure and parent-bound target declarations. LI07 delivered selected
-draft/resource/ABI contracts; LI08 is next. Selected verification/publication and
-concrete native agreements/implementation remain pending.
+draft/resource/ABI contracts; LI08 added independent shared/target checks, immutable
+selected publication and inventory closure. LI09 consuming edits and analyses are
+next; concrete native agreements/implementation remain pending.
 A22 remains in progress: verified LIR, native migration, adoption and allocation
 are pending.
 Scalar promotion and semantic SSA remain separate follow-ups.

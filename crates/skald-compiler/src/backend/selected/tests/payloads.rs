@@ -83,6 +83,13 @@ impl Payload for Synthetic {
             });
         }
         Description {
+            flow: match self.opcode {
+                Opcode::Flags => Flow::Branch,
+                Opcode::Return => Flow::Return,
+                _ => Flow::Instruction,
+            },
+            call_signature: None,
+            call_attribution: None,
             operands: Cow::Owned(operands),
             ties: if matches!(self.opcode, Opcode::TwoAddress) {
                 &[Tie {
