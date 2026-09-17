@@ -402,8 +402,11 @@ LA05 owns reporting/determinism/default adoption and fallback removal.
 
 ## Joint design questions and measurement readiness
 
-Resolve these before dependent LA02/LA03 implementation. They refine accepted
-boundaries; they do not reopen shared lowering or single-definition values:
+The [frozen model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#joint-review-and-promotion-checkpoint)
+settles the common LA02 contracts. Its roadmap tests their readiness; concrete
+LA03 counterparts below must be resolved before dependent native implementation.
+They refine accepted boundaries; they do not reopen shared lowering or
+single-definition values:
 
 | Decision to specify | Primary owner / required counterpart | Concrete required output |
 | --- | --- | --- |
@@ -476,16 +479,17 @@ maintained through LA05, which reconciles its obligations and archives it.
 
 ## Preparation handoff and next designs
 
-The draft [LA02 model/construction/verification proposal](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
-uses this handoff. Next is review and promotion, coordinated with LA03's
-target-selection and physical-realization interfaces. Neither
-starts dependent implementation before its design and roadmap settle the
-[joint questions](#joint-design-questions-and-measurement-readiness). The phase
-design remains the frozen authority; its preparation roadmap is complete, while
-the architecture program and cleanup audit's A22 remain in progress.
-The draft's [joint review checkpoint](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#joint-review-and-promotion-checkpoint)
-proposes concrete counterparts to the questions below; drafting does not mark
-any new-pipeline delivery complete.
+The [LA02 model/construction/verification design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
+is accepted, frozen and promoted. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
+is planned; LI01 is next and records common contract readiness against the
+inherited walkthroughs. LA03's concrete target-selection and physical-realization
+agreements remain pending before dependent native implementation.
+The phase design remains the inherited frozen authority; its preparation
+roadmap is complete, while the architecture program and cleanup audit's A22
+remain in progress. The model's
+[joint contract checkpoint](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#joint-review-and-promotion-checkpoint)
+records common contracts and required native counterparts. Promotion and roadmap
+creation do not mark any new-pipeline delivery complete.
 
 Carry these accepted constraints into both designs:
 

@@ -1,9 +1,11 @@
 # Low-Level IR Model, Construction, and Verification Design Proposal
 
-Status: draft LA02 proposal, 2026-09-17. Assessed against `027af94f`, the
-committed phase-preparation closing change. This is a proposed contract, not
-an implementation or an accepted/frozen design. Review the joint target
-interfaces below before promotion and roadmap creation.
+Status: accepted, frozen and promoted LA02 design, 2026-09-17. Accepted by the
+user after review of the draft committed at `10b5de75`; source assessment is
+against `027af94f`, the phase-preparation closing change. The executable model
+is not implemented yet. The [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
+starts with LI01. Changes to these contracts require an explicit design amendment
+before dependent implementation.
 
 Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Inherited authority: [frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md).
@@ -56,9 +58,9 @@ those decisions; it does not replace them. The continuing
 [coverage inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) owns exhaustive
 MIR/helper migration accounting rather than a second inventory in this document.
 
-## Proposed decisions
+## Accepted decisions
 
-| Question | Proposed decision |
+| Question | Accepted decision |
 | --- | --- |
 | Shared storage | Typed dense vectors with explicit block order and entry; no hash-map iteration defines execution or dump order |
 | IDs | Distinct program, callable, local and stage IDs; MIR IDs appear only in origins/planning keys |
@@ -495,8 +497,8 @@ late definition. At a call, clobbers discard old values before result definition
 establish new ones, even when they share a resource. A tie describes reuse at
 those operand points; it does not erase an input's later uses. LA03 must confirm
 this ordering against its recipes, including early-clobber and indirect-target
-cases, before the interface is frozen. The future checker must interpret the
-same ordering as the placer.
+cases, before its concrete target adapter is frozen. The future checker must
+interpret the same ordering as the placer.
 
 Resource descriptors model banks, views, overlapping units, reservations and
 preserved footprints independently. Sharing a bank does not establish overlap;
@@ -733,11 +735,15 @@ foundation from `495debd3` and removes legacy selection.
 
 ## Joint review and promotion checkpoint
 
-The proposed common contracts above have chosen directions. These counterpart
-decisions must be reviewed explicitly before freezing interfaces or implementing
-their dependent pieces; they are not permission to defer them to emission:
+The common contracts above are accepted and frozen. The table records their
+required LA03 counterparts; acceptance does not claim that real target recipes,
+ABI mappings or resource catalogs have been designed or verified. LI01 records
+the common schema agreement against the inherited walkthroughs, and LI07/LI08
+exercise it with synthetic targets before shared selected publication. LA03 must
+settle and validate its concrete counterparts before their implementation; they
+cannot be deferred to emission.
 
-| Joint question | LA02 proposed contract | LA03 required agreement/evidence |
+| Joint question | LA02 frozen contract | LA03 required agreement/evidence |
 | --- | --- | --- |
 | Logical shape versus physical ABI | Role-based checked signatures; shared entry/call/return shape; typed indirect target | Component-to-location plan, incoming/outgoing slot descriptors and resource timing for scalar, hidden-result, receiver/origin and mixed-pressure witnesses |
 | Selected representation and operands | Fresh stage IDs; target representation/resource descriptor IDs; opcode-derived operand/tie/clobber view and specified early/late event ordering | Representative x86 payload shapes, width/canonicalization obligations, fixed/tied/early-clobber timing and complete call clobbers; matching synthetic three-address/overlap witness. Full target opcode schema is frozen in LA03 |
@@ -746,21 +752,20 @@ their dependent pieces; they are not permission to defer them to emission:
 | Symbolic objects and scratch | Distinct semantic/trace/ABI objects; placement-created requirements later; recipe/scratch descriptors, no offsets | ABI slot shapes, declared scratch lifetimes and bounded frame legalization contract sufficient for baseline placement/checking |
 | Inspection and errors | Private read-only views, canonical text, stage/local structured defects; existing public facade retained | Selected/placement/physical dump integration and failure conversion without MIR queries, fabricated observations or generated semantic IDs |
 
-Promotion requires reviewing these against the frozen walkthroughs, completing
-the descriptor/schema agreement needed by LA02, and recording any adjustment in
-this draft. Full LA03 algorithm/native implementation decisions can follow under
-its own design, but cannot be smuggled into shared APIs as x86 defaults. If an
-agreement conflicts with a frozen phase decision, amend that owning design
-explicitly before dependent work.
+The user's acceptance promotes the common model contract. Concrete LA03
+algorithm/native decisions follow under its own design; they cannot enter shared
+APIs as x86 defaults. If implementation review finds that a witness cannot be
+represented, stop the affected dependent task, record the mismatch and amend
+the owning design explicitly. Do not invent an unchecked adapter or weaken a seal
+to pass the checkpoint. This applies equally to conflicts with the frozen phase
+design.
 
-After acceptance, create a separate PR-sized LA02 roadmap ordered by context/IDs,
-lowered schemas and construction, CFG/check verification, selected structural
-contracts, inspection/editing and cumulative closure. Combine or split tasks by
-ownership and testable outcome, not by this section order. LA02 closure requires
-all model consumers and negative fixtures, repository/toolchain gates, accurate
-indexes and an updated program handoff. Native pilot, complete migration and
-allocation remain pending; no measurement go/no-go can turn unimplemented phases
-into delivered architecture.
+The [LA02 roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) orders context/IDs, lowered
+construction, verification/publication, selected structural contracts,
+editing/inspection and cumulative closure. Closure requires all model consumers
+and negative fixtures, repository/toolchain gates, accurate indexes and an updated
+program handoff. Native pilot, complete migration and allocation remain pending;
+no measurement go/no-go can turn unimplemented phases into delivered architecture.
 
 ## Alternatives
 

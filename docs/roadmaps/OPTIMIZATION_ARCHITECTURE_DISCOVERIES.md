@@ -471,10 +471,13 @@ freezes the shared lowering and target ownership contracts. Its
 [archived roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) records qualified
 coverage, regressions and durable baseline inputs. The
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
-informs the draft [LIR model proposal](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md),
-whose joint target interfaces need review before promotion and implementation.
-Later child designs and implementation remain pending; preparation does not
-deliver LIR, foundation adoption or register allocation.
+informs the accepted, frozen and promoted
+[LIR model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
+Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) is planned; LI01
+is next, with explicit model and selected-interface readiness checkpoints.
+Concrete native counterparts remain LA03 decisions. Later child designs and
+implementation remain pending; planning does not deliver LIR, foundation
+adoption or register allocation.
 
 ### Optimization possibilities unlocked
 
