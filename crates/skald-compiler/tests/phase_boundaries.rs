@@ -193,6 +193,12 @@ fn low_level_dependency_allowed(dependency: &str) -> bool {
 fn low_level_core_guards_accept_metadata_and_reject_execution_or_lookup_inputs() {
     assert!(is_low_level_core(Path::new("backend/plan/view.rs")));
     assert!(is_low_level_core(Path::new("backend/graph/arena.rs")));
+    assert!(is_low_level_core(Path::new(
+        "backend/graph/verify/check.rs"
+    )));
+    assert!(is_low_level_core(Path::new(
+        "backend/lir/graph/operands.rs"
+    )));
     assert!(is_low_level_core(Path::new("backend/lir/builder.rs")));
     assert!(!is_low_level_core(Path::new(
         "backend/x86_64_sysv/planning.rs"

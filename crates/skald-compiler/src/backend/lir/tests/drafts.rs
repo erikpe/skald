@@ -39,6 +39,7 @@ fn entry_inputs_and_forward_results_have_exact_single_definition_sites() {
     builder.define_block(spare, &[]).unwrap();
     builder.terminate(spare, Terminator::HardTrap).unwrap();
     let draft = builder.finish();
+    crate::backend::graph::check_graph(&draft).unwrap();
     assert_eq!(draft.owner().key(), source(0));
     assert_eq!(draft.entry(), Some(entry.id()));
     assert_eq!(draft.inputs(), &[input.id()]);
@@ -163,6 +164,7 @@ fn loop_parameters_transfer_simultaneously_and_parallel_edges_keep_occurrences()
         )
         .unwrap();
     let draft = builder.finish();
+    crate::backend::graph::check_graph(&draft).unwrap();
     let terminator = draft.block(entry).unwrap().terminator.as_ref().unwrap();
     let edges = terminator.edges(entry.id()).collect::<Vec<_>>();
     assert_eq!(edges.len(), 2);
@@ -254,7 +256,9 @@ fn diamond_edges_match_defined_parameters_and_return_components() {
     builder
         .terminate(merge, Terminator::Return(vec![]))
         .unwrap();
-    assert_eq!(builder.finish().blocks().len(), 4);
+    let draft = builder.finish();
+    crate::backend::graph::check_graph(&draft).unwrap();
+    assert_eq!(draft.blocks().len(), 4);
 }
 
 #[test]

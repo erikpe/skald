@@ -204,6 +204,7 @@ fn shared_release_uses_explicit_memory_branches_finalizer_and_original_header_af
             .unwrap();
         builder.terminate(done, Terminator::Return(vec![])).unwrap();
         let draft = builder.finish();
+        crate::backend::graph::check_graph(&draft).unwrap();
         assert_eq!(draft.blocks().len(), 5);
         assert_eq!(draft.trace_plan().is_some(), tracing);
         assert_eq!(

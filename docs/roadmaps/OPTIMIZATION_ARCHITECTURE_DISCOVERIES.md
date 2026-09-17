@@ -475,7 +475,8 @@ informs the accepted, frozen and promoted
 [LIR model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
 Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) is in progress;
 LI01–LI03 delivered checked declarations/identities and the complete lowered
-execution vocabulary, including calls, effects and tracing; LI04 is next.
+execution vocabulary, including calls, effects and tracing. LI04 added independent
+graph/value-flow verification; LI05 is next.
 Selected-interface readiness and executable model publication remain pending.
 Concrete native counterparts remain LA03 decisions. Later child designs and
 implementation remain pending; planning does not deliver LIR, foundation

@@ -1,6 +1,6 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01–LI03 are complete, LI04 is next.
+Status: in progress, 2026-09-17; LI01–LI04 are complete, LI05 is next.
 Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
@@ -59,7 +59,7 @@ the illustrative directory sketch.
 - [x] LI01 — Checked contexts, declarations and identity domains
 - [x] LI02 — Lowered scalar/object model and draft construction
 - [x] LI03 — Calls, effects, tracing and terminal operations
-- [ ] LI04 — CFG and single-definition verification
+- [x] LI04 — CFG and single-definition verification
 - [ ] LI05 — Scalar domains, memory checks and lowered publication
 - [ ] LI06 — Generated inventories and complete-program authority
 - [ ] LI07 — Selected payload and resource description contracts
@@ -242,8 +242,8 @@ omitted-policy trace references. Run the task quality gates.
 explicit schemas and meaningful call/effect/trace consumers; no operation
 recovers its executable meaning from MIR or a service-name string.
 
-**Completion evidence:** implemented against the user's LI02 commit `43df9ce6`;
-changes remain uncommitted for the user. Added nine owner tests (25 lowered tests
+**Completion evidence:** committed by the user as `68dec8ed`, implemented against
+the user's LI02 commit `43df9ce6`. Added nine owner tests (25 lowered tests
 in total), checked all nine runtime service signatures, and exercised aggregate
 and receiver components, secured indirect operands, conservative alias/effect
 summaries, six attribution categories, ordered tracing and both trace policies.
@@ -263,15 +263,15 @@ fixtures are recorded in the ledger below.
 **Purpose:** establish independently checked graph/value structure shared by
 both stages.
 
-- [ ] Implement checked structural traversal, reachability and dominance with
+- [x] Implement checked structural traversal, reachability and dominance with
   one verification session rather than repeated graph reconstruction per use.
-- [ ] Validate ownership/bounds/reservations before indexing, exact definition
+- [x] Validate ownership/bounds/reservations before indexing, exact definition
   sites/results/types, terminators, entry rules and ordered edge signatures.
-- [ ] Check same-block ordering, reachable dominance and predecessor edge-use
+- [x] Check same-block ordering, reachable dominance and predecessor edge-use
   positions. Preserve simultaneous swaps/cycles and distinct edge occurrences.
-- [ ] Check unreachable structure/local ordering; return unknown for analysis
+- [x] Check unreachable structure/local ordering; return unknown for analysis
   cross-block dominance queries involving unreachable blocks.
-- [ ] Emit canonical structured stage/callable/local failures. Keep graph checks
+- [x] Emit canonical structured stage/callable/local failures. Keep graph checks
   as components of full verification, not a public verified-phase constructor.
 
 **Tests:** independent malformed tables, duplicate/unresolved definitions,
@@ -281,6 +281,23 @@ branch edges and critical edges. Run the task quality gates.
 
 **Exit criteria:** both sound and invalid graph fixtures exercise one shared
 algorithm owner; graph success alone cannot publish a lowered/selected seal.
+
+**Completion evidence:** implemented against the user's LI03 commit `68dec8ed`;
+changes remain uncommitted for the user. Added 17 regressions (nine shared
+selected-shape fixtures and eight lowered-draft fixtures), and applied graph
+checking to earlier loop/diamond/trace/release witnesses. Stored contexts/IDs,
+reservations, exact definition/result/type agreement, ordered edge signatures,
+local order and reachable dominance are checked independently of construction.
+One borrowed session computes CFG/reachability/dominance; unreachable cross-block
+queries return unknown. Structured stage/profile/callable/location failures remain
+private and cannot publish a seal. The full publication layers remain LI05/LI06;
+actual selected payloads remain LI07/LI08. `make check` passed serially (3,220
+compiler unit tests, 12 boundary tests, runtime tests and 650 golden observations);
+`make msrv-check` passed on Rust 1.82.0. An earlier overlapping gate exposed a
+shared golden-artifact collision; the independent follow-up is recorded in
+[discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md). No design amendment,
+compatibility bridge, provisional seal or production phase switch was introduced.
+Scoped pre-consumer allowances and durable fixtures are ledgered below.
 
 ### LI05 — Scalar domains, memory checks and lowered publication
 
@@ -515,10 +532,12 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 | `backend/plan/test_fixtures.rs` and colocated declaration/arena tests | LI01; `ff12421d` | Retain; LI11 reviews final consumers | Durable context/identity/domain regression fixtures, test-only and shared across the two owners; no prototype emission |
 | `backend/lir/{model,scalar,builder,schema}.rs`: item-scoped non-test dead-code allowances on the delivered draft records, descriptors and checked construction impls; `backend/lir/mod.rs` explicit private facade import groups | LI02; `43df9ce6` | LA03 first native lowered consumer; LA04 remaining surfaces; LI11 transfers outstanding entries | Remove per consumed item or trim exports; ordinary model compilation and unsuppressed test linting remain active |
 | `backend/lir/tests/`: draft/scalar/memory fixtures, including direct owner-private malformed storage construction | LI02; `43df9ce6` | Retain; LI04/LI05 extend with independent verifier rejection assertions; LI11 reviews | Durable schema, definition, edge, lifetime and canonicalization regressions; no provisional verification success path |
-
-| `backend/{effects,lir/{call,trace,observable}}.rs` and `backend/plan/services.rs`: item-scoped non-test dead-code allowances on delivered effects, attribution/trace/provenance records and checked construction impls; explicit private facade groups | LI03; uncommitted, based on `43df9ce6` | LA03 first native consumer; LA04 remaining surfaces; LI11 transfers outstanding entries | Ordinary builds compile all records; remove allowances per consumed item; test linting remains unsuppressed |
-| `backend/failure.rs` and the native failure catalog import | LI03; uncommitted | Retain shared messages; LA05 removes legacy native mapping with legacy lowering | Durable single exact-message catalog; semantic/physical mappings remain in their owners |
-| Runtime declaration fixture table and lowered call/trace/shared-release tests | LI03; uncommitted | Retain; LI04/LI05 add independent malformed verification assertions; LI11 reviews | Checked service/role/effect/policy regressions and use-after-finalizer representation; no provisional seal or native switch |
+| `backend/{effects,lir/{call,trace,observable}}.rs` and `backend/plan/services.rs`: item-scoped non-test dead-code allowances on delivered effects, attribution/trace/provenance records and checked construction impls; explicit private facade groups | LI03; `68dec8ed`, based on `43df9ce6` | LA03 first native consumer; LA04 remaining surfaces; LI11 transfers outstanding entries | Ordinary builds compile all records; remove allowances per consumed item; test linting remains unsuppressed |
+| `backend/failure.rs` and the native failure catalog import | LI03; `68dec8ed` | Retain shared messages; LA05 removes legacy native mapping with legacy lowering | Durable single exact-message catalog; semantic/physical mappings remain in their owners |
+| Runtime declaration fixture table and lowered call/trace/shared-release tests | LI03; `68dec8ed` | Retain; LI04/LI05 add independent malformed verification assertions; LI11 reviews | Checked service/role/effect/policy regressions and use-after-finalizer representation; no provisional seal or native switch |
+| `backend/graph/verify/{model,check,analysis}.rs`: item-scoped non-test dead-code allowances on structural descriptions, failures, shared checking and borrowed analysis; explicit graph facade imports | LI04; uncommitted, based on `68dec8ed` | LA03 first native structural consumer; LI07/LI08 exercise selected APIs; LI11 transfers any outstanding allowances | Durable shared algorithm; remove allowances per consumed item, preserving ordinary compilation and unsuppressed test linting |
+| `backend/lir/graph/{storage,operands}.rs`: item-scoped non-test allowances on stored-draft adapter impls | LI04; uncommitted | LI05 composes genuine full verification; LA03 native consumer; LI11 reviews | Retain independent ID/schema adapter; trim allowances as callers land; graph success cannot publish |
+| Graph-owner malformed selected-shape tables, lowered malformed tables and graph assertions in earlier loop/diamond/trace/release fixtures | LI04; uncommitted | Retain; LI07/LI08 connect real selected descriptions; LI11 reviews | Durable structural/type/dataflow witnesses, with no provisional selected storage or seal |
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation
 and lint allowances as they arise. Genuine draft builders and synthetic
@@ -534,7 +553,6 @@ to LA03's first real consumer. LI11 transfers outstanding obligations to the
 program handoff rather than forgetting them at child archival. No blanket lint
 allowance or empty placeholder API is justified.
 
-Use `LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md` for the first substantial
-new independent finding, and index it when created; do not create an empty
-discoveries file. Implement small maintainability fixes directly within the
+Use [architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
+for substantial new independent findings; keep its active index entry current. Implement small maintainability fixes directly within the
 responsible task when they preserve the reviewed scope.

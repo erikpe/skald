@@ -75,6 +75,13 @@ impl<'plan, K: Copy + Eq, T> OwnedArena<'plan, LocalId<K>, T> {
         }
     }
 
+    pub(in crate::backend) fn require_owner(
+        &self,
+        owner: CallableBinding<'plan>,
+    ) -> Result<(), PlanError> {
+        self.owner.require_same_owner(owner)
+    }
+
     pub(in crate::backend) fn push(
         &mut self,
         value: T,

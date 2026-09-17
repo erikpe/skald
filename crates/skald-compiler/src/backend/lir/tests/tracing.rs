@@ -96,6 +96,7 @@ fn enabled_trace_actions_remain_ordered_and_associated_with_explicit_call_locati
         .terminate(entry, Terminator::Return(vec![]))
         .unwrap();
     let draft = builder.finish();
+    crate::backend::graph::check_graph(&draft).unwrap();
     assert_eq!(draft.trace_plan().unwrap().record, Some(record.id()));
     let instructions = &draft.block(entry).unwrap().instructions;
     assert_eq!(instructions.len(), 4);
@@ -399,6 +400,7 @@ fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_withou
         };
         builder.terminate(entry, terminal).unwrap();
         let draft = builder.finish();
+        crate::backend::graph::check_graph(&draft).unwrap();
         let block = draft.block(entry).unwrap();
         assert_eq!(
             block.terminator.as_ref().unwrap().edges(entry.id()).count(),
@@ -422,6 +424,7 @@ fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_withou
     let entry = entry_block(&mut builder);
     builder.terminate(entry, Terminator::HardTrap).unwrap();
     let draft = builder.finish();
+    crate::backend::graph::check_graph(&draft).unwrap();
     let effects = draft
         .block(entry)
         .unwrap()

@@ -2,8 +2,9 @@
 
 Status: private checked declarations and the complete lowered draft vocabulary
 are implemented. Production emission still uses the [current backend](BACKEND.md).
-Independent verification/publication, selected graphs, edits, placement and
-native consumption remain planned.
+Independent graph/value-flow verification is implemented. Full callable
+verification/publication, selected graphs, edits, placement and native consumption
+remain planned.
 
 ## Ownership and checking
 
@@ -104,14 +105,50 @@ Scalar checks have explicit success/failure edges and three finite relations:
 nonzero divisor, count below integer width and finite truncated binary64 in an
 integer range. Evidence names a check terminator or an exact constant value.
 These records grant no proof: operand identity, constant validity and success-edge
-protection still require independent verification. The builder also leaves
-cross-block use ordering, forward-edge reconciliation, object extents and
-independent effect/provenance recomputation to that verification. `finish` returns a draft even when reservations or blocks
-remain incomplete; it creates no seal or emission authority.
+protection still require independent verification. The independent graph checker
+handles cross-block use ordering and forward-edge reconciliation. Guard/domain checks, object extents and independent effect/provenance
+recomputation remain publication obligations. `finish` returns a draft even when
+reservations or blocks remain incomplete; it creates no seal or emission authority.
 
 Owner-private storage supports independently malformed test fixtures without
 exposing an unchecked verified constructor. Arithmetic descriptors specify
 meaning; native recipe equivalence is a separate target obligation.
+
+## Structural verification and analysis
+
+`backend::graph::check_graph` checks stage-independent structural descriptions.
+The lowered adapter reads stored draft tables independently of builder history,
+checks arena context/owner and referenced local IDs before converting them to
+indices, and derives ordered uses/results from the closed operation vocabulary.
+The shared checker reconciles every declared definition with its actual input,
+parameter or result site and type. It rejects duplicate/unresolved definitions,
+missing terminators, invalid entry shapes/predecessors and mismatched ordered
+edge arguments. The separated instruction/terminator storage permits one final
+terminator per block, with no instruction-after-terminator representation.
+
+After structural checks succeed, one session builds CFG predecessors, entry
+reachability and dominance. Instruction operands precede their results; edge
+arguments are uses in the predecessor terminator, before successor parameters.
+Parallel edges retain their distinct predecessor/slot occurrences. Critical edges,
+loop parameters and simultaneous swaps/cycles remain legal.
+
+Unreachable blocks still undergo structural and same-block ordering checks.
+Entry-path dominance imposes no cross-block constraint on an unreachable use;
+analysis queries involving unreachable blocks return unknown across blocks.
+Making a block reachable requires a new check and ordinary dominance. Sessions
+borrow the exact immutable draft, so mutation cannot coexist with continued use
+of its analysis. No shared context clone, per-use CFG rebuild or global cache is
+involved.
+
+Failures carry stage, target/profile, machine callable, stable reason, local
+position and a value origin span when available. Shared failures are ordered by
+storage category and block/instruction/edge position, independent of traversal
+order. An adapter rejects an unsafe reference before constructing the indexed
+description. Graph success grants analysis only: scalar legality, guard protection,
+call/artifact contracts, mandatory effects, memory extents and trace-path parity
+must all pass separate checks before a phase seal or receipt can be published.
+Synthetic structural fixtures exercise the same algorithm for selected shapes;
+selected payload storage and its target-specific verification remain planned.
 
 ## Calls, effects and tracing
 

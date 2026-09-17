@@ -61,3 +61,5 @@ mod scalars;
 mod calls;
 mod release;
 mod tracing;
+
+mod graph;

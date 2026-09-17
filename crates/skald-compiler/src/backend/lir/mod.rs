@@ -2,6 +2,7 @@
 
 mod builder;
 mod call;
+mod graph;
 mod model;
 mod observable;
 mod scalar;
