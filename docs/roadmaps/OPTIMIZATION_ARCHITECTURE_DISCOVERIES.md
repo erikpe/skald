@@ -476,11 +476,13 @@ informs the accepted, frozen and promoted
 Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) is in progress;
 LI01–LI03 delivered checked declarations/identities and the complete lowered
 execution vocabulary, including calls, effects and tracing. LI04 added independent
-graph/value-flow verification; LI05 is next.
-Selected-interface readiness and executable model publication remain pending.
+graph/value-flow verification; LI06 is next.
+Full lowered callable verification/publication and genuine snapshot receipts are
+implemented. Complete-program closure, selected-interface readiness and native
+consumption remain pending; this grants no native performance clearance.
 Concrete native counterparts remain LA03 decisions. Later child designs and
-implementation remain pending; planning does not deliver LIR, foundation
-adoption or register allocation.
+implementation remain pending; model delivery does not deliver a native LIR
+pipeline, foundation adoption or register allocation.
 
 ### Optimization possibilities unlocked
 

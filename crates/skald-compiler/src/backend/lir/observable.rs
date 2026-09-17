@@ -1,8 +1,8 @@
 //! Checked observable schemas and conservative provenance/effect derivation.
 
 use super::{
-    BlockHandle, BuildError, Call, Constant, Conversion, DraftBuilder, ObjectHandle, Operation,
-    ValueHandle,
+    BlockHandle, BuildError, Call, Constant, Conversion, DraftBuilder, DraftChecks, ObjectHandle,
+    Operation, ValueHandle,
 };
 use crate::backend::effects::{Effect, Effects, MemoryRegion};
 use crate::backend::graph::{LoweredObjectId, LoweredValueId};
@@ -24,14 +24,14 @@ pub(in crate::backend) enum AddressProvenance {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl AddressProvenance {
-    fn region(self) -> MemoryRegion<LoweredObjectId> {
+    pub(super) fn region(self) -> MemoryRegion<LoweredObjectId> {
         match self {
             Self::Object { object, .. } => MemoryRegion::Object(object),
             Self::Static { field, .. } => MemoryRegion::Static(field),
             Self::Unknown => MemoryRegion::Unknown,
         }
     }
-    fn offset(self, bytes: i128) -> Self {
+    pub(super) fn offset(self, bytes: i128) -> Self {
         let (offset, base) = match self {
             Self::Object { object, offset } => (offset, Some(object)),
             Self::Static { offset, .. } => (offset, None),
@@ -51,18 +51,27 @@ impl AddressProvenance {
     }
 }
 #[cfg_attr(not(test), allow(dead_code))]
-impl<'p> DraftBuilder<'p> {
+impl<'p> DraftChecks<'_, 'p> {
     pub(super) fn operation_effects(
         &self,
         operation: &Operation,
     ) -> Result<Effects<LoweredObjectId>, BuildError> {
+        self.operation_effects_for(operation, |value| {
+            Ok(self.draft.values.get_id(value)?.provenance)
+        })
+    }
+    pub(super) fn operation_effects_for(
+        &self,
+        operation: &Operation,
+        provenance: impl Fn(LoweredValueId) -> Result<AddressProvenance, BuildError>,
+    ) -> Result<Effects<LoweredObjectId>, BuildError> {
         Ok(match operation {
-            Operation::Load { address, .. } => Effects::new([Effect::Read(
-                self.draft.values.get_id(*address)?.provenance.region(),
-            )]),
-            Operation::Store { address, .. } => Effects::new([Effect::Write(
-                self.draft.values.get_id(*address)?.provenance.region(),
-            )]),
+            Operation::Load { address, .. } => {
+                Effects::new([Effect::Read(provenance(*address)?.region())])
+            }
+            Operation::Store { address, .. } => {
+                Effects::new([Effect::Write(provenance(*address)?.region())])
+            }
             Operation::Call(call) => self.call_effects(call)?,
             Operation::Trace(_) => Effects::new([
                 Effect::TraceState,
@@ -71,40 +80,6 @@ impl<'p> DraftBuilder<'p> {
             ]),
             _ => Effects::default(),
         })
-    }
-    pub(in crate::backend) fn append_with_effects(
-        &mut self,
-        block: BlockHandle<'p>,
-        operation: Operation<ValueHandle<'p>, ObjectHandle<'p>, BlockHandle<'p>>,
-        effects: Effects<LoweredObjectId>,
-    ) -> Result<Vec<ValueHandle<'p>>, BuildError> {
-        self.writable(block)?;
-        let (normalized, _) = self.normalize(operation.clone())?;
-        let required = self.operation_effects(&normalized)?;
-        if !effects.covers(&required) {
-            return Err(BuildError::NarrowedEffects);
-        }
-        for effect in effects.iter() {
-            match effect {
-                Effect::Read(MemoryRegion::Object(object))
-                | Effect::Write(MemoryRegion::Object(object)) => {
-                    self.draft.objects.get_id(*object)?;
-                }
-                Effect::Read(MemoryRegion::Static(field))
-                | Effect::Write(MemoryRegion::Static(field)) => {
-                    let view = self.draft.owner.context();
-                    view.artifact(
-                        view.artifact_id(ArtifactId::Data(DataKey::Static(*field)))?,
-                        ArtifactCategory::Data,
-                    )?;
-                }
-                _ => {}
-            }
-        }
-        let ordinal = self.draft.blocks.get(block)?.instructions.len();
-        let results = self.append(block, operation)?;
-        self.draft.blocks.get_mut(block)?.instructions[ordinal].effects = effects;
-        Ok(results)
     }
     pub(super) fn result_provenance(
         &self,
@@ -180,7 +155,7 @@ impl<'p> DraftBuilder<'p> {
         }
         Ok(())
     }
-    fn constant_integer(&self, value: LoweredValueId) -> Option<i128> {
+    pub(super) fn constant_integer(&self, value: LoweredValueId) -> Option<i128> {
         let definition = self.draft.values.get_id(value).ok()?.definition?;
         let super::Definition::InstructionResult {
             instruction,
@@ -196,5 +171,43 @@ impl<'p> DraftBuilder<'p> {
             Operation::Constant(Constant::U8(value)) => Some(value as i128),
             _ => None,
         }
+    }
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+impl<'p> DraftBuilder<'p> {
+    pub(in crate::backend) fn append_with_effects(
+        &mut self,
+        block: BlockHandle<'p>,
+        operation: Operation<ValueHandle<'p>, ObjectHandle<'p>, BlockHandle<'p>>,
+        effects: Effects<LoweredObjectId>,
+    ) -> Result<Vec<ValueHandle<'p>>, BuildError> {
+        self.writable(block)?;
+        let (normalized, _) = self.normalize(operation.clone())?;
+        let required = self.operation_effects(&normalized)?;
+        if !effects.covers(&required) {
+            return Err(BuildError::NarrowedEffects);
+        }
+        for effect in effects.iter() {
+            match effect {
+                Effect::Read(MemoryRegion::Object(object))
+                | Effect::Write(MemoryRegion::Object(object)) => {
+                    self.draft.objects.get_id(*object)?;
+                }
+                Effect::Read(MemoryRegion::Static(field))
+                | Effect::Write(MemoryRegion::Static(field)) => {
+                    let view = self.draft.owner.context();
+                    view.artifact(
+                        view.artifact_id(ArtifactId::Data(DataKey::Static(*field)))?,
+                        ArtifactCategory::Data,
+                    )?;
+                }
+                _ => {}
+            }
+        }
+        let ordinal = self.draft.blocks.get(block)?.instructions.len();
+        let results = self.append(block, operation)?;
+        self.draft.blocks.get_mut(block)?.instructions[ordinal].effects = effects;
+        Ok(results)
     }
 }

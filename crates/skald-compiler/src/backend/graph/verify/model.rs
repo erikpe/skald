@@ -19,6 +19,7 @@ pub(in crate::backend) struct GraphIdentity {
 pub(in crate::backend) enum GraphLocation {
     Entry,
     Value(usize),
+    Object(usize),
     Block(usize),
     Parameter {
         block: usize,
@@ -41,6 +42,26 @@ pub(in crate::backend) enum GraphLocation {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl GraphLocation {
+    pub(in crate::backend) fn sort_key(self) -> (usize, usize, usize, usize, usize) {
+        match self {
+            GraphLocation::Entry => (0, 0, 0, 0, 0),
+            GraphLocation::Value(value) => (1, value, 0, 0, 0),
+            GraphLocation::Object(object) => (1, object, 1, 0, 0),
+            GraphLocation::Block(block) => (2, block, 0, 0, 0),
+            GraphLocation::Parameter { block, ordinal } => (2, block, 1, ordinal, 0),
+            GraphLocation::Instruction {
+                block,
+                ordinal,
+                operand,
+            } => (2, block, 2, ordinal, operand),
+            GraphLocation::Terminator { block, operand } => (2, block, 3, 0, operand),
+            GraphLocation::Edge {
+                block,
+                slot,
+                operand,
+            } => (2, block, 4, slot, operand),
+        }
+    }
     pub(in crate::backend) fn operand(self, operand: usize) -> Self {
         match self {
             Self::Instruction { block, ordinal, .. } => Self::Instruction {

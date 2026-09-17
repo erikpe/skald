@@ -264,23 +264,7 @@ pub(in crate::backend) fn check_graph<G: GraphView>(
 #[cfg_attr(not(test), allow(dead_code))]
 fn canonical(mut failures: Vec<GraphFailure>) -> Vec<GraphFailure> {
     failures.sort_by_key(|failure| {
-        let location = match failure.location {
-            GraphLocation::Entry => (0, 0, 0, 0, 0),
-            GraphLocation::Value(value) => (1, value, 0, 0, 0),
-            GraphLocation::Block(block) => (2, block, 0, 0, 0),
-            GraphLocation::Parameter { block, ordinal } => (2, block, 1, ordinal, 0),
-            GraphLocation::Instruction {
-                block,
-                ordinal,
-                operand,
-            } => (2, block, 2, ordinal, operand),
-            GraphLocation::Terminator { block, operand } => (2, block, 3, 0, operand),
-            GraphLocation::Edge {
-                block,
-                slot,
-                operand,
-            } => (2, block, 4, slot, operand),
-        };
+        let location = failure.location.sort_key();
         (location, failure.reason)
     });
     failures.dedup();

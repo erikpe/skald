@@ -136,6 +136,17 @@ impl<'plan, K: Copy + Eq, T> OwnedArena<'plan, LocalId<K>, T> {
             .ok_or(PlanError::OutOfBounds)
     }
 
+    pub(in crate::backend) fn handle_id(
+        &self,
+        id: LocalId<K>,
+    ) -> Result<LocalHandle<'plan, LocalId<K>>, PlanError> {
+        self.get_id(id)?;
+        Ok(LocalHandle {
+            owner: self.owner,
+            id,
+        })
+    }
+
     pub(in crate::backend) fn handles(
         &self,
     ) -> impl ExactSizeIterator<Item = LocalHandle<'plan, LocalId<K>>> + '_ {

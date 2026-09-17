@@ -29,7 +29,7 @@ pub(super) fn trace_catalog(facts: &mut PlanFacts) -> (ArtifactId, ArtifactId) {
     }
     (context, location)
 }
-fn origin() -> Span {
+pub(super) fn origin() -> Span {
     let mut sources = SourceDatabase::new();
     Span::empty(sources.add("call.ska", ""), 0)
 }
@@ -123,6 +123,7 @@ fn enabled_trace_actions_remain_ordered_and_associated_with_explicit_call_locati
         .iter()
         .next()
         .is_none());
+    verify_callable(draft).unwrap();
 }
 
 #[test]
@@ -411,6 +412,7 @@ fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_withou
             .as_ref()
             .unwrap()
             .contains(Effect::Report));
+        verify_callable(draft).unwrap();
     }
     assert_eq!(
         FailureMessage::PrimitiveCastOutOfRange.bytes(),
@@ -433,4 +435,5 @@ fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_withou
         .unwrap();
     assert!(effects.contains(Effect::HardTrap));
     assert!(!effects.contains(Effect::Report));
+    verify_callable(draft).unwrap();
 }

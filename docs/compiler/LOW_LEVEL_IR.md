@@ -1,10 +1,10 @@
-# Low-Level Execution Drafts
+# Low-Level Execution and Callable Verification
 
 Status: private checked declarations and the complete lowered draft vocabulary
 are implemented. Production emission still uses the [current backend](BACKEND.md).
-Independent graph/value-flow verification is implemented. Full callable
-verification/publication, selected graphs, edits, placement and native consumption
-remain planned.
+Independent graph/value-flow and full lowered callable verification are implemented.
+Complete-program publication, selected graphs, edits, placement and native
+consumption remain planned.
 
 ## Ownership and checking
 
@@ -31,7 +31,7 @@ aggregate returns have a matching address-valued destination and no scalar resul
 Receiver triples and optional alias-origin pairs must be complete and address
 typed. Component roles are independent of list position and physical ABI location.
 Runtime services have checked logical shapes and conservative mandatory effects;
-independent operation verification remains planned.
+independent operation verification rechecks those contracts against stored operations.
 
 The profile vocabulary includes x86-64 System V and AArch64 AAPCS64 fact shapes,
 with 64-bit addresses and capability checks for binary64, indirect calls and
@@ -63,8 +63,8 @@ serialized token or public context constructor.
 Lowered/selected block, value and object IDs are six distinct types. Allocation
 and lookup check indices, context and callable ownership; iteration preserves
 index order. IDs contain no stack home or physical location. Arena handles check
-context/owner, not immutable snapshot freshness: later phase publication must
-establish that separate authority, and edits must reverify it.
+context/owner, not immutable snapshot freshness. Callable publication establishes
+that separate authority; future consuming edits must reverify it.
 
 All these interfaces remain backend-private. Context checking issues no callable
 verification seal, completion receipt, complete-program authority or placement
@@ -104,10 +104,10 @@ executions; they do not prove source initialization, alias lifetimes or liveness
 Scalar checks have explicit success/failure edges and three finite relations:
 nonzero divisor, count below integer width and finite truncated binary64 in an
 integer range. Evidence names a check terminator or an exact constant value.
-These records grant no proof: operand identity, constant validity and success-edge
-protection still require independent verification. The independent graph checker
-handles cross-block use ordering and forward-edge reconciliation. Guard/domain checks, object extents and independent effect/provenance
-recomputation remain publication obligations. `finish` returns a draft even when
+These records grant no proof by themselves. Callable verification checks operand
+identity, constant validity and success-edge protection independently. The graph
+checker handles cross-block use ordering and forward-edge reconciliation.
+`finish` returns a draft even when
 reservations or blocks remain incomplete; it creates no seal or emission authority.
 
 Owner-private storage supports independently malformed test fixtures without
@@ -146,7 +146,8 @@ storage category and block/instruction/edge position, independent of traversal
 order. An adapter rejects an unsafe reference before constructing the indexed
 description. Graph success grants analysis only: scalar legality, guard protection,
 call/artifact contracts, mandatory effects, memory extents and trace-path parity
-must all pass separate checks before a phase seal or receipt can be published.
+must all pass the lowered verification checks before a phase seal or receipt can
+be published. Native trace-path parity remains a target responsibility.
 Synthetic structural fixtures exercise the same algorithm for selected shapes;
 selected payload storage and its target-specific verification remain planned.
 
@@ -170,7 +171,11 @@ offsets. Loaded pointers, alias inputs, dynamic offsets and unresolved merges
 remain unknown; origin spans confer no alias authority. Optional summaries must
 cover every mandatory effect; unknown reads/writes cover known regions, while a
 known object cannot cover unknown memory. Pure operations have empty effects.
-Verification must recompute these facts independently before publication.
+Verification recomputes provenance and mandatory effects independently before
+publication, including forward address definitions. Supplied known provenance
+must agree; unknown metadata can become known after checking. Known object and
+static accesses must fit their declared extent and alignment; inactive statics
+are rejected even in complete mode. Unknown addresses grant no bounds proof.
 
 Call attribution distinguishes source operations, inherited boundaries, source
 bodies entered from omitted helpers, nonreporting calls, hard defects and process
@@ -179,8 +184,9 @@ context and permitted locations to the checked catalog. Ineligible helpers have
 no local frame record. Explicit push/location-replacement/pop actions retain
 ordering and associated instruction/terminal sites; attribution emits no action
 implicitly. Omitted tracing rejects plans, actions and trace references, while a
-compiler-defect span remains ordinary metadata. Association/path parity and
-physical marshalling order still require independent/native checks.
+compiler-defect span remains ordinary metadata. Verification checks record ownership, eligible entry push and return pop, and
+immediate location-to-operation associations. Full path parity and physical
+marshalling order remain native lowering/selection obligations.
 
 `ReportFailure` contains its checked nonreturning panic call and a typed failure
 message artifact with exact byte length. The shared failure catalog is also used
@@ -195,6 +201,42 @@ The shared-release fixture uses ordinary loads/stores and branches for immortal,
 ordinary and last-owner paths, then an indirect finalizer call and free of the
 original header value. Enabled helper attribution and omitted tracing exercise
 the same graph. It is representation evidence, not native finalizer equivalence.
+
+## Immutable callable publication
+
+`verify_callable` consumes a draft. It first establishes safe structural access,
+then independently checks stored scalar/cast schemas, domains, object layouts,
+memory, effects, signatures/services, trace associations and typed references.
+Construction and verification share borrowed local schema rules; verification
+rebinds stored IDs through checked arenas and recomputes derived facts rather
+than trusting builder history. Graph success alone cannot publish a callable.
+
+Guard evidence must name the exact secured operand and relation. Removing the
+check's success edge must prevent access to the guarded operation, both from
+entry when reachable and from the check itself. The latter checks dead regions
+and rejects disconnected evidence. A reload cannot reuse an earlier value's
+check. Constant evidence reads the actual defining constant: nonzero divisors,
+counts strictly below width, and finite mathematically truncated floats within
+the target integer range. NaNs, infinities and exclusive upper endpoints fail.
+
+Only successful verification constructs `VerifiedCallable` and its
+`CompletionReceipt`. The body exposes an immutable draft view. A receipt carries
+its live context/callable owner, checked typed dependencies and a private unique
+snapshot witness; equal bodies or equal live plans do not share authority.
+Cloning a receipt preserves that exact witness without retaining the body.
+These are genuine lowered callable receipts, not complete-program closure or
+selected-stage authority. Program inventory reconciliation remains planned.
+
+Failures are ordered by local storage position and stable reason, with stage,
+target/profile, source or generated callable identity and available origin spans.
+Private conversion preserves the public `BackendError` shape, leaves generated
+identities out of the source-callable field, and distinguishes capability/size
+rejection from verifier defects. It introduces no production phase event.
+
+This verifier checks supplied low-level execution, not the final-MIR projection,
+source initialization or alias/lifetime correctness. Dynamic memory bounds,
+physical ABI, native recipe equivalence and full trace-path parity remain with
+their upstream or target owners. No native emitter consumes these products yet.
 
 ## Regression ownership
 

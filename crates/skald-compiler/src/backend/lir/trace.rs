@@ -1,6 +1,6 @@
 //! Explicit, owner-bound trace records and operation associations.
 
-use super::{BlockHandle, BuildError, DraftBuilder, ObjectHandle, ObjectRole};
+use super::{BlockHandle, BuildError, DraftBuilder, DraftChecks, ObjectHandle, ObjectRole};
 use crate::backend::graph::{LoweredBlockId, LoweredObjectId};
 use crate::backend::plan::ArtifactId;
 use crate::backend::plan::{ArtifactCategory, DataKey, PlanError};
@@ -42,7 +42,7 @@ impl<'p> DraftBuilder<'p> {
         &mut self,
         plan: TracePlan<ObjectHandle<'p>>,
     ) -> Result<(), BuildError> {
-        self.trace_enabled()?;
+        self.checks().trace_enabled()?;
         if self.draft.trace_plan.is_some()
             || self
                 .draft
@@ -52,11 +52,34 @@ impl<'p> DraftBuilder<'p> {
         {
             return Err(BuildError::InvalidTrace);
         }
+        let record = plan
+            .record
+            .map(|record| {
+                self.draft.objects.get(record)?;
+                Ok::<_, BuildError>(record.id())
+            })
+            .transpose()?;
+        let plan = TracePlan {
+            frame_eligible: plan.frame_eligible,
+            record,
+            context: plan.context,
+            locations: plan.locations,
+        };
+        self.checks().check_trace_plan(&plan)?;
+        self.draft.trace_plan = Some(plan);
+        Ok(())
+    }
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+impl<'p> DraftChecks<'_, 'p> {
+    pub(super) fn check_trace_plan(&self, plan: &TracePlan) -> Result<(), BuildError> {
+        self.trace_enabled()?;
         if plan.frame_eligible != plan.record.is_some() {
             return Err(BuildError::InvalidTrace);
         }
         if let Some(record) = plan.record {
-            let record = self.draft.objects.get(record)?;
+            let record = self.draft.objects.get_id(record)?;
             if record.role != ObjectRole::TraceRecord
                 || record.layout.disposition != crate::backend::plan::LayoutDisposition::Addressable
             {
@@ -81,15 +104,9 @@ impl<'p> DraftBuilder<'p> {
             }
             view.artifact(view.artifact_id(*location)?, ArtifactCategory::Data)?;
         }
-        self.draft.trace_plan = Some(TracePlan {
-            frame_eligible: plan.frame_eligible,
-            record: plan.record.map(|record| record.id()),
-            context: plan.context,
-            locations: plan.locations,
-        });
         Ok(())
     }
-    fn trace_enabled(&self) -> Result<(), BuildError> {
+    pub(super) fn trace_enabled(&self) -> Result<(), BuildError> {
         if self.draft.owner.context().runtime_trace() == RuntimeTracePolicy::Omitted {
             return Err(BuildError::Plan(PlanError::OmittedTrace));
         }

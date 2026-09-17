@@ -73,9 +73,9 @@ optimization.
 
 Target legality, layout, calling conventions, and code generation are defined
 by the [backend and target contract](BACKEND.md). Private
-[low-level execution drafts](LOW_LEVEL_IR.md) supply checked contexts,
+[low-level execution and callable verification](LOW_LEVEL_IR.md) supply checked contexts,
 logical signatures, stage-owned identities and the complete lowered execution
-vocabulary, including calls, effects and tracing; native consumers
+vocabulary with independent callable verification and immutable publication; native consumers
 remain planned. The public runtime C surface
 and compiler/runtime compatibility mechanism are defined by the
 [runtime ABI](RUNTIME_ABI.md). The implemented ownership, ordinary/copy-allocation,

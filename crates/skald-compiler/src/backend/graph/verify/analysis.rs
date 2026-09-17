@@ -5,6 +5,7 @@ pub(in crate::backend) struct GraphSession<'a, G: GraphView> {
     pub(super) owner: &'a G,
     pub(super) reachable: Vec<bool>,
     pub(super) dominators: Vec<Vec<bool>>,
+    pub(super) successors: Vec<Vec<usize>>,
     pub(super) predecessors: Vec<Vec<(usize, usize)>>,
 }
 #[cfg_attr(not(test), allow(dead_code))]
@@ -30,6 +31,9 @@ impl<G: GraphView> GraphSession<'_, G> {
             return None;
         }
         Some(self.dominators[use_block][definition])
+    }
+    pub(in crate::backend) fn successors(&self, block: usize) -> Option<&[usize]> {
+        self.successors.get(block).map(Vec::as_slice)
     }
     pub(in crate::backend) fn predecessors(&self, block: usize) -> Option<&[(usize, usize)]> {
         self.predecessors.get(block).map(Vec::as_slice)
@@ -97,5 +101,6 @@ pub(super) fn analyze<'a, G: GraphView>(
         reachable,
         dominators,
         predecessors,
+        successors,
     }
 }

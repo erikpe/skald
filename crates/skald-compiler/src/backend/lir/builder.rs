@@ -1,14 +1,13 @@
 //! Checked draft mutations. Cross-block use/guard validity belongs to verification.
 
 use super::model::{
-    Block, BlockHandle, CallableDraft, Definition, Edge, Instruction, InstructionLocation,
-    LifetimeDisposition, Object, ObjectHandle, ObjectRole, Operation, Terminator, Value,
-    ValueHandle,
+    Block, BlockHandle, CallableDraft, Definition, Edge, Instruction, InstructionLocation, Object,
+    ObjectHandle, Operation, Terminator, Value, ValueHandle,
 };
 use super::AddressProvenance;
 use crate::backend::effects::{Effect, Effects};
 use crate::backend::graph::OwnedArena;
-use crate::backend::plan::{CallableBinding, LayoutDisposition, PlanError, ScalarType};
+use crate::backend::plan::{CallableBinding, PlanError, ScalarType};
 use crate::source::Span;
 use std::collections::BTreeSet;
 
@@ -133,26 +132,7 @@ impl<'p> DraftBuilder<'p> {
         &mut self,
         object: Object,
     ) -> Result<ObjectHandle<'p>, BuildError> {
-        let layout = object.layout;
-        if layout.alignment == 0 || !layout.alignment.is_power_of_two() {
-            return Err(BuildError::InvalidObject);
-        }
-        layout
-            .size
-            .checked_add(layout.alignment - 1)
-            .ok_or(BuildError::SizeOverflow)?;
-        if layout.disposition != LayoutDisposition::Addressable && layout.size != 0 {
-            return Err(BuildError::InvalidObject);
-        }
-        if matches!(object.lifetime, LifetimeDisposition::Sites(0)) {
-            return Err(BuildError::InvalidLifetime);
-        }
-        if object.role == ObjectRole::TraceRecord
-            && self.draft.owner.context().runtime_trace()
-                == crate::backend::RuntimeTracePolicy::Omitted
-        {
-            return Err(BuildError::Plan(PlanError::OmittedTrace));
-        }
+        self.checks().check_object(&object)?;
         Ok(self.draft.objects.push(object)?)
     }
     pub(in crate::backend) fn append(

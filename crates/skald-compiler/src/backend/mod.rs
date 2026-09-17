@@ -90,6 +90,17 @@ pub enum RuntimeTracePolicy {
 /// ```compile_fail
 /// use skald_compiler::backend::lir::DraftBuilder;
 /// ```
+///
+/// Verified low-level callables and completion receipts also have no public
+/// unchecked construction path:
+///
+/// ```compile_fail
+/// use skald_compiler::backend::lir::VerifiedCallable;
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::lir::CompletionReceipt;
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {
     verified: &'input VerifiedFinalMirProgram,

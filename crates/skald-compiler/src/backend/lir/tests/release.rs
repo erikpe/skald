@@ -241,5 +241,6 @@ fn shared_release_uses_explicit_memory_branches_finalizer_and_original_header_af
             .blocks()
             .flat_map(|(_, block)| &block.instructions)
             .all(|instruction| !matches!(instruction.operation, Operation::Trace(_))));
+        verify_callable(draft).unwrap();
     }
 }

@@ -5,7 +5,10 @@ mod call;
 mod graph;
 mod model;
 mod observable;
+mod read;
 mod scalar;
+mod verify;
+use read::DraftChecks;
 mod schema;
 mod trace;
 
@@ -32,3 +35,8 @@ pub(in crate::backend) use call::{Call, CallArgument, CallAttribution, CallTarge
 pub(in crate::backend) use observable::AddressProvenance;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use trace::{TraceAction, TracePlan, TraceSite};
+
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use verify::{
+    verify_callable, CompletionReceipt, VerificationFailure, VerificationReason, VerifiedCallable,
+};

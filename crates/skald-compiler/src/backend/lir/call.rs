@@ -1,6 +1,6 @@
 //! Logical calls and attribution; no physical ABI binding or executable MIR.
 
-use super::{BuildError, DraftBuilder, ValueHandle};
+use super::{BuildError, DraftChecks, ValueHandle};
 use crate::backend::effects::{Effect, Effects};
 use crate::backend::graph::LoweredObjectId;
 use crate::backend::graph::LoweredValueId;
@@ -48,7 +48,7 @@ pub(in crate::backend) struct Call<V = LoweredValueId> {
 }
 
 #[cfg_attr(not(test), allow(dead_code))]
-impl<'p> DraftBuilder<'p> {
+impl<'p> DraftChecks<'_, 'p> {
     pub(super) fn normalize_call(
         &self,
         call: Call<ValueHandle<'p>>,

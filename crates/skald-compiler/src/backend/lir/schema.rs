@@ -6,12 +6,12 @@ use super::model::{
 };
 use super::scalar::{integer, integer_width};
 use super::{
-    BinaryOperation, BuildError, Conversion, DraftBuilder, MemoryRepresentation, UnaryOperation,
+    BinaryOperation, BuildError, Conversion, DraftChecks, MemoryRepresentation, UnaryOperation,
 };
 use crate::backend::plan::{ArtifactCategory, LayoutDisposition, PlanError, ScalarType};
 
 #[cfg_attr(not(test), allow(dead_code))]
-impl<'p> DraftBuilder<'p> {
+impl<'p> DraftChecks<'_, 'p> {
     pub(super) fn check_type(&self, ty: ScalarType) -> Result<(), BuildError> {
         let view = self.draft.owner.context();
         match ty {
