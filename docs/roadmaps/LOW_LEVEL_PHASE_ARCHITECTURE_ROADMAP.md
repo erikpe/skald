@@ -1,6 +1,6 @@
 # Low-Level Phase Architecture and Backend Ownership Roadmap
 
-Status: in progress; LP01–LP02 are complete and LP03 is next. Implements LA01 of the
+Status: in progress; LP01–LP03 are complete and LP04 is next. Implements LA01 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen as of 2026-09-17.
@@ -51,7 +51,7 @@ behavior; do not implement the illustrative future directory tree in advance.
 
 - [x] LP01 — Establish the migration contract and coverage inventory
 - [x] LP02 — Protect existing backend boundaries and behavioral witnesses
-- [ ] LP03 — Make the foundation measurement protocol reproducible
+- [x] LP03 — Make the foundation measurement protocol reproducible
 - [ ] LP04 — Capture and qualify the pre-migration baseline
 - [ ] LP05 — Cumulative review, downstream handoff, and closure
 
@@ -68,11 +68,11 @@ behavior; do not implement the illustrative future directory tree in advance.
 
 The [migration coverage record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
 program-wide migration record created by LP01. Keep it active through LA05;
-LA01 closure does not archive pending migration obligations. LP03 creates
-`docs/development/LOW_LEVEL_COMPILER_MEASUREMENTS.md` for the reproducible
-procedure and evidence, referring to the generic
+LA01 closure does not archive pending migration obligations. The
+[foundation measurement procedure](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md)
+defines reproducible collection/comparison, referring to the generic
 [cleanup measurement contract](../development/CLEANUP_MEASUREMENTS.md).
-The measurement document remains a future deliverable.
+Qualified baseline evidence remains an LP04 deliverable.
 
 ## PR-sized implementation sequence
 
@@ -206,30 +206,30 @@ Changes remain uncommitted for the user; LP03 is next.
 **Purpose:** make the frozen foundation cost policy executable without building
 a parallel benchmark framework.
 
-- [ ] Freeze a versioned manifest of the four compile workload families and
+- [x] Freeze a versioned manifest of the four compile workload families and
   range-loop, vector-growth and runtime-trace native workloads from the existing
   harness. Add a nonconstant scalar/call kernel only if LP01 found a material
   coverage gap. Record inputs, expected observations and mode/toolchain settings.
-- [ ] Check existing support for explicit compiler/runtime identities, warmups,
+- [x] Check existing support for explicit compiler/runtime identities, warmups,
   repetition counts, per-variant order, deterministic output, watchdogs and
   semantic digests. Extend the existing harness/support only for demonstrated
   gaps in comparing two compiler builds. Identify binaries by revision/hash;
   do not label a baseline binary with the current checkout's revision.
-- [ ] Specify and implement reproducible collection of compiler time/RSS,
+- [x] Specify and implement reproducible collection of compiler time/RSS,
   native time, assembly/native text size, per-callable frame sizes and static
   frame-access counts. Keep target-specific measurement separate from semantic
   artifact closure. Unknown code shapes produce an explicit unsupported metric,
   never a guessed zero; validate extraction against known small assemblies.
-- [ ] Test new manifest/collection/comparison behavior, including mismatched
+- [x] Test new manifest/collection/comparison behavior, including mismatched
   inputs, missing metrics, noisy/inconclusive timings and semantic divergence.
   Test the accepted thresholds if classification is automated; do not encode
   operational timing thresholds into ordinary correctness tests.
-- [ ] Document exact commands and provenance fields, storage/retention of raw
+- [x] Document exact commands and provenance fields, storage/retention of raw
   samples, and the paired comparison procedure. Use at least five compile and
   nine native samples per variant, warmups and alternating order. Report median,
   MAD and range. Reproduce timing regressions in a second paired run and apply
   the frozen twice-larger-MAD rule.
-- [ ] Carry forward the accepted review gates: repeatable increases above 10%
+- [x] Carry forward the accepted review gates: repeatable increases above 10%
   in compile/native median time or 15% in peak RSS/native text size require
   correction or an explicit recorded tradeoff before adoption. Keep frame
   growth visible and correctness/ABI/trace parity unconditional.
@@ -245,11 +245,59 @@ identified compiler builds and distinguish valid evidence, incompatible inputs,
 and inconclusive runs. No future LIR events or allocator infrastructure is
 needed to collect the baseline; new-phase observations are a later extension.
 
+**Completion evidence (2026-09-17):** task baseline `e446ecdb`, the user's
+committed LP02 implementation. History/source review confirmed the prior native
+probes are enduring tests, with no bridge due for removal. Foundation mode now
+extends the existing cleanup entry point and Make target. Shared corpus/MIR
+observation functions moved into cohesive script owners, retaining ordinary
+cleanup behavior. Manifest format/workload version 1 freezes four compile and
+17 native configurations, including enabled/omitted runtime-input scalar/call/
+division kernels (`17 1000000`, independent stdout `-993156\n`).
+
+The collector attests binary revisions, dirty states, build profiles/toolchains/
+flags and hashes separately from collecting-checkout identity. It forces shared
+runtime/stdlib/C-driver inputs; records source/runtime/harness/tool/host identity;
+alternates both compile and native compiler roles; retains warmup/measured raw
+events, medians/MADs/ranges, deterministic assembly and untimed reporting
+equivalence/observations. Target metrics cover ELF text sections, per-callable
+fixed frames, peak explicit stack reservations and direct static frame accesses.
+Unknown recipes remain unsupported. A bounded physical stack-depth extractor
+handles conditional/nested helper reservations without influencing semantic
+artifact closure. Comparison requires two independent paired captures, validates
+inputs/provenance/semantics/determinism and applies the frozen repeated cost/MAD
+rules per workload. Smoke/subset captures remain nonqualifying.
+
+Frame-recipe review exposed an unaligned exhaustion-reporter call in the
+frameless generated retain helper. A private native ABI probe failed with a
+hard trap before correction and passed after an eight-byte nonreturning-edge
+reservation. This small correction must be included in LP04's selected compiler
+revision. An external-output-root reporting bug was also fixed in ordinary
+cleanup mode. No substantial independent discovery remains deferred.
+
+`make measurement-support-test` passed all 33 deterministic support tests.
+An untimed real-compiler audit extracted supported metrics for all 21 workloads
+and 1,099 callable observations. Two independent paired smoke captures exercised
+small-source compilation and both scalar trace modes with exact manifest
+semantics; CLI comparison correctly reported **inconclusive** for their reduced
+counts/nonqualifying scope. Ordinary cleanup and Make foundation smoke commands
+also passed with external output roots. These checks used the dirty current
+compiler build based on `e446ecdb` and Rust 1.97.1; they are functional harness
+validation, not baseline/performance evidence.
+
+Final `make check` passed formatting/build/lint/docs, workspace/runtime suites
+and all 650 golden leaves. `make msrv-check` passed on Rust 1.82.0. Final
+documentation/whitespace checks passed after progress updates. The measurement
+procedure documents exact commands, provenance attestations, raw retention and
+outcome actions. Qualified full-corpus capture and durable reviewed records
+remain LP04 obligations. Changes are uncommitted for the user; no new compiler
+phase, production instrumentation or transitional pipeline is introduced.
+
 ### LP04 — Capture and qualify the pre-migration baseline
 
 **Purpose:** preserve trustworthy evidence before any production lowering move.
 
-- [ ] Select and record the pre-migration compiler revision after LP02 fixes.
+- [ ] Select and record the pre-migration compiler revision after LP02/LP03's
+  current-boundary and ABI fixes.
   Distinguish this measurement revision from the program and child implementation
   baselines. If later fixes change semantics, explicitly requalify affected
   evidence instead of silently replacing the comparison baseline.
@@ -349,7 +397,9 @@ migration record carries pending program obligations through LA05.
 | Artifact/file or symbol | Introducing task/commit | Removal or transfer owner | Final disposition and evidence |
 | --- | --- | --- | --- |
 | No bridge, gate, exception or exploratory code introduced | LP01; `d7163d9d` | — | Documentation inventory only; source/history review recorded above |
-| Live-input/aggregate-pressure goldens and private count probe | LP02; baseline `d7163d9d`, commit pending | Retain through downstream migrations | Enduring regression fixtures/test doubles; no production bridge, gate, placeholder IR or extraction introduced |
+| Live-input/aggregate-pressure goldens and private count probe | LP02; `e446ecdb` (task baseline `d7163d9d`) | Retain through downstream migrations | Enduring regression fixtures/test doubles; no production bridge, gate, placeholder IR or extraction introduced |
+| Foundation collector/comparator, versioned manifest, scalar kernel and metric fixtures | LP03; baseline `e446ecdb`, commit pending | Retain through foundation adoption | Enduring opt-in machinery under the existing cleanup entry point; no production instrumentation, rollout gate or new pipeline |
+| Generated retain exhaustion stack alignment/probe | LP03; baseline `e446ecdb`, commit pending | Retain | ABI correction with native failure-before/fix-after proof; not migration scaffolding |
 
 Carry continuing program obligations into the migration record with explicit
 owners; do not reset their history at a child-roadmap boundary. Shared baseline

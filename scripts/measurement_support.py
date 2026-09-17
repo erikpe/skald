@@ -49,6 +49,7 @@ def run_checked(
     capture: bool = True,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     expected_statuses: Iterable[int] = (0,),
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     command = [str(argument) for argument in arguments]
     process = subprocess.Popen(
@@ -57,6 +58,7 @@ def run_checked(
         stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         start_new_session=True,
+        env=env,
     )
     try:
         stdout, stderr = process.communicate(timeout=timeout_seconds)
@@ -83,6 +85,7 @@ def timed_process(
     capture: bool = True,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     expected_statuses: Iterable[int] = (0,),
+    env: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[bytes], float]:
     started = time.perf_counter_ns()
     completed = run_checked(
@@ -92,6 +95,7 @@ def timed_process(
         capture=capture,
         timeout_seconds=timeout_seconds,
         expected_statuses=expected_statuses,
+        env=env,
     )
     elapsed_ms = (time.perf_counter_ns() - started) / 1_000_000.0
     return completed, elapsed_ms
@@ -104,6 +108,7 @@ def measured_process(
     run_directory: Path,
     cwd: Path = REPOSITORY,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    env: dict[str, str] | None = None,
 ) -> ProcessUsage:
     if not GNU_TIME.is_file():
         raise MeasurementFailure(f"GNU time is required at {GNU_TIME}")
@@ -116,6 +121,7 @@ def measured_process(
             operation=operation,
             cwd=cwd,
             timeout_seconds=timeout_seconds,
+            env=env,
         )
         try:
             peak_rss_kib = int(usage_path.read_text(encoding="ascii").strip())
@@ -143,6 +149,14 @@ def timing_summary(samples_ms: Sequence[float]) -> dict[str, float | int]:
 def alternating_order(values: Sequence[str], iteration: int) -> tuple[str, ...]:
     ordered = tuple(values)
     return ordered if iteration % 2 == 0 else tuple(reversed(ordered))
+
+
+def numeric_summary(samples: Sequence[float]) -> dict[str, float | int]:
+    """Unit-neutral summaries for RSS, sizes, and comparison metrics."""
+    summary = timing_summary(samples)
+    return {"samples": summary["samples"], "median": summary["median_ms"],
+            "median_absolute_deviation": summary["median_absolute_deviation_ms"],
+            "min": summary["min_ms"], "max": summary["max_ms"]}
 
 
 def sha256_bytes(value: bytes) -> str:

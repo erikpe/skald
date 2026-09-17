@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Low-level phase architecture and backend ownership](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) | In progress; LP01–LP02 complete | Establish migration coverage, existing-boundary regressions, and qualified pre-migration measurements | LP03 — Reproducible foundation measurement protocol | Frozen phase architecture design; detailed LIR and target implementation remain later workstreams |
+| [Low-level phase architecture and backend ownership](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) | In progress; LP01–LP03 complete | Establish migration coverage, existing-boundary regressions, and qualified pre-migration measurements | LP04 — Capture and qualify the pre-migration baseline | Frozen phase architecture design; detailed LIR and target implementation remain later workstreams |
 
 ## Pending discovery and planning records
 

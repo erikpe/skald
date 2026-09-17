@@ -1,0 +1,28 @@
+from std::process import args;
+from std::str import Str;
+from std::io import println_i64;
+
+fn triple(value: i64) -> i64 { return value * 3; }
+
+fn mix(seed: i64, iteration: i64) -> i64 {
+    var value: i64 = (seed + iteration) % 97 - 48;
+    var divisor: i64 = 3;
+    if (iteration % 2 != 0) { divisor = -3; }
+    var quotient: i64 = value / divisor;
+    var remainder: i64 = value % divisor;
+    return triple(quotient) + remainder + value * 7;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = args();
+    var seed: i64 = arguments[1].to_i64()!;
+    var rounds: i64 = arguments[2].to_i64()!;
+    var iteration: i64 = 0;
+    var checksum: i64 = 0;
+    while (iteration < rounds) {
+        checksum = checksum + mix(seed, iteration);
+        iteration = iteration + 1;
+    }
+    println_i64(checksum);
+    return 0;
+}

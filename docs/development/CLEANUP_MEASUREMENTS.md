@@ -5,6 +5,11 @@ work that can affect compiler cost, generated code, or native execution. MIR
 structure remains owned by the
 [local final-MIR redundancy measurement](MIR_REDUNDANCY_MEASUREMENT.md), while
 specialized acceptance procedures retain their workload-specific metrics.
+The [foundation protocol](LOW_LEVEL_COMPILER_MEASUREMENTS.md) extends this same
+entry point with a frozen manifest, explicitly attested compiler builds,
+paired raw samples, target metrics and two-capture cost classification. Use it
+when comparing preserved binaries or collecting architecture acceptance evidence;
+the ordinary mode below reports the collecting checkout's identity.
 
 ## Procedure
 
@@ -60,6 +65,8 @@ Use `--workload` more than once to select an exact subset. `--timeout`,
 `--compile-repeats`, `--native-warmups`, and `--native-repeats` make the
 execution policy explicit. Keep the compiler profile argument accurate when
 supplying a different compiler executable.
+The Make target forwards optional `CLEANUP_BASELINE_ARGS` to this entry point;
+use it for repetition overrides or the foundation subcommand/protocol options.
 
 ## Workload coverage
 

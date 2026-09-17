@@ -12,6 +12,9 @@ use crate::{
 use super::super::call;
 use super::{emit_release_loaded_handle, emit_retain_loaded_handle};
 
+#[cfg(test)]
+mod tests;
+
 pub(super) fn lower_all(
     program: &MirProgram,
     dispatch: &DispatchMetadata,
@@ -50,6 +53,10 @@ fn lower_retain() -> AssemblyFunction {
     }];
     emit_retain_loaded_handle(invalid.clone(), overflow.clone(), &mut instructions);
     instructions.extend([Instruction::Return, Instruction::Label(overflow)]);
+    // This otherwise frameless helper enters with rsp eight bytes off the
+    // call boundary. Exhaustion still calls the runtime through the SysV ABI.
+    // The reporter never returns, so no scratch release is needed on this edge.
+    instructions.push(Instruction::ReserveStack(8));
     super::super::terminator::emit_ownership_overflow(
         call::TraceAttribution::InheritedSourceOperation,
         None,

@@ -8,7 +8,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 
-from measure_cleanup_baseline import parse_analysis_usage, parse_pass_occurrences  # noqa: E402
+from cleanup_measurements.observations import parse_analysis_usage, parse_pass_occurrences  # noqa: E402
 from measurement_support import MeasurementFailure  # noqa: E402
 
 

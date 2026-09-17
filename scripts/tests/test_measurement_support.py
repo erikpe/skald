@@ -22,6 +22,13 @@ from measurement_support import (  # noqa: E402
 
 
 class MeasurementSupportTests(unittest.TestCase):
+    def test_explicit_child_environment_is_used(self) -> None:
+        completed = run_checked(
+            [sys.executable, "-c", "import os; print(os.environ['SKALD_MEASUREMENT_TEST'])"],
+            env={"SKALD_MEASUREMENT_TEST": "selected"},
+        )
+        self.assertEqual(completed.stdout, b"selected\n")
+
     def test_deterministic_projection_excludes_operational_metadata(self) -> None:
         left = {"deterministic": {"artifact": "abc"}, "operational": {"wall_ms": 1.0}}
         right = {"deterministic": {"artifact": "abc"}, "operational": {"wall_ms": 99.0}}

@@ -4,6 +4,7 @@ GOLDEN_RUNNER := target/$(GOLDEN_PROFILE)/skald-golden
 GOLDEN_COMPILER := target/$(GOLDEN_PROFILE)/skac
 GOLDEN_RELEASE_RUNNER := target/release/skald-golden
 GOLDEN_RELEASE_COMPILER := target/release/skac
+CLEANUP_BASELINE_ARGS ?=
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
 	workspace-test compiler-test binary64-test cli-test docs-test golden-runner-test \
@@ -148,7 +149,7 @@ range-loop-benchmark: runtime golden-tools
 	python3 scripts/measure_range_loops.py --compiler $(GOLDEN_COMPILER) --require-target
 
 cleanup-baseline: runtime golden-tools
-	python3 scripts/measure_cleanup_baseline.py --compiler $(GOLDEN_COMPILER) --compiler-profile $(GOLDEN_PROFILE)
+	python3 scripts/measure_cleanup_baseline.py $(CLEANUP_BASELINE_ARGS) --compiler $(GOLDEN_COMPILER) --compiler-profile $(GOLDEN_PROFILE)
 
 mir-redundancy-measure:
 	cargo run --quiet --locked -p skald-mir-measure -- \

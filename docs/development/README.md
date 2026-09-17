@@ -12,6 +12,8 @@ The opt-in structural opportunity census is documented in
 [Local final-MIR redundancy measurement](MIR_REDUNDANCY_MEASUREMENT.md).
 The cross-cutting compiler and native baseline is documented in
 [Cleanup Measurement Baseline](CLEANUP_MEASUREMENTS.md).
+The frozen paired low-level architecture protocol is documented in
+[Low-Level Compiler Foundation Measurements](LOW_LEVEL_COMPILER_MEASUREMENTS.md).
 The evidence and decision record for proof-snapshot local constant reuse is
 documented in
 [MIR Analysis Reuse Measurements](MIR_ANALYSIS_REUSE_MEASUREMENTS.md).

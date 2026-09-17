@@ -47,6 +47,10 @@ make cleanup-baseline
 
 The report contract and comparison procedure are documented in
 [Cleanup Measurement Baseline](../docs/development/CLEANUP_MEASUREMENTS.md).
+The same entry point's `foundation` and `compare-foundation` modes implement
+the [frozen architecture protocol](../docs/development/LOW_LEVEL_COMPILER_MEASUREMENTS.md).
+`cleanup_measurements/` separates the shared workload/observation owners from
+the manifest, paired collector, target metrics, provenance and comparison.
 `measurement_support.py` owns the small shared subprocess, watchdog, unique
 directory, alternating-order, timing-summary, hashing, and repository-identity
 helpers. Every native benchmark report also records the selected runtime

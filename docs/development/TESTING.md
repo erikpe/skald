@@ -39,6 +39,13 @@ stack offsets. The
 [migration coverage record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md)
 maps reused trace, sparse-artifact and reporting witnesses to their exact modes
 and assigns negative tests for future low-level products to their future owners.
+A generated-retain helper native probe checks the runtime's SysV stack alignment
+on the count-exhaustion edge; normal frameless returns remain independently covered.
+The opt-in [foundation measurement protocol](LOW_LEVEL_COMPILER_MEASUREMENTS.md)
+uses deterministic Python fixtures for extraction, paired collection and noisy/
+missing/incompatible evidence classification. Its support tests run through
+`make measurement-support-test`; operational timing runs remain outside ordinary
+correctness gates.
 
 Generic-interface coverage follows the complete compiler pipeline. Syntax
 tests own source shape, punctuation, nested closers, and recovery. Resolution

@@ -88,6 +88,7 @@ Retain the semantic expectations while adapting owners during migration.
 | E18 | [Reporting observers](../../crates/skald-compiler/src/driver/tests/reporting/observers.rs): `observation_preserves_success_artifacts_and_failure_diagnostics`, `independent_observers_do_not_share_events_across_repeated_or_parallel_calls`; [cross-process pipeline tests](../../crates/skald-compiler/tests/pipeline_determinism.rs); golden determinism/release Make targets |
 | E19 | [Live integers](../../tests/golden/operators/live_integer_inputs.ska), `operators/arithmetic::live_integer_inputs`; [aggregate pressure](../../tests/golden/calls/aggregate_pressure.ska), `calls/functions::aggregate_pressure`; exact variants/runs below |
 | E20 | [Strong-count native probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/count/tests.rs): `release_frees_original_header_after_finalizer_changes_owner_and_clobbers_callers` |
+| E21 | [Generated retain ABI probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/helpers/tests.rs): `generated_retain_helper_aligns_the_stack_before_reporting_exhaustion`; demonstrated the unaligned overflow reporter call before its correction |
 
 Feature-owned native/failure goldens additionally protect
 [calls](../../tests/golden/calls/functions.golden.toml),
@@ -417,31 +418,29 @@ already records compiler/runtime/source identities, three compile samples by
 default, native warmups/repeats, compiler wall/RSS summaries, repeated assembly
 hashes, assembly byte size, total executable bytes, pass/analysis observations,
 and native result digests. Native enabled/omitted workload pairs alternate order.
-No foundation measurement is captured in this task.
+No qualified foundation baseline is captured by the inventory or protocol work.
 
-LP03 must close these concrete capabilities before LP04:
+LP03 closes the six collection/comparison gaps identified by LP01. The
+[foundation protocol](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md) is the
+authoritative procedure; collection extends the same cleanup entry point.
 
-- A versioned frozen workload manifest and compatibility checks across compiler
-  builds, with binary revision provenance independent of current checkout
-  identity. The current report combines executable hash with checkout revision;
-  a label alone cannot establish an older binary's source revision.
-- Paired old/new **compiler** runs with compile warmups and alternating order.
-  Current compile workloads run sequentially against one compiler; native
-  alternating order currently compares workload variants, not two compiler builds.
-- At least five compile/nine native measurements and repeat-pair protocol;
-  current default counts (three/five) need explicit overrides or extension.
-- Native text-section size distinct from total executable bytes, per-callable
-  frame size and static frame-access counts with explicit unsupported metrics.
-- Raw-sample retention beyond summary-only compiler/RSS statistics, controlled
-  host/toolchain provenance, reporting equivalence, and durable baseline records.
-- Comparison classification preserving semantic/deterministic mismatches and
-  inconclusive/noisy results; frozen per-workload cost thresholds and MAD rule.
+| Original capability gap | Implemented disposition |
+| --- | --- |
+| Frozen corpus and historical-binary identity | Version-1 manifest, hashed source/stdlib/expected bytes; explicit binary commit/dirty/profile/toolchain/flags attestations and hashes, separate collecting-checkout identity |
+| Paired compiler measurements | Compile and native warmups/repetitions alternate baseline/candidate order; raw ordered events retained |
+| Required counts and repeat protocol | Defaults/minima five compile/nine native, warmups; comparison requires distinct paired captures; explicit smoke/subset captures cannot qualify adoption |
+| Target code/frame metrics | ELF text-section sizes, fixed frame bytes, peak explicit stack reservations and direct static frame-memory operands; supported recipes have small fixtures, unknown shapes are unsupported |
+| Raw samples/provenance/reporting and retention | Full reports, copied manifest, repeated assembly, untimed reporting equivalence/observations, tool/host/input/harness identities; durable qualified-record retention is explicitly LP04's remaining obligation |
+| Classification | Per-workload incompatibility, semantic/report/determinism invalidity, missing/noisy evidence, repeated 10% timing/15% RSS/text review gates and strict twice-larger-MAD rule; frame changes separately visible |
 
-LP04 captures evidence only after these capabilities and LP02 fixes are ready.
-The workload shapes already cover small-source startup, modules/large CFG,
-generic applications, nested ownership, vector growth, ranges and traces.
-LP03 should assess a nonconstant scalar/call kernel for the pilot witnesses;
-none is added here and no standard-library refactoring is required.
+An additional runtime-input scalar/call/division kernel covers the material
+pilot gap left by the existing recursion/range/trace workloads. Inputs
+`17 1000000` and independent checksum `-993156` are frozen in the manifest.
+No standard-library refactoring is required. E21 fixes the generated retain
+helper's exhaustion-call alignment defect found while checking frame recipes;
+LP04 must capture a compiler revision including that correction. Full baseline
+collection, reproducibility qualification and durable reviewed evidence remain
+pending LP04; smoke runs make no performance/adoption claim.
 
 ## Contract reconciliation and transition disposition
 

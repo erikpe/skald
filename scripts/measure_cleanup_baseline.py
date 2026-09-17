@@ -5,8 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-from dataclasses import asdict, dataclass
+import sys
 from pathlib import Path
 
 from measurement_support import (
@@ -14,7 +13,9 @@ from measurement_support import (
     MeasurementFailure,
     alternating_order,
     deterministic_projection,
+    display_path,
     measured_process,
+    numeric_summary,
     repository_identity,
     resolve_repository_path,
     run_checked,
@@ -27,246 +28,11 @@ from measurement_support import (
 )
 
 
+from cleanup_measurements.workloads import Workload, workloads
+from cleanup_measurements.observations import inspect_analysis_usage, resolved_schedule
+
+
 DEFAULT_OUTPUT_ROOT = REPOSITORY / "build/measurements/cleanup-baseline"
-PASS_PATTERN = re.compile(
-    rb"^skac: trace: (proof-rich|proof-transition|final) MIR pass `([^`]+)` "
-    rb"\(pass identity \d+, schedule position (\d+), occurrence (\d+)\) "
-    rb"(unchanged|changed|failed) ",
-    re.MULTILINE,
-)
-ANALYSIS_PATTERN = re.compile(
-    rb"^skac: trace analysis: ([^:]+): requests (\d+), computations (\d+), hits (\d+), "
-    rb"repeated snapshot requests (\d+), results before (\d+), inserted (\d+), discarded (\d+)$"
-)
-
-
-@dataclass(frozen=True)
-class Workload:
-    identity: str
-    dimensions: tuple[str, ...]
-    compiler_arguments: tuple[str, ...]
-    input_paths: tuple[Path, ...]
-    runtime_trace: str
-    native_group: str | None = None
-    native_arguments: tuple[str, ...] = ()
-
-
-def direct_workload(
-    identity: str,
-    dimensions: tuple[str, ...],
-    source: str,
-    *,
-    compiler_arguments: tuple[str, ...] = (),
-    runtime_trace: str = "enabled",
-    native_group: str | None = None,
-    native_arguments: tuple[str, ...] = (),
-) -> Workload:
-    source_path = REPOSITORY / source
-    trace_arguments = ("--omit-runtime-trace",) if runtime_trace == "omitted" else ()
-    return Workload(
-        identity,
-        dimensions,
-        (source, *compiler_arguments, *trace_arguments),
-        (source_path,),
-        runtime_trace,
-        native_group,
-        native_arguments,
-    )
-
-
-def workloads() -> tuple[Workload, ...]:
-    module_root = REPOSITORY / "tests/golden/vm_benchmark/cases/modules"
-    compile_baselines = (
-        direct_workload(
-            "compile/small-source",
-            ("small-source",),
-            "samples/vertical/exit_42.ska",
-            compiler_arguments=("--no-stdlib",),
-            runtime_trace="omitted",
-        ),
-        Workload(
-            "compile/many-modules-large-cfg",
-            ("many-modules", "large-callable-cfg"),
-            ("--entry", "app", "--module-root", str(module_root.relative_to(REPOSITORY))),
-            tuple(sorted(module_root.glob("**/*.ska"))),
-            "enabled",
-        ),
-        direct_workload(
-            "compile/many-generic-applications",
-            ("many-generic-applications",),
-            "tests/golden/generic_interfaces/conformance_matrix.ska",
-            compiler_arguments=("--no-stdlib",),
-            runtime_trace="omitted",
-        ),
-        direct_workload(
-            "compile/nested-ownership",
-            ("nested-ownership",),
-            "tests/golden/standard_vec/vec_generic_type_shapes.ska",
-            runtime_trace="omitted",
-        ),
-    )
-    native = [
-        direct_workload(
-            "native/generic-vector-growth",
-            ("existing-native", "generic-applications", "ownership"),
-            "tests/benchmarks/generic_vec/growth.ska",
-            native_group="generic-vector",
-        )
-    ]
-    for integer in ("u8", "u64", "i64"):
-        for form in ("range", "while"):
-            native.append(
-                direct_workload(
-                    f"native/range-{integer}-{form}",
-                    ("existing-native", "loop"),
-                    f"tests/benchmarks/range_loop/{integer}_{form}.ska",
-                    runtime_trace="omitted",
-                    native_group=f"range-{integer}",
-                )
-            )
-    trace_sources = (
-        ("call-recursion", "tests/benchmarks/panic_runtime_trace/call_recursion.ska"),
-        ("tight-loop", "tests/benchmarks/panic_runtime_trace/tight_loop.ska"),
-        ("allocation", "tests/benchmarks/panic_runtime_trace/allocation.ska"),
-        ("representative-golden", "tests/golden/operators/primitive_operator_profile.ska"),
-    )
-    for name, source in trace_sources:
-        for policy in ("enabled", "omitted"):
-            native.append(
-                direct_workload(
-                    f"native/runtime-trace-{name}-{policy}",
-                    ("existing-native", "runtime-trace"),
-                    source,
-                    runtime_trace=policy,
-                    native_group=f"runtime-trace-{name}",
-                )
-            )
-    return (*compile_baselines, *native)
-
-
-def resolved_schedule(
-    compiler: Path, run_directory: Path, timeout_seconds: float
-) -> list[dict[str, object]]:
-    output = run_directory / "schedule.s"
-    completed = run_checked(
-        [
-            compiler,
-            "samples/vertical/exit_42.ska",
-            "--no-stdlib",
-            "--omit-runtime-trace",
-            "--emit",
-            "asm",
-            "--report-level",
-            "trace",
-            "-o",
-            output,
-        ],
-        operation="default MIR schedule inspection",
-        timeout_seconds=timeout_seconds,
-    )
-    schedule = [
-        {
-            "position": occurrence["position"],
-            "pass": occurrence["pass"],
-            "stage": occurrence["stage"],
-            "occurrence": occurrence["occurrence"],
-        }
-        for occurrence in parse_pass_occurrences(completed.stderr)
-    ]
-    positions = [entry["position"] for entry in schedule]
-    if not schedule or positions != list(range(len(schedule))):
-        raise MeasurementFailure(
-            "compiler trace did not contain one contiguous resolved MIR schedule"
-        )
-    return schedule
-
-
-def parse_pass_occurrences(stderr: bytes) -> list[dict[str, object]]:
-    return [
-        {
-            "position": int(position),
-            "pass": name.decode("utf-8"),
-            "stage": stage.decode("ascii"),
-            "occurrence": int(occurrence),
-            "outcome": outcome.decode("ascii"),
-        }
-        for stage, name, position, occurrence, outcome in PASS_PATTERN.findall(stderr)
-    ]
-
-
-def parse_analysis_usage(stderr: bytes) -> list[dict[str, object]]:
-    current: dict[str, object] | None = None
-    usage: list[dict[str, object]] = []
-    for line in stderr.splitlines():
-        if match := PASS_PATTERN.match(line):
-            stage, name, position, occurrence, outcome = match.groups()
-            current = {
-                "position": int(position),
-                "pass": name.decode("utf-8"),
-                "stage": stage.decode("ascii"),
-                "occurrence": int(occurrence),
-                "outcome": outcome.decode("ascii"),
-            }
-            continue
-        match = ANALYSIS_PATTERN.match(line)
-        if match is None:
-            continue
-        if current is None:
-            raise MeasurementFailure("analysis usage preceded its MIR pass occurrence")
-        kind, requests, computations, hits, repeated, before, inserted, discarded = match.groups()
-        usage.append(
-            {
-                **current,
-                "analysis": kind.decode("ascii"),
-                "requests": int(requests),
-                "computations": int(computations),
-                "hits": int(hits),
-                "repeated_snapshot_requests": int(repeated),
-                "distinct_callable_snapshot_keys": int(requests) - int(repeated),
-                "results_before": int(before),
-                "results_inserted": int(inserted),
-                "results_discarded": int(discarded),
-            }
-        )
-    return usage
-
-
-def inspect_analysis_usage(
-    compiler: Path,
-    workload: Workload,
-    run_directory: Path,
-    timeout_seconds: float,
-) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    output = run_directory / f"{workload.identity.replace('/', '-')}-analysis.s"
-    completed = run_checked(
-        [
-            compiler,
-            *workload.compiler_arguments,
-            "--emit",
-            "asm",
-            "--report-level",
-            "trace",
-            "-o",
-            output,
-        ],
-        operation=f"{workload.identity} analysis-usage inspection",
-        timeout_seconds=timeout_seconds,
-    )
-    return (
-        parse_analysis_usage(completed.stderr),
-        parse_pass_occurrences(completed.stderr),
-    )
-
-
-def numeric_summary(samples: list[int]) -> dict[str, int | float]:
-    summary = timing_summary([float(sample) for sample in samples])
-    return {
-        "samples": summary["samples"],
-        "median": summary["median_ms"],
-        "median_absolute_deviation": summary["median_absolute_deviation_ms"],
-        "min": summary["min_ms"],
-        "max": summary["max_ms"],
-    }
 
 
 def compile_workload(
@@ -396,6 +162,13 @@ def run_native_groups(
 
 
 def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "foundation":
+        from cleanup_measurements.foundation import main as foundation_main
+        return foundation_main(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] == "compare-foundation":
+        from cleanup_measurements.comparison import main as comparison_main
+        return comparison_main(sys.argv[2:])
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler", default="target/golden/skac")
     parser.add_argument("--compiler-profile", default="golden")
@@ -484,7 +257,7 @@ def main() -> int:
     report = {
         "deterministic": deterministic,
         "operational": {
-            "run_directory": str(run_directory.relative_to(REPOSITORY)),
+            "run_directory": display_path(run_directory),
             "workloads": [operational_workloads[workload.identity] for workload in selected],
         },
     }
@@ -503,7 +276,7 @@ def main() -> int:
             f"({arguments.compiler_profile}; {arguments.compiler_label})"
         )
         print(f"resolved MIR schedule: {len(schedule)} occurrences")
-        print(f"report: {run_directory.relative_to(REPOSITORY) / 'report.json'}")
+        print(f"report: {display_path(run_directory / 'report.json')}")
         print("timing is observational and has no pass threshold")
     return 0
 
