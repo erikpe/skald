@@ -123,6 +123,16 @@ impl Deref for VerifiedProofMirProgram {
 /// }
 /// ```
 ///
+/// Inspecting the sealed program does not grant mutation authority:
+///
+/// ```compile_fail
+/// use skald_compiler::{mir::MirProgram, passes::VerifiedFinalMirProgram};
+///
+/// fn mutate(verified: &mut VerifiedFinalMirProgram) {
+///     let _: &mut MirProgram = verified.program();
+/// }
+/// ```
+///
 /// Seal-bound reachability facts cannot be detached, replaced, or mutated:
 ///
 /// ```compile_fail

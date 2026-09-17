@@ -1,0 +1,48 @@
+from std::process import args;
+from std::str import Str;
+from std::test import assert_eq_i64;
+
+fn identity(value: i64) -> i64 {
+    return value;
+}
+
+fn arithmetic(left: i64, right: i64) -> i64 {
+    var result: i64 = left * 3 + right;
+    var observed: i64 = identity(result + 5);
+    // Both inputs remain live after the result and the intervening call.
+    return observed + left * 7 + right * 11;
+}
+
+fn division_loop(left: i64, right: i64, expected_q: i64, expected_r: i64) -> i64 {
+    var iteration: i64 = 0;
+    var total: i64 = 0;
+    while (iteration < 4) {
+        var quotient: i64 = left / right;
+        var remainder: i64 = left % right;
+        assert_eq_i64(quotient, expected_q);
+        assert_eq_i64(remainder, expected_r);
+        var joined: i64 = 0;
+        if (iteration % 2 == 0) {
+            joined = identity(quotient) + remainder;
+        } else {
+            joined = quotient + identity(remainder);
+        }
+        assert_eq_i64(joined, expected_q + expected_r);
+        total = total + joined;
+        iteration = iteration + 1;
+    }
+    assert_eq_i64(total, (expected_q + expected_r) * 4);
+    return left + right;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = args();
+    var left: i64 = arguments[1].to_i64()!;
+    var right: i64 = arguments[2].to_i64()!;
+    var expected_q: i64 = arguments[3].to_i64()!;
+    var expected_r: i64 = arguments[4].to_i64()!;
+    var expected_arithmetic: i64 = arguments[5].to_i64()!;
+    assert_eq_i64(arithmetic(left, right), expected_arithmetic);
+    assert_eq_i64(division_loop(left, right, expected_q, expected_r), left + right);
+    return 0;
+}

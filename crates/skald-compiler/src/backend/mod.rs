@@ -61,6 +61,16 @@ pub enum RuntimeTracePolicy {
 /// use skald_compiler::mir::rewrite::MirCallableEdit;
 /// let _edit: MirCallableEdit = todo!();
 /// ```
+///
+/// Callers cannot attach sources to an input after omitting runtime tracing:
+///
+/// ```compile_fail
+/// use skald_compiler::{backend::BackendInput, source::SourceDatabase};
+///
+/// fn attach_sources<'a>(input: &mut BackendInput<'a>, sources: &'a SourceDatabase) {
+///     input.sources = Some(sources);
+/// }
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {
     verified: &'input VerifiedFinalMirProgram,

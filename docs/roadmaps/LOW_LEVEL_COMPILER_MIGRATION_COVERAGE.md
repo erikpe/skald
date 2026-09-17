@@ -1,8 +1,9 @@
 # Low-Level Compiler Migration Coverage
 
-Status: initial inventory reconciled against `495debd3` on 2026-09-17.
-All new-pipeline delivery is **pending**. Current evidence below is inspected
-test source, not a claim that those suites were rerun for this inventory.
+Status: initial inventory reconciled against `495debd3` on 2026-09-17;
+current-boundary/native witness protection added from task baseline `d7163d9d`.
+All new-pipeline delivery is **pending**. The initial inventory inspected test
+source; subsequent validation is recorded in the preparation roadmap.
 Program implementation baseline: `495debd3`.
 
 This is the continuing migration/handoff record for the
@@ -83,8 +84,10 @@ Retain the semantic expectations while adapting owners during migration.
 | E14 | [Static initialization](../../crates/skald-compiler/src/backend/x86_64_sysv/tests/static_initialization.rs): `coordinator_uses_dependency_order_and_wrapper_runs_it_before_entry`; [shutdown](../../crates/skald-compiler/src/backend/x86_64_sysv/tests/static_shutdown.rs): `lowers_exact_reverse_shutdown_and_preserves_the_entry_result`, `entry_panic_does_not_attempt_static_unwinding`; [planning](../../crates/skald-compiler/src/backend/x86_64_sysv/tests/static_planning.rs): `backend_storage_planning_distinguishes_active_and_dead_body_fallback_slots` |
 | E15 | [Retained domain](../../crates/skald-compiler/src/backend/x86_64_sysv/tests/retained_domain.rs): `sparse_backend_planning_visits_only_physically_retained_definitions`, `sparse_complete_and_artifact_retained_emission_never_resurrect_absent_bodies`, `equal_retained_closures_emit_identical_runtime_trace_metadata`; [artifact closure](../../crates/skald-compiler/src/backend/x86_64_sysv/artifacts.rs): `prunes_unreachable_artifacts_from_every_section`, `retains_transitive_function_and_data_dependencies` |
 | E16 | [Trace frames/metadata](../../crates/skald-compiler/src/backend/x86_64_sysv/runtime_trace/tests.rs): `runtime_trace_metadata_omission_never_requests_or_emits_trace_data`, `runtime_trace_frame_mixed_returns_preserve_results_and_restore_null`; [locations](../../crates/skald-compiler/src/backend/x86_64_sysv/runtime_trace/location_tests.rs): `runtime_trace_location_precedes_every_explicit_call_target_after_marshalling`, `runtime_trace_location_is_failure_only_and_immediately_precedes_reporters`; [attribution](../../crates/skald-compiler/src/backend/x86_64_sysv/runtime_trace/attribution_tests.rs): `runtime_trace_attribution_native_generated_copy_and_finalizer_chains_omit_helpers` |
-| E17 | [Facade](../../crates/skald-compiler/src/backend/mod.rs): raw/proof-rich input and private mutation compile-fail examples, `backend_input_exposes_sources_only_for_enabled_tracing`; [phase guards](../../crates/skald-compiler/tests/phase_boundaries.rs): `production_compiler_dependencies_follow_owned_boundaries`, `policy_rejects_reverse_edges_and_accepts_lowering_inputs` |
+| E17 | [Facade](../../crates/skald-compiler/src/backend/mod.rs): raw/proof-rich input, private edit authority and attaching omitted sources compile-fail examples, `backend_input_exposes_sources_only_for_enabled_tracing`; [final seal](../../crates/skald-compiler/src/passes/pipeline/seal.rs): seal forgery, read-only program and private invalidation compile-fail examples; [phase guards](../../crates/skald-compiler/tests/phase_boundaries.rs): `production_compiler_dependencies_follow_owned_boundaries`, `policy_rejects_reverse_edges_and_accepts_lowering_inputs`, `backend_policy_rejects_frontend_state_and_accepts_verified_input_services` |
 | E18 | [Reporting observers](../../crates/skald-compiler/src/driver/tests/reporting/observers.rs): `observation_preserves_success_artifacts_and_failure_diagnostics`, `independent_observers_do_not_share_events_across_repeated_or_parallel_calls`; [cross-process pipeline tests](../../crates/skald-compiler/tests/pipeline_determinism.rs); golden determinism/release Make targets |
+| E19 | [Live integers](../../tests/golden/operators/live_integer_inputs.ska), `operators/arithmetic::live_integer_inputs`; [aggregate pressure](../../tests/golden/calls/aggregate_pressure.ska), `calls/functions::aggregate_pressure`; exact variants/runs below |
+| E20 | [Strong-count native probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/count/tests.rs): `release_frees_original_header_after_finalizer_changes_owner_and_clobbers_callers` |
 
 Feature-owned native/failure goldens additionally protect
 [calls](../../tests/golden/calls/functions.golden.toml),
@@ -92,7 +95,12 @@ Feature-owned native/failure goldens additionally protect
 [optional lifecycle](../../tests/golden/optionals/lifecycle.golden.toml),
 [static fields](../../tests/golden/static_fields/fields.golden.toml), and
 [panic reporting](../../tests/golden/runtime/panic.golden.toml).
-LP02 records exact selected leaves and their mode coverage when adding witnesses.
+Exact selected leaves and their mode coverage are recorded below.
+
+Inventory references G01–G05 identify the original readiness gaps, now all
+closed by E17/E19/E20 and the selected mode table. Retain those references to
+connect the audited families to their added protection; they do not mark
+pending current-behavior work. New-pipeline delivery remains pending separately.
 
 ## MIR instruction inventory
 
@@ -257,8 +265,9 @@ complete-object address and dynamic metadata. These are logical components,
 not a universal ABI register list. Current `abi.rs`/`lower/call/marshal.rs`
 spill/marshal them alongside hidden result storage; future target planning
 classifies shapes, shared lowering materializes values, selection assigns ABI
-locations, and realization moves them. E02/E05/E07/E12/E13 are evidence; G03
-is the combined call witness gap. Delivery: pending LA03 pilot/LA04 full surface.
+locations, and realization moves them. E02/E05/E07/E12/E13 are evidence;
+E19 closes G03's combined call witness gap. Delivery remains pending for
+LA03's pilot and LA04's full surface.
 
 | Generated/external family | Current construction/domain | Future owner and invariant | Evidence / gap | Delivery (pending) |
 | --- | --- | --- | --- | --- |
@@ -338,34 +347,48 @@ to introduce global caches or a general pass manager.
 
 ## Acceptance witnesses and bounded follow-up
 
-| Frozen walkthrough | Current evidence and missing protection | Downstream acceptance obligation |
+| Frozen walkthrough | Current evidence and readiness disposition | Downstream acceptance obligation |
 | --- | --- | --- |
-| Live arithmetic input with x86 tie versus AArch64 three-address form | E01 establishes operation selection; G01 adds a compact native witness with input reused after result and a call | LA03 selected tie test plus independent placement corruption/value-flow test; synthetic three-address/resource view test, no AArch64 execution claim |
-| Loop, join and checked signed division | E03 boundaries and E04 storage joins exist separately; G02 combines a checked divide/remainder with values used beyond a branch/loop | LA02 dominance/block-parameter/edge negatives; LA03 all selection-created correction blocks visible and transfers checked |
-| Object result, receiver triple, integer/float pressure and indirect target | E05 hidden destination/receiver and E02/E13 pressure exist; G03 identifies the combined native hidden-result/receiver pressure witness | LA03 joint role-based shape/ABI contract; LA04 full method/virtual/interface result native parity; AArch64 `x8` witness remains proposed private mapping |
-| Original allocation across finalizer and free | E07 dynamic finalizer/free and E08 owner replacement exist; G04 checks clobber/mutable-owner behavior is explicitly established by a native probe | LA04 lowered header value survives call, metadata/helper checks remain hard defects, source destructor gets its own trace frame |
+| Live arithmetic input with x86 tie versus AArch64 three-address form | E01 selection plus E19 runtime-loaded inputs reused after arithmetic result and a call; G01 closed | LA03 selected tie test plus independent placement corruption/value-flow test; synthetic three-address/resource view test, no AArch64 execution claim |
+| Loop, join and checked signed division | E03 boundary/property/failure coverage plus E19 signed division/remainder through both joins and loop epochs with original inputs live; G02 closed | LA02 dominance/block-parameter/edge negatives; LA03 all selection-created correction blocks visible and transfers checked |
+| Object result, receiver triple, integer/float pressure and indirect target | E05 hidden destination/receiver plus E19 direct/interface object results with seven integer/nine floating arguments and later argument calls; G03 closed | LA03 joint role-based shape/ABI contract; LA04 full method/virtual/interface result native parity; AArch64 `x8` witness remains proposed private mapping |
+| Original allocation across finalizer and free | E07/E08 lifecycle integration plus E20 finalizer-before-free, mutable-owner replacement, all caller-saved integer/SIMD registers clobbered, original header freed once; G04 closed | LA04 lowered header value survives call, metadata/helper checks remain hard defects, source destructor gets its own trace frame |
 | Width overlap, preserved resources and platform reservations | E02/E05 exercise current scalar x86 ABI; no machine resource model exists yet | LA03 synthetic overlap/partial-preservation/link-register/resource tests and real x86 assembler/C ABI probes; full AArch64 remains separate |
 
-LP02 current-behavior gaps are deliberately bounded. Confirm existing tests
-before adding each case; close a gap by naming an adequate witness rather than
-duplicating it. These are readiness obligations, not claims of demonstrated wrong code:
+LP02 closes G01–G05 as current-behavior readiness obligations. No wrong-code
+defect was found. Fixed homes still hide the future destructive-tie hazard;
+native parity does not replace downstream constraint/placement verification.
+Canonical byte/boolean coverage remains E01/E02; division property/zero-failure
+coverage remains E03. Existing ABI-position/encoding assertions remain owned by
+LA03; new semantic witnesses do not depend on temporary registers or offsets.
 
-- **G01:** one runtime-input arithmetic witness preserving a later-used input
-  across result computation/call, with canonical byte/boolean coverage reused
-  from E01/E02. Fixed homes currently hide the future destructive-tie hazard.
-- **G02:** one combined checked division/remainder CFG/native witness with live
-  values after a join/loop, reusing E03 for boundary/property/failure coverage.
-- **G03:** establish a native combined hidden aggregate result/receiver and
-  mixed register/stack pressure case. E05's result-position assertion alone
-  does not prove runtime preservation under marshalling pressure.
-- **G04:** confirm or extend E07/E08's allocator/finalizer probes so clobbered
-  caller-saved state and a changed owner location still free the original base
-  exactly once. Avoid testing a new invariant solely by matching `rax`/offset text.
-- **G05:** record exact mode coverage for selected witnesses (both MIR profiles,
-  enabled/omitted traces, relevant complete/reachable domains, reporting off/on).
-  Existing E15/E16/E18 protect separate dimensions; they do not automatically
-  exercise every new witness. Reuse E17 privacy/phase guards, and add only
-  observed gaps rather than broadening scanner claims.
+The live-integer spec has six runs: `negative_dividend`, `negative_divisor`,
+`both_negative`, `both_positive`, `minimum_over_negative_one`, and
+`maximum_over_two`. Operands and independent expected results come from process
+arguments, preventing compile-time folding of the operations under test.
+The aggregate spec has one run, `hidden_result_receiver_and_mixed_argument_pressure`;
+weighted integer and exact floating results detect lost/permuted components.
+Native lifecycle probes use ABI header identity and order, not assembly-text
+matches. The count probe invokes the real current release selector; synthetic
+finalizer/free bodies are enduring test doubles, never production scaffolding.
+
+### Selected mode coverage (G05 closed)
+
+| Witness / exact selection | Established dimension | Deliberate scope |
+| --- | --- | --- |
+| `operators/arithmetic::live_integer_inputs::{default,optimization-none,omit-runtime-trace}::<six runs above>` | Default/minimum MIR profiles, enabled/omitted tracing; native arithmetic, signed floor correction, minimum/-1 and maximum/2, joins/loops | Three builds, 18 executions; production reachable artifacts, reporting off |
+| `calls/functions::aggregate_pressure::{default,optimization-none,omit-runtime-trace}::hidden_result_receiver_and_mixed_argument_pressure` | Same profile/trace variants; hidden result, receiver triple, integer/SIMD register and stack pressure, direct/indirect calls | Three builds/executions; production reachable artifacts, reporting off |
+| E20 count probe; E07 `generated_dynamic_finalizer_executes_derived_then_base_and_frees_once` | Original header across destructive finalizer; ordinary generated dynamic-finalizer integration | Count probe bypasses MIR/traces deliberately to isolate the call-clobber obligation; E16 owns source/helper attribution |
+| E17 `backend_input_exposes_sources_only_for_enabled_tracing`, facade/final-seal doctests, `backend_policy_rejects_frontend_state_and_accepts_verified_input_services` | Enabled-only source access; caller cannot attach omitted sources; raw/proof-rich input and mutation authority rejected; frontend phase roots forbidden, source/MIR/seals allowed | Current public visibility and direct source-reference policy only; no internal LIR phase isolation claim |
+| E15 `sparse_backend_planning_visits_only_physically_retained_definitions`, `equal_retained_closures_emit_identical_runtime_trace_metadata` | Complete versus sparse bodies with tracing enabled; full/sparse reachable artifact closures identical | Reuses current target planning/trace witnesses rather than duplicating native fixtures |
+| E15 `sparse_complete_and_artifact_retained_emission_never_resurrect_absent_bodies` | Complete/reachable artifact modes on sparse MIR with tracing omitted; deterministic repeated emission | Assembler acceptance and absent-body guards; no claim every native case is crossed with both artifact modes |
+| E16 `runtime_trace_metadata_omission_never_requests_or_emits_trace_data`, `runtime_trace_frame_mixed_returns_preserve_results_and_restore_null`, `runtime_trace_attribution_native_generated_copy_and_finalizer_chains_omit_helpers` | Enabled/omitted metadata isolation; native trace push/pop and helper/finalizer attribution | Complements the new goldens' result parity without copying their scenarios |
+| E18 `observation_preserves_success_artifacts_and_failure_diagnostics` | Quiet, reporting Off and reporting Trace emit identical success artifacts; quiet/Trace failures preserve diagnostics | Existing driver witness; native pressure cases need not also multiply reporting variants |
+
+Run the new native witnesses with `scripts/golden.sh --filter
+'**live_integer_inputs**' --filter '**aggregate_pressure**'`. The ordinary
+repository gate includes all selected/reused witnesses. No scanner or policy
+implementation change, target API extraction or orchestration change was needed.
 
 Future negative-test ownership: LA02 owns unfinished CFG, duplicate definitions,
 dominance, edge argument type/arity, forbidden payloads/effects, target/context

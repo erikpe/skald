@@ -276,6 +276,31 @@ fn policy_rejects_reverse_edges_and_accepts_lowering_inputs() {
 }
 
 #[test]
+fn backend_policy_rejects_frontend_state_and_accepts_verified_input_services() {
+    let backend = POLICIES
+        .iter()
+        .find(|policy| policy.root == "backend")
+        .unwrap();
+    let path = Path::new("backend/x86_64_sysv/lower.rs");
+    let source = "use crate::{source::SourceDatabase, mir::MirProgram,
+        passes::VerifiedFinalMirProgram, lexer::Token, syntax::CompilationUnit,
+        module::ModuleGraph, resolve::ResolvedProgram, hir::HirProgram,
+        typeck::TypeCheckOutput};";
+    let references = crate_root_references(source);
+    let (allowed, forbidden): (Vec<_>, Vec<_>) = references
+        .into_iter()
+        .partition(|reference| dependency_allowed(backend, path, &reference.root));
+    assert_eq!(
+        allowed.into_iter().map(|r| r.root).collect::<Vec<_>>(),
+        ["source", "mir", "passes"]
+    );
+    assert_eq!(
+        forbidden.into_iter().map(|r| r.root).collect::<Vec<_>>(),
+        ["lexer", "syntax", "module", "resolve", "hir", "typeck"]
+    );
+}
+
+#[test]
 fn neutral_capability_policy_accepts_resolved_inputs_and_rejects_later_products() {
     let capabilities = POLICIES
         .iter()

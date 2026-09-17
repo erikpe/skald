@@ -1,6 +1,6 @@
 # Low-Level Phase Architecture and Backend Ownership Roadmap
 
-Status: in progress; LP01 is complete and LP02 is next. Implements LA01 of the
+Status: in progress; LP01–LP02 are complete and LP03 is next. Implements LA01 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen as of 2026-09-17.
@@ -50,7 +50,7 @@ behavior; do not implement the illustrative future directory tree in advance.
 ## Progress
 
 - [x] LP01 — Establish the migration contract and coverage inventory
-- [ ] LP02 — Protect existing backend boundaries and behavioral witnesses
+- [x] LP02 — Protect existing backend boundaries and behavioral witnesses
 - [ ] LP03 — Make the foundation measurement protocol reproducible
 - [ ] LP04 — Capture and qualify the pre-migration baseline
 - [ ] LP05 — Cumulative review, downstream handoff, and closure
@@ -139,26 +139,26 @@ suites were inspected, not rerun. Changes remain uncommitted for the user.
 **Purpose:** make architectural migration failures observable through tests
 that exercise today's compiler and can survive ownership moves.
 
-- [ ] Reuse existing compile-fail facade tests and phase dependency policies.
+- [x] Reuse existing compile-fail facade tests and phase dependency policies.
   Add only missing checks for unverified/proof-rich input, private mutation
   authority, forbidden frontend access, and omitted-trace source isolation.
   Test any scanner/policy changes with permitted and forbidden references.
-- [ ] From LP01's gaps, add focused cases for source-visible arithmetic after
+- [x] From LP01's gaps, add focused cases for source-visible arithmetic after
   a live-input use, division boundaries and joins, hidden-result/receiver calls
   under argument pressure, and finalizer ordering with the original allocation
   live across the call. Reuse existing coverage when it already proves the
   obligation; do not duplicate the full backend suite.
-- [ ] Verify the selected witnesses cover enabled/omitted tracing, relevant
+- [x] Verify the selected witnesses cover enabled/omitted tracing, relevant
   complete/reachable emission behavior, and both MIR profiles through existing
   test facilities. Record which owner test establishes each dimension rather
   than multiplying every fixture across an unnecessary Cartesian product.
-- [ ] Keep semantic/native expectations independent of temporary scratch
+- [x] Keep semantic/native expectations independent of temporary scratch
   choices and offsets. Retain precise assembly assertions only where they
   prove a current ABI/encoding contract, with their migration owner recorded.
-- [ ] Record future lowered/selected/placement/physical negative-test obligations
+- [x] Record future lowered/selected/placement/physical negative-test obligations
   in the coverage record. Do not claim the current source scanner proves
   internal phase isolation or create a mock LIR solely to make those tests pass.
-- [ ] Apply any small current-boundary extraction needed by these tests under
+- [x] Apply any small current-boundary extraction needed by these tests under
   the existing facade organization; otherwise retain current orchestration.
   Update living test/backend guidance only for actual contract or test changes.
 
@@ -172,6 +172,34 @@ semantic change needs an explicit task/design amendment.
 **Exit criteria:** current boundaries and missing behavioral witnesses are
 protected, tests use maintained owners, and future validation is clearly
 distinguished from what this task actually proves.
+
+**Completion evidence (2026-09-17):** task baseline `d7163d9d`, the user's
+committed LP01 documentation. History and current-source review found no
+previous implementation bridge or temporary artifact to remove. Existing
+raw/proof-rich-input and private-authority doctests were retained; new doctests
+reject attaching omitted sources and taking mutable access through the final
+seal's program accessor. A focused synthetic dependency test accepts
+source/MIR/seal services and rejects all six frontend roots. Scanner/policy
+implementation, public contracts and orchestration remain unchanged.
+
+Two feature-owned source goldens close the live-input, division/join and
+aggregate-result/receiver pressure gaps, with 21 native executions across the
+default, minimum and omitted-trace variants. A private release-selector native
+probe closes the original-header/finalizer gap by replacing the owner slot and
+clobbering every caller-saved integer/SIMD register. Expectations check semantic
+results, callback order and allocation identity. The migration record closes
+G01–G05, names exact mode coverage from reused trace/sparse/reporting tests,
+and keeps future seal/constraint/placement negatives with LA02–LA05. Test
+guidance and feature READMEs are updated. No substantial independent discovery
+or necessary production extraction was identified.
+
+The focused goldens, release probe, 11 phase-boundary tests and compiler
+doctests passed. Final `make check` passed formatting/build/lint/docs checks,
+workspace and runtime suites, all 23 compiler doctests and 650 golden leaves.
+`make msrv-check` passed on Rust 1.82.0. Final documentation/whitespace checks
+passed after progress updates. No production behavior, new LIR implementation,
+measurement evidence or temporary migration infrastructure is introduced.
+Changes remain uncommitted for the user; LP03 is next.
 
 ### LP03 — Make the foundation measurement protocol reproducible
 
@@ -320,7 +348,8 @@ migration record carries pending program obligations through LA05.
 
 | Artifact/file or symbol | Introducing task/commit | Removal or transfer owner | Final disposition and evidence |
 | --- | --- | --- | --- |
-| No bridge, gate, exception or exploratory code introduced | LP01; commit pending | — | Documentation inventory only; source/history review recorded above |
+| No bridge, gate, exception or exploratory code introduced | LP01; `d7163d9d` | — | Documentation inventory only; source/history review recorded above |
+| Live-input/aggregate-pressure goldens and private count probe | LP02; baseline `d7163d9d`, commit pending | Retain through downstream migrations | Enduring regression fixtures/test doubles; no production bridge, gate, placeholder IR or extraction introduced |
 
 Carry continuing program obligations into the migration record with explicit
 owners; do not reset their history at a child-roadmap boundary. Shared baseline

@@ -11,6 +11,9 @@ use super::{
     PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE, STRONG_COUNT_OFFSET,
 };
 
+#[cfg(test)]
+mod tests;
+
 pub(in super::super) fn emit_retain_loaded_handle(
     invalid: Label,
     overflow: Label,

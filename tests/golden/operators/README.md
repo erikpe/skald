@@ -12,6 +12,12 @@ specialization so observations stay explicit. Native panic stderr uses
 stable prefixes that allow future stack traces; compile diagnostics match
 their stable leading identity and location.
 
+`live_integer_inputs.ska` loads operands from process arguments to prevent
+constant folding from hiding live-input hazards. It checks arithmetic inputs
+after a call and signed division/remainder through a loop and both join paths,
+including signed-minimum overflow and signed-maximum input. The same six runs
+use default optimization, minimum optimization, and omitted runtime traces.
+
 The cross-layer ownership map is the
 [operator-overloading conformance matrix](../../../docs/compiler/OPERATOR_OVERLOADING_TEST_MATRIX.md).
 It links these native observations to the canonical declaration, resolution,

@@ -1,6 +1,14 @@
 schema = 2
 
 [[test]]
+name = "aggregate_pressure"
+mode = "run"
+source = "aggregate_pressure.ska"
+variants = ["default", "optimization-none", "omit-runtime-trace"]
+[[test.run]]
+name = "hidden_result_receiver_and_mixed_argument_pressure"
+
+[[test]]
 name = "execution"
 mode = "run"
 source = "function_calls.ska"

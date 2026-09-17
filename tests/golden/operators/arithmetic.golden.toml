@@ -1,6 +1,30 @@
 schema = 2
 
 [[test]]
+name = "live_integer_inputs"
+mode = "run"
+source = "live_integer_inputs.ska"
+variants = ["default", "optimization-none", "omit-runtime-trace"]
+[[test.run]]
+name = "negative_dividend"
+args = ["-7", "3", "-3", "2", "-29"]
+[[test.run]]
+name = "negative_divisor"
+args = ["7", "-3", "-3", "-2", "39"]
+[[test.run]]
+name = "both_negative"
+args = ["-7", "-3", "2", "-1", "-101"]
+[[test.run]]
+name = "both_positive"
+args = ["7", "3", "2", "1", "111"]
+[[test.run]]
+name = "minimum_over_negative_one"
+args = ["-9223372036854775808", "-1", "-9223372036854775808", "0", "-7"]
+[[test.run]]
+name = "maximum_over_two"
+args = ["9223372036854775807", "2", "4611686018427387903", "1", "19"]
+
+[[test]]
 name = "generic_operator_overloading"
 mode = "run"
 source = "generic_operator_overloading.ska"

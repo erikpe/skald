@@ -26,6 +26,20 @@ runs through ordinary workspace and repository gates. Opaque phase seals and
 mutation authority remain enforced by Rust visibility and their existing
 compile-fail documentation tests.
 
+Backend migration witnesses remain in their existing owners. Feature-owned
+native goldens cover runtime-loaded arithmetic inputs through calls and
+division joins (`operators/live_integer_inputs.ska`) and hidden object results
+with receiver and mixed register/stack pressure (`calls/aggregate_pressure.ska`).
+Both select default optimization, minimum optimization, and omitted runtime
+traces. A private strong-count native probe checks finalization before free,
+clobbers all caller-saved integer/SIMD registers, and replaces the mutable owner
+slot; free must receive the original header exactly once. These tests compare
+semantic results and allocation identity rather than temporary registers or
+stack offsets. The
+[migration coverage record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md)
+maps reused trace, sparse-artifact and reporting witnesses to their exact modes
+and assigns negative tests for future low-level products to their future owners.
+
 Generic-interface coverage follows the complete compiler pipeline. Syntax
 tests own source shape, punctuation, nested closers, and recovery. Resolution
 tests own template and requirement identities, structural applications,
