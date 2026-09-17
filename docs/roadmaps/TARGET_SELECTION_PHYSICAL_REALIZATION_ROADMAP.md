@@ -1,0 +1,385 @@
+# Target Selection, Checked Placement, and Physical Realization Roadmap
+
+Status: planned, 2026-09-18; NP01 is next. No implementation task is complete.
+Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
+Planning baseline: `8834bcd6`, the reviewed draft commit.
+Implementation baseline: **not yet set**; record the last commit before the first
+code change in NP01, even if planning is committed separately.
+Program baseline: `495debd3`; completed model endpoint: `f59d3fff`.
+
+Deliver a private whole-program scalar/control-flow/call native pilot through the
+new phases. This establishes a target structure and checked placement interface
+that a future allocator can use. It does not adopt the pilot as the production
+backend or claim full-language migration.
+
+## Scope and invariants
+
+- Preserve the [phase contract](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
+  [model contract and accepted streaming amendment](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment),
+  [completed-model evidence](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
+  and [native obligations](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#target-implementation-obligations).
+- Linux x86-64 SysV remains the only native pilot target. Synthetic second-target
+  tests exercise shared contracts without registering an AArch64 backend.
+- Admission matches the frozen pilot whitelist across the whole retained program.
+  All admitted scalar operations, casts, checks, calls, trace policies and entry
+  protocol must execute through the new phases. Unsupported input rejects;
+  failures after admission never invoke legacy lowering.
+- Planning alone accesses certified final MIR and checked semantic services.
+  Selection, placement and physical owners consume narrow immutable phase facts.
+  Keep facade-oriented modules cohesive; split implementation by responsibility,
+  without empty framework modules or a universal cross-target opcode enum.
+- Single definitions, memory/value/location separation, ordered effects, guard
+  evidence, signature components and exact snapshot derivation remain mandatory.
+  No semantic corrections, scratch, helper discovery or allocation can hide in
+  emission. Every published stage has its independent required checks.
+- Discovery receipts are discarded. Final selected and physical products reconcile
+  exact executable-pass parent receipts before final artifact publication.
+- Baseline placement uses unique private homes. Shared contracts/checking must also
+  accept manually supplied register placements; no producer-only proof.
+- Public CLI, target registry, diagnostics, runtime ABI and default legacy emission
+  remain unchanged. No allocator, semantic SSA, scalar promotion, scheduling,
+  persisted cache/importer, full lifecycle/helper migration or public LIR API.
+- LA04 owns remaining language/helper/static migration, including complete-mode
+  inactive-static reconciliation. LA05 owns default adoption, public observations,
+  legacy removal and full foundation cost qualification. LA06 owns allocation.
+
+## Progress
+
+- [ ] NP01 — Streaming publication authority
+- [ ] NP02 — x86 resources and component ABI
+- [ ] NP03 — Whole-program admission and fact projection
+- [ ] NP04 — Scalar memory and control-flow lowering
+- [ ] NP05 — Guarded arithmetic and conversion lowering
+- [ ] NP06 — Calls, traces and pilot entry lowering
+- [ ] NP07 — Concrete scalar selected payload and verifier
+- [ ] NP08 — Constrained numeric selection recipes
+- [ ] NP09 — Native call and trace selection
+- [ ] NP10 — Placement representation and checker contract
+- [ ] NP11 — Independent placement checking
+- [ ] NP12 — Baseline placement and parallel transfers
+- [ ] NP13 — Symbolic frame planning and limits
+- [ ] NP14 — Typed physical realization
+- [ ] NP15 — Independent physical verification
+- [ ] NP16 — Typed program closure and fragment storage
+- [ ] NP17 — Whole-program native pilot
+- [ ] NP18 — Native hardening, observations and handoff
+- [ ] NP19 — Cumulative review, cleanup and closure
+
+## PR-sized implementation sequence
+
+Each task updates relevant current API/architecture/test guidance and records
+focused validation. Mark detail boxes as results are delivered; mark the summary
+box only after its tests and exit criteria pass. A failed prerequisite blocks its
+consumers. If a task cannot fit a reviewable PR, split it explicitly while keeping
+its acceptance boundary; do not silently defer part of its contract.
+
+### NP01 — Streaming publication authority
+
+**Purpose:** Make callable streaming possible without weakening complete-program proof.
+
+- [ ] Record the actual child implementation baseline before the first code change; inspect committed model history and import exact retained-artifact owners from the handoff.
+- [ ] Implement plan-bound frozen target declarations and source selection from actual verified lower callables. Separate catalog authority from finalized program authority; discovery receipts cannot certify executable bodies.
+- [ ] Consume worklists at selected-program closure, reconcile exact chosen lower witnesses, and preserve parent-bound authority, thunk/data closure and replacement invalidation. Update model API documentation to describe implemented behavior.
+
+**Tests:** Adapt existing inventory/selection tests without losing invariant coverage: wrong plan/profile/trace policy, wrong finalized parent, same-ID replacement, stale receipts, missing/late thunk, conflicting definitions, and premature publication. Demonstrate per-callable body release before lower-program closure.
+
+**Exit criteria:** Catalog freeze and callable selection precede lower-program finalization; complete selected publication still proves exact parent derivation. No unchecked or permissive compatibility constructor remains.
+
+### NP02 — x86 resources and component ABI
+
+**Purpose:** Establish target facts shared by selection, checking and later realization.
+
+- [ ] Define concrete register banks/views, overlap and width preservation, reservations, caller/preserved footprints and encoding restrictions; keep flags atomic rather than virtual values.
+- [ ] Classify checked logical signatures into entry/call/return roles, independent integer/SIMD exhaustion and stack slots. Keep hidden result, receiver and alias-origin components explicit; distinguish internal component ABI from scalar C interop.
+- [ ] Freeze division, shifts, indirect-call target protection and trace event requirements with opcode/event walkthroughs. Reject unsupported external signatures explicitly; add no MIR queries to the target owner.
+
+**Tests:** Table tests for six integer/eight SIMD arguments, seven/nine pressure, mixed components, hidden result and receiver, return roles, unsupported C aggregates/variadics, high-byte restrictions and partial preservation. Cross-check existing ABI witnesses, not only the new classifier.
+
+**Exit criteria:** Immutable resource and ABI contracts explain all required operand events and clobbers before selected consumers are implemented.
+
+### NP03 — Whole-program admission and fact projection
+
+**Purpose:** Connect verified final MIR to checked planning facts through a narrow shared owner.
+
+- [ ] Implement the frozen pilot whitelist against all physically retained callable bodies, places, signatures, helpers and policies. Return explicit unsupported reasons before executable construction; never drop retained bodies to gain admission.
+- [ ] Project complete immutable signature/layout/declaration pools and canonical source/generated/data keys from existing checked services and certified domains. Keep frontend queries out of downstream phases.
+- [ ] Expose private admitted-plan construction for owner tests; preserve public backend input/errors and isolate enabled-only trace source lookup.
+
+**Tests:** Admission positives across primitive/function-pointer forms and negatives for every excluded family, including statics, receiver-bearing source forms and unsupported intrinsics. Test complete/reachable retained domains, sparse IDs and omitted trace source lookup.
+
+**Exit criteria:** An admitted whole-program plan has all required facts and immutable domains; unsupported programs cannot enter the private pilot or silently fall back.
+
+### NP04 — Scalar memory and control-flow lowering
+
+**Purpose:** Produce executable shared lowered bodies for ordinary scalar storage and graph structure.
+
+- [ ] Lower constants, scalar locals/loads/stores, primitive unary/binary operations, comparisons, jumps, branches and returns into the implemented lowered inventory with origins and explicit effects.
+- [ ] Keep semantic memory objects distinct from computed values and later placement storage. Preserve single definitions, edge occurrences, block parameters, evaluation order and certified retention.
+- [ ] Use ordinary builders, graph checks and lower worklists; remove inherited allowances on the APIs now consumed.
+
+**Tests:** Verified lowered fixtures for loops/joins, duplicate-successor edges, local memory, signed/unsigned/float predicates, unreachable retained structure and sparse identities. Negative tests for malformed construction use final publication APIs.
+
+**Exit criteria:** Admitted ordinary scalar/CFG bodies publish genuine lower receipts without target registers, offsets or late semantic queries.
+
+### NP05 — Guarded arithmetic and conversion lowering
+
+**Purpose:** Make failure and numeric semantics explicit before target recipes.
+
+- [ ] Lower the full admitted cast matrix, checked shifts, division/remainder and explicit checks using the closed operation inventory and required guard evidence.
+- [ ] Preserve failure kind/message/attribution and integer floor/minimum-overflow behavior, float range/NaN rules and full-width shift-count validation.
+- [ ] Record recipe associations and correction obligations that native selection must discharge; do not introduce new runtime helpers to conceal missing semantics.
+
+**Tests:** Lowered guard/effect verification and independent semantic boundary cases for zero divisors, signed minimum/-1, negative floor/remainder, NaN/infinity/range boundaries and shift counts before narrowing. Test that forged or bypassed guards fail.
+
+**Exit criteria:** All admitted numeric semantics and failures are explicit verified lower operations; target selection has no implicit semantic repair obligation.
+
+### NP06 — Calls, traces and pilot entry lowering
+
+**Purpose:** Complete the admitted shared lower inventory, including process protocol.
+
+- [ ] Lower scalar direct/indirect calls, admitted scalar C externs, reporter/hard-trap intrinsics and returns with checked signatures and ordered effects.
+- [ ] Implement shared enabled/omitted trace actions and attribution. Preserve result storage before trace cleanup, failure-only location updates and no source/TLS data requests when omitted.
+- [ ] Construct the minimal exported entry/runtime-marker/startup/shutdown protocol without statics; keep coordinators consistently empty or absent. Complete required lower worklist bodies/data.
+
+**Tests:** Verified call/trace/entry fixtures, indirect-signature rejection, failure-only attribution, result preservation, no-return reporter then trap, omitted metadata isolation and runtime ABI marker/protocol checks.
+
+**Exit criteria:** The entire admitted pilot can reach verified lower-program closure; lifecycle and aggregate source migration are still explicitly unsupported.
+
+### NP07 — Concrete scalar selected payload and verifier
+
+**Purpose:** Turn native opcode contracts into a target-owned selected representation.
+
+- [ ] Implement immutable inspect/edit payload contracts and exhaustive opcode-derived descriptors for constants, bit operations, addresses, loads/stores, integer/float arithmetic, comparisons and graph flow.
+- [ ] Implement the mandatory independent x86 TargetVerifier against actual fields, resources, effects and encoding rules. Malformed drafts must be describable without panic; descriptor self-comparison is insufficient.
+- [ ] Preserve recipe/origin provenance and normalize parameter-transfer edges before selected publication; consuming edits create fresh identities and witnesses.
+
+**Tests:** Positive payload/graph publication and malformed-field/descriptor/effect/resource tests; flag-bundle atomicity, NaN comparison semantics, pointer-width rules, duplicate edge occurrences and required edge forwarding.
+
+**Exit criteria:** Ordinary native selected graphs receive joint shared/target verification; no opcode binds selected values to baseline stack homes.
+
+### NP08 — Constrained numeric selection recipes
+
+**Purpose:** Discharge guarded numeric semantics through explicit native instructions and correction CFG.
+
+- [ ] Implement concrete signed/unsigned dividend setup, divide-pair, fixed RAX/RDX requirements, divisor nonaliasing, destructive ties and CL shifts.
+- [ ] Implement exact integer/float conversion cells and checked correction recipes, including unsigned float ranges, floor division and minimum/-1 behavior; all semantic CFG precedes publication.
+- [ ] Extend the independent target verifier to reject substituted/bypassed recipe associations and undeclared scratch, calls or traps.
+
+**Tests:** Selected recipe walkthroughs for every admitted cast cell and numeric boundary, fixed-register conflicts, live destructive inputs and full-width count guards. Independent reference cases establish intended semantics before native execution later in the roadmap.
+
+**Exit criteria:** Numeric selection exposes all constraints and correction flow; realization will only expand finite declared straight-line recipes.
+
+### NP09 — Native call and trace selection
+
+**Purpose:** Expose ABI and trace requirements as selected events rather than emitter conventions.
+
+- [ ] Implement entry/call/return payloads, actual call clobbers, incoming/outgoing/result roles and secured indirect targets using the frozen component ABI.
+- [ ] Select TLS/trace memory operations explicitly for enabled traces; select no TLS or source metadata in omitted mode. Marshal simultaneously and preserve results before cleanup.
+- [ ] Use canonical pure target request rules for constants/failure bytes and supported thunks; unsupported thunk forms reject explicitly, supported bodies pass normal target verification.
+
+**Tests:** Selected scalar/C/indirect-call fixtures, pressure signatures, trace events/clobbers, secured target during marshaling, no-return behavior and missing/late request rejection. Walk both trace policies through complete selected descriptors.
+
+**Exit criteria:** The full pilot has a concrete verified selected representation and reproducible discovery requests; no late runtime or ABI discovery is needed.
+
+### NP10 — Placement representation and checker contract
+
+**Purpose:** Freeze the algorithm contract before implementing acceptance or producer heuristics.
+
+- [ ] Define drafts bound to the exact immutable selected callable, assignments at every operand event and explicit entry/instruction/edge transfer points. Separate value storage, semantic objects and ABI slots.
+- [ ] Document finite abstract location contents, overlap/width kills, definition epochs, simultaneous edge parameter rebinding, conservative joins, loop convergence and unreachable structural checks. Define a finite bound and deterministic failure reporting.
+- [ ] Write independent counterexample fixtures for live ties, call-clobbered values, protected indirect targets, mixed-bank copies, duplicate edges and loop rebinding. Check a second synthetic target with non-x86 roles and partial preservation.
+- [ ] Checkpoint: establish that these cases have unambiguous expected acceptance/rejection under the frozen design. Stop and amend or split a focused proposal on a mismatch; do not invent a provisional checked-placement seal.
+
+**Tests:** Representation validation and fixture/oracle tests; demonstrate same-ID stale selected inputs cannot confer authority. Review the checker state against cyclic CFG and overlapping-width counterexamples independently of the future producer.
+
+**Exit criteria:** A concrete documented state/join/iteration contract and executable counterexamples are ready before checker implementation; drafts cannot authorize realization.
+
+### NP11 — Independent placement checking
+
+**Purpose:** Create the sole checked-placement authority from selected facts and transfer semantics.
+
+- [ ] Implement requirement reconstruction from the exact verified selected input, complete legal assignments, overlap/reservation/ABI/tie/event checks and independent transfer/clobber simulation.
+- [ ] Implement the specified finite CFG analysis through loops and joins; prove required tokens available at uses, preserve live tied inputs and account for simultaneous scratch lifetimes and width preservation.
+- [ ] Make CheckedPlacement privately constructible only after full checking; realization APIs require it. Keep checker logic independent of producer availability maps and success flags.
+
+**Tests:** Run all preceding counterexamples plus manually register-resident positive placements. Corrupt otherwise valid placements one obligation at a time; test loop definition epochs, divergent joins, calls, scratch aliasing and unreachable structural defects.
+
+**Exit criteria:** Every acceptance invariant is enforced without trusting the baseline producer; genuine register placements and deliberately invalid placements distinguish the interface from stack-only checking.
+
+### NP12 — Baseline placement and parallel transfers
+
+**Purpose:** Build the first producer against the completed strategy-independent checker.
+
+- [ ] Assign deterministic unique private homes without reuse/rematerialization; load legal operand resources, honor ties/fixed events and store results, including entry and ABI marshaling.
+- [ ] Resolve parallel copies deterministically with declared typed cycle-breaking scratch and legal memory-to-memory resources; no undeclared emitter temporary or push/pop scratch.
+- [ ] Feed baseline output through independent checking and compare resolved transfer sequences against simultaneous-copy semantics. Remove producer scaffolding and allowances now consumed.
+
+**Tests:** Baseline acceptance across the full selected pilot; two-/three-cycles, mixed-bank, memory copies, duplicate-successor edges, live ties, secured targets, caller clobbers and pressure. Permute construction order and require identical canonical results.
+
+**Exit criteria:** The baseline produces checked placements for admitted selected bodies; register-holding manual fixtures still pass the same checker.
+
+### NP13 — Symbolic frame planning and limits
+
+**Purpose:** Freeze concrete frame and physical-state contracts before realization.
+
+- [ ] Combine semantic objects with placement homes, spills, saves, outgoing areas and transfer scratch as typed symbolic requirements; compute deterministic checked offsets using conservative object lifetimes.
+- [ ] Implement frame-pointer/fixed-outgoing-area policy, independent incoming slots, ABI alignment and width-aware preserved-resource save areas. Freeze supported x86 size/displacement limits and explicit rejection beyond bounds.
+- [ ] Checkpoint: document entry/return stack states, CFG join rules, prologue/epilogue and forwarding provenance, legal addressing recipes and declared scratch bounds. Test narrower synthetic target displacements and non-x86 result/link roles before consumers.
+
+**Tests:** Layout extent/alignment/nonoverlap and overflow boundaries, outgoing pressure, manual callee-save placements, partial preserved widths and permitted address materialization versus unsupported size errors.
+
+**Exit criteria:** Frame plans and physical-checker rules are concrete and compatible with both baseline and nonbaseline placements; realization cannot discover storage or scratch.
+
+### NP14 — Typed physical realization
+
+**Purpose:** Expand checked selected operations into concrete target code without late semantic work.
+
+- [ ] Implement physical drafts with concrete registers, offsets, immediates, blocks, relocations, calls and typed dependencies; retain exact selected/placement/frame provenance.
+- [ ] Expand transfers and bounded declared recipes, prologue/epilogue, saves and ABI movements. Require CheckedPlacement and checked frame plans; no virtual operands, symbolic offsets or assembly-string proof.
+- [ ] Keep target-owned instruction formatting reusable only as a typed leaf. Do not expose a final assembly entry until physical verification and program closure exist.
+
+**Tests:** Physical draft fixtures for constrained arithmetic, conversion cells, frame/call pressure, trace memory, parallel copies and saves; inspect exact declared recipe footprints and reject unavailable sizes before expansion.
+
+**Exit criteria:** Realization produces fully concrete typed drafts from checked inputs and introduces no new semantic edge, call, trap, dependency family or temporary.
+
+### NP15 — Independent physical verification
+
+**Purpose:** Authorize physical callable publication only after legality and state checks.
+
+- [ ] Implement exhaustive opcode/register/width/immediate/displacement checks, closure of symbolic operands and relocations, declared recipe/provenance and dependency checks.
+- [ ] Check CFG stack state, call alignment, saves/restores, return state, loops/joins and scratch footprints; linearly balanced stack adjustments are not sufficient.
+- [ ] Publish VerifiedPhysicalCallable and exact derivation receipts only from this checker. Add deterministic immutable physical inspection and requested-only frame/placement observations.
+
+**Tests:** Positive baseline/manual-register physical bodies and negative illegal encodings, unresolved references, undeclared scratch, wrong save widths, stack join mismatch, misaligned calls, bypassed epilogue and stale input provenance.
+
+**Exit criteria:** No renderer/publication path accepts a physical draft; physical legality and selected derivation are enforced independently of realization.
+
+### NP16 — Typed program closure and fragment storage
+
+**Purpose:** Bound resident bodies while retaining exact whole-program artifact authority.
+
+- [ ] Implement discovery/freeze and executable-pass orchestration with pure matching request rules; reconcile lower/selected/physical receipts against exact finalized parents and all required data/thunks.
+- [ ] Render only verified physical callables into a private temporary fragment store keyed canonically. Retain typed dependencies/derivations; never parse fragments to discover symbols or prove correctness.
+- [ ] Publish deterministic complete/reachable assembly only after full closure, preserving the final String interface. Account for store/read/write failures and cleanup of failed passes.
+
+**Tests:** Wrong-parent and replaced-input closure, missing bodies/data/thunks, late requests, duplicate canonical keys, attempted premature emission, complete/reachable retention, randomized request order and fragment I/O failure cleanup. Verify predecessor bodies can be released.
+
+**Exit criteria:** Only a completely reconciled physical program produces a checked final artifact; fragment text is storage, never authority.
+
+### NP17 — Whole-program native pilot
+
+**Purpose:** Exercise the entire new path from real source through execution.
+
+- [ ] Add the private explicit pilot entry and owner integration harness requiring whole-program admission; ordinary public/default emission remains the legacy path with no pilot fallback.
+- [ ] Run admitted source programs through projection, discovery, both construction passes, selection, checking, frame/physical publication and final artifact closure. Preserve entry protocol and runtime ABI.
+- [ ] Add independent native phase/C probes for hidden result, receiver and alias-origin component pressure, without falsely claiming excluded aggregate source migration.
+
+**Tests:** Source-to-native primitive/memory/loop/call/cast/division/failure witnesses; bidirectional scalar C calls and indirect targets; seven-integer/nine-float native component probes. Verify both trace policies, default/minimal MIR modes and complete/reachable artifacts using an explicit dimension matrix.
+
+**Exit criteria:** The complete admitted pilot executes through every new phase with observable parity and mandatory native checks; excluded source forms and public production behavior remain accurately documented.
+
+### NP18 — Native hardening, observations and handoff
+
+**Purpose:** Close recipe, portability and policy gaps using final native interfaces.
+
+- [ ] Complete adversarial numerical/ABI/trace/frame tests through the verified path; cover NaN predicates, unsigned float casts, minimum overflow/floor semantics, full-count shifts, live ties and caller-clobber result preservation.
+- [ ] Validate requested-only immutable dumps/checkpoints and quiet mode without fabricating public phase events. Keep target-independent contracts free of x86 frame/register assumptions with the synthetic target.
+- [ ] Update coverage with exact native witnesses and dimensions, remaining full-language/helper/static gaps, consumed allowance disposition and remaining removal owners. Record exploratory pilot cost evidence only; retain all foundation timing qualifications.
+
+**Tests:** Native trace attribution, omission isolation, failure messages/termination, runtime marker, deterministic assembly across construction order and resource fixtures. Run applicable release and determinism gates; use independent native probes where legacy output alone cannot establish semantics.
+
+**Exit criteria:** The pilot validation matrix has no unqualified coverage claims; LA04 receives full migration and inactive-static contract obligations, LA05 public observation/adoption/cost obligations, and LA06 allocation obligations.
+
+### NP19 — Cumulative review, cleanup and closure
+
+**Purpose:** Review committed and uncommitted work as one architecture change before closing.
+
+- [ ] Review child baseline..HEAD with stat/name-status/full diff plus staged, unstaged and untracked changes. Inspect relevant foundation history and current owners; distinguish unrelated intervening changes. Manual task commits do not remove cleanup obligations.
+- [ ] Reconcile every artifact ledger entry against source/history, including inherited allowances, bridging APIs, draft consumers, extracted adapters, fragment experiments and private pilot gates. Remove expired artifacts; transfer necessary continuing items with exact file/symbol and owner.
+- [ ] Fix small ownership/interface/diagnostic inconsistencies. Resolve substantial design/correctness gaps in explicit tasks before closure; record independent opportunities in the indexed architecture discoveries.
+- [ ] After fixups, run artifact-free full validation and supported-toolchain/native gates. Record reviewed baseline/endpoint, residual closing changes awaiting user commit, artifact disposition and results.
+- [ ] Mark completion only after all exit criteria pass; archive this roadmap and the frozen target design, repair links/indexes and update parent, coverage and audit readiness. Keep full migration/adoption/allocation pending; leave committing to the user.
+
+**Tests:** make check and serial make msrv-check from an artifact-free snapshot; make check-long for extended native/release/determinism coverage. Check final documentation links, whitespace, cumulative and closing diffs. If a gate fails, fix or explicitly reopen the responsible implementation task rather than marking closure.
+
+**Exit criteria:** One coherent checked private native pilot remains, every temporary artifact has a verified disposition, full gates pass, and archived decisions plus the active handoff accurately bound the next workstream.
+
+## Ordering and dependencies
+
+The default sequence is serial and follows authority: amended publication,
+target facts, admitted planning, complete shared lowering, native selection,
+placement contract/checker/producer, frame contract, realization/checker,
+complete artifact closure, native integration and hardening, then closure.
+NP02 and NP03 have distinct owners but both depend on the publication boundary;
+do not assume concurrent implementation or bypass the listed checkpoints.
+
+NP10 freezes the concrete checker algorithm before NP11. NP13 freezes physical
+state/encoding bounds before NP14–NP15. Numeric/call schema walkthroughs in NP02
+precede NP07–NP09. The recorded contracts and executable counterexamples are the
+review artifacts for these checkpoints. A pass permits dependent implementation;
+a failure pauses those tasks, records the exact mismatch and requires an explicit
+owning-design amendment or focused child proposal. Never substitute permissive
+verification or an unchecked bridge. There is no measured allocator go/no-go in
+this roadmap: full foundation cost acceptance remains with adoption.
+
+## Validation and evidence
+
+Use owner-local Rust tests for private construction/checker/recipe behavior;
+crate integration tests for cross-owner boundaries, existing reusable corpora for
+source cases, and golden/public tests for production behavior. Native pilot tests
+must explicitly require the new entry: an unsupported skip or legacy result is
+not new-path evidence. Hand-built aggregate ABI probes complement scalar source
+coverage; they do not qualify full object/lifecycle migration.
+
+Every implementation task runs proportionate focused tests plus `make check`;
+run `make msrv-check` when Rust targets/manifests/syntax change. Run native probes
+when their complete verified path first exists, then strengthen coverage using
+final interfaces. Record deferred execution witnesses until run; schema tests
+alone never certify numeric or ABI native parity. Track a compact matrix of
+trace enabled/omitted, ordinary/minimal MIR, complete/reachable artifacts,
+source/native phase probes, supported operations and deliberate rejection cases.
+Choose representative combinations plus targeted interactions; justify missing
+cells rather than blindly multiplying every case.
+
+Run applicable release/determinism checks for native changes; closing validation
+uses `make check-long` plus the ordinary artifact-free gate. Run golden/MSRV
+commands serially: the [architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
+track the independent concurrent artifact race. Do not fix it by broadening this
+roadmap or accept a contaminated run as evidence.
+
+The [foundation measurement protocol](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md)
+and preserved compiler `9e3cebb1` remain authoritative. Pilot timing/code/frame
+counts are exploratory, not full-corpus adoption evidence. Do not rewrite historic
+baseline records or clear the eleven inconclusive timings. If the measurement
+harness changes, adoption must recapture compatible paired baseline/candidate
+runs. No stack placer result proves allocator benefits.
+
+## Temporary artifact ledger
+
+Import exact inherited symbols before implementation. Update introduction commits
+from history when the user commits; a clean working tree is not a disposition.
+Expand grouped entries as artifacts actually arise. No speculative artifact is
+permission to introduce it unnecessarily.
+
+| File/symbol or artifact | Introduction | Removal/transfer owner | Required final disposition |
+| --- | --- | --- | --- |
+| [Inherited model allowances and APIs](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#retained-model-artifacts-and-removal-owners) | Committed model work; exact commits/symbols to import in NP01 | First actual native consumer; reconcile NP19 | Remove consumed item allowances; transfer only precisely listed unconsumed full-surface items to LA04 |
+| Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | Prefer direct migration; remove adapters once invariant coverage uses the final catalog/closure interfaces |
+| Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
+| Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
+| Fragment storage experiments/adapters, if introduced | NP16; record exact symbols/commit | NP16/NP19 | Retain only failure-safe typed-key storage with a demonstrated bounded-body purpose; no serializer/importer/cache |
+| Private explicit pilot entry/admission gate | NP17; record exact symbols/commit | LA05 adoption, transfer NP19 | Required private test consumer until adoption; retire or become the sole production entry, never a permanent fallback route |
+| Synthetic second-target fixtures and manual register placements | NP02/NP10 onward; record owners/commits | Permanent owner-local tests, audit NP19 | Retain independent portability/checker witnesses; no production registration, exports or blanket test-only phase gating |
+
+## Discoveries and closure record
+
+Record independent candidates in the existing indexed
+[architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md), with
+evidence, owner, priority and a bounded follow-up. Implement small maintainability
+fixes that support the current task directly; substantial design/correctness gaps
+must be resolved before dependent tasks or closure rather than hidden there.
+
+Closing record (fill in NP19): implementation baseline; reviewed committed endpoint;
+uncommitted closing changes; cumulative ownership/contract review outcome; artifact
+dispositions and transferred owners; artifact-free ordinary/MSRV/extended native
+validation results; final handoff and archival links. The user performs commits.

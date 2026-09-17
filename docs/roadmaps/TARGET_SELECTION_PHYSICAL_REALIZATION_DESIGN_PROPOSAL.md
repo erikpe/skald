@@ -1,6 +1,9 @@
 # Target Selection, Checked Placement, and Physical Realization Design Proposal
 
-Status: draft LA03 design, 2026-09-18; not frozen or promoted.
+Status: accepted, frozen and promoted LA03 design, 2026-09-18. Accepted by the
+user after review of the draft committed at `8834bcd6`.
+Implementation: [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md),
+planned; no native implementation has started.
 Source assessment: `f59d3fff`, the committed executable-model closing change.
 Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Inherited contracts: [frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
@@ -55,9 +58,9 @@ leaf rules whose inputs already obey the new phase boundary. Do not build a
 universal instruction enum, duplicate module runners or introduce frontend
 queries into target selection, placement or realization.
 
-## Proposed decisions
+## Accepted decisions
 
-| Question | Proposed decision |
+| Question | Accepted decision |
 | --- | --- |
 | Native target | Linux x86-64 SysV, ELF relocations and existing GNU Intel-syntax assembly interface |
 | Selection | Concrete immutable x86 payloads over the implemented shared selected graph; all semantic correction CFG precedes publication |
@@ -132,13 +135,14 @@ any source selection can begin. Receipts do not retain bodies. A second lowering
 pass creates fresh snapshots and cannot reuse first-pass authority. Keeping all
 lowered bodies until selection would defeat the requested callable streaming.
 
-**Proposed explicit model amendment:** freeze target declarations against the
+**Accepted explicit model amendment (2026-09-18):** freeze target declarations against the
 immutable checked plan and its permitted body/domain declarations, while deferring
 exact complete-program receipt reconciliation to program closure. Retain genuine
 per-callable verification and exact derivation witnesses. This changes when the
 parent inventory must be complete, not what complete-program authority proves.
-The archived model contract must be amended explicitly if this proposal is
-accepted; do not silently reinterpret its existing finalized-parent API.
+The [owning frozen model](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
+records this accepted amendment. Its implementation remains pending; the current
+finalized-parent API must be replaced explicitly, preserving its invariant tests.
 
 The executable schedule is:
 
@@ -160,7 +164,7 @@ The executable schedule is:
    Physical-program finalization reconciles its selected inputs and dependencies
    with that selected program. Only complete closure authorizes a final artifact.
 
-Proposed catalog checking and completed-program checking have separate types and
+Catalog checking and completed-program checking have separate types and
 owners. `SelectionContext` borrows the frozen catalog/resources; it grants no
 complete-program seal. A source builder still requires an actual fully verified
 lower input with the same plan/profile/owner. A selected receipt retains that
@@ -177,8 +181,9 @@ appending mutable declarations. Require tests that finalize the wrong parent,
 replace a body after local completion, mismatch derivation receipts, omit a thunk
 or attempt to emit before closure. Adapt the current tests as contracts change;
 retain all their invariant coverage rather than merely deleting old rejection
-cases. If this amendment is not accepted, reconsider streaming explicitly;
-do not hide all-program body retention behind a pilot-only bound or vague spool.
+cases. If implementation reveals an unrepresentable invariant, stop dependent
+work and amend the owning design explicitly; do not hide all-program body
+retention behind a pilot-only bound or vague spool.
 
 Physical callable bodies may be rendered into a private temporary fragment store
 once individually verified. Retain typed dependencies, derivation receipts and
@@ -480,20 +485,24 @@ counts are exploratory; a scalar subset cannot qualify foundation adoption.
 Do not change historical records or clear the eleven inconclusive timing gates.
 LA05 recaptures compatible full-corpus old/new pairs and owns cost acceptance.
 
-## Promotion decisions and risks
+## Accepted decisions and implementation checkpoints
 
-| Decision | Required before promotion / dependent implementation |
+The streaming amendment is accepted and recorded in the owning frozen model.
+Scope, ownership, pilot admission and the baseline strategy are frozen. Concrete
+algorithm and instruction contracts are mandatory deliverables before their
+consumers, rather than unresolved promotion decisions:
+
+| Contract | Required checkpoint in the implementation roadmap |
 | --- | --- |
-| Exact-snapshot streaming schedule | Accept or revise the explicit plan-bound catalog / deferred whole-program reconciliation amendment; amend the owning frozen design before implementation |
-| Placement checker algorithm | Specify finite state, overlap/width kills, loop rebinding and joins; review live tie, call and parallel-copy counterexamples independently of producer heuristics |
-| Native selected schema | Walk actual division, checked float, indirect call and trace recipes through opcodes/events/resources/ABI; settle any frozen-interface mismatch explicitly |
-| Frame/physical verification | Agree exact supported size/encoding limits, stack-state rules, scratch bounds and provenance for target scaffolding |
+| Streaming authority | Replace the finalized-parent construction schedule while retaining exact snapshot reconciliation and complete-program publication checks |
+| Placement checker | Specify finite state, overlap/width kills, loop rebinding and joins; establish live-tie, call and parallel-copy counterexamples before implementing the checker |
+| Native selected schema | Walk division, checked float, indirect call and both trace modes through actual opcodes, events, resources and ABI before implementing dependent recipes |
+| Frame/physical verification | Record exact size/encoding limits, stack-state rules, scratch bounds and scaffolding provenance before realization |
 
-Proposed scope, ownership and baseline strategy are ready for review. The streaming
-amendment is a proposed architectural decision revealed by the handoff, not
-implementation work to conceal in an initial PR. Resolve these questions and
-freeze this proposal before ordering an implementation roadmap. Split overly large native schema or
-checking work into focused dependent proposals if that makes review practical.
+A checkpoint passes only when its documented contract and executable witnesses
+agree with this frozen design. On a mismatch, stop dependent work, record the
+specific gap and explicitly amend the owning design or split a focused proposal.
+Do not weaken checks, publish provisional seals or silently widen pilot admission.
 
 Complete-mode inactive-static fallback on the legacy path also needs explicit
 reconciliation before full migration: the model rejects inactive static accesses,

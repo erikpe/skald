@@ -570,10 +570,12 @@ handoff for target selection and physical realization. Concrete native agreement
 remain pending before dependent implementation. The architecture program and
 cleanup audit's A22 remain in progress: private model delivery does not deliver
 production native lowering, placement, adoption or allocation.
-The [native target design draft](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
-proposes the next pilot and an explicit plan-bound target catalog / final receipt
-reconciliation amendment for streaming. That amendment is pending review;
-the current implemented finalized-parent contract remains authoritative.
+The [accepted, frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+and [planned roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) define the
+next pilot. The [owning model amendment](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
+accepts plan-bound target catalogs and final exact-receipt reconciliation. The
+amendment is not yet implemented: the evidence above describes the current
+finalized-parent API, whose invariant coverage must survive migration.
 
 Carry these accepted constraints into the native design:
 

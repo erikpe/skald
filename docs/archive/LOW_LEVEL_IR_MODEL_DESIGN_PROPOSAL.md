@@ -3,7 +3,9 @@
 Status: accepted, frozen and promoted LA02 design, 2026-09-17. Accepted by the
 user after review of the draft committed at `10b5de75`; source assessment is
 against `027af94f`, the phase-preparation closing change. The executable model
-is implemented and the child workstream is archived.
+is implemented and the child workstream is archived. The streaming publication
+amendment accepted on 2026-09-18 below is planned, not yet implemented; the
+completed model roadmap validates the original construction schedule.
 The [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) records cumulative
 review and validation; the [active program handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
 owns native counterpart and retained-artifact obligations. Changes to these
@@ -115,6 +117,9 @@ publication. Selection uses a separately finalized extension for target thunks,
 constant data and resource/ABI descriptors. The extension retains its parent
 plan/inventory identity; it cannot overwrite their layouts, signatures or IDs.
 Selected callables bind to this selection context as well as their target.
+The accepted streaming amendment below refines the extension's parent binding:
+declaration freeze binds the checked plan; exact finalized-parent inventory
+binding is required at selected-program closure, not at callable construction.
 
 Each publication also creates a private snapshot witness. A completion receipt
 binds that witness, context, callable, stage and verified reference requirements,
@@ -465,6 +470,37 @@ requiring every intermediate body to remain resident. Frozen declarations and
 small completion receipts support streaming one callable at a time. Complete
 and reachable artifact modes retain their current semantics; final physical
 references may add target dependencies but cannot resurrect removed MIR bodies.
+
+## Accepted streaming publication amendment
+
+Accepted 2026-09-18 with the [frozen native target design](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md#declaration-freeze-and-callable-streaming).
+The [native phase roadmap](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
+implements this change. This amendment supersedes any reading of staged
+publication above that requires a finalized lower program before source
+selection begins; it does not weaken complete-program authority.
+
+- Freeze a separate target declaration catalog against the exact immutable
+  checked plan, target/profile, trace policy and permitted declaration domains.
+  The catalog cannot mutate layout/signature pools or authorize absent bodies.
+  It grants selection context, never complete-program authority.
+- Discovery may lower and verify one callable at a time to collect canonical
+  target requests. Discard discovery receipts; the executable pass creates new
+  verified snapshots and must derive from those actual bodies.
+- During the executable pass, register each lower receipt, select from that
+  verified callable, retain its exact input witness in the selected receipt,
+  and release predecessor bodies after registering downstream derivations.
+- Consume program worklists at closure. Reconcile selected inputs with the exact
+  chosen receipts of the finalized lower program, then reconcile physical
+  inputs with the finalized selected program. Bind complete products to their
+  exact parent authority and close all required thunks/data and typed dependencies.
+- Replacing an input or changing a catalog invalidates affected downstream
+  authority. Wrong-parent, stale-snapshot, missing-definition and premature
+  publication rejection remain mandatory; matching IDs or plan identity alone
+  cannot establish derivation equality.
+
+The implemented finalized-parent `TargetExtension` API remains the current
+behavior until the explicit migration passes its invariant tests. Neither the
+amendment nor a catalog seal authorizes emission from partially closed programs.
 
 ## Selected graph and target-facing structural interface
 
