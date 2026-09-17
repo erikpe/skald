@@ -11,6 +11,7 @@ use crate::{
 };
 
 mod graph;
+mod lir;
 mod plan;
 mod retained_domain;
 mod x86_64_sysv;
@@ -74,7 +75,7 @@ pub enum RuntimeTracePolicy {
 /// }
 /// ```
 ///
-/// Low-level declaration checking and graph identities are backend-private:
+/// Low-level declarations, graph identities and draft builders are backend-private:
 ///
 /// ```compile_fail
 /// use skald_compiler::backend::plan::CheckedPlan;
@@ -82,6 +83,10 @@ pub enum RuntimeTracePolicy {
 ///
 /// ```compile_fail
 /// use skald_compiler::backend::graph::LoweredValueId;
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::lir::DraftBuilder;
 /// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {

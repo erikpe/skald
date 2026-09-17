@@ -106,6 +106,38 @@ impl<'plan, K: Copy + Eq, T> OwnedArena<'plan, LocalId<K>, T> {
             .ok_or(PlanError::OutOfBounds)
     }
 
+    pub(in crate::backend) fn get_mut(
+        &mut self,
+        handle: LocalHandle<'plan, LocalId<K>>,
+    ) -> Result<&mut T, PlanError> {
+        self.get(handle)?;
+        self.entries
+            .get_mut(handle.id, |entry| entry.id)
+            .map(|entry| &mut entry.value)
+            .ok_or(PlanError::OutOfBounds)
+    }
+
+    /// Stored IDs are interpreted relative to this arena's bound context;
+    /// this does not attach authority to an ID obtained from another context.
+    pub(in crate::backend) fn get_id(&self, id: LocalId<K>) -> Result<&T, PlanError> {
+        if id.callable != self.owner.key() {
+            return Err(PlanError::WrongOwner);
+        }
+        self.entries
+            .get(id, |entry| entry.id)
+            .map(|entry| &entry.value)
+            .ok_or(PlanError::OutOfBounds)
+    }
+
+    pub(in crate::backend) fn handles(
+        &self,
+    ) -> impl ExactSizeIterator<Item = LocalHandle<'plan, LocalId<K>>> + '_ {
+        self.entries.iter().map(|entry| LocalHandle {
+            owner: self.owner,
+            id: entry.id,
+        })
+    }
+
     pub(in crate::backend) fn iter(&self) -> impl ExactSizeIterator<Item = (LocalId<K>, &T)> {
         self.entries.iter().map(|entry| (entry.id, &entry.value))
     }

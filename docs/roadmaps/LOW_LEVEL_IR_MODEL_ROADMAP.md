@@ -1,6 +1,6 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01 is complete, LI02 is next.
+Status: in progress, 2026-09-17; LI01/LI02 are complete, LI03 is next.
 Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
@@ -57,7 +57,7 @@ the illustrative directory sketch.
 ## Progress
 
 - [x] LI01 — Checked contexts, declarations and identity domains
-- [ ] LI02 — Lowered scalar/object model and draft construction
+- [x] LI02 — Lowered scalar/object model and draft construction
 - [ ] LI03 — Calls, effects, tracing and terminal operations
 - [ ] LI04 — CFG and single-definition verification
 - [ ] LI05 — Scalar domains, memory checks and lowered publication
@@ -169,9 +169,9 @@ Run the task quality gates.
 consumers, deterministic ordering and no physical location dependency; the
 common readiness result explicitly lists LA03's remaining obligations.
 
-**Completion evidence:** implemented against `f1053782`, awaiting the user's
-commit. Added 13 declaration tests, three arena tests, one maintained boundary
-guard test and two public private-path compile-fail examples. Focused owner and
+**Completion evidence:** committed by the user as `ff12421d`, implemented
+against `f1053782`. Added 13 declaration tests, three arena tests, one maintained
+boundary guard test and two public private-path compile-fail examples. Focused owner and
 boundary suites passed. Final `make check` passed, including 3,178 compiler unit
 tests and 650 golden observations; `make msrv-check` passed on Rust 1.82.0.
 The [common readiness record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness-li01)
@@ -183,15 +183,15 @@ discovery was needed; temporary non-test allowances are accounted for below.
 **Purpose:** make executable computation and addressable storage distinct and
 constructible without assigning a stack home.
 
-- [ ] Implement callable/block/value/object storage, entry inputs, definition
+- [x] Implement callable/block/value/object storage, entry inputs, definition
   sites, ordered results, explicit edge occurrences and the draft builder.
-- [ ] Implement the closed scalar/address/load/store/lifetime schemas and
+- [x] Implement the closed scalar/address/load/store/lifetime schemas and
   finite check/evidence records; reuse the neutral comparison descriptor.
-- [ ] Reserve forward blocks/parameters, append typed instructions and terminate
+- [x] Reserve forward blocks/parameters, append typed instructions and terminate
   blocks with checked construction errors for duplicate/post-termination writes.
-- [ ] Preserve explicit widths, alignments, binary64 bits and object roles.
+- [x] Preserve explicit widths, alignments, binary64 bits and object roles.
   Represent zero-size addressable objects and elided unit/metadata separately.
-- [ ] Provide private malformed-fixture construction for independent verifier
+- [x] Provide private malformed-fixture construction for independent verifier
   testing. Keep drafts distinct from verified products; no seal exists yet.
 
 **Tests:** scalar/cast schema cells, byte/boolean canonical constants, signed
@@ -202,6 +202,20 @@ Construct straight-line and loop/diamond drafts. Run the task quality gates.
 **Exit criteria:** the scalar/object vocabulary and meaningful drafts are
 represented without MIR executable types, physical registers or offsets.
 Guard records are obligations, not assumed successful proofs.
+
+**Completion evidence:** implemented against the user's LI01 commit `ff12421d`;
+changes await the user's commit. Added 16 owner tests, extended checked arena and
+phase-boundary regressions, and added draft-builder privacy coverage. Fixtures
+exercise all primitive cast cells, exact binary64 bits, wrapping/floor operation
+schemas (including signed overflow literals), forward results/blocks, nonzero
+entry IDs, loop swaps, parallel/diamond edges, memory widths, checked stride/size
+overflow, object dispositions, lifetime sites and metadata. Direct owner-private
+construction supplies independently malformed products for LI04/LI05; guard
+records remain unverified obligations. No seal, native pipeline or new production
+phase event exists. `make check` passed (3,194 compiler unit tests, 12 boundary
+tests, runtime tests and 650 golden observations); `make msrv-check` passed on
+Rust 1.82.0. No design amendment or independent discovery was needed. Item-scoped
+pre-consumer allowances remain explicitly ledgered for native-consumer removal.
 
 ### LI03 — Calls, effects, tracing and terminal operations
 
@@ -479,10 +493,12 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 
 | File / symbol | Introducing task / commit | Removal or transfer owner | Final disposition / retention criterion |
 | --- | --- | --- | --- |
-| `backend/plan/{facts,identities,check,view}.rs`: item-scoped `cfg_attr(not(test), allow(dead_code))` on delivered records, ID generators, checking/lookup helpers and impls | LI01; uncommitted, based on `f1053782` | LA03 first native fact/lowering consumer; LA04 for remaining full-surface consumers; LI11 transfers outstanding entries | Temporary compilation allowances only; remove per consumed item and audit remaining variants/helpers. Test builds do not suppress dead code |
-| `backend/graph/arena.rs`: item-scoped non-test dead-code allowances on ID domains, storage, allocation and lookup | LI01; uncommitted | LA03 first native lowered/selected graph consumer; LI11 transfer if still pending | Remove as native storage users land; no whole-model test gate |
-| `backend/{plan,graph}/mod.rs`: non-test unused-import allowances on explicit private facade re-export groups | LI01; uncommitted | LA03 first native consumers; LI11 transfer if still pending | Temporary private exports; remove allowances or trim exports as consumers land; no public API widening |
-| `backend/plan/test_fixtures.rs` and colocated declaration/arena tests | LI01; uncommitted | Retain; LI11 reviews final consumers | Durable context/identity/domain regression fixtures, test-only and shared across the two owners; no prototype emission |
+| `backend/plan/{facts,identities,check,view}.rs`: item-scoped `cfg_attr(not(test), allow(dead_code))` on delivered records, ID generators, checking/lookup helpers and impls | LI01; `ff12421d` | LA03 first native fact/lowering consumer; LA04 for remaining full-surface consumers; LI11 transfers outstanding entries | Temporary compilation allowances only; remove per consumed item and audit remaining variants/helpers. Test builds do not suppress dead code |
+| `backend/graph/arena.rs`: item-scoped non-test dead-code allowances on ID domains, storage, allocation and lookup | LI01; `ff12421d`; checked mutation/stored-ID lookup and handle enumeration extended by LI02 | LA03 first native lowered/selected graph consumer; LI11 transfer if still pending | Remove as native storage users land; no whole-model test gate |
+| `backend/{plan,graph}/mod.rs`: non-test unused-import allowances on explicit private facade re-export groups | LI01; `ff12421d` | LA03 first native consumers; LI11 transfer if still pending | Temporary private exports; remove allowances or trim exports as consumers land; no public API widening |
+| `backend/plan/test_fixtures.rs` and colocated declaration/arena tests | LI01; `ff12421d` | Retain; LI11 reviews final consumers | Durable context/identity/domain regression fixtures, test-only and shared across the two owners; no prototype emission |
+| `backend/lir/{model,scalar,builder,schema}.rs`: item-scoped non-test dead-code allowances on the delivered draft records, descriptors and checked construction impls; `backend/lir/mod.rs` explicit private facade import groups | LI02; uncommitted, based on `ff12421d` | LA03 first native lowered consumer; LA04 remaining surfaces; LI11 transfers outstanding entries | Remove per consumed item or trim exports; ordinary model compilation and unsuppressed test linting remain active |
+| `backend/lir/tests/`: draft/scalar/memory fixtures, including direct owner-private malformed storage construction | LI02; uncommitted | Retain; LI04/LI05 extend with independent verifier rejection assertions; LI11 reviews | Durable schema, definition, edge, lifetime and canonicalization regressions; no provisional verification success path |
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation
 and lint allowances as they arise. Genuine draft builders and synthetic

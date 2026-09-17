@@ -178,7 +178,9 @@ const LOW_LEVEL_FORBIDDEN: &[&str] = &[
 ];
 
 fn is_low_level_core(path: &Path) -> bool {
-    path.starts_with("backend/plan") || path.starts_with("backend/graph")
+    path.starts_with("backend/plan")
+        || path.starts_with("backend/graph")
+        || path.starts_with("backend/lir")
 }
 
 fn low_level_dependency_allowed(dependency: &str) -> bool {
@@ -189,6 +191,7 @@ fn low_level_dependency_allowed(dependency: &str) -> bool {
 fn low_level_core_guards_accept_metadata_and_reject_execution_or_lookup_inputs() {
     assert!(is_low_level_core(Path::new("backend/plan/view.rs")));
     assert!(is_low_level_core(Path::new("backend/graph/arena.rs")));
+    assert!(is_low_level_core(Path::new("backend/lir/builder.rs")));
     assert!(!is_low_level_core(Path::new(
         "backend/x86_64_sysv/planning.rs"
     )));

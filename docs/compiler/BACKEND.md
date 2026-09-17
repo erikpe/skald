@@ -4,8 +4,8 @@ Status: authoritative for the current backend interface, supported target
 registry, target legality, x86-64 System V realization, and generated assembly
 boundary. Explicitly marked frozen additions define selected future target
 boundaries without claiming current backend support.
-The implemented private [low-level execution declarations](LOW_LEVEL_IR.md)
-provide checked fact views and distinct graph identity domains; production
+The implemented private [low-level execution drafts](LOW_LEVEL_IR.md)
+provide checked facts, stage-owned identities and scalar/object construction; production
 emission has not migrated to a low-level IR pipeline.
 Source-visible language semantics remain owned by the
 [language documentation](../language/README.md); the runtime C interface is a

@@ -1075,10 +1075,11 @@ cost clearance. The maintained
 maps current owners, pending delivery, witnesses and joint design questions.
 The [LIR model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
 and promoted from that handoff. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-is in progress; LI01 delivered the checked declaration/identity foundation and
-common readiness handoff. LI02 is next; selected synthetic checks and concrete
+is in progress; LI01/LI02 delivered checked declarations/identities, common
+readiness and lowered scalar/object drafts. LI03 is next; selected synthetic checks and concrete
 native agreements/implementation remain pending.
-A22 remains in progress: LIR, migration, adoption and allocation are pending.
+A22 remains in progress: verified LIR, native migration, adoption and allocation
+are pending.
 Scalar promotion and semantic SSA remain separate follow-ups.
 
 **Planning/validation:** use the existing

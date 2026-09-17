@@ -2,9 +2,9 @@
 
 /// The relation tested by a primitive comparison.
 ///
-/// HIR and MIR retain their own operand and operation types. This descriptor is
+/// The typed IRs retain their own operand and operation types. This descriptor is
 /// shared because its variants, stable dump mnemonic, and equality
-/// classification have the same meaning in both representations.
+/// classification have the same meaning across representations.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum PrimitiveComparisonPredicate {
     Equal,

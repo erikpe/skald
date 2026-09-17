@@ -24,6 +24,16 @@ fn arenas_check_live_context_owner_and_range_before_indexing() {
     assert_eq!(value.id().index(), 0);
     assert_eq!(value.id().callable(), source(0));
     assert_eq!(values.get(value), Ok(&42));
+    assert_eq!(values.get_id(value.id()), Ok(&42));
+    *values.get_mut(value).unwrap() = 44;
+    assert_eq!(values.get(value), Ok(&44));
+    assert_eq!(
+        values
+            .handles()
+            .map(|handle| handle.id())
+            .collect::<Vec<_>>(),
+        [value.id()]
+    );
     let mut foreign =
         OwnedArena::<LoweredValueId, _>::new(second.view().callable(source(0)).unwrap());
     assert_eq!(
@@ -38,15 +48,18 @@ fn arenas_check_live_context_owner_and_range_before_indexing() {
     let mut malformed = value;
     malformed.id.index = usize::MAX;
     assert_eq!(values.get(malformed), Err(PlanError::OutOfBounds));
+    assert_eq!(values.get_id(malformed.id), Err(PlanError::OutOfBounds));
+    assert_eq!(values.get_mut(malformed), Err(PlanError::OutOfBounds));
     malformed.id.callable = source(1);
     assert_eq!(values.get(malformed), Err(PlanError::WrongOwner));
+    assert_eq!(values.get_id(malformed.id), Err(PlanError::WrongOwner));
     values.push(43).unwrap();
     assert_eq!(
         values
             .iter()
             .map(|(id, value)| (id.index(), *value))
             .collect::<Vec<_>>(),
-        [(0, 42), (1, 43)]
+        [(0, 44), (1, 43)]
     );
 }
 

@@ -5,6 +5,6 @@ mod arena;
 
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use arena::{
-    LoweredBlockId, LoweredObjectId, LoweredValueId, OwnedArena, SelectedBlockId, SelectedObjectId,
-    SelectedValueId,
+    LocalHandle, LoweredBlockId, LoweredObjectId, LoweredValueId, OwnedArena, SelectedBlockId,
+    SelectedObjectId, SelectedValueId,
 };
