@@ -2,6 +2,10 @@
 
 Status: three architectural constraints remain without implementation plans;
 proof-provenance normalization is implemented and archived.
+The native backend constraint now has a draft
+[overarching design proposal](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
+for explicit LIR phases, backend ownership, migration, and consolidation,
+followed by a separate final register-allocation workstream.
 The reachability constraint is resolved by the completed
 [target-independent whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
 [implementation roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
@@ -450,6 +454,15 @@ assembly model. It should provide:
 Runtime-trace updates, failure attribution, ABI constraints, ownership calls,
 and hard-trap behavior should be represented as ordered pseudo-instructions or
 explicit effects so target passes cannot move across them accidentally.
+
+The draft
+[low-level compiler architecture proposal](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
+develops this direction into separate design workstreams. It proposes explicit
+LIR phases, shared structural contracts with target-specific instructions, and
+early AArch64 review. Complete migration and consolidation use baseline stack
+placement; register allocation follows through the same placement boundary.
+Scalar-storage promotion and semantic MIR SSA remain separate follow-ups.
+Detailed child designs, measurements, and implementation roadmaps are pending.
 
 ### Optimization possibilities unlocked
 
