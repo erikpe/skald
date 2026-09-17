@@ -1,7 +1,8 @@
 # Low-Level Compiler Architecture Design Proposal
 
-Status: draft overarching proposal, prepared 2026-09-17. Child designs and
-implementation roadmaps remain to be written and reviewed. Repository
+Status: draft overarching proposal, prepared 2026-09-17. The first child
+[phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+is drafted for review; later designs and implementation roadmaps remain pending. Repository
 assessment baseline: `f97a9e51`; record the implementation baseline when work
 starts.
 
@@ -181,6 +182,9 @@ overarching prerequisite. If selected, account for joins, loops, edge copies,
 and two-address constraints explicitly. It does not imply converting semantic
 MIR to SSA. Cross-block values must at least be representable for lowering-
 created control flow; general scalar-storage promotion can remain absent.
+The draft [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+proposes single-definition values with block parameters; acceptance of that
+child design settles this choice before schema implementation.
 
 ### Effects, calls, and legal expansion
 
@@ -284,14 +288,14 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 
 | Workstream | Focused design | Required handoff | Dependencies |
 | --- | --- | --- | --- |
-| LA01 | **Phase architecture and backend ownership:** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
+| LA01 | **[Phase architecture and backend ownership](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md):** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
 | LA02 | **LIR model, construction, and verification:** identities, values, memory, CFG/edges, effects, call representation, mutation rules, and dumps | Executable LIR model and verifier fixtures; supported construction/transformation APIs; exact selected-stage requirements | LA01; input requirements for future placement consumers reviewed |
 | LA03 | **Target selection and physical realization:** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | End-to-end executable scalar/control-flow/call pilot through every new phase, without a production register allocator | LA01–LA02; jointly settle selection/placement/frame contracts before implementation |
 | LA04 | **Complete lowering migration:** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | Complete supported x86 behavior through LIR and stack placement; explicit operation/helper coverage and native parity | LA03; may split into lifecycle/helper and observation/artifact proposals |
 | LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04; portability review and full foundation validation |
 | LA06 | **Register allocation:** allocator selection, liveness, constraints, preserved registers, splitting/spilling, coalescing scope, checking, and measured adoption | Proper allocation implemented through the existing placement contract; separate acceptance evidence and explicit disposition of baseline placement | LA05; own design and implementation roadmap |
 
-LA01 is the next proposal. The foundation is LA01–LA05; LA06 is the final
+LA01 is drafted and ready for review. The foundation is LA01–LA05; LA06 is the final
 planned consumer. Early contract exercises can reason about allocation without
 building its algorithm. If a contract problem appears later, amend the owning
 design explicitly rather than adding hidden exceptions across phases.
@@ -409,5 +413,6 @@ Exact Rust schemas, LIR staging/seals, cross-block value form, common lowering
 operations, and target interfaces are settled by the foundation child designs.
 An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
-delivery decisions. The immediate next step is LA01: phase architecture and
-backend ownership.
+delivery decisions. The immediate next step is review of the
+[LA01 phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
+followed by its implementation roadmap after acceptance.
