@@ -476,12 +476,16 @@ maintained through LA05, which reconciles its obligations and archives it.
 
 ## Preparation handoff and next designs
 
-The next step is **LA02's focused LIR model/construction/verification proposal**,
-coordinated with LA03's target-selection and physical-realization design. Neither
+The draft [LA02 model/construction/verification proposal](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
+uses this handoff. Next is review and promotion, coordinated with LA03's
+target-selection and physical-realization interfaces. Neither
 starts dependent implementation before its design and roadmap settle the
 [joint questions](#joint-design-questions-and-measurement-readiness). The phase
 design remains the frozen authority; its preparation roadmap is complete, while
 the architecture program and cleanup audit's A22 remain in progress.
+The draft's [joint review checkpoint](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#joint-review-and-promotion-checkpoint)
+proposes concrete counterparts to the questions below; drafting does not mark
+any new-pipeline delivery complete.
 
 Carry these accepted constraints into both designs:
 

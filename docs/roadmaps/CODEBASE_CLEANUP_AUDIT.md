@@ -1073,7 +1073,8 @@ qualified; eleven noisy compile timings remain inconclusive, without adoption
 cost clearance. The maintained
 [migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
 maps current owners, pending delivery, witnesses and joint design questions.
-Next is the focused LIR representation design with target-interface coordination.
+The [LIR model proposal](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is drafted from
+that handoff; next is review/promotion with target-interface coordination.
 A22 remains in progress: LIR, migration, adoption and allocation are pending.
 Scalar promotion and semantic SSA remain separate follow-ups.
 
