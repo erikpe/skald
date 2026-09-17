@@ -5,7 +5,7 @@ mod source_scan;
 
 use std::{collections::BTreeSet, fs, path::Path};
 
-use source_scan::{crate_root_references, root_references};
+use source_scan::{crate_root_references, forbidden_identifier_references, root_references};
 
 const PHASE_ROOTS: &[&str] = &[
     "source",
@@ -127,13 +127,26 @@ fn production_compiler_dependencies_follow_owned_boundaries() {
                         exception.path,
                     ));
                 }
-                if !dependency_allowed(policy, relative, &reference.root) {
+                if !dependency_allowed(policy, relative, &reference.root)
+                    || (is_low_level_core(relative)
+                        && !low_level_dependency_allowed(&reference.root))
+                {
                     violations.push(format!(
                         "{}:{}: `{}` may not depend on `{}`",
                         relative.display(),
                         reference.line,
                         policy.root,
                         reference.root,
+                    ));
+                }
+            }
+            if is_low_level_core(relative) {
+                for reference in forbidden_identifier_references(&source, LOW_LEVEL_FORBIDDEN) {
+                    violations.push(format!(
+                        "{}:{}: low-level core may not reference `{}`",
+                        relative.display(),
+                        reference.line,
+                        reference.identifier
                     ));
                 }
             }
@@ -152,6 +165,52 @@ fn production_compiler_dependencies_follow_owned_boundaries() {
         violations.is_empty(),
         "compiler phase dependency violations:\n{}",
         violations.join("\n")
+    );
+}
+
+const LOW_LEVEL_FORBIDDEN: &[&str] = &[
+    "x86_64_sysv",
+    "SourceDatabase",
+    "SourceFile",
+    "SourceLookup",
+    "BackendInput",
+    "BackendRequiredRuntimeEntity",
+];
+
+fn is_low_level_core(path: &Path) -> bool {
+    path.starts_with("backend/plan") || path.starts_with("backend/graph")
+}
+
+fn low_level_dependency_allowed(dependency: &str) -> bool {
+    !is_governed_root(dependency) || matches!(dependency, "backend" | "source")
+}
+
+#[test]
+fn low_level_core_guards_accept_metadata_and_reject_execution_or_lookup_inputs() {
+    assert!(is_low_level_core(Path::new("backend/plan/view.rs")));
+    assert!(is_low_level_core(Path::new("backend/graph/arena.rs")));
+    assert!(!is_low_level_core(Path::new(
+        "backend/x86_64_sysv/planning.rs"
+    )));
+    let source = "use crate::{identity::CallableId, source::Span, mir::MirProgram,
+        passes::VerifiedFinalMirProgram, syntax::CompilationUnit};
+        use super::super::x86_64_sysv as physical;
+        use crate::source::{SourceDatabase as Sources};
+        // SourceLookup and BackendInput are mentioned only in a comment.
+        const NOTE: &str = \"SourceFile x86_64_sysv\";";
+    let forbidden_roots = crate_root_references(source)
+        .into_iter()
+        .filter(|reference| !low_level_dependency_allowed(&reference.root))
+        .map(|reference| reference.root)
+        .collect::<Vec<_>>();
+    assert_eq!(forbidden_roots, ["mir", "passes", "syntax"]);
+    let forbidden = forbidden_identifier_references(source, LOW_LEVEL_FORBIDDEN);
+    assert_eq!(
+        forbidden
+            .iter()
+            .map(|r| r.identifier.as_str())
+            .collect::<Vec<_>>(),
+        ["x86_64_sysv", "SourceDatabase"]
     );
 }
 

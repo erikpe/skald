@@ -7,6 +7,33 @@ pub(super) struct RootReference {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct IdentifierReference {
+    pub(super) identifier: String,
+    pub(super) line: usize,
+}
+
+/// Reuse the dependency lexer so strings/comments cannot create false guards.
+pub(super) fn forbidden_identifier_references(
+    source: &str,
+    forbidden: &[&str],
+) -> Vec<IdentifierReference> {
+    tokenize(source)
+        .into_iter()
+        .filter_map(|token| {
+            let TokenKind::Identifier(identifier) = token.kind else {
+                return None;
+            };
+            forbidden
+                .contains(&identifier.as_str())
+                .then(|| IdentifierReference {
+                    identifier,
+                    line: line_number(source, token.offset),
+                })
+        })
+        .collect()
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct Token {
     kind: TokenKind,
     offset: usize,

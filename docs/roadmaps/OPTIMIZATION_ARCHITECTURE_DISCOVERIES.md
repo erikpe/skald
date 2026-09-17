@@ -473,8 +473,9 @@ coverage, regressions and durable baseline inputs. The
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
 informs the accepted, frozen and promoted
 [LIR model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
-Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) is planned; LI01
-is next, with explicit model and selected-interface readiness checkpoints.
+Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) is in progress;
+LI01 delivered checked declarations and identity arenas; LI02 is next.
+Selected-interface readiness and executable model publication remain pending.
 Concrete native counterparts remain LA03 decisions. Later child designs and
 implementation remain pending; planning does not deliver LIR, foundation
 adoption or register allocation.

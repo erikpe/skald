@@ -10,6 +10,8 @@ use crate::{
     identity::CallableId, mir::MirProgram, passes::VerifiedFinalMirProgram, source::SourceDatabase,
 };
 
+mod graph;
+mod plan;
 mod retained_domain;
 mod x86_64_sysv;
 
@@ -70,6 +72,16 @@ pub enum RuntimeTracePolicy {
 /// fn attach_sources<'a>(input: &mut BackendInput<'a>, sources: &'a SourceDatabase) {
 ///     input.sources = Some(sources);
 /// }
+/// ```
+///
+/// Low-level declaration checking and graph identities are backend-private:
+///
+/// ```compile_fail
+/// use skald_compiler::backend::plan::CheckedPlan;
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::graph::LoweredValueId;
 /// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {

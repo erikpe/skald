@@ -72,7 +72,10 @@ optimization.
   there instead of restating language rules.
 
 Target legality, layout, calling conventions, and code generation are defined
-by the [backend and target contract](BACKEND.md). The public runtime C surface
+by the [backend and target contract](BACKEND.md). Private
+[low-level execution declarations](LOW_LEVEL_IR.md) now supply checked contexts,
+logical signatures and stage-owned identities; their native pipeline consumers
+remain planned. The public runtime C surface
 and compiler/runtime compatibility mechanism are defined by the
 [runtime ABI](RUNTIME_ABI.md). The implemented ownership, ordinary/copy-allocation,
 header, finalizer, anchor, and compiler/runtime responsibility design is

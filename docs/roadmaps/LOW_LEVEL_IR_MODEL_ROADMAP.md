@@ -1,12 +1,13 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: planned, 2026-09-17; LI01 is next. Implements LA02 of the
+Status: in progress, 2026-09-17; LI01 is complete, LI02 is next.
+Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
 and promoted as of 2026-09-17.
 
 Planning baseline: `10b5de75`, the committed draft. Implementation baseline:
-not started; record the last commit before LI01's first code change here.
+`f1053782`, the last commit before LI01's first code change.
 Program implementation baseline remains `495debd3`. The preparation closing
 commit is `027af94f`; the preserved pre-migration measurement compiler is
 `9e3cebb1`. These have different purposes and must not be substituted for one
@@ -55,7 +56,7 @@ the illustrative directory sketch.
 
 ## Progress
 
-- [ ] LI01 — Checked contexts, declarations and identity domains
+- [x] LI01 — Checked contexts, declarations and identity domains
 - [ ] LI02 — Lowered scalar/object model and draft construction
 - [ ] LI03 — Calls, effects, tracing and terminal operations
 - [ ] LI04 — CFG and single-definition verification
@@ -142,20 +143,20 @@ acceptance. Do not benchmark test-only models as evidence of native adoption.
 **Purpose:** establish the immutable execution facts and ownership boundaries
 needed by every model consumer.
 
-- [ ] Record the implementation baseline from current history before changing
+- [x] Record the implementation baseline from current history before changing
   code. Inspect prior preparation commits and protect unrelated user changes.
-- [ ] Record the common contract readiness result in the program handoff,
+- [x] Record the common contract readiness result in the program handoff,
   covering all six [joint questions](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#joint-review-and-promotion-checkpoint).
   Distinguish accepted common schemas from pending concrete target decisions.
-- [ ] Implement private target/profile and policy facts, execution scalar types,
+- [x] Implement private target/profile and policy facts, execution scalar types,
   checked layout/signature component declarations, typed callable/artifact keys
   and distinct lowered/selected local ID domains.
-- [ ] Supply borrowed narrow context views, checked `usize` arenas and live
+- [x] Supply borrowed narrow context views, checked `usize` arenas and live
   context identity checks. Fixture plans validate supplied facts; do not claim
   a production plan has been projected from final MIR.
-- [ ] Exercise declarations and lookup with real checked fixture contexts;
+- [x] Exercise declarations and lookup with real checked fixture contexts;
   extend maintained phase guards for the scopes actually introduced.
-- [ ] Document implemented facts and ownership without announcing a running
+- [x] Document implemented facts and ownership without announcing a running
   LIR pipeline. Add modules only when they contain a tested responsibility.
 
 **Tests:** same facts in two simultaneously live contexts; wrong context/target,
@@ -167,6 +168,15 @@ Run the task quality gates.
 **Exit criteria:** checked declarations and identity lookups have genuine
 consumers, deterministic ordering and no physical location dependency; the
 common readiness result explicitly lists LA03's remaining obligations.
+
+**Completion evidence:** implemented against `f1053782`, awaiting the user's
+commit. Added 13 declaration tests, three arena tests, one maintained boundary
+guard test and two public private-path compile-fail examples. Focused owner and
+boundary suites passed. Final `make check` passed, including 3,178 compiler unit
+tests and 650 golden observations; `make msrv-check` passed on Rust 1.82.0.
+The [common readiness record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness-li01)
+lists every native counterpart still pending. No design amendment or independent
+discovery was needed; temporary non-test allowances are accounted for below.
 
 ### LI02 — Lowered scalar/object model and draft construction
 
@@ -464,12 +474,15 @@ not a shared-core x86 dependency or an emitter-only workaround.
 
 ## Temporary artifacts and discoveries
 
-No compiler scaffolding is introduced by this planning change. Maintain this
-ledger during implementation, including committed artifacts:
+Maintain this ledger during implementation, including committed artifacts.
+LI01 adds no production switch, provisional verifier seal or compatibility bridge.
 
 | File / symbol | Introducing task / commit | Removal or transfer owner | Final disposition / retention criterion |
 | --- | --- | --- | --- |
-| None yet | Planning only | — | — |
+| `backend/plan/{facts,identities,check,view}.rs`: item-scoped `cfg_attr(not(test), allow(dead_code))` on delivered records, ID generators, checking/lookup helpers and impls | LI01; uncommitted, based on `f1053782` | LA03 first native fact/lowering consumer; LA04 for remaining full-surface consumers; LI11 transfers outstanding entries | Temporary compilation allowances only; remove per consumed item and audit remaining variants/helpers. Test builds do not suppress dead code |
+| `backend/graph/arena.rs`: item-scoped non-test dead-code allowances on ID domains, storage, allocation and lookup | LI01; uncommitted | LA03 first native lowered/selected graph consumer; LI11 transfer if still pending | Remove as native storage users land; no whole-model test gate |
+| `backend/{plan,graph}/mod.rs`: non-test unused-import allowances on explicit private facade re-export groups | LI01; uncommitted | LA03 first native consumers; LI11 transfer if still pending | Temporary private exports; remove allowances or trim exports as consumers land; no public API widening |
+| `backend/plan/test_fixtures.rs` and colocated declaration/arena tests | LI01; uncommitted | Retain; LI11 reviews final consumers | Durable context/identity/domain regression fixtures, test-only and shared across the two owners; no prototype emission |
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation
 and lint allowances as they arise. Genuine draft builders and synthetic
