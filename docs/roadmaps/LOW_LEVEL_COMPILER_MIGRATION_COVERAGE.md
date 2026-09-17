@@ -424,7 +424,7 @@ fault injection and malformed storage support remain test-only.
 | `plan::CheckedPlan`, `PlanView`, typed declaration IDs and `graph::OwnedArena` | Foreign live contexts/owners, checked bounds, sparse body dispositions, component roles, zero-size layouts and trace-policy rejection | Production fact projection and target capability checking |
 | `lir::DraftBuilder`, closed `Operation`/`Terminator` and borrowed `DraftChecks` | Complete scalar/cast cells, calls and indirect targets, object/memory/lifetime forms, all attribution forms, enabled/omitted trace and expanded shared release | Actual MIR/lifecycle/helper construction preserving source evaluation and destruction order |
 | Shared `check_graph` and `verify_callable` | Definition/result/type agreement, dominance, unreachable-region rules, simultaneous loop swaps and parallel critical edges; exact constant and success-edge evidence; extent/provenance/effects and trace associations | Native arithmetic recipes, dynamic safety, source initialization and full trace-path parity |
-| `lir::VerifiedCallable`, `CompletionReceipt`, `ProgramBuilder`, `VerifiedProgram`, `TargetDeclarations` and `TargetExtension` | Exact snapshot/context reconciliation, recursive worklist closure, missing/conflicting bodies and data, active statics, typed dependencies and parent-bound extension freeze | Concrete target discovery/freeze order, relocations and streaming body ownership |
+| `lir::VerifiedCallable`, `CompletionReceipt`, `ProgramBuilder`, `VerifiedProgram`, `TargetDeclarations` and `TargetCatalog` | Exact snapshot/context reconciliation, recursive worklist closure, missing/conflicting bodies and data, active statics, typed dependencies, plan-bound catalog freeze and exact parent reconciliation | Concrete native discovery/freeze orchestration and relocations; publication APIs permit callable release before closure |
 | `selected::SelectionContext`, `SelectedBuilder`, `Payload`, `ResourceCatalog`, `AbiBindings` and `AbiAreas` | Destructive tie with distinct value IDs, three-address form, overlapping/reserved/partially preserved resources, mixed integer/float ABI pressure, hidden destination and receiver roles, explicit correction CFG and atomic bundles | Real opcode/resource/ABI schema, complete clobbers/effects, canonicalization and indirect-target timing |
 | `verify_selected`, mandatory `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt` and `SelectedProgramBuilder` | Shared and target checks required before authority; malformed descriptions, omitted references and effects, stale derivations, foreign contexts and verified target thunks rejected/covered | A real target verifier plus adversarial assembler/ABI/recipe tests independent of descriptions |
 | Stage `LoweredEditor`/`SelectedEditor`, `IdMap`, `LoweredRemap`/`SelectedRemap`, consuming program edits and borrowed `analysis()` | Guard/trace/definition/object/origin relocation, removed-ID rejection, full republication, stale receipt rejection and consuming/non-clone signatures | Native transformations and independently checked transfers/placement bound to the exact selected snapshot |
@@ -548,7 +548,7 @@ unused exports rather than widen visibility or gate the model under `cfg(test)`.
 | `backend/graph/{arena,edit}.rs`, `graph/verify/{model,check,analysis}.rs`, `graph/mod.rs`: `OwnedArena`, `IdMap`, `GraphView`, `check_graph`, `GraphSession` and explicit re-export groups | First native graph/analysis/edit consumers; shared algorithm stays durable |
 | `backend/lir/{model,scalar,builder,schema,read,call,trace,observable}.rs`, `lir/graph/{storage,operands}.rs`: draft records, `DraftBuilder`, `DraftChecks` and graph adapter impls | First native lowered construction/checking consumers; remaining vocabulary with complete migration |
 | `backend/lir/verify/{check,domains,memory,trace,lift,failure,publication}.rs`: full checking helpers, structured failures, `VerifiedCallable` and `CompletionReceipt` | First native lowered verification/publication consumer; no replacement with builder trust |
-| `backend/lir/program/{inventory,data,target}.rs`: `ProgramBuilder`, `VerifiedProgram`, data validation, `TargetDeclarations`, `TargetExtension` | First native inventory/discovery consumer; preserve streaming receipts and parent freeze |
+| `backend/lir/program/{inventory,data,target}.rs`: `ProgramBuilder`, `VerifiedProgram`, data validation, `TargetDeclarations`, `TargetCatalog` | First native inventory/discovery consumer; preserve streaming receipts, plan freeze and exact parent reconciliation |
 | `backend/selected/{storage,context,builder,graph,abi,resources,description}.rs`: `SelectedDraft`, `SelectionContext`, `SelectedBuilder`, `Payload`, ABI/resource records and descriptions | Real target schema/selection consumer; retain immutable opcode-derived descriptions |
 | `backend/selected/verify/{check,descriptors,failure,publication,program}.rs`: shared checking helpers, `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt`, `SelectedProgramBuilder` | First native selected verification consumer; both shared and target checks remain mandatory |
 | `backend/{lir,selected}/edit/{mod,editor,rebuild}.rs`, `lir/edit/split.rs`: `LoweredEditor`, `SelectedEditor`, `LoweredRemap`, `SelectedRemap`, remapping/rebuilding and split helpers | Native edits/analysis consumers; retain consuming authority and full reverification |
@@ -571,11 +571,15 @@ remain pending before dependent implementation. The architecture program and
 cleanup audit's A22 remain in progress: private model delivery does not deliver
 production native lowering, placement, adoption or allocation.
 The [accepted, frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
-and [planned roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) define the
+and [active roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) define the
 next pilot. The [owning model amendment](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
 accepts plan-bound target catalogs and final exact-receipt reconciliation. The
-amendment is not yet implemented: the evidence above describes the current
-finalized-parent API, whose invariant coverage must survive migration.
+amendment is implemented in publication APIs: catalogs bind the checked plan,
+source selection requires genuine verified callables, and selected closure
+reconciles exact executable receipts against its borrowed finalized lower parent.
+Owner regressions cover body release before closure, discarded discovery authority,
+stale replacement, missing thunks and bound-parent edits. Concrete native
+orchestration and final physical publication remain pending.
 
 Carry these accepted constraints into the native design:
 

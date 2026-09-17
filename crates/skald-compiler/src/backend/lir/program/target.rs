@@ -1,27 +1,28 @@
-//! Parent-bound declaration extension; selected publication is a separate check.
-use super::{data, DataDefinition, ProgramError, VerifiedProgram};
+//! Plan-bound frozen declarations; exact parent inventories are reconciled at closure.
+use super::{data, DataDefinition, ProgramError};
 use crate::backend::plan::{
-    ArtifactCategory, ArtifactDeclaration, ArtifactId, DataKey, LirCallableId, PlanError,
+    ArtifactCategory, ArtifactDeclaration, ArtifactId, DataKey, LirCallableId, PlanError, PlanView,
 };
 use std::collections::BTreeMap;
 
 #[cfg_attr(not(test), allow(dead_code))]
-pub(in crate::backend) struct TargetDeclarations<'a, 'p> {
-    parent: &'a VerifiedProgram<'p>,
+pub(in crate::backend) struct TargetDeclarations<'p> {
+    plan: PlanView<'p>,
     declarations: BTreeMap<ArtifactId, ArtifactDeclaration>,
     data: BTreeMap<DataKey, DataDefinition>,
 }
 #[cfg_attr(not(test), allow(dead_code))]
-pub(in crate::backend) struct TargetExtension<'a, 'p> {
-    parent: &'a VerifiedProgram<'p>,
+/// Frozen declarations authorize local selection, never whole-program publication.
+pub(in crate::backend) struct TargetCatalog<'p> {
+    plan: PlanView<'p>,
     declarations: BTreeMap<ArtifactId, ArtifactDeclaration>,
     data: BTreeMap<DataKey, DataDefinition>,
 }
 #[cfg_attr(not(test), allow(dead_code))]
-impl<'a, 'p> TargetDeclarations<'a, 'p> {
-    pub(in crate::backend) fn new(parent: &'a VerifiedProgram<'p>) -> Self {
+impl<'p> TargetDeclarations<'p> {
+    pub(in crate::backend) fn new(plan: PlanView<'p>) -> Self {
         Self {
-            parent,
+            plan,
             declarations: BTreeMap::new(),
             data: BTreeMap::new(),
         }
@@ -31,7 +32,7 @@ impl<'a, 'p> TargetDeclarations<'a, 'p> {
         &mut self,
         declaration: ArtifactDeclaration,
     ) -> Result<(), ProgramError> {
-        let view = self.parent.parent();
+        let view = self.plan;
         if view.artifact_id(declaration.key).is_ok()
             || self.declarations.contains_key(&declaration.key)
         {
@@ -76,13 +77,13 @@ impl<'a, 'p> TargetDeclarations<'a, 'p> {
         if self.data.contains_key(&definition.key) {
             return Err(ProgramError::DuplicateDefinition);
         }
-        data::check(&definition, self.parent.parent(), |key, category| {
-            lookup(self.parent, &self.declarations, key, category)
+        data::check(&definition, self.plan, |key, category| {
+            lookup(self.plan, &self.declarations, key, category)
         })?;
         self.data.insert(definition.key, definition);
         Ok(())
     }
-    pub(in crate::backend) fn freeze(self) -> Result<TargetExtension<'a, 'p>, ProgramError> {
+    pub(in crate::backend) fn freeze(self) -> Result<TargetCatalog<'p>, ProgramError> {
         for key in self.declarations.keys() {
             if let ArtifactId::Data(key) = key {
                 if !self.data.contains_key(key) {
@@ -90,8 +91,8 @@ impl<'a, 'p> TargetDeclarations<'a, 'p> {
                 }
             }
         }
-        Ok(TargetExtension {
-            parent: self.parent,
+        Ok(TargetCatalog {
+            plan: self.plan,
             declarations: self.declarations,
             data: self.data,
         })
@@ -99,7 +100,7 @@ impl<'a, 'p> TargetDeclarations<'a, 'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 fn lookup(
-    parent: &VerifiedProgram<'_>,
+    plan: PlanView<'_>,
     declarations: &BTreeMap<ArtifactId, ArtifactDeclaration>,
     key: ArtifactId,
     category: ArtifactCategory,
@@ -110,21 +111,16 @@ fn lookup(
     if let Some(declaration) = declarations.get(&key) {
         return declaration
             .layout
-            .map(|layout| {
-                parent
-                    .parent()
-                    .layout(parent.parent().layout_id(layout.index())?)
-                    .map(|l| l.size)
-            })
+            .map(|layout| plan.layout(plan.layout_id(layout.index())?).map(|l| l.size))
             .transpose()
             .map_err(ProgramError::from);
     }
-    data::parent_artifact(parent.parent(), key, category)
+    data::parent_artifact(plan, key, category)
 }
 #[cfg_attr(not(test), allow(dead_code))]
-impl<'a, 'p> TargetExtension<'a, 'p> {
-    pub(in crate::backend) fn parent(&self) -> &'a VerifiedProgram<'p> {
-        self.parent
+impl<'p> TargetCatalog<'p> {
+    pub(in crate::backend) fn plan(&self) -> PlanView<'p> {
+        self.plan
     }
     pub(in crate::backend) fn selection_binding(
         &self,
@@ -135,27 +131,24 @@ impl<'a, 'p> TargetExtension<'a, 'p> {
                 .declarations
                 .get(&ArtifactId::Callable(key))
                 .ok_or(PlanError::UnknownDeclaration)?;
-            Ok(self.parent.parent().thunk_binding(
+            Ok(self.plan.thunk_binding(
                 key,
                 declaration.signature.ok_or(PlanError::InvalidSignature)?,
             )?)
         } else {
-            Ok(self.parent.parent().callable(key)?)
+            Ok(self.plan.callable(key)?)
         }
     }
 
-    pub(in crate::backend) fn require_parent(
-        &self,
-        parent: &VerifiedProgram<'p>,
-    ) -> Result<(), ProgramError> {
-        self.parent.require_same_snapshot(parent)
+    pub(in crate::backend) fn require_plan(&self, plan: PlanView<'p>) -> Result<(), ProgramError> {
+        Ok(self.plan.require_same_context(plan)?)
     }
     pub(in crate::backend) fn artifact(
         &self,
         key: ArtifactId,
         category: ArtifactCategory,
     ) -> Result<Option<usize>, ProgramError> {
-        lookup(self.parent, &self.declarations, key, category)
+        lookup(self.plan, &self.declarations, key, category)
     }
     pub(in crate::backend) fn declarations(
         &self,

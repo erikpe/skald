@@ -3,7 +3,8 @@
 Status: accepted, frozen and promoted LA03 design, 2026-09-18. Accepted by the
 user after review of the draft committed at `8834bcd6`.
 Implementation: [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md),
-planned; no native implementation has started.
+in progress; streaming publication authority is implemented, native consumption
+remains pending.
 Source assessment: `f59d3fff`, the committed executable-model closing change.
 Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Inherited contracts: [frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
@@ -128,8 +129,8 @@ shared-release source witnesses remain full-migration oracles.
 ## Declaration freeze and callable streaming
 
 Planning inventories are immutable. Target selection cannot add signatures or
-layouts to a sealed plan. The current model makes `TargetExtension` borrow a
-finalized `VerifiedProgram`; selected drafts must match its chosen receipts.
+layouts to a sealed plan. The inherited model at `f59d3fff` made `TargetExtension` borrow a
+finalized `VerifiedProgram`; selected drafts had to match its chosen receipts.
 This is sound, but finalization requires every lower callable to complete before
 any source selection can begin. Receipts do not retain bodies. A second lowering
 pass creates fresh snapshots and cannot reuse first-pass authority. Keeping all
@@ -141,8 +142,9 @@ exact complete-program receipt reconciliation to program closure. Retain genuine
 per-callable verification and exact derivation witnesses. This changes when the
 parent inventory must be complete, not what complete-program authority proves.
 The [owning frozen model](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
-records this accepted amendment. Its implementation remains pending; the current
-finalized-parent API must be replaced explicitly, preserving its invariant tests.
+records this accepted amendment. The active roadmap implements it with a
+plan-bound `TargetCatalog` and exact finalized-parent reconciliation at selected
+program closure, preserving invariant coverage. Native orchestration remains pending.
 
 The executable schedule is:
 

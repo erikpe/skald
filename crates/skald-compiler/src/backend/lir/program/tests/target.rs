@@ -1,15 +1,16 @@
 use super::*;
 
 #[test]
-fn target_freeze_is_bound_to_the_exact_parent_inventory_and_preserves_parent_facts() {
+fn target_freeze_is_bound_to_the_exact_plan_and_preserves_parent_facts() {
     let plan = CheckedPlan::check(facts()).unwrap();
     let parent = program(&plan);
-    let different = program(&plan);
+    let different_plan = CheckedPlan::check(facts()).unwrap();
+    let different = program(&different_plan);
     let layout = plan.view().layout_id(0).unwrap();
     let layout_id = facts().add_layout(facts().layouts[0]).unwrap();
     // Obtain a valid parent pool ID through a declaration rather than forge one.
     let signature = plan.view().callables().next().unwrap().signature;
-    let mut extension = TargetDeclarations::new(&parent);
+    let mut extension = TargetDeclarations::new(parent.parent());
     extension
         .declare(ArtifactDeclaration {
             key: thunk(),
@@ -33,10 +34,10 @@ fn target_freeze_is_bound_to_the_exact_parent_inventory_and_preserves_parent_fac
         })),
         ProgramError::Plan(PlanError::UnknownDeclaration)
     );
-    let frozen: TargetExtension<'_, '_> = extension.freeze().unwrap();
-    frozen.require_parent(&parent).unwrap();
+    let frozen: TargetCatalog<'_> = extension.freeze().unwrap();
+    frozen.require_plan(parent.parent()).unwrap();
     assert_eq!(
-        error(frozen.require_parent(&different)),
+        error(frozen.require_plan(different.parent())),
         ProgramError::Plan(PlanError::WrongContext)
     );
     assert_eq!(frozen.declarations().len(), 1);
@@ -72,7 +73,7 @@ fn target_constants_cannot_replace_parent_data_or_mutate_frozen_catalogs() {
         signature: None,
         layout: Some(layout),
     };
-    let mut extension = TargetDeclarations::new(&parent);
+    let mut extension = TargetDeclarations::new(parent.parent());
     assert_eq!(
         error(extension.declare(ArtifactDeclaration {
             key: ArtifactId::Data(DataKey::Table(0)),
@@ -111,7 +112,7 @@ fn target_constants_cannot_replace_parent_data_or_mutate_frozen_catalogs() {
         error(frozen.artifact(thunk(), ArtifactCategory::Data)),
         ProgramError::Plan(PlanError::ArtifactCategoryMismatch)
     );
-    let mut missing = TargetDeclarations::new(&parent);
+    let mut missing = TargetDeclarations::new(parent.parent());
     missing.declare(decl).unwrap();
     assert_eq!(
         error(missing.freeze()),
@@ -125,7 +126,7 @@ fn target_extensions_reject_new_signatures_trace_inventory_and_semantic_bodies()
     let parent = program(&plan);
     let mut f = facts();
     let signature = f.add_signature(f.signatures[0].clone()).unwrap();
-    let mut extension = TargetDeclarations::new(&parent);
+    let mut extension = TargetDeclarations::new(parent.parent());
     assert_eq!(
         error(extension.declare(ArtifactDeclaration {
             key: thunk(),
@@ -171,7 +172,7 @@ fn target_constant_cycles_are_predeclared_and_sorted_independently_of_arrival() 
         .layout
         .unwrap();
     for order in [[3, 2], [2, 3]] {
-        let mut extension = TargetDeclarations::new(&parent);
+        let mut extension = TargetDeclarations::new(parent.parent());
         for key in order {
             extension
                 .declare(ArtifactDeclaration {

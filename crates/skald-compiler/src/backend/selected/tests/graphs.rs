@@ -16,7 +16,9 @@ fn payload_events_and_structural_consumers_need_no_target_enum_matches() {
         inventory.complete(body, &body.receipt()).unwrap();
     }
     let program = inventory.finish().unwrap();
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (mut resources, view, unit) = catalog();
     let bank = resources.bank(BankKind::Integer);
     let additional = resources.unit().unwrap();
@@ -52,7 +54,7 @@ fn payload_events_and_structural_consumers_need_no_target_enum_matches() {
     ctx.resources
         .require_view(view, 64, BankKind::Integer, true)
         .unwrap();
-    let mut build = SelectedBuilder::<Synthetic>::new(&ctx, source(0), Some(a.receipt())).unwrap();
+    let mut build = SelectedBuilder::<Synthetic>::new(&ctx, source(0), Some(&a)).unwrap();
     let entry = build.block(&[], None).unwrap();
     let input = build.value(repr(), None).unwrap();
     let result = build.value(repr(), None).unwrap();
@@ -248,8 +250,7 @@ fn payload_events_and_structural_consumers_need_no_target_enum_matches() {
     );
     let (_r, _v, _u) = catalog();
     let other = SelectionContext::new(&extension, ResourceCatalog::default());
-    let mut foreign =
-        SelectedBuilder::<Synthetic>::new(&other, source(0), Some(a.receipt())).unwrap();
+    let mut foreign = SelectedBuilder::<Synthetic>::new(&other, source(0), Some(&a)).unwrap();
     assert!(matches!(
         foreign.block(&[input], None),
         Err(SelectedBuildError::Context(plan::PlanError::WrongContext))
@@ -328,7 +329,7 @@ fn selected_thunk_drafts_require_frozen_declarations_without_fabricated_inputs()
         family: 0,
         specialization: 0,
     });
-    let mut extension = lir::TargetDeclarations::new(&program);
+    let mut extension = lir::TargetDeclarations::new(program.parent());
     extension
         .declare(plan::ArtifactDeclaration {
             key: plan::ArtifactId::Callable(thunk),

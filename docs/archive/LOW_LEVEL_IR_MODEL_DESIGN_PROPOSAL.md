@@ -4,8 +4,8 @@ Status: accepted, frozen and promoted LA02 design, 2026-09-17. Accepted by the
 user after review of the draft committed at `10b5de75`; source assessment is
 against `027af94f`, the phase-preparation closing change. The executable model
 is implemented and the child workstream is archived. The streaming publication
-amendment accepted on 2026-09-18 below is planned, not yet implemented; the
-completed model roadmap validates the original construction schedule.
+amendment accepted on 2026-09-18 below is implemented by the active native
+phase roadmap; the completed model roadmap validates the original schedule.
 The [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) records cumulative
 review and validation; the [active program handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
 owns native counterpart and retained-artifact obligations. Changes to these
@@ -498,9 +498,11 @@ selection begins; it does not weaken complete-program authority.
   publication rejection remain mandatory; matching IDs or plan identity alone
   cannot establish derivation equality.
 
-The implemented finalized-parent `TargetExtension` API remains the current
-behavior until the explicit migration passes its invariant tests. Neither the
-amendment nor a catalog seal authorizes emission from partially closed programs.
+The native phase roadmap replaces the finalized-parent `TargetExtension` with
+a plan-bound `TargetCatalog`; selected-program closure borrows the exact finalized
+lower parent and checks its chosen witnesses. The original invariant coverage is
+retained. Neither the amendment nor a catalog seal authorizes emission from
+partially closed programs. Production streaming orchestration remains downstream.
 
 ## Selected graph and target-facing structural interface
 

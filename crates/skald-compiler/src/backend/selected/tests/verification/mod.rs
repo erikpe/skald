@@ -9,6 +9,7 @@ use crate::backend::{
 mod editing;
 mod inspection;
 mod malformed;
+mod streaming;
 mod target;
 mod tracing;
 mod witnesses;
@@ -63,7 +64,7 @@ fn resources() -> (ResourceCatalog, Vec<ViewId>, Vec<UnitId>) {
     (r, views, units)
 }
 fn context<'p>(
-    extension: &'p lir::TargetExtension<'p, 'p>,
+    extension: &'p lir::TargetCatalog<'p>,
     resources: ResourceCatalog,
     inputs: Vec<Representation>,
 ) -> SelectionContext<'p> {
@@ -81,9 +82,8 @@ fn begin<'p>(
 ) -> (SelectedBuilder<'p, Node>, BH<'p>, Vec<VH<'p>>) {
     let key = body.receipt().owner().key();
     let declaration = ctx
-        .extension
-        .parent()
-        .parent()
+        .catalog
+        .plan()
         .callables()
         .find(|d| d.key == key)
         .unwrap();
@@ -117,7 +117,7 @@ fn begin<'p>(
     let bindings = ctx
         .abi_bindings(declaration.signature, inputs.clone(), results)
         .unwrap();
-    let mut b = SelectedBuilder::new(ctx, key, Some(body.receipt())).unwrap();
+    let mut b = SelectedBuilder::new(ctx, key, Some(body)).unwrap();
     let block = b.block(&[], None).unwrap();
     let values = inputs
         .iter()
@@ -160,7 +160,7 @@ fn call_node(
     views: &[ViewId],
     units: &[UnitId],
 ) -> Node {
-    let view = ctx.extension.parent().parent();
+    let view = ctx.catalog.plan();
     let sig = view
         .signature(view.signature_id(signature.index()).unwrap())
         .unwrap();

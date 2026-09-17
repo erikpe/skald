@@ -70,7 +70,9 @@ pub(super) fn assert_dump(body: &VerifiedSelectedCallable<'_, Node>) {
 fn malformed_selected_drafts_and_writer_failures_are_visible() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     let (b, _, _) = begin(&ctx, &bodies[0]);
@@ -115,7 +117,11 @@ fn malformed_selected_drafts_and_writer_failures_are_visible() {
     let body = checked(b, Shape::Two);
     builder.complete(&body, &body.receipt()).unwrap();
     let mut text = String::new();
-    builder.finish().unwrap().dump_inventory(&mut text).unwrap();
+    builder
+        .finish(&program)
+        .unwrap()
+        .dump_inventory(&mut text)
+        .unwrap();
     assert!(text.contains("stage=selected-inventory status=verified"));
     assert!(text.contains("lower-input=Some(Source"));
 }
@@ -158,7 +164,9 @@ fn worked_case_dumps_are_deterministic_in_independent_processes() {
 fn equivalent_live_selection_scopes_have_identical_dumps() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, first_views, _) = resources();
     let first_ctx = context(&extension, r, vec![repr(); 2]);
     let (r, equal_views, _) = resources();

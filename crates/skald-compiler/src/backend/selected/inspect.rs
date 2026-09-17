@@ -165,7 +165,7 @@ fn render<P: InspectPayload>(
         )?,
         None => writeln!(out, "lower-input <none>")?,
     }
-    for declaration in draft.context.extension.declarations() {
+    for declaration in draft.context.catalog.declarations() {
         writeln!(out, "target-artifact {declaration:?}")?;
     }
     visit(draft, |fact| match fact {
@@ -295,14 +295,14 @@ impl VerifiedSelectedProgram<'_> {
             "skald-lir schema=1 stage=selected-inventory status=verified"
         )?;
         let ctx = self.context();
-        crate::backend::inspection::declarations(out, ctx.extension.parent().parent())?;
-        for declaration in ctx.extension.declarations() {
+        crate::backend::inspection::declarations(out, ctx.catalog.plan())?;
+        for declaration in ctx.catalog.declarations() {
             writeln!(out, "target-artifact {declaration:?}")?;
         }
-        for data in ctx.extension.parent().data() {
+        for data in self.parent().data() {
             writeln!(out, "data {data:?}")?;
         }
-        for data in ctx.extension.data() {
+        for data in ctx.catalog.data() {
             writeln!(out, "target-data {data:?}")?;
         }
         for receipt in self.receipts() {

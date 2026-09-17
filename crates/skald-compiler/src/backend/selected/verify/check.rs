@@ -48,7 +48,7 @@ pub(in crate::backend) fn verify_selected<'p, P: Payload>(
     }
     match &draft.input {
         Some(receipt) => {
-            if let Err(error) = context.extension.parent().require_input(receipt) {
+            if let Err(error) = context.catalog.require_plan(receipt.owner().context()) {
                 errors.push(failure(
                     GraphLocation::Entry,
                     SelectedReason::Inventory(error),
@@ -131,7 +131,7 @@ pub(in crate::backend) fn verify_selected<'p, P: Payload>(
             || !object.layout.alignment.is_power_of_two()
             || object.layout.disposition != LayoutDisposition::Addressable;
         let omitted = matches!(object.role, ObjectRole::Trace)
-            && context.extension.parent().parent().runtime_trace() == RuntimeTracePolicy::Omitted;
+            && context.catalog.plan().runtime_trace() == RuntimeTracePolicy::Omitted;
         let area_bad = match object.role {
             ObjectRole::Abi(area) => {
                 let slots = match area {

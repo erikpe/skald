@@ -9,7 +9,7 @@ use crate::{
             DefinitionSite, LocalHandle, LoweredBlockId, LoweredObjectId, LoweredValueId,
             OwnedArena, SelectedBlockId, SelectedObjectId, SelectedValueId,
         },
-        lir::{CompletionReceipt, ProgramError, VerifiedCallable},
+        lir::{ProgramError, VerifiedCallable},
         plan::{LayoutFact, LirCallableId, PlanError},
     },
     source::Span,
@@ -35,15 +35,19 @@ pub(in crate::backend) struct SelectedBuilder<'p, P> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p, P: Payload> SelectedBuilder<'p, P> {
+    /// Source selection starts from a genuine verified body, not a detached receipt.
+    /// Its witness is reconciled with the finalized lower program at program closure.
+    /// Only a declared target thunk may omit the lower input.
     pub(in crate::backend) fn new(
         context: &'p SelectionContext<'p>,
         key: LirCallableId,
-        input: Option<CompletionReceipt<'p>>,
+        input: Option<&VerifiedCallable<'p>>,
     ) -> Result<Self, ProgramError> {
         let owner = context.binding(key)?;
+        let input = input.map(VerifiedCallable::receipt);
         match &input {
             Some(receipt) => {
-                context.extension.parent().require_input(receipt)?;
+                context.catalog.require_plan(receipt.owner().context())?;
                 if receipt.owner().key() != key {
                     return Err(PlanError::WrongOwner.into());
                 }

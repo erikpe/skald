@@ -1,7 +1,7 @@
 use crate::backend::lir::{
     verify_callable, Call, CallAttribution, CallTarget, DataDefinition, DataInitializer,
-    DraftBuilder, InventoryState, Operation, ProgramBuilder, ProgramError, TargetDeclarations,
-    TargetExtension, Terminator, VerifiedCallable, VerifiedProgram,
+    DraftBuilder, InventoryState, Operation, ProgramBuilder, ProgramError, TargetCatalog,
+    TargetDeclarations, Terminator, VerifiedCallable, VerifiedProgram,
 };
 use crate::backend::plan::{
     test_fixtures::{facts, runtime_declarations, source},

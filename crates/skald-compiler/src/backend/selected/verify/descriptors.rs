@@ -172,7 +172,7 @@ pub(super) fn check<P: Payload>(
         }
     }
     for (artifact, category) in desc.artifacts {
-        if ctx.extension.artifact(*artifact, *category).is_err() {
+        if ctx.catalog.artifact(*artifact, *category).is_err() {
             errors.push(Reason::Reference);
         } else {
             references.insert(*artifact);
@@ -187,8 +187,7 @@ pub(super) fn check<P: Payload>(
                 errors.push(Reason::Effect)
             }
             Effect::TraceState
-                if ctx.extension.parent().parent().runtime_trace()
-                    == RuntimeTracePolicy::Omitted
+                if ctx.catalog.plan().runtime_trace() == RuntimeTracePolicy::Omitted
                     || !desc.artifacts.contains(&(
                         crate::backend::plan::ArtifactId::TraceTls,
                         crate::backend::plan::ArtifactCategory::Tls,
@@ -201,11 +200,8 @@ pub(super) fn check<P: Payload>(
                 let artifact = crate::backend::plan::ArtifactId::Data(
                     crate::backend::plan::DataKey::Static(*field),
                 );
-                if !ctx.extension.parent().parent().is_active_static(*field)
-                    || ctx
-                        .extension
-                        .artifact(artifact, artifact.category())
-                        .is_err()
+                if !ctx.catalog.plan().is_active_static(*field)
+                    || ctx.catalog.artifact(artifact, artifact.category()).is_err()
                 {
                     errors.push(Reason::Reference);
                 } else {
@@ -216,7 +212,7 @@ pub(super) fn check<P: Payload>(
         }
     }
     if let Some(signature) = desc.call_signature {
-        let view = ctx.extension.parent().parent();
+        let view = ctx.catalog.plan();
         let attribution_ok = match desc.call_attribution {
             Some(crate::backend::lir::CallAttribution::SourceOperation { location, .. }) => {
                 location.is_none_or(|location| {
@@ -280,13 +276,8 @@ pub(super) fn check<P: Payload>(
         ) {
             errors.push(Reason::Abi);
         }
-        if let Ok(handle) = ctx
-            .extension
-            .parent()
-            .parent()
-            .signature_id(signature.index())
-        {
-            if let Ok(sig) = ctx.extension.parent().parent().signature(handle) {
+        if let Ok(handle) = ctx.catalog.plan().signature_id(signature.index()) {
+            if let Ok(sig) = ctx.catalog.plan().signature(handle) {
                 if (sig.returns == ReturnShape::Never) != (desc.flow == Flow::Never) {
                     errors.push(Reason::Flow);
                 }
@@ -315,13 +306,7 @@ pub(super) fn check<P: Payload>(
                 sig.returns != ReturnShape::Never
                     && AbiBindings::new(
                         sig,
-                        (ctx.extension
-                            .parent()
-                            .parent()
-                            .profile()
-                            .data_layout
-                            .pointer_bytes
-                            * 8) as u16,
+                        (ctx.catalog.plan().profile().data_layout.pointer_bytes * 8) as u16,
                         &ctx.resources,
                         draft.abi().map_or(vec![], |a| a.inputs().to_vec()),
                         desc.abi_results.to_vec(),

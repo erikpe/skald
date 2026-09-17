@@ -44,8 +44,8 @@ pub(in crate::backend) use verify::{
 
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use program::{
-    DataDefinition, DataInitializer, InventoryState, ProgramBuilder, ProgramError,
-    TargetDeclarations, TargetExtension, VerifiedProgram,
+    DataDefinition, DataInitializer, InventoryState, ProgramBuilder, ProgramError, TargetCatalog,
+    TargetDeclarations, VerifiedProgram,
 };
 
 mod edit;

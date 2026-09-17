@@ -180,7 +180,7 @@ impl<'p> ProgramBuilder<'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> VerifiedProgram<'p> {
-    /// Consuming inventory authority prevents dependent target extensions surviving replacement.
+    /// Consuming inventory authority invalidates dependent complete-program publication.
     pub(in crate::backend) fn edit(
         self,
         body: VerifiedCallable<'p>,
@@ -217,7 +217,10 @@ impl<'p> VerifiedProgram<'p> {
             body.into_editor(),
         ))
     }
-    pub(super) fn require_same_snapshot(&self, other: &Self) -> Result<(), ProgramError> {
+    pub(in crate::backend) fn require_same_snapshot(
+        &self,
+        other: &Self,
+    ) -> Result<(), ProgramError> {
         self.parent.require_same_context(other.parent)?;
         if !Arc::ptr_eq(&self.snapshot, &other.snapshot) {
             return Err(PlanError::WrongContext.into());

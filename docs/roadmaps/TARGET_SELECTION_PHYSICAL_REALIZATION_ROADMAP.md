@@ -1,10 +1,10 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: planned, 2026-09-18; NP01 is next. No implementation task is complete.
+Status: in progress, 2026-09-18; NP01 complete; NP02 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
-Implementation baseline: **not yet set**; record the last commit before the first
-code change in NP01, even if planning is committed separately.
+Implementation baseline: `f150d028`, immediately before NP01 code changes.
+The working tree was clean; planning and model work were manually committed.
 Program baseline: `495debd3`; completed model endpoint: `f59d3fff`.
 
 Deliver a private whole-program scalar/control-flow/call native pilot through the
@@ -45,7 +45,7 @@ backend or claim full-language migration.
 
 ## Progress
 
-- [ ] NP01 — Streaming publication authority
+- [x] NP01 — Streaming publication authority
 - [ ] NP02 — x86 resources and component ABI
 - [ ] NP03 — Whole-program admission and fact projection
 - [ ] NP04 — Scalar memory and control-flow lowering
@@ -77,9 +77,9 @@ its acceptance boundary; do not silently defer part of its contract.
 
 **Purpose:** Make callable streaming possible without weakening complete-program proof.
 
-- [ ] Record the actual child implementation baseline before the first code change; inspect committed model history and import exact retained-artifact owners from the handoff.
-- [ ] Implement plan-bound frozen target declarations and source selection from actual verified lower callables. Separate catalog authority from finalized program authority; discovery receipts cannot certify executable bodies.
-- [ ] Consume worklists at selected-program closure, reconcile exact chosen lower witnesses, and preserve parent-bound authority, thunk/data closure and replacement invalidation. Update model API documentation to describe implemented behavior.
+- [x] Record the actual child implementation baseline before the first code change; inspect committed model history and import exact retained-artifact owners from the handoff.
+- [x] Implement plan-bound frozen target declarations and source selection from actual verified lower callables. Separate catalog authority from finalized program authority; discovery receipts cannot certify executable bodies.
+- [x] Consume worklists at selected-program closure, reconcile exact chosen lower witnesses, and preserve parent-bound authority, thunk/data closure and replacement invalidation. Update model API documentation to describe implemented behavior.
 
 **Tests:** Adapt existing inventory/selection tests without losing invariant coverage: wrong plan/profile/trace policy, wrong finalized parent, same-ID replacement, stale receipts, missing/late thunk, conflicting definitions, and premature publication. Demonstrate per-callable body release before lower-program closure.
 
@@ -356,15 +356,24 @@ runs. No stack placer result proves allocator benefits.
 
 ## Temporary artifact ledger
 
-Import exact inherited symbols before implementation. Update introduction commits
-from history when the user commits; a clean working tree is not a disposition.
+Inherited owner groups and introducing commits were imported in NP01. Update
+introduction commits from history when the user commits; a clean working tree is not a disposition.
 Expand grouped entries as artifacts actually arise. No speculative artifact is
 permission to introduce it unnecessarily.
 
 | File/symbol or artifact | Introduction | Removal/transfer owner | Required final disposition |
 | --- | --- | --- | --- |
-| [Inherited model allowances and APIs](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#retained-model-artifacts-and-removal-owners) | Committed model work; exact commits/symbols to import in NP01 | First actual native consumer; reconcile NP19 | Remove consumed item allowances; transfer only precisely listed unconsumed full-surface items to LA04 |
-| Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | Prefer direct migration; remove adapters once invariant coverage uses the final catalog/closure interfaces |
+| `backend/effects.rs`: `MemoryRegion`, `Effect`, `Effects` and their checked set/remapping methods | `68dec8ed` | First native effect/verification consumers; conservative barriers remain durable; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/plan/{facts,identities,check,view,services}.rs`, `plan/mod.rs`: `PlanFacts`, `CheckedPlan`, `PlanView`, typed IDs/declarations, checked services and explicit re-export groups | `ff12421d`, services `68dec8ed` | First native planning/lowering consumer; remaining full-surface facts retire their allowances with complete migration; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/graph/{arena,edit}.rs`, `graph/verify/{model,check,analysis}.rs`, `graph/mod.rs`: `OwnedArena`, `IdMap`, `GraphView`, `check_graph`, `GraphSession` and explicit re-export groups | `ff12421d`, verification `eecdb4cc`, edits `03e4ae42` | First native graph/analysis/edit consumers; shared algorithm stays durable; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/lir/{model,scalar,builder,schema,read,call,trace,observable}.rs`, `lir/graph/{storage,operands}.rs`: draft records, `DraftBuilder`, `DraftChecks` and graph adapter impls | `43df9ce6`, effects `68dec8ed`, graph adapters `eecdb4cc` | First native lowered construction/checking consumers; remaining vocabulary with complete migration; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/lir/verify/{check,domains,memory,trace,lift,failure,publication}.rs`: full checking helpers, structured failures, `VerifiedCallable` and `CompletionReceipt` | `e87fa392` | First native lowered verification/publication consumer; no replacement with builder trust; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/lir/program/{inventory,data,target}.rs`: `ProgramBuilder`, `VerifiedProgram`, data validation, `TargetDeclarations`, `TargetCatalog` | `ddc5a97d`; catalog migrated NP01 (uncommitted) | First native inventory/discovery consumer; preserve streaming receipts, plan freeze and exact parent reconciliation; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/selected/{storage,context,builder,graph,abi,resources,description}.rs`: `SelectedDraft`, `SelectionContext`, `SelectedBuilder`, `Payload`, ABI/resource records and descriptions | `63291d6d` | Real target schema/selection consumer; retain immutable opcode-derived descriptions; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/selected/verify/{check,descriptors,failure,publication,program}.rs`: shared checking helpers, `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt`, `SelectedProgramBuilder` | `73b1fafe`; closure migrated NP01 (uncommitted) | First native selected verification consumer; both shared and target checks remain mandatory; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/{lir,selected}/edit/{mod,editor,rebuild}.rs`, `lir/edit/split.rs`: `LoweredEditor`, `SelectedEditor`, `LoweredRemap`, `SelectedRemap`, remapping/rebuilding and split helpers | `03e4ae42` | Native edits/analysis consumers; retain consuming authority and full reverification; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/{inspection,lir/inspect,selected/inspect}.rs`, `lir/mod.rs`, `selected/mod.rs`: visitors/renderers, immutable enumeration and explicit facade re-export groups | `495df6b9` | First native inspection/checkpoint consumers; no fabricated observations; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
 | Fragment storage experiments/adapters, if introduced | NP16; record exact symbols/commit | NP16/NP19 | Retain only failure-safe typed-key storage with a demonstrated bounded-body purpose; no serializer/importer/cache |
@@ -383,3 +392,24 @@ Closing record (fill in NP19): implementation baseline; reviewed committed endpo
 uncommitted closing changes; cumulative ownership/contract review outcome; artifact
 dispositions and transferred owners; artifact-free ordinary/MSRV/extended native
 validation results; final handoff and archival links. The user performs commits.
+
+### Streaming publication implementation record
+
+NP01 baseline: `f150d028`; all earlier model/planning changes are committed.
+`TargetCatalog` replaces `TargetExtension` directly, with one plan lifetime and
+no alias or temporary adapter. `SelectedBuilder` requires a genuine verified
+lower body; source snapshots reconcile only at consuming selected-program closure.
+The resulting program borrows its finalized parent, and selected edits preserve
+that exact publication binding. Existing invariant/inspection/edit tests use the
+final APIs. New owner tests exercise callable release before closure and hostile
+receipt/parent/catalog substitutions. Native orchestration remains NP16.
+
+Inherited non-test allowances remain because the new APIs still have only private
+model/test consumers. No native consumer has landed; removal is due as each later
+consumer arrives, with remaining full-surface obligations transferred to LA04.
+Validation: 602 focused backend tests passed, including seven new streaming
+regressions. `make check` passed (3,300 compiler unit tests, workspace/integration/
+documentation/support checks and 650 golden cases). Serial `make msrv-check`
+passed with Rust 1.82.0. Documentation links and whitespace checks passed. No
+compatibility scaffold or independent discovery was introduced; committing stays
+with the user.

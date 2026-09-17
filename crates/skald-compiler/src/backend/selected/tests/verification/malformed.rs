@@ -3,7 +3,9 @@ use super::*;
 fn descriptor_failures_are_independent_of_append_and_target_checks() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (mut r, views, _) = resources();
     let bank = r.bank(BankKind::Integer);
     let u = r.unit().unwrap();
@@ -111,7 +113,9 @@ fn descriptor_failures_are_independent_of_append_and_target_checks() {
 fn shared_success_cannot_bypass_target_rejection_or_wrong_profile() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     for wrong_profile in [false, true] {
@@ -139,7 +143,9 @@ fn shared_success_cannot_bypass_target_rejection_or_wrong_profile() {
 fn unsecured_division_and_malformed_edges_cannot_publish() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     let (mut b, entry, args) = begin(&ctx, &bodies[0]);
@@ -194,7 +200,9 @@ fn unsecured_division_and_malformed_edges_cannot_publish() {
 fn omitted_trace_objects_and_incompatible_call_origins_are_rejected() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     let target = WitnessTarget {
@@ -236,7 +244,9 @@ fn omitted_trace_objects_and_incompatible_call_origins_are_rejected() {
 fn call_bindings_cannot_reuse_incoming_slot_area() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     let (mut b, entry, args) = begin(&ctx, &bodies[0]);
@@ -321,7 +331,9 @@ fn static_effects_are_typed_receipt_dependencies_and_inactive_statics_fail() {
                 .unwrap();
         }
         let program = builder.finish().unwrap();
-        let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+        let extension = lir::TargetDeclarations::new(program.parent())
+            .freeze()
+            .unwrap();
         let (r, views, _) = resources();
         let ctx = context(&extension, r, vec![repr(); 2]);
         let (mut b, entry, args) = begin(&ctx, &bodies[0]);

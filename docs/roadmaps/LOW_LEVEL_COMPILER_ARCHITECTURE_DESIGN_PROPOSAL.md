@@ -15,9 +15,9 @@ deterministic inspection are delivered. The active
 records executable-model evidence and retained-artifact removal obligations.
 Concrete native selection, ABI, transfers, placement and physical realization
 remain pending under the [accepted, frozen target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
-and its [planned implementation roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
-The owning model records the accepted streaming amendment; implementation is
-pending. Production migration, adoption and
+and its [active implementation roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
+The owning model records the implemented streaming publication amendment;
+concrete native orchestration remains pending. Production migration, adoption and
 allocation remain pending; preserved measurements grant no cost clearance.
 Repository assessment baseline:
 `f97a9e51`. Program implementation baseline: `495debd3`, before the migration
@@ -434,7 +434,7 @@ An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
 delivery decisions. Phase preparation has qualified existing-boundary witnesses
 and complete baseline inputs; noisy cost gates remain inconclusive. The immediate
-next step is the streaming-authority task in the
+next step is x86 resource and component-ABI implementation in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md), using the
 [frozen model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) and active
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs).

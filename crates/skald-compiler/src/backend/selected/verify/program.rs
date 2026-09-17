@@ -2,31 +2,35 @@
 use super::{SelectedReceipt, VerifiedSelectedCallable};
 use crate::backend::selected::SelectionContext;
 use crate::backend::{
-    lir::ProgramError,
-    plan::{ArtifactId, LirCallableId},
+    lir::{ProgramError, VerifiedProgram},
+    plan::{ArtifactId, BodyDisposition, LirCallableId},
 };
 use std::collections::{BTreeMap, BTreeSet};
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct SelectedProgramBuilder<'p> {
     context: &'p SelectionContext<'p>,
+    // Edits remain bound to the original finalized parent authority.
+    parent: Option<&'p VerifiedProgram<'p>>,
     expected: BTreeSet<LirCallableId>,
     completed: BTreeMap<LirCallableId, SelectedReceipt<'p>>,
 }
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct VerifiedSelectedProgram<'p> {
     context: &'p SelectionContext<'p>,
+    parent: &'p VerifiedProgram<'p>,
     receipts: BTreeMap<LirCallableId, SelectedReceipt<'p>>,
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> SelectedProgramBuilder<'p> {
     pub(in crate::backend) fn new(context: &'p SelectionContext<'p>) -> Self {
         let mut expected: BTreeSet<_> = context
-            .extension
-            .parent()
-            .receipts()
-            .map(|(key, _)| *key)
+            .catalog
+            .plan()
+            .callables()
+            .filter(|callable| callable.body == BodyDisposition::Required)
+            .map(|callable| callable.key)
             .collect();
-        expected.extend(context.extension.declarations().filter_map(|decl| {
+        expected.extend(context.catalog.declarations().filter_map(|decl| {
             if let ArtifactId::Callable(key) = decl.key {
                 Some(key)
             } else {
@@ -35,6 +39,7 @@ impl<'p> SelectedProgramBuilder<'p> {
         }));
         Self {
             context,
+            parent: None,
             expected,
             completed: BTreeMap::new(),
         }
@@ -57,13 +62,33 @@ impl<'p> SelectedProgramBuilder<'p> {
         self.completed.insert(receipt.key(), receipt.clone());
         Ok(())
     }
-    pub(in crate::backend) fn finish(self) -> Result<VerifiedSelectedProgram<'p>, ProgramError> {
+    pub(in crate::backend) fn finish(
+        self,
+        parent: &'p VerifiedProgram<'p>,
+    ) -> Result<VerifiedSelectedProgram<'p>, ProgramError> {
+        self.context.catalog.require_plan(parent.parent())?;
+        if let Some(original) = self.parent {
+            original.require_same_snapshot(parent)?;
+        }
         for key in self.expected {
             if !self.completed.contains_key(&key) {
                 return Err(ProgramError::MissingDefinition(ArtifactId::Callable(key)));
             }
         }
+        // Local selection proves derivation from a genuine callable. Only closure
+        // proves that it is the executable parent's chosen snapshot.
+        for receipt in self.completed.values() {
+            if let Some(input) = receipt.input() {
+                parent.require_input(input)?;
+            }
+            for reference in receipt.references() {
+                self.context
+                    .catalog
+                    .artifact(*reference, reference.category())?;
+            }
+        }
         Ok(VerifiedSelectedProgram {
+            parent,
             context: self.context,
             receipts: self.completed,
         })
@@ -84,6 +109,7 @@ impl<'p> VerifiedSelectedProgram<'p> {
         let receipt = body.receipt();
         self.require_input(&receipt)?;
         let mut builder = SelectedProgramBuilder::new(self.context);
+        builder.parent = Some(self.parent);
         builder.completed = self.receipts;
         builder.completed.remove(&receipt.key());
         Ok((builder, body.into_editor()))
@@ -103,6 +129,9 @@ impl<'p> VerifiedSelectedProgram<'p> {
             return Err(ProgramError::StaleReceipt);
         }
         Ok(())
+    }
+    pub(in crate::backend) fn parent(&self) -> &'p VerifiedProgram<'p> {
+        self.parent
     }
     pub(in crate::backend) fn context(&self) -> &'p SelectionContext<'p> {
         self.context

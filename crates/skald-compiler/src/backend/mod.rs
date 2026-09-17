@@ -138,7 +138,7 @@ pub enum RuntimeTracePolicy {
 /// ```
 ///
 /// ```compile_fail
-/// use skald_compiler::backend::lir::TargetExtension;
+/// use skald_compiler::backend::lir::TargetCatalog;
 /// ```
 #[derive(Clone, Copy, Debug)]
 pub struct BackendInput<'input> {

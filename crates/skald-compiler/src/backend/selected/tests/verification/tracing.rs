@@ -42,7 +42,9 @@ pub(super) fn enabled_trace_dependencies_and_inherited_helper_attribution_surviv
         })
         .unwrap();
     let program = inventory.finish().unwrap();
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     let (mut b, entry, args) = begin(&ctx, &bodies[2]);

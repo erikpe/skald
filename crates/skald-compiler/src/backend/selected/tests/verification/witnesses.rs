@@ -4,7 +4,9 @@ pub(super) fn destructive_and_three_address_targets_preserve_live_input_flow() {
     for shape in [Shape::Two, Shape::Three] {
         let p = CheckedPlan::check(supplied(shape)).unwrap();
         let (program, bodies) = inventory(&p);
-        let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+        let extension = lir::TargetDeclarations::new(program.parent())
+            .freeze()
+            .unwrap();
         let (r, views, units) = resources();
         let ctx = context(&extension, r, vec![repr(); 2]);
         let (mut b, entry, args) = begin(&ctx, &bodies[0]);
@@ -79,7 +81,7 @@ pub(super) fn destructive_and_three_address_targets_preserve_live_input_flow() {
         );
         let callee = checked(b, shape);
         inventory.complete(&callee, &callee.receipt()).unwrap();
-        let selected: VerifiedSelectedProgram<'_> = inventory.finish().unwrap();
+        let selected: VerifiedSelectedProgram<'_> = inventory.finish(&program).unwrap();
         assert!(std::ptr::eq(selected.context(), &ctx));
         assert_eq!(selected.receipts().len(), 2);
     }
@@ -88,7 +90,9 @@ pub(super) fn destructive_and_three_address_targets_preserve_live_input_flow() {
 pub(super) fn division_selection_exposes_guard_correction_blocks_and_join_arguments() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     let (mut b, entry, args) = begin(&ctx, &bodies[0]);
@@ -195,7 +199,9 @@ pub(super) fn division_selection_exposes_guard_correction_blocks_and_join_argume
 pub(super) fn loop_swaps_parallel_successors_and_critical_edges_remain_simultaneous() {
     let p = CheckedPlan::check(supplied(Shape::Three)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     let (mut b, entry, args) = begin(&ctx, &bodies[0]);
@@ -290,7 +296,9 @@ pub(super) fn hidden_destination_receiver_and_mixed_banks_keep_exact_components(
         f.callables[1].signature = f.callables[0].signature;
         let p = CheckedPlan::check(f).unwrap();
         let (program, bodies) = inventory(&p);
-        let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+        let extension = lir::TargetDeclarations::new(program.parent())
+            .freeze()
+            .unwrap();
         let (mut r, views, _) = resources();
         let float = r.bank(BankKind::Float);
         let u = r.unit().unwrap();
@@ -400,7 +408,9 @@ pub(super) fn release_uses_original_header_after_finalizer_and_rejects_omitted_t
     let free = services[&plan::RuntimeService::Free];
     let p = CheckedPlan::check(f).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, units) = resources();
     let ctx = context(&extension, r, vec![addr]);
     let (mut b, entry, args) = begin(&ctx, &bodies[0]);
@@ -505,7 +515,7 @@ pub(super) fn resource_extensions_and_thunk_receipts_are_context_and_snapshot_bo
         family: 1,
         specialization: 0,
     });
-    let mut extension = lir::TargetDeclarations::new(&program);
+    let mut extension = lir::TargetDeclarations::new(program.parent());
     extension
         .declare(plan::ArtifactDeclaration {
             key: ArtifactId::Callable(thunk),
@@ -546,7 +556,7 @@ pub(super) fn resource_extensions_and_thunk_receipts_are_context_and_snapshot_bo
         Err(lir::ProgramError::StaleReceipt)
     );
     inventory.complete(&product, &product.receipt()).unwrap();
-    assert!(inventory.finish().is_err());
+    assert!(inventory.finish(&program).is_err());
     let foreign = context(&extension, ResourceCatalog::default(), vec![]);
     assert_eq!(
         product.receipt().require_context(&foreign),

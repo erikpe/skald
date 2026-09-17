@@ -3,8 +3,8 @@
 Status: private checked declarations and the complete lowered draft vocabulary
 are implemented. Production emission still uses the [current backend](BACKEND.md).
 Independent graph/value-flow and full lowered callable verification are implemented.
-Complete lowered-program inventory publication and parent-bound target
-declarations, selected graphs and consuming edits are implemented. Verified
+Complete lowered-program inventory publication, plan-bound target catalogs,
+selected graphs with exact parent reconciliation and consuming edits are implemented. Verified
 products support immutable visitors and private deterministic text inspection.
 Placement and native consumption remain planned.
 
@@ -254,7 +254,7 @@ completion state cannot diverge from its witness.
 parent and exact snapshot before recording completion. Bodies may then be
 released: bookkeeping retains receipts and typed dependencies rather than every
 predecessor graph. Receipts certify completion; they do not reconstruct released
-input bodies or implement the native streaming schedule. `finish` consumes construction state and checks all required
+input bodies. `finish` consumes construction state and checks all required
 bodies and data definitions before producing `VerifiedProgram`. Consumers use
 `require_input` to reconcile a chosen input witness; receipts from replacements,
 other callables, other live contexts or other targets cannot substitute. Consuming
@@ -271,29 +271,43 @@ inactive complete-mode static declarations remain inspectable and cannot be
 initialized or referenced. Runtime/external declarations and authorized null
 dispatch slots require no fabricated body.
 
-`TargetDeclarations` borrows the exact finalized parent inventory. It can declare
-target thunks with existing logical signatures and constant data with existing
-layouts, then define that data and freeze a `TargetExtension`. It cannot replace
-parent declarations, introduce source/helper bodies or trace policy, or allocate
-new layout/signature facts. New facts require replanning. Catalogs and initializer
-iteration are canonical; the extension checks its parent publication witness,
-separate from equality of declarations or callable receipts.
+`TargetDeclarations` borrows the immutable checked plan, not a finalized lower
+inventory. It declares target thunks with existing logical signatures and constant
+data with existing layouts, defines that data and consumes itself to freeze a
+`TargetCatalog`. It cannot replace parent declarations, introduce source/helper
+bodies or trace policy, or allocate new layout/signature facts. New facts require
+replanning. Catalog and initializer iteration remain canonical.
 
-This freeze certifies declarations and data only. Selected drafts use frozen
-extensions; a frozen extension creates no selected seal, placement result or
-native emission authority. The
-supplied catalog remains the inventory authority: these checks do not rediscover
-semantic reachability, build real helpers or certify production MIR projection.
+The catalog certifies declarations/data and binds the exact plan, profile and
+trace policy. It grants no complete-program or native emission authority. Source
+selection requires an actual `VerifiedCallable`; a detached receipt cannot start
+construction. The selected callable retains that body's witness, so its storage
+may be released after registering downstream completion. Local checking confirms
+plan and owner; final program closure confirms the chosen executable snapshot.
+Discovery-pass receipts cannot certify fresh executable-pass bodies.
+
+`SelectedProgramBuilder` reserves required plan bodies and frozen target thunks.
+`finish` consumes its state and requires a finalized `VerifiedProgram` from the
+same plan. It checks all required selected completions and reconciles every source
+input witness with the lower program's chosen receipt. Same IDs or equal body
+contents do not establish snapshot equality. The resulting selected program
+borrows its exact finalized parent authority. Wrong-parent, stale/replaced-input,
+missing-definition, duplicate and foreign-context completions fail.
+
+These APIs permit callable-at-a-time construction before lower-program closure;
+production discovery/orchestration and physical closure remain planned. The
+supplied catalog remains declaration authority: checks do not rediscover semantic
+reachability, build real helpers or certify production MIR projection.
 
 ## Selected construction and target descriptions
 
 `backend::selected` supplies independent selected draft arenas over the shared
 block/value/object ID machinery. A selection context borrows a frozen target
-extension and owns its resource catalog and symbolic ABI slot shapes. Checked
+catalog and owns its resource catalog and symbolic ABI slot shapes. Checked
 handles additionally carry a fresh selection scope: equal declarations and
 numeric IDs in two contexts do not confer shared ownership. Source drafts require
-an exact receipt from the finalized lower program; declared target thunks have
-no fabricated lower input. Explicit stage maps preserve value/object origins and
+an actual verified lower callable with the same plan and owner; declared target
+thunks have no fabricated lower input. Explicit stage maps preserve value/object origins and
 record block provenance without copying lower definition sites.
 
 Targets implement `Payload::describe` over their concrete opcodes. The immutable
@@ -349,9 +363,9 @@ when the opcode has no explicit static artifact operand.
 Only successful shared and target checks publish an immutable
 `VerifiedSelectedCallable`. Its receipt binds the live selection context, exact
 selected snapshot, checked references and chosen lower input; generated thunks
-have no fictitious lower input. A selected program closes every finalized source
-body and declared target thunk using those receipts. Bodies may be released after
-completion; foreign-context, stale and duplicate completions fail.
+have no fictitious lower input. Complete selected publication closes required
+source bodies and target thunks and reconciles those exact input witnesses with
+the finalized lower program. Bodies may be released after local completion.
 
 Targets must independently check opcode completeness, mandatory effects and
 references, real resource footprints and target-specific control-flow rules.
@@ -367,8 +381,11 @@ work.
 Both stages have private editor owners. Backend orchestration opens an edit by
 consuming the complete program and its exact chosen callable through `edit`.
 The result is an unpublished editor and a program builder missing that callable's
-completion. Other chosen receipts and data definitions remain intact. A callable
-can enter an editor directly only inside its owning phase, before program
+completion. Other chosen receipts and data definitions remain intact. Selected
+program edits retain the exact finalized lower parent; even another program
+publication with identical chosen callable receipts cannot replace that bound
+authority. A callable can enter an editor directly only inside its owning phase,
+before program
 admission. No public constructor or mutable published-draft accessor exists.
 
 Editors replace instruction or terminal uses, redirect individual edge occurrences

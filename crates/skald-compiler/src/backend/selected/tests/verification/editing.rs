@@ -99,7 +99,7 @@ impl Node {
 }
 fn target(ctx: &SelectionContext<'_>, shape: Shape) -> WitnessTarget {
     WitnessTarget {
-        profile: ctx.extension.parent().parent().profile(),
+        profile: ctx.catalog.plan().profile(),
         shape,
         reject: false,
     }
@@ -109,7 +109,9 @@ fn selected_split_rebuild_and_program_replacement_use_fresh_receipts() {
     for shape in [Shape::Two, Shape::Three] {
         let p = CheckedPlan::check(supplied(shape)).unwrap();
         let (program, bodies) = inventory(&p);
-        let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+        let extension = lir::TargetDeclarations::new(program.parent())
+            .freeze()
+            .unwrap();
         let (r, views, _) = resources();
         let ctx = context(&extension, r, vec![repr(); 2]);
         let (mut b, entry, args) = begin(&ctx, &bodies[0]);
@@ -142,7 +144,7 @@ fn selected_split_rebuild_and_program_replacement_use_fresh_receipts() {
         ret(&mut b, e, vec![vf(a[0], repr())], result_binding, &views);
         let callee = checked(b, shape);
         complete.complete(&callee, &callee.receipt()).unwrap();
-        let (mut complete, mut edit) = complete.finish().unwrap().edit(body).unwrap();
+        let (mut complete, mut edit) = complete.finish(&program).unwrap().edit(body).unwrap();
         let entry = edit.block(entry.id()).unwrap();
         let replacement = edit.value(args[1].id()).unwrap();
         edit.replace_operand(entry, 0, 0, replacement).unwrap();
@@ -180,7 +182,7 @@ fn selected_split_rebuild_and_program_replacement_use_fresh_receipts() {
             Err(lir::ProgramError::StaleReceipt)
         );
         complete.complete(&edited, &edited.receipt()).unwrap();
-        let complete = complete.finish().unwrap();
+        let complete = complete.finish(&program).unwrap();
         assert_eq!(complete.receipts().len(), 2);
         complete.require_input(&edited.receipt()).unwrap();
         assert_eq!(
@@ -194,7 +196,9 @@ fn selected_split_rebuild_and_program_replacement_use_fresh_receipts() {
 fn selected_swaps_and_malformed_target_remaps_are_reverified() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     for bad in 0..4 {
@@ -288,7 +292,9 @@ fn selected_swaps_and_malformed_target_remaps_are_reverified() {
 fn correction_graph_rebuilds_and_divisor_substitution_rechecks_target_guard() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
-    let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+    let extension = lir::TargetDeclarations::new(program.parent())
+        .freeze()
+        .unwrap();
     let (r, views, _) = resources();
     let ctx = context(&extension, r, vec![repr(); 2]);
     for broken in 0..3 {

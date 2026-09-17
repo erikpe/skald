@@ -68,10 +68,9 @@ impl<'p> SelectedReceipt<'p> {
         context: &SelectionContext<'p>,
     ) -> Result<(), PlanError> {
         self.context
-            .extension
-            .parent()
-            .parent()
-            .require_same_context(context.extension.parent().parent())?;
+            .catalog
+            .plan()
+            .require_same_context(context.catalog.plan())?;
         if !std::ptr::eq(self.context, context) {
             return Err(PlanError::WrongContext);
         }

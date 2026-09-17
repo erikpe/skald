@@ -1,15 +1,15 @@
-//! Frozen extension/resource authority and a fresh arena namespace per selection.
+//! Frozen plan-bound catalog/resource authority and a fresh arena namespace per selection.
 use super::{
     AbiAreas, AbiBinding, AbiBindings, AbiLocation, Representation, RepresentationKind,
     ResourceCatalog,
 };
 use crate::backend::{
-    lir::{ProgramError, TargetExtension},
+    lir::{ProgramError, TargetCatalog},
     plan::{CallableBinding, LirCallableId, PlanError, SignatureId},
 };
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct SelectionContext<'p> {
-    pub(super) extension: &'p TargetExtension<'p, 'p>,
+    pub(super) catalog: &'p TargetCatalog<'p>,
     pub resources: ResourceCatalog,
     pub abi_areas: AbiAreas,
     scope: Box<u8>,
@@ -17,11 +17,11 @@ pub(in crate::backend) struct SelectionContext<'p> {
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> SelectionContext<'p> {
     pub(in crate::backend) fn new(
-        extension: &'p TargetExtension<'p, 'p>,
+        catalog: &'p TargetCatalog<'p>,
         resources: ResourceCatalog,
     ) -> Self {
         Self {
-            extension,
+            catalog,
             resources,
             abi_areas: AbiAreas::default(),
             scope: Box::new(0),
@@ -45,7 +45,7 @@ impl<'p> SelectionContext<'p> {
         inputs: Vec<AbiBinding>,
         results: Vec<AbiBinding>,
     ) -> Result<AbiBindings, PlanError> {
-        let view = self.extension.parent().parent();
+        let view = self.catalog.plan();
         let signature = view.signature(view.signature_id(signature.index())?)?;
         let pointer_bits = u16::try_from(view.profile().data_layout.pointer_bytes * 8)
             .map_err(|_| PlanError::InvalidProfile)?;
@@ -80,10 +80,10 @@ impl<'p> SelectionContext<'p> {
         &'p self,
         key: LirCallableId,
     ) -> Result<CallableBinding<'p>, ProgramError> {
-        Ok(self.extension.selection_binding(key)?.scoped(&self.scope))
+        Ok(self.catalog.selection_binding(key)?.scoped(&self.scope))
     }
     pub(super) fn representation(&self, ty: Representation) -> Result<(), PlanError> {
-        let view = self.extension.parent().parent();
+        let view = self.catalog.plan();
         match ty.kind {
             RepresentationKind::CodeAddress(signature) => {
                 view.signature(view.signature_id(signature.index())?)?;

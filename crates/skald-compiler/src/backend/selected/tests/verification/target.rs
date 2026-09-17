@@ -352,7 +352,7 @@ impl TargetVerifier<Node> for WitnessTarget {
                     ..
                 } = node.op
                 {
-                    let view = draft.context.extension.parent().parent();
+                    let view = draft.context.catalog.plan();
                     let signature_fact = view
                         .signature(
                             view.signature_id(signature.index())
@@ -362,7 +362,7 @@ impl TargetVerifier<Node> for WitnessTarget {
                     let matches = if let ArtifactId::Callable(key) = artifact {
                         draft
                             .context
-                            .extension
+                            .catalog
                             .selection_binding(key)
                             .map_err(|_| "unknown callable")?
                             .signature()
