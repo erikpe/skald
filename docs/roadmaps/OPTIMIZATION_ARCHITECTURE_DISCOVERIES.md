@@ -472,23 +472,16 @@ freezes the shared lowering and target ownership contracts. Its
 coverage, regressions and durable baseline inputs. The
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
 informs the accepted, frozen and promoted
-[LIR model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
-Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) is in progress;
-LI01–LI03 delivered checked declarations/identities and the complete lowered
-execution vocabulary, including calls, effects and tracing. LI04 added independent
-graph/value-flow verification. Selected draft/resource/ABI contracts are delivered;
-LI08 added shared/target verification, immutable selected publication and selected
-inventory closure. Consuming edits, explicit remaps and snapshot-bound analyses
-are delivered, together with immutable visitors and deterministic phase dumps.
-Cumulative review and child-roadmap closure are next.
-Full lowered callable verification/publication and genuine snapshot receipts are
-implemented. Complete-program closure and parent-bound target declarations are
-also implemented. Native consumption remains pending;
-this grants no native performance clearance.
-Concrete native counterparts remain LA03 decisions. Later child designs and
-implementation remain pending; model delivery does not deliver a native LIR
-pipeline, foundation adoption or register allocation.
-
+[LIR model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
+The [model implementation roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md) is complete.
+Checked lowered/selected models, independent verification and immutable
+publication, inventories/receipts, consuming edits, snapshot-bound analyses and
+deterministic inspection are delivered. The active
+[migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
+records executable-model evidence and retained-artifact removal obligations.
+Concrete native selection, ABI, transfers, placement and physical realization
+remain pending under their own design. Production migration, adoption and
+allocation remain pending; preserved measurements grant no cost clearance.
 ### Optimization possibilities unlocked
 
 - register allocation and copy coalescing;

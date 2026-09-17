@@ -287,3 +287,71 @@ fn call_bindings_cannot_reuse_incoming_slot_area() {
     };
     assert!(reasons(verify_selected(draft, &target)).contains(&SelectedReason::Abi));
 }
+
+#[test]
+fn static_effects_are_typed_receipt_dependencies_and_inactive_statics_fail() {
+    use crate::backend::effects::MemoryRegion;
+    use crate::identity::{ClassId, StaticFieldId};
+    let field = StaticFieldId::new(ClassId::new(0), 0);
+    let artifact = ArtifactId::Data(plan::DataKey::Static(field));
+    for active in [true, false] {
+        let mut f = supplied(Shape::Two);
+        let layout = f.add_layout(f.layouts[0]).unwrap();
+        f.artifacts.push(plan::ArtifactDeclaration {
+            key: artifact,
+            signature: None,
+            layout: Some(layout),
+        });
+        if active {
+            f.active_statics.insert(field);
+        }
+        let p = CheckedPlan::check(f).unwrap();
+        let bodies = [lower(&p, source(0)), lower(&p, source(1))];
+        let mut builder = lir::ProgramBuilder::new(p.view());
+        for body in &bodies {
+            builder.begin(body.receipt().owner().key()).unwrap();
+            builder.complete(body, &body.receipt()).unwrap();
+        }
+        if active {
+            builder
+                .define_data(lir::DataDefinition {
+                    key: plan::DataKey::Static(field),
+                    initializers: vec![lir::DataInitializer::Zero(8)],
+                })
+                .unwrap();
+        }
+        let program = builder.finish().unwrap();
+        let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
+        let (r, views, _) = resources();
+        let ctx = context(&extension, r, vec![repr(); 2]);
+        let (mut b, entry, args) = begin(&ctx, &bodies[0]);
+        let out = b.value(repr(), None).unwrap();
+        let mut node = Node::new(
+            Op::Add {
+                a: vf(args[0], repr()),
+                b: vf(args[1], repr()),
+                out: vf(out, repr()),
+                destructive: true,
+            },
+            &views,
+        );
+        // Widened effects are valid even without an opcode's explicit artifact operand.
+        node.effects = Effects::new([
+            Effect::Read(MemoryRegion::Static(field)),
+            Effect::Write(MemoryRegion::Static(field)),
+        ]);
+        b.append(entry, node).unwrap();
+        ret(&mut b, entry, vec![], vec![], &views);
+        let target = WitnessTarget {
+            profile: p.view().profile(),
+            shape: Shape::Two,
+            reject: false,
+        };
+        let result = verify_selected(b.finish(), &target);
+        if active {
+            assert!(result.unwrap().receipt().references().contains(&artifact));
+        } else {
+            assert!(reasons(result).contains(&SelectedReason::Reference));
+        }
+    }
+}

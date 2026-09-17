@@ -25,6 +25,8 @@ For current information, use:
 
 Archived plans:
 
+- [Low-level IR model, construction and verification frozen design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
+- [Low-level IR model, construction and verification](LOW_LEVEL_IR_MODEL_ROADMAP.md)
 - [Low-level phase architecture and backend ownership frozen design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 - [Low-level phase architecture and backend ownership](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
 - [Cleanup architecture retrospective](CLEANUP_RETROSPECTIVE_ROADMAP.md)

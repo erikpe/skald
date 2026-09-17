@@ -66,7 +66,7 @@ Lowered/selected block, value and object IDs are six distinct types. Allocation
 and lookup check indices, context and callable ownership; iteration preserves
 index order. IDs contain no stack home or physical location. Arena handles check
 context/owner, not immutable snapshot freshness. Callable publication establishes
-that separate authority; future consuming edits must reverify it.
+that separate authority; consuming edits must reverify it.
 
 All these interfaces remain backend-private. Context checking issues no callable
 verification seal, completion receipt, complete-program authority or placement
@@ -257,8 +257,8 @@ predecessor graph. Receipts certify completion; they do not reconstruct released
 input bodies or implement the native streaming schedule. `finish` consumes construction state and checks all required
 bodies and data definitions before producing `VerifiedProgram`. Consumers use
 `require_input` to reconcile a chosen input witness; receipts from replacements,
-other callables, other live contexts or other targets cannot substitute. Future
-consuming edits must invalidate and republish program authority.
+other callables, other live contexts or other targets cannot substitute. Consuming
+edits invalidate and republish program authority.
 
 Data definitions explicitly contain byte, zero-fill and typed address
 initializers. Their checked total width must exactly match the declared extent.
@@ -304,6 +304,12 @@ editable use/def lists are absent. Shared structural analysis consumes this view
 without matching target enums. Terminal payloads expose their flow kind and successor count,
 and graph storage contains every ordered edge and argument list.
 
+Target payload immutability and descriptor totality are private implementation
+contracts: shared borrows cannot mutate opcode/descriptor facts, mutable aliases
+cannot survive publication, and malformed drafts must yield verification errors
+rather than descriptor indexing panics. Concrete target review and independent
+recipe tests must enforce these properties; the generic trait bound cannot.
+
 Operand constraints distinguish legal resource views with a memory alternative,
 a fixed view and a symbolic ABI slot. Representations have nonzero widths and
 separate bits, float, data address and signature-qualified code address kinds.
@@ -336,6 +342,9 @@ logical signature and attribution; a secured indirect target is a separate early
 use. Entry/call/return bindings preserve exact component order. Trace effects
 require enabled policy and an explicit TLS dependency. Symbolic objects are
 checked for layout, role and ABI-area extent.
+
+Selected static memory effects contribute typed dependencies to receipts even
+when the opcode has no explicit static artifact operand.
 
 Only successful shared and target checks publish an immutable
 `VerifiedSelectedCallable`. Its receipt binds the live selection context, exact
@@ -444,5 +453,5 @@ frontend/MIR execution and pass inputs, source lookup and physical x86 owners
 cannot enter the declaration/arena/lowered/selected core. Private APIs without native
 consumers temporarily have item-scoped non-test lint allowances. Their removal
 obligations
-are tracked in the [model roadmap](../roadmaps/LOW_LEVEL_IR_MODEL_ROADMAP.md);
+are tracked in the active [program handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#retained-model-artifacts-and-removal-owners);
 the ordinary test build retains dead-code/import checking.

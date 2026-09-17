@@ -1073,19 +1073,16 @@ qualified; eleven noisy compile timings remain inconclusive, without adoption
 cost clearance. The maintained
 [migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
 maps current owners, pending delivery, witnesses and joint design questions.
-The [LIR model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
-and promoted from that handoff. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-is in progress; LI01–LI03 delivered checked declarations/identities, common
-readiness and the complete lowered execution vocabulary; LI04 added independent
-graph/value-flow verification. LI05 delivered full lowered callable verification,
-private immutable publication and genuine snapshot receipts. LI06 added program
-inventory closure and parent-bound target declarations. LI07 delivered selected
-draft/resource/ABI contracts; LI08 added independent shared/target checks, immutable
-selected publication and inventory closure. LI09 delivered consuming edits, explicit remaps and snapshot-bound analyses;
-LI10 delivered immutable visitors and deterministic phase dumps. Cumulative
-review and child-roadmap closure are next; concrete native agreements/implementation remain pending.
-A22 remains in progress: verified LIR, native migration, adoption and allocation
-are pending.
+The [LIR model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
+and promoted from that handoff. The [model implementation roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md) is complete.
+Checked lowered/selected models, independent verification and immutable
+publication, inventories/receipts, consuming edits, snapshot-bound analyses and
+deterministic inspection are delivered. The active
+[migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
+records executable-model evidence and retained-artifact removal obligations.
+Concrete native selection, ABI, transfers, placement and physical realization
+remain pending under their own design. Production migration, adoption and
+allocation remain pending; preserved measurements grant no cost clearance.
 Scalar promotion and semantic SSA remain separate follow-ups.
 
 **Planning/validation:** use the existing

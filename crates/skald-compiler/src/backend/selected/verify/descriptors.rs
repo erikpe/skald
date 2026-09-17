@@ -197,10 +197,20 @@ pub(super) fn check<P: Payload>(
                 errors.push(Reason::Effect)
             }
             Effect::Read(MemoryRegion::Static(field))
-            | Effect::Write(MemoryRegion::Static(field))
-                if !ctx.extension.parent().parent().is_active_static(*field) =>
-            {
-                errors.push(Reason::Reference)
+            | Effect::Write(MemoryRegion::Static(field)) => {
+                let artifact = crate::backend::plan::ArtifactId::Data(
+                    crate::backend::plan::DataKey::Static(*field),
+                );
+                if !ctx.extension.parent().parent().is_active_static(*field)
+                    || ctx
+                        .extension
+                        .artifact(artifact, artifact.category())
+                        .is_err()
+                {
+                    errors.push(Reason::Reference);
+                } else {
+                    references.insert(artifact);
+                }
             }
             _ => {}
         }

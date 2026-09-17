@@ -3,13 +3,16 @@
 Status: accepted, frozen and promoted LA02 design, 2026-09-17. Accepted by the
 user after review of the draft committed at `10b5de75`; source assessment is
 against `027af94f`, the phase-preparation closing change. The executable model
-is not implemented yet. The [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-starts with LI01. Changes to these contracts require an explicit design amendment
+is implemented and the child workstream is archived.
+The [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) records cumulative
+review and validation; the [active program handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
+owns native counterpart and retained-artifact obligations. Changes to these
+contracts require an explicit design amendment
 before dependent implementation.
 
-Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
-Inherited authority: [frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md).
-Preparation input: [migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs).
+Parent: [Low-Level Compiler Architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+Inherited authority: [frozen phase design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md).
+Preparation input: [migration handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs).
 Program implementation baseline remains `495debd3`; a child implementation
 baseline must be recorded immediately before its first implementation task.
 
@@ -55,7 +58,7 @@ The frozen contract selects layout-specialized shared lowering, separate verifie
 phase products, single-definition values, block parameters, explicit memory and
 complete lifecycle expansion before lowered publication. This proposal refines
 those decisions; it does not replace them. The continuing
-[coverage inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) owns exhaustive
+[coverage inventory](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) owns exhaustive
 MIR/helper migration accounting rather than a second inventory in this document.
 
 ## Accepted decisions

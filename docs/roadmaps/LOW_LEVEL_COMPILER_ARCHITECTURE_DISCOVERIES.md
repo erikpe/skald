@@ -1,7 +1,7 @@
 # Low-Level Compiler Architecture Discoveries
 
 Status: one actionable follow-up, 2026-09-17. Independent findings encountered
-while implementing the [model roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md) belong here;
+while implementing the [model roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md) belong here;
 they do not expand its phase-model scope.
 
 ## Golden artifact ownership across concurrent invocations

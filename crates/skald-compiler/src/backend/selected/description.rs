@@ -136,6 +136,13 @@ pub(in crate::backend) struct Description<'a> {
     pub call_signature: Option<SignatureId>,
     pub call_attribution: Option<&'a crate::backend::lir::CallAttribution>,
 }
+/// A target-owned immutable opcode record. Shared borrows must not change any
+/// execution or descriptor fact: no interior mutation, mutable external aliases
+/// or descriptor callbacks into MIR/source state. Cloning an editable payload
+/// must not share mutable opcode storage with its published predecessor.
+/// `describe` must be total even for malformed drafts; verifiers, not indexing
+/// panics, reject invalid IDs and constraints. Concrete target review enforces
+/// this contract; the trait is private and is not an untrusted extension API.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) trait Payload {
     fn describe(&self) -> Description<'_>;

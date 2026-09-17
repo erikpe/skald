@@ -1,8 +1,8 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01–LI10 are complete, LI11 is next.
+Status: complete and archived, 2026-09-17; LI01–LI11 are complete.
 Implements LA02 of the
-[low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+[low-level compiler architecture program](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
 and promoted as of 2026-09-17.
 
@@ -66,7 +66,7 @@ the illustrative directory sketch.
 - [x] LI08 — Selected verification and portability witnesses
 - [x] LI09 — Consuming edits, remaps and snapshot-bound analyses
 - [x] LI10 — Immutable inspection and deterministic phase dumps
-- [ ] LI11 — Cumulative review, cleanup, downstream handoff and closure
+- [x] LI11 — Cumulative review, cleanup, downstream handoff and closure
 
 ## Owners and durable outputs
 
@@ -79,7 +79,7 @@ the illustrative directory sketch.
 | Selected operands and resources | [Selected interface](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#selected-graph-and-target-facing-structural-interface) | Borrowed structural descriptions, verifier and test-only target adapters |
 | Phase dependencies | [Boundary tests](../../crates/skald-compiler/tests/phase_boundaries.rs) | Narrow maintained guards for new graph/model/verifier scopes |
 | Inspection and model tests | New private phase owners; [testing guide](../development/TESTING.md) | Read-only views, deterministic dumps and colocated malformed fixtures |
-| Migration accounting | [Program coverage/handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) | Implemented model evidence distinguished from pending native delivery |
+| Migration accounting | [Program coverage/handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) | Implemented model evidence distinguished from pending native delivery |
 
 Keep `mod.rs` files as concise facades with selective visibility. Shared graph,
 model and verification owners cannot import frontend state, MIR executable enums,
@@ -174,7 +174,7 @@ against `f1053782`. Added 13 declaration tests, three arena tests, one maintaine
 boundary guard test and two public private-path compile-fail examples. Focused owner and
 boundary suites passed. Final `make check` passed, including 3,178 compiler unit
 tests and 650 golden observations; `make msrv-check` passed on Rust 1.82.0.
-The [common readiness record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness-li01)
+The [common readiness record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
 lists every native counterpart still pending. No design amendment or independent
 discovery was needed; temporary non-test allowances are accounted for below.
 
@@ -295,7 +295,7 @@ actual selected payloads remain LI07/LI08. `make check` passed serially (3,220
 compiler unit tests, 12 boundary tests, runtime tests and 650 golden observations);
 `make msrv-check` passed on Rust 1.82.0. An earlier overlapping gate exposed a
 shared golden-artifact collision; the independent follow-up is recorded in
-[discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md). No design amendment,
+[discoveries](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md). No design amendment,
 compatibility bridge, provisional seal or production phase switch was introduced.
 Scoped pre-consumer allowances and durable fixtures are ledgered below.
 
@@ -381,7 +381,7 @@ with genuine receipts. Test catalogs exercise the contract; production discovery
 and helper generation remain explicitly pending.
 
 **Completion evidence:** implemented against the user's LI05 commit `e87fa392`;
-this task remains uncommitted for the user. Added 14 owner regressions and two
+committed by the user as `ddc5a97d`. Added 14 owner regressions and two
 public private-path compile-fail examples. The canonical worklist stores a real
 receipt inside each verified entry, rejects building reentry/conflicting
 completion, and retains exact chosen snapshots after body release. Consuming
@@ -438,14 +438,14 @@ indirect-target slots and atomic/bounded recipes. Catalogs represent banks, view
 reservations and partial preservation; ABI slots remain symbolic. Synthetic
 payloads exercise destructive ties, three-address shapes, fixed call results,
 early clobbers and explicit flag edges. Readiness is recorded in the
-[handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#selected-contract-readiness-li07).
+[handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness).
 No selected seal, target hook, native opcode/switch or placeholder placement is
 introduced; independent descriptor verification/publication remains LI08.
 
 Validation: `make check` passed serially, including 3,259 compiler unit tests,
 12 phase-boundary tests, workspace integration/Rustdoc suites and 650 golden
-cases. `make msrv-check` passed all targets on Rust 1.82.0. Changes remain
-uncommitted for the user. No discovery or frozen-design amendment was needed.
+cases. `make msrv-check` passed all targets on Rust 1.82.0. Changes were
+committed by the user as `63291d6d`. No discovery or frozen-design amendment was needed.
 
 ### LI08 — Selected verification and portability witnesses
 
@@ -498,7 +498,7 @@ ledger. No separate discovery or frozen-design amendment was required.
 Validation: final fixed-source `make check` passed, including 3,271 compiler unit
 tests (17 selected owner tests), boundary/privacy suites, runtime tests and all
 650 native golden observations. `make msrv-check` passed serially on Rust 1.82.0.
-Changes remain uncommitted for the user's manual commit; LI09 is next.
+Committed by the user as `73b1fafe`.
 
 ### LI09 — Consuming edits, remaps and snapshot-bound analyses
 
@@ -544,7 +544,7 @@ runtime contracts and all 650 native golden leaves. `make msrv-check` then passe
 serially on Rust 1.82.0. No production migration, cache, pass manager or placement
 stub was introduced. Scoped allowances for delivered unwired APIs are recorded in
 the artifact ledger; no independent substantial discovery was found. Changes
-remain uncommitted for the user's manual commit; LI10 is next.
+were committed by the user as `03e4ae42`.
 
 ### LI10 — Immutable inspection and deterministic phase dumps
 
@@ -598,42 +598,41 @@ the readiness handoff distinguish implemented private APIs from pending native
 execution, observation events, public adapters and metrics. No importer, CLI
 switch, placement stub, production migration or new independent discovery was
 introduced. Scoped native-consumer allowances and durable fixtures are ledgered.
-Changes remain uncommitted for the user's manual commit; LI11's cumulative review
-and closure are next.
+Committed by the user as `495df6b9`.
 
 ### LI11 — Cumulative review, cleanup, downstream handoff and closure
 
 **Purpose:** assess the complete model as one change and prepare its closing
 commit for the user.
 
-- [ ] Review implementation-baseline-to-`HEAD` diff, stat and name-status plus
+- [x] Review implementation-baseline-to-`HEAD` diff, stat and name-status plus
   staged, unstaged and untracked work. Inspect earlier task commits and relevant
   program changes from `495debd3`; a clean tree is not cleanup evidence.
-- [ ] Reconcile every artifact-ledger entry against source/history, using symbol
+- [x] Reconcile every artifact-ledger entry against source/history, using symbol
   searches and `git log -S` where useful. Search beyond the ledger for duplicate
   graph/check logic, aliases, escape hatches, unused abstractions, broad exports,
   allowances and stale rollout/task names.
-- [ ] Remove expired scaffolding and make small final coherence fixes. Resolve
+- [x] Remove expired scaffolding and make small final coherence fixes. Resolve
   substantial missing model contracts before closure; record unrelated
   discoveries with evidence, owner, priority and later implementation boundary.
-- [ ] Confirm meaningful consumers and negative fixtures cover every frozen
+- [x] Confirm meaningful consumers and negative fixtures cover every frozen
   operation, verification layer and worked case. Audit snapshot identity,
   immutable payloads and program receipts across task boundaries.
-- [ ] Update the program handoff with actual APIs, test evidence, readiness
+- [x] Update the program handoff with actual APIs, test evidence, readiness
   results and explicit LA03 target/streaming/placement obligations. Transfer any
   justified future-removal artifacts with exact symbols and owners; keep the
   program coverage record active.
-- [ ] Reconcile living docs, parent design, A22/audit and indexes. Keep native
+- [x] Reconcile living docs, parent design, A22/audit and indexes. Keep native
   migration/adoption/allocation pending. Do not change baseline measurements
   or grant cost clearance.
-- [ ] After fixups, run `make check` and `make msrv-check` from an artifact-free
+- [x] After fixups, run `make check` and `make msrv-check` from an artifact-free
   snapshot/clean checkout containing the final uncommitted work. Record source
   identity, commands/results, baseline/endpoint and residual changes awaiting
   the user's commit.
-- [ ] Mark completion only after all gates/exit criteria pass; archive this
+- [x] Mark completion only after all gates/exit criteria pass; archive this
   roadmap and the frozen child design, update both indexes and repair inbound
   relative links. Keep the parent program and migration coverage active.
-- [ ] Check the final cumulative/closing diffs, documentation and whitespace.
+- [x] Check the final cumulative/closing diffs, documentation and whitespace.
   Leave committing to the user.
 
 **Tests:** final artifact-free ordinary and supported-toolchain gates after all
@@ -643,6 +642,43 @@ fixups, plus documentation/link/whitespace checks after archival.
 cumulatively; expired scaffolds are removed, justified retained artifacts have
 explicit continuing purposes, and LA03 has an accurate executable-model handoff.
 No unsupported claim of a native LIR pipeline or allocator is made.
+
+**Completion record (2026-09-17):** reviewed `f1053782..495df6b9` stat,
+name-status and implementation, earlier task commits and preparation changes
+from program baseline `495debd3`, plus the closing uncommitted changes. The
+committed model spans 113 files (19,763 insertions and 154 deletions). Shared
+structure, stage checks, context/snapshot authority, inventories, edits and
+inspection were assessed as one change against all six frozen worked cases.
+No expired compatibility adapter, provisional seal, accepting production target
+hook, placeholder placement or native switch was found. Synthetic fixtures are
+durable test-only consumers. Scoped pre-consumer allowances remain justified;
+the active program handoff names their files/APIs and native removal owners.
+
+Closing review fixed selected static-effect dependencies missing from receipts,
+including widened effects without explicit opcode artifact operands, and added
+an active/inactive-static regression. The private payload contract now explicitly
+requires immutable opcode-derived facts and total malformed-draft descriptions;
+concrete native implementations must enforce it. No frozen-design amendment or
+new independent substantial discovery was required. The existing golden artifact
+collision discovery remains active. Living documentation and handoff now describe
+final behavior, with native construction, ABI/recipe/transfer/placement/physical
+checks still pending. Preserved measurement records and cost classifications
+are unchanged.
+
+Validation used an initially artifact-free copy of tracked source and final
+uncommitted fixups rooted at `495df6b9dfe118e1448f4000164f610f2ea7c1c4`.
+The pre-archival source-manifest SHA-256 was
+`db1752e7ace47a74a44e9f45ab2145981936a6e1f9f4be6615272e76e4ad7f86`;
+its Rust/manifest/lockfile SHA-256 was
+`171b102023613db90b21022a09d2932cb3abcca87590e6973c9d2326e6115ee8`.
+The latter source is unchanged by final documentation archival. `make check`
+passed: formatting, all-target workspace build, Clippy, docs/dependency guards,
+3,293 compiler unit tests, workspace integration/doctests, runtime contracts and
+650 golden observations. `make msrv-check` then passed serially on Rust 1.82.0
+against the same fixed-source snapshot. Documentation/link and whitespace checks
+passed after archival. Only the receipt fix, regression, payload contract and
+closing documentation/link/index changes await the user's manual commit; no
+files were staged or committed.
 
 ## Ordering and dependencies
 
@@ -661,6 +697,12 @@ end-to-end native pilots. A target mismatch requires an owning-design amendment,
 not a shared-core x86 dependency or an emitter-only workaround.
 
 ## Temporary artifacts and discoveries
+
+Closing disposition: every entry below was checked against committed source and
+history. Durable regression fixtures stay test-only. Outstanding native-consumer
+allowances are transferred to the active
+[program handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#retained-model-artifacts-and-removal-owners),
+which retains their exact file/API owners and removal criteria.
 
 Maintain this ledger during implementation, including committed artifacts.
 LI01 adds no production switch, provisional verifier seal or compatibility bridge.
@@ -690,10 +732,8 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 | Selected verification synthetic target and private malformed-descriptor witnesses | LI08; `73b1fafe` | Retain; LI11 reviews | Durable test-only portability and authority regressions; no target registration or accepting production hook |
 | `backend/{lir,selected}/edit/`, graph arena rebuilding/partial ID maps, effect-object remapping, publication analysis/editor entry and inventory replacement APIs: scoped non-test lint allowances and facade groups | LI09; `03e4ae42`, based on `73b1fafe` | LA03 first native edit/analysis consumer; LI10 exercises read-only consumers; LI11 transfers remaining allowances | Durable consuming transformations and genuine reverification; remove allowances per consumed item, retaining ordinary builds and unsuppressed test linting |
 | Phase-owned edit/guard/trace/remap/receipt/privacy and non-clone/consuming-signature regressions | LI09; `03e4ae42` | Retain; LI11 reviews | Durable authority and metadata-coherence contracts; fault injection remains test-only |
-
-| `backend/{inspection,lir/inspect,selected/inspect}.rs`, explicit phase facade groups and immutable declaration/resource enumeration: scoped non-test allowances | LI10; uncommitted, based on `03e4ae42` | LA03 first native inspection consumer; LI11 transfers remaining allowances | Genuine read-only visitors, required target formatting and deterministic text, without production adapters/events; remove allowances per consumed API |
-| Existing worked fixtures as inspection consumers, bit-pattern/draft/inventory/writer/process regressions | LI10; uncommitted | Retain; LI11 reviews | Durable test-only inspection evidence; synthetic opcode formatter has no production registration |
-
+| `backend/{inspection,lir/inspect,selected/inspect}.rs`, explicit phase facade groups and immutable declaration/resource enumeration: scoped non-test allowances | LI10; `495df6b9`, based on `03e4ae42` | LA03 first native inspection consumer; LI11 transfers remaining allowances | Genuine read-only visitors, required target formatting and deterministic text, without production adapters/events; remove allowances per consumed API |
+| Existing worked fixtures as inspection consumers, bit-pattern/draft/inventory/writer/process regressions | LI10; `495df6b9` | Retain; LI11 reviews | Durable test-only inspection evidence; synthetic opcode formatter has no production registration |
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation
 and lint allowances as they arise. Genuine draft builders and synthetic
@@ -709,6 +749,6 @@ to LA03's first real consumer. LI11 transfers outstanding obligations to the
 program handoff rather than forgetting them at child archival. No blanket lint
 allowance or empty placeholder API is justified.
 
-Use [architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
+Use [architecture discoveries](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
 for substantial new independent findings; keep its active index entry current. Implement small maintainability fixes directly within the
 responsible task when they preserve the reviewed scope.
