@@ -1,6 +1,6 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01–LI06 are complete, LI07 is next.
+Status: in progress, 2026-09-17; LI01–LI07 are complete, LI08 is next.
 Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
@@ -62,7 +62,7 @@ the illustrative directory sketch.
 - [x] LI04 — CFG and single-definition verification
 - [x] LI05 — Scalar domains, memory checks and lowered publication
 - [x] LI06 — Generated inventories and complete-program authority
-- [ ] LI07 — Selected payload and resource description contracts
+- [x] LI07 — Selected payload and resource description contracts
 - [ ] LI08 — Selected verification and portability witnesses
 - [ ] LI09 — Consuming edits, remaps and snapshot-bound analyses
 - [ ] LI10 — Immutable inspection and deterministic phase dumps
@@ -408,17 +408,17 @@ unchanged.
 
 **Purpose:** expose target requirements through a narrow shared structural view.
 
-- [ ] Implement separate selected storage/builders and fresh IDs using the
+- [x] Implement separate selected storage/builders and fresh IDs using the
   shared graph utilities; preserve origins through explicit stage remaps.
-- [ ] Implement borrowed opcode-derived operand/tie/clobber/effect/reference
+- [x] Implement borrowed opcode-derived operand/tie/clobber/effect/reference
   descriptions, checked representations, resource banks/views/overlap units,
   reservations and partial-preservation descriptors.
-- [ ] Implement frozen early/late event ordering, component ABI bindings,
+- [x] Implement frozen early/late event ordering, component ABI bindings,
   symbolic ABI areas and atomic/bounded recipe descriptors with declared scratch.
-- [ ] Add test-only two-address and three-address payloads with call, fixed,
+- [x] Add test-only two-address and three-address payloads with call, fixed,
   early-clobber and flag-bundle cases. Derive descriptions from their payloads;
   do not separately edit use/def lists or introduce real x86 opcodes.
-- [ ] Record readiness against each joint counterpart and extend boundary guards
+- [x] Record readiness against each joint counterpart and extend boundary guards
   for the new shared/target-facing owners.
 
 **Tests:** ordered descriptors, overlapping narrow/full views across banks,
@@ -429,6 +429,23 @@ Run the task quality gates.
 **Exit criteria:** structural consumers can inspect meaningful synthetic selected
 graphs without matching target enums or reading MIR. No selected seal is minted
 until both verification layers are available in LI08.
+
+Implementation record: separate selected storage and builders,
+parent-bound selection context, explicit value/block/object origin maps and shared
+CFG projection are implemented against `ddc5a97d`. Opcode descriptions expose
+operands, ties, timed unit clobbers, effects/references, component bindings,
+indirect-target slots and atomic/bounded recipes. Catalogs represent banks, views,
+reservations and partial preservation; ABI slots remain symbolic. Synthetic
+payloads exercise destructive ties, three-address shapes, fixed call results,
+early clobbers and explicit flag edges. Readiness is recorded in the
+[handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#selected-contract-readiness-li07).
+No selected seal, target hook, native opcode/switch or placeholder placement is
+introduced; independent descriptor verification/publication remains LI08.
+
+Validation: `make check` passed serially, including 3,259 compiler unit tests,
+12 phase-boundary tests, workspace integration/Rustdoc suites and 650 golden
+cases. `make msrv-check` passed all targets on Rust 1.82.0. Changes remain
+uncommitted for the user. No discovery or frozen-design amendment was needed.
 
 ### LI08 — Selected verification and portability witnesses
 
@@ -585,8 +602,11 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 | `backend/lir/read.rs` and borrowed scalar/object/call/effect/trace checks | LI05; `e87fa392`, based on `eecdb4cc` | Retain; LI11 reviews | Durable shared local legality rules, replacing builder-only ownership without cloning contexts or trusting builder history; mutation remains with the builder |
 | `backend/lir/verify/`: item-scoped non-test dead-code allowances on full verification, failures, private publication and receipt APIs; explicit lowered facade import groups | LI05; `e87fa392` | LA03 first native lowered consumer; LI06/LI09 exercise program/edit APIs; LI11 transfers outstanding allowances | Genuine immutable authority, with no provisional seal or emission switch; remove allowances per consumed item; test linting remains unsuppressed |
 | Lowered malformed publication fixtures, full verification of trace/shared-release witnesses, and public compile-fail publication examples | LI05; `e87fa392` | Retain; LI11 reviews | Durable guard/memory/effect/reference/trace/snapshot/privacy regressions; no exploratory production path |
-| `backend/lir/program/{inventory,data,target}.rs`: item-scoped non-test dead-code allowances; explicit lowered facade re-exports | LI06; uncommitted, based on `e87fa392` | LA03 first production inventory/target discovery consumer; LI07/LI08 selected catalogs and publication; LI09 consuming edits; LI11 transfers outstanding allowances | Genuine lower-program closure and parent-bound declaration freeze; no selected seal or native switch. Remove allowances per consumed API, preserving unsuppressed test lints |
-| Program-owner worklist/data/target tests and public private-path program/extension examples | LI06; uncommitted | Retain; LI11 reviews | Durable recursion, exact receipt, streaming, data dependency/addend and parent-freeze regressions; no exploratory target emitter |
+| `backend/lir/program/{inventory,data,target}.rs`: item-scoped non-test dead-code allowances; explicit lowered facade re-exports | LI06; `ddc5a97d`, based on `e87fa392` | LA03 first production inventory/target discovery consumer; LI07/LI08 selected catalogs and publication; LI09 consuming edits; LI11 transfers outstanding allowances | Genuine lower-program closure and parent-bound declaration freeze; no selected seal or native switch. Remove allowances per consumed API, preserving unsuppressed test lints |
+| Program-owner worklist/data/target tests and public private-path program/extension examples | LI06; `ddc5a97d` | Retain; LI11 reviews | Durable recursion, exact receipt, streaming, data dependency/addend and parent-freeze regressions; no exploratory target emitter |
+| Selected model/context/builder/graph/ABI/resource/description owners and explicit facade imports: item-scoped non-test lint allowances; selection-scoped binding and checked extension draft lookup | LI07; uncommitted, based on `ddc5a97d` | LI08 exercises independent descriptor/publication APIs; LA03 first native selected consumer; LI11 transfers remaining allowances | Durable selected contracts, not transitional native code; remove allowances per consumed item with test linting unsuppressed |
+| Selected synthetic opcode fixtures, origin/context/program/thunk/resource/ABI/timing/CFG regressions, private-path example and selected dependency guard | LI07; uncommitted | Retain; LI08 extends malformed/portability witnesses; LI11 reviews | Durable opcode-derived structural tests; fixtures remain test-only |
+
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation
 and lint allowances as they arise. Genuine draft builders and synthetic

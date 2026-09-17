@@ -1079,8 +1079,9 @@ is in progress; LI01–LI03 delivered checked declarations/identities, common
 readiness and the complete lowered execution vocabulary; LI04 added independent
 graph/value-flow verification. LI05 delivered full lowered callable verification,
 private immutable publication and genuine snapshot receipts. LI06 added program
-inventory closure and parent-bound target declarations. LI07 is next; selected synthetic checks and concrete
-native agreements/implementation remain pending.
+inventory closure and parent-bound target declarations. LI07 delivered selected
+draft/resource/ABI contracts; LI08 is next. Selected verification/publication and
+concrete native agreements/implementation remain pending.
 A22 remains in progress: verified LIR, native migration, adoption and allocation
 are pending.
 Scalar promotion and semantic SSA remain separate follow-ups.

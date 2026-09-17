@@ -181,6 +181,7 @@ fn is_low_level_core(path: &Path) -> bool {
     path.starts_with("backend/plan")
         || path.starts_with("backend/graph")
         || path.starts_with("backend/lir")
+        || path.starts_with("backend/selected")
         || path == Path::new("backend/effects.rs")
         || path == Path::new("backend/failure.rs")
 }
@@ -200,6 +201,9 @@ fn low_level_core_guards_accept_metadata_and_reject_execution_or_lookup_inputs()
         "backend/lir/graph/operands.rs"
     )));
     assert!(is_low_level_core(Path::new("backend/lir/builder.rs")));
+    assert!(is_low_level_core(Path::new(
+        "backend/selected/description.rs"
+    )));
     assert!(!is_low_level_core(Path::new(
         "backend/x86_64_sysv/planning.rs"
     )));

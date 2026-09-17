@@ -149,8 +149,8 @@ description. Graph success grants analysis only: scalar legality, guard protecti
 call/artifact contracts, mandatory effects, memory extents and trace-path parity
 must all pass the lowered verification checks before a phase seal or receipt can
 be published. Native trace-path parity remains a target responsibility.
-Synthetic structural fixtures exercise the same algorithm for selected shapes;
-selected payload storage and its target-specific verification remain planned.
+Synthetic selected payloads exercise the same algorithm over independent selected
+storage. Descriptor consistency and target verification remain publication obligations.
 
 ## Calls, effects and tracing
 
@@ -278,11 +278,59 @@ new layout/signature facts. New facts require replanning. Catalogs and initializ
 iteration are canonical; the extension checks its parent publication witness,
 separate from equality of declarations or callable receipts.
 
-This freeze certifies declarations and data only. Resource/ABI catalogs and
-selected thunk construction/verification remain planned; a frozen extension
-creates no selected seal, placement result or native emission authority. The
+This freeze certifies declarations and data only. Selected drafts use frozen
+extensions; a frozen extension creates no selected seal, placement result or
+native emission authority. The
 supplied catalog remains the inventory authority: these checks do not rediscover
 semantic reachability, build real helpers or certify production MIR projection.
+
+## Selected construction and target descriptions
+
+`backend::selected` supplies independent selected draft arenas over the shared
+block/value/object ID machinery. A selection context borrows a frozen target
+extension and owns its resource catalog and symbolic ABI slot shapes. Checked
+handles additionally carry a fresh selection scope: equal declarations and
+numeric IDs in two contexts do not confer shared ownership. Source drafts require
+an exact receipt from the finalized lower program; declared target thunks have
+no fabricated lower input. Explicit stage maps preserve value/object origins and
+record block provenance without copying lower definition sites.
+
+Targets implement `Payload::describe` over their concrete opcodes. The immutable
+view derives ordered operands and results from opcode fields and borrows ties,
+clobbers, mandatory effects, typed artifact references, objects and ABI component
+bindings. Transient owned operand descriptions are permitted; independent
+editable use/def lists are absent. Shared structural analysis consumes this view
+without matching target enums. Terminal payloads expose their successor count,
+and graph storage contains every ordered edge and argument list.
+
+Operand constraints distinguish legal resource views with a memory alternative,
+a fixed view and a symbolic ABI slot. Representations have nonzero widths and
+separate bits, float, data address and signature-qualified code address kinds.
+Context-bound representation checks enforce address widths, capabilities and code signatures.
+The draft records checked entry/result bindings. ABI binding construction preserves
+exact logical component order, including
+hidden destination and receiver roles, and checks representation/resource/slot
+shapes against the parent facts. Slots identify components within incoming,
+outgoing or result areas; they have no physical frame offsets.
+
+The event order is **early uses, early clobbers, early definitions, late uses,
+late clobbers, late definitions**. Call clobbers precede new results, including
+results in the same fixed resource. Ties relate operand slots with distinct value
+IDs and leave later input uses intact. Resource views name overlap units
+independently of bank membership. Reservations conservatively exclude overlapping
+views from allocation; fixed ABI bindings may still name reserved resources.
+Partial preservation describes a unit footprint, so a narrow view can survive
+while an overlapping wide view does not.
+
+Atomic bundles prevent insertion inside flag-sensitive sequences. Bounded
+recipes declare a positive step bound and explicit resource scratch requirements;
+all effects and successors remain in the enclosing description and graph. The
+synthetic tests exercise two-address and three-address descriptions, fixed call
+results, early clobbers, flag branches and hidden ABI components. They establish
+structural contracts, not native instruction completeness or ABI preservation.
+Selected drafts grant no seal or placement authority. Independent shared/target
+descriptor verification and immutable selected publication are the next step;
+real target opcodes, ABI catalogs and physical realization remain future work.
 
 ## Regression ownership
 
@@ -295,7 +343,7 @@ handling. Public compile-fail examples protect private paths.
 
 The maintained phase-boundary test also guards these narrower core scopes:
 frontend/MIR execution and pass inputs, source lookup and physical x86 owners
-cannot enter the declaration/arena/lowered core. Private APIs without native
+cannot enter the declaration/arena/lowered/selected core. Private APIs without native
 consumers temporarily have item-scoped non-test lint allowances. Their removal
 obligations
 are tracked in the [model roadmap](../roadmaps/LOW_LEVEL_IR_MODEL_ROADMAP.md);

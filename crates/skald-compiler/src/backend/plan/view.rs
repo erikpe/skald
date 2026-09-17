@@ -26,6 +26,7 @@ pub(in crate::backend) struct CallableBinding<'plan> {
     context: PlanView<'plan>,
     key: LirCallableId,
     signature: SignatureId,
+    scope: Option<&'plan u8>,
 }
 
 #[cfg_attr(not(test), allow(dead_code))]
@@ -145,9 +146,27 @@ impl<'plan> PlanView<'plan> {
             context: self,
             key,
             signature: declaration.signature,
+            scope: None,
         })
     }
 
+    /// Called only after the frozen extension has resolved a generated thunk.
+    pub(in crate::backend) fn thunk_binding(
+        self,
+        key: LirCallableId,
+        signature: SignatureId,
+    ) -> Result<CallableBinding<'plan>, PlanError> {
+        if !matches!(key, LirCallableId::TargetThunk(_)) {
+            return Err(PlanError::UnknownDeclaration);
+        }
+        self.signature(self.signature_id(signature.index())?)?;
+        Ok(CallableBinding {
+            context: self,
+            key,
+            signature,
+            scope: None,
+        })
+    }
     pub(in crate::backend) fn callables(
         self,
     ) -> impl ExactSizeIterator<Item = &'plan CallableDeclaration> {
@@ -171,6 +190,11 @@ impl<'plan> PlanView<'plan> {
 
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'plan> CallableBinding<'plan> {
+    /// Namespace a selected draft without granting completion or publication.
+    pub(in crate::backend) fn scoped(mut self, scope: &'plan u8) -> Self {
+        self.scope = Some(scope);
+        self
+    }
     pub(in crate::backend) const fn context(self) -> PlanView<'plan> {
         self.context
     }
@@ -185,6 +209,13 @@ impl<'plan> CallableBinding<'plan> {
     }
     pub(in crate::backend) fn require_same_owner(self, other: Self) -> Result<(), PlanError> {
         self.context.require_same_context(other.context)?;
+        if !match (self.scope, other.scope) {
+            (None, None) => true,
+            (Some(a), Some(b)) => std::ptr::eq(a, b),
+            _ => false,
+        } {
+            return Err(PlanError::WrongContext);
+        }
         if self.key != other.key {
             return Err(PlanError::WrongOwner);
         }

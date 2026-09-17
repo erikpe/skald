@@ -414,18 +414,18 @@ single-definition values:
 
 Assessed against `f1053782` and the preparation commits through `027af94f`.
 The frozen common contracts represent the inherited walkthroughs; no conflict
-requiring a design amendment was found. Declaration/identity readiness is
-implemented, while selected payload, complete-program publication and native evidence
-remain with their scheduled owners. The present checker validates supplied facts;
+requiring a design amendment was found. Declaration/identity readiness was the initial result; the task records below
+cover subsequent program and selected delivery. Native evidence remains with
+its scheduled owner. The present checker validates supplied facts;
 it does not certify a production final-MIR projection.
 
 | Joint question | Common schema agreement / present evidence | Remaining owner and required evidence |
 | --- | --- | --- |
 | Logical shape versus physical ABI | Explicit convention, scalar/address component roles and return shape; positive hidden-destination, receiver/origin and seven-integer/nine-float fixtures on both profile shapes | LI03 delivered logical call checks; LA03 freezes actual incoming/outgoing bindings and indirect-target timing; LA04 migrates full native pressure witness |
-| Selected representation and operands | Distinct stage/local IDs and checked owner arenas; frozen ordered opcode-derived operand/tie/clobber interface can express fixed division resources, destructive add and three-address shapes | LI07/LI08 implement synthetic payload/resource/timing validation; LA03 confirms early-clobber, call-result ordering and canonicalization in real x86 recipes |
-| Flags and edges | Frozen atomic flag bundles and explicit edge occurrences/arguments represent current conditional labels and simultaneous loop transfers without hiding branches | LI02 constructed loop/diamond/parallel-edge drafts; LI04 delivered independent CFG/definition/dominance checks; LI07/LI08 check bundles/correction blocks; LA03 implements critical-edge policy and independent swap/cycle transfer checking |
+| Selected representation and operands | Distinct stage/local IDs and checked owner arenas; frozen ordered opcode-derived operand/tie/clobber interface can express fixed division resources, destructive add and three-address shapes | LI07 delivered synthetic payload/resource/timing contracts; LI08 independently verifies them; LA03 confirms early-clobber, call-result ordering and canonicalization in real x86 recipes |
+| Flags and edges | Frozen atomic flag bundles and explicit edge occurrences/arguments represent current conditional labels and simultaneous loop transfers without hiding branches | LI02 constructed loop/diamond/parallel-edge drafts; LI04 delivered independent CFG/definition/dominance checks; LI07 delivered explicit atomic bundle edges; LI08 checks correction blocks and bundle consistency; LA03 implements critical-edge policy and independent swap/cycle transfer checking |
 | Inventories and publication | Typed source/helper/coordinator/entry/thunk keys, canonical declaration lookup, absent-source rejection and context-bound handles; equal live plans do not share authority | LI05 delivered genuine callable seals/receipts; LI06 delivered worklists, program closure and parent-bound extensions; LA03 freezes streaming target discovery and verified thunk construction |
-| Symbolic objects and scratch | Checked addressable/zero-size versus elided layouts; no value home or frame offset; frozen role separation represents semantic/trace/ABI and later placement requirements | LI02 delivered size-zero/elided objects and checked lifetime sites; LI07/LI08 describe scratch/ABI areas; LA03 freezes actual slot shapes and bounded frame legalization |
+| Symbolic objects and scratch | Checked addressable/zero-size versus elided layouts; no value home or frame offset; frozen role separation represents semantic/trace/ABI and later placement requirements | LI02 delivered size-zero/elided objects and checked lifetime sites; LI07 delivered scratch/ABI descriptions; LI08 verifies their consistency; LA03 freezes actual slot shapes and bounded frame legalization |
 | Inspection and errors | Immutable borrowed fact views, stable structural declaration failure reasons and public private-path compile-fail tests; omitted policy rejects trace inventory | LI03 delivered effects and trace construction checks; LI04 delivered structured graph failures; LI05 delivered full callable failures; LI10 supplies canonical phase dumps; LA03/LA05 wire real observations and native error conversion |
 
 The model compiles in ordinary builds, with item-scoped non-test allowances for
@@ -531,7 +531,8 @@ Target declaration extensions borrow the exact finalized parent inventory and
 freeze target thunk signatures/constant layouts from existing immutable pools.
 They cannot overwrite parent declarations or create new layout/signature facts,
 semantic bodies or trace policy. This is declaration/data freeze, not a selected
-seal: resource/ABI catalogs and selected thunk completion remain LI07/LI08.
+seal. LI07 delivered resource/ABI catalogs and selected thunk drafts; selected
+thunk completion remains LI08.
 
 Owner regressions cover recursive helpers, randomized arrival, missing/conflicting
 completion, streaming receipt retention, stale/foreign witnesses, data cycles,
@@ -614,11 +615,33 @@ Future changes must record their introducing commit and removal/transfer owner
 in the child and program ledgers, even after local commits. This record is
 maintained through LA05, which reconciles its obligations and archives it.
 
+### Selected contract readiness (LI07)
+
+Implemented against the user's LI06 commit `ddc5a97d`, with the model baseline
+`f1053782`. `backend::selected` compiles in ordinary builds and gives shared graph
+consumers fresh arenas and borrowed opcode-derived descriptions. No target enum,
+MIR execution record, native selection switch, selected seal or placer enters the
+shared owner.
+
+| Joint counterpart | Present structural evidence | Remaining obligation |
+| --- | --- | --- |
+| Logical versus physical ABI | Exact component/representation checks; hidden destination and receiver bindings; fixed resources and checked symbolic slots | LI08 independently challenges payload bindings and input/result agreement; LA03 freezes real entry/call/return areas and indirect-target timing |
+| Representations and operands | Nonzero widths, signature-qualified addresses, opcode-derived use/def slots, destructive tie with separate IDs, three-address shape and frozen event iteration | LI08 validates slot/tie/constraint legality independently; LA03 confirms actual opcodes and canonicalization |
+| Flags and edges | Atomic synthetic terminal bundle names two actual stored edges; shared CFG/dominance checking consumes target descriptions | LI08 completes correction/critical-edge/loop portability cases and rejects hidden or malformed control flow; LA03 supplies actual flag recipes/transfers |
+| Inventories and publication | Source draft admission checks finalized parent receipts; thunk drafts resolve only frozen extension declarations; distinct selection contexts reject foreign handles | LI08 issues immutable products only after shared and target checks and binds extension/thunk receipts; LA03 supplies native discovery |
+| Objects, resources and scratch | Semantic/trace/ABI symbolic object roles, explicit origin maps, bounded recipe scratch; same/cross-bank overlap, reservation and partial-width preservation tests | LI08 checks effects/object references, scratch and resource consistency; LA03 supplies real footprints, preservation and frame legalization |
+| Inspection and failures | Shared `GraphView` projection over selected storage; structured construction errors; private-path compile-fail and selected-core dependency guard | LI08 composes descriptor failures with target verification; LI10 canonicalizes phase inspection; LA03/LA05 wire production observations |
+
+The structural interface is ready for LI08. Native preservation and allocator
+correctness are not established by these witnesses. No separate discovery or
+accepted-design amendment was required; scoped non-test allowances remain
+tracked in the model artifact ledger and expire with native consumers.
+
 ## Preparation handoff and next designs
 
 The [LA02 model/construction/verification design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
 is accepted, frozen and promoted. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-is in progress; LI01–LI06 are complete and LI07 is next. The
+is in progress; LI01–LI07 are complete and LI08 is next. The
 [common readiness record](#common-model-readiness-li01) covers the inherited
 walkthroughs and the implemented declaration/identity foundation. LA03's
 concrete target-selection and physical-realization

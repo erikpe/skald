@@ -16,6 +16,7 @@ mod graph;
 mod lir;
 mod plan;
 mod retained_domain;
+mod selected;
 mod x86_64_sysv;
 
 pub(crate) use retained_domain::BackendRequiredRuntimeEntity;
@@ -89,6 +90,10 @@ pub enum RuntimeTracePolicy {
 ///
 /// ```compile_fail
 /// use skald_compiler::backend::lir::DraftBuilder;
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::selected::SelectedDraft;
 /// ```
 ///
 /// Verified low-level callables and completion receipts also have no public

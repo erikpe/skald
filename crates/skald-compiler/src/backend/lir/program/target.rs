@@ -123,6 +123,27 @@ fn lookup(
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'a, 'p> TargetExtension<'a, 'p> {
+    pub(in crate::backend) fn parent(&self) -> &'a VerifiedProgram<'p> {
+        self.parent
+    }
+    pub(in crate::backend) fn selection_binding(
+        &self,
+        key: LirCallableId,
+    ) -> Result<crate::backend::plan::CallableBinding<'p>, ProgramError> {
+        if matches!(key, LirCallableId::TargetThunk(_)) {
+            let declaration = self
+                .declarations
+                .get(&ArtifactId::Callable(key))
+                .ok_or(PlanError::UnknownDeclaration)?;
+            Ok(self.parent.parent().thunk_binding(
+                key,
+                declaration.signature.ok_or(PlanError::InvalidSignature)?,
+            )?)
+        } else {
+            Ok(self.parent.parent().callable(key)?)
+        }
+    }
+
     pub(in crate::backend) fn require_parent(
         &self,
         parent: &VerifiedProgram<'p>,
