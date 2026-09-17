@@ -16,6 +16,17 @@ pub(in crate::backend) struct CompletionReceipt<'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> VerifiedCallable<'p> {
+    pub(in crate::backend::lir) fn into_editor(self) -> crate::backend::lir::LoweredEditor<'p> {
+        crate::backend::lir::LoweredEditor::new(self.draft, self.receipt)
+    }
+    pub(in crate::backend) fn analysis(
+        &self,
+    ) -> Result<
+        crate::backend::graph::GraphSession<'_, CallableDraft<'p>>,
+        Vec<crate::backend::graph::GraphFailure>,
+    > {
+        crate::backend::graph::check_graph(&self.draft)
+    }
     pub(in crate::backend) fn draft(&self) -> &CallableDraft<'p> {
         &self.draft
     }

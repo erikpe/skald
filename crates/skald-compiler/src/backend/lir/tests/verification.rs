@@ -145,7 +145,7 @@ fn float_range_evidence_uses_mathematical_truncation_and_exclusive_power_of_two_
         );
     }
 }
-fn guarded<'p>(
+pub(super) fn guarded<'p>(
     plan: &'p CheckedPlan,
 ) -> (
     CallableDraft<'p>,
@@ -185,7 +185,7 @@ fn guarded<'p>(
     b.terminate(failure, Terminator::HardTrap).unwrap();
     (b.finish(), e, success, failure)
 }
-fn input_plan() -> CheckedPlan {
+pub(super) fn input_plan() -> CheckedPlan {
     let mut f = facts();
     for n in 0..2 {
         f.signatures[0].inputs.push(Component {

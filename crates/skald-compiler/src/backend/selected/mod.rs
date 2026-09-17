@@ -34,3 +34,9 @@ pub(in crate::backend) use verify::{
     verify_selected, SelectedFailure, SelectedProgramBuilder, SelectedReason, SelectedReceipt,
     TargetVerifier, VerifiedSelectedCallable, VerifiedSelectedProgram,
 };
+
+mod edit;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use edit::{
+    EditablePayload, SelectedEditFailure, SelectedEditor, SelectedRemap,
+};

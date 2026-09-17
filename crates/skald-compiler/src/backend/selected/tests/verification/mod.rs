@@ -6,6 +6,7 @@ use crate::backend::{
         SignatureId,
     },
 };
+mod editing;
 mod malformed;
 mod target;
 mod tracing;

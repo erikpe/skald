@@ -12,12 +12,14 @@ use crate::{
     source::Span,
 };
 use std::collections::BTreeMap;
+#[derive(Clone)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(super) struct Value {
     pub(super) ty: Representation,
     pub(super) definition: Option<DefinitionSite>,
     pub(super) origin: Option<Span>,
 }
+#[derive(Clone)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(super) struct Block<P> {
     pub(super) parameters: Vec<SelectedValueId>,
@@ -25,17 +27,20 @@ pub(super) struct Block<P> {
     pub(super) terminal: Option<Terminal<P>>,
     pub(super) origin: Option<Span>,
 }
+#[derive(Clone)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(super) struct Terminal<P> {
     pub(super) payload: P,
     pub(super) edges: Vec<(SelectedBlockId, Vec<SelectedValueId>)>,
 }
+#[derive(Clone, Copy)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum ObjectRole {
     Semantic,
     Trace,
     Abi(AbiArea),
 }
+#[derive(Clone)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(super) struct Object {
     pub(super) layout: LayoutFact,

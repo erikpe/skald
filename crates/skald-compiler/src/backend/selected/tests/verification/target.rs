@@ -9,6 +9,7 @@ pub(super) struct ValueRef {
     pub id: SelectedValueId,
     pub ty: Representation,
 }
+#[derive(Clone)]
 pub(super) enum Op {
     Load {
         address: ValueRef,
@@ -62,6 +63,7 @@ pub(super) enum Corruption {
     WrongAbi,
     UnknownClobber,
 }
+#[derive(Clone)]
 pub(super) struct Node {
     pub op: Op,
     pub views: Vec<ViewId>,
@@ -69,6 +71,7 @@ pub(super) struct Node {
     pub effects: Effects<graph::SelectedObjectId>,
     pub refs: Vec<(ArtifactId, ArtifactCategory)>,
     pub corrupt: Option<Corruption>,
+    pub skip_definition_remap: bool,
     pub attribution: lir::CallAttribution,
     empty: Effects<graph::SelectedObjectId>,
 }
@@ -101,6 +104,7 @@ impl Node {
             effects,
             refs,
             corrupt: None,
+            skip_definition_remap: false,
             attribution: lir::CallAttribution::NonReporting,
             empty: Effects::default(),
         }

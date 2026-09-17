@@ -102,6 +102,26 @@ pub enum RuntimeTracePolicy {
 /// use skald_compiler::backend::selected::{VerifiedSelectedCallable, SelectedReceipt, VerifiedSelectedProgram};
 /// ```
 ///
+/// Low-level editing and analysis are private phase services. Callers cannot
+/// mutate a published draft or keep program authority across a consuming edit:
+///
+/// ```compile_fail
+/// use skald_compiler::backend::lir::{VerifiedCallable, VerifiedProgram};
+/// fn edit(body: VerifiedCallable<'_>, program: VerifiedProgram<'_>) {
+///     let analysis = body.analysis().unwrap();
+///     let _ = program.edit(body);
+///     let _ = analysis.owner();
+/// }
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::selected::{VerifiedSelectedCallable, VerifiedSelectedProgram, Payload};
+/// fn edit<P: Payload>(body: VerifiedSelectedCallable<'_, P>, program: VerifiedSelectedProgram<'_>) {
+///     let _ = program.edit(body);
+///     let _ = program.context();
+/// }
+/// ```
+///
 /// Verified low-level callables and completion receipts also have no public
 /// unchecked construction path:
 ///

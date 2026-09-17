@@ -47,3 +47,7 @@ pub(in crate::backend) use program::{
     DataDefinition, DataInitializer, InventoryState, ProgramBuilder, ProgramError,
     TargetDeclarations, TargetExtension, VerifiedProgram,
 };
+
+mod edit;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use edit::{LoweredEditFailure, LoweredEditor, LoweredRemap};

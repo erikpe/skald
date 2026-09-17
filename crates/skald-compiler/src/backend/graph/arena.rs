@@ -99,6 +99,27 @@ impl<'plan, K: Copy + Eq, T> OwnedArena<'plan, LocalId<K>, T> {
         })
     }
 
+    /// Rebuild compact storage in explicit order; omitted records are deleted.
+    pub(in crate::backend) fn rebuild(
+        &self,
+        order: &[LocalHandle<'plan, LocalId<K>>],
+    ) -> Result<(Self, super::IdMap<LocalId<K>>), super::EditError>
+    where
+        T: Clone,
+        K: Ord,
+    {
+        let mut rebuilt = Self::new(self.owner);
+        let mut pairs = std::collections::BTreeMap::new();
+        for handle in order {
+            let value = self.get(*handle)?.clone();
+            if pairs.contains_key(&handle.id) {
+                return Err(super::EditError::DuplicateId);
+            }
+            pairs.insert(handle.id, rebuilt.push(value)?.id());
+        }
+        Ok((rebuilt, super::IdMap::new(pairs)))
+    }
+
     pub(in crate::backend) fn get(
         &self,
         handle: LocalHandle<'plan, LocalId<K>>,

@@ -35,6 +35,34 @@ impl<O> Default for Effects<O> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<O: Copy + Ord> Effects<O> {
+    pub(in crate::backend) fn try_map_objects<R: Copy + Ord, E>(
+        &self,
+        mut map: impl FnMut(O) -> Result<R, E>,
+    ) -> Result<Effects<R>, E> {
+        let mut entries = Vec::with_capacity(self.entries.len());
+        for effect in &self.entries {
+            let region = |region: MemoryRegion<O>,
+                          map: &mut dyn FnMut(O) -> Result<R, E>|
+             -> Result<MemoryRegion<R>, E> {
+                Ok(match region {
+                    MemoryRegion::Object(id) => MemoryRegion::Object(map(id)?),
+                    MemoryRegion::Static(id) => MemoryRegion::Static(id),
+                    MemoryRegion::Unknown => MemoryRegion::Unknown,
+                })
+            };
+            entries.push(match *effect {
+                Effect::Read(r) => Effect::Read(region(r, &mut map)?),
+                Effect::Write(r) => Effect::Write(region(r, &mut map)?),
+                Effect::Call => Effect::Call,
+                Effect::Allocate => Effect::Allocate,
+                Effect::Free => Effect::Free,
+                Effect::Report => Effect::Report,
+                Effect::HardTrap => Effect::HardTrap,
+                Effect::TraceState => Effect::TraceState,
+            });
+        }
+        Ok(Effects::new(entries))
+    }
     pub(in crate::backend) fn new(entries: impl IntoIterator<Item = Effect<O>>) -> Self {
         let mut entries: Vec<_> = entries.into_iter().collect();
         entries.sort_unstable();

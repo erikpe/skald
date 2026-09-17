@@ -16,3 +16,7 @@ pub(in crate::backend) use verify::{
     GraphIdentity, GraphLocation, GraphReason, GraphSession, GraphStage, GraphView,
     InstructionDescription, TypedUse, ValueDescription,
 };
+
+mod edit;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use edit::{EditError, IdMap};

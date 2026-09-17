@@ -1,6 +1,6 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01–LI08 are complete, LI09 is next.
+Status: in progress, 2026-09-17; LI01–LI09 are complete, LI10 is next.
 Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
@@ -64,7 +64,7 @@ the illustrative directory sketch.
 - [x] LI06 — Generated inventories and complete-program authority
 - [x] LI07 — Selected payload and resource description contracts
 - [x] LI08 — Selected verification and portability witnesses
-- [ ] LI09 — Consuming edits, remaps and snapshot-bound analyses
+- [x] LI09 — Consuming edits, remaps and snapshot-bound analyses
 - [ ] LI10 — Immutable inspection and deterministic phase dumps
 - [ ] LI11 — Cumulative review, cleanup, downstream handoff and closure
 
@@ -504,13 +504,13 @@ Changes remain uncommitted for the user's manual commit; LI09 is next.
 
 **Purpose:** support safe transformation without stale publication or analysis.
 
-- [ ] Implement consuming edit/rebuild APIs for both stage products: operand
+- [x] Implement consuming edit/rebuild APIs for both stage products: operand
   replacement, edge/argument redirection, block splitting and explicit remaps.
-- [ ] Update definitions, check evidence, references and origins coherently,
+- [x] Update definitions, check evidence, references and origins coherently,
   then require full reverification before downstream use.
-- [ ] Consume affected complete-program authority when replacing/editing bodies;
+- [x] Consume affected complete-program authority when replacing/editing bodies;
   produce fresh receipts and reconcile finalization with the replacement.
-- [ ] Provide read-only phase-local analysis views borrowing the exact immutable
+- [x] Provide read-only phase-local analysis views borrowing the exact immutable
   snapshot. No global cache, generic pass manager or placement stub.
 
 **Tests:** positive splits/swaps/correction-block remaps and independently broken
@@ -520,6 +520,31 @@ challenge mutation and reuse of consumed authority. Run the task quality gates.
 
 **Exit criteria:** transformations either republish fully verified new snapshots
 or fail; old analyses/receipts cannot certify changed bodies.
+
+**Completion record (2026-09-17):** implemented against committed LI08 endpoint
+`73b1fafe`. Both stages provide consuming editors, explicit partial arena remaps,
+operand/terminal and edge replacement, and block splitting. Rebuild/publication
+refresh derived definitions; lowered evidence, trace sites and object effects and
+selected payload references/origins are carried through their owning rewrite
+contracts. Full verification remains the only publication path. Reopening a chosen
+body consumes its program authority; fresh receipts must reconcile the replacement
+before inventory finalization. Borrowed analyses identify the actual immutable
+snapshot and grant no mutation or publication authority.
+
+Regressions cover splits, simultaneous transfers, correction blocks, origin and
+trace relocation, duplicate/deleted IDs, a broken target remap, newly reachable
+non-dominating uses, changed guard operands and stale receipts. Consuming-signature
+and non-clone assertions complement private-path doctests. Review also repaired
+selected receipt dependencies for inherited attribution boundaries, with a
+regression in the existing trace suite.
+
+`make check` passed on the final Rust source: formatting, workspace checks, Clippy,
+documentation/dependency guards, 3,285 compiler unit tests, integration/doctests,
+runtime contracts and all 650 native golden leaves. `make msrv-check` then passed
+serially on Rust 1.82.0. No production migration, cache, pass manager or placement
+stub was introduced. Scoped allowances for delivered unwired APIs are recorded in
+the artifact ledger; no independent substantial discovery was found. Changes
+remain uncommitted for the user's manual commit; LI10 is next.
 
 ### LI10 — Immutable inspection and deterministic phase dumps
 
@@ -632,8 +657,10 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 | Program-owner worklist/data/target tests and public private-path program/extension examples | LI06; `ddc5a97d` | Retain; LI11 reviews | Durable recursion, exact receipt, streaming, data dependency/addend and parent-freeze regressions; no exploratory target emitter |
 | Selected model/context/builder/graph/ABI/resource/description owners and explicit facade imports: item-scoped non-test lint allowances; selection-scoped binding and checked extension draft lookup | LI07; `63291d6d`, based on `ddc5a97d` | LI08 exercises independent descriptor/publication APIs; LA03 first native selected consumer; LI11 transfers remaining allowances | Durable selected contracts, not transitional native code; remove allowances per consumed item with test linting unsuppressed |
 | Selected synthetic opcode fixtures, origin/context/program/thunk/resource/ABI/timing/CFG regressions, private-path example and selected dependency guard | LI07; `63291d6d` | Retain; LI08 extends malformed/portability witnesses; LI11 reviews | Durable opcode-derived structural tests; fixtures remain test-only |
-| `backend/selected/verify/` and explicit selected facade exports: scoped non-test dead-code/import allowances on verification/publication/receipt/program APIs | LI08; uncommitted, based on `63291d6d` | LA03 first native selected consumer; LI09 exercises edit/republication; LI11 transfers remaining allowances | Genuine selected authority requiring shared and target success; remove per consumed item, keeping test linting unsuppressed |
-| Selected verification synthetic target and private malformed-descriptor witnesses | LI08; uncommitted | Retain; LI11 reviews | Durable test-only portability and authority regressions; no target registration or accepting production hook |
+| `backend/selected/verify/` and explicit selected facade exports: scoped non-test dead-code/import allowances on verification/publication/receipt/program APIs | LI08; `73b1fafe`, based on `63291d6d` | LA03 first native selected consumer; LI09 exercises edit/republication; LI11 transfers remaining allowances | Genuine selected authority requiring shared and target success; remove per consumed item, keeping test linting unsuppressed |
+| Selected verification synthetic target and private malformed-descriptor witnesses | LI08; `73b1fafe` | Retain; LI11 reviews | Durable test-only portability and authority regressions; no target registration or accepting production hook |
+| `backend/{lir,selected}/edit/`, graph arena rebuilding/partial ID maps, effect-object remapping, publication analysis/editor entry and inventory replacement APIs: scoped non-test lint allowances and facade groups | LI09; uncommitted, based on `73b1fafe` | LA03 first native edit/analysis consumer; LI10 exercises read-only consumers; LI11 transfers remaining allowances | Durable consuming transformations and genuine reverification; remove allowances per consumed item, retaining ordinary builds and unsuppressed test linting |
+| Phase-owned edit/guard/trace/remap/receipt/privacy and non-clone/consuming-signature regressions | LI09; uncommitted | Retain; LI11 reviews | Durable authority and metadata-coherence contracts; fault injection remains test-only |
 
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation

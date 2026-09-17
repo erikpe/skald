@@ -437,3 +437,72 @@ fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_withou
     assert!(!effects.contains(Effect::Report));
     verify_callable(draft).unwrap();
 }
+
+#[test]
+fn consuming_split_relocates_trace_associations_with_the_call() {
+    let mut facts = facts();
+    let (context, location) = trace_catalog(&mut facts);
+    let p = CheckedPlan::check(facts).unwrap();
+    let mut b = builder(&p);
+    let entry = entry_block(&mut b);
+    let record = b
+        .declare_object(object(
+            LayoutDisposition::Addressable,
+            32,
+            8,
+            ObjectRole::TraceRecord,
+            LifetimeDisposition::WholeCallable,
+        ))
+        .unwrap();
+    b.declare_trace_plan(TracePlan {
+        frame_eligible: true,
+        record: Some(record),
+        context,
+        locations: vec![location],
+    })
+    .unwrap();
+    b.append(entry, Operation::Trace(TraceAction::PushFrame { record }))
+        .unwrap();
+    b.append(
+        entry,
+        Operation::Trace(TraceAction::ReplaceLocation {
+            record,
+            location,
+            site: TraceSite::Instruction {
+                block: entry,
+                ordinal: 2,
+            },
+        }),
+    )
+    .unwrap();
+    b.append(
+        entry,
+        Operation::Call(Call {
+            target: CallTarget::Direct(ArtifactId::Callable(source(1))),
+            signature: p.view().callables().next().unwrap().signature,
+            arguments: vec![],
+            attribution: CallAttribution::SourceOperation {
+                origin: origin(),
+                location: Some(location),
+            },
+        }),
+    )
+    .unwrap();
+    b.append(entry, Operation::Trace(TraceAction::PopFrame { record }))
+        .unwrap();
+    b.terminate(entry, Terminator::Return(vec![])).unwrap();
+    let body = verify_callable(b.finish()).unwrap();
+    let mut edit = body.into_editor();
+    let suffix = edit.split_block(entry, 1).unwrap();
+    let body = edit.finish().unwrap();
+    match &body.draft().blocks.get(suffix).unwrap().instructions[0].operation {
+        Operation::Trace(TraceAction::ReplaceLocation {
+            site: TraceSite::Instruction { block, ordinal },
+            ..
+        }) => {
+            assert_eq!(*block, suffix.id());
+            assert_eq!(*ordinal, 1);
+        }
+        _ => panic!("missing relocated trace site"),
+    }
+}

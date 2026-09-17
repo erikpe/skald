@@ -352,6 +352,47 @@ shared interface is usable across two target shapes, not physical preservation.
 Real target opcodes, ABI catalogs, placement and frame realization remain future
 work.
 
+## Consuming edits and snapshot analyses
+
+Both stages have private editor owners. Backend orchestration opens an edit by
+consuming the complete program and its exact chosen callable through `edit`.
+The result is an unpublished editor and a program builder missing that callable's
+completion. Other chosen receipts and data definitions remain intact. A callable
+can enter an editor directly only inside its owning phase, before program
+admission. No public constructor or mutable published-draft accessor exists.
+
+Editors replace instruction or terminal uses, redirect individual edge occurrences
+with simultaneous argument lists, split blocks, and rebuild compact arenas in
+explicit value/block/object order. Partial remaps fail on any surviving reference
+to a deleted ID; they never substitute identity mappings. Remaps retain their
+source receipt and reject a different snapshot. Numeric IDs may change: use the
+returned mappings rather than old handles after rebuilding. Origins stay with
+preserved records. Lowered rebuilding covers calls, scalar evidence, trace plans
+and sites, object effects and edge arguments. Splitting relocates moved scalar
+checks and instruction/terminal trace associations.
+
+Selected targets implement `EditablePayload` by rewriting concrete opcode fields,
+including definitions and symbolic objects, and relocating their own indexed
+metadata. Shared code rewrites stored edges and stage-origin maps; it never edits
+a description or matches physical opcodes. Target callbacks have no accepting
+default. Splits require an explicit target transfer payload.
+
+Editor drafts are unverified working state. Rebuild/finish regenerates definition
+sites; lowered edits discard cached address claims and conservatively widen
+required effects without dropping existing barriers. Publication recomputes
+provenance, guards and references. Replacing a use preserves existing evidence so
+verification can reject an invalidated guard. `finish` consumes the editor and
+runs the full owning verifier, including both verification layers for selected
+code. Success produces a fresh receipt; stale completions cannot certify it.
+Reclosed programs reconcile their exact chosen snapshots, and selected programs
+also expose `require_input` for that check.
+
+A verified callable's `analysis` returns the shared read-only graph session
+borrowing its exact immutable draft. Its lifetime prevents consumption while the
+view is still used. Callable, program and analysis authority is non-cloneable;
+receipts may be cloned but retain their original snapshot identity. There is no
+global cache, generic pass manager, placement stub or production pipeline change.
+
 ## Regression ownership
 
 Declaration tests are colocated under the plan owner; arena tests under the

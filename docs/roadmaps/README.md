@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Low-level IR model, construction and verification](LOW_LEVEL_IR_MODEL_ROADMAP.md) | In progress; LI01–LI08 complete | Deliver checked lowered/selected models, builders, verification/publication, edits and immutable inspection | LI09 — Consuming edits, remaps and snapshot-bound analyses | Frozen LA02 model and archived phase design; common declaration readiness passed; selected publication readiness passed; concrete native agreements remain LA03 |
+| [Low-level IR model, construction and verification](LOW_LEVEL_IR_MODEL_ROADMAP.md) | In progress; LI01–LI09 complete | Deliver checked lowered/selected models, builders, verification/publication, edits and immutable inspection | LI10 — Immutable inspection and deterministic phase dumps | Frozen LA02 model and archived phase design; common declaration readiness passed; selected publication readiness passed; concrete native agreements remain LA03 |
 
 ## Pending discovery and planning records
 

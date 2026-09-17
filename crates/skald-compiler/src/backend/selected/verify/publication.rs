@@ -21,6 +21,25 @@ pub(in crate::backend) struct SelectedReceipt<'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p, P> VerifiedSelectedCallable<'p, P> {
+    pub(in crate::backend::selected) fn into_editor(
+        self,
+    ) -> crate::backend::selected::SelectedEditor<'p, P>
+    where
+        P: crate::backend::selected::EditablePayload,
+    {
+        crate::backend::selected::SelectedEditor::new(self.draft, self.receipt)
+    }
+    pub(in crate::backend) fn analysis(
+        &self,
+    ) -> Result<
+        crate::backend::graph::GraphSession<'_, SelectedDraft<'p, P>>,
+        Vec<crate::backend::graph::GraphFailure>,
+    >
+    where
+        P: crate::backend::selected::Payload,
+    {
+        crate::backend::graph::check_graph(&self.draft)
+    }
     pub(in crate::backend) fn draft(&self) -> &SelectedDraft<'p, P> {
         &self.draft
     }
@@ -30,6 +49,11 @@ impl<'p, P> VerifiedSelectedCallable<'p, P> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> SelectedReceipt<'p> {
+    pub(in crate::backend) fn same_snapshot(&self, other: &Self) -> bool {
+        std::ptr::eq(self.context, other.context)
+            && self.key == other.key
+            && Arc::ptr_eq(&self.snapshot, &other.snapshot)
+    }
     pub(in crate::backend) fn key(&self) -> LirCallableId {
         self.key
     }

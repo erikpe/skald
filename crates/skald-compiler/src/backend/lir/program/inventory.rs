@@ -180,6 +180,43 @@ impl<'p> ProgramBuilder<'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> VerifiedProgram<'p> {
+    /// Consuming inventory authority prevents dependent target extensions surviving replacement.
+    pub(in crate::backend) fn edit(
+        self,
+        body: VerifiedCallable<'p>,
+    ) -> Result<(ProgramBuilder<'p>, crate::backend::lir::LoweredEditor<'p>), ProgramError> {
+        self.require_input(&body.receipt())?;
+        let key = body.receipt().owner().key();
+        let mut states = self
+            .chosen
+            .into_iter()
+            .map(|(key, receipt)| (key, WorkEntry::Verified(receipt)))
+            .collect::<BTreeMap<_, _>>();
+        states.insert(key, WorkEntry::Building);
+        let mut references = self
+            .data
+            .values()
+            .flat_map(|definition| definition.initializers.iter())
+            .filter_map(|i| match i {
+                super::DataInitializer::Address { target, .. } => Some(*target),
+                _ => None,
+            })
+            .collect::<BTreeSet<_>>();
+        for state in states.values() {
+            if let WorkEntry::Verified(receipt) = state {
+                references.extend(receipt.references().iter().copied());
+            }
+        }
+        Ok((
+            ProgramBuilder {
+                parent: self.parent,
+                states,
+                data: self.data,
+                references,
+            },
+            body.into_editor(),
+        ))
+    }
     pub(super) fn require_same_snapshot(&self, other: &Self) -> Result<(), ProgramError> {
         self.parent.require_same_context(other.parent)?;
         if !Arc::ptr_eq(&self.snapshot, &other.snapshot) {

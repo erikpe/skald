@@ -243,6 +243,13 @@ pub(super) fn check<P: Payload>(
             Some(crate::backend::lir::CallAttribution::ProcessBoundary) => true,
             None => false,
         };
+        if let Some(
+            crate::backend::lir::CallAttribution::InheritedOperation { boundary }
+            | crate::backend::lir::CallAttribution::SourceBodyFromOmittedHelper { boundary },
+        ) = desc.call_attribution
+        {
+            references.insert(crate::backend::plan::ArtifactId::Callable(*boundary));
+        }
         if !attribution_ok {
             errors.push(Reason::Abi);
         }

@@ -80,4 +80,8 @@ fn enabled_trace_dependencies_and_inherited_helper_attribution_survive_publicati
         .references()
         .contains(&ArtifactId::TraceTls));
     assert!(product.receipt().references().contains(&trace));
+    assert!(product
+        .receipt()
+        .references()
+        .contains(&ArtifactId::Callable(helper)));
 }

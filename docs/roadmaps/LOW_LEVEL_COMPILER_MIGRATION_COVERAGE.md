@@ -615,6 +615,32 @@ Future changes must record their introducing commit and removal/transfer owner
 in the child and program ledgers, even after local commits. This record is
 maintained through LA05, which reconciles its obligations and archives it.
 
+### Consuming edit and analysis readiness (LI09)
+
+Implemented against LI08's committed endpoint `73b1fafe`. Both stages have
+consuming editors for instruction/terminal uses, individual edge arguments,
+block splits and explicit compact arena remaps. Complete-program edits consume
+the chosen inventory and exact callable, preserve other completions/data, and
+require fresh verified completion before reclosure. Direct callable editor entry
+is restricted to its owning phase. New selected inventory input reconciliation
+checks the chosen snapshot, matching the lowered contract.
+
+| Contract | Delivered evidence | Remaining native obligation |
+| --- | --- | --- |
+| Definitions and remaps | Explicit partial maps, source receipt binding, coherent regenerated sites and preserved origins; duplicate/deleted IDs and faulty target definition rewrites rejected | Real target callback coverage for every opcode, object and indexed annotation |
+| Guard / trace / reference coherence | Moved check evidence and trace associations relocated; changed divisor/check operands rejected; inherited attribution boundaries retained in selected dependencies | Actual selection evidence propagation and trace/frame recipes |
+| CFG changes | Swaps and correction-graph splits/permutations republish; newly reachable nondominating uses and malformed edge arity fail | Semantics-preserving native transformations and independently checked transfer realization |
+| Snapshot authority | Fresh receipts and reclosed inventories reject stale completions; static assertions enforce consuming signatures and non-cloneable callable/program/analysis authority | Downstream placement/realization must borrow or reconcile the exact selected snapshot |
+| Read-only analyses | Borrowed graph sessions identify the actual immutable draft, with reachability/dominance and ordered edge occurrences | No global cache or pass manager is introduced; canonical inspection remains LI10 |
+
+Unpublished editor drafts may have dirty derived metadata until rebuild/finish;
+no editor analysis or provisional publication authority is provided. Full
+reverification recomputes current facts and dependencies. This establishes
+structural transformation contracts, not semantic equivalence, native ABI
+preservation or optimization cost clearance. LA03 must implement concrete target
+rewriters and verify actual payload/frame/transfer behavior. Scoped non-test
+allowances remain ledgered for first native consumers.
+
 ### Selected verification readiness (LI08)
 
 Shared descriptor checking and a mandatory target hook jointly publish immutable
@@ -637,8 +663,8 @@ reference/effect and clobber mistakes independently of checked append. Wrong
 profiles, explicit target rejection and malformed edge arguments fail. Lowered
 IDs cannot inhabit selected operand storage. Earlier construction regressions
 remain useful; they certify drafts only. No native target registration, placer,
-checker or physical-preservation claim is introduced. Consuming edits and analysis
-snapshot borrowing remain LI09; canonical inspection remains LI10.
+checker or physical-preservation claim is introduced. Consuming edits and snapshot borrowing are delivered by LI09; canonical
+inspection remains LI10.
 
 ### Selected contract readiness (LI07)
 
@@ -666,7 +692,7 @@ tracked in the model artifact ledger and expire with native consumers.
 
 The [LA02 model/construction/verification design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
 is accepted, frozen and promoted. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-is in progress; LI01–LI08 are complete and LI09 is next. The
+is in progress; LI01–LI09 are complete and LI10 is next. The
 [common readiness record](#common-model-readiness-li01) covers the inherited
 walkthroughs and the implemented declaration/identity foundation. LA03's
 concrete target-selection and physical-realization

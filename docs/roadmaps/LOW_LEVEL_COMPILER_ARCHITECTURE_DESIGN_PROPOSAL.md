@@ -14,8 +14,8 @@ graph/value-flow verification; LI05 added full lowered callable verification and
 genuine immutable publication/receipts. LI06 added finalized lowered inventories
 and parent-bound target declarations. LI07 delivered selected draft/resource/ABI
 contracts; LI08 added independent shared/target verification, immutable selected
-publication and complete selected inventories. LI09 consuming edits and
-snapshot-bound analyses are next.
+publication and complete selected inventories. LI09 delivered consuming edits, explicit remaps and snapshot-bound analyses;
+immutable inspection and deterministic phase dumps are next.
 Common model contracts are frozen; concrete target counterparts remain
 LA03 decisions before dependent native implementation. Later child designs
 and roadmaps remain pending.
@@ -303,7 +303,7 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 | Workstream | Focused design | Required handoff | Dependencies |
 | --- | --- | --- | --- |
 | LA01 | **[Phase architecture and backend ownership](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md):** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
-| LA02 | **[LIR model, construction, and verification](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md):** identities, values, memory, CFG/edges, effects, call representation, mutation rules, and dumps | Accepted/frozen design; [roadmap in progress](LOW_LEVEL_IR_MODEL_ROADMAP.md), LI01–LI08 complete, LI09 next. Complete lowered execution vocabulary and full callable verification/publication and complete-program closure delivered; selected draft/resource contracts and shared/target verification/publication delivered. Required handoff: supported construction/transformation APIs and exact selected-stage requirements | LA01 and common declaration readiness complete; selected publication readiness passed; concrete native counterparts remain LA03 |
+| LA02 | **[LIR model, construction, and verification](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md):** identities, values, memory, CFG/edges, effects, call representation, mutation rules, and dumps | Accepted/frozen design; [roadmap in progress](LOW_LEVEL_IR_MODEL_ROADMAP.md), LI01–LI09 complete, LI10 next. Complete lowered execution vocabulary and full callable verification/publication and complete-program closure delivered; selected draft/resource contracts and shared/target verification/publication delivered. Required handoff: supported construction/transformation APIs and exact selected-stage requirements | LA01 and common declaration readiness complete; selected publication readiness passed; concrete native counterparts remain LA03 |
 | LA03 | **Target selection and physical realization:** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | End-to-end executable scalar/control-flow/call pilot through every new phase, without a production register allocator | LA01–LA02; jointly settle selection/placement/frame contracts before implementation |
 | LA04 | **Complete lowering migration:** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | Complete supported x86 behavior through LIR and stack placement; explicit operation/helper coverage and native parity | LA03; may split into lifecycle/helper and observation/artifact proposals |
 | LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04; portability review and full foundation validation |
@@ -434,7 +434,7 @@ An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
 delivery decisions. Phase preparation has qualified existing-boundary witnesses
 and complete baseline inputs; noisy cost gates remain inconclusive. The immediate
-next step is LI09 of the
+next step is LI10 of the
 [LA02 model roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md), implementing the
 [frozen model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) using the
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)

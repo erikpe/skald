@@ -71,6 +71,39 @@ impl<'p> SelectedProgramBuilder<'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> VerifiedSelectedProgram<'p> {
+    pub(in crate::backend) fn edit<P: crate::backend::selected::EditablePayload>(
+        self,
+        body: VerifiedSelectedCallable<'p, P>,
+    ) -> Result<
+        (
+            SelectedProgramBuilder<'p>,
+            crate::backend::selected::SelectedEditor<'p, P>,
+        ),
+        ProgramError,
+    > {
+        let receipt = body.receipt();
+        self.require_input(&receipt)?;
+        let mut builder = SelectedProgramBuilder::new(self.context);
+        builder.completed = self.receipts;
+        builder.completed.remove(&receipt.key());
+        Ok((builder, body.into_editor()))
+    }
+    pub(in crate::backend) fn require_input(
+        &self,
+        receipt: &SelectedReceipt<'p>,
+    ) -> Result<(), ProgramError> {
+        receipt.require_context(self.context)?;
+        let chosen = self
+            .receipts
+            .get(&receipt.key())
+            .ok_or(ProgramError::MissingDefinition(ArtifactId::Callable(
+                receipt.key(),
+            )))?;
+        if !chosen.same_snapshot(receipt) {
+            return Err(ProgramError::StaleReceipt);
+        }
+        Ok(())
+    }
     pub(in crate::backend) fn context(&self) -> &'p SelectionContext<'p> {
         self.context
     }
