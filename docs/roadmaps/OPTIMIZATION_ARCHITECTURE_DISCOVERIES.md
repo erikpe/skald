@@ -1,14 +1,15 @@
 # Optimization Architecture Discoveries
 
-Status: three architectural constraints remain; backend preparation is in progress;
+Status: three architectural constraints remain; phase architecture preparation is complete;
 proof-provenance normalization is implemented and archived.
 The native backend constraint now has an accepted
 [overarching design proposal](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
 for explicit LIR phases, backend ownership, migration, and consolidation,
 followed by a separate final register-allocation workstream. Its first focused
-[phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-is frozen, with a [preparatory implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
-and initial [migration coverage inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md).
+[phase architecture design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+is frozen, with a completed
+[preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) and maintained
+[migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs).
 The reachability constraint is resolved by the completed
 [target-independent whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
 [implementation roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
@@ -465,11 +466,14 @@ LIR phases, shared structural contracts with target-specific instructions, and
 early AArch64 review. Complete migration and consolidation use baseline stack
 placement; register allocation follows through the same placement boundary.
 Scalar-storage promotion and semantic MIR SSA remain separate follow-ups.
-The first [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+The first [phase architecture design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 freezes the shared lowering and target ownership contracts. Its
-[roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) establishes coverage,
-regressions and baseline evidence. Later child designs and implementation
-remain pending; this does not deliver LIR or register allocation.
+[archived roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) records qualified
+coverage, regressions and durable baseline inputs. The
+[handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
+is ready for the LIR model design with coordinated target-interface review.
+Later child designs and implementation remain pending; preparation does not
+deliver LIR, foundation adoption or register allocation.
 
 ### Optimization possibilities unlocked
 

@@ -25,6 +25,8 @@ For current information, use:
 
 Archived plans:
 
+- [Low-level phase architecture and backend ownership frozen design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+- [Low-level phase architecture and backend ownership](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
 - [Cleanup architecture retrospective](CLEANUP_RETROSPECTIVE_ROADMAP.md)
 - [Cleanup retrospective evidence and acceptance review](CLEANUP_RETROSPECTIVE_REVIEW.md)
 - [Cleanup retrospective resolved discoveries](CLEANUP_RETROSPECTIVE_DISCOVERIES.md)

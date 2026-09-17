@@ -25,6 +25,12 @@ def explicit_stack_peak(body: str) -> tuple[int | None, str | None]:
             return None, "unrecognized stack/save instruction"
         elif re.match(r"\w+ (?:rsp|rbp|esp|ebp|sp|bp)(?:,|$)", line) and not line.startswith(("cmp ", "test ")):
             return None, "unrecognized stack/base write"
+        elif re.match(r"(?:xchg|xadd) .*, (?:rsp|rbp|esp|ebp|sp|bp)$", line):
+            # Both operands are written; the ordinary destination check above
+            # covers only the first operand in Intel syntax.
+            return None, "unrecognized stack/base write"
+        elif re.match(r"loop\w*\b", line):
+            return None, "unrecognized control-flow instruction"
         elif line.startswith("ret "):
             return None, "unrecognized return stack adjustment"
         else:

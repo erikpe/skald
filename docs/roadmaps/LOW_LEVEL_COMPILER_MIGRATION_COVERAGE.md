@@ -1,15 +1,16 @@
 # Low-Level Compiler Migration Coverage
 
-Status: initial inventory reconciled against `495debd3` on 2026-09-17;
-current-boundary/native witness protection added from task baseline `d7163d9d`.
-All new-pipeline delivery is **pending**. The initial inventory inspected test
-source; subsequent validation is recorded in the preparation roadmap.
+Status: phase architecture preparation complete, 2026-09-17. Cumulative review
+covers `495debd3..472bce66` and the closing metric guard/documentation changes.
+Current-boundary witnesses and the durable baseline are qualified; all
+new-pipeline delivery is **pending**. The archived preparation roadmap records
+validation and artifact dispositions.
 Program implementation baseline: `495debd3`.
 
 This is the continuing migration/handoff record for the
 [architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
-The [frozen phase design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md) owns
-architectural decisions; the [preparation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
+The [frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md) owns
+architectural decisions; the [preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
 owns current-boundary tests and baseline evidence. Update this inventory when
 schemas or helpers change, retain it through foundation adoption, and archive
 only after all migration obligations have a disposition.
@@ -460,10 +461,71 @@ not discrepancies requiring a silent design amendment. The current artifact
 graph uses symbol strings inside typed machine variants; typed artifact identity
 is a later representation improvement, and assembly parsing is not introduced.
 
-No frozen-contract conflict or demonstrated semantic defect was found in this
-inventory review. No Rust extraction, bridge, gate, lint exception or exploratory
-phase product is introduced by this task. Existing code remains with its current
-production owner until the named delivery workstream migrates it. Future changes
-must record their introducing commit and removal/transfer owner in the child and
-program ledgers, even after local commits. This record is maintained, not temporary
-scaffolding: LA05 reconciles its obligations and archives the completed record.
+Preparation required no frozen-contract amendment, Rust extraction, production
+bridge, rollout gate, scanner exception or exploratory phase product. The retain
+helper's exhaustion-call alignment correction and private native probe are
+enduring ABI protection. Boundary/privacy tests, live-input/aggregate goldens,
+the opt-in measurement protocol and retained raw evidence have continuing owners.
+The original cleanup workload definitions are unchanged. Existing lowering
+remains production code until LA05 retires it; baseline stack placement is a
+future implementation, not a bridge due for removal now.
+
+Future changes must record their introducing commit and removal/transfer owner
+in the child and program ledgers, even after local commits. This record is
+maintained through LA05, which reconciles its obligations and archives it.
+
+## Preparation handoff and next designs
+
+The next step is **LA02's focused LIR model/construction/verification proposal**,
+coordinated with LA03's target-selection and physical-realization design. Neither
+starts dependent implementation before its design and roadmap settle the
+[joint questions](#joint-design-questions-and-measurement-readiness). The phase
+design remains the frozen authority; its preparation roadmap is complete, while
+the architecture program and cleanup audit's A22 remain in progress.
+
+Carry these accepted constraints into both designs:
+
+- Layout-specialized shared lowering expands lifecycle work before publication.
+  Checked planning, lowered LIR, selected LIR, placement and physical realization
+  have separate payloads and verification authority bound to one context/target
+  and exact input snapshot.
+- Machine values have one definition, dominance and simultaneous block-edge
+  arguments. Semantic MIR locals remain memory; SSA conversion and scalar
+  promotion are separate work. Lowered LIR contains no physical registers,
+  target instructions or concrete frame offsets.
+- Selection exposes complete CFG, ABI components, effects, clobbers and trace
+  requirements. Target realization owns physical ABI assignment, frames,
+  declared scratch and bounded legalization. Baseline stack placement needs an
+  independent checker and must be complete without register allocation.
+- Final-MIR authority, sparse executable bodies, certified statics, stable
+  dispatch, trace omission and typed artifact dependencies remain explicit.
+  There is no second semantic reachability calculation or assembly dependency
+  inference. AArch64 witnesses guide contracts without claiming a second backend.
+
+| Owner | Remaining deliverable / exit obligation |
+| --- | --- |
+| LA02 | Concrete IDs/storage, instruction/value/memory/effect/call schemas, CFG construction/remapping, context and seal APIs, immutable inspection/dumps/errors, and executable negative verifier/privacy fixtures |
+| LA03 | Target resources and overlap/tie/operand timing, ABI plans and complete selection, parallel transfers, checked stack placement, symbolic frames and physical legalization; end-to-end scalar/control-flow/call pilot plus native x86 and synthetic AArch64 contract witnesses |
+| LA04 | Full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, I/O, traces, entry/statics and complete/reachable artifacts; update each inventory row with delivery evidence |
+| LA05 | One production LIR pipeline, reporting/determinism parity, legacy-path removal, portability/cumulative review and frozen foundation cost acceptance |
+| LA06 | Separate allocation design, implementation/checking and measured adoption after foundation consolidation |
+
+Use the existing named witnesses, acceptance walkthroughs and future negative-test
+ownership above when scheduling tests; current-backend success is not evidence
+that a nonexistent LIR verifier, selection constraint or placement checker passes.
+
+The [pre-migration record](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md#reviewed-pre-migration-baseline)
+at `9e3cebb1` retains all 21 supported configurations, exact observations,
+deterministic artifacts and two full equivalent-build captures. Eleven compile
+timings remain inconclusive under the frozen policy; input readiness does not
+grant future adoption cost clearance. Improve compatible measurement support or
+host control before resolving those uncertainties.
+
+Closing review made stack-register writes in the second operand of `xchg`/`xadd`
+and unsupported `loop` control flow conservatively unsupported. Untimed review
+of all 4,396 role/capture callable observations found no change to retained
+metrics. Original evidence and its historical harness identity remain untouched.
+The guard changes the current harness fingerprint: future paired comparisons
+must recapture the preserved baseline and candidate with one compatible harness,
+as the measurement procedure requires. No timing recapture is needed for this
+preparation closure.

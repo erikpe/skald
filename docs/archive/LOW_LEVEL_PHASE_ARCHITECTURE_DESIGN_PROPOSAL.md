@@ -1,9 +1,11 @@
 # Low-Level Phase Architecture and Backend Ownership Design Proposal
 
 Status: accepted and frozen LA01 design, 2026-09-17. Assessed against
-`d5a33858`; accepted text recorded at `97fdaf49`. Implementation is planned in
-the [phase architecture roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md);
-no compiler implementation or performance measurement is claimed here.
+`d5a33858`; accepted text recorded at `97fdaf49`. The
+[phase preparation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) is complete
+and archived, with qualified current-boundary witnesses and durable baseline
+inputs. The active [handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
+carries pending delivery; no new compiler pipeline is implemented by preparation.
 Exact LIR schemas and target realization belong to LA02 and LA03 respectively.
 
 The decisions and foundation validation policy below are the implementation
@@ -12,7 +14,7 @@ affected downstream owners; roadmap execution must not silently relax them.
 Illustrative Rust organization and the AArch64 ABI witness retain their stated
 scope and do not freeze detailed schemas or a complete second-target ABI.
 
-Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+Parent: [Low-Level Compiler Architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 This proposal settles the phase and ownership decisions needed to build that
 foundation. Register allocation remains LA06, after complete migration and
 architecture consolidation using baseline stack placement.

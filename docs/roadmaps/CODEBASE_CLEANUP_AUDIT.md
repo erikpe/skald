@@ -127,7 +127,7 @@ narrower endpoint and names any deferred work.
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Complete | P2 | 3 | M | Medium | O | M, R |
 | [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Complete | P2 | 3 | M | Medium | O | M, E, R |
-| [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | Phase design frozen; preparation in progress | P3 | 5 | XL | High | C | N, E |
+| [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | In progress; phase preparation complete | P3 | 5 | XL | High | C | N, E |
 | [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | Open | P3 | 5 | XL | High | C | N, E, R |
 | [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | Open | P2 | 3 | M | Medium | C | C, M |
 | [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Complete | P2 | 3 | S–M | Low | O | C, M |
@@ -1064,15 +1064,18 @@ cleanup.
 defines LIR phases, shared/target ownership, AArch64 constraints, complete
 migration, and architectural consolidation before a separate final allocation
 workstream. The first focused
-[phase architecture and backend ownership proposal](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+[phase architecture and backend ownership proposal](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is frozen and defines layout-specialized shared lowering, phase products,
 machine value flow, and foundation validation. Its
-[implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) is in progress.
-The initial [migration inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md)
-maps the current MIR/backend surface to phase owners, tests and measurement
-handoffs; boundary regressions and pre-migration evidence follow. Scalar promotion
-and semantic SSA remain follow-ups. No LIR implementation or allocation is
-complete; detailed representation and target work retain their own later designs.
+[preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) is complete and
+archived. Boundary regressions and complete durable pre-migration inputs are
+qualified; eleven noisy compile timings remain inconclusive, without adoption
+cost clearance. The maintained
+[migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
+maps current owners, pending delivery, witnesses and joint design questions.
+Next is the focused LIR representation design with target-interface coordination.
+A22 remains in progress: LIR, migration, adoption and allocation are pending.
+Scalar promotion and semantic SSA remain separate follow-ups.
 
 **Planning/validation:** use the existing
 [architecture discovery](OPTIMIZATION_ARCHITECTURE_DISCOVERIES.md#5-direct-physical-register-backend-lowering)

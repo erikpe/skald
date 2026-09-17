@@ -110,6 +110,24 @@ failure:
         for output in (".data 99 8192", ".text unknown 4096", ".text 40"):
             self.assertEqual(parse_text_size(output)["status"], "unsupported")
 
+    def test_second_operand_stack_writes_and_loop_edges_are_unsupported(self):
+        for instruction in ("xchg rax, rsp", "xadd rax, esp", "xchg rax, rbp",
+                            "xchg qword ptr [rdi], rsp", "loop .Lbody", "loope .Lbody", "loopne .Lbody"):
+            with self.subTest(instruction=instruction):
+                assembly = f""".type probe, @function
+probe:
+.Lbody:
+    {instruction}
+    ret
+.size probe, .-probe
+"""
+                result = assembly_metrics(assembly)
+                self.assertEqual(result["status"], "unsupported")
+                self.assertNotIn("max_stack_bytes", result["functions"]["probe"])
+        # A memory operand addressed through rsp does not write rsp itself.
+        memory_swap = ".type swap, @function\nswap:\n    xchg qword ptr [rsp], rax\n    ret\n.size swap, .-swap\n"
+        self.assertEqual(assembly_metrics(memory_swap)["functions"]["swap"]["static_frame_accesses"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

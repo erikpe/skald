@@ -1,7 +1,7 @@
 # Low-Level Phase Architecture and Backend Ownership Roadmap
 
-Status: in progress; LP01–LP04 are complete and LP05 is next. Implements LA01 of the
-[low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+Status: complete and archived, 2026-09-17; LP01–LP05 are complete. Implements LA01 of the
+[low-level compiler architecture program](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen as of 2026-09-17.
 
@@ -53,7 +53,7 @@ behavior; do not implement the illustrative future directory tree in advance.
 - [x] LP02 — Protect existing backend boundaries and behavioral witnesses
 - [x] LP03 — Make the foundation measurement protocol reproducible
 - [x] LP04 — Capture and qualify the pre-migration baseline
-- [ ] LP05 — Cumulative review, downstream handoff, and closure
+- [x] LP05 — Cumulative review, downstream handoff, and closure
 
 ## Current owners and durable outputs
 
@@ -66,7 +66,7 @@ behavior; do not implement the illustrative future directory tree in advance.
 | Timing, identities, digests and workload selection | [Cleanup measurement script](../../scripts/measure_cleanup_baseline.py), [support tests](../../scripts/tests/test_cleanup_baseline.py) | Reproducible foundation manifest/procedure and any narrowly necessary harness support |
 | Current compiler/test contracts | [Backend guide](../compiler/BACKEND.md), [reporting](../compiler/REPORTING.md), [testing](../development/TESTING.md) | Accurate current behavior and links to planned work, without claiming LIR exists |
 
-The [migration coverage record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
+The [migration coverage record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
 program-wide migration record created by LP01. Keep it active through LA05;
 LA01 closure does not archive pending migration obligations. The
 [foundation measurement procedure](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md)
@@ -119,7 +119,7 @@ current-behavior tests and measurement capabilities. No detailed schema decision
 is disguised as an already-implemented phase contract.
 
 **Completion evidence (2026-09-17):** the
-[migration record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) reconciles 42
+[migration record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) reconciles 42
 instructions, 20 terminators, 29 array operations, five I/O operations, all 12
 termination reasons, and 19 rvalues (including the excluded proof-rich
 `PathCondition`). It also covers place forms, generated bodies, runtime/data
@@ -382,30 +382,30 @@ deferred. Changes remain uncommitted for the user; LP05 is next.
 
 ### LP05 — Cumulative review, downstream handoff, and closure
 
-**Purpose:** leave a complete LA01 foundation with explicit obligations for the
+**Purpose:** close LA01 preparation with explicit obligations for the
 remaining program and no unowned transitional code.
 
-- [ ] Review `git diff <implementation-baseline>..HEAD`, its stat/name-status
+- [x] Review `git diff <implementation-baseline>..HEAD`, its stat/name-status
   views, staged/unstaged changes and untracked files as one change. Inspect
   earlier task commits even when the working tree is clean; separate unrelated
   intervening changes from this roadmap's work.
-- [ ] Reconcile the transition ledger against source/history, using symbol
+- [x] Reconcile the transition ledger against source/history, using symbol
   searches and `git log -S` where needed. Remove expired helpers, flags, scanner
   exceptions, duplicate fixtures and measurement shortcuts. Record a continuing
   purpose and owner for every retained adapter.
-- [ ] Check the frozen decisions against all outputs. Confirm no phantom phases,
+- [x] Check the frozen decisions against all outputs. Confirm no phantom phases,
   allocator requirements, x86 types in future shared contracts, or unsupported
   AArch64 implementation claims have entered the handoff. Resolve substantial
   gaps before closure; record independent opportunities separately.
-- [ ] Publish a concise handoff covering accepted contracts, coverage/test gaps
+- [x] Publish a concise handoff covering accepted contracts, coverage/test gaps
   owned by LA02–LA05, qualified baseline references, and joint LA02/LA03 design
   questions. LA02 owns concrete schemas and seals; LA03 owns target constraints,
   transfers and frames. Neither starts dependent implementation until its
   focused design and roadmap settle those details.
-- [ ] Run final gates after fixups from an artifact-free snapshot or clean
+- [x] Run final gates after fixups from an artifact-free snapshot or clean
   checkout. Record baseline, reviewed endpoint, residual uncommitted changes,
   evidence and ledger dispositions. Leave committing to the user.
-- [ ] Mark LA01 complete only after all task exits pass. Archive this roadmap
+- [x] Mark LA01 complete only after all task exits pass. Archive this roadmap
   and its focused frozen design, update archive/active indexes and every link,
   and keep the overarching proposal and program coverage record active. A22
   remains in progress; LIR, foundation adoption and allocation are not delivered.
@@ -419,6 +419,52 @@ changes. Do not rerun lengthy timing experiments solely because docs moved.
 **Exit criteria:** cumulative changes meet LA01's accepted scope, every
 transitional artifact has a disposition, evidence remains accessible, and
 the next work is the LA02 proposal with coordinated LA03 interface review.
+
+**Cumulative review (2026-09-17):** reviewed implementation baseline `495debd3`
+through endpoint `472bce66`, all four intervening task commits, their stat/name
+views, and the uncommitted closing changes including both archived files.
+History contains no unrelated intervening implementation. Source, symbol and
+`git log -S` review reconciled every ledger entry: no expired bridge, gate,
+scanner exception, lint allowance, placeholder phase or duplicate lowering
+remains. Private native ABI/count probes, semantic goldens, public privacy
+tests, measurement owners and raw records have continuing purposes. Original
+cleanup workload definitions are AST-identical to the pre-roadmap definitions.
+The frozen contracts require no amendment; LIR/target interfaces and all new
+phase delivery remain pending.
+
+One small closing defect was reproduced: second-operand stack/base writes in
+`xchg`/`xadd` and unsupported `loop` control flow could be reported as supported
+zero-stack recipes. Conservative rejection and negative fixtures now protect
+the extractor; ordinary frame-memory swaps remain supported. Untimed
+re-extraction agrees with all 4,396 retained callable observations. Original raw
+records, source attestations and comparison remain unchanged. The measurement
+guide records the changed harness fingerprint and future baseline/candidate
+recapture requirement. No new timing experiment or cost clearance is claimed.
+
+The active [handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
+records accepted constraints, pending delivery/test ownership, baseline limits
+and joint LA02/LA03 decisions. Next is LA02's focused design with coordinated
+target review before dependent implementation. A22 and the overarching program
+remain in progress; the child design and roadmap are archived without archiving
+the program coverage record. No independent substantial discovery was found.
+
+**Closing validation:** an artifact-free source snapshot at
+`/tmp/skald-low-level-phase-closure-b2w94lyh` copied all 2,272 tracked/untracked
+source files, including the archived documents and closing fixes, with no
+`target`, `build` or `.git`. The source manifest was retained outside Git at
+`/tmp/skald-lp05-source-manifest.json`. Offline `RUSTUP_TOOLCHAIN=stable make check`
+passed fresh formatting/build/lint/docs, workspace/privacy/native/runtime suites
+and all 650 golden leaves. In the same snapshot,
+`make measurement-support-test` passed all 44 tests, and the untimed retained
+baseline verifier passed with the expected **inconclusive** cost result.
+LP04's extended determinism/release evidence remains valid: this task changes
+only Python extraction/tests and documentation. No Rust/toolchain surface
+changed, so no additional MSRV run was required; earlier Rust changes already
+passed Rust 1.82.0. Post-archival documentation and whitespace checks passed.
+Residual uncommitted changes are the conservative metric guard/regressions,
+handoff/status/index/link updates, and child document archival/closing evidence.
+Committing remains with the user; the reviewed endpoint is `472bce66` plus this
+closing change, not an invented closing commit.
 
 ## Ordering and checkpoints
 
@@ -452,7 +498,8 @@ migration record carries pending program obligations through LA05.
 | Live-input/aggregate-pressure goldens and private count probe | LP02; `e446ecdb` (task baseline `d7163d9d`) | Retain through downstream migrations | Enduring regression fixtures/test doubles; no production bridge, gate, placeholder IR or extraction introduced |
 | Foundation collector/comparator, versioned manifest, scalar kernel and metric fixtures | LP03; `9e3cebb1` (task baseline `e446ecdb`) | Retain through foundation adoption | Enduring opt-in machinery under the existing cleanup entry point; no production instrumentation, rollout gate or new pipeline |
 | Generated retain exhaustion stack alignment/probe | LP03; `9e3cebb1` (task baseline `e446ecdb`) | Retain | ABI correction with native failure-before/fix-after proof; not migration scaffolding |
-| Retained baseline records and untimed evidence verifier/tests | LP04; baseline `9e3cebb1`, commit pending | Retain through foundation adoption | Complete checked-in raw evidence with supported metrics; eleven noisy compile timing gates remain inconclusive. No production bridge or new phase |
+| Retained baseline records and untimed evidence verifier/tests | LP04; `472bce66` (task/measurement baseline `9e3cebb1`) | Retain through foundation adoption | Complete checked-in raw evidence with supported metrics; eleven noisy compile timing gates remain inconclusive. No production bridge or new phase |
+| Conservative stack recipe guard/regressions | LP05; commit pending (task baseline `472bce66`) | Retain | Reject unsupported second-operand stack/base writes and `loop` edges; all 4,396 retained callable metrics unchanged |
 
 Carry continuing program obligations into the migration record with explicit
 owners; do not reset their history at a child-roadmap boundary. Shared baseline

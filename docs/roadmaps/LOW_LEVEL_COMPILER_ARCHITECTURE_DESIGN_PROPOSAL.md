@@ -1,9 +1,11 @@
 # Low-Level Compiler Architecture Design Proposal
 
 Status: accepted architectural direction, prepared 2026-09-17. The first child
-[phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-is accepted and frozen, with its
-[implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) in progress.
+[phase architecture design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+is accepted and frozen, and its
+[preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) is complete.
+The [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
+is ready for the detailed LIR proposal with coordinated target-interface review.
 Later child designs and roadmaps remain pending. Repository assessment baseline:
 `f97a9e51`. Program implementation baseline: `495debd3`, before the migration
 contract/coverage work began. Child roadmaps retain their own task baselines.
@@ -178,7 +180,7 @@ MIR storage roles and lifetime markers remain semantic facts; neither a role
 named `ScalarSpill` nor a `StorageDead` marker substitutes for machine liveness
 or a proof that memory can be eliminated.
 
-The accepted [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+The accepted [phase architecture design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 selects single-definition machine values with dominance and block parameters.
 Account for joins, loops, edge copies, and two-address constraints explicitly
 in the detailed LIR design. This does not convert semantic MIR to SSA:
@@ -287,15 +289,17 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 
 | Workstream | Focused design | Required handoff | Dependencies |
 | --- | --- | --- | --- |
-| LA01 | **[Phase architecture and backend ownership](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md):** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
+| LA01 | **[Phase architecture and backend ownership](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md):** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
 | LA02 | **LIR model, construction, and verification:** identities, values, memory, CFG/edges, effects, call representation, mutation rules, and dumps | Executable LIR model and verifier fixtures; supported construction/transformation APIs; exact selected-stage requirements | LA01; input requirements for future placement consumers reviewed |
 | LA03 | **Target selection and physical realization:** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | End-to-end executable scalar/control-flow/call pilot through every new phase, without a production register allocator | LA01–LA02; jointly settle selection/placement/frame contracts before implementation |
 | LA04 | **Complete lowering migration:** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | Complete supported x86 behavior through LIR and stack placement; explicit operation/helper coverage and native parity | LA03; may split into lifecycle/helper and observation/artifact proposals |
 | LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04; portability review and full foundation validation |
 | LA06 | **Register allocation:** allocator selection, liveness, constraints, preserved registers, splitting/spilling, coalescing scope, checking, and measured adoption | Proper allocation implemented through the existing placement contract; separate acceptance evidence and explicit disposition of baseline placement | LA05; own design and implementation roadmap |
 
-LA01 is accepted and frozen; its [roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
-has an initial [coverage/handoff inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md).
+LA01 preparation is complete; its [archived roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
+records contract, regression and baseline qualification. The maintained
+[coverage/handoff inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
+carries pending delivery and joint LA02/LA03 questions.
 The foundation is LA01–LA05; LA06 is the final
 planned consumer. Early contract exercises can reason about allocation without
 building its algorithm. If a contract problem appears later, amend the owning
@@ -415,7 +419,8 @@ contract. Exact Rust schemas, executable seals, operation inventories, and
 target interfaces remain with LA02/LA03.
 An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
-delivery decisions. The initial
-[migration coverage inventory](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is
-reconciled; the immediate next step is existing-boundary and behavioral
-protection in the [LA01 roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md).
+delivery decisions. Phase preparation has qualified existing-boundary witnesses
+and complete baseline inputs; noisy cost gates remain inconclusive. The immediate
+next step is LA02's focused design, using the
+[handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
+and coordinated LA03 review before dependent implementation.

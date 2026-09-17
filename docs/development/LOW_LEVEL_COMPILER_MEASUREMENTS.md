@@ -4,9 +4,9 @@ Status: authoritative for the foundation collection/comparison protocol and
 the complete, durably retained pre-migration baseline at `9e3cebb1`.
 The equivalent-build timing comparison is **inconclusive**; no architecture
 performance result or adoption cost clearance is claimed. The
-[preparation roadmap](../roadmaps/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) owns
+[completed preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) records
 baseline qualification and durable evidence; the
-[frozen phase design](../roadmaps/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md#foundation-measurement-and-adoption-policy)
+[frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md#foundation-measurement-and-adoption-policy)
 owns adoption policy. The [generic cleanup harness](CLEANUP_MEASUREMENTS.md)
 remains available for exploratory measurements.
 
@@ -353,6 +353,12 @@ with that path, explicit revision and shared runtime/stdlib roots. Build path,
 host/tool changes or collector changes can change hashes or compatibility;
 such a rebuild produces explicitly requalified evidence, not a replacement
 claim for the original bytes. Do not edit the original retained samples.
+Closing review tightened unsupported stack recipe detection for second-operand
+stack/base writes in `xchg`/`xadd` and `loop` control flow. Untimed re-extraction
+matched all 4,396 retained role/capture callable observations; the historical
+records and harness identity remain unchanged. This guard changes the current
+harness fingerprint, so use the recapture rule below for future comparisons.
+
 Future architecture comparisons need independent old/new pairs collected with
 one compatible harness/input/host configuration. Recapture the preserved baseline
 as well when those compatibility inputs change, and record the reason.
