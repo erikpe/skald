@@ -247,14 +247,15 @@ practical only after introducing a target-private virtual-register LIR. That
 foundation is itself listed because it is the placement boundary for a large
 family of optimizations, not because it should be disguised as a pass.
 
-The draft
+The accepted
 [low-level compiler architecture proposal](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
 coordinates explicit LIR phases, backend ownership, and complete migration
 using baseline stack placement. Register allocation is a separate final
 workstream; scalar promotion remains a follow-up. Architecture completion has
 its own criteria, independent of allocation speedups. The candidates below
-remain unimplemented; focused designs, roadmaps, and acceptance measurements
-are pending.
+remain unimplemented. The frozen phase architecture design has a
+[preparation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md); detailed LIR
+and target designs, migration, and acceptance measurements remain pending.
 
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|

@@ -1,9 +1,16 @@
 # Low-Level Phase Architecture and Backend Ownership Design Proposal
 
-Status: draft LA01 design, prepared 2026-09-17 against `d5a33858`. No compiler
-implementation or performance measurement is claimed. An implementation
-roadmap follows review; exact LIR schemas and target realization belong to
-LA02 and LA03 respectively.
+Status: accepted and frozen LA01 design, 2026-09-17. Assessed against
+`d5a33858`; accepted text recorded at `97fdaf49`. Implementation is planned in
+the [phase architecture roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md);
+no compiler implementation or performance measurement is claimed here.
+Exact LIR schemas and target realization belong to LA02 and LA03 respectively.
+
+The decisions and foundation validation policy below are the implementation
+contract. Changes require an explicit amendment identifying the rationale and
+affected downstream owners; roadmap execution must not silently relax them.
+Illustrative Rust organization and the AArch64 ABI witness retain their stated
+scope and do not freeze detailed schemas or a complete second-target ABI.
 
 Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 This proposal settles the phase and ownership decisions needed to build that
@@ -31,7 +38,7 @@ lowering, ABI classification, frame ownership, or assembly emission.
 
 ## Decisions at this level
 
-| Question | Proposed decision |
+| Question | Accepted decision |
 | --- | --- |
 | Where is the semantic boundary? | Keep `BackendInput` and sealed final MIR; no backend access to frontend state or mutable MIR certificates |
 | What is shared before selection? | Explicit scalar/address computation, memory operations, calls, CFG, effects, source attribution, and symbolic artifact references |
@@ -74,9 +81,9 @@ Three current couplings explain the proposed split:
 The [backend](../compiler/BACKEND.md), [runtime ABI](../compiler/RUNTIME_ABI.md),
 [shared ownership](../compiler/SHARED_OWNERSHIP.md), and
 [optional values](../compiler/OPTIONAL_VALUES.md) documents remain authoritative
-for implemented behavior. This draft does not change source semantics, x86
-layouts or calling conventions, trace visibility, accepted source programs,
-or current target registration.
+for implemented behavior. This design preserves source semantics, x86
+layouts and calling conventions, trace visibility, accepted source programs,
+and current target registration.
 
 ## Phase products and authority
 
@@ -475,11 +482,11 @@ No measurement has been captured by this document.
 
 Retain all four compile-baseline workload families: small source, many modules
 and large CFG, many generic applications, and nested ownership. Native coverage
-includes [range loops](../../tests/benchmarks/range_loop),
-[vector growth](../../tests/benchmarks/generic_vec), and
-[runtime traces](../../tests/benchmarks/panic_runtime_trace). Add narrowly scoped
-nonconstant scalar/call kernels only where the architectural pilot is otherwise
-unrepresented. Finalize their inputs before comparing implementations.
+includes [range loops](../../tests/benchmarks/range_loop/README.md),
+[vector growth](../../tests/benchmarks/generic_vec/README.md), and
+[runtime traces](../../tests/benchmarks/panic_runtime_trace/README.md). Add
+narrowly scoped nonconstant scalar/call kernels only where the architectural
+pilot is otherwise unrepresented. Finalize their inputs before comparing implementations.
 
 Compare old and new compilers on the same controlled host, source/runtime bytes,
 compiler profile, MIR profile, trace policy, and native toolchain. Capture:
@@ -491,7 +498,7 @@ compiler profile, MIR profile, trace policy, and native toolchain. Capture:
 - Exact process status/stdout/stderr digests, and deterministic assembly within
   each compiler configuration. Old/new assembly need not be byte-identical.
 
-The proposed adoption limits are review gates, not correctness tests: a
+The accepted adoption limits are review gates, not correctness tests: a
 repeatable increase above 10% in compile or native median time, or 15% in peak
 RSS or native text size on any representative workload requires correction
 or a documented architectural tradeoff decision before default adoption.
@@ -504,8 +511,8 @@ with warmups and alternating order. Preserve medians, MADs and ranges. For a
 timing regression to trigger a decision, reproduce it in a second paired run;
 require the median difference also to exceed twice the larger MAD. If noise
 prevents classification, improve the run or workload duration and leave the
-result inconclusive rather than declaring it a pass. These are proposed
-protocol parameters to freeze on acceptance, not reported experimental results.
+result inconclusive rather than declaring it a pass. These are frozen protocol
+parameters, not reported experimental results.
 
 Correctness and ABI/trace parity are unconditional. Unresolved cost failures
 block adoption, not development of the LIR model. A reviewed exception states
@@ -541,13 +548,14 @@ New semantic SSA or promotion passes remain independent scope decisions.
 
 ## Handoff and closure
 
-Acceptance freezes the layout-specialized shared LIR direction, distinct phase
-products, single-definition value/edge contract, shared lifecycle expansion,
-target selection/ABI ownership, baseline placement boundary, and foundation
-validation policy. Detailed schemas and algorithms remain with their named
+The accepted contract freezes the layout-specialized shared LIR direction,
+distinct phase products, single-definition value/edge contract, shared lifecycle
+expansion, target selection/ABI ownership, baseline placement boundary, and
+foundation validation policy. Detailed schemas and algorithms remain with their named
 downstream designs; no architectural decision above is deferred to an emitter.
 
-The LA01 implementation roadmap should establish the boundary/coverage records,
+The [LA01 implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
+establishes the boundary/coverage records,
 measurement protocol and baseline evidence, architecture guard fixtures, and
 the minimum orchestration/contracts justified before LA02. It must not build
 placeholder phase types or a second backend just to demonstrate progress.

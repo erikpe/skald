@@ -1,10 +1,11 @@
 # Low-Level Compiler Architecture Design Proposal
 
-Status: draft overarching proposal, prepared 2026-09-17. The first child
+Status: accepted architectural direction, prepared 2026-09-17. The first child
 [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-is drafted for review; later designs and implementation roadmaps remain pending. Repository
-assessment baseline: `f97a9e51`; record the implementation baseline when work
-starts.
+is accepted and frozen, with its
+[implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) planned.
+Later child designs and roadmaps remain pending. Repository assessment baseline:
+`f97a9e51`; record the program implementation baseline when work starts.
 
 This proposal defines a new low-level compiler architecture between verified
 final MIR and native assembly. Its purpose is to establish explicit phases,
@@ -176,15 +177,12 @@ MIR storage roles and lifetime markers remain semantic facts; neither a role
 named `ScalarSpill` nor a `StorageDead` marker substitutes for machine liveness
 or a proof that memory can be eliminated.
 
-Choose a precise definition/use and cross-block value contract in the LIR
-design. Machine SSA with dominance and block parameters is a candidate, not an
-overarching prerequisite. If selected, account for joins, loops, edge copies,
-and two-address constraints explicitly. It does not imply converting semantic
-MIR to SSA. Cross-block values must at least be representable for lowering-
-created control flow; general scalar-storage promotion can remain absent.
-The draft [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-proposes single-definition values with block parameters; acceptance of that
-child design settles this choice before schema implementation.
+The accepted [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+selects single-definition machine values with dominance and block parameters.
+Account for joins, loops, edge copies, and two-address constraints explicitly
+in the detailed LIR design. This does not convert semantic MIR to SSA:
+cross-block values support lowering-created control flow while general
+scalar-storage promotion remains outside the foundation.
 
 ### Effects, calls, and legal expansion
 
@@ -295,7 +293,8 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 | LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04; portability review and full foundation validation |
 | LA06 | **Register allocation:** allocator selection, liveness, constraints, preserved registers, splitting/spilling, coalescing scope, checking, and measured adoption | Proper allocation implemented through the existing placement contract; separate acceptance evidence and explicit disposition of baseline placement | LA05; own design and implementation roadmap |
 
-LA01 is drafted and ready for review. The foundation is LA01–LA05; LA06 is the final
+LA01 is accepted and frozen; its [roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
+is planned. The foundation is LA01–LA05; LA06 is the final
 planned consumer. Early contract exercises can reason about allocation without
 building its algorithm. If a contract problem appears later, amend the owning
 design explicitly rather than adding hidden exceptions across phases.
@@ -409,10 +408,10 @@ using baseline stack placement, and architecture consolidation before production
 register allocation. It preserves the native backend and the existing final-MIR
 semantic boundary.
 
-Exact Rust schemas, LIR staging/seals, cross-block value form, common lowering
-operations, and target interfaces are settled by the foundation child designs.
+LA01 settles phase authority, shared lowering ownership, and the machine value
+contract. Exact Rust schemas, executable seals, operation inventories, and
+target interfaces remain with LA02/LA03.
 An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
-delivery decisions. The immediate next step is review of the
-[LA01 phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
-followed by its implementation roadmap after acceptance.
+delivery decisions. The immediate next step is the migration contract and
+coverage inventory in the [LA01 roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md).

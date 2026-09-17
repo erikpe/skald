@@ -1,13 +1,13 @@
 # Optimization Architecture Discoveries
 
-Status: three architectural constraints remain without implementation plans;
+Status: three architectural constraints remain; backend preparation is planned;
 proof-provenance normalization is implemented and archived.
-The native backend constraint now has a draft
+The native backend constraint now has an accepted
 [overarching design proposal](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
 for explicit LIR phases, backend ownership, migration, and consolidation,
 followed by a separate final register-allocation workstream. Its first focused
 [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-is drafted for review.
+is frozen, with a [preparatory implementation roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md).
 The reachability constraint is resolved by the completed
 [target-independent whole-world reachability design](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_DESIGN_PROPOSAL.md),
 [implementation roadmap](../archive/TARGET_INDEPENDENT_WHOLE_WORLD_REACHABILITY_ROADMAP.md),
@@ -457,7 +457,7 @@ Runtime-trace updates, failure attribution, ABI constraints, ownership calls,
 and hard-trap behavior should be represented as ordered pseudo-instructions or
 explicit effects so target passes cannot move across them accidentally.
 
-The draft
+The accepted
 [low-level compiler architecture proposal](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
 develops this direction into separate design workstreams. It proposes explicit
 LIR phases, shared structural contracts with target-specific instructions, and
@@ -465,8 +465,10 @@ early AArch64 review. Complete migration and consolidation use baseline stack
 placement; register allocation follows through the same placement boundary.
 Scalar-storage promotion and semantic MIR SSA remain separate follow-ups.
 The first [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-proposes the shared lowering and target ownership contracts. Later child
-designs, measurements, and implementation roadmaps remain pending.
+freezes the shared lowering and target ownership contracts. Its
+[roadmap](LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) establishes coverage,
+regressions and baseline evidence. Later child designs and implementation
+remain pending; this does not deliver LIR or register allocation.
 
 ### Optimization possibilities unlocked
 
