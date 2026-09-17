@@ -1455,6 +1455,15 @@ and runtime-trace metadata.
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.
+Private lowered/selected inspection tests additionally compare equivalent live
+contexts, explicit binary64 special-value bits, varied generated-inventory
+construction order and visibly unverified malformed drafts. Existing worked
+fixtures exercise call/ABI, guarded division/correction, simultaneous loop edges,
+release, tracing and resource/thunk output. Independent unit-test child processes
+compare their marked dump sections without exposing a public CLI or importer.
+Select these owners with `cargo test --locked -p skald-compiler backend::lir::tests::inspection`
+and `cargo test --locked -p skald-compiler backend::selected::tests::verification::inspection`.
+
 `pipeline_determinism` compares tokens, AST, resolved, HIR, MIR, and assembly
 products for representative object-lifetime, polymorphism, shared-ownership,
 optional-value, array, primitive-integer-operation, and string programs from

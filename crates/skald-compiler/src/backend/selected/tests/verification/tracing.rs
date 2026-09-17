@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn enabled_trace_dependencies_and_inherited_helper_attribution_survive_publication() {
+pub(super) fn enabled_trace_dependencies_and_inherited_helper_attribution_survive_publication() {
     let mut f = supplied(Shape::Three);
     f.runtime_trace = crate::backend::RuntimeTracePolicy::Enabled;
     let signature = f.callables[0].signature;

@@ -1,6 +1,6 @@
 use super::*;
 #[test]
-fn destructive_and_three_address_targets_preserve_live_input_flow() {
+pub(super) fn destructive_and_three_address_targets_preserve_live_input_flow() {
     for shape in [Shape::Two, Shape::Three] {
         let p = CheckedPlan::check(supplied(shape)).unwrap();
         let (program, bodies) = inventory(&p);
@@ -85,7 +85,7 @@ fn destructive_and_three_address_targets_preserve_live_input_flow() {
     }
 }
 #[test]
-fn division_selection_exposes_guard_correction_blocks_and_join_arguments() {
+pub(super) fn division_selection_exposes_guard_correction_blocks_and_join_arguments() {
     let p = CheckedPlan::check(supplied(Shape::Two)).unwrap();
     let (program, bodies) = inventory(&p);
     let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
@@ -192,7 +192,7 @@ fn division_selection_exposes_guard_correction_blocks_and_join_arguments() {
         .unwrap());
 }
 #[test]
-fn loop_swaps_parallel_successors_and_critical_edges_remain_simultaneous() {
+pub(super) fn loop_swaps_parallel_successors_and_critical_edges_remain_simultaneous() {
     let p = CheckedPlan::check(supplied(Shape::Three)).unwrap();
     let (program, bodies) = inventory(&p);
     let extension = lir::TargetDeclarations::new(&program).freeze().unwrap();
@@ -258,7 +258,7 @@ fn loop_swaps_parallel_successors_and_critical_edges_remain_simultaneous() {
     assert_eq!(edges[1].arguments[1].value, x.id().index());
 }
 #[test]
-fn hidden_destination_receiver_and_mixed_banks_keep_exact_components() {
+pub(super) fn hidden_destination_receiver_and_mixed_banks_keep_exact_components() {
     for shape in [Shape::Two, Shape::Three] {
         let mut f = supplied(shape);
         let layout = f.add_layout(f.layouts[0]).unwrap();
@@ -389,7 +389,7 @@ fn hidden_destination_receiver_and_mixed_banks_keep_exact_components() {
     }
 }
 #[test]
-fn release_uses_original_header_after_finalizer_and_rejects_omitted_trace() {
+pub(super) fn release_uses_original_header_after_finalizer_and_rejects_omitted_trace() {
     let mut f = facts();
     let addr = Representation::new(RepresentationKind::DataAddress, 64).unwrap();
     f.signatures[0].inputs = vec![Component {
@@ -498,7 +498,7 @@ fn release_uses_original_header_after_finalizer_and_rejects_omitted_trace() {
     assert!(reasons(verify_selected(draft, &target)).contains(&SelectedReason::Effect));
 }
 #[test]
-fn resource_extensions_and_thunk_receipts_are_context_and_snapshot_bound() {
+pub(super) fn resource_extensions_and_thunk_receipts_are_context_and_snapshot_bound() {
     let p = CheckedPlan::check(facts()).unwrap();
     let (program, bodies) = inventory(&p);
     let thunk = plan::LirCallableId::TargetThunk(plan::TargetThunkKey {

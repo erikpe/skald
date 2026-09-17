@@ -67,3 +67,5 @@ mod graph;
 mod verification;
 
 mod editing;
+
+mod inspection;

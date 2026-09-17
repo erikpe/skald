@@ -1082,7 +1082,8 @@ private immutable publication and genuine snapshot receipts. LI06 added program
 inventory closure and parent-bound target declarations. LI07 delivered selected
 draft/resource/ABI contracts; LI08 added independent shared/target checks, immutable
 selected publication and inventory closure. LI09 delivered consuming edits, explicit remaps and snapshot-bound analyses;
-immutable inspection and deterministic phase dumps are next; concrete native agreements/implementation remain pending.
+LI10 delivered immutable visitors and deterministic phase dumps. Cumulative
+review and child-roadmap closure are next; concrete native agreements/implementation remain pending.
 A22 remains in progress: verified LIR, native migration, adoption and allocation
 are pending.
 Scalar promotion and semantic SSA remain separate follow-ups.

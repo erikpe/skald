@@ -337,3 +337,5 @@ mod tests {
             .reachable_artifacts_only());
     }
 }
+
+mod inspection;

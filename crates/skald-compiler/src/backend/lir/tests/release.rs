@@ -11,7 +11,8 @@ use crate::backend::RuntimeTracePolicy;
 /// Ordinary instructions express all paths and retain the header across an
 /// arbitrary finalizer call. This fixture grants no native/verification proof.
 #[test]
-fn shared_release_uses_explicit_memory_branches_finalizer_and_original_header_after_call() {
+pub(super) fn shared_release_uses_explicit_memory_branches_finalizer_and_original_header_after_call(
+) {
     for tracing in [false, true] {
         let mut supplied = facts();
         let services = runtime_declarations(&mut supplied);
@@ -241,6 +242,6 @@ fn shared_release_uses_explicit_memory_branches_finalizer_and_original_header_af
             .blocks()
             .flat_map(|(_, block)| &block.instructions)
             .all(|instruction| !matches!(instruction.operation, Operation::Trace(_))));
-        verify_callable(draft).unwrap();
+        inspection::assert_dump(&verify_callable(draft).unwrap());
     }
 }

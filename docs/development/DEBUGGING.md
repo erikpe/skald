@@ -31,6 +31,13 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Diagnostics | `diagnostics::render_diagnostics` | diagnostic model, wording, spans, and source lookup |
 | GNU assembly in Intel syntax | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
 
+Private verified lowered and selected products also own immutable visitors and
+canonical text dumps, described in [Low-level inspection](../compiler/LOW_LEVEL_IR.md#immutable-inspection-and-text-dumps).
+Their headers distinguish verified checkpoints from best-effort unverified
+construction drafts. Inventory dumps report completion and dependencies without
+reconstructing released bodies. These phases do not execute in production yet;
+the APIs expose model fixtures and future phase consumers, with no CLI adapter.
+
 The phase renderers are repository-internal Rust APIs. There are no CLI modes
 for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
 Their text is a deterministic

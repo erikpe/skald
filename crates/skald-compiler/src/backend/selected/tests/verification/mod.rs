@@ -7,6 +7,7 @@ use crate::backend::{
     },
 };
 mod editing;
+mod inspection;
 mod malformed;
 mod target;
 mod tracing;
@@ -146,7 +147,9 @@ fn checked<'p>(b: SelectedBuilder<'p, Node>, shape: Shape) -> VerifiedSelectedCa
         shape,
         reject: false,
     };
-    verify_selected(draft, &target).unwrap()
+    let body = verify_selected(draft, &target).unwrap();
+    inspection::assert_dump(&body);
+    body
 }
 fn call_node(
     ctx: &SelectionContext<'_>,

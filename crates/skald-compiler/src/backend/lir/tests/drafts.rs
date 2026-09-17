@@ -126,7 +126,7 @@ fn reservations_and_rejected_writes_leave_existing_definitions_intact() {
 }
 
 #[test]
-fn loop_parameters_transfer_simultaneously_and_parallel_edges_keep_occurrences() {
+pub(super) fn loop_parameters_transfer_simultaneously_and_parallel_edges_keep_occurrences() {
     let plan = CheckedPlan::check(facts()).unwrap();
     let mut builder = builder(&plan);
     let entry = entry_block(&mut builder);
@@ -195,6 +195,7 @@ fn loop_parameters_transfer_simultaneously_and_parallel_edges_keep_occurrences()
         Terminator::Jump(edge) => assert_eq!(edge.arguments, [b.id(), a.id()]),
         _ => panic!("expected back edge"),
     }
+    inspection::assert_dump(&verify_callable(draft).unwrap());
 }
 
 #[test]

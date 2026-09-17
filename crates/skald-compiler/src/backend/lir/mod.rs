@@ -51,3 +51,7 @@ pub(in crate::backend) use program::{
 mod edit;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use edit::{LoweredEditFailure, LoweredEditor, LoweredRemap};
+
+mod inspect;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use inspect::LoweredFact;

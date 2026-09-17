@@ -21,10 +21,10 @@ pub(in crate::backend) use description::{
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use resources::{
-    BankId, BankKind, ResourceCatalog, ResourceError, UnitId, ViewId,
+    BankId, BankKind, ResourceCatalog, ResourceError, ResourceView, UnitId, ViewId,
 };
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use storage::SelectedDraft;
+pub(in crate::backend) use storage::{ObjectRole, SelectedDraft};
 
 #[cfg(test)]
 mod tests;
@@ -40,3 +40,7 @@ mod edit;
 pub(in crate::backend) use edit::{
     EditablePayload, SelectedEditFailure, SelectedEditor, SelectedRemap,
 };
+
+mod inspect;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use inspect::{InspectPayload, SelectedFact};

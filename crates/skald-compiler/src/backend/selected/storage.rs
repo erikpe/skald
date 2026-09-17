@@ -33,7 +33,7 @@ pub(super) struct Terminal<P> {
     pub(super) payload: P,
     pub(super) edges: Vec<(SelectedBlockId, Vec<SelectedValueId>)>,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum ObjectRole {
     Semantic,

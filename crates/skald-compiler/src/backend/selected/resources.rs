@@ -26,21 +26,42 @@ pub(in crate::backend) enum ResourceError {
     Footprint,
 }
 #[cfg_attr(not(test), allow(dead_code))]
-struct View {
-    bank: BankId,
-    bits: u16,
-    units: Vec<UnitId>,
-    reserved: bool,
+#[derive(Debug)]
+pub(in crate::backend) struct ResourceView {
+    pub bank: BankId,
+    pub bits: u16,
+    pub units: Vec<UnitId>,
+    pub reserved: bool,
 }
 #[derive(Default)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct ResourceCatalog {
     banks: Vec<BankKind>,
     units: usize,
-    views: Vec<View>,
+    views: Vec<ResourceView>,
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl ResourceCatalog {
+    pub(in crate::backend) fn banks(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (BankId, BankKind)> + '_ {
+        self.banks
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(i, kind)| (BankId(i), kind))
+    }
+    pub(in crate::backend) fn views(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (ViewId, &ResourceView)> {
+        self.views
+            .iter()
+            .enumerate()
+            .map(|(i, view)| (ViewId(i), view))
+    }
+    pub(in crate::backend) fn units(&self) -> usize {
+        self.units
+    }
     pub(in crate::backend) fn bank(&mut self, kind: BankKind) -> BankId {
         let id = BankId(self.banks.len());
         self.banks.push(kind);
@@ -75,7 +96,7 @@ impl ResourceCatalog {
             return Err(ResourceError::Unknown);
         }
         let id = ViewId(self.views.len());
-        self.views.push(View {
+        self.views.push(ResourceView {
             bank,
             bits,
             units: footprint,
@@ -83,7 +104,7 @@ impl ResourceCatalog {
         });
         Ok(id)
     }
-    fn get(&self, view: ViewId) -> Result<&View, ResourceError> {
+    fn get(&self, view: ViewId) -> Result<&ResourceView, ResourceError> {
         self.views.get(view.0).ok_or(ResourceError::Unknown)
     }
     pub(in crate::backend) fn view_units(&self, view: ViewId) -> Result<&[UnitId], ResourceError> {

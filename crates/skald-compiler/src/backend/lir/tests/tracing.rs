@@ -35,7 +35,7 @@ pub(super) fn origin() -> Span {
 }
 
 #[test]
-fn enabled_trace_actions_remain_ordered_and_associated_with_explicit_call_locations() {
+pub(super) fn enabled_trace_actions_remain_ordered_and_associated_with_explicit_call_locations() {
     let mut supplied = facts();
     let (context, location) = trace_catalog(&mut supplied);
     let signature = supplied.callables[0].signature;
@@ -123,7 +123,7 @@ fn enabled_trace_actions_remain_ordered_and_associated_with_explicit_call_locati
         .iter()
         .next()
         .is_none());
-    verify_callable(draft).unwrap();
+    inspection::assert_dump(&verify_callable(draft).unwrap());
 }
 
 #[test]
@@ -322,7 +322,8 @@ fn six_attribution_meanings_preserve_effect_contracts_and_omitted_source_metadat
 }
 
 #[test]
-fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_without_cleanup_edges() {
+pub(super) fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_without_cleanup_edges(
+) {
     let mut supplied = facts();
     let signatures = runtime_declarations(&mut supplied);
     let reason = FailureMessage::PrimitiveCastOutOfRange;
@@ -412,7 +413,7 @@ fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_withou
             .as_ref()
             .unwrap()
             .contains(Effect::Report));
-        verify_callable(draft).unwrap();
+        inspection::assert_dump(&verify_callable(draft).unwrap());
     }
     assert_eq!(
         FailureMessage::PrimitiveCastOutOfRange.bytes(),
@@ -435,7 +436,7 @@ fn reported_failure_and_nonreturning_service_calls_are_explicit_terminals_withou
         .unwrap();
     assert!(effects.contains(Effect::HardTrap));
     assert!(!effects.contains(Effect::Report));
-    verify_callable(draft).unwrap();
+    inspection::assert_dump(&verify_callable(draft).unwrap());
 }
 
 #[test]

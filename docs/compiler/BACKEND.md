@@ -6,9 +6,9 @@ boundary. Explicitly marked frozen additions define selected future target
 boundaries without claiming current backend support.
 The implemented private [low-level execution and publication](LOW_LEVEL_IR.md)
 provide checked facts, stage-owned identities and the complete lowered execution vocabulary, including
-calls, effects and tracing, plus independent callable verification and immutable
-publication; production
-emission has not migrated to a low-level IR pipeline.
+calls, effects and tracing, plus independent lowered/selected verification,
+immutable publication, consuming edits and private deterministic inspection;
+production emission has not migrated to a low-level IR pipeline.
 Source-visible language semantics remain owned by the
 [language documentation](../language/README.md); the runtime C interface is a
 separate contract. The shared-handle/header layout, generated

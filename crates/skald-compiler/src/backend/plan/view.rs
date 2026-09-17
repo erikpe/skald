@@ -177,6 +177,14 @@ impl<'plan> PlanView<'plan> {
     ) -> impl ExactSizeIterator<Item = &'plan ArtifactDeclaration> {
         self.plan.artifacts.values()
     }
+    pub(in crate::backend) fn layouts(self) -> impl ExactSizeIterator<Item = &'plan LayoutFact> {
+        self.plan.layouts.iter()
+    }
+    pub(in crate::backend) fn signatures(
+        self,
+    ) -> impl ExactSizeIterator<Item = &'plan SignatureFact> {
+        self.plan.signatures.iter()
+    }
     pub(in crate::backend) fn dispatch(self) -> &'plan [DispatchSlot] {
         &self.plan.dispatch
     }

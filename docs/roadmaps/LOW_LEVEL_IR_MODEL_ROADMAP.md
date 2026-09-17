@@ -1,6 +1,6 @@
 # Low-Level IR Model, Construction, and Verification Roadmap
 
-Status: in progress, 2026-09-17; LI01–LI09 are complete, LI10 is next.
+Status: in progress, 2026-09-17; LI01–LI10 are complete, LI11 is next.
 Implements LA02 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) is accepted, frozen
@@ -65,7 +65,7 @@ the illustrative directory sketch.
 - [x] LI07 — Selected payload and resource description contracts
 - [x] LI08 — Selected verification and portability witnesses
 - [x] LI09 — Consuming edits, remaps and snapshot-bound analyses
-- [ ] LI10 — Immutable inspection and deterministic phase dumps
+- [x] LI10 — Immutable inspection and deterministic phase dumps
 - [ ] LI11 — Cumulative review, cleanup, downstream handoff and closure
 
 ## Owners and durable outputs
@@ -550,15 +550,15 @@ remain uncommitted for the user's manual commit; LI10 is next.
 
 **Purpose:** make the verified model inspectable through its owning phase.
 
-- [ ] Implement read-only visitors and canonical lowered/selected text renderers
+- [x] Implement read-only visitors and canonical lowered/selected text renderers
   with stage/schema/profile headers and complete ordered structural facts.
-- [ ] Print float bits, widths, effects, guards, attribution, edge occurrences,
+- [x] Print float bits, widths, effects, guards, attribution, edge occurrences,
   resource/timing constraints and typed artifacts; exclude host/context tokens,
   timing values and unordered output.
-- [ ] Keep best-effort malformed-draft rendering visibly separate and panic-free.
-- [ ] Test independent-process dump determinism with existing child-process
+- [x] Keep best-effort malformed-draft rendering visibly separate and panic-free.
+- [x] Test independent-process dump determinism with existing child-process
   testing patterns and owner fixtures; avoid new public CLI or importer plumbing.
-- [ ] Update living backend/inspection/test guidance for implemented private
+- [x] Update living backend/inspection/test guidance for implemented private
   APIs and add linked model documentation as needed. Keep actual production
   phase events, public dump adapters and requested metrics delivery pending.
 
@@ -571,6 +571,35 @@ Run the task quality gates.
 **Exit criteria:** genuine phase-owned consumers inspect both verified models
 deterministically; documentation distinguishes available APIs from pending
 production execution and observation.
+
+**Completion record (2026-09-17):** implemented against the user's committed LI09
+endpoint `03e4ae42`, preserving implementation baseline `f1053782`. Phase-owned
+immutable visitors and streaming renderers cover both verified models. Selected
+visits include entry/ABI, resource and stage-origin maps as well as graph records;
+the renderer consumes the same events. Required target opcode formatting keeps
+opcode distinctions/immediates out of the shared enum surface. Canonical headers,
+checked declarations, typed dependencies, binary64 bit patterns, widths, effects,
+guards, attribution, individual edge slots and selected timing/resource/bundle
+constraints are printed without live-context, receipt or host witnesses.
+
+Separate unverified draft rendering marks reservations and never follows invalid
+IDs. Canonical inventory rendering preserves body-release bookkeeping. Existing
+six selected worked fixtures and lowered release/trace/terminal/loop fixtures are
+inspection consumers; seven new tests challenge distinct live contexts, signed
+zero/subnormal/infinity/NaN bits, generated construction order, malformed drafts,
+writer errors and independent process repetitions. Compact contextual local-ID
+formatting and exposed immutable resource/role facts improve interface clarity.
+
+Final fixed-source `make check` passed: formatting, workspace checks, Clippy,
+documentation/dependency guards, all 3,292 compiler unit tests, integration/
+doctests, runtime contracts and all 650 native golden leaves. `make msrv-check`
+then passed serially on Rust 1.82.0. Living backend/debugging/testing guidance and
+the readiness handoff distinguish implemented private APIs from pending native
+execution, observation events, public adapters and metrics. No importer, CLI
+switch, placement stub, production migration or new independent discovery was
+introduced. Scoped native-consumer allowances and durable fixtures are ledgered.
+Changes remain uncommitted for the user's manual commit; LI11's cumulative review
+and closure are next.
 
 ### LI11 — Cumulative review, cleanup, downstream handoff and closure
 
@@ -659,8 +688,11 @@ LI01 adds no production switch, provisional verifier seal or compatibility bridg
 | Selected synthetic opcode fixtures, origin/context/program/thunk/resource/ABI/timing/CFG regressions, private-path example and selected dependency guard | LI07; `63291d6d` | Retain; LI08 extends malformed/portability witnesses; LI11 reviews | Durable opcode-derived structural tests; fixtures remain test-only |
 | `backend/selected/verify/` and explicit selected facade exports: scoped non-test dead-code/import allowances on verification/publication/receipt/program APIs | LI08; `73b1fafe`, based on `63291d6d` | LA03 first native selected consumer; LI09 exercises edit/republication; LI11 transfers remaining allowances | Genuine selected authority requiring shared and target success; remove per consumed item, keeping test linting unsuppressed |
 | Selected verification synthetic target and private malformed-descriptor witnesses | LI08; `73b1fafe` | Retain; LI11 reviews | Durable test-only portability and authority regressions; no target registration or accepting production hook |
-| `backend/{lir,selected}/edit/`, graph arena rebuilding/partial ID maps, effect-object remapping, publication analysis/editor entry and inventory replacement APIs: scoped non-test lint allowances and facade groups | LI09; uncommitted, based on `73b1fafe` | LA03 first native edit/analysis consumer; LI10 exercises read-only consumers; LI11 transfers remaining allowances | Durable consuming transformations and genuine reverification; remove allowances per consumed item, retaining ordinary builds and unsuppressed test linting |
-| Phase-owned edit/guard/trace/remap/receipt/privacy and non-clone/consuming-signature regressions | LI09; uncommitted | Retain; LI11 reviews | Durable authority and metadata-coherence contracts; fault injection remains test-only |
+| `backend/{lir,selected}/edit/`, graph arena rebuilding/partial ID maps, effect-object remapping, publication analysis/editor entry and inventory replacement APIs: scoped non-test lint allowances and facade groups | LI09; `03e4ae42`, based on `73b1fafe` | LA03 first native edit/analysis consumer; LI10 exercises read-only consumers; LI11 transfers remaining allowances | Durable consuming transformations and genuine reverification; remove allowances per consumed item, retaining ordinary builds and unsuppressed test linting |
+| Phase-owned edit/guard/trace/remap/receipt/privacy and non-clone/consuming-signature regressions | LI09; `03e4ae42` | Retain; LI11 reviews | Durable authority and metadata-coherence contracts; fault injection remains test-only |
+
+| `backend/{inspection,lir/inspect,selected/inspect}.rs`, explicit phase facade groups and immutable declaration/resource enumeration: scoped non-test allowances | LI10; uncommitted, based on `03e4ae42` | LA03 first native inspection consumer; LI11 transfers remaining allowances | Genuine read-only visitors, required target formatting and deterministic text, without production adapters/events; remove allowances per consumed API |
+| Existing worked fixtures as inspection consumers, bit-pattern/draft/inventory/writer/process regressions | LI10; uncommitted | Retain; LI11 reviews | Durable test-only inspection evidence; synthetic opcode formatter has no production registration |
 
 
 Ledger draft-only adapters, exploratory fixtures, aliases, gates, instrumentation

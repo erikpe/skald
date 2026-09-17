@@ -479,7 +479,8 @@ execution vocabulary, including calls, effects and tracing. LI04 added independe
 graph/value-flow verification. Selected draft/resource/ABI contracts are delivered;
 LI08 added shared/target verification, immutable selected publication and selected
 inventory closure. Consuming edits, explicit remaps and snapshot-bound analyses
-are delivered; immutable inspection and deterministic phase dumps are next.
+are delivered, together with immutable visitors and deterministic phase dumps.
+Cumulative review and child-roadmap closure are next.
 Full lowered callable verification/publication and genuine snapshot receipts are
 implemented. Complete-program closure and parent-bound target declarations are
 also implemented. Native consumption remains pending;

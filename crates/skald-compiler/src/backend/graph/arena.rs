@@ -22,12 +22,19 @@ local_domain!(SelectedBlock, SelectedBlockId);
 local_domain!(SelectedValue, SelectedValueId);
 local_domain!(SelectedObject, SelectedObjectId);
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct LocalId<K> {
     callable: LirCallableId,
     index: usize,
     kind: PhantomData<fn(K) -> K>,
+}
+
+// Storage indices are contextual IDs, never live-context or host addresses.
+impl<K> std::fmt::Debug for LocalId<K> {
+    fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(out, "{:?}/{}", self.callable, self.index)
+    }
 }
 
 #[cfg_attr(not(test), allow(dead_code))]

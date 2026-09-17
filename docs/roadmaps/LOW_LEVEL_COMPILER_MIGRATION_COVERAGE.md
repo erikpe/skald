@@ -426,7 +426,7 @@ it does not certify a production final-MIR projection.
 | Flags and edges | Frozen atomic flag bundles and explicit edge occurrences/arguments represent current conditional labels and simultaneous loop transfers without hiding branches | LI02 constructed loop/diamond/parallel-edge drafts; LI04 delivered independent CFG/definition/dominance checks; LI07 delivered explicit atomic bundle edges; LI08 checks correction blocks and bundle consistency; LA03 implements critical-edge policy and independent swap/cycle transfer checking |
 | Inventories and publication | Typed source/helper/coordinator/entry/thunk keys, canonical declaration lookup, absent-source rejection and context-bound handles; equal live plans do not share authority | LI05 delivered genuine callable seals/receipts; LI06 delivered worklists, program closure and parent-bound extensions; LA03 freezes streaming target discovery and verified thunk construction |
 | Symbolic objects and scratch | Checked addressable/zero-size versus elided layouts; no value home or frame offset; frozen role separation represents semantic/trace/ABI and later placement requirements | LI02 delivered size-zero/elided objects and checked lifetime sites; LI07 delivered scratch/ABI descriptions; LI08 verifies their consistency; LA03 freezes actual slot shapes and bounded frame legalization |
-| Inspection and errors | Immutable borrowed fact views, stable structural declaration failure reasons and public private-path compile-fail tests; omitted policy rejects trace inventory | LI03 delivered effects and trace construction checks; LI04 delivered structured graph failures; LI05 delivered full callable failures; LI10 supplies canonical phase dumps; LA03/LA05 wire real observations and native error conversion |
+| Inspection and errors | Immutable borrowed fact views, stable structural declaration failure reasons and public private-path compile-fail tests; omitted policy rejects trace inventory | LI03 delivered effects and trace construction checks; LI04 delivered structured graph failures; LI05 delivered full callable failures; LI10 delivered canonical phase dumps; LA03/LA05 wire real observations and native error conversion |
 
 The model compiles in ordinary builds, with item-scoped non-test allowances for
 delivered interfaces that currently have only regression consumers. The
@@ -615,6 +615,33 @@ Future changes must record their introducing commit and removal/transfer owner
 in the child and program ledgers, even after local commits. This record is
 maintained through LA05, which reconciles its obligations and archives it.
 
+### Immutable inspection readiness (LI10)
+
+Implemented against committed editor endpoint `03e4ae42`. Both verified stages
+own immutable visitors and streaming text renderers, with explicit schema/stage/
+status/profile and callable headers. Lowered records expose operations, widths,
+float bits, effects, guards, attribution and distinct edge slots. Selected
+visitors expose stage-owned facts and opcode payloads; the required target-owned
+`InspectPayload` formatter supplies opcode/immediate details while shared code
+renders structural descriptions, resource footprints, symbolic ABI areas,
+ties/clobbers/timing, effects and typed references. Ordered arenas/maps determine
+output; context/receipt witnesses never enter it.
+
+Separate unverified draft renderers mark reservations and avoid following invalid
+IDs. Inventory rendering retains the streaming contract: closure receipts are
+inspectable without reconstructing discarded callable bodies. Existing worked
+fixtures, independent process repetitions, special float bits, distinct contexts,
+writer errors and varied inventory insertion orders exercise these contracts.
+The authoritative API behavior is documented in
+[low-level inspection](../compiler/LOW_LEVEL_IR.md#immutable-inspection-and-text-dumps).
+
+This grants no native pipeline or performance clearance. LA03/LA05 must supply
+concrete opcode formatting, actual phase checkpoint events, public adapters and
+requested metrics only when those phases execute. Native placement/frame/checker
+requirements remain pending; this work introduces no importer, CLI switch or
+fabricated phase event. Scoped unwired API allowances remain ledgered for native
+consumer removal and final child-roadmap reconciliation.
+
 ### Consuming edit and analysis readiness (LI09)
 
 Implemented against LI08's committed endpoint `73b1fafe`. Both stages have
@@ -631,7 +658,7 @@ checks the chosen snapshot, matching the lowered contract.
 | Guard / trace / reference coherence | Moved check evidence and trace associations relocated; changed divisor/check operands rejected; inherited attribution boundaries retained in selected dependencies | Actual selection evidence propagation and trace/frame recipes |
 | CFG changes | Swaps and correction-graph splits/permutations republish; newly reachable nondominating uses and malformed edge arity fail | Semantics-preserving native transformations and independently checked transfer realization |
 | Snapshot authority | Fresh receipts and reclosed inventories reject stale completions; static assertions enforce consuming signatures and non-cloneable callable/program/analysis authority | Downstream placement/realization must borrow or reconcile the exact selected snapshot |
-| Read-only analyses | Borrowed graph sessions identify the actual immutable draft, with reachability/dominance and ordered edge occurrences | No global cache or pass manager is introduced; canonical inspection remains LI10 |
+| Read-only analyses | Borrowed graph sessions identify the actual immutable draft, with reachability/dominance and ordered edge occurrences | No global cache or pass manager is introduced; canonical inspection is delivered by LI10 |
 
 Unpublished editor drafts may have dirty derived metadata until rebuild/finish;
 no editor analysis or provisional publication authority is provided. Full
@@ -664,7 +691,7 @@ profiles, explicit target rejection and malformed edge arguments fail. Lowered
 IDs cannot inhabit selected operand storage. Earlier construction regressions
 remain useful; they certify drafts only. No native target registration, placer,
 checker or physical-preservation claim is introduced. Consuming edits and snapshot borrowing are delivered by LI09; canonical
-inspection remains LI10.
+inspection is delivered by LI10.
 
 ### Selected contract readiness (LI07)
 
@@ -681,7 +708,7 @@ or physical instruction enum enters the shared owner.
 | Flags and edges | Atomic synthetic terminal bundle names two actual stored edges; shared CFG/dominance checking consumes target descriptions | LA03 supplies actual flag recipes/transfers |
 | Inventories and publication | Source draft admission checks finalized parent receipts; thunk drafts resolve only frozen extension declarations; distinct selection contexts reject foreign handles | LA03 supplies native discovery |
 | Objects, resources and scratch | Semantic/trace/ABI symbolic object roles, explicit origin maps, bounded recipe scratch; same/cross-bank overlap, reservation and partial-width preservation tests | LA03 supplies real footprints, preservation and frame legalization |
-| Inspection and failures | Shared `GraphView` projection over selected storage; structured construction errors; private-path compile-fail and selected-core dependency guard | LI10 canonicalizes phase inspection; LA03/LA05 wire production observations |
+| Inspection and failures | Shared `GraphView` projection over selected storage; structured construction errors; private-path compile-fail and selected-core dependency guard | LI10 delivered canonical phase inspection; LA03/LA05 wire production observations |
 
 The construction interface is now independently checked by LI08. Native preservation and allocator
 correctness are not established by these witnesses. No separate discovery or
@@ -692,7 +719,7 @@ tracked in the model artifact ledger and expire with native consumers.
 
 The [LA02 model/construction/verification design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
 is accepted, frozen and promoted. Its [implementation roadmap](LOW_LEVEL_IR_MODEL_ROADMAP.md)
-is in progress; LI01–LI09 are complete and LI10 is next. The
+is in progress; LI01–LI10 are complete and LI11 is next. The
 [common readiness record](#common-model-readiness-li01) covers the inherited
 walkthroughs and the implemented declaration/identity foundation. LA03's
 concrete target-selection and physical-realization

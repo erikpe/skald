@@ -4,8 +4,9 @@ Status: private checked declarations and the complete lowered draft vocabulary
 are implemented. Production emission still uses the [current backend](BACKEND.md).
 Independent graph/value-flow and full lowered callable verification are implemented.
 Complete lowered-program inventory publication and parent-bound target
-declarations are implemented. Selected graphs, edits, placement and native
-consumption remain planned.
+declarations, selected graphs and consuming edits are implemented. Verified
+products support immutable visitors and private deterministic text inspection.
+Placement and native consumption remain planned.
 
 ## Ownership and checking
 
@@ -392,6 +393,42 @@ borrowing its exact immutable draft. Its lifetime prevents consumption while the
 view is still used. Callable, program and analysis authority is non-cloneable;
 receipts may be cloned but retain their original snapshot identity. There is no
 global cache, generic pass manager, placement stub or production pipeline change.
+
+## Immutable inspection and text dumps
+
+Each verified stage owns `visit` and `dump`. Lowered visitors borrow typed value,
+object and block records, including their ordered instructions and terminals.
+Selected visitors expose entry/ABI facts, resource banks/views, explicit stage
+origin maps, representations, definition/origin facts, block parameters, opcode
+payloads and edge occurrences. All records are
+immutable borrows; visitors grant no publication, mutable model, MIR or source
+lookup authority.
+
+Text starts with a schema version, stage, verified status and canonical callable
+key, then target/profile, trace/artifact policy and checked declarations. Dense
+arena order and ordered maps define output order. Graphs print entry, inputs,
+objects, definitions, origins, instructions/results, terminals and edge slots.
+Lowered output preserves binary64 constants as 16 hexadecimal bit digits, memory
+widths/alignments, guard evidence, effects and call attribution. Selected output
+also prints representations, symbolic ABI bindings/areas, resource footprints,
+reservations, ties, early/late operand events, clobbers and bounded bundles.
+`InspectPayload::fmt_opcode` is a required target-owned formatter for opcode
+choices and immediate data absent from structural descriptions. Implementations
+must be total on diagnostic drafts and format deterministic scalar facts, never
+live context identity or host pointers. Shared rendering uses `describe` for
+structural facts rather than target enums.
+
+`dump_inventory` prints canonical completion keys and typed dependencies without
+reconstructing released bodies or serializing receipt/context witnesses. A draft's
+separate `dump_draft` prints `status=unverified-draft` and marks unresolved
+reservations; it does not follow potentially invalid references or certify the
+result. Writers receive streaming text and errors propagate normally. These are
+private debugging APIs, not a stable external wire format or importer.
+
+Production phase events, public dump adapters and requested metrics remain
+pending until the native pipeline executes these phases. Current CLI dumps still
+observe the existing production compiler. No synthetic stage event, new CLI
+switch or native performance claim follows from model inspection.
 
 ## Regression ownership
 
