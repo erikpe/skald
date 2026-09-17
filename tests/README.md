@@ -6,7 +6,9 @@ non-Rust data and cross-crate harnesses:
 
 - [`compiler/`](compiler/README.md) contains compiler corpus data;
 - [`golden/`](golden/README.md) contains feature-owned `.ska` cases, specs, and
-  external expectation data; and
+  external expectation data;
+- [`measurements/`](measurements/README.md) contains opt-in measurement inputs
+  and durable reviewed evidence; and
 - [`runtime/`](runtime/README.md) contains direct C runtime harnesses.
 
 Rust unit tests live beside their implementation. Public and cross-phase Rust

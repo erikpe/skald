@@ -418,7 +418,11 @@ already records compiler/runtime/source identities, three compile samples by
 default, native warmups/repeats, compiler wall/RSS summaries, repeated assembly
 hashes, assembly byte size, total executable bytes, pass/analysis observations,
 and native result digests. Native enabled/omitted workload pairs alternate order.
-No qualified foundation baseline is captured by the inventory or protocol work.
+The complete pre-migration baseline at `9e3cebb1` is now
+[durably retained](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md#reviewed-pre-migration-baseline).
+Its equivalent-build cost comparison remains inconclusive for eleven short
+compile timings; all required metrics and correctness/identity evidence are
+complete. Future architecture adoption still needs cost clearance.
 
 LP03 closes the six collection/comparison gaps identified by LP01. The
 [foundation protocol](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md) is the
@@ -430,7 +434,7 @@ authoritative procedure; collection extends the same cleanup entry point.
 | Paired compiler measurements | Compile and native warmups/repetitions alternate baseline/candidate order; raw ordered events retained |
 | Required counts and repeat protocol | Defaults/minima five compile/nine native, warmups; comparison requires distinct paired captures; explicit smoke/subset captures cannot qualify adoption |
 | Target code/frame metrics | ELF text-section sizes, fixed frame bytes, peak explicit stack reservations and direct static frame-memory operands; supported recipes have small fixtures, unknown shapes are unsupported |
-| Raw samples/provenance/reporting and retention | Full reports, copied manifest, repeated assembly, untimed reporting equivalence/observations, tool/host/input/harness identities; durable qualified-record retention is explicitly LP04's remaining obligation |
+| Raw samples/provenance/reporting and retention | Full reports, copied manifest, repeated assembly, untimed reporting equivalence/observations, tool/host/input/harness identities; checked-in raw reports/manifest/build record/untimed output/comparison plus hashes and untimed verification |
 | Classification | Per-workload incompatibility, semantic/report/determinism invalidity, missing/noisy evidence, repeated 10% timing/15% RSS/text review gates and strict twice-larger-MAD rule; frame changes separately visible |
 
 An additional runtime-input scalar/call/division kernel covers the material
@@ -438,9 +442,14 @@ pilot gap left by the existing recursion/range/trace workloads. Inputs
 `17 1000000` and independent checksum `-993156` are frozen in the manifest.
 No standard-library refactoring is required. E21 fixes the generated retain
 helper's exhaustion-call alignment defect found while checking frame recipes;
-LP04 must capture a compiler revision including that correction. Full baseline
-collection, reproducibility qualification and durable reviewed evidence remain
-pending LP04; smoke runs make no performance/adoption claim.
+The measured revision `9e3cebb1` includes that correction. Two independent full
+captures use the same preserved binary with 15 compile/31 native samples per
+role/workload, warmups and reversed alternating order. All 21 configurations'
+artifact/static metrics agree across roles/captures; native digests match the
+manifest and reporting emits equivalent assembly. No metrics or semantic evidence
+are absent. Noisy compile classifications are retained without changing policy;
+they remain an adoption obligation. The measurement guide owns exact results,
+retention, host limits and requalification instructions.
 
 ## Contract reconciliation and transition disposition
 

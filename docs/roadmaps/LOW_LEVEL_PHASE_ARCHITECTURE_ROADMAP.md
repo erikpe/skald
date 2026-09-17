@@ -1,6 +1,6 @@
 # Low-Level Phase Architecture and Backend Ownership Roadmap
 
-Status: in progress; LP01–LP03 are complete and LP04 is next. Implements LA01 of the
+Status: in progress; LP01–LP04 are complete and LP05 is next. Implements LA01 of the
 [low-level compiler architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 The [phase architecture design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen as of 2026-09-17.
@@ -52,7 +52,7 @@ behavior; do not implement the illustrative future directory tree in advance.
 - [x] LP01 — Establish the migration contract and coverage inventory
 - [x] LP02 — Protect existing backend boundaries and behavioral witnesses
 - [x] LP03 — Make the foundation measurement protocol reproducible
-- [ ] LP04 — Capture and qualify the pre-migration baseline
+- [x] LP04 — Capture and qualify the pre-migration baseline
 - [ ] LP05 — Cumulative review, downstream handoff, and closure
 
 ## Current owners and durable outputs
@@ -72,7 +72,9 @@ LA01 closure does not archive pending migration obligations. The
 [foundation measurement procedure](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md)
 defines reproducible collection/comparison, referring to the generic
 [cleanup measurement contract](../development/CLEANUP_MEASUREMENTS.md).
-Qualified baseline evidence remains an LP04 deliverable.
+The complete pre-migration baseline at `9e3cebb1` is durably retained in that
+procedure. Its equivalent-build comparison preserves eleven inconclusive short
+compile timings; cost clearance remains a future adoption obligation.
 
 ## PR-sized implementation sequence
 
@@ -296,27 +298,27 @@ phase, production instrumentation or transitional pipeline is introduced.
 
 **Purpose:** preserve trustworthy evidence before any production lowering move.
 
-- [ ] Select and record the pre-migration compiler revision after LP02/LP03's
+- [x] Select and record the pre-migration compiler revision after LP02/LP03's
   current-boundary and ABI fixes.
   Distinguish this measurement revision from the program and child implementation
   baselines. If later fixes change semantics, explicitly requalify affected
   evidence instead of silently replacing the comparison baseline.
-- [ ] Build the compiler/runtime outside timing, record toolchains, build
+- [x] Build the compiler/runtime outside timing, record toolchains, build
   profiles, source/runtime/binary hashes, host conditions and dirty-state
   provenance, and execute the full frozen manifest using LP03's commands.
-- [ ] Confirm repeated assembly determinism within each configuration and exact
+- [x] Confirm repeated assembly determinism within each configuration and exact
   native status/stdout/stderr digests. Capture reporting-on/off equivalence and
   keep instrumentation observations in a separate untimed run.
-- [ ] Exercise comparison reproducibility with equivalent baseline builds or
+- [x] Exercise comparison reproducibility with equivalent baseline builds or
   repeated baseline runs. This qualifies the procedure; it does not measure
   an old/new architecture improvement. Resolve absent metrics and insufficient
   workload duration, and retain noisy classifications as inconclusive.
-- [ ] Store compact reviewed results and artifact hashes in the measurement
+- [x] Store compact reviewed results and artifact hashes in the measurement
   document. Preserve raw samples and manifests durably through foundation
   acceptance: ignored build paths alone are not evidence retention. Use small
   checked-in machine-readable evidence or an explicitly recorded durable store;
   keep large binaries/build products out of Git and give rebuild commands.
-- [ ] Record the readiness outcome and any blocking environment/corpus issue.
+- [x] Record the readiness outcome and any blocking environment/corpus issue.
   A timing fluctuation does not justify weakening the frozen adoption policy.
 
 **Tests:** `make cleanup-baseline` with the documented protocol overrides as
@@ -327,6 +329,56 @@ defaults are insufficient. Validate all retained evidence and documentation link
 **Exit criteria:** the baseline is reproducible, complete for the manifest and
 qualified for later comparison. Missing evidence leaves this task open; it
 cannot be marked complete because the architecture implementation has not begun.
+
+**Completion evidence (2026-09-17):** task/measurement baseline
+`9e3cebb172db1c5b0f7813ce7c34a87b019c9e9d`, the user's committed LP03 result.
+History/source review confirmed LP03's collector, scalar kernel, metric fixtures
+and ABI probe have continuing owners; no transition is due for removal here.
+The measurement revision includes the retain-helper correction and is distinct
+from program/child implementation baseline `495debd3`.
+
+`make golden-tools runtime` completed before timing. One preserved clean golden
+compiler serves both roles with Rust 1.97.1, no extra flags and the same runtime.
+Two independent full captures (`pair-azv57129`, `pair-uk5oz741`) use CPU 14,
+opposite starting orders, warmups, 15 compile/31 native samples per role/workload.
+Both collecting identities were clean at `9e3cebb1`. WSL2 governor/turbo controls
+are unavailable and Windows background load is uncontrolled; exact host/tool
+conditions, commands and hashes are retained.
+
+All 21 configurations pass semantic digests, assembly determinism and untimed
+reporting equivalence, with all frame/text metrics supported. Static metrics,
+assembly and linked executable hashes agree across all four role/capture
+combinations. Native durations satisfy the noise rule even for the shortest
+workloads. Checked-in records preserve 1,260 measured compile and 2,108 measured
+native events plus 152 warmups, all per-callable metrics, copied manifest,
+build attestation, comparison, and raw untimed stderr/native output. The six
+hashed evidence records total about 355 KB; no large assembly or executable is
+checked in. All 56 source/harness hashes were independently checked against the
+selected commit. The
+[measurement document](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md#reviewed-pre-migration-baseline)
+owns compact results, artifact hashes, rebuild/retention and requalification
+instructions.
+
+Baseline **input readiness passes**, with no absent or unsupported metric.
+Equivalent-build **cost classification remains inconclusive**: all RSS/text and
+17 native timing gates are within limits, ten compile timing gates are within
+limits, and eleven short compile timings are noisy. They are retained unchanged;
+no threshold is weakened and no cost exception is granted. This task qualifies
+complete baseline inputs/procedure, not architecture adoption. Future adoption
+must resolve those cost uncertainties with compatible paired evidence and
+improved host control/measurement support; more repeats alone do not eliminate
+within-sample MAD.
+
+The new untimed evidence verifier checks hashes, equivalent build/manifest
+identities, complete metrics/counts/alternation, row/event agreement, raw
+observations/native output, deterministic artifacts and comparison replay.
+Corruption, missing warmups/samples/metrics, changed attestations and invented
+results have regressions; noisy complete evidence remains distinguishable.
+`make measurement-support-test` passed all 43 tests. Extended
+`make golden-determinism-test` and `make golden-release-test` each passed all
+650 leaves, as did final `make check` with workspace/runtime/static/doc checks.
+No Rust/toolchain surface changed. No substantial independent discovery is
+deferred. Changes remain uncommitted for the user; LP05 is next.
 
 ### LP05 — Cumulative review, downstream handoff, and closure
 
@@ -379,7 +431,7 @@ to implement undecided schemas.
 | Checkpoint | Proceed when | Otherwise |
 | --- | --- | --- |
 | Contract readiness after LP01 | All current families have owners and reviewable test dispositions | Complete the inventory or explicitly amend a conflicting design; do not invent a legacy fallback |
-| Baseline readiness after LP04 | Identity, semantics, determinism and all required metrics are qualified | Repair collection/corpus/environment and leave capture open; report uncertainty without fabricating acceptance |
+| Baseline readiness after LP04 | Identity, semantics, determinism and all required metrics are complete/qualified; noisy cost classifications retained explicitly | Repair missing/invalid collection/corpus evidence and leave capture open; preserve uncertainty without claiming adoption cost clearance |
 | LA01 closure after LP05 | Contracts, guards, evidence and cumulative review pass | Resolve scope gaps in this roadmap; record independent work separately |
 | Future foundation adoption in LA05 | Full new-pipeline parity and frozen cost gates pass | Fix regressions or record a reviewed cost exception; keep production adoption pending. Do not require LA06 to rescue the baseline |
 
@@ -398,8 +450,9 @@ migration record carries pending program obligations through LA05.
 | --- | --- | --- | --- |
 | No bridge, gate, exception or exploratory code introduced | LP01; `d7163d9d` | — | Documentation inventory only; source/history review recorded above |
 | Live-input/aggregate-pressure goldens and private count probe | LP02; `e446ecdb` (task baseline `d7163d9d`) | Retain through downstream migrations | Enduring regression fixtures/test doubles; no production bridge, gate, placeholder IR or extraction introduced |
-| Foundation collector/comparator, versioned manifest, scalar kernel and metric fixtures | LP03; baseline `e446ecdb`, commit pending | Retain through foundation adoption | Enduring opt-in machinery under the existing cleanup entry point; no production instrumentation, rollout gate or new pipeline |
-| Generated retain exhaustion stack alignment/probe | LP03; baseline `e446ecdb`, commit pending | Retain | ABI correction with native failure-before/fix-after proof; not migration scaffolding |
+| Foundation collector/comparator, versioned manifest, scalar kernel and metric fixtures | LP03; `9e3cebb1` (task baseline `e446ecdb`) | Retain through foundation adoption | Enduring opt-in machinery under the existing cleanup entry point; no production instrumentation, rollout gate or new pipeline |
+| Generated retain exhaustion stack alignment/probe | LP03; `9e3cebb1` (task baseline `e446ecdb`) | Retain | ABI correction with native failure-before/fix-after proof; not migration scaffolding |
+| Retained baseline records and untimed evidence verifier/tests | LP04; baseline `9e3cebb1`, commit pending | Retain through foundation adoption | Complete checked-in raw evidence with supported metrics; eleven noisy compile timing gates remain inconclusive. No production bridge or new phase |
 
 Carry continuing program obligations into the migration record with explicit
 owners; do not reset their history at a child-roadmap boundary. Shared baseline

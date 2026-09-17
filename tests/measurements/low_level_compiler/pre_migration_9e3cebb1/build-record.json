@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "revision": "9e3cebb172db1c5b0f7813ce7c34a87b019c9e9d",
+  "dirty": false,
+  "profile": "golden",
+  "build_toolchain": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "build_commands": [
+    "make golden-tools runtime"
+  ],
+  "build_flags": "",
+  "environment": {
+    "RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CC": null,
+    "SKALD_RUNTIME_ARCHIVE": null,
+    "SKALD_STDLIB_ROOT": null
+  },
+  "compiler": {
+    "path": "build/preserved/low-level-compiler-9e3cebb1/skac",
+    "sha256": "a1daa5eb6574963a53685c36bdb84f149db7da7306aa2e08f9324483efa18061"
+  },
+  "runtime": {
+    "sha256": "4b321ca197cf0d672ea0ffaf60529619725346e1c46612b2c52d490a540969a8",
+    "configuration": "format=1\ncc=cc\nar=ar\ncflags=-O2 -std=c11 -Wall -Wextra -Werror -Iinclude\n"
+  },
+  "host_notes": "WSL2 Linux; collecting process and descendants pinned to logical CPU 14; no concurrent intentional builds/tests/benchmarks; governor/turbo controls unavailable in guest; Windows host scheduling and background load uncontrolled; record load averages; same binary in both roles qualifies procedure only.",
+  "capture_commands": [
+    [
+      "taskset",
+      "-c",
+      "14",
+      "python3",
+      "scripts/measure_cleanup_baseline.py",
+      "foundation",
+      "--compiler",
+      "build/preserved/low-level-compiler-9e3cebb1/skac",
+      "--compiler-revision",
+      "9e3cebb172db1c5b0f7813ce7c34a87b019c9e9d",
+      "--candidate-compiler",
+      "build/preserved/low-level-compiler-9e3cebb1/skac",
+      "--candidate-revision",
+      "9e3cebb172db1c5b0f7813ce7c34a87b019c9e9d",
+      "--build-toolchain",
+      "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+      "--host-notes",
+      "WSL2 Linux; collecting process and descendants pinned to logical CPU 14; no concurrent intentional builds/tests/benchmarks; governor/turbo controls unavailable in guest; Windows host scheduling and background load uncontrolled; record load averages; same binary in both roles qualifies procedure only.",
+      "--compile-repeats",
+      "15",
+      "--native-repeats",
+      "31",
+      "--order-start",
+      "0",
+      "--output-root",
+      "build/measurements/low-level-compiler/qualification-9e3cebb1"
+    ],
+    [
+      "taskset",
+      "-c",
+      "14",
+      "python3",
+      "scripts/measure_cleanup_baseline.py",
+      "foundation",
+      "--compiler",
+      "build/preserved/low-level-compiler-9e3cebb1/skac",
+      "--compiler-revision",
+      "9e3cebb172db1c5b0f7813ce7c34a87b019c9e9d",
+      "--candidate-compiler",
+      "build/preserved/low-level-compiler-9e3cebb1/skac",
+      "--candidate-revision",
+      "9e3cebb172db1c5b0f7813ce7c34a87b019c9e9d",
+      "--build-toolchain",
+      "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+      "--host-notes",
+      "WSL2 Linux; collecting process and descendants pinned to logical CPU 14; no concurrent intentional builds/tests/benchmarks; governor/turbo controls unavailable in guest; Windows host scheduling and background load uncontrolled; record load averages; same binary in both roles qualifies procedure only.",
+      "--compile-repeats",
+      "15",
+      "--native-repeats",
+      "31",
+      "--order-start",
+      "1",
+      "--output-root",
+      "build/measurements/low-level-compiler/qualification-9e3cebb1"
+    ]
+  ]
+}

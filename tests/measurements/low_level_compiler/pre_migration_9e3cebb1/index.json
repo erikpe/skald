@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "kind": "foundation-baseline-evidence",
+  "revision": "9e3cebb172db1c5b0f7813ce7c34a87b019c9e9d",
+  "files": {
+    "build-record.json": "7851c4fd9afed2e603fe2a46d6d49dd611e7cc5b8f8ad28083c0bad4de191386",
+    "comparison.json": "f6a721a2d0c1fa908b30a86ca9ac677b95a3d112af40ccbfa69565a3b01d9b45",
+    "first.json.gz": "a51c95ca5f994d53eca9bb3f9aae121a93dfc96d7db2a9801466951dea2f0834",
+    "manifest.json": "b1e779bd317354f61450b65c874d78b8986727cf2e3fe3be32b1bb32c9634d57",
+    "observations.json.gz": "b915e865fbcbdfaa667968a4fc53d0a1cd0590024411bea016ffc3925e51d79b",
+    "second.json.gz": "48ff6ed1bc314385970ee94205c28b12911b0ae8c864c5bf5b75414f175564fa"
+  }
+}

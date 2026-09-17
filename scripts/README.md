@@ -60,6 +60,13 @@ selected with `SKALD_RUNTIME_ARCHIVE` must have its `build-config.txt` sibling;
 this prevents measurements from silently using an artifact of unknown origin.
 The helper's focused tests run through `make measurement-support-test`.
 
+`verify_low_level_baseline.py` verifies the retained foundation evidence hashes,
+build/manifest identities, full raw execution order and counts, untimed
+observations/native output, deterministic artifacts, and replayed comparison.
+It runs no timed processes. Its zero exit status establishes record integrity;
+the printed comparison can still be inconclusive. Retention and exact invocation
+are defined in the foundation measurement guide.
+
 `measure_generic_vec.py` compiles the representative generic-vector growth,
 copy, pop, and clear workload under `tests/benchmarks/generic_vec/`, then
 reports assembly/executable size, compile time, and median native run time:

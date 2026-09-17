@@ -1,0 +1,483 @@
+{
+  "schema": 1,
+  "version": 1,
+  "target": "x86_64-sysv",
+  "mir_profile": "default",
+  "compiler_profile": "golden",
+  "policy": {
+    "compile_repeats": 5,
+    "native_repeats": 9,
+    "warmups": 1,
+    "timing_increase": 0.1,
+    "rss_text_increase": 0.15,
+    "mad_multiplier": 2
+  },
+  "workloads": [
+    {
+      "id": "compile/small-source",
+      "dimensions": [
+        "small-source"
+      ],
+      "compiler_arguments": [
+        "samples/vertical/exit_42.ska",
+        "--no-stdlib",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "samples/vertical/exit_42.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": null,
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "compile/many-modules-large-cfg",
+      "dimensions": [
+        "many-modules",
+        "large-callable-cfg"
+      ],
+      "compiler_arguments": [
+        "--entry",
+        "app",
+        "--module-root",
+        "tests/golden/vm_benchmark/cases/modules"
+      ],
+      "input_paths": [
+        "tests/golden/vm_benchmark/cases/modules"
+      ],
+      "runtime_trace": "enabled",
+      "native_group": null,
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "compile/many-generic-applications",
+      "dimensions": [
+        "many-generic-applications"
+      ],
+      "compiler_arguments": [
+        "tests/golden/generic_interfaces/conformance_matrix.ska",
+        "--no-stdlib",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/golden/generic_interfaces/conformance_matrix.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": null,
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "compile/nested-ownership",
+      "dimensions": [
+        "nested-ownership"
+      ],
+      "compiler_arguments": [
+        "tests/golden/standard_vec/vec_generic_type_shapes.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/golden/standard_vec/vec_generic_type_shapes.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": null,
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/generic-vector-growth",
+      "dimensions": [
+        "existing-native",
+        "generic-applications",
+        "ownership"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/generic_vec/growth.ska"
+      ],
+      "input_paths": [
+        "tests/benchmarks/generic_vec/growth.ska"
+      ],
+      "runtime_trace": "enabled",
+      "native_group": "generic-vector",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/range-u8-range",
+      "dimensions": [
+        "existing-native",
+        "loop"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/range_loop/u8_range.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/range_loop/u8_range.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "range-u8",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/range-u8-while",
+      "dimensions": [
+        "existing-native",
+        "loop"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/range_loop/u8_while.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/range_loop/u8_while.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "range-u8",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/range-u64-range",
+      "dimensions": [
+        "existing-native",
+        "loop"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/range_loop/u64_range.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/range_loop/u64_range.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "range-u64",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/range-u64-while",
+      "dimensions": [
+        "existing-native",
+        "loop"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/range_loop/u64_while.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/range_loop/u64_while.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "range-u64",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/range-i64-range",
+      "dimensions": [
+        "existing-native",
+        "loop"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/range_loop/i64_range.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/range_loop/i64_range.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "range-i64",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/range-i64-while",
+      "dimensions": [
+        "existing-native",
+        "loop"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/range_loop/i64_while.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/range_loop/i64_while.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "range-i64",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/runtime-trace-call-recursion-enabled",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/panic_runtime_trace/call_recursion.ska"
+      ],
+      "input_paths": [
+        "tests/benchmarks/panic_runtime_trace/call_recursion.ska"
+      ],
+      "runtime_trace": "enabled",
+      "native_group": "runtime-trace-call-recursion",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/runtime-trace-call-recursion-omitted",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/panic_runtime_trace/call_recursion.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/panic_runtime_trace/call_recursion.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "runtime-trace-call-recursion",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/runtime-trace-tight-loop-enabled",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/panic_runtime_trace/tight_loop.ska"
+      ],
+      "input_paths": [
+        "tests/benchmarks/panic_runtime_trace/tight_loop.ska"
+      ],
+      "runtime_trace": "enabled",
+      "native_group": "runtime-trace-tight-loop",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/runtime-trace-tight-loop-omitted",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/panic_runtime_trace/tight_loop.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/panic_runtime_trace/tight_loop.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "runtime-trace-tight-loop",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/runtime-trace-allocation-enabled",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/panic_runtime_trace/allocation.ska"
+      ],
+      "input_paths": [
+        "tests/benchmarks/panic_runtime_trace/allocation.ska"
+      ],
+      "runtime_trace": "enabled",
+      "native_group": "runtime-trace-allocation",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/runtime-trace-allocation-omitted",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/panic_runtime_trace/allocation.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/panic_runtime_trace/allocation.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "runtime-trace-allocation",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/runtime-trace-representative-golden-enabled",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/golden/operators/primitive_operator_profile.ska"
+      ],
+      "input_paths": [
+        "tests/golden/operators/primitive_operator_profile.ska"
+      ],
+      "runtime_trace": "enabled",
+      "native_group": "runtime-trace-representative-golden",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stderr": "",
+        "stdout_file": "tests/golden/operators/data/primitive_operator_profile.stdout"
+      }
+    },
+    {
+      "id": "native/runtime-trace-representative-golden-omitted",
+      "dimensions": [
+        "existing-native",
+        "runtime-trace"
+      ],
+      "compiler_arguments": [
+        "tests/golden/operators/primitive_operator_profile.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/golden/operators/primitive_operator_profile.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "runtime-trace-representative-golden",
+      "native_arguments": [],
+      "expected": {
+        "status": 0,
+        "stderr": "",
+        "stdout_file": "tests/golden/operators/data/primitive_operator_profile.stdout"
+      }
+    },
+    {
+      "id": "native/scalar-calls-enabled",
+      "dimensions": [
+        "scalar-calls",
+        "division-join",
+        "runtime-input"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/low_level_compiler/scalar_calls.ska"
+      ],
+      "input_paths": [
+        "tests/benchmarks/low_level_compiler/scalar_calls.ska"
+      ],
+      "runtime_trace": "enabled",
+      "native_group": "scalar-calls",
+      "native_arguments": [
+        "17",
+        "1000000"
+      ],
+      "expected": {
+        "status": 0,
+        "stdout": "-993156\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "native/scalar-calls-omitted",
+      "dimensions": [
+        "scalar-calls",
+        "division-join",
+        "runtime-input"
+      ],
+      "compiler_arguments": [
+        "tests/benchmarks/low_level_compiler/scalar_calls.ska",
+        "--omit-runtime-trace"
+      ],
+      "input_paths": [
+        "tests/benchmarks/low_level_compiler/scalar_calls.ska"
+      ],
+      "runtime_trace": "omitted",
+      "native_group": "scalar-calls",
+      "native_arguments": [
+        "17",
+        "1000000"
+      ],
+      "expected": {
+        "status": 0,
+        "stdout": "-993156\n",
+        "stderr": ""
+      }
+    }
+  ]
+}
