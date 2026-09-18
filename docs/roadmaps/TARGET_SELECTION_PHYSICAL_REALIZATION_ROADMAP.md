@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01 complete; NP02 is next.
+Status: in progress, 2026-09-18; NP01–NP02 complete; NP03 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -46,7 +46,7 @@ backend or claim full-language migration.
 ## Progress
 
 - [x] NP01 — Streaming publication authority
-- [ ] NP02 — x86 resources and component ABI
+- [x] NP02 — x86 resources and component ABI
 - [ ] NP03 — Whole-program admission and fact projection
 - [ ] NP04 — Scalar memory and control-flow lowering
 - [ ] NP05 — Guarded arithmetic and conversion lowering
@@ -89,9 +89,9 @@ its acceptance boundary; do not silently defer part of its contract.
 
 **Purpose:** Establish target facts shared by selection, checking and later realization.
 
-- [ ] Define concrete register banks/views, overlap and width preservation, reservations, caller/preserved footprints and encoding restrictions; keep flags atomic rather than virtual values.
-- [ ] Classify checked logical signatures into entry/call/return roles, independent integer/SIMD exhaustion and stack slots. Keep hidden result, receiver and alias-origin components explicit; distinguish internal component ABI from scalar C interop.
-- [ ] Freeze division, shifts, indirect-call target protection and trace event requirements with opcode/event walkthroughs. Reject unsupported external signatures explicitly; add no MIR queries to the target owner.
+- [x] Define concrete register banks/views, overlap and width preservation, reservations, caller/preserved footprints and encoding restrictions; keep flags atomic rather than virtual values.
+- [x] Classify checked logical signatures into entry/call/return roles, independent integer/SIMD exhaustion and stack slots. Keep hidden result, receiver and alias-origin components explicit; distinguish internal component ABI from scalar C interop.
+- [x] Freeze division, shifts, indirect-call target protection and trace event requirements with opcode/event walkthroughs. Reject unsupported external signatures explicitly; add no MIR queries to the target owner.
 
 **Tests:** Table tests for six integer/eight SIMD arguments, seven/nine pressure, mixed components, hidden result and receiver, return roles, unsupported C aggregates/variadics, high-byte restrictions and partial preservation. Cross-check existing ABI witnesses, not only the new classifier.
 
@@ -149,6 +149,7 @@ its acceptance boundary; do not silently defer part of its contract.
 
 **Purpose:** Turn native opcode contracts into a target-owned selected representation.
 
+- [ ] Resolve [signature-boundary ABI slot validation](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary) before native selected consumers; preserve context authority and strict per-boundary shape checks. Split an explicit prerequisite if necessary.
 - [ ] Implement immutable inspect/edit payload contracts and exhaustive opcode-derived descriptors for constants, bit operations, addresses, loads/stores, integer/float arithmetic, comparisons and graph flow.
 - [ ] Implement the mandatory independent x86 TargetVerifier against actual fields, resources, effects and encoding rules. Malformed drafts must be describable without panic; descriptor self-comparison is insufficient.
 - [ ] Preserve recipe/origin provenance and normalize parameter-transfer edges before selected publication; consuming edits create fresh identities and witnesses.
@@ -368,11 +369,12 @@ permission to introduce it unnecessarily.
 | `backend/graph/{arena,edit}.rs`, `graph/verify/{model,check,analysis}.rs`, `graph/mod.rs`: `OwnedArena`, `IdMap`, `GraphView`, `check_graph`, `GraphSession` and explicit re-export groups | `ff12421d`, verification `eecdb4cc`, edits `03e4ae42` | First native graph/analysis/edit consumers; shared algorithm stays durable; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/lir/{model,scalar,builder,schema,read,call,trace,observable}.rs`, `lir/graph/{storage,operands}.rs`: draft records, `DraftBuilder`, `DraftChecks` and graph adapter impls | `43df9ce6`, effects `68dec8ed`, graph adapters `eecdb4cc` | First native lowered construction/checking consumers; remaining vocabulary with complete migration; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/lir/verify/{check,domains,memory,trace,lift,failure,publication}.rs`: full checking helpers, structured failures, `VerifiedCallable` and `CompletionReceipt` | `e87fa392` | First native lowered verification/publication consumer; no replacement with builder trust; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/lir/program/{inventory,data,target}.rs`: `ProgramBuilder`, `VerifiedProgram`, data validation, `TargetDeclarations`, `TargetCatalog` | `ddc5a97d`; catalog migrated NP01 (uncommitted) | First native inventory/discovery consumer; preserve streaming receipts, plan freeze and exact parent reconciliation; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/lir/program/{inventory,data,target}.rs`: `ProgramBuilder`, `VerifiedProgram`, data validation, `TargetDeclarations`, `TargetCatalog` | `ddc5a97d`; catalog migrated NP01 `2cbd7ffd` | First native inventory/discovery consumer; preserve streaming receipts, plan freeze and exact parent reconciliation; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/selected/{storage,context,builder,graph,abi,resources,description}.rs`: `SelectedDraft`, `SelectionContext`, `SelectedBuilder`, `Payload`, ABI/resource records and descriptions | `63291d6d` | Real target schema/selection consumer; retain immutable opcode-derived descriptions; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/selected/verify/{check,descriptors,failure,publication,program}.rs`: shared checking helpers, `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt`, `SelectedProgramBuilder` | `73b1fafe`; closure migrated NP01 (uncommitted) | First native selected verification consumer; both shared and target checks remain mandatory; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/selected/verify/{check,descriptors,failure,publication,program}.rs`: shared checking helpers, `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt`, `SelectedProgramBuilder` | `73b1fafe`; closure migrated NP01 `2cbd7ffd` | First native selected verification consumer; both shared and target checks remain mandatory; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{lir,selected}/edit/{mod,editor,rebuild}.rs`, `lir/edit/split.rs`: `LoweredEditor`, `SelectedEditor`, `LoweredRemap`, `SelectedRemap`, remapping/rebuilding and split helpers | `03e4ae42` | Native edits/analysis consumers; retain consuming authority and full reverification; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{inspection,lir/inspect,selected/inspect}.rs`, `lir/mod.rs`, `selected/mod.rs`: visitors/renderers, immutable enumeration and explicit facade re-export groups | `495df6b9` | First native inspection/checkpoint consumers; no fabricated observations; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/x86_64_sysv/native/{mod,resources,abi}.rs`: `Gpr`, `NativeResources`, `ComponentAbi`, classifier, explicit facade imports and scoped non-test allowances | NP02, baseline `2cbd7ffd`; introducing commit pending user commit | NP07/NP09 actual native selection consumers; NP12/NP13 placement/frame consumers; reconcile NP19 | Durable immutable target facts; remove allowances per actual consumer. Tests retain lint checks; no legacy adapter or production switch |
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
@@ -413,3 +415,27 @@ documentation/support checks and 650 golden cases). Serial `make msrv-check`
 passed with Rust 1.82.0. Documentation links and whitespace checks passed. No
 compatibility scaffold or independent discovery was introduced; committing stays
 with the user.
+
+### Native resource and component ABI implementation record
+
+NP02 baseline: `2cbd7ffd`, the manually committed publication task. The native
+owner supplies complete conservative register units/views and caller/preserved
+footprints, reserved stack/frame aliases, low-byte encoding facts and clobber-only
+flags. Classification derives immutable entry/call/result bindings from checked
+signatures, canonical logical roles and independently exhausted argument banks.
+Symbolic spill shapes remain local to each signature; no native selection or
+production emission path is introduced. The [native contracts](../compiler/X86_NATIVE_CONTRACTS.md)
+freeze constrained numeric/call/trace walkthroughs for later consumers.
+
+The ABI boundary-shape discovery is an explicit NP07 prerequisite, with wider
+work split before consumers if needed. Native facts are implemented and tested;
+shared selected integration is not claimed. Scalar representation mapping is
+shared between component classification and common ABI verification to avoid
+duplicate semantic tables.
+
+Validation: eight native-owner tests and all 32 shared selected tests passed.
+`make check` passed (3,308 compiler unit tests, workspace/integration/support
+checks and 650 golden cases). Serial `make msrv-check` passed with Rust 1.82.0.
+Documentation link and whitespace checks passed. No compatibility adapter,
+production switch or exploratory emitter was introduced. Native fact allowances
+remain scoped and ledgered until their actual consumers arrive. User commit pending.

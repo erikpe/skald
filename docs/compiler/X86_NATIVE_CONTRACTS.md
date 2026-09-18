@@ -1,0 +1,132 @@
+# x86 Native Resource and Component ABI Contracts
+
+Status: immutable target resource facts and checked-signature component
+classification are implemented privately. Native opcode selection, placement and
+physical emission remain planned. Production still uses the [existing backend](BACKEND.md).
+These contracts refine the [shared low-level model](LOW_LEVEL_IR.md) and
+[frozen target design](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
+
+## Resource authority
+
+`backend::x86_64_sysv::native` owns facts without MIR types. `NativeResources`
+constructs a checked catalog and exposes immutable queries. It describes all
+sixteen GPRs at low 8/16/32/64-bit widths and sixteen SIMD registers at 64/128-bit
+widths. SIMD widths do not admit vector source operations or external signatures.
+Each physical register has one conservative overlap unit. Different banks are
+not an alias rule: actual units determine overlap.
+
+Every write kills the old whole-register token conservatively. Hardware 32-bit
+GPR writes zero the upper half; 8/16-bit writes do not establish a fresh full-width
+value. Selected canonicalization must expose extension when a full-width value
+is needed. The whole-register model deliberately makes no partial preservation
+promise. This is compatible with SysV's lack of call-preserved SIMD registers;
+shared checking must retain its independent partial-preservation portability tests.
+
+RSP and RBP views are reserved at every width, including aliases. RAX, RCX, RDX,
+RSI, RDI and R8–R11 plus all SIMD units are caller clobbers. RBX, R12–R15 and the
+reserved stack/frame units are preserved across a returning call; frame planning
+still saves/restores any used allocatable preserved register. A call's stack
+movement and alignment are separate physical-state obligations.
+
+Flags have a clobber-only unit, no value bank/view and no virtual definitions.
+Calls clobber it. Flag-consuming compare/set or compare/branch sequences are
+atomic bundles. High-byte AH/BH/CH/DH forms are absent. Low-byte SPL/BPL/SIL/DIL
+require REX; extended GPRs require REX at every width and 64-bit operations require
+REX.W. Width and concrete instruction encoding checks remain mandatory later.
+
+## Component classification
+
+Classification looks up a signature through its checked plan and rejects a
+non-x86/SysV target. Bindings retain the signature's original component order;
+physical assignment follows logical roles: hidden result destination, receiver
+static/complete/metadata, then parameters by index with each alias address followed
+by complete/metadata origins. Runtime parameters use their logical index. This
+preserves the existing native ABI even if checked declarations list roles in a
+different order. Components keep their roles after assignment.
+
+Six integer argument positions are RDI, RSI, RDX, RCX, R8, R9; eight floating
+positions are XMM0–XMM7. Banks exhaust independently. Spilled components receive
+successive eight-byte symbolic slots in physical component order. Incoming and
+outgoing bindings name different areas using the same slot indices, never RBP
+or RSP byte offsets. The outgoing area rounds to sixteen bytes and rejects
+arithmetic overflow or a rounded size greater than the existing signed 32-bit
+frame/address limit. This does not yet verify a complete frame size.
+
+Scalar integer/address results use the appropriate RAX view; binary64 uses XMM0.
+Unit/aggregate/nonreturning signatures have no logical scalar result. Internal
+aggregate return uses its hidden destination, without introducing a C aggregate
+classification or a new pointer-return convention. Nonreturning calls retain
+explicit call effects and a defensive trap in selection.
+
+External C signatures accept only value parameters/results of I64, U64, U8,
+Bool and F64, plus a unit result. Receivers, aliases, aggregate results, raw/code
+address cells and nonreturning source external declarations reject explicitly.
+Runtime signatures remain distinct and support their checked address/service
+components. Variadic classification rejects explicitly for every convention;
+there is no implied partial varargs support or vector argument-count protocol.
+Narrow byte/boolean bindings do not certify canonical upper register contents;
+marshaling and external bool-result normalization remain selection obligations.
+
+## Native opcode and event walkthroughs
+
+The shared event order is early uses, early clobbers, early definitions, late uses,
+late clobbers, late definitions. Transfers cannot be inserted inside an atomic
+bundle. These are requirements for the concrete payload/verifier work, not claims
+that those opcodes or native probes already exist.
+
+| Recipe | Required operands/resources/events | Independent rejection witness |
+| --- | --- | --- |
+| Signed dividend setup | RAX64 input, RDX64 high-half definition; `cqo` preserves flags, high half is an explicit value | Wrong bank/width/fixed register or undeclared high-half result |
+| Unsigned dividend setup | Explicit RDX64 zero result; a 32-bit zero idiom must declare whole-unit write/zero extension and flag clobber if it uses XOR | Implicit high half, wrong zero-extension footprint or undeclared flags |
+| Signed/unsigned divide | Low/high/divisor late uses; low RAX64, high RDX64; quotient RAX64 and remainder RDX64 late definitions; flag clobber after uses; divisor excludes both overlapping units | Divisor alias, wrong fixed/tied binding, missing overflow/zero guards or stale live dividend |
+| Variable shift | Validated full-width count narrows explicitly to CL8; value and CL are late uses, result is a tied late definition; flags clobber after uses | Narrowing before guard, count assigned outside CL, value/count overlap with different tokens, lost live tied input |
+| Integer destructive operation | Inputs consumed before tied result definition, declared flag footprint and legal width; other live input cannot be destroyed | Omitted tie or preserving a live input only in an overwritten location |
+| Checked F64/integer conversion | Concrete conversion cells expose banks, intermediate values and correction CFG; unsigned range/NaN/overflow checks precede conversion; no flags cross a bundle boundary | High-level cast hiding branches, wrong conversion width/cell or missing correction provenance |
+| Direct call | Component ABI operands are late uses; all caller units/flags clobber after uses; scalar results are late definitions | Missing call clobber, wrong slot area, result stored only after clobbering cleanup |
+| Indirect call | Separate code-address operand with exact logical signature is a late use; its location survives all preceding simultaneous marshaling/scratch transfers | Target overwritten by an argument or temporary, signature mismatch, hidden target operand |
+| Enabled trace actions | Explicit TLS address and trace loads/stores/values, ordered attribution and effects; scratch/flags are declared; call-free local-exec ELF TLS recipe | Hidden trace helper call, undeclared TLS/scratch, location update after call or reporter, result lost during pop |
+| Omitted tracing | No source lookup, trace/TLS declaration, location update or hidden frame action | Trace metadata request or TLS/reference/effect in omitted mode |
+| Reporter/trap | Reporting call uses ordinary ABI/clobbers and exact failure attribution, then explicit defensive hard trap; no unwind edge | Reporter without call barrier/trap or unrecorded failure edge |
+
+Division overflow/floor correction, checked float ranges and full-width count
+validation are shared/selection CFG, never realization repairs. Calls evaluate
+arguments before simultaneous ABI transfers; an indirect target stays available
+through that entire transfer sequence. Trace pop follows result preservation;
+failure locations update only on the failure path immediately before reporting.
+TLS relocation and its finite scratch/address recipe must be fully described
+before physical realization; unsupported relocation forms reject rather than
+calling a resolver implicitly.
+
+Later native schema tasks must implement and test these requirements against
+actual immutable opcodes and independent target verification. A mismatch requires
+an explicit contract amendment before consumers, not a permissive descriptor.
+
+## Numeric correction walkthrough
+
+For signed 64-bit division, shared checks establish nonzero divisor and the
+minimum/-1 disposition; selection handles that overflow case in explicit CFG
+before `cqo`/`idiv`. The ordinary path has explicit RAX/RDX dividend inputs and
+quotient/remainder results. Floor correction uses the nonzero remainder and sign
+relationship in separate blocks, then merges fresh corrected values. Unsigned
+`div` consumes an explicitly zero high half. Byte division widens to the declared
+64-bit recipe and narrows/canonicalizes its explicit result; it never uses AH.
+
+A variable shift validates the entire original count against the semantic width
+and any signed lower bound before narrowing to CL. SHL, SAR and SHR correspond
+to left, signed-right and unsigned-right cells. A narrow native count never
+substitutes for that proof, and RCX/CL overlap cannot hold different simultaneously
+required value tokens.
+
+F64-to-I64 uses `cvttsd2si` only after explicit finite/range checks for
+[-2^63, 2^63). F64-to-U64 checks (-1, 2^64), branches at 2^63 and uses the signed
+conversion either directly or after subtracting 2^63, restoring the high bit in
+an explicit integer operation. F64-to-byte checks (-1, 256) before explicit narrowing; negative finite
+fractions truncate to unsigned zero in both unsigned cells; boolean conversion follows its specified predicate/canonicalization,
+never an unchecked integer-conversion shortcut. Signed integer-to-F64 uses
+`cvtsi2sd`; unsigned values above signed range require the explicit half/low-bit
+rounding recipe and doubling, or an equivalently validated explicit correction
+CFG. MOVQ bit transfers between integer/SIMD banks are reinterpretation cells,
+not numeric conversion. Each concrete recipe declares actual flags, intermediates,
+constants and edges; unordered UCOMISD checks consume flags inside their atomic
+comparison bundles. Native probes must later verify range endpoints, NaNs,
+infinities and unsigned rounding independently of descriptor checking.

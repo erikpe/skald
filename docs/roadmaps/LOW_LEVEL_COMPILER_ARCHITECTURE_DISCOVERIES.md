@@ -1,8 +1,9 @@
 # Low-Level Compiler Architecture Discoveries
 
-Status: one actionable follow-up, 2026-09-17. Independent findings encountered
-while implementing the [model roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md) belong here;
-they do not expand its phase-model scope.
+Status: one independent follow-up and one native-integration prerequisite,
+2026-09-18. Findings from the [architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
+are tracked here. Independent maintenance work stays outside active task scope;
+contract gaps must be resolved before their dependent consumers.
 
 ## Golden artifact ownership across concurrent invocations
 
@@ -37,3 +38,33 @@ scheduling delays alone to reproduce the race.
 Until addressed, run golden/full checks serially within a checkout. The model
 task's final gate was rerun serially; this candidate requires no compiler-phase
 change or rollback.
+
+## ABI slot shapes must be local to the signature boundary
+
+**Priority:** high before native selected integration. **Owner:** shared selected
+ABI/context/descriptor checking. **Boundary:** fix validation scope before the
+[native selected-schema task](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md#np07--concrete-scalar-selected-payload-and-verifier)
+and freeze its contract before native call consumers. This is an in-roadmap
+correctness prerequisite, not an independent post-adoption optimization.
+
+At the committed publication endpoint `2cbd7ffd`, `SelectionContext` owns one `AbiAreas`
+with representation vectors for incoming/outgoing/results. `require_abi_binding`
+checks each slot against those context-wide vectors; selected descriptor checking
+uses it for call bindings. `SelectedProgramBuilder` also requires receipts from
+the same selection context. A seven-integer signature needs integer slot zero;
+a nine-floating signature needs floating slot zero. Both occupy the same eight
+bytes but have different representations. A single context cannot presently
+validate both entry shapes or both outgoing call shapes, even though the native
+ABI legitimately reuses that slot at different boundaries.
+
+The native owner regression `stack_slot_shapes_belong_to_each_signature_boundary`
+proves distinct checked signatures produce those distinct valid plans. Existing
+synthetic tests do not establish production support for heterogeneous boundary
+shapes. Scope slot validation to the relevant callable entry or call signature/
+site, while preserving component roles, slot bounds, width/bank checking and exact
+context/snapshot authority. Do not relax representation checks globally or solve
+this by changing per-callable contexts without reconciling program authority.
+Add selected-publication tests for heterogeneous incoming signatures and multiple
+call sites using slot zero with different types, plus wrong-area/out-of-range/
+wrong-type negatives. If the fix exceeds the selected-schema PR, split an explicit
+prerequisite task and amend the owning contract before its consumers.

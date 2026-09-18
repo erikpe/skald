@@ -627,3 +627,17 @@ The guard changes the current harness fingerprint: future paired comparisons
 must recapture the preserved baseline and candidate with one compatible harness,
 as the measurement procedure requires. No timing recapture is needed for this
 preparation closure.
+
+### Native target fact readiness
+
+[Native x86 resource/ABI contracts](../compiler/X86_NATIVE_CONTRACTS.md) now provide
+immutable checked register banks/views, conservative overlap/preservation,
+reservations, complete caller clobbers and component-role classification over
+checked signatures. Owner tests cross-check the legacy classifier at argument
+pressure and hidden-destination/receiver/alias boundaries. Numeric/call/trace
+opcode/event walkthroughs are frozen for downstream target consumers, not yet
+native execution evidence. Public/default production emission is unchanged.
+
+[Signature-boundary slot validation](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary)
+must be resolved before integrating heterogeneous signatures into selected
+publication. Existing global slot-shape fixtures do not certify that integration.

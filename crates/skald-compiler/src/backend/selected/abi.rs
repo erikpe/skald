@@ -1,6 +1,6 @@
 //! Logical components stay intact when assigning target ABI locations.
-use super::{AbiBinding, AbiLocation, Representation, RepresentationKind, ResourceCatalog};
-use crate::backend::plan::{PlanError, ScalarType, SignatureFact};
+use super::{AbiBinding, AbiLocation, Representation, ResourceCatalog};
+use crate::backend::plan::{PlanError, SignatureFact};
 #[cfg_attr(not(test), allow(dead_code))]
 #[derive(Clone)]
 pub(in crate::backend) struct AbiBindings {
@@ -22,23 +22,14 @@ impl AbiBindings {
                 return Err(PlanError::InvalidSignature);
             }
             for (component, binding) in components.iter().zip(bindings) {
-                let (kind, bits) = match component.ty {
-                    ScalarType::I64 | ScalarType::U64 => (RepresentationKind::Bits, 64),
-                    ScalarType::U8 | ScalarType::Bool => (RepresentationKind::Bits, 8),
-                    ScalarType::F64 => (RepresentationKind::Float, 64),
-                    ScalarType::DataAddress => (RepresentationKind::DataAddress, pointer_bits),
-                    ScalarType::CodeAddress(signature) => {
-                        (RepresentationKind::CodeAddress(signature), pointer_bits)
-                    }
-                };
-                if *component != binding.component
-                    || Representation::new(kind, bits) != Some(binding.representation)
-                {
+                let representation = Representation::from_scalar(component.ty, pointer_bits)
+                    .ok_or(PlanError::InvalidSignature)?;
+                if *component != binding.component || representation != binding.representation {
                     return Err(PlanError::InvalidSignature);
                 }
                 if let AbiLocation::Fixed(view) = binding.location {
                     resources
-                        .require_view(view, bits, binding.representation.bank(), false)
+                        .require_view(view, representation.bits(), representation.bank(), false)
                         .map_err(|_| PlanError::InvalidSignature)?;
                 }
             }

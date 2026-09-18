@@ -3,7 +3,7 @@ use super::{BankKind, UnitId, ViewId};
 use crate::backend::{
     effects::Effects,
     graph::{SelectedObjectId, SelectedValueId},
-    plan::{ArtifactCategory, ArtifactId, Component, SignatureId},
+    plan::{ArtifactCategory, ArtifactId, Component, ScalarType, SignatureId},
 };
 use std::{borrow::Cow, num::NonZeroU16};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -27,6 +27,19 @@ impl Representation {
             kind,
             bits: NonZeroU16::new(bits)?,
         })
+    }
+    /// Logical scalar representation, independent of target register assignment.
+    pub(in crate::backend) fn from_scalar(ty: ScalarType, pointer_bits: u16) -> Option<Self> {
+        let (kind, bits) = match ty {
+            ScalarType::I64 | ScalarType::U64 => (RepresentationKind::Bits, 64),
+            ScalarType::U8 | ScalarType::Bool => (RepresentationKind::Bits, 8),
+            ScalarType::F64 => (RepresentationKind::Float, 64),
+            ScalarType::DataAddress => (RepresentationKind::DataAddress, pointer_bits),
+            ScalarType::CodeAddress(signature) => {
+                (RepresentationKind::CodeAddress(signature), pointer_bits)
+            }
+        };
+        Self::new(kind, bits)
     }
     pub(in crate::backend) fn bits(self) -> u16 {
         self.bits.get()

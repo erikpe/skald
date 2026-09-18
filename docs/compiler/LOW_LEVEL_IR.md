@@ -6,7 +6,9 @@ Independent graph/value-flow and full lowered callable verification are implemen
 Complete lowered-program inventory publication, plan-bound target catalogs,
 selected graphs with exact parent reconciliation and consuming edits are implemented. Verified
 products support immutable visitors and private deterministic text inspection.
-Placement and native consumption remain planned.
+The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
+component classification. Placement and native consumption remain planned;
+shared ABI slot-shape integration is a tracked prerequisite before native selection.
 
 ## Ownership and checking
 

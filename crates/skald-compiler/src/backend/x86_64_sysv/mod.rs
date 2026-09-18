@@ -18,6 +18,7 @@ mod legality;
 mod literal_data;
 mod lower;
 mod machine;
+mod native;
 mod planning;
 mod runtime_trace;
 mod static_fields;
