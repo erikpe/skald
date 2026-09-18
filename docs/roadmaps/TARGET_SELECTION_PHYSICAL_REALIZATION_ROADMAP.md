@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01–NP11 complete; NP12 is next.
+Status: in progress, 2026-09-18; NP01–NP12 complete; NP13 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -56,7 +56,7 @@ backend or claim full-language migration.
 - [x] NP09 — Native call and trace selection
 - [x] NP10 — Placement representation and checker contract
 - [x] NP11 — Independent placement checking
-- [ ] NP12 — Baseline placement and parallel transfers
+- [x] NP12 — Baseline placement and parallel transfers
 - [ ] NP13 — Symbolic frame planning and limits
 - [ ] NP14 — Typed physical realization
 - [ ] NP15 — Independent physical verification
@@ -221,9 +221,9 @@ ordinary selected publication and target verification.
 
 **Purpose:** Build the first producer against the completed strategy-independent checker.
 
-- [ ] Assign deterministic unique private homes without reuse/rematerialization; load legal operand resources, honor ties/fixed events and store results, including entry and ABI marshaling.
-- [ ] Resolve parallel copies deterministically with declared typed cycle-breaking scratch and legal memory-to-memory resources; no undeclared emitter temporary or push/pop scratch.
-- [ ] Feed baseline output through independent checking and compare resolved transfer sequences against simultaneous-copy semantics. Remove producer scaffolding and allowances now consumed.
+- [x] Assign deterministic unique private homes without reuse/rematerialization; load legal operand resources, honor ties/fixed events and store results, including entry and ABI marshaling.
+- [x] Resolve parallel copies deterministically with declared typed cycle-breaking scratch and legal memory-to-memory resources; no undeclared emitter temporary or push/pop scratch.
+- [x] Feed baseline output through independent checking and compare resolved transfer sequences against simultaneous-copy semantics. Remove producer scaffolding and allowances now consumed.
 
 **Tests:** Baseline acceptance across the full selected pilot; two-/three-cycles, mixed-bank, memory copies, duplicate-successor edges, live ties, secured targets, caller clobbers and pressure. Permute construction order and require identical canonical results.
 
@@ -396,7 +396,7 @@ permission to introduce it unnecessarily.
 | `SelectionContext::abi_areas`, `ObjectRole::Abi`, selected slot checks | Global shapes introduced LA02; replaced NP07, baseline `5369ea69` | NP07, checked again NP19 | Global shape storage and unqualified ABI objects removed; one signature registry preserves shared program authority; no compatibility adapter |
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Frozen lower trace facts in `lir::CompletionReceipt`; native call fields, concrete trace cells and pure requests | NP09, task baseline `e35be34f` | NP10–NP16 placement/realization/closure; reconcile NP19 | Durable narrow immutable facts survive body release; no retained executable lower body, opaque trace payload, thunk bridge or instrumentation |
-| `backend/placement/{model,structure}.rs`: unchecked drafts and non-test dead-code allowances | NP10, task baseline `3413f792`; committed `1d0b84e6` | NP11 checker and NP12 producer; reconcile NP19 | NP11 retired module-wide model/structure allowances and consumed draft/type allowances; retain only draft builder methods and storage-purpose construction allowances until NP12/NP13. Structural validation grants no authority; no producer success flag or realization bypass |
+| `backend/placement/{model,structure}.rs`: unchecked drafts and non-test dead-code allowances | NP10, task baseline `3413f792`; committed `1d0b84e6` | NP11 checker and NP12 producer; reconcile NP19 | NP11 retired module-wide model/structure allowances and consumed draft/type allowances; NP12 retires the draft builder and home/save/transfer-scratch construction allowances. Only `Spill` construction remains narrowly scoped until a spilling producer. Structural validation grants no authority; no producer success flag or realization bypass |
 | `backend/placement/check.rs`: private immutable checked queries; native `check_native_placement` entry and facade allowance | NP11, task baseline `1d0b84e6` | NP12 producer, NP13/NP14 frame/realization consumers and NP17 private orchestration; reconcile NP19 | Sole checked constructor runs legality, finite convergence and strict replay. Retain query/entry allowances only until actual consumers; no unchecked constructor, mutable draft accessor or producer flag |
 | `backend/placement/tests/oracle.rs`: independent finite-state specification and native resource probe | NP10, task baseline `3413f792` | Durable independent checker regression reference, reconcile NP19 | Remains test-only and independent of producer/checker availability maps. No production path sampling, placement authority or temporary execution bridge |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
@@ -404,6 +404,7 @@ permission to introduce it unnecessarily.
 | Fragment storage experiments/adapters, if introduced | NP16; record exact symbols/commit | NP16/NP19 | Retain only failure-safe typed-key storage with a demonstrated bounded-body purpose; no serializer/importer/cache |
 | Private explicit pilot entry/admission gate | NP17; record exact symbols/commit | LA05 adoption, transfer NP19 | Required private test consumer until adoption; retire or become the sole production entry, never a permanent fallback route |
 | Synthetic second-target fixtures and manual register placements | NP02/NP10 onward; record owners/commits | Permanent owner-local tests, audit NP19 | Retain independent portability/checker witnesses; no production registration, exports or blanket test-only phase gating |
+| `backend/placement/baseline/{produce,operands}.rs`, `placement/transfers.rs`: descriptor-local baseline and shared deterministic copy resolver | NP12, task baseline `9e6e2405`; awaiting user commit | Durable producer/resolver; NP13 frame requirements, NP14 realization, NP17 orchestration; reconcile NP19 | No producer success flag, availability proof map, fake checked product or compatibility bridge. Typed point-local cycle storage and target-declared working views remain explicit. Native baseline entry keeps one item-scoped non-test allowance until NP17 consumes it |
 
 ## Discoveries and closure record
 
@@ -862,3 +863,64 @@ tokens: promised width stays exact, while raw original bits may pass through
 another bank using explicit bitwise transfers. Its positive/corrupted regression
 checks restoration after the original floating register is overwritten.
 NP11 is complete; NP12 is next. No additional independent discovery was needed.
+
+## NP12 implementation evidence
+
+Task baseline: `9e6e2405`, the user's committed NP11 implementation; roadmap
+baseline remains `f150d028`. The clean starting tree did not hide cleanup:
+committed draft builder/construction allowances and the checker boundary were
+reviewed against history. No reset or commit was performed.
+
+The shared baseline gives every selected value a distinct typed private home,
+including inputs and parameters. Descriptor-local resource search intersects
+fixed/tied constraints, observes early/late clobber and operand conflicts, and
+reserves disjoint caller scratch. Explicit entry transfers capture ABI inputs
+and original preservation contents; node transfers load uses and capture results;
+edge occurrences marshal homes before simultaneous parameter rebinding. Calls
+secure indirect targets and arguments before caller kills. Return transfers
+restore the exact target-promised original widths. No liveness map, register
+retention, slot reuse or rematerialization is introduced.
+
+The separate shared transfer owner orders parallel requests canonically, schedules
+non-destructive moves and breaks cycles with typed single-point storage. Target
+move facts validate explicit working resources and their kills, protecting pending
+sources and all final outputs, including identity copies. Every request can be
+captured at most once. Exhausted scratch and overlapping outputs reject; no
+emitter temporary or push/pop recipe is assumed. Native placement reconstructs
+canonical target facts through the same factory as manual native checking, and
+all baseline output crosses the unchanged independent checker.
+
+Four new shared regressions compare two-/three-cycles against simultaneous bits
+for register and memory locations, exercise every request permutation, mixed-bank
+bitwise memory/register swaps, identity-output scratch protection and resource
+exhaustion. Genuine CFG fixtures cover duplicate edges, cyclic parameters, live
+ties, calls, floating homes and secured targets on both profiles, including
+partial floating and link-like preservation. A new native source fixture covers
+ordinary arithmetic, guards/division/shifts, all 25 casts, bundle scratch, direct/
+C/indirect calls, incoming/outgoing mixed-bank pressure, both trace policies and
+generated entry. Existing real bit-intrinsic and nonreturning-call fixtures also
+require baseline acceptance. Earlier manual register placements remain unchanged
+and pass the same checker. These qualify placement, not concrete frames, encoding
+or native pilot execution.
+
+Consumed draft builder and home/save/transfer-scratch construction allowances are
+removed. Only spill construction retains its narrow future-strategy allowance;
+checked consumer queries and the private native entry keep their documented
+removal owners. No temporary producer bridge, prototype or availability-proof
+adapter remains. Living placement/native/model documentation and migration
+coverage describe the current boundary. No larger independent discovery was
+identified; the existing ABI-area extent/stride prerequisite stays with NP13.
+
+Validation: final serial `make check` passed formatting, locked workspace/all-target
+builds, Clippy without warnings, documentation checks, workspace Rust tests
+(3,419 compiler unit tests), runtime contracts and all 650 golden observations.
+`make msrv-check` passed for every workspace target on Rust 1.82.0 without warnings.
+Final documentation/static and tracked/untracked whitespace checks passed. Logs:
+`/tmp/skald-np12-final-check.log`, `/tmp/skald-np12-msrv.log` and
+`/tmp/skald-np12-final-static.log`. Five new regression tests and the strengthened
+bit-intrinsic/nonreturning fixtures are included in the full gate. Final review
+ensured baseline bundle/move scratch excludes preserved units; mixed-bank
+fixtures enforce that policy on both profiles while manual placements retain the
+strategy-independent checker contract.
+
+NP12 is complete; NP13 is next. Changes remain uncommitted for the user.

@@ -8,7 +8,7 @@ mod selected;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use abi::{classify, AbiError, CallArity, ComponentAbi};
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use placement::check_native_placement;
+pub(in crate::backend) use placement::{check_native_placement, place_native_baseline};
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use resources::{Gpr, NativeResources};
 

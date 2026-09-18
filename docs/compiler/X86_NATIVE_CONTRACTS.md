@@ -3,7 +3,9 @@
 Status: immutable target resource facts and checked-signature component
 classification and the complete pilot selected vocabulary, including calls and
 trace memory operations, and independent placement checking are implemented
-privately. Placement production, frame planning and physical emission remain planned. Production still uses the [existing backend](BACKEND.md).
+privately. Deterministic baseline placement marshals operands and ABI values
+through independently checked explicit transfers. Frame planning and physical
+emission remain planned. Production still uses the [existing backend](BACKEND.md).
 Shared [placement drafts and checking](PLACEMENT_CHECKING.md) enforce exact-input
 binding, target constraints, preservation and finite CFG availability.
 These contracts refine the [shared low-level model](LOW_LEVEL_IR.md) and

@@ -55,9 +55,9 @@ pub(in crate::backend) enum Location {
     },
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum StoragePurpose {
     Home(SelectedValueId),
+    #[cfg_attr(not(test), allow(dead_code))]
     Spill(SelectedValueId),
     TransferScratch,
     CalleeSave(ViewId),
@@ -122,7 +122,6 @@ impl<'s, 'p, P> PlacementDraft<'s, 'p, P> {
     pub(in crate::backend) fn selected(&self) -> &'s VerifiedSelectedCallable<'p, P> {
         self.selected
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn new(selected: &'s VerifiedSelectedCallable<'p, P>) -> Self {
         Self {
             selected,
@@ -141,7 +140,6 @@ impl<'s, 'p, P> PlacementDraft<'s, 'p, P> {
             Err(PlacementError::WrongSnapshot)
         }
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn assign(
         &mut self,
         assignment: Assignment,
@@ -153,13 +151,11 @@ impl<'s, 'p, P> PlacementDraft<'s, 'p, P> {
         self.assignments.insert(assignment, location);
         Ok(())
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn storage(&mut self, requirement: Storage) -> StorageId {
         let id = StorageId(self.storage.len());
         self.storage.push(requirement);
         id
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn transfer(&mut self, point: TransferPoint, transfer: Transfer) {
         self.transfers.entry(point).or_default().push(transfer);
     }

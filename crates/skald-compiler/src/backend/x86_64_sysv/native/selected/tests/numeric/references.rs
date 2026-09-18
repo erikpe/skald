@@ -260,6 +260,7 @@ fn normalized_bit_intrinsics_preserve_nan_payloads_and_signed_zero() {
             return Ok(());
         };
         let body = select(&context, &lower).unwrap();
+        crate::backend::x86_64_sysv::native::place_native_baseline(&body).unwrap();
         for bits in [0, 1 << 63, 0x7ff8000000000042, 0x7ff0000000000001, u64::MAX] {
             let (input, output) = if target == plan::ScalarType::F64 {
                 (Value::Bits(bits), Value::Float(bits))

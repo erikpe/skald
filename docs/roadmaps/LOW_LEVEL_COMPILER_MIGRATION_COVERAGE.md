@@ -705,7 +705,7 @@ request caller TLS; explicit trace accesses still require enabled policy and
 TLS authority. Native call/trace selection now covers the complete admitted pilot,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
-and frame checks use frozen parent facts. Placement production is next in the
+and frame checks use frozen parent facts. Frame planning is next in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
 
 Shared placement drafts now borrow the exact selected publication, distinguish
@@ -723,5 +723,11 @@ and strict replay. Hand-written register placements, genuine native call results
 and deliberate transfer/event/join/scratch/preservation corruption exercise the
 same interface. The test oracle remains independent. Native checking supplies
 canonical preservation promises, ABI footprints and explicit move recipes.
-No producer, frame or physical body exists yet; future realization requires the
-checked placement. Concrete ABI-area extent/padding remains frame-planning work.
+The shared baseline now assigns deterministic unique homes, descriptor-local
+resources and explicit entry, operand, ABI and edge transfers. A separate shared
+parallel-copy resolver uses typed point-local cycle storage and legal declared
+working resources. Native baseline output passes the same independent checker
+as manual register placements. Tests cover simultaneous-copy semantics, request
+permutations, loop swaps, mixed banks, pressure, calls, tracing and entry.
+No frame or physical body exists yet; realization requires the checked placement.
+Concrete ABI-area extent/padding remains frame-planning work.

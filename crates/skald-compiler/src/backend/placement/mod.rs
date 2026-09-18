@@ -1,6 +1,7 @@
 //! Exact-snapshot drafts and independent checked-placement authority.
 //! Structural validation alone cannot authorize realization.
 //! See `docs/compiler/PLACEMENT_CHECKING.md` for the independent checker contract.
+mod baseline;
 mod check;
 mod legality;
 mod model;
@@ -8,6 +9,9 @@ mod requirements;
 mod state;
 mod structure;
 mod target;
+mod transfers;
+
+pub(in crate::backend) use baseline::place_baseline;
 
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use check::{check_placement, CheckedPlacement};

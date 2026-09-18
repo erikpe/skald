@@ -4,7 +4,8 @@ Placement is private backend data over a verified selected callable. The shared
 `backend/placement` owner implements drafts, structural validation and independent
 finite availability checking. The checker consumes a draft and publishes an
 immutable `CheckedPlacement` only after static legality, CFG convergence and
-strict replay succeed. Producers, frames and physical realization remain planned.
+strict replay succeed. Deterministic baseline placement is implemented; frames
+and physical realization remain planned.
 Drafts never authorize code generation.
 
 The test-only specification oracle remains separate from the production checker.
@@ -86,6 +87,44 @@ checking. Native ABI slots have eight-byte relative stride and footprints;
 concrete area extent, padding and frame alignment remain frame-planning duties.
 The checker rejects callee-save storage with a representation other than its
 promised original bits, or transfer scratch used outside its declared point.
+
+## Baseline placement and parallel transfers
+
+The shared baseline producer assigns one distinct whole-callable home to every
+selected value, including inputs and block parameters. It does not reuse slots,
+rematerialize values or keep a value in a register between instructions. Entry
+transfers capture incoming ABI values; each node loads its uses, reserves bundle
+scratch, obeys fixed views and destructive ties, and captures definitions into
+homes. Calls marshal arguments and the secured target before caller clobbers,
+then capture results. Edge occurrences transfer argument homes into successor
+parameter homes before simultaneous rebinding. Original preserved bits have
+separate save storage and explicit entry/return transfers.
+
+Descriptor-local resource search orders candidates by resource ID and prioritizes
+restricted operand groups. Tied groups intersect their constraints. Early/late
+uses, definitions and clobbers constrain sharing; bundle scratch is disjoint from
+all operands. Baseline bundle/move scratch excludes preserved resource units.
+Failure to find legal resources rejects with a selected coordinate;
+there is no permissive placement or legacy fallback. The native producer uses
+canonical target facts and passes its draft through the independent checker.
+
+The shared parallel-transfer resolver orders requests by destination, source and
+identity, then emits copies whose destination cannot destroy a pending source.
+A cycle captures a source into fresh, typed, single-point transfer storage before
+redirecting that request. Each request is captured at most once, so resolution
+terminates even with overlapping resource views. Memory-to-memory moves declare
+legal target working views; their kills preserve all pending sources and final
+outputs, including identity copies requiring no emitted move. No hidden emitter
+temporary, push/pop scratch or numeric conversion is permitted. Conflicting
+output destinations and unavailable scratch reject deterministically.
+
+These sequences remain untrusted until checked. Tests compare two- and
+three-cycles against an independent simultaneous-bit-copy reference, permute
+request order, check mixed-bank bitwise movement and exercise exhausted working
+resources. Native source fixtures cover live inputs, guarded arithmetic, casts,
+pressure slots, direct/indirect calls, tracing and generated entry. Hand-written
+register placements still use the same checking boundary. These are phase-level
+witnesses; physical execution and concrete frames remain separate obligations.
 
 ## Finite abstract state
 
@@ -240,5 +279,5 @@ checks that real result definitions follow caller clobbers.
 
 If a future rule exposes a mismatch, amend this contract and the frozen design
 before producing authority; do not weaken acceptance or silently add a
-producer-specific exception. Baseline production and frame realization follow
-checked placement.
+producer-specific exception. Frame planning and realization consume checked
+placement.

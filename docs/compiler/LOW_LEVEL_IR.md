@@ -14,8 +14,9 @@ Private native scalar/numeric/call/trace selection and joint checking are
 implemented with signature-local ABI slot shapes. Shared unchecked placement
 drafts, structural validation and independent
 [placement checking](PLACEMENT_CHECKING.md) are implemented, including finite CFG
-availability analysis and immutable checked-placement publication. Placement
-production, frame planning and physical realization remain planned.
+availability analysis and immutable checked-placement publication. Deterministic
+baseline placement with unique private homes and explicit parallel transfers is
+implemented. Frame planning and physical realization remain planned.
 
 ## Shared final-MIR lowering
 

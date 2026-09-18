@@ -4,7 +4,7 @@ use crate::backend::{
     plan::{ArtifactId, DataKey, RuntimeService},
     BackendInput,
 };
-fn complete(
+pub(super) fn complete(
     source: &str,
     trace: bool,
     mut check: impl for<'p> FnMut(&'p selected::SelectionContext<'p>, &lir::VerifiedCallable<'p>),
@@ -305,6 +305,7 @@ fn independent_payload_validation_covers_nonreturning_calls_and_hard_traps() {
                 .unwrap();
             let lower = lir::verify_callable(builder.finish()).unwrap();
             let selected = select(context, &lower).unwrap();
+            crate::backend::x86_64_sysv::native::place_native_baseline(&selected).unwrap();
             let verifier = Verifier::new(plan.profile()).unwrap();
             selected.visit(|fact| {
             if let SelectedFact::Terminal { payload: Some(payload), edges, .. } = fact {

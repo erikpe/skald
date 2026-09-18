@@ -242,3 +242,50 @@ fn native_memory_move_recipes_validate_scratch_and_kill_its_old_contents() {
         }
     });
 }
+
+#[test]
+fn baseline_accepts_complete_native_pilot_with_calls_pressure_tracing_and_entry() {
+    use crate::backend::x86_64_sysv::native::place_native_baseline;
+    let sources=[
+        "extern fn foreign(a:i64,b:f64)->i64; fn identity(a:i64)->i64{return a;} fn invoke(f:fn(i64)->i64,a:i64)->i64{return f(a)+a;} fn main()->i64{return foreign(invoke(identity,7),2.5);}",
+        "fn calculate(a:i64,b:i64,c:u64,f:f64)->i64 {var remaining:i64=a; var result:i64=1; while(remaining>0){result=result/b + result%b; result=result<<c; result=result+(i64)f; remaining=remaining-1;} return result;} fn main()->i64{return 0;}",
+        "fn compare(a:f64,b:f64)->bool{return a != b;} fn negate(a:f64)->f64{return -a;} fn byte(a:u8,b:u8)->u8{return a*b;} fn main()->i64{return 0;}",
+        "fn ordinary(a:u64,b:u64)->u64{return ((a&b)|(a^b))+(a-b)*b;} fn float_math(a:f64,b:f64)->f64{return (a+b)*(a-b)/b;} fn divide(a:u8,b:u8)->u8{return a/b+a%b;} fn unsigned(a:u64,b:u64)->u64{return a/b+a%b;} fn logical(a:bool)->bool{return !a;} fn main()->i64{return 0;}",
+        "fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:f64,i:f64,j:f64,k:f64,l:f64,m:f64,n:f64,o:f64,p:f64)->f64{return (f64)g+p;} fn main()->i64{return (i64)pressure(1,2,3,4,5,6,7,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0);}",
+        "extern fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:f64,i:f64,j:f64,k:f64,l:f64,m:f64,n:f64,o:f64,p:f64)->f64; fn main()->i64{return (i64)pressure(1,2,3,4,5,6,7,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0);}",
+    ];
+    for source in sources {
+        for trace in [false, true] {
+            super::calls::complete(source, trace, |context, lower| {
+                let selected = select(context, lower).unwrap();
+                let checked =
+                    place_native_baseline(&selected).unwrap_or_else(|e| panic!("{e:?}\n{source}"));
+                checked.require_selected(&selected).unwrap();
+                let homes: Vec<_> = checked
+                    .storage()
+                    .iter()
+                    .filter_map(|s| {
+                        if let StoragePurpose::Home(v) = s.purpose {
+                            Some(v)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                let unique: std::collections::BTreeSet<_> = homes.iter().collect();
+                assert_eq!(homes.len(), unique.len());
+            });
+        }
+    }
+    for from in ["i64", "u64", "u8", "bool", "f64"] {
+        for to in ["i64", "u64", "u8", "bool", "f64"] {
+            let source = format!(
+                "fn convert(value:{from})->{to}{{return ({to})value;}} fn main()->i64{{return 0;}}"
+            );
+            super::calls::complete(&source, false, |context, lower| {
+                let selected = select(context, lower).unwrap();
+                place_native_baseline(&selected).unwrap_or_else(|e| panic!("{e:?}: {from}->{to}"));
+            });
+        }
+    }
+}

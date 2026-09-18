@@ -6,7 +6,10 @@ use crate::backend::{
         PlacementTarget, SlotFootprint, Transfer, TransferKind,
     },
     plan::{SignatureId, TargetProfile},
-    selected::{AbiArea, BankKind, Representation, RepresentationKind, UnitId, ViewId},
+    selected::{
+        AbiArea, BankKind, Representation, RepresentationKind, UnitId, VerifiedSelectedCallable,
+        ViewId,
+    },
 };
 
 struct NativeTarget {
@@ -24,13 +27,26 @@ pub(in crate::backend) fn check_native_placement<'s, 'p>(
         .catalog()
         .plan()
         .profile();
-    let resources = NativeResources::for_profile(profile).map_err(|_| CheckFailure {
-        location: CheckLocation::Entry,
-        reason: CheckReason::WrongTarget,
-        origin: None,
-        structure: None,
-    })?;
-    placement::check_placement(draft, &NativeTarget { resources, profile })
+    placement::check_placement(draft, &NativeTarget::new(profile)?)
+}
+/// Conservative placement remains private until whole-program orchestration.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) fn place_native_baseline<'s, 'p>(
+    selected: &'s VerifiedSelectedCallable<'p, Instruction>,
+) -> Result<CheckedPlacement<'s, 'p, Instruction>, CheckFailure> {
+    let profile = selected.draft().context().catalog().plan().profile();
+    placement::place_baseline(selected, &NativeTarget::new(profile)?)
+}
+impl NativeTarget {
+    fn new(profile: TargetProfile) -> Result<Self, CheckFailure> {
+        let resources = NativeResources::for_profile(profile).map_err(|_| CheckFailure {
+            location: CheckLocation::Entry,
+            reason: CheckReason::WrongTarget,
+            origin: None,
+            structure: None,
+        })?;
+        Ok(Self { resources, profile })
+    }
 }
 impl PlacementTarget for NativeTarget {
     fn profile(&self) -> TargetProfile {

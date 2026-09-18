@@ -1,4 +1,5 @@
 //! Representation/checker regressions and a separate independent specification oracle.
+mod baseline;
 mod checking;
 mod fixtures;
 mod oracle;
