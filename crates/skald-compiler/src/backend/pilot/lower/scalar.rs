@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-type ScalarOperation<'p> = Operation<ValueHandle<'p>, ObjectHandle<'p>, BlockHandle<'p>>;
+pub(super) type ScalarOperation<'p> = Operation<ValueHandle<'p>, ObjectHandle<'p>, BlockHandle<'p>>;
 
 impl<'plan> Lowerer<'plan, '_> {
     pub(super) fn instruction(
@@ -35,6 +35,13 @@ impl<'plan> Lowerer<'plan, '_> {
             )?,
             MirInstruction::EndFullExpression(end) if end.temporaries.is_empty() => {}
             MirInstruction::Assign(assign) => {
+                if self
+                    .guards
+                    .get(&block)
+                    .is_some_and(|guard| guard.value == assign.result)
+                {
+                    return Ok(()); // The secured load is defined by the predecessor check.
+                }
                 let operation = self.rvalue(block, &assign.rvalue.kind)?;
                 self.builder.append_into(
                     self.blocks[block.index()],
@@ -103,7 +110,7 @@ impl<'plan> Lowerer<'plan, '_> {
             | MirRvalueKind::Shift { .. }
             | MirRvalueKind::PrimitiveCast { .. }
             | MirRvalueKind::CheckedF64ToInteger { .. } => {
-                return Err(self.pending(PendingFeature::GuardedNumeric))
+                return self.guarded_operation(block, kind)
             }
             _ => return Err(PlanError::InvalidDomain.into()),
         })

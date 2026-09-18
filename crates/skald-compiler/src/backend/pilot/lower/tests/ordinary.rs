@@ -164,25 +164,21 @@ fn sparse_retention_does_not_resurrect_removed_bodies() {
 
 #[test]
 fn pending_features_leave_the_declared_work_item_unbegun() {
-    for (source, feature) in [
-        (
-            "fn main() -> i64 { return 1 / 2; }",
-            PendingFeature::GuardedNumeric,
-        ),
-        (
-            "extern fn foreign() -> i64; fn main() -> i64 { return foreign(); }",
-            PendingFeature::Calls,
-        ),
-    ] {
-        let fixture = lower_source_to_complete_final_mir_with_sources("pending.ska", source);
-        let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-        let mut worklist = ProgramBuilder::new(admitted.plan().view());
-        let key = worklist.next().unwrap();
-        assert!(
-            matches!(lower_next(&admitted, &mut worklist), Err(LowerError::Pending { feature: actual, .. }) if actual == feature)
-        );
-        assert_eq!(worklist.request(key).unwrap(), InventoryState::Declared);
-    }
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "pending.ska",
+        "extern fn foreign() -> i64; fn main() -> i64 { return foreign(); }",
+    );
+    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    let key = worklist.next().unwrap();
+    assert!(matches!(
+        lower_next(&admitted, &mut worklist),
+        Err(LowerError::Pending {
+            feature: PendingFeature::Calls,
+            ..
+        })
+    ));
+    assert_eq!(worklist.request(key).unwrap(), InventoryState::Declared);
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "entry.ska",
         "fn main() -> i64 { return 0; }",

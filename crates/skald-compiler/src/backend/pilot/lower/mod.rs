@@ -3,7 +3,9 @@
 mod context;
 mod control;
 mod error;
+mod failure;
 mod memory;
+mod numeric;
 mod scalar;
 mod worklist;
 

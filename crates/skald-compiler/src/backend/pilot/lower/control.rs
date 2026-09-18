@@ -1,4 +1,4 @@
-use super::{context::Lowerer, LowerError, PendingFeature};
+use super::{context::Lowerer, LowerError};
 use crate::{
     backend::{
         lir::{Edge, Terminator},
@@ -7,21 +7,28 @@ use crate::{
     mir::{BlockId, MirTerminator},
 };
 
-impl Lowerer<'_, '_> {
+impl<'plan> Lowerer<'plan, '_> {
+    pub(super) fn edge(
+        &self,
+        target: BlockId,
+    ) -> Edge<crate::backend::lir::ValueHandle<'plan>, crate::backend::lir::BlockHandle<'plan>>
+    {
+        Edge {
+            target: self.blocks[target.index()],
+            arguments: vec![],
+        }
+    }
+
     pub(super) fn terminator(
         &mut self,
         block: BlockId,
         terminator: &MirTerminator,
     ) -> Result<(), LowerError> {
-        let edge = |target: BlockId| Edge {
-            target: self.blocks[target.index()],
-            arguments: vec![],
-        };
         let terminator = match terminator {
             MirTerminator::Return { value, .. } => {
                 Terminator::Return(value.iter().map(|v| self.values[v.index()]).collect())
             }
-            MirTerminator::Goto { target, .. } => Terminator::Jump(edge(*target)),
+            MirTerminator::Goto { target, .. } => Terminator::Jump(self.edge(*target)),
             MirTerminator::Branch {
                 condition,
                 true_target,
@@ -29,14 +36,26 @@ impl Lowerer<'_, '_> {
                 ..
             } => Terminator::Branch {
                 condition: self.values[condition.index()],
-                true_edge: edge(*true_target),
-                false_edge: edge(*false_target),
+                true_edge: self.edge(*true_target),
+                false_edge: self.edge(*false_target),
             },
-            MirTerminator::ShiftCountCheck { .. }
-            | MirTerminator::IntegerDivisorCheck { .. }
-            | MirTerminator::PrimitiveCastRangeCheck { .. }
-            | MirTerminator::Terminate { .. } => {
-                return Err(self.pending(PendingFeature::GuardedNumeric))
+            MirTerminator::ShiftCountCheck {
+                success_target,
+                failure_target,
+                ..
+            }
+            | MirTerminator::IntegerDivisorCheck {
+                success_target,
+                failure_target,
+                ..
+            }
+            | MirTerminator::PrimitiveCastRangeCheck {
+                success_target,
+                failure_target,
+                ..
+            } => self.numeric_check(block, *success_target, *failure_target)?,
+            MirTerminator::Terminate { reason, span } => {
+                self.report_failure(block, *reason, *span)?
             }
             _ => return Err(PlanError::InvalidDomain.into()),
         };

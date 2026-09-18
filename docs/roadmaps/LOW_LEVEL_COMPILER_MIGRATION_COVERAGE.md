@@ -659,11 +659,18 @@ for shared lowering; later phases consume immutable views. Public emission remai
 legacy. This is admission/projection evidence, not executable native equivalence.
 Ordinary scalar memory/control-flow bodies now publish genuine lower receipts
 through the shared builder, full callable checker and lower inventory worklist.
-[Owner tests](../../crates/skald-compiler/src/backend/pilot/lower/tests.rs) cover
+[Owner tests](../../crates/skald-compiler/src/backend/pilot/lower/tests/mod.rs) cover
 loops/joins, typed primitive predicates and memory, canonical code addresses,
 raw float bits, sparse identities, duplicate successors and retained unreachable
 blocks. Malformed construction and foreign contexts cannot acquire a receipt.
 This proves the source-to-lowered boundary, not executable native equivalence or
-complete lowered-program closure. Numeric checks/casts, calls, tracing and entry
-remain explicitly pending. The next owner is guarded arithmetic/conversion
+complete lowered-program closure. Guarded numeric operations and all primitive
+cast cells now publish with exact secured-value evidence; reporting preserves
+failure messages, effects and source origins. Numeric owner regressions execute
+constant lowered fixtures with an independent small oracle, reject forged/bypassed
+guards, exercise loop definitions, and cover float range/NaN/infinity boundaries
+and exact bit payloads. Real normalized bit-intrinsic bodies publish individually;
+their wrapper callers await call lowering. This qualifies the shared boundary,
+not native recipe execution. Calls, tracing and entry remain explicitly pending.
+The next owner is calls, traces and pilot entry
 lowering in the [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).

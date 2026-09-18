@@ -8,7 +8,6 @@ use crate::{
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::backend) enum PendingFeature {
-    GuardedNumeric,
     Calls,
     RuntimeTrace,
     Entry,

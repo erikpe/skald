@@ -52,20 +52,17 @@ pub(in crate::backend) enum BinaryOperation {
 }
 /// Signed division is floor division; MIN / -1 yields MIN, with remainder 0.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum DivisionResult {
     Quotient,
     Remainder,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum ShiftDirection {
     Left,
     ArithmeticRight,
     LogicalRight,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum Conversion {
     Identity,
     IntegerBits,
@@ -74,6 +71,7 @@ pub(in crate::backend) enum Conversion {
     ToFloat,
     FloatBits,
     TruncateFloat,
+    #[cfg_attr(not(test), allow(dead_code))]
     PointerBits,
 }
 

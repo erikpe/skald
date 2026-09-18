@@ -8,7 +8,8 @@ selected graphs with exact parent reconciliation and consuming edits are impleme
 products support immutable visitors and private deterministic text inspection.
 The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
 component classification. Private whole-program pilot admission and final-MIR
-fact projection and ordinary scalar/CFG lowering are implemented. Placement and native consumption remain planned;
+fact projection, ordinary scalar/CFG lowering and guarded numeric lowering are
+implemented. Placement and native consumption remain planned;
 shared ABI slot-shape integration is a tracked prerequisite before native selection.
 
 ## Shared final-MIR lowering
@@ -16,8 +17,8 @@ shared ABI slot-shape integration is a tracked prerequisite before native select
 The private `backend::pilot` adapter constructs ordinary scalar bodies with the
 standard lowered builder and publishes them through full callable verification.
 Its worklist registers the exact body receipt; it does not yet close an executable
-lowered program. Guarded numeric operations, calls, tracing and entry construction
-return explicit pending-feature errors before beginning the work item.
+lowered program. Calls, tracing and entry construction return explicit
+pending-feature errors before beginning the work item.
 
 Every retained MIR block is preserved, including unreachable blocks and repeated
 successor occurrences. MIR computed values are block-local, so the adapter needs
@@ -33,6 +34,34 @@ Source value and storage origins survive reservation. Primitive comparison
 predicates retain operand types; floating constants retain raw bits and callable
 addresses retain canonical code signatures. Lowering queries only admitted MIR
 and frozen plan facts, without selecting registers, frame offsets or instructions.
+
+### Guarded numeric lowering
+
+Checked MIR diamonds secure operands in temporary memory carriers. The adapter
+moves the success block's secured divisor/count/float load into its check block,
+keeping that source value's identity and origin. Both the scalar-check terminator
+and the operation use this exact immutable value; the original success load is
+not emitted again. Other source loads and result stores retain their order and
+semantic objects. These values may cross the exclusive success edge without
+block parameters; this does not promote ordinary locals or change their memory
+representation. Full publication checks the success-edge protection independently.
+
+The closed numeric operations are the recipe associations consumed by selection:
+
+| Lowered association | Required native semantics |
+| --- | --- |
+| `Divide`, operand type and quotient/remainder result, with nonzero evidence | Signed floor quotient and divisor-sign remainder; minimum/-1 gives minimum or zero. Selection expands the overflow case and floor correction before constrained division. Unsigned and byte results preserve their widths. |
+| `Shift`, direction/type and below-width evidence | Check the complete original U64 count against 8 or 64 before any native count narrowing; signed right shift is arithmetic, unsigned right shift is logical. |
+| `Convert::TruncateFloat`, target and finite/truncated-range evidence | Reject NaN/infinity and truncated values outside the target range. Negative fractions above -1 truncate to unsigned zero. Conversion and unsigned correction occur only after the guard. |
+| Other typed `Convert` cells | Integer bit conversion and byte canonicalization, canonical boolean predicates/results, correctly rounded integer-to-float conversion, and exact float-bit reinterpretation retain distinct semantics. |
+| `ReportFailure`, exact message and source attribution | Existing panic service with typed message address/length, reporting effects and source span; selection supplies the defensive trap. Enabled failure-location trace actions are owned with trace lowering. |
+
+Native recipes reconcile these operations and their guard associations against
+verified parent snapshots. Overflow, rounding, unsigned conversion and floor
+corrections are explicit selection obligations, never repairs performed by frame
+realization or rendering. The private numeric fixture oracle tests lowered
+control/data relationships against boundary expectations; native equivalence
+still requires the target recipe and execution probes.
 
 ## Ownership and checking
 

@@ -8,7 +8,7 @@ use crate::backend::{
     plan::{LirCallableId, PlanError},
     RuntimeTracePolicy,
 };
-use crate::mir::{MirInstruction, MirRvalueKind, MirTerminator};
+use crate::mir::{MirInstruction, MirTerminator};
 
 /// Construct and verify one declared source body, then register its exact receipt.
 /// Later features reject before beginning work; no temporary trap or fake body.
@@ -38,18 +38,8 @@ fn preflight(admitted: &AdmittedPilot<'_>, callable: LirCallableId) -> Result<()
     let definition = definition(admitted, source)?;
     for block in &definition.body().blocks {
         for instruction in &block.instructions {
-            match instruction {
-                MirInstruction::Assign(assign) => match assign.rvalue.kind {
-                    MirRvalueKind::IntegerDivision { .. }
-                    | MirRvalueKind::Shift { .. }
-                    | MirRvalueKind::PrimitiveCast { .. }
-                    | MirRvalueKind::CheckedF64ToInteger { .. } => {
-                        return Err(pending(PendingFeature::GuardedNumeric))
-                    }
-                    _ => {}
-                },
-                MirInstruction::Call(_) => return Err(pending(PendingFeature::Calls)),
-                _ => {}
+            if matches!(instruction, MirInstruction::Call(_)) {
+                return Err(pending(PendingFeature::Calls));
             }
         }
         match block
@@ -63,9 +53,7 @@ fn preflight(admitted: &AdmittedPilot<'_>, callable: LirCallableId) -> Result<()
             MirTerminator::ShiftCountCheck { .. }
             | MirTerminator::IntegerDivisorCheck { .. }
             | MirTerminator::PrimitiveCastRangeCheck { .. }
-            | MirTerminator::Terminate { .. } => {
-                return Err(pending(PendingFeature::GuardedNumeric))
-            }
+            | MirTerminator::Terminate { .. } => {}
             _ => return Err(PlanError::InvalidDomain.into()),
         }
     }

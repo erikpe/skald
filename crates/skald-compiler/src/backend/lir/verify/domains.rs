@@ -3,13 +3,11 @@ use super::super::*;
 use crate::backend::graph::{LoweredBlockId, LoweredValueId};
 use crate::backend::plan::ScalarType;
 use std::collections::BTreeMap;
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) struct GuardPaths {
     edges: Vec<Vec<usize>>,
     entry: usize,
     cache: BTreeMap<(usize, Option<usize>), Vec<bool>>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl GuardPaths {
     pub fn new(session: &crate::backend::graph::GraphSession<'_, CallableDraft<'_>>) -> Self {
         let draft = session.owner();
@@ -81,7 +79,6 @@ impl GuardPaths {
         }
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn constant(draft: &CallableDraft<'_>, value: LoweredValueId) -> Option<Constant> {
     let Definition::InstructionResult {
         instruction,
@@ -102,7 +99,6 @@ pub(super) fn constant(draft: &CallableDraft<'_>, value: LoweredValueId) -> Opti
         _ => None,
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 fn satisfies(constant: Constant, relation: &ScalarCheck) -> bool {
     match relation {
         ScalarCheck::NonZeroDivisor { ty, .. } => {
@@ -132,7 +128,6 @@ fn satisfies(constant: Constant, relation: &ScalarCheck) -> bool {
         }
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn obligation(
     op: &Operation,
     draft: &CallableDraft<'_>,

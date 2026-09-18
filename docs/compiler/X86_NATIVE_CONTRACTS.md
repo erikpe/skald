@@ -103,8 +103,9 @@ an explicit contract amendment before consumers, not a permissive descriptor.
 
 ## Numeric correction walkthrough
 
-For signed 64-bit division, shared checks establish nonzero divisor and the
-minimum/-1 disposition; selection handles that overflow case in explicit CFG
+For signed 64-bit division, the shared guard establishes a nonzero divisor and
+the closed division descriptor specifies the minimum/-1 disposition; selection
+handles that overflow case in explicit CFG
 before `cqo`/`idiv`. The ordinary path has explicit RAX/RDX dividend inputs and
 quotient/remainder results. Floor correction uses the nonzero remainder and sign
 relationship in separate blocks, then merges fresh corrected values. Unsigned

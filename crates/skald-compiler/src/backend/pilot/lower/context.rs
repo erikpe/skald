@@ -19,6 +19,7 @@ pub(super) struct Lowerer<'plan, 'input> {
     pub(super) blocks: Vec<BlockHandle<'plan>>,
     pub(super) values: Vec<ValueHandle<'plan>>,
     pub(super) objects: Vec<ObjectHandle<'plan>>,
+    pub(super) guards: BTreeMap<BlockId, super::numeric::Guard>,
     // Computed addresses are block-local, even though the underlying object
     // represents semantic storage across blocks and dynamic lifetime epochs.
     pub(super) addresses: BTreeMap<(BlockId, StorageId), ValueHandle<'plan>>,
@@ -67,6 +68,7 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             blocks,
             values,
             objects: vec![],
+            guards: super::numeric::guards(definition)?,
             addresses: BTreeMap::new(),
         };
         lowerer.declare_storage()?;
