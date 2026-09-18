@@ -12,7 +12,6 @@ use crate::source::Span;
 use std::collections::BTreeSet;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum BuildError {
     Plan(PlanError),
     SizeOverflow,
@@ -37,12 +36,10 @@ impl From<PlanError> for BuildError {
         Self::Plan(error)
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct DraftBuilder<'p> {
     pub(super) draft: CallableDraft<'p>,
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> DraftBuilder<'p> {
     pub(in crate::backend) fn new(owner: CallableBinding<'p>) -> Result<Self, BuildError> {
         let mut builder = Self {

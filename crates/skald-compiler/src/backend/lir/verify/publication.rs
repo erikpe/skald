@@ -2,23 +2,21 @@
 use super::super::CallableDraft;
 use crate::backend::plan::{ArtifactId, CallableBinding};
 use std::{collections::BTreeSet, sync::Arc};
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct VerifiedCallable<'p> {
     draft: CallableDraft<'p>,
     receipt: CompletionReceipt<'p>,
 }
 #[derive(Clone)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct CompletionReceipt<'p> {
     owner: CallableBinding<'p>,
     snapshot: Arc<()>,
     references: BTreeSet<ArtifactId>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> VerifiedCallable<'p> {
     pub(in crate::backend::lir) fn into_editor(self) -> crate::backend::lir::LoweredEditor<'p> {
         crate::backend::lir::LoweredEditor::new(self.draft, self.receipt)
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn analysis(
         &self,
     ) -> Result<
@@ -34,7 +32,6 @@ impl<'p> VerifiedCallable<'p> {
         self.receipt.clone()
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> CompletionReceipt<'p> {
     pub(in crate::backend) fn owner(&self) -> CallableBinding<'p> {
         self.owner
@@ -50,7 +47,6 @@ impl<'p> CompletionReceipt<'p> {
         self.same_snapshot(&body.receipt)
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn publish(
     draft: CallableDraft<'_>,
     references: BTreeSet<ArtifactId>,

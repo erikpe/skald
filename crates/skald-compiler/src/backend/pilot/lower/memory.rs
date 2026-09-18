@@ -1,0 +1,140 @@
+use super::{
+    context::{scalar_type, Lowerer},
+    LowerError,
+};
+use crate::{
+    backend::{
+        lir::{
+            LifetimeDisposition, LifetimeMarker, MemoryRepresentation, Object, ObjectRole,
+            Operation, ValueHandle,
+        },
+        plan::PlanError,
+    },
+    mir::{BlockId, MirInstruction, MirPlace, MirPlaceBase, MirType, StorageId},
+};
+
+impl<'plan> Lowerer<'plan, '_> {
+    pub(super) fn declare_storage(&mut self) -> Result<(), LowerError> {
+        let explicit_lifetimes = self
+            .definition
+            .body()
+            .blocks
+            .iter()
+            .flat_map(|b| &b.instructions)
+            .filter_map(|i| match i {
+                MirInstruction::StorageLive(live) => Some(live.storage),
+                MirInstruction::StorageDead(dead) => Some(dead.storage),
+                _ => None,
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        for storage in self.definition.storage_entries() {
+            let id = self
+                .admitted
+                .layout(storage.ty)
+                .ok_or(PlanError::UnknownDeclaration)?;
+            let layout = *self.plan().layout(self.plan().layout_id(id.index())?)?;
+            let explicit_lifetime =
+                storage.ty != MirType::Unit && explicit_lifetimes.contains(&storage.id);
+            // One source storage identity has one lexical lifetime site. Loop
+            // iterations and alternate exits repeat that site's dynamic epochs.
+            let lifetime = if explicit_lifetime {
+                LifetimeDisposition::Sites(1)
+            } else {
+                LifetimeDisposition::WholeCallable
+            };
+            self.objects.push(self.builder.declare_object(Object {
+                layout,
+                role: ObjectRole::SemanticStorage,
+                lifetime,
+                origin: Some(storage.span),
+            })?);
+        }
+        Ok(())
+    }
+    pub(super) fn representation(
+        &self,
+        storage: StorageId,
+    ) -> Result<MemoryRepresentation, LowerError> {
+        let ty = self
+            .definition
+            .storage(storage)
+            .expect("verified local storage")
+            .ty;
+        let id = self
+            .admitted
+            .layout(ty)
+            .ok_or(PlanError::UnknownDeclaration)?;
+        let layout = self.plan().layout(self.plan().layout_id(id.index())?)?;
+        Ok(MemoryRepresentation {
+            scalar: scalar_type(self.admitted, ty)?,
+            bytes: layout.size,
+            alignment: layout.alignment,
+        })
+    }
+    pub(super) fn address(
+        &mut self,
+        block: BlockId,
+        storage: StorageId,
+    ) -> Result<ValueHandle<'plan>, LowerError> {
+        if let Some(address) = self.addresses.get(&(block, storage)) {
+            return Ok(*address);
+        }
+        let result = self.builder.append(
+            self.blocks[block.index()],
+            Operation::ObjectAddress(self.objects[storage.index()]),
+        )?[0];
+        self.addresses.insert((block, storage), result);
+        Ok(result)
+    }
+    pub(super) fn store(
+        &mut self,
+        block: BlockId,
+        storage: StorageId,
+        value: ValueHandle<'plan>,
+    ) -> Result<(), LowerError> {
+        let address = self.address(block, storage)?;
+        let representation = self.representation(storage)?;
+        self.builder.append(
+            self.blocks[block.index()],
+            Operation::Store {
+                address,
+                value,
+                representation,
+            },
+        )?;
+        Ok(())
+    }
+    pub(super) fn lifetime(
+        &mut self,
+        block: BlockId,
+        storage: StorageId,
+        marker: LifetimeMarker,
+    ) -> Result<(), LowerError> {
+        if self
+            .definition
+            .storage(storage)
+            .expect("verified local storage")
+            .ty
+            != MirType::Unit
+        {
+            self.builder.append(
+                self.blocks[block.index()],
+                Operation::Lifetime {
+                    marker,
+                    object: self.objects[storage.index()],
+                    site: 0,
+                },
+            )?;
+        }
+        Ok(())
+    }
+}
+
+pub(super) fn local(place: &MirPlace) -> Result<StorageId, LowerError> {
+    if let MirPlaceBase::Storage(storage) = place.base {
+        if place.projections.is_empty() {
+            return Ok(storage);
+        }
+    }
+    Err(PlanError::InvalidDomain.into())
+}

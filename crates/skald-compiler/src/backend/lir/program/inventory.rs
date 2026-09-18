@@ -10,14 +10,12 @@ use std::{
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum InventoryState {
     Declared,
     Building,
     Verified,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum ProgramError {
     Plan(PlanError),
     AlreadyBuilding,
@@ -33,13 +31,12 @@ impl From<PlanError> for ProgramError {
         Self::Plan(value)
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 enum WorkEntry<'p> {
+    #[cfg_attr(not(test), allow(dead_code))]
     Declared,
     Building,
     Verified(CompletionReceipt<'p>),
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct ProgramBuilder<'p> {
     parent: PlanView<'p>,
     states: BTreeMap<LirCallableId, WorkEntry<'p>>,
@@ -54,8 +51,8 @@ pub(in crate::backend) struct VerifiedProgram<'p> {
     chosen: BTreeMap<LirCallableId, CompletionReceipt<'p>>,
     data: BTreeMap<DataKey, DataDefinition>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> ProgramBuilder<'p> {
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn new(parent: PlanView<'p>) -> Self {
         Self {
             parent,
@@ -128,6 +125,7 @@ impl<'p> ProgramBuilder<'p> {
             .insert(key, WorkEntry::Verified(receipt.clone()));
         Ok(())
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn define_data(
         &mut self,
         definition: DataDefinition,
@@ -142,6 +140,7 @@ impl<'p> ProgramBuilder<'p> {
         self.data.insert(definition.key, definition);
         Ok(())
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn finish(self) -> Result<VerifiedProgram<'p>, ProgramError> {
         // Declaration presence alone never satisfies body or initializer completion.
         for declaration in self.parent.artifacts() {

@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; streaming authority, native facts and pilot planning implemented | Deliver the private whole-program native pilot through independently checked native phases | NP04 — Scalar memory and control-flow lowering | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
+| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; streaming authority, native facts, pilot planning and ordinary scalar/CFG lowering implemented | Deliver the private whole-program native pilot through independently checked native phases | NP05 — Guarded arithmetic and conversion lowering | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
 
 ## Pending discovery and planning records
 

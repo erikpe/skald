@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01–NP03 complete; NP04 is next.
+Status: in progress, 2026-09-18; NP01–NP04 complete; NP05 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -48,7 +48,7 @@ backend or claim full-language migration.
 - [x] NP01 — Streaming publication authority
 - [x] NP02 — x86 resources and component ABI
 - [x] NP03 — Whole-program admission and fact projection
-- [ ] NP04 — Scalar memory and control-flow lowering
+- [x] NP04 — Scalar memory and control-flow lowering
 - [ ] NP05 — Guarded arithmetic and conversion lowering
 - [ ] NP06 — Calls, traces and pilot entry lowering
 - [ ] NP07 — Concrete scalar selected payload and verifier
@@ -113,9 +113,9 @@ its acceptance boundary; do not silently defer part of its contract.
 
 **Purpose:** Produce executable shared lowered bodies for ordinary scalar storage and graph structure.
 
-- [ ] Lower constants, scalar locals/loads/stores, primitive unary/binary operations, comparisons, jumps, branches and returns into the implemented lowered inventory with origins and explicit effects.
-- [ ] Keep semantic memory objects distinct from computed values and later placement storage. Preserve single definitions, edge occurrences, block parameters, evaluation order and certified retention.
-- [ ] Use ordinary builders, graph checks and lower worklists; remove inherited allowances on the APIs now consumed.
+- [x] Lower constants, scalar locals/loads/stores, primitive unary/binary operations, comparisons, jumps, branches and returns into the implemented lowered inventory with origins and explicit effects.
+- [x] Keep semantic memory objects distinct from computed values and later placement storage. Preserve single definitions, edge occurrences, block parameters, evaluation order and certified retention.
+- [x] Use ordinary builders, graph checks and lower worklists; remove inherited allowances on the APIs now consumed.
 
 **Tests:** Verified lowered fixtures for loops/joins, duplicate-successor edges, local memory, signed/unsigned/float predicates, unreachable retained structure and sparse identities. Negative tests for malformed construction use final publication APIs.
 
@@ -366,16 +366,17 @@ permission to introduce it unnecessarily.
 | --- | --- | --- | --- |
 | `backend/effects.rs`: `MemoryRegion`, `Effect`, `Effects` and their checked set/remapping methods | `68dec8ed` | First native effect/verification consumers; conservative barriers remain durable; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/plan/{facts,identities,check,view,services}.rs`, `plan/mod.rs`: `PlanFacts`, `CheckedPlan`, `PlanView`, typed IDs/declarations, checked services and explicit re-export groups | `ff12421d`, services `68dec8ed` | First native planning/lowering consumer; remaining full-surface facts retire their allowances with complete migration; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/graph/{arena,edit}.rs`, `graph/verify/{model,check,analysis}.rs`, `graph/mod.rs`: `OwnedArena`, `IdMap`, `GraphView`, `check_graph`, `GraphSession` and explicit re-export groups | `ff12421d`, verification `eecdb4cc`, edits `03e4ae42` | First native graph/analysis/edit consumers; shared algorithm stays durable; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/lir/{model,scalar,builder,schema,read,call,trace,observable}.rs`, `lir/graph/{storage,operands}.rs`: draft records, `DraftBuilder`, `DraftChecks` and graph adapter impls | `43df9ce6`, effects `68dec8ed`, graph adapters `eecdb4cc` | First native lowered construction/checking consumers; remaining vocabulary with complete migration; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/lir/verify/{check,domains,memory,trace,lift,failure,publication}.rs`: full checking helpers, structured failures, `VerifiedCallable` and `CompletionReceipt` | `e87fa392` | First native lowered verification/publication consumer; no replacement with builder trust; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/lir/program/{inventory,data,target}.rs`: `ProgramBuilder`, `VerifiedProgram`, data validation, `TargetDeclarations`, `TargetCatalog` | `ddc5a97d`; catalog migrated NP01 `2cbd7ffd` | First native inventory/discovery consumer; preserve streaming receipts, plan freeze and exact parent reconciliation; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/graph/{arena,edit}.rs`, `graph/verify/{model,check,analysis}.rs`, `graph/mod.rs`: `OwnedArena`, `IdMap`, `GraphView`, `check_graph`, `GraphSession` and explicit re-export groups | `ff12421d`, verification `eecdb4cc`, edits `03e4ae42` | First native graph/analysis/edit consumers; shared algorithm stays durable; reconcile NP19 | `check_graph` allowance retired NP04; remaining analysis/edit allowances stay until their consumers. Durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/lir/{model,scalar,builder,schema,read,call,trace,observable}.rs`, `lir/graph/{storage,operands}.rs`: draft records, `DraftBuilder`, `DraftChecks` and graph adapter impls | `43df9ce6`, effects `68dec8ed`, graph adapters `eecdb4cc` | First native lowered construction/checking consumers; remaining vocabulary with complete migration; reconcile NP19 | `DraftBuilder` allowances retired NP04; remaining vocabulary allowances stay until their consumers. Durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/lir/verify/{check,domains,memory,trace,lift,failure,publication}.rs`: full checking helpers, structured failures, `VerifiedCallable` and `CompletionReceipt` | `e87fa392` | First native lowered verification/publication consumer; no replacement with builder trust; reconcile NP19 | Callable checking and publication/receipt allowances retired NP04; callable analysis remains scoped until its consumer. Durable APIs remain. Audit all annotations in these files, not only principal symbols |
+| `backend/lir/program/{inventory,data,target}.rs`: `ProgramBuilder`, `VerifiedProgram`, data validation, `TargetDeclarations`, `TargetCatalog` | `ddc5a97d`; catalog migrated NP01 `2cbd7ffd` | First native inventory/discovery consumer; preserve streaming receipts, plan freeze and exact parent reconciliation; reconcile NP19 | Worklist begin/completion/state allowances retired NP04; constructor, data and final closure remain narrowly scoped until orchestration. Other catalog/program allowances remain pending their consumers. Audit all annotations in these files, not only principal symbols |
 | `backend/selected/{storage,context,builder,graph,abi,resources,description}.rs`: `SelectedDraft`, `SelectionContext`, `SelectedBuilder`, `Payload`, ABI/resource records and descriptions | `63291d6d` | Real target schema/selection consumer; retain immutable opcode-derived descriptions; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/selected/verify/{check,descriptors,failure,publication,program}.rs`: shared checking helpers, `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt`, `SelectedProgramBuilder` | `73b1fafe`; closure migrated NP01 `2cbd7ffd` | First native selected verification consumer; both shared and target checks remain mandatory; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{lir,selected}/edit/{mod,editor,rebuild}.rs`, `lir/edit/split.rs`: `LoweredEditor`, `SelectedEditor`, `LoweredRemap`, `SelectedRemap`, remapping/rebuilding and split helpers | `03e4ae42` | Native edits/analysis consumers; retain consuming authority and full reverification; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{inspection,lir/inspect,selected/inspect}.rs`, `lir/mod.rs`, `selected/mod.rs`: visitors/renderers, immutable enumeration and explicit facade re-export groups | `495df6b9` | First native inspection/checkpoint consumers; no fabricated observations; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/x86_64_sysv/native/{mod,resources,abi}.rs`: `Gpr`, `NativeResources`, `ComponentAbi`, classifier, explicit facade imports and scoped non-test allowances | NP02, baseline `2cbd7ffd`; introducing commit `9a9e3bc1` | NP07/NP09 actual native selection consumers; NP12/NP13 placement/frame consumers; reconcile NP19 | Durable immutable target facts; remove allowances per actual consumer. Tests retain lint checks; no legacy adapter or production switch |
-| `backend/pilot/{mod,facts,projection}.rs`, `x86_64_sysv/pilot_facts.rs`: private admission facade, admitted getters, projection entry points and item-scoped non-test allowances | NP03, baseline `9a9e3bc1`; introducing commit pending user commit | NP04/NP06 lower consumers; NP17 private pipeline; reconcile NP19 and LA05 public adoption | Durable checked planning boundary; retire allowances per actual consumer. No temporary lowerer, fallback, fake intrinsic input or production switch |
+| `backend/pilot/{mod,facts,projection}.rs`, `x86_64_sysv/pilot_facts.rs`: private admission facade, admitted getters, projection entry points and item-scoped non-test allowances | NP03, baseline `9a9e3bc1`; introducing commit `879bfb47` | NP04/NP06 lower consumers; NP17 private pipeline; reconcile NP19 and LA05 public adoption | Durable checked planning boundary; program/plan/layout/signature getter allowances retired NP04; admission entry and trace facts remain scoped until orchestration/trace consumers. No temporary lowerer, fallback, fake intrinsic input or production switch |
+| `backend/pilot/lower/`: shared adapter, pending-feature preflight and private facade allowance | NP04, baseline `879bfb47`; introducing commit pending user commit | NP05 numeric lowering; NP06 calls/trace/entry and program construction; NP17 private pipeline; reconcile NP19 | Retain shared adapter; retire each pending-feature rejection and duplicated preflight classification with its implemented feature. Remove private entry allowance with actual orchestration. No fake body, trap, receipt or fallback |
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
@@ -474,4 +475,39 @@ whitespace checks passed. New planning APIs remain private and item-scoped lint
 allowances are ledgered for their actual consumers. No executable lowerer,
 compatibility bridge, fallback, fake intrinsic input or production switch remains.
 The existing ABI slot-shape prerequisite is unchanged; no additional independent
-follow-up was identified. NP04 is next. Changes await the user's manual commit.
+follow-up was identified. Implementation committed by the user as `879bfb47`.
+
+### NP04 implementation evidence
+
+Task baseline: `879bfb47`, the user-committed admission/projection task; the
+working tree was clean. Shared lowering now reserves the actual retained block
+and value domains, declares semantic storage objects, initializes logical inputs,
+and lowers ordinary constants, addresses, local memory, lifetimes, unary/binary
+operations, comparisons and control flow. Each completed body passes ordinary
+full verification before its exact receipt is registered in the lower worklist.
+Unreachable blocks and duplicate edge occurrences are preserved. MIR values are
+block-local, so block parameter and edge argument lists are empty; semantic locals
+remain memory rather than being implicitly promoted. Source value/storage origins,
+raw floating bits, canonical callable signatures and explicit derived effects
+survive this boundary. No target register, home or frame offset is selected.
+
+Consumed allowances were removed from `DraftBuilder`, graph/callable checking,
+callable/receipt publication, worklist construction state and begin/completion,
+and admitted program/layout/signature getters. Worklist `new`, its declared-state
+variant, data/final closure, callable analysis and admitted trace facts retain
+narrow non-test allowances pending their actual orchestration/analysis consumers.
+The private lowering entry retains one scoped non-test allowance until the pilot
+pipeline calls it. Pending-feature preflight rejects numeric checks/casts, calls,
+tracing and entry before work begins; NP05/NP06 remove those gates as their real
+construction becomes available. Per-body success cannot fake program closure.
+
+Eight owner regressions cover loops/joins, parameter and byte/bool memory,
+primitive predicates and arithmetic, raw NaN payloads, canonical callable
+addresses, sparse retained identities, duplicate edges, retained unreachable
+structure, foreign contexts, pending features and malformed final publication.
+Focused tests and `make check` passed (3,327 compiler unit tests, workspace,
+integration/support/runtime checks and all 650 golden observations). Serial
+`make msrv-check` passed with Rust 1.82.0. Final documentation/index and
+tracked/untracked whitespace checks passed.
+The existing ABI slot-shape prerequisite remains assigned to NP07; no additional
+independent discovery was identified. Changes await the user's manual commit.

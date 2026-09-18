@@ -1,7 +1,6 @@
 //! Validate all structure before analysis or dataflow indexing.
 use super::analysis::{analyze, GraphSession};
 use super::model::*;
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn check_graph<G: GraphView>(
     owner: &G,
 ) -> Result<GraphSession<'_, G>, Vec<GraphFailure>> {

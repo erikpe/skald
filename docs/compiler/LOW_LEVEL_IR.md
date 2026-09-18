@@ -8,8 +8,31 @@ selected graphs with exact parent reconciliation and consuming edits are impleme
 products support immutable visitors and private deterministic text inspection.
 The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
 component classification. Private whole-program pilot admission and final-MIR
-fact projection are implemented. Placement and native consumption remain planned;
+fact projection and ordinary scalar/CFG lowering are implemented. Placement and native consumption remain planned;
 shared ABI slot-shape integration is a tracked prerequisite before native selection.
+
+## Shared final-MIR lowering
+
+The private `backend::pilot` adapter constructs ordinary scalar bodies with the
+standard lowered builder and publishes them through full callable verification.
+Its worklist registers the exact body receipt; it does not yet close an executable
+lowered program. Guarded numeric operations, calls, tracing and entry construction
+return explicit pending-feature errors before beginning the work item.
+
+Every retained MIR block is preserved, including unreachable blocks and repeated
+successor occurrences. MIR computed values are block-local, so the adapter needs
+no block parameters or cross-block value transport. Semantic locals and parameters
+remain symbolic memory objects, independently of computed values and later
+placement homes. Logical entry inputs are stored in their parameter objects;
+loads/stores use frozen semantic layouts and builder-derived effects. Object
+addresses are cached within each block. Explicit source lifetime markers name one
+lexical storage site whose dynamic epochs may repeat in loops. Unit storage has
+no scalar access or lifetime operation.
+
+Source value and storage origins survive reservation. Primitive comparison
+predicates retain operand types; floating constants retain raw bits and callable
+addresses retain canonical code signatures. Lowering queries only admitted MIR
+and frozen plan facts, without selecting registers, frame offsets or instructions.
 
 ## Ownership and checking
 

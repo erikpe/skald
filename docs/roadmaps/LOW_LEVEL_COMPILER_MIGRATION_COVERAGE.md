@@ -657,5 +657,13 @@ code signatures, source/entry declarations, C/runtime declarations, failure data
 and enabled-only owned trace metadata. It borrows the inspected MIR snapshot only
 for shared lowering; later phases consume immutable views. Public emission remains
 legacy. This is admission/projection evidence, not executable native equivalence.
-The next owner is shared scalar memory/control-flow lowering in the
-[native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
+Ordinary scalar memory/control-flow bodies now publish genuine lower receipts
+through the shared builder, full callable checker and lower inventory worklist.
+[Owner tests](../../crates/skald-compiler/src/backend/pilot/lower/tests.rs) cover
+loops/joins, typed primitive predicates and memory, canonical code addresses,
+raw float bits, sparse identities, duplicate successors and retained unreachable
+blocks. Malformed construction and foreign contexts cannot acquire a receipt.
+This proves the source-to-lowered boundary, not executable native equivalence or
+complete lowered-program closure. Numeric checks/casts, calls, tracing and entry
+remain explicitly pending. The next owner is guarded arithmetic/conversion
+lowering in the [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).

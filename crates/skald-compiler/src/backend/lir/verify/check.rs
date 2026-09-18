@@ -10,7 +10,6 @@ use crate::backend::effects::{Effect, Effects, MemoryRegion};
 use crate::backend::graph::{check_graph, GraphLocation, GraphView};
 use crate::backend::plan::{ArtifactCategory, ArtifactId, DataKey};
 use std::collections::BTreeSet;
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn verify_callable(
     mut draft: CallableDraft<'_>,
 ) -> Result<publication::VerifiedCallable<'_>, Vec<Failure>> {

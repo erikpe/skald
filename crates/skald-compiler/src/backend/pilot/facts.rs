@@ -34,20 +34,20 @@ impl From<PlanError> for PilotError {
 
 /// Immutable maps retain semantic identity even when physical shapes coincide.
 /// Only the admission/projection owner can construct this authority.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct AdmittedPilot<'input> {
     pub(super) program: &'input crate::mir::MirProgram,
     pub(super) plan: CheckedPlan,
     pub(super) layouts: Vec<(MirType, LayoutId)>,
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) trace: TraceFacts,
     pub(super) function_types: BTreeMap<FunctionTypeId, SignatureId>,
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl AdmittedPilot<'_> {
     pub(in crate::backend) fn program(&self) -> &crate::mir::MirProgram {
         self.program
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn trace(&self) -> &TraceFacts {
         &self.trace
     }
