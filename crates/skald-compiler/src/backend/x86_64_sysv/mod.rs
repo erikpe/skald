@@ -19,7 +19,11 @@ mod literal_data;
 mod lower;
 mod machine;
 mod native;
+mod pilot_facts;
 mod planning;
+
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use pilot_facts::{project_layouts, project_trace};
 mod runtime_trace;
 mod static_fields;
 mod symbol;

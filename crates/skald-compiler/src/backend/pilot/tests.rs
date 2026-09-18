@@ -1,0 +1,374 @@
+use super::*;
+use crate::{
+    backend::{plan::*, BackendInput, RuntimeTracePolicy},
+    mir::*,
+    test_support::lower_source_to_complete_final_mir_with_sources,
+};
+
+fn fixture(source: &str) -> crate::test_support::FinalMirWithSources {
+    lower_source_to_complete_final_mir_with_sources("pilot.ska", source)
+}
+
+#[test]
+fn scalar_and_higher_order_signatures_have_complete_checked_pools() {
+    let fixture = fixture("fn add(value: i64) -> i64 { return value + 1; } fn choose() -> fn(i64) -> i64 { return add; } fn invoke(callback: fn(i64) -> i64) -> i64 { return callback(4); } fn main() -> i64 { var callback: fn(i64) -> i64 = choose(); return invoke(callback); }");
+    let plan = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    assert_eq!(plan.program().executable_definitions().count(), 4);
+    let view = plan.plan().view();
+    assert_eq!(view.runtime_trace(), RuntimeTracePolicy::Omitted);
+    assert_eq!(
+        view.callables()
+            .filter(|c| c.body == BodyDisposition::Required)
+            .count(),
+        5
+    );
+    for ty in [
+        MirType::I64,
+        MirType::U64,
+        MirType::U8,
+        MirType::Bool,
+        MirType::F64,
+        MirType::Unit,
+    ] {
+        let id = plan.layout(ty).unwrap();
+        let fact = view.layout(view.layout_id(id.index()).unwrap()).unwrap();
+        assert_eq!(
+            fact.size,
+            if ty == MirType::Unit {
+                0
+            } else if matches!(ty, MirType::U8 | MirType::Bool) {
+                1
+            } else {
+                8
+            }
+        );
+    }
+    assert_ne!(plan.layout(MirType::I64), plan.layout(MirType::U64));
+    for id in plan.function_types.keys() {
+        assert!(plan.function_type(*id).is_some());
+    }
+    assert!(plan.trace().requests.is_empty());
+    assert!(view.artifacts().all(|a| !matches!(
+        a.key,
+        ArtifactId::TraceTls
+            | ArtifactId::Data(
+                DataKey::TraceBytes(_) | DataKey::TraceContext(_) | DataKey::TraceLocation(_)
+            )
+    )));
+}
+
+#[test]
+fn arithmetic_checks_and_all_primitive_cells_are_admitted() {
+    let fixture = fixture("fn compute(x: i64, y: u64, z: u8, f: f64, b: bool) -> i64 { var n: i64 = (i64) f; var count: u64 = 1u; while (count < 3u) { n = n + (x << count); count = count + 1u; } if (b) { return n / x + n % x; } return ((i64) y) + ((i64) z); } fn main() -> i64 { return compute(2, 3u, 4u8, 5.0, true); }");
+    let plan = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    assert!(plan
+        .plan()
+        .view()
+        .artifacts()
+        .any(|a| a.key == ArtifactId::Runtime(RuntimeService::Panic)));
+}
+
+#[test]
+fn artifact_policy_cannot_hide_an_unsupported_retained_body() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "excluded.ska",
+        "fn dead(ref x: i64) -> i64 { return x; } fn main() -> i64 { return 0; }",
+    );
+    for input in [
+        BackendInput::without_runtime_trace(&fixture.mir),
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    ] {
+        let Err(PilotError::Unsupported(reason)) = admit(input) else {
+            panic!("unsupported retained alias body must reject")
+        };
+        assert!(reason.callable.is_some());
+    }
+}
+
+#[test]
+fn sparse_domains_preserve_absent_declarations_and_never_resurrect_bodies() {
+    use crate::mir::retain::{prepare_reachable_definition_retention, MirDefinitionRetention};
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "sparse.ska",
+        "fn dead() -> i64 { return 4; } fn main() -> i64 { return 0; }",
+    );
+    let MirDefinitionRetention::Changed(retention) =
+        prepare_reachable_definition_retention(fixture.mir.program(), fixture.mir.reachability())
+            .unwrap()
+    else {
+        panic!("expected sparse rewrite")
+    };
+    let sparse =
+        crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
+            .unwrap();
+    for reachable in [false, true] {
+        let mut input = BackendInput::without_runtime_trace(&sparse);
+        if reachable {
+            input = input.with_reachable_artifacts_only();
+        }
+        let plan = admit(input).unwrap();
+        let view = plan.plan().view();
+        assert_eq!(
+            view.callables()
+                .filter(|c| matches!(c.key, LirCallableId::Source(_))
+                    && c.body == BodyDisposition::Required)
+                .count(),
+            1
+        );
+        assert_eq!(
+            view.callables()
+                .filter(|c| c.body == BodyDisposition::Absent)
+                .count(),
+            1
+        );
+        assert_eq!(
+            view.artifact_policy(),
+            if reachable {
+                ArtifactPolicy::Reachable
+            } else {
+                ArtifactPolicy::Complete
+            }
+        );
+    }
+}
+
+#[test]
+fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "trace.ska",
+        "fn main() -> i64 { var x: i64 = 2; return x; }",
+    );
+    let enabled = admit(BackendInput::with_runtime_trace(
+        &fixture.mir,
+        &fixture.sources,
+    ))
+    .unwrap();
+    assert!(!enabled.trace().strings.is_empty());
+    assert_eq!(enabled.trace().contexts.len(), 1);
+    let view = enabled.plan().view();
+    for request in &enabled.trace().requests {
+        view.artifact_id(ArtifactId::Data(request.location))
+            .unwrap();
+        assert!(enabled
+            .program()
+            .has_executable_definition(request.callable));
+        assert_eq!(request.span.source_id(), enabled.program().span.source_id());
+    }
+    for context in &enabled.trace().contexts {
+        for key in [context.name, context.path] {
+            view.artifact_id(ArtifactId::Data(key)).unwrap();
+        }
+    }
+    for location in &enabled.trace().locations {
+        view.artifact_id(ArtifactId::Data(location.context))
+            .unwrap();
+        assert!(location.line > 0 && location.column > 0);
+    }
+    let empty = crate::source::SourceDatabase::new();
+    assert!(matches!(
+        admit(BackendInput::with_runtime_trace(&fixture.mir, &empty)),
+        Err(PilotError::Backend(_))
+    ));
+    let omitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    assert!(omitted.trace().strings.is_empty());
+}
+
+#[test]
+fn excluded_source_families_reject_before_plan_publication() {
+    let sources = [
+        "fn dead(values: i64[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "fn dead(value: i64?) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} } fn dead(value: Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "interface Marker { fn mark() -> i64; } fn dead(ref value: Marker) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "fn dead(ref value: Obj) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }",
+        "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
+        "fn dead(callback: fn(ref i64) -> i64) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+    ];
+    for source in sources {
+        let fixture = fixture(source);
+        for input in [
+            BackendInput::without_runtime_trace(&fixture.mir),
+            BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+        ] {
+            let Err(PilotError::Unsupported(reason)) = admit(input) else {
+                panic!("excluded fixture admitted: {source}")
+            };
+            assert!(!reason.reason.is_empty());
+        }
+    }
+}
+
+#[test]
+fn extern_cells_are_projected_without_changing_public_emission() {
+    let fixture = fixture("extern fn foreign(a: i64, b: u64, c: u8, d: f64, e: bool) -> i64; fn main() -> i64 { return foreign(1, 2u, 3u8, 4.0, true); }");
+    let plan = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    assert_eq!(
+        plan.plan()
+            .view()
+            .artifacts()
+            .filter(|a| matches!(a.key, ArtifactId::External(_)))
+            .count(),
+        1
+    );
+    let assembly = crate::backend::emit_assembly(
+        crate::backend::Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&fixture.mir),
+    )
+    .unwrap();
+    assert!(assembly.contains("call foreign"));
+}
+
+#[test]
+fn normalized_intrinsics_and_user_panic_respect_the_pilot_boundary() {
+    for (source, supported) in [
+        ("import std::f64; extern fn input() -> f64; fn main() -> i64 { return (i64) std::f64::from_bits(std::f64::to_bits(input())); }", true),
+        ("import std::io; fn main() -> i64 { std::io::println_i64(1); return 0; }", false),
+        ("import std::error; fn main() -> i64 { std::error::panic(\"failure\"); return 0; }", false),
+    ] {
+        let (_directory, graph) = crate::test_support::load_module_sources_with_standard_library("app", &[("app.ska", source)]);
+        let resolved = crate::resolve::resolve_module_graph(&graph);
+        assert!(resolved.diagnostics.is_empty(), "{:?}", resolved.diagnostics);
+        let checked = crate::typeck::type_check(&resolved.program);
+        assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+        let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
+        let verified = crate::passes::run_mir_pipeline(program).unwrap();
+        let result = admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only());
+        if supported {result.unwrap();}
+        else {assert!(matches!(result, Err(PilotError::Unsupported(_))));}
+    }
+}
+
+#[test]
+fn sparse_receiverless_methods_share_canonical_code_signatures() {
+    use crate::mir::retain::{prepare_reachable_definition_retention, MirDefinitionRetention};
+    let fixture = fixture("class Math { init() {} static fn add(x: i64) -> i64 { return x + 1; } } fn invoke(callback: fn(i64) -> i64) -> i64 { return callback(4); } fn main() -> i64 { return invoke(Math.add); }");
+    let MirDefinitionRetention::Changed(retention) =
+        prepare_reachable_definition_retention(fixture.mir.program(), fixture.mir.reachability())
+            .unwrap()
+    else {
+        panic!("unused initializer must be removed")
+    };
+    let sparse =
+        crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
+            .unwrap();
+    let plan = admit(BackendInput::without_runtime_trace(&sparse).with_reachable_artifacts_only())
+        .unwrap();
+    let method = sparse
+        .program()
+        .classes
+        .iter()
+        .next()
+        .unwrap()
+        .methods
+        .iter()
+        .find(|m| m.name == "add")
+        .unwrap();
+    let declaration = plan
+        .plan()
+        .view()
+        .callables()
+        .find(|c| c.key == LirCallableId::Source(method.id.into()))
+        .unwrap();
+    assert_eq!(declaration.body, BodyDisposition::Required);
+    assert!(plan
+        .function_types
+        .values()
+        .any(|id| *id == declaration.signature));
+    assert!(plan
+        .plan()
+        .view()
+        .callables()
+        .any(|c| c.body == BodyDisposition::Absent));
+    // Complete mode would still require the unsupported generated class family.
+    assert!(matches!(
+        admit(BackendInput::without_runtime_trace(&sparse)),
+        Err(PilotError::Unsupported(_))
+    ));
+}
+
+#[test]
+fn absent_signatures_preserve_source_identity_despite_equal_physical_cells() {
+    let fixture = fixture("fn read(ref x: i64) -> i64 { return x; } fn write(mut ref x: i64) -> i64 { return x; } fn ro(callback: fn(ref i64) -> i64) -> unit {} fn rw(callback: fn(mut ref i64) -> i64) -> unit {} fn main() -> i64 { return 0; }");
+    let verified = crate::passes::run_mir_pipeline(fixture.mir.program().clone()).unwrap();
+    let plan = admit(BackendInput::without_runtime_trace(&verified)).unwrap();
+    let view = plan.plan().view();
+    let signature = |name| {
+        let id = plan
+            .program()
+            .declarations
+            .iter()
+            .find(|d| d.name == name)
+            .unwrap()
+            .id;
+        view.callables()
+            .find(|c| c.key == LirCallableId::Source(id.into()))
+            .unwrap()
+            .signature
+    };
+    let read = signature("read");
+    let write = signature("write");
+    assert_ne!(read, write);
+    assert_eq!(
+        view.signature(view.signature_id(read.index()).unwrap())
+            .unwrap(),
+        view.signature(view.signature_id(write.index()).unwrap())
+            .unwrap()
+    );
+    for name in ["read", "write"] {
+        let declaration = plan
+            .program()
+            .declarations
+            .iter()
+            .find(|d| d.name == name)
+            .unwrap();
+        let function_type = plan
+            .program()
+            .function_types
+            .iter()
+            .find(|t| t.parameters == declaration.parameters && t.result == declaration.return_type)
+            .unwrap();
+        assert_eq!(plan.function_type(function_type.id), Some(signature(name)));
+    }
+}
+
+#[test]
+fn scalar_io_intrinsic_rejects_even_without_lifecycle_dependencies() {
+    let (_directory, graph) =
+        crate::test_support::load_module_sources_with_standard_library_overrides(
+            "app",
+            &[(
+                "app.ska",
+                "import std::io; fn main() -> i64 { return std::io::close(1); }",
+            )],
+            &[(
+                "std/io.ska",
+                concat!(
+                "intrinsic fn _io_standard_handle(stream: u8) -> i64;",
+                "intrinsic fn _io_open(ref path: u8[], mode: u8) -> i64;",
+                "intrinsic fn _io_read(handle: i64, mut ref destination: u8[], offset: u64) -> i64;",
+                "intrinsic fn _io_write(handle: i64, ref source: u8[], offset: u64) -> i64;",
+                "intrinsic fn _io_close(handle: i64) -> i64;",
+                "public fn close(handle: i64) -> i64 { return _io_close(handle); }",
+            ),
+            )],
+        );
+    let resolved = crate::resolve::resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
+    let verified = crate::passes::run_mir_pipeline(program).unwrap();
+    let Err(PilotError::Unsupported(reason)) =
+        admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
+    else {
+        panic!("scalar I/O must reject")
+    };
+    assert!(reason.callable.is_some());
+    assert!(reason.reason.contains("Io"), "{}", reason.reason);
+}

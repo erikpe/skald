@@ -1,0 +1,107 @@
+use std::collections::BTreeMap;
+
+use crate::backend::{
+    plan::{CheckedPlan, LayoutId, PlanError, SignatureId},
+    BackendError,
+};
+use crate::{identity::FunctionTypeId, mir::MirType};
+
+#[derive(Debug, Eq, PartialEq)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct UnsupportedPilot {
+    pub callable: Option<crate::identity::CallableId>,
+    pub reason: String,
+}
+
+#[derive(Debug)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) enum PilotError {
+    Unsupported(UnsupportedPilot),
+    Backend(BackendError),
+    Plan(PlanError),
+}
+
+impl From<BackendError> for PilotError {
+    fn from(error: BackendError) -> Self {
+        Self::Backend(error)
+    }
+}
+impl From<PlanError> for PilotError {
+    fn from(error: PlanError) -> Self {
+        Self::Plan(error)
+    }
+}
+
+/// Immutable maps retain semantic identity even when physical shapes coincide.
+/// Only the admission/projection owner can construct this authority.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct AdmittedPilot<'input> {
+    pub(super) program: &'input crate::mir::MirProgram,
+    pub(super) plan: CheckedPlan,
+    pub(super) layouts: Vec<(MirType, LayoutId)>,
+    pub(super) trace: TraceFacts,
+    pub(super) function_types: BTreeMap<FunctionTypeId, SignatureId>,
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+impl AdmittedPilot<'_> {
+    pub(in crate::backend) fn program(&self) -> &crate::mir::MirProgram {
+        self.program
+    }
+    pub(in crate::backend) fn trace(&self) -> &TraceFacts {
+        &self.trace
+    }
+    pub(in crate::backend) fn plan(&self) -> &CheckedPlan {
+        &self.plan
+    }
+    pub(in crate::backend) fn layout(&self, ty: MirType) -> Option<LayoutId> {
+        self.layouts
+            .iter()
+            .find_map(|(key, id)| (*key == ty).then_some(*id))
+    }
+    pub(in crate::backend) fn function_type(&self, id: FunctionTypeId) -> Option<SignatureId> {
+        self.function_types.get(&id).copied()
+    }
+}
+
+#[derive(Default)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct TraceFacts {
+    pub strings: Vec<Vec<u8>>,
+    pub contexts: Vec<TraceContext>,
+    pub locations: Vec<TraceLocation>,
+    pub requests: Vec<TraceRequest>,
+}
+
+impl std::fmt::Display for PilotError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unsupported(reason) => write!(
+                f,
+                "unsupported native pilot input in {:?}: {}",
+                reason.callable, reason.reason
+            ),
+            Self::Backend(error) => error.fmt(f),
+            Self::Plan(error) => write!(f, "native pilot planning invariant: {error:?}"),
+        }
+    }
+}
+impl std::error::Error for PilotError {}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct TraceContext {
+    pub name: crate::backend::plan::DataKey,
+    pub path: crate::backend::plan::DataKey,
+}
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct TraceLocation {
+    pub context: crate::backend::plan::DataKey,
+    pub line: u64,
+    pub column: u64,
+}
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct TraceRequest {
+    pub callable: crate::identity::CallableId,
+    pub span: crate::source::Span,
+    pub location: crate::backend::plan::DataKey,
+}

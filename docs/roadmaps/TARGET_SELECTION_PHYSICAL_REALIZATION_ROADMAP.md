@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01–NP02 complete; NP03 is next.
+Status: in progress, 2026-09-18; NP01–NP03 complete; NP04 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -47,7 +47,7 @@ backend or claim full-language migration.
 
 - [x] NP01 — Streaming publication authority
 - [x] NP02 — x86 resources and component ABI
-- [ ] NP03 — Whole-program admission and fact projection
+- [x] NP03 — Whole-program admission and fact projection
 - [ ] NP04 — Scalar memory and control-flow lowering
 - [ ] NP05 — Guarded arithmetic and conversion lowering
 - [ ] NP06 — Calls, traces and pilot entry lowering
@@ -101,9 +101,9 @@ its acceptance boundary; do not silently defer part of its contract.
 
 **Purpose:** Connect verified final MIR to checked planning facts through a narrow shared owner.
 
-- [ ] Implement the frozen pilot whitelist against all physically retained callable bodies, places, signatures, helpers and policies. Return explicit unsupported reasons before executable construction; never drop retained bodies to gain admission.
-- [ ] Project complete immutable signature/layout/declaration pools and canonical source/generated/data keys from existing checked services and certified domains. Keep frontend queries out of downstream phases.
-- [ ] Expose private admitted-plan construction for owner tests; preserve public backend input/errors and isolate enabled-only trace source lookup.
+- [x] Implement the frozen pilot whitelist against all physically retained callable bodies, places, signatures, helpers and policies. Return explicit unsupported reasons before executable construction; never drop retained bodies to gain admission.
+- [x] Project complete immutable signature/layout/declaration pools and canonical source/generated/data keys from existing checked services and certified domains. Keep frontend queries out of downstream phases.
+- [x] Expose private admitted-plan construction for owner tests; preserve public backend input/errors and isolate enabled-only trace source lookup.
 
 **Tests:** Admission positives across primitive/function-pointer forms and negatives for every excluded family, including statics, receiver-bearing source forms and unsupported intrinsics. Test complete/reachable retained domains, sparse IDs and omitted trace source lookup.
 
@@ -374,7 +374,8 @@ permission to introduce it unnecessarily.
 | `backend/selected/verify/{check,descriptors,failure,publication,program}.rs`: shared checking helpers, `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt`, `SelectedProgramBuilder` | `73b1fafe`; closure migrated NP01 `2cbd7ffd` | First native selected verification consumer; both shared and target checks remain mandatory; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{lir,selected}/edit/{mod,editor,rebuild}.rs`, `lir/edit/split.rs`: `LoweredEditor`, `SelectedEditor`, `LoweredRemap`, `SelectedRemap`, remapping/rebuilding and split helpers | `03e4ae42` | Native edits/analysis consumers; retain consuming authority and full reverification; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{inspection,lir/inspect,selected/inspect}.rs`, `lir/mod.rs`, `selected/mod.rs`: visitors/renderers, immutable enumeration and explicit facade re-export groups | `495df6b9` | First native inspection/checkpoint consumers; no fabricated observations; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/x86_64_sysv/native/{mod,resources,abi}.rs`: `Gpr`, `NativeResources`, `ComponentAbi`, classifier, explicit facade imports and scoped non-test allowances | NP02, baseline `2cbd7ffd`; introducing commit pending user commit | NP07/NP09 actual native selection consumers; NP12/NP13 placement/frame consumers; reconcile NP19 | Durable immutable target facts; remove allowances per actual consumer. Tests retain lint checks; no legacy adapter or production switch |
+| `backend/x86_64_sysv/native/{mod,resources,abi}.rs`: `Gpr`, `NativeResources`, `ComponentAbi`, classifier, explicit facade imports and scoped non-test allowances | NP02, baseline `2cbd7ffd`; introducing commit `9a9e3bc1` | NP07/NP09 actual native selection consumers; NP12/NP13 placement/frame consumers; reconcile NP19 | Durable immutable target facts; remove allowances per actual consumer. Tests retain lint checks; no legacy adapter or production switch |
+| `backend/pilot/{mod,facts,projection}.rs`, `x86_64_sysv/pilot_facts.rs`: private admission facade, admitted getters, projection entry points and item-scoped non-test allowances | NP03, baseline `9a9e3bc1`; introducing commit pending user commit | NP04/NP06 lower consumers; NP17 private pipeline; reconcile NP19 and LA05 public adoption | Durable checked planning boundary; retire allowances per actual consumer. No temporary lowerer, fallback, fake intrinsic input or production switch |
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
@@ -438,4 +439,39 @@ Validation: eight native-owner tests and all 32 shared selected tests passed.
 checks and 650 golden cases). Serial `make msrv-check` passed with Rust 1.82.0.
 Documentation link and whitespace checks passed. No compatibility adapter,
 production switch or exploratory emitter was introduced. Native fact allowances
-remain scoped and ledgered until their actual consumers arrive. User commit pending.
+remain scoped and ledgered until their actual consumers arrive. Committed by the user as `9a9e3bc1`.
+
+
+### NP03 implementation evidence
+
+Task baseline: `9a9e3bc1`, the user-committed native-resource/component-ABI task.
+The working tree was clean. The shared `backend::pilot` owner now admits the
+whole physically retained program before freezing a checked plan. Every retained
+body is inspected under both artifact policies; unsupported bodies are never
+trimmed or routed to legacy emission. Complete emission also rejects unsupported
+generated metadata/lifecycle families; reachable emission checks certified runtime
+obligations. Receiverless scalar static methods remain eligible when no unsupported
+family is retained.
+
+The admitted product borrows the inspected MIR snapshot and owns checked pools,
+semantic layout maps, exact canonical higher-order signature maps, present/absent
+source declarations, entry, C/runtime declarations and pilot failure data.
+Source signature equality, rather than physical-cell equality, selects canonical
+code signature IDs. Unused aggregate/alias declarations remain inspectable without
+acquiring executable authority. No lifecycle coordinator body is declared when
+static activation is empty. Narrow x86 service adapters reuse checked layout and
+canonical trace planning and discard target symbols; enabled metadata is owned
+and typed, while omitted tracing performs no source lookup or trace declaration.
+
+Validation: all 11 pilot-owner regressions passed, including excluded-family
+fixtures, sparse callable holes, complete/reachable policy behavior, canonical
+receiverless method addresses, physically equal but semantically distinct absent
+alias signatures, C scalar cells, real normalized bit/I/O intrinsics, string panic,
+and enabled/omitted source access. `make check` passed (3,319 compiler unit tests,
+workspace/integration/support checks and all 650 golden observations). Serial
+`make msrv-check` passed with Rust 1.82.0; documentation and tracked/untracked
+whitespace checks passed. New planning APIs remain private and item-scoped lint
+allowances are ledgered for their actual consumers. No executable lowerer,
+compatibility bridge, fallback, fake intrinsic input or production switch remains.
+The existing ABI slot-shape prerequisite is unchanged; no additional independent
+follow-up was identified. NP04 is next. Changes await the user's manual commit.

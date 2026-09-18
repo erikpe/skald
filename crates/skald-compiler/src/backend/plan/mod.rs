@@ -1,7 +1,8 @@
 //! Immutable execution declarations for future low-level phase consumers.
 //!
-//! Checking supplied facts does not project or certify final MIR. Production
-//! target planning remains with the current backend until the lowering migration.
+//! Checking supplied facts does not project or certify final MIR. The private
+//! pilot planner projects verified inputs separately; production target emission
+//! remains with the current backend until the lowering migration.
 //! Item-scoped non-test lint allowances cover APIs without native consumers yet;
 //! remove them as production lowering adopts the corresponding declarations.
 

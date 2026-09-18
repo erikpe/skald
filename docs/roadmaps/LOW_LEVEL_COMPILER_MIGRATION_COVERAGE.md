@@ -641,3 +641,21 @@ native execution evidence. Public/default production emission is unchanged.
 [Signature-boundary slot validation](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary)
 must be resolved before integrating heterogeneous signatures into selected
 publication. Existing global slot-shape fixtures do not certify that integration.
+
+## Private pilot planning readiness
+
+Whole-program admission now checks the physically retained final-MIR domain,
+including uncalled bodies, signatures, scalar/function-pointer payloads, storage
+and places. Artifact retention requests cannot hide unsupported bodies. Complete
+emission also checks unsupported generated family roots; reachable emission uses
+certified runtime obligations. Sparse declarations remain absent rather than
+being resurrected. Scalar static methods are eligible when their owning class
+requires no retained unsupported lifecycle/metadata family.
+
+The planner freezes checked semantic layout identities, canonical higher-order
+code signatures, source/entry declarations, C/runtime declarations, failure data
+and enabled-only owned trace metadata. It borrows the inspected MIR snapshot only
+for shared lowering; later phases consume immutable views. Public emission remains
+legacy. This is admission/projection evidence, not executable native equivalence.
+The next owner is shared scalar memory/control-flow lowering in the
+[native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).

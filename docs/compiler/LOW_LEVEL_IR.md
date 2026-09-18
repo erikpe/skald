@@ -7,7 +7,8 @@ Complete lowered-program inventory publication, plan-bound target catalogs,
 selected graphs with exact parent reconciliation and consuming edits are implemented. Verified
 products support immutable visitors and private deterministic text inspection.
 The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
-component classification. Placement and native consumption remain planned;
+component classification. Private whole-program pilot admission and final-MIR
+fact projection are implemented. Placement and native consumption remain planned;
 shared ABI slot-shape integration is a tracked prerequisite before native selection.
 
 ## Ownership and checking
@@ -19,12 +20,38 @@ and trace/artifact policies, dense layout/signature pools, typed callable/artifa
 keys, executable source dispositions, active statics and stable dispatch slots.
 
 Checking consumes the supplied facts and validates their structural consistency.
-This is not production target planning or certification of a final-MIR projection.
-The supplied executable/static domains and unused dispatch slots must eventually
-come from the verified input's authority; the checker never recalculates semantic
-reachability. Present source bodies may acquire an executable callable binding.
+The checker never recalculates semantic reachability. The private
+`backend::pilot` planner obtains executable and static domains from verified final
+MIR and certified retention services before freezing a checked plan. Supplied-fact
+fixtures remain available for independent model tests. Present source bodies may acquire an executable callable binding.
 An absent source declaration remains inspectable but cannot acquire that binding.
 Target thunks cannot enter the shared declaration catalog.
+
+The private planner checks every physically retained body and its storage,
+places, signatures, calls and terminators against the scalar pilot whitelist.
+Requesting reachable artifact emission does not remove unsupported bodies.
+Receiverless static methods are eligible; receiver-bearing bodies, aliases,
+aggregate/lifecycle operations, I/O, string panic and statics reject explicitly.
+Complete artifact emission also rejects declared families requiring unsupported
+generated lifecycle/metadata roots. Reachable emission uses certified runtime
+obligations; unused declarations do not acquire executable authority.
+
+The admitted product borrows the exact inspected MIR snapshot for shared lowering
+and owns immutable checked facts. It preserves absent source declarations,
+canonical higher-order function signature IDs, distinct semantic layout IDs,
+external and runtime service declarations, entry and failure-message data.
+Unused aggregate/alias declarations remain inspectable; they do not grant pilot
+support. Empty lifecycle coordinators are absent. Selection and later phases use
+plan views rather than the admitted product's MIR access.
+
+Existing checked x86 layout and trace services have narrow projection adapters.
+Enabled trace planning freezes owned byte strings, context/location records and
+source-span mappings in canonical order; target symbols and source databases do
+not escape the adapter. `TraceBytes` keys distinguish byte backing from activation
+records. Omitted tracing returns empty metadata before any source lookup and
+creates no trace/TLS declarations. Later artifact closure retains the used subset.
+The public backend remains on legacy emission; admission creates no executable
+lowered, selected or physical body and never falls back after a private failure.
 
 Layouts distinguish addressable objects, including size-zero objects, from
 elided unit/metadata views. Sizes/alignment and extent arithmetic are checked.
