@@ -731,7 +731,7 @@ fn malformed_trace_sites_and_missing_entry_push_or_return_pop_are_rejected() {
     let (context, location) = trace_catalog(&mut f);
     let signature = f.callables[0].signature;
     let plan = CheckedPlan::check(f).unwrap();
-    for case in 0..4 {
+    for case in 0..6 {
         let mut b = builder(&plan);
         let e = entry_block(&mut b);
         let record = b
@@ -747,6 +747,7 @@ fn malformed_trace_sites_and_missing_entry_push_or_return_pop_are_rejected() {
             frame_eligible: true,
             record: Some(record),
             context,
+            initial_location: Some(location),
             locations: vec![location],
         })
         .unwrap();
@@ -806,6 +807,11 @@ fn malformed_trace_sites_and_missing_entry_push_or_return_pop_are_rejected() {
                 }
             }
             3 => draft.trace_plan.as_mut().unwrap().locations.push(location),
+            4 => draft.trace_plan.as_mut().unwrap().initial_location = None,
+            5 => {
+                draft.trace_plan.as_mut().unwrap().initial_location =
+                    Some(ArtifactId::Data(DataKey::TraceLocation(99)))
+            }
             _ => unreachable!(),
         }
         assert!(reasons(draft).contains(&VerificationReason::InvalidTrace));

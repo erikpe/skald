@@ -93,6 +93,12 @@ validation are shared/selection CFG, never realization repairs. Calls evaluate
 arguments before simultaneous ABI transfers; an indirect target stays available
 through that entire transfer sequence. Trace pop follows result preservation;
 failure locations update only on the failure path immediately before reporting.
+A source frame has two pointer-width words (previous frame and current location);
+its initial definition location is an explicit frozen lower fact. The generated
+entry has no source frame and calls the ABI marker before language main. With
+no statics, lifecycle coordinators remain absent. Trace context records contain
+name pointer/length and path pointer/length; location records contain context
+pointer, line and column. These data are materialized during shared lower closure.
 TLS relocation and its finite scratch/address recipe must be fully described
 before physical realization; unsupported relocation forms reject rather than
 calling a resolver implicitly.

@@ -63,6 +63,7 @@ pub(super) fn shared_release_uses_explicit_memory_branches_finalizer_and_origina
                     frame_eligible: false,
                     record: None,
                     context,
+                    initial_location: None,
                     locations: vec![location],
                 })
                 .unwrap();

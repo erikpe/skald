@@ -9,13 +9,11 @@ use crate::backend::plan::{ArtifactId, ComponentRole, LirCallableId, SignatureId
 use crate::source::Span;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum CallTarget<V = LoweredValueId> {
     Direct(ArtifactId),
     Indirect(V),
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct CallArgument<V = LoweredValueId> {
     pub role: ComponentRole,
     pub value: V,
@@ -39,7 +37,6 @@ pub(in crate::backend) enum CallAttribution {
     ProcessBoundary,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct Call<V = LoweredValueId> {
     pub target: CallTarget<V>,
     pub signature: SignatureId,
@@ -47,7 +44,6 @@ pub(in crate::backend) struct Call<V = LoweredValueId> {
     pub attribution: CallAttribution,
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> DraftChecks<'_, 'p> {
     pub(super) fn normalize_call(
         &self,

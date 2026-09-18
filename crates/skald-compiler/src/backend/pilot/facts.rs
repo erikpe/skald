@@ -38,8 +38,8 @@ pub(in crate::backend) struct AdmittedPilot<'input> {
     pub(super) program: &'input crate::mir::MirProgram,
     pub(super) plan: CheckedPlan,
     pub(super) layouts: Vec<(MirType, LayoutId)>,
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) trace: TraceFacts,
+    pub(super) trace_record_layout: Option<LayoutId>,
     pub(super) function_types: BTreeMap<FunctionTypeId, SignatureId>,
 }
 
@@ -47,7 +47,6 @@ impl AdmittedPilot<'_> {
     pub(in crate::backend) fn program(&self) -> &crate::mir::MirProgram {
         self.program
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn trace(&self) -> &TraceFacts {
         &self.trace
     }
@@ -65,8 +64,8 @@ impl AdmittedPilot<'_> {
 }
 
 #[derive(Default)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct TraceFacts {
+    pub record_layout: Option<crate::backend::plan::LayoutFact>,
     pub strings: Vec<Vec<u8>>,
     pub contexts: Vec<TraceContext>,
     pub locations: Vec<TraceLocation>,
@@ -88,18 +87,15 @@ impl std::fmt::Display for PilotError {
 }
 impl std::error::Error for PilotError {}
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct TraceContext {
     pub name: crate::backend::plan::DataKey,
     pub path: crate::backend::plan::DataKey,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct TraceLocation {
     pub context: crate::backend::plan::DataKey,
     pub line: u64,
     pub column: u64,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct TraceRequest {
     pub callable: crate::identity::CallableId,
     pub span: crate::source::Span,

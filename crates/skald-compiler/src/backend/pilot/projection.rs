@@ -251,6 +251,11 @@ pub(in crate::backend) fn admit(input: BackendInput<'_>) -> Result<AdmittedPilot
     if input.runtime_trace() == RuntimeTracePolicy::Enabled {
         data(&mut facts, ArtifactId::TraceTls, 8, 8)?;
     }
+    // Reuse the target's existing runtime frame shape; freeze its checked ID.
+    let trace_record_layout = trace
+        .record_layout
+        .map(|layout| facts.add_layout(layout))
+        .transpose()?;
     let plan = CheckedPlan::check(facts)?;
     Ok(AdmittedPilot {
         program,
@@ -258,6 +263,7 @@ pub(in crate::backend) fn admit(input: BackendInput<'_>) -> Result<AdmittedPilot
         layouts,
         function_types,
         trace,
+        trace_record_layout,
     })
 }
 

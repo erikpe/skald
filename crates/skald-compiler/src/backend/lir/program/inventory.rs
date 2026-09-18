@@ -32,7 +32,6 @@ impl From<PlanError> for ProgramError {
     }
 }
 enum WorkEntry<'p> {
-    #[cfg_attr(not(test), allow(dead_code))]
     Declared,
     Building,
     Verified(CompletionReceipt<'p>),
@@ -52,7 +51,6 @@ pub(in crate::backend) struct VerifiedProgram<'p> {
     data: BTreeMap<DataKey, DataDefinition>,
 }
 impl<'p> ProgramBuilder<'p> {
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn new(parent: PlanView<'p>) -> Self {
         Self {
             parent,
@@ -125,7 +123,6 @@ impl<'p> ProgramBuilder<'p> {
             .insert(key, WorkEntry::Verified(receipt.clone()));
         Ok(())
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn define_data(
         &mut self,
         definition: DataDefinition,
@@ -140,7 +137,6 @@ impl<'p> ProgramBuilder<'p> {
         self.data.insert(definition.key, definition);
         Ok(())
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn finish(self) -> Result<VerifiedProgram<'p>, ProgramError> {
         // Declaration presence alone never satisfies body or initializer completion.
         for declaration in self.parent.artifacts() {

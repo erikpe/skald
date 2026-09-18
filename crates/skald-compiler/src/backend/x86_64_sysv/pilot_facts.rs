@@ -88,6 +88,11 @@ pub(in crate::backend) fn project_trace(
         .map(|(index, location)| (location.symbol.as_str(), index))
         .collect::<BTreeMap<_, _>>();
     Ok(TraceFacts {
+        record_layout: Some(LayoutFact {
+            size: super::frame::TRACE_RECORD_SIZE,
+            alignment: super::frame::TRACE_RECORD_ALIGNMENT,
+            disposition: LayoutDisposition::Addressable,
+        }),
         strings: metadata.strings.iter().map(|s| s.bytes.clone()).collect(),
         contexts: metadata
             .contexts

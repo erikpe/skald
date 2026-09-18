@@ -1,4 +1,4 @@
-use super::{LowerError, PendingFeature};
+use super::LowerError;
 use crate::backend::pilot::AdmittedPilot;
 use crate::{
     backend::{
@@ -19,6 +19,7 @@ pub(super) struct Lowerer<'plan, 'input> {
     pub(super) blocks: Vec<BlockHandle<'plan>>,
     pub(super) values: Vec<ValueHandle<'plan>>,
     pub(super) objects: Vec<ObjectHandle<'plan>>,
+    pub(super) trace_record: Option<ObjectHandle<'plan>>,
     pub(super) guards: BTreeMap<BlockId, super::numeric::Guard>,
     // Computed addresses are block-local, even though the underlying object
     // represents semantic storage across blocks and dynamic lifetime epochs.
@@ -35,10 +36,7 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             .view()
             .require_same_context(owner.context())?;
         let LirCallableId::Source(callable) = owner.key() else {
-            return Err(LowerError::Pending {
-                callable: owner.key(),
-                feature: PendingFeature::Entry,
-            });
+            return Err(PlanError::InvalidDomain.into());
         };
         let definition = definition(admitted, callable)?;
         let mut builder = DraftBuilder::new(owner)?;
@@ -68,10 +66,12 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             blocks,
             values,
             objects: vec![],
+            trace_record: None,
             guards: super::numeric::guards(definition)?,
             addresses: BTreeMap::new(),
         };
         lowerer.declare_storage()?;
+        lowerer.initialize_trace()?;
         let entry = definition.body().entry;
         let inputs = lowerer.builder.inputs().collect::<Vec<_>>();
         for (input, component) in inputs.into_iter().zip(&owner.signature()?.inputs) {

@@ -1,7 +1,7 @@
 use crate::{
     backend::{
         lir::{InventoryState, Operation, ProgramBuilder},
-        pilot::{admit, lower_next, LowerError, PendingFeature},
+        pilot::{admit, lower_next, LowerError},
         plan::LirCallableId,
         BackendInput,
     },
@@ -159,43 +159,6 @@ fn sparse_retention_does_not_resurrect_removed_bodies() {
     assert!(
         worklist.finish().is_err(),
         "per-body receipts cannot fake complete program closure"
-    );
-}
-
-#[test]
-fn pending_features_leave_the_declared_work_item_unbegun() {
-    let fixture = lower_source_to_complete_final_mir_with_sources(
-        "pending.ska",
-        "extern fn foreign() -> i64; fn main() -> i64 { return foreign(); }",
-    );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    let key = worklist.next().unwrap();
-    assert!(matches!(
-        lower_next(&admitted, &mut worklist),
-        Err(LowerError::Pending {
-            feature: PendingFeature::Calls,
-            ..
-        })
-    ));
-    assert_eq!(worklist.request(key).unwrap(), InventoryState::Declared);
-    let fixture = lower_source_to_complete_final_mir_with_sources(
-        "entry.ska",
-        "fn main() -> i64 { return 0; }",
-    );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    lower_next(&admitted, &mut worklist).unwrap();
-    assert!(matches!(
-        lower_next(&admitted, &mut worklist),
-        Err(LowerError::Pending {
-            feature: PendingFeature::Entry,
-            ..
-        })
-    ));
-    assert_eq!(
-        worklist.request(LirCallableId::Entry).unwrap(),
-        InventoryState::Declared
     );
 }
 
@@ -383,7 +346,7 @@ fn callable_addresses_are_canonical_and_float_constants_keep_raw_bits() {
 }
 
 #[test]
-fn foreign_plans_cannot_publish_and_enabled_tracing_remains_pending() {
+fn foreign_plans_cannot_publish_and_enabled_tracing_publishes() {
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "context.ska",
         "fn main() -> i64 { return 0; }",
@@ -402,13 +365,10 @@ fn foreign_plans_cannot_publish_and_enabled_tracing_remains_pending() {
     ))
     .unwrap();
     let mut worklist = ProgramBuilder::new(tracing.plan().view());
-    let key = worklist.next().unwrap();
-    assert!(matches!(
-        lower_next(&tracing, &mut worklist),
-        Err(LowerError::Pending {
-            feature: PendingFeature::RuntimeTrace,
-            ..
-        })
-    ));
-    assert_eq!(worklist.request(key).unwrap(), InventoryState::Declared);
+    let body = lower_next(&tracing, &mut worklist).unwrap().unwrap();
+    assert_eq!(
+        worklist.request(body.receipt().owner().key()).unwrap(),
+        InventoryState::Verified
+    );
+    assert!(body.draft().trace_plan().is_some());
 }

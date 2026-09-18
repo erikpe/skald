@@ -64,6 +64,14 @@ impl<'p> DraftBuilder<'p> {
         }
         Ok(builder)
     }
+    /// Read the checked block's next instruction position for trace associations.
+    pub(in crate::backend) fn instruction_count(
+        &self,
+        block: BlockHandle<'p>,
+    ) -> Result<usize, BuildError> {
+        Ok(self.draft.blocks.get(block)?.instructions.len())
+    }
+
     pub(in crate::backend) fn inputs(&self) -> impl ExactSizeIterator<Item = ValueHandle<'p>> + '_ {
         // Handles are issued by the arena, never reconstructed from a numeric ID.
         self.draft.values.handles().take(self.draft.inputs.len())

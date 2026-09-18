@@ -56,6 +56,7 @@ pub(super) fn enabled_trace_actions_remain_ordered_and_associated_with_explicit_
             frame_eligible: true,
             record: Some(record),
             context,
+            initial_location: Some(location),
             locations: vec![location],
         })
         .unwrap();
@@ -153,6 +154,7 @@ fn trace_policy_and_local_plan_reject_omitted_foreign_records_unknown_locations_
             frame_eligible: false,
             record: None,
             context: ArtifactId::Data(DataKey::TraceContext(0)),
+            initial_location: None,
             locations: vec![]
         })),
         BuildError::Plan(PlanError::OmittedTrace)
@@ -187,6 +189,7 @@ fn trace_policy_and_local_plan_reject_omitted_foreign_records_unknown_locations_
             frame_eligible: true,
             record: Some(foreign),
             context,
+            initial_location: Some(location),
             locations: vec![location]
         })),
         BuildError::Plan(PlanError::WrongContext)
@@ -196,6 +199,7 @@ fn trace_policy_and_local_plan_reject_omitted_foreign_records_unknown_locations_
             frame_eligible: true,
             record: Some(record),
             context,
+            initial_location: Some(location),
             locations: vec![location, location]
         })),
         BuildError::InvalidTrace
@@ -205,6 +209,7 @@ fn trace_policy_and_local_plan_reject_omitted_foreign_records_unknown_locations_
             frame_eligible: false,
             record: None,
             context,
+            initial_location: None,
             locations: vec![location],
         })
         .unwrap();
@@ -459,6 +464,7 @@ fn consuming_split_relocates_trace_associations_with_the_call() {
         frame_eligible: true,
         record: Some(record),
         context,
+        initial_location: Some(location),
         locations: vec![location],
     })
     .unwrap();

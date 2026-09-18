@@ -7,21 +7,19 @@ use crate::backend::plan::{ArtifactCategory, DataKey, PlanError};
 use crate::backend::RuntimeTracePolicy;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct TracePlan<O = LoweredObjectId> {
     pub frame_eligible: bool,
     pub record: Option<O>,
     pub context: ArtifactId,
+    pub initial_location: Option<ArtifactId>,
     pub locations: Vec<ArtifactId>,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum TraceSite<B = LoweredBlockId> {
     Instruction { block: B, ordinal: usize },
     Terminator(B),
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum TraceAction<O = LoweredObjectId, B = LoweredBlockId> {
     PushFrame {
         record: O,
@@ -36,7 +34,6 @@ pub(in crate::backend) enum TraceAction<O = LoweredObjectId, B = LoweredBlockId>
     },
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> DraftBuilder<'p> {
     pub(in crate::backend) fn declare_trace_plan(
         &mut self,
@@ -63,6 +60,7 @@ impl<'p> DraftBuilder<'p> {
             frame_eligible: plan.frame_eligible,
             record,
             context: plan.context,
+            initial_location: plan.initial_location,
             locations: plan.locations,
         };
         self.checks().check_trace_plan(&plan)?;
@@ -71,11 +69,15 @@ impl<'p> DraftBuilder<'p> {
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> DraftChecks<'_, 'p> {
     pub(super) fn check_trace_plan(&self, plan: &TracePlan) -> Result<(), BuildError> {
         self.trace_enabled()?;
-        if plan.frame_eligible != plan.record.is_some() {
+        if plan.frame_eligible != plan.record.is_some()
+            || plan.frame_eligible != plan.initial_location.is_some()
+            || plan
+                .initial_location
+                .is_some_and(|location| !plan.locations.contains(&location))
+        {
             return Err(BuildError::InvalidTrace);
         }
         if let Some(record) = plan.record {

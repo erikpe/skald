@@ -20,4 +20,4 @@ pub(in crate::backend) use projection::admit;
 mod tests;
 
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use lower::{lower_next, LowerError, PendingFeature};
+pub(in crate::backend) use lower::{lower_next, lower_program, LowerError};

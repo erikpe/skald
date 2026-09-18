@@ -1,7 +1,6 @@
 //! Local trace ownership and immediate operation associations; recipes own native parity.
 use super::super::*;
 use crate::backend::plan::ArtifactId;
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn plan(draft: &CallableDraft<'_>) -> Result<(), BuildError> {
     let Some(plan) = &draft.trace_plan else {
         return if draft
@@ -22,7 +21,6 @@ pub(super) fn plan(draft: &CallableDraft<'_>) -> Result<(), BuildError> {
     }
     Ok(())
 }
-#[cfg_attr(not(test), allow(dead_code))]
 fn location(call: &Call) -> Option<ArtifactId> {
     if let CallAttribution::SourceOperation { location, .. } = call.attribution {
         location
@@ -30,7 +28,6 @@ fn location(call: &Call) -> Option<ArtifactId> {
         None
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn block(
     draft: &CallableDraft<'_>,
     id: crate::backend::graph::LoweredBlockId,
@@ -133,7 +130,6 @@ pub(super) fn block(
     }
     Ok(())
 }
-#[cfg_attr(not(test), allow(dead_code))]
 fn association(
     id: crate::backend::graph::LoweredBlockId,
     block: &Block,

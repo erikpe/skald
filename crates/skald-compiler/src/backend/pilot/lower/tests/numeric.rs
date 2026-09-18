@@ -363,15 +363,24 @@ fn bit_reinterpretation_intrinsics_keep_payloads_and_need_no_range_guard() {
     let admitted =
         admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
             .unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
     let mut conversions = 0;
-    // Wrapper callers await call lowering. Exercise the actual normalized
-    // intrinsic bodies directly through ordinary construction and publication.
-    for definition in verified.program().definitions.iter().filter(|d| d.body.blocks.iter().any(|b| b.instructions.iter().any(|i| matches!(i, crate::mir::MirInstruction::Assign(a) if matches!(a.rvalue.kind, crate::mir::MirRvalueKind::PrimitiveCast { operation, .. } if operation.kind() == crate::mir::MirPrimitiveCastKind::BitReinterpretation))))) {
-        let key = LirCallableId::Source(crate::identity::CallableId::Function(definition.function));
-        let owner = worklist.begin(key).unwrap();
-        let body = super::super::context::Lowerer::new(&admitted, owner).unwrap().finish().unwrap();
-        worklist.complete(&body, &body.receipt()).unwrap();
+    crate::backend::pilot::lower_program(&admitted, |body| {
+        let normalized_intrinsic = body
+            .draft()
+            .blocks()
+            .flat_map(|(_, b)| &b.instructions)
+            .any(|i| {
+                matches!(
+                    i.operation,
+                    Operation::Convert {
+                        conversion: Conversion::FloatBits,
+                        ..
+                    }
+                )
+            });
+        if !normalized_intrinsic {
+            return Ok(());
+        }
         if body.draft().inputs().len() == 1 {
             for bits in [0, 1 << 63, 0x7ff8_0000_0000_0042, 0x7ff0_0000_0000_0001] {
                 let (_, input) = body
@@ -404,7 +413,9 @@ fn bit_reinterpretation_intrinsics_keep_payloads_and_need_no_range_guard() {
                 }
             }
         }
-    }
+        Ok(())
+    })
+    .unwrap();
     assert_eq!(conversions, 2);
 }
 

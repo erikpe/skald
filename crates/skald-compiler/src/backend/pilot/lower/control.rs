@@ -26,6 +26,7 @@ impl<'plan> Lowerer<'plan, '_> {
     ) -> Result<(), LowerError> {
         let terminator = match terminator {
             MirTerminator::Return { value, .. } => {
+                self.pop_trace(block)?;
                 Terminator::Return(value.iter().map(|v| self.values[v.index()]).collect())
             }
             MirTerminator::Goto { target, .. } => Terminator::Jump(self.edge(*target)),

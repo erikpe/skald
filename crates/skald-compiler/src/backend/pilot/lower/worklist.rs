@@ -1,18 +1,11 @@
-use super::{
-    context::{definition, Lowerer},
-    LowerError, PendingFeature,
-};
+use super::{context::Lowerer, LowerError};
 use crate::backend::pilot::AdmittedPilot;
 use crate::backend::{
     lir::{ProgramBuilder, VerifiedCallable},
-    plan::{LirCallableId, PlanError},
-    RuntimeTracePolicy,
+    plan::LirCallableId,
 };
-use crate::mir::{MirInstruction, MirTerminator};
 
-/// Construct and verify one declared source body, then register its exact receipt.
-/// Later features reject before beginning work; no temporary trap or fake body.
-#[cfg_attr(not(test), allow(dead_code))]
+/// Construct one declared body and register its exact verified receipt.
 pub(in crate::backend) fn lower_next<'plan>(
     admitted: &'plan AdmittedPilot<'_>,
     worklist: &mut ProgramBuilder<'plan>,
@@ -20,42 +13,27 @@ pub(in crate::backend) fn lower_next<'plan>(
     let Some(key) = worklist.next() else {
         return Ok(None);
     };
-    preflight(admitted, key)?;
     let owner = worklist.begin(key)?;
-    let body = Lowerer::new(admitted, owner)?.finish()?;
+    let body = match key {
+        LirCallableId::Source(_) => Lowerer::new(admitted, owner)?.finish()?,
+        LirCallableId::Entry => super::entry::lower(admitted, owner)?,
+        _ => return Err(crate::backend::plan::PlanError::InvalidDomain.into()),
+    };
     worklist.complete(&body, &body.receipt())?;
     Ok(Some(body))
 }
 
-fn preflight(admitted: &AdmittedPilot<'_>, callable: LirCallableId) -> Result<(), LowerError> {
-    let pending = |feature| LowerError::Pending { callable, feature };
-    let LirCallableId::Source(source) = callable else {
-        return Err(pending(PendingFeature::Entry));
-    };
-    if admitted.plan().view().runtime_trace() == RuntimeTracePolicy::Enabled {
-        return Err(pending(PendingFeature::RuntimeTrace));
+/// Stream verified bodies to their consumer; retain only exact completion receipts.
+/// This witness closes shared lowering, not native emission or executable authority.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) fn lower_program<'plan>(
+    admitted: &'plan AdmittedPilot<'_>,
+    mut consume: impl FnMut(VerifiedCallable<'plan>) -> Result<(), LowerError>,
+) -> Result<crate::backend::lir::VerifiedProgram<'plan>, LowerError> {
+    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    while let Some(body) = lower_next(admitted, &mut worklist)? {
+        consume(body)?;
     }
-    let definition = definition(admitted, source)?;
-    for block in &definition.body().blocks {
-        for instruction in &block.instructions {
-            if matches!(instruction, MirInstruction::Call(_)) {
-                return Err(pending(PendingFeature::Calls));
-            }
-        }
-        match block
-            .terminator
-            .as_ref()
-            .expect("verified final MIR terminator")
-        {
-            MirTerminator::Return { .. }
-            | MirTerminator::Goto { .. }
-            | MirTerminator::Branch { .. } => {}
-            MirTerminator::ShiftCountCheck { .. }
-            | MirTerminator::IntegerDivisorCheck { .. }
-            | MirTerminator::PrimitiveCastRangeCheck { .. }
-            | MirTerminator::Terminate { .. } => {}
-            _ => return Err(PlanError::InvalidDomain.into()),
-        }
-    }
-    Ok(())
+    super::data::define(admitted, &mut worklist)?;
+    Ok(worklist.finish()?)
 }

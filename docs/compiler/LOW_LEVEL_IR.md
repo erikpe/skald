@@ -105,6 +105,27 @@ creates no trace/TLS declarations. Later artifact closure retains the used subse
 The public backend remains on legacy emission; admission creates no executable
 lowered, selected or physical body and never falls back after a private failure.
 
+The private shared adapter can close the complete admitted lower inventory. It
+lowers scalar direct/indirect calls and C externs against frozen logical signatures,
+with ordered conservative effects; normalized binary64 bit intrinsics remain
+ordinary conversions. Source bodies in enabled mode own a two-word shadow frame
+(previous frame and current location), initialized with their frozen definition
+location before parameter stores. Calls update the frame immediately before the
+call; checked numeric failures update only on their failure path before reporting.
+Scalar result values and source stores precede the final return-frame pop.
+The generated process entry owns no source frame: it calls the runtime ABI marker,
+then language main and returns main's exact scalar result. Admission excludes
+statics, so startup/shutdown coordinators remain absent rather than acquiring
+synthetic empty bodies.
+
+`lower_program` streams each verified body to a consumer and retains exact
+completion receipts. It materializes all declared failure and enabled trace
+bytes/context/location data with checked relocations, then publishes the lower
+inventory witness. Trace TLS has a frozen declaration; its physical zero storage
+and relocation recipe belong to later target catalog/emission work. Consumer
+failure cannot publish closure. This proves shared lowering, without granting
+selected, physical or executable authority; the public backend remains legacy.
+
 Layouts distinguish addressable objects, including size-zero objects, from
 elided unit/metadata views. Sizes/alignment and extent arithmetic are checked.
 Equal layout records do not automatically merge identities or helper semantics.
@@ -263,8 +284,9 @@ are rejected even in complete mode. Unknown addresses grant no bounds proof.
 Call attribution distinguishes source operations, inherited boundaries, source
 bodies entered from omitted helpers, nonreporting calls, hard defects and process
 boundaries. Enabled trace plans bind local record ownership, frame eligibility,
-context and permitted locations to the checked catalog. Ineligible helpers have
-no local frame record. Explicit push/location-replacement/pop actions retain
+context, an eligible frame's required initial location, and permitted locations to
+the checked catalog. The initial location must belong to that permitted set.
+Ineligible helpers have no local frame record. Explicit push/location-replacement/pop actions retain
 ordering and associated instruction/terminal sites; attribution emits no action
 implicitly. Omitted tracing rejects plans, actions and trace references, while a
 compiler-defect span remains ordinary metadata. Verification checks record ownership, eligible entry push and return pop, and
@@ -278,7 +300,7 @@ nonreturning calls retain an explicit terminal call without inventing a reason.
 Hard trap is a separate terminal with no reporter. These terminals have no
 cleanup/unwind edges; target selection later exposes the defensive trap if a
 nonreturning callee violates its contract. Explicit data initializers and inventory closure are checked during program
-publication. Production discovery and native lowering remain future responsibilities.
+publication. Native discovery and physical lowering remain future responsibilities.
 
 The shared-release fixture uses ordinary loads/stores and branches for immortal,
 ordinary and last-owner paths, then an indirect finalizer call and free of the

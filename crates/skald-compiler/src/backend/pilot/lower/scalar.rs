@@ -1,4 +1,4 @@
-use super::{context::Lowerer, memory::local, LowerError, PendingFeature};
+use super::{context::Lowerer, memory::local, LowerError};
 use crate::{
     backend::{
         lir::{
@@ -49,7 +49,7 @@ impl<'plan> Lowerer<'plan, '_> {
                     &[self.values[assign.result.index()]],
                 )?;
             }
-            MirInstruction::Call(_) => return Err(self.pending(PendingFeature::Calls)),
+            MirInstruction::Call(call) => self.call(block, call)?,
             _ => return Err(PlanError::InvalidDomain.into()),
         }
         Ok(())
@@ -114,12 +114,6 @@ impl<'plan> Lowerer<'plan, '_> {
             }
             _ => return Err(PlanError::InvalidDomain.into()),
         })
-    }
-    pub(super) fn pending(&self, feature: PendingFeature) -> LowerError {
-        LowerError::Pending {
-            callable: LirCallableId::Source(self.definition.callable()),
-            feature,
-        }
     }
 }
 

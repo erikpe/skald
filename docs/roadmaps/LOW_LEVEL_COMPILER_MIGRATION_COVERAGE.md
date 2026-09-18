@@ -664,13 +664,27 @@ loops/joins, typed primitive predicates and memory, canonical code addresses,
 raw float bits, sparse identities, duplicate successors and retained unreachable
 blocks. Malformed construction and foreign contexts cannot acquire a receipt.
 This proves the source-to-lowered boundary, not executable native equivalence or
-complete lowered-program closure. Guarded numeric operations and all primitive
+native program realization. Guarded numeric operations and all primitive
 cast cells now publish with exact secured-value evidence; reporting preserves
 failure messages, effects and source origins. Numeric owner regressions execute
 constant lowered fixtures with an independent small oracle, reject forged/bypassed
 guards, exercise loop definitions, and cover float range/NaN/infinity boundaries
-and exact bit payloads. Real normalized bit-intrinsic bodies publish individually;
-their wrapper callers await call lowering. This qualifies the shared boundary,
-not native recipe execution. Calls, tracing and entry remain explicitly pending.
-The next owner is calls, traces and pilot entry
-lowering in the [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
+and exact bit payloads. Real normalized bit-intrinsic bodies and their wrapper callers now publish through
+the complete lower worklist. Direct, indirect, scalar C extern and sparse static
+method calls use exact canonical signatures. Enabled source frames freeze their
+initial location, associate updates immediately with calls/reporters, preserve
+results before return pop and keep failure updates off successful guard paths.
+Omitted lowering needs no source database or trace/TLS facts. Generated entry
+calls the runtime ABI marker then language main, without a source frame or
+invented statics coordinators. Frozen failure and enabled trace data materialize
+with checked relocations. A streaming consumer receives each verified body;
+complete shared lower closure retains exact receipts, not all callable drafts.
+Consumer failure cannot publish a complete inventory witness.
+
+This qualifies shared program closure, not native execution or trace recipes.
+`ReportFailure` preserves the mandatory reporter/defensive-trap contract; concrete
+reporter-then-trap instructions remain a selection obligation. Trace TLS zero
+storage remains a target artifact obligation. Lifecycle and aggregate source
+migration remain unsupported. The next owner is concrete scalar selected payload
+and verification, beginning with signature-boundary ABI slot validation, in the
+[native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).

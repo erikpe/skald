@@ -15,13 +15,11 @@ pub(in crate::backend) enum DataInitializer {
     },
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct DataDefinition {
     pub key: DataKey,
     pub initializers: Vec<DataInitializer>,
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn check(
     definition: &DataDefinition,
     parent: PlanView<'_>,
@@ -87,7 +85,6 @@ pub(super) fn check(
     Ok(references)
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn parent_artifact(
     parent: PlanView<'_>,
     key: ArtifactId,

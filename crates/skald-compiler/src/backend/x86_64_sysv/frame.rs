@@ -16,8 +16,8 @@ use super::{
 
 const SCALAR_HOME_SIZE: usize = 8;
 const SCALAR_HOME_ALIGNMENT: usize = 8;
-const TRACE_RECORD_SIZE: usize = 16;
-const TRACE_RECORD_ALIGNMENT: usize = 16;
+pub(super) const TRACE_RECORD_SIZE: usize = 16;
+pub(super) const TRACE_RECORD_ALIGNMENT: usize = 16;
 const TRACE_WORD_SIZE: i32 = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

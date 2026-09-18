@@ -4,8 +4,8 @@ use crate::{
     backend::{
         failure::FailureMessage,
         lir::{
-            BlockHandle, Call, CallArgument, CallAttribution, CallTarget, Constant, Operation,
-            Terminator, ValueHandle,
+            BlockHandle, Call, CallArgument, CallTarget, Constant, Operation, Terminator,
+            ValueHandle,
         },
         plan::{ArtifactId, ComponentRole, DataKey, PlanError, RuntimeService, ScalarType},
     },
@@ -34,6 +34,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .artifact(self.plan().artifact_id(target)?, target.category())?
             .signature
             .ok_or(PlanError::InvalidSignature)?;
+        let source_block = block;
         let block = self.blocks[block.index()];
         let message = self.builder.append(
             block,
@@ -46,6 +47,7 @@ impl<'plan> Lowerer<'plan, '_> {
             block,
             Operation::Constant(Constant::U64(reason.bytes().len() as u64)),
         )?[0];
+        let attribution = self.attribution(source_block, origin, true)?;
         Ok(Terminator::ReportFailure {
             reason,
             call: Call {
@@ -61,10 +63,7 @@ impl<'plan> Lowerer<'plan, '_> {
                         value: length,
                     },
                 ],
-                attribution: CallAttribution::SourceOperation {
-                    origin,
-                    location: None,
-                },
+                attribution,
             },
         })
     }
