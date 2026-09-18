@@ -38,3 +38,5 @@ mod numeric;
 mod oracle;
 mod predicates;
 mod selection;
+
+mod placement;

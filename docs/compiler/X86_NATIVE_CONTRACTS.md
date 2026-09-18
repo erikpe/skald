@@ -2,10 +2,10 @@
 
 Status: immutable target resource facts and checked-signature component
 classification and the complete pilot selected vocabulary, including calls and
-trace memory operations, are implemented privately. Checked placement and physical
-emission remain planned. Production still uses the [existing backend](BACKEND.md).
-Shared [placement drafts and checking](PLACEMENT_CHECKING.md) define exact-input
-binding and the finite availability contract; checked acceptance remains planned.
+trace memory operations, and independent placement checking are implemented
+privately. Placement production, frame planning and physical emission remain planned. Production still uses the [existing backend](BACKEND.md).
+Shared [placement drafts and checking](PLACEMENT_CHECKING.md) enforce exact-input
+binding, target constraints, preservation and finite CFG availability.
 These contracts refine the [shared low-level model](LOW_LEVEL_IR.md) and
 [frozen target design](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 

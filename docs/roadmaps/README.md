@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; complete pilot selection and unchecked placement drafts implemented; finite checker contract frozen | Deliver the private whole-program native pilot through independently checked native phases | NP11 — Independent placement checking | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
+| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; complete pilot selection and independent checked placement implemented | Deliver the private whole-program native pilot through independently checked native phases | NP12 — Baseline placement and parallel transfers | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
 
 ## Pending discovery and planning records
 

@@ -14,8 +14,9 @@ deterministic inspection are delivered. The active
 [migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
 records executable-model evidence and retained-artifact removal obligations.
 Native [resource facts and component ABI classification](../compiler/X86_NATIVE_CONTRACTS.md)
-are implemented. Concrete selection, ABI transfer execution, placement and
-physical realization remain pending under the [accepted, frozen target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+and private native selection and independent placement checking are implemented.
+ABI transfer production, frame planning and physical realization remain pending
+under the [accepted, frozen target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
 and its [active implementation roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
 The owning model records the implemented streaming publication amendment;
 concrete native orchestration remains pending. Production migration, adoption and

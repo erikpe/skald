@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01–NP10 complete; NP11 is next.
+Status: in progress, 2026-09-18; NP01–NP11 complete; NP12 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -55,7 +55,7 @@ backend or claim full-language migration.
 - [x] NP08 — Constrained numeric selection recipes
 - [x] NP09 — Native call and trace selection
 - [x] NP10 — Placement representation and checker contract
-- [ ] NP11 — Independent placement checking
+- [x] NP11 — Independent placement checking
 - [ ] NP12 — Baseline placement and parallel transfers
 - [ ] NP13 — Symbolic frame planning and limits
 - [ ] NP14 — Typed physical realization
@@ -209,9 +209,9 @@ ordinary selected publication and target verification.
 
 **Purpose:** Create the sole checked-placement authority from selected facts and transfer semantics.
 
-- [ ] Implement requirement reconstruction from the exact verified selected input, complete legal assignments, overlap/reservation/ABI/tie/event checks and independent transfer/clobber simulation.
-- [ ] Implement the specified finite CFG analysis through loops and joins; prove required tokens available at uses, preserve live tied inputs and account for simultaneous scratch lifetimes and width preservation.
-- [ ] Make CheckedPlacement privately constructible only after full checking; realization APIs require it. Keep checker logic independent of producer availability maps and success flags.
+- [x] Implement requirement reconstruction from the exact verified selected input, complete legal assignments, overlap/reservation/ABI/tie/event checks and independent transfer/clobber simulation.
+- [x] Implement the specified finite CFG analysis through loops and joins; prove required tokens available at uses, preserve live tied inputs and account for simultaneous scratch lifetimes and width preservation.
+- [x] Make CheckedPlacement privately constructible only after full checking; realization APIs require it. Keep checker logic independent of producer availability maps and success flags.
 
 **Tests:** Run all preceding counterexamples plus manually register-resident positive placements. Corrupt otherwise valid placements one obligation at a time; test loop definition epochs, divergent joins, calls, scratch aliasing and unreachable structural defects.
 
@@ -396,7 +396,8 @@ permission to introduce it unnecessarily.
 | `SelectionContext::abi_areas`, `ObjectRole::Abi`, selected slot checks | Global shapes introduced LA02; replaced NP07, baseline `5369ea69` | NP07, checked again NP19 | Global shape storage and unqualified ABI objects removed; one signature registry preserves shared program authority; no compatibility adapter |
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Frozen lower trace facts in `lir::CompletionReceipt`; native call fields, concrete trace cells and pure requests | NP09, task baseline `e35be34f` | NP10–NP16 placement/realization/closure; reconcile NP19 | Durable narrow immutable facts survive body release; no retained executable lower body, opaque trace payload, thunk bridge or instrumentation |
-| `backend/placement/{model,structure}.rs`: unchecked drafts and non-test dead-code allowances | NP10, task baseline `3413f792` | NP11 checker and NP12 producer; reconcile NP19 | Retain typed drafts and structural checking. Retire allowances as production consumers land; no checked-placement constructor, producer success flag or realization bypass |
+| `backend/placement/{model,structure}.rs`: unchecked drafts and non-test dead-code allowances | NP10, task baseline `3413f792`; committed `1d0b84e6` | NP11 checker and NP12 producer; reconcile NP19 | NP11 retired module-wide model/structure allowances and consumed draft/type allowances; retain only draft builder methods and storage-purpose construction allowances until NP12/NP13. Structural validation grants no authority; no producer success flag or realization bypass |
+| `backend/placement/check.rs`: private immutable checked queries; native `check_native_placement` entry and facade allowance | NP11, task baseline `1d0b84e6` | NP12 producer, NP13/NP14 frame/realization consumers and NP17 private orchestration; reconcile NP19 | Sole checked constructor runs legality, finite convergence and strict replay. Retain query/entry allowances only until actual consumers; no unchecked constructor, mutable draft accessor or producer flag |
 | `backend/placement/tests/oracle.rs`: independent finite-state specification and native resource probe | NP10, task baseline `3413f792` | Durable independent checker regression reference, reconcile NP19 | Remains test-only and independent of producer/checker availability maps. No production path sampling, placement authority or temporary execution bridge |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
@@ -807,3 +808,57 @@ targets compilation without warnings. Living architecture, migration coverage,
 roadmap status/index and frozen decision links are updated. No independent
 larger maintainability discovery was added. Final `make static-check` and
 tracked/untracked whitespace checks passed. NP11 is next.
+
+## NP11 implementation evidence
+
+Task baseline: `1d0b84e6`, the user-committed NP10 implementation. Earlier placement
+scaffolding and the roadmap baseline `f150d028` were inspected; no reset or commit
+was performed. Changes here remain for the user to commit.
+
+The shared checker reconstructs requirements from exact verified selected facts
+and immutable target semantics. Static checks cover all coordinates, including
+unreachable blocks, resource reservations/overlaps, fixed/ABI constraints, ties,
+simultaneous definitions/scratch, storage lifetimes and explicit move recipes.
+An independent must-contents interpreter implements width/unit kills, original
+preservation tokens, definition epochs, ordered bit moves and simultaneous edge
+rebinding. Synchronous CFG rounds intersect every predecessor occurrence, include
+the entry seed and use the checked finite lattice bound. Strict replay follows
+convergence; neither intermediate top facts nor producer claims confer authority.
+
+Only this checker constructs immutable `CheckedPlacement`, consuming its draft
+while borrowing the exact selected publication. Frame/realization consumers are
+scheduled in NP13/NP14 and must take this product; no provisional realizer or draft
+bypass was added. Native checking reconstructs canonical x86 target facts, full
+64-bit callee promises, eight-byte relative ABI footprints and exact move scratch.
+Concrete ABI-area extent/padding remains the existing NP13 prerequisite. Native
+classification and checking share the stack-slot width constant; structural and
+flow checking share the representation compatibility rule in the placement model.
+
+Hand-written register placements and corrected/corrupted pairs cover live ties,
+secured targets, caller saves/reloads, real native call results, mixed-bank cycles,
+duplicate edges, divergent joins, cyclic parameter swaps and stale homes/epochs,
+narrow writes, partial floating preservation and link restoration on a second
+synthetic profile, simultaneous definitions/scratch, ABI aliases across signatures,
+transfer lifetimes, unreachable defects and selected diagnostic provenance.
+The earlier oracle remains test-only and independent. Tests are divided by
+responsibility, and consumed model/structure/event lint allowances are retired;
+remaining consumer allowances have removal owners in the ledger. Native profile
+validation is shared by selection and placement, and diagnostics retain selected
+site/origin metadata without querying earlier phases. Native memory moves also
+exercise missing/reserved working scratch and destruction of its held value.
+
+Validation: `make check` passed on the final implementation: formatting, locked
+workspace/all-target builds, Clippy without warnings, documentation links/indexes,
+all workspace Rust tests (3,414 compiler unit tests), runtime contracts and all
+650 golden cases. The 23 new regressions include genuine native register/call
+placements and explicit memory-move scratch. `make msrv-check` passed serially on
+Rust 1.82.0 for all workspace targets without warnings. Final `make static-check`
+and tracked/untracked whitespace checks passed. Logs:
+`/tmp/skald-np11-final-check.log`, `/tmp/skald-np11-msrv.log` and
+`/tmp/skald-np11-final-static.log`.
+
+Final review corrected inherited structural validation of original preservation
+tokens: promised width stays exact, while raw original bits may pass through
+another bank using explicit bitwise transfers. Its positive/corrupted regression
+checks restoration after the original floating register is overwritten.
+NP11 is complete; NP12 is next. No additional independent discovery was needed.

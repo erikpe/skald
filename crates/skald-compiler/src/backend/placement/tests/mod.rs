@@ -1,4 +1,6 @@
-//! Representation tests and an independent specification oracle, not a placement seal.
+//! Representation/checker regressions and a separate independent specification oracle.
+mod checking;
+mod fixtures;
 mod oracle;
 mod representation;
 

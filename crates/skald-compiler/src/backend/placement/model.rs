@@ -1,7 +1,7 @@
 use crate::backend::{
     graph::{SelectedBlockId, SelectedValueId},
     plan::SignatureId,
-    selected::{AbiArea, Representation, VerifiedSelectedCallable, ViewId},
+    selected::{AbiArea, Representation, RepresentationKind, VerifiedSelectedCallable, ViewId},
 };
 use std::collections::BTreeMap;
 
@@ -42,9 +42,9 @@ pub(in crate::backend) enum TransferPoint {
     After(Site),
     Edge { block: SelectedBlockId, slot: usize },
 }
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(in crate::backend) struct StorageId(pub(super) usize);
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(in crate::backend) enum Location {
     Resource(ViewId),
     Storage(StorageId),
@@ -55,6 +55,7 @@ pub(in crate::backend) enum Location {
     },
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum StoragePurpose {
     Home(SelectedValueId),
     Spill(SelectedValueId),
@@ -80,7 +81,7 @@ pub(in crate::backend) enum TransferKind {
     /// Same-width bits, including integer/SIMD movement; never a numeric conversion.
     Bitwise,
 }
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(in crate::backend) enum TransferValue {
     Selected(SelectedValueId),
     /// Original incoming bits at the target's promised preservation width.
@@ -111,15 +112,17 @@ pub(in crate::backend) enum PlacementError {
 
 /// The borrow prevents consuming edits while this draft is in use. No seal,
 /// success flag, frame offset or semantic-object ID belongs in this product.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct PlacementDraft<'s, 'p, P> {
     pub(super) selected: &'s VerifiedSelectedCallable<'p, P>,
     pub(super) assignments: BTreeMap<Assignment, Location>,
     pub(super) storage: Vec<Storage>,
     pub(super) transfers: BTreeMap<TransferPoint, Vec<Transfer>>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'s, 'p, P> PlacementDraft<'s, 'p, P> {
+    pub(in crate::backend) fn selected(&self) -> &'s VerifiedSelectedCallable<'p, P> {
+        self.selected
+    }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn new(selected: &'s VerifiedSelectedCallable<'p, P>) -> Self {
         Self {
             selected,
@@ -138,6 +141,7 @@ impl<'s, 'p, P> PlacementDraft<'s, 'p, P> {
             Err(PlacementError::WrongSnapshot)
         }
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn assign(
         &mut self,
         assignment: Assignment,
@@ -149,12 +153,22 @@ impl<'s, 'p, P> PlacementDraft<'s, 'p, P> {
         self.assignments.insert(assignment, location);
         Ok(())
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn storage(&mut self, requirement: Storage) -> StorageId {
         let id = StorageId(self.storage.len());
         self.storage.push(requirement);
         id
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn transfer(&mut self, point: TransferPoint, transfer: Transfer) {
         self.transfers.entry(point).or_default().push(transfer);
     }
+}
+
+/// Moves can reinterpret raw equal-width bits, never address/signature identity.
+pub(super) fn transfer_compatible(a: Representation, b: Representation) -> bool {
+    a == b
+        || (a.bits() == b.bits()
+            && matches!(a.kind, RepresentationKind::Bits | RepresentationKind::Float)
+            && matches!(b.kind, RepresentationKind::Bits | RepresentationKind::Float))
 }

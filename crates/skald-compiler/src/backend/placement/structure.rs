@@ -123,33 +123,25 @@ impl<P: Payload> PlacementDraft<'_, '_, P> {
                 return Err(PlacementError::UnknownTransferPoint(*point));
             }
             for (index, transfer) in transfers.iter().enumerate() {
-                let compatible = |a: Representation, b: Representation| {
-                    a == b
-                        || (a.bits() == b.bits()
-                            && matches!(
-                                a.kind,
-                                RepresentationKind::Bits | RepresentationKind::Float
-                            )
-                            && matches!(
-                                b.kind,
-                                RepresentationKind::Bits | RepresentationKind::Float
-                            ))
-                };
                 let valid_identity = match transfer.value {
                     TransferValue::Selected(value) => {
                         values.get(&value).is_some_and(|representation| {
-                            compatible(*representation, transfer.source_representation)
-                                && compatible(*representation, transfer.destination_representation)
+                            transfer_compatible(*representation, transfer.source_representation)
+                                && transfer_compatible(
+                                    *representation,
+                                    transfer.destination_representation,
+                                )
                         })
                     }
                     TransferValue::Preserved(view) => {
                         matches!(
                             transfer.source_representation.kind,
                             RepresentationKind::Bits | RepresentationKind::Float
-                        ) && self.valid_location(
-                            Location::Resource(view),
-                            transfer.source_representation,
-                        ) && compatible(
+                        ) && self.selected.draft().context().resources.views().any(
+                            |(id, resource)| {
+                                id == view && resource.bits == transfer.source_representation.bits()
+                            },
+                        ) && transfer_compatible(
                             transfer.source_representation,
                             transfer.destination_representation,
                         )

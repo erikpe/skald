@@ -1,13 +1,14 @@
 # Placement representation and checking contract
 
 Placement is private backend data over a verified selected callable. The shared
-`backend/placement` owner currently implements drafts and structural validation.
-Availability checking, checked-placement publication, producers, frames and
-physical realization remain planned. Drafts never authorize code generation.
+`backend/placement` owner implements drafts, structural validation and independent
+finite availability checking. The checker consumes a draft and publishes an
+immutable `CheckedPlacement` only after static legality, CFG convergence and
+strict replay succeed. Producers, frames and physical realization remain planned.
+Drafts never authorize code generation.
 
-The independent checker must implement the following contract. The test-only
-specification oracle exercises its difficult state transitions without publishing
-authority or relying on a producer's availability map.
+The test-only specification oracle remains separate from the production checker.
+Neither relies on a producer's availability map or success flag.
 
 ## Coordinates and storage
 
@@ -60,6 +61,32 @@ prove that the sequence preserves the named bits, including memory-to-memory
 moves. Writing incoming ABI slots is forbidden. ABI slots are temporary protocol
 locations, rather than general persistent homes.
 
+## Checked authority and target facts
+
+`CheckedPlacement` owns its accepted draft and retains the borrow of the exact
+selected publication. Its fields and sole constructor are private to the checker;
+consumers have immutable assignment, storage and transfer queries. There is no
+mutable draft accessor, unchecked constructor or acceptance flag. Future frame
+planning and realization consume this checked product, rather than structural
+validation results. Its snapshot comparison rejects a same-ID replacement.
+
+The private target contract supplies immutable profile facts, exact preservation
+views, relative ABI slot footprints and validated transfer recipes with explicit
+clobbered units. These are target-owned semantics, not placement-producer claims.
+The native entry reconstructs canonical x86 facts from the selected profile.
+Native moves support integer 8/16/32/64-bit and floating 64-bit representations;
+memory-to-memory movement requires one nonreserved working view of the recipe's
+bank and width. Bitwise movement between banks uses integer working scratch.
+Resource moves require no working scratch. Every declared scratch aliases neither
+endpoint nor another simultaneous scratch, and its kills participate in analysis.
+
+Native preservation promises cover RBX and R12–R15 at 64 bits. Reserved stack and
+frame pointers remain outside value placement and belong to physical-state/frame
+checking. Native ABI slots have eight-byte relative stride and footprints;
+concrete area extent, padding and frame alignment remain frame-planning duties.
+The checker rejects callee-save storage with a representation other than its
+promised original bits, or transfer scratch used outside its declared point.
+
 ## Finite abstract state
 
 For an exact selected snapshot, construct a finite location universe from all
@@ -70,6 +97,8 @@ contains a set of identities whose complete bits are **definitely** present:
 - `Value(v)` denotes the current dynamic definition of a selected value.
 - `Preserved(view)` denotes original incoming bits the target requires restored
   on return, at the exact promised width. These are separate from selected values.
+  Their raw bits can pass through either bank using declared bitwise transfers;
+  the preservation identity retains its original view and width.
 
 Multiple identities at a location express proven equal bits, for example two
 parameters receiving the same argument. An empty set means unknown, not zero.
@@ -200,10 +229,16 @@ enters the state interpreter. Representation tests use genuine selected
 publication to reject a same-ID replacement and check unreachable scratch,
 edge completeness, storage types, ABI slots and explicit move kinds.
 
-These cases have unambiguous outcomes under this contract. Continue with an
-independent production checker, retaining the test oracle as a separate reference.
-If implementing a rule exposes a mismatch, amend this contract and the frozen
-design before producing authority; do not weaken acceptance or silently add a
-producer-specific exception. Register-resident positive placements, preservation
-obligations and corruption of individual constraints remain required checker
-tests. Baseline production and frame realization follow checked placement.
+The production checker is additionally tested with genuine selected publication
+and hand-written placements: register-only acceptance, live ties, secured call
+targets, explicit caller saves, mixed-bank cycles, duplicate edges, cyclic swaps,
+old epochs, ABI aliases, simultaneous scratch and unreachable defects. Corrected
+placements pass the same interface as deliberately corrupted drafts. The second
+synthetic target exercises different secured/link roles and partial floating
+preservation without registering another production backend. A native call fixture
+checks that real result definitions follow caller clobbers.
+
+If a future rule exposes a mismatch, amend this contract and the frozen design
+before producing authority; do not weaken acceptance or silently add a
+producer-specific exception. Baseline production and frame realization follow
+checked placement.

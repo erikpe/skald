@@ -11,6 +11,9 @@ use crate::backend::{
 use std::{borrow::Cow, num::NonZeroU16};
 
 impl Payload for Instruction {
+    fn span(&self) -> Option<crate::source::Span> {
+        self.origin.span
+    }
     fn describe(&self) -> Description<'_> {
         let operands = self
             .operands()

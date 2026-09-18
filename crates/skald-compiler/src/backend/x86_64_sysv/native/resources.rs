@@ -81,6 +81,20 @@ pub(in crate::backend) struct NativeResources {
     preserved: Vec<UnitId>,
 }
 impl NativeResources {
+    pub(in crate::backend) fn for_profile(
+        profile: crate::backend::plan::TargetProfile,
+    ) -> Result<Self, &'static str> {
+        use crate::backend::plan::{Abi, Architecture, Endianness};
+        if profile.architecture != Architecture::X86_64
+            || profile.abi != Abi::SysV
+            || profile.data_layout.pointer_alignment != 8
+            || profile.data_layout.pointer_bytes != 8
+            || profile.data_layout.endianness != Endianness::Little
+        {
+            return Err("unsupported native target profile");
+        }
+        Self::new().map_err(|_| "invalid native resources")
+    }
     pub(in crate::backend) fn new() -> Result<Self, ResourceError> {
         let mut catalog = ResourceCatalog::default();
         let integer = catalog.bank(BankKind::Integer);

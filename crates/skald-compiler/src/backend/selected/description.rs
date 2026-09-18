@@ -64,7 +64,7 @@ pub(in crate::backend) enum OperandRole {
     Use,
     Definition,
 }
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum AbiArea {
     Incoming,
@@ -156,12 +156,14 @@ pub(in crate::backend) struct Description<'a> {
 /// `describe` must be total even for malformed drafts; verifiers, not indexing
 /// panics, reject invalid IDs and constraints. Concrete target review enforces
 /// this contract; the trait is private and is not an untrusted extension API.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) trait Payload {
     fn describe(&self) -> Description<'_>;
+    /// Immutable selected provenance only; never query sources or earlier phases.
+    fn span(&self) -> Option<crate::source::Span> {
+        None
+    }
 }
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum Phase {
     EarlyUses,
     EarlyClobbers,
@@ -171,12 +173,10 @@ pub(in crate::backend) enum Phase {
     LateDefinitions,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum Event {
     Operand { phase: Phase, slot: usize },
     Clobber { phase: Phase, unit: UnitId },
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'a> Description<'a> {
     pub(in crate::backend) fn events(&'a self) -> impl Iterator<Item = Event> + 'a {
         [

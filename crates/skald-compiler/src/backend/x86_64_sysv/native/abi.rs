@@ -7,6 +7,9 @@ use crate::backend::{
     selected::{AbiArea, AbiBinding, AbiBindings, AbiLocation, Representation},
 };
 
+/// SysV scalar stack slots retain full word footprints, including byte arguments.
+pub(super) const STACK_SLOT_BYTES: usize = 8;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::backend) enum CallArity {
     Fixed,
@@ -189,7 +192,7 @@ fn role_order(role: ComponentRole) -> (u8, usize, u8) {
 
 fn outgoing_bytes(slots: usize) -> Result<usize, AbiError> {
     slots
-        .checked_mul(8)
+        .checked_mul(STACK_SLOT_BYTES)
         .and_then(|bytes| bytes.checked_add(15))
         .map(|bytes| bytes & !15)
         .filter(|bytes| *bytes <= i32::MAX as usize)

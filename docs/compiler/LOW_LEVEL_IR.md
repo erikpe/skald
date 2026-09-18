@@ -12,9 +12,10 @@ fact projection, ordinary scalar/CFG lowering and guarded numeric lowering are
 implemented, including lower program closure, calls/tracing and generated entry.
 Private native scalar/numeric/call/trace selection and joint checking are
 implemented with signature-local ABI slot shapes. Shared unchecked placement
-drafts and structural validation are implemented; the
-[placement checking contract](PLACEMENT_CHECKING.md) freezes the finite state
-analysis. Independent placement acceptance and physical realization remain planned.
+drafts, structural validation and independent
+[placement checking](PLACEMENT_CHECKING.md) are implemented, including finite CFG
+availability analysis and immutable checked-placement publication. Placement
+production, frame planning and physical realization remain planned.
 
 ## Shared final-MIR lowering
 

@@ -1,9 +1,20 @@
-//! Unchecked, exact-snapshot placement data. Structural validation is not authority.
+//! Exact-snapshot drafts and independent checked-placement authority.
+//! Structural validation alone cannot authorize realization.
 //! See `docs/compiler/PLACEMENT_CHECKING.md` for the independent checker contract.
-#[cfg_attr(not(test), allow(dead_code))]
+mod check;
+mod legality;
 mod model;
-#[cfg_attr(not(test), allow(dead_code))]
+mod requirements;
+mod state;
 mod structure;
+mod target;
+
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use check::{check_placement, CheckedPlacement};
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use requirements::{CheckFailure, CheckLocation, CheckReason};
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use target::{PlacementTarget, SlotFootprint};
 
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use model::{

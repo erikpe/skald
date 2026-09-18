@@ -10,7 +10,7 @@ use super::{
     Instruction,
 };
 use crate::backend::{
-    plan::{Abi, Architecture, Endianness, TargetProfile},
+    plan::TargetProfile,
     selected::{SelectedDraft, TargetVerifier},
 };
 use std::sync::Arc;
@@ -21,17 +21,9 @@ pub(in crate::backend) struct Verifier {
 }
 impl Verifier {
     pub(in crate::backend) fn new(profile: TargetProfile) -> Result<Self, &'static str> {
-        if profile.architecture != Architecture::X86_64
-            || profile.abi != Abi::SysV
-            || profile.data_layout.pointer_alignment != 8
-            || profile.data_layout.pointer_bytes != 8
-            || profile.data_layout.endianness != Endianness::Little
-        {
-            return Err("unsupported native target profile");
-        }
         Ok(Self {
             profile,
-            resources: Arc::new(NativeResources::new().map_err(|_| "invalid native resources")?),
+            resources: Arc::new(NativeResources::for_profile(profile)?),
         })
     }
 }

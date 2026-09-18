@@ -1284,4 +1284,6 @@ it is not emitted metadata and does not alter field layout or callable ABI.
 The private [native resource and component ABI contracts](X86_NATIVE_CONTRACTS.md)
 provide checked-signature classification and complete register facts for the new
 phase architecture. They do not change production emission or external support.
-Concrete selected consumers, placement and physical realization remain planned.
+Private native selection and independent placement acceptance are implemented;
+see the [shared phase status](LOW_LEVEL_IR.md). Placement production, frame planning
+and physical realization remain planned.
