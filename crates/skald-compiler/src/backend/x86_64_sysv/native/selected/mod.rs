@@ -1,10 +1,12 @@
 //! Virtual x86 scalar instructions, bounded flag bundles and independent legality.
+mod calls;
 mod context;
 mod describe;
 mod edit;
 mod model;
 mod numeric;
 mod recipes;
+mod requests;
 mod select;
 mod verify;
 

@@ -90,6 +90,7 @@ impl Verifier {
                     payload: Some(payload),
                     ..
                 } => {
+                    self.check_trace_attribution(draft, payload)?;
                     sites.push(payload.origin.site);
                     for (value, definition) in payload.operands() {
                         if definition {
@@ -135,6 +136,27 @@ impl Verifier {
                         failures.push((*reason, arguments));
                     }
                     match &payload.opcode {
+                        Opcode::Call(_) => self.check_call(context, payload)?,
+                        Opcode::TlsAddress { .. }
+                            if context.catalog().plan().runtime_trace()
+                                == crate::backend::RuntimeTracePolicy::Omitted =>
+                        {
+                            return Err("native TLS in omitted trace mode")
+                        }
+                        Opcode::TraceLoad {
+                            address, record, ..
+                        }
+                        | Opcode::TraceStore {
+                            address, record, ..
+                        } => {
+                            accesses.push((
+                                address.value,
+                                8,
+                                8,
+                                record.map_or(MemoryRegion::Unknown, MemoryRegion::Object),
+                            ));
+                        }
+
                         Opcode::Return { bindings, .. }
                             if bindings != expected.entry().results() =>
                         {
@@ -326,6 +348,7 @@ impl Verifier {
             }
         }
         super::numeric::graph(draft)?;
+        super::tracing::check(draft)?;
         Ok(())
     }
 }

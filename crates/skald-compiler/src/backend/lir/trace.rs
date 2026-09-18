@@ -14,7 +14,7 @@ pub(in crate::backend) struct TracePlan<O = LoweredObjectId> {
     pub initial_location: Option<ArtifactId>,
     pub locations: Vec<ArtifactId>,
 }
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(in crate::backend) enum TraceSite<B = LoweredBlockId> {
     Instruction { block: B, ordinal: usize },
     Terminator(B),

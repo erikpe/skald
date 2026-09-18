@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01–NP08 complete; NP09 is next.
+Status: in progress, 2026-09-18; NP01–NP09 complete; NP10 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -53,7 +53,7 @@ backend or claim full-language migration.
 - [x] NP06 — Calls, traces and pilot entry lowering
 - [x] NP07 — Concrete scalar selected payload and verifier
 - [x] NP08 — Constrained numeric selection recipes
-- [ ] NP09 — Native call and trace selection
+- [x] NP09 — Native call and trace selection
 - [ ] NP10 — Placement representation and checker contract
 - [ ] NP11 — Independent placement checking
 - [ ] NP12 — Baseline placement and parallel transfers
@@ -174,15 +174,19 @@ its acceptance boundary; do not silently defer part of its contract.
 
 **Purpose:** Expose ABI and trace requirements as selected events rather than emitter conventions.
 
-- [ ] Implement entry/call/return payloads, actual call clobbers, incoming/outgoing/result roles and secured indirect targets using the frozen component ABI.
-- [ ] Select TLS/trace memory operations explicitly for enabled traces; select no TLS or source metadata in omitted mode. Marshal simultaneously and preserve results before cleanup.
-- [ ] Use canonical pure target request rules for constants/failure bytes and supported thunks; unsupported thunk forms reject explicitly, supported bodies pass normal target verification.
+- [x] Implement entry/call/return payloads, actual call clobbers, incoming/outgoing/result roles and secured indirect targets using the frozen component ABI.
+- [x] Select TLS/trace memory operations explicitly for enabled traces; select no TLS or source metadata in omitted mode. Marshal simultaneously and preserve results before cleanup.
+- [x] Use canonical pure target request rules for constants/failure bytes and supported thunks; unsupported thunk forms reject explicitly, supported bodies pass normal target verification.
 
-**Handoff prerequisite:** The inherited shared indirect-target check in
-`selected/verify/descriptors.rs` currently requires an early use. Reconcile it
-with the frozen native late-use contract using portable event validation and
-independent counterexamples; do not describe a native call target as early to
-work around shared checking. The numeric reporter is direct and unaffected.
+**Handoff prerequisite (resolved):** Shared indirect-target checking now accepts
+portable target-chosen early or late timing while requiring a typed use. Native
+checking requires the frozen late R11 target contract; synthetic counterexamples
+exercise both timings and reject an incorrectly typed target. No early-use
+workaround remains.
+
+The ABI-compatible pilot requires no native thunk. All thunk forms reject
+explicitly; no stubbed body is introduced. Any future supported family must use
+ordinary selected publication and target verification.
 
 **Tests:** Selected scalar/C/indirect-call fixtures, pressure signatures, trace events/clobbers, secured target during marshaling, no-return behavior and missing/late request rejection. Walk both trace policies through complete selected descriptors.
 
@@ -385,12 +389,13 @@ permission to introduce it unnecessarily.
 | `backend/pilot/{mod,facts,projection}.rs`, `x86_64_sysv/pilot_facts.rs`: private admission facade, admitted getters, projection entry points and item-scoped non-test allowances | NP03, baseline `9a9e3bc1`; introducing commit `879bfb47` | NP04/NP06 lower consumers; NP17 private pipeline; reconcile NP19 and LA05 public adoption | Durable checked planning boundary; program/plan/layout/signature getter allowances retired NP04; trace fact allowances retired NP06; admission entry remains scoped until private orchestration. No temporary lowerer, fallback, fake intrinsic input or production switch |
 | `backend/pilot/lower/`: shared adapter and private facade allowance | NP04, baseline `879bfb47`; introducing commit `a4c3f189` | NP05 numeric lowering; NP06 calls/trace/entry and program construction; NP17 private pipeline; reconcile NP19 | NP05 retired numeric pending gates. NP06 retired all remaining pending-feature variants, duplicated preflight and call/trace/entry rejection branches, and replaced the intrinsic test bypass with complete worklist closure. Retain shared adapter and streaming `lower_program`; its private entry allowance remains until NP17 orchestration. No fake body, trap, receipt or fallback |
 | `backend/pilot/lower/tests/oracle.rs`: private numeric fixture execution oracle | NP05, baseline `a4c3f189`; introducing commit `430a30bc` | Permanent owner-local tests; reconcile purpose NP19 | Retain independent lowering association/boundary evidence, with unsupported operations rejected. No production interpreter, target parity claim or executable authority |
-| `backend/x86_64_sysv/native/selected/{context,select}.rs`: private entry non-test allowances and explicit unsupported recipe preflight | NP07, baseline `5369ea69`; awaiting manual commit | NP08 numeric/failure recipes, NP09 calls/trace; NP17 private orchestration; reconcile NP19 | Retain real immutable scalar selector/verifier, no fake body or fallback. NP08 retired numeric/check/failure preflight and rejection cases; general calls/traces and out-of-pilot pointer/scaled-index recipes still reject. Retire entry allowances when orchestration consumes them |
-| `backend/x86_64_sysv/native/selected/{numeric,recipes,verify/numeric}`: concrete numeric cells, domains and zero-code operation/result associations | NP08 atop uncommitted NP07, HEAD `5369ea69`; awaiting manual commit | Durable target checking metadata; NP14 finite expansion, reconcile NP19 | Retain markers only while independently checking actual CFG/definitions; no machine instruction, operand, hidden correction or emission authority |
-| `backend/x86_64_sysv/native/selected/tests/oracle.rs`: concrete selected-cell test interpreter | NP08 atop uncommitted NP07 | Permanent owner-local recipe evidence, reconcile NP19 | Test-only, independent of selector/verifier mappings; rejects unsupported cells; never production execution or native parity authority |
-| Native `Opcode::Failure` and shared call trace-barrier clarification | NP08 numeric prerequisite | NP09 general call/trace consumers; NP14 declared reporter/trap expansion; reconcile NP19 | Durable narrow canonical reporter terminal; retire no implementation bridge. General calls/traces remain gated |
+| `backend/x86_64_sysv/native/selected/{context,select}.rs`: private entry non-test allowances and explicit unsupported recipe preflight | NP07, baseline `5369ea69`; committed with NP08 as `e35be34f` | NP08 numeric/failure recipes, NP09 calls/trace; NP17 private orchestration; reconcile NP19 | Retain real immutable scalar selector/verifier, no fake body or fallback. NP08 retired numeric/check/failure preflight and rejection cases; NP09 retired the call/trace and nonreturning/trap gates; out-of-pilot pointer/scaled-index recipes still reject. Retire entry allowances when orchestration consumes them |
+| `backend/x86_64_sysv/native/selected/{numeric,recipes,verify/numeric}`: concrete numeric cells, domains and zero-code operation/result associations | NP08 atop uncommitted NP07, HEAD `5369ea69`; committed together as `e35be34f` | Durable target checking metadata; NP14 finite expansion, reconcile NP19 | Retain markers only while independently checking actual CFG/definitions; no machine instruction, operand, hidden correction or emission authority |
+| `backend/x86_64_sysv/native/selected/tests/oracle.rs`: concrete selected-cell test interpreter | NP08 atop uncommitted NP07; committed as `e35be34f` | Permanent owner-local recipe evidence, reconcile NP19 | Test-only, independent of selector/verifier mappings; rejects unsupported cells; never production execution or native parity authority |
+| Native `Opcode::Failure` and shared call trace-barrier clarification | NP08 numeric prerequisite; commit `e35be34f` | NP09 general call/trace consumers; NP14 declared reporter/trap expansion; reconcile NP19 | Durable narrow canonical reporter terminal; retire no implementation bridge. General calls/traces are selected by NP09 |
 | `SelectionContext::abi_areas`, `ObjectRole::Abi`, selected slot checks | Global shapes introduced LA02; replaced NP07, baseline `5369ea69` | NP07, checked again NP19 | Global shape storage and unqualified ABI objects removed; one signature registry preserves shared program authority; no compatibility adapter |
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
+| Frozen lower trace facts in `lir::CompletionReceipt`; native call fields, concrete trace cells and pure requests | NP09, task baseline `e35be34f` | NP10–NP16 placement/realization/closure; reconcile NP19 | Durable narrow immutable facts survive body release; no retained executable lower body, opaque trace payload, thunk bridge or instrumentation |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
 | Fragment storage experiments/adapters, if introduced | NP16; record exact symbols/commit | NP16/NP19 | Retain only failure-safe typed-key storage with a demonstrated bounded-body purpose; no serializer/importer/cache |
@@ -705,3 +710,51 @@ only the numeric pending rejection; tracked/untracked whitespace and final
 documentation checks passed.
 No additional independent follow-up was identified; existing frame-layout and
 golden-artifact discoveries retain their owners.
+
+
+### NP09 implementation evidence
+
+Task baseline: `e35be34f`, the user's combined NP07/NP08 commit; the working tree
+was clean. The roadmap implementation baseline remains `f150d028`. History and
+current-source review identified and removed the committed general call/trace
+and nonreturning/trap gates and their obsolete rejection test. Scalar/numeric
+selection and predecessor regressions remain intact; committing stays with the
+user.
+
+Calls expose canonical ordered input/result components, full late caller clobbers,
+fixed secured R11 indirect targets, logical signatures and attribution. Generated
+entry uses the same selector and preserves the marker/main protocol. Nonreturning
+calls declare atomic call/UD2 terminals, while standalone hard traps are explicit.
+The shared indirect check permits portable target-defined event timing; native
+checking independently reclassifies ABI roles and enforces its concrete contract.
+
+Enabled trace actions become TLS addresses and explicit record/head loads/stores,
+with mandatory memory/trace effects. The call-free local-exec address recipe has
+two steps, no scratch/flags and an explicit FS:0 memory read. Independent checking
+reconstructs the actual memory sequence, source record/initial location,
+site-to-location attribution, adjacency and CFG frame balance. Narrow immutable
+trace facts remain in completion receipts after lower executable body release;
+omitted mode creates neither these retained facts nor TLS/trace-memory operations.
+Consuming rebuilds remap record origins and concrete operands. This retention
+clarification is recorded in the frozen target design.
+
+Pure canonical requests use verified lower dependencies; immediate constants need
+no target data artifact. Catalog authority and reference-set checks reject missing
+or late requests and every unsupported thunk form. The pilot needs no ABI thunk
+or fake generated body. Source-to-selected whole-program fixtures reconcile exact
+receipts after releasing both callable bodies. Placement owns simultaneous
+transfer construction, result capture, live target protection and scratch conflict
+checking; physical encoding/native execution remain mandatory subsequent work.
+
+Validation: `make check` passed on final implementation (3,372 compiler tests,
+workspace/integration/documentation/runtime checks and all 650 golden
+observations). Serial `make msrv-check` passed without warnings on Rust 1.82.0.
+All 29 native selected-owner tests pass; call/trace regressions cover direct/C/
+indirect/unit/entry calls, mixed bank pressure, both trace policies, numeric
+failure terminals, nonreturning calls, malformed clobbers/effects/ABI/attribution,
+trace publication substitution, consuming rebuilds, loops/correction joins,
+request rejection and released-body selected closure. The shared early/late
+indirect-use regression also passes. Final `make static-check` and tracked/untracked
+whitespace checks passed. No independent follow-up was added; existing
+frame-layout and golden-artifact discoveries retain their owners. The next task
+is NP10's placement representation and checker contract.

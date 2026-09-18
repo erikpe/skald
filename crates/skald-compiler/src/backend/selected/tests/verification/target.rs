@@ -73,6 +73,7 @@ pub(super) struct Node {
     pub corrupt: Option<Corruption>,
     pub skip_definition_remap: bool,
     pub attribution: lir::CallAttribution,
+    pub indirect_timing: Timing,
     empty: Effects<graph::SelectedObjectId>,
 }
 impl Node {
@@ -106,6 +107,7 @@ impl Node {
             corrupt: None,
             skip_definition_remap: false,
             attribution: lir::CallAttribution::NonReporting,
+            indirect_timing: Timing::Early,
             empty: Effects::default(),
         }
     }
@@ -216,7 +218,9 @@ impl Payload for Node {
                 }
                 if let Some(target) = target {
                     indirect_target = Some(operands.len());
-                    operands.push(operand(*target, OperandRole::Use, c));
+                    let mut target = operand(*target, OperandRole::Use, c);
+                    target.timing = self.indirect_timing;
+                    operands.push(target);
                 }
                 for (i, v) in out.iter().enumerate() {
                     operands.push(operand(

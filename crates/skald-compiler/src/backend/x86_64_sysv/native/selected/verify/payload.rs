@@ -20,6 +20,28 @@ impl Verifier {
         let bool_rep = Representation::from_scalar(ScalarType::Bool, 64).unwrap();
         let same = |a: ValueRef, b: ValueRef| a.representation == b.representation;
         let (valid, flags) = match &node.opcode {
+            Opcode::Call(call) => (
+                call.arguments.len() == call.inputs.len()
+                    && call.results.len() == call.outputs.len()
+                    && call
+                        .arguments
+                        .iter()
+                        .zip(&call.inputs)
+                        .chain(call.results.iter().zip(&call.outputs))
+                        .all(|(v, b)| v.representation == b.representation)
+                    && (!call.never || call.results.is_empty()),
+                false,
+            ),
+            Opcode::HardTrap => (true, false),
+            Opcode::TlsAddress { out } => (pointer(out.representation), false),
+            Opcode::TraceLoad { address, out, .. } => (
+                pointer(address.representation) && pointer(out.representation),
+                false,
+            ),
+            Opcode::TraceStore { address, value, .. } => (
+                pointer(address.representation) && pointer(value.representation),
+                false,
+            ),
             Opcode::Numeric(n) => (true, super::numeric::fields(n)?),
             Opcode::CheckBranch { condition, .. } => (condition.representation == bool_rep, true),
             Opcode::Failure {
@@ -183,19 +205,19 @@ impl Verifier {
         if !valid {
             return Err("illegal x86 opcode field or representation");
         }
-        if terminal
-            != matches!(
-                node.opcode,
-                Opcode::Jump
-                    | Opcode::Branch { .. }
-                    | Opcode::CheckBranch { .. }
-                    | Opcode::Failure { .. }
-                    | Opcode::Return { .. }
-            )
-        {
+        let expected_terminal = matches!(
+            node.opcode,
+            Opcode::Jump
+                | Opcode::Branch { .. }
+                | Opcode::CheckBranch { .. }
+                | Opcode::Failure { .. }
+                | Opcode::HardTrap
+                | Opcode::Return { .. }
+        ) || matches!(&node.opcode, Opcode::Call(call) if call.never);
+        if terminal != expected_terminal {
             return Err("illegal x86 instruction/terminal position");
         }
-        let clobbers = if matches!(node.opcode, Opcode::Failure { .. }) {
+        let clobbers = if matches!(node.opcode, Opcode::Failure { .. } | Opcode::Call(_)) {
             self.resources
                 .caller_clobbers()
                 .iter()
@@ -212,6 +234,29 @@ impl Verifier {
         // Mandatory native memory effects and references are checked from fields,
         // not by asking describe to agree with itself.
         let effects = match node.opcode {
+            Opcode::TlsAddress { .. } => Effects::new([Effect::Read(MemoryRegion::Unknown)]),
+            Opcode::Call(ref call) => {
+                let base = match call.target {
+                    crate::backend::lir::CallTarget::Direct(ArtifactId::Runtime(service)) => {
+                        crate::backend::plan::service_effects(service)
+                    }
+                    _ => Effects::conservative_call(),
+                };
+                if call.never {
+                    Effects::new(base.iter().copied().chain([Effect::HardTrap]))
+                } else {
+                    base
+                }
+            }
+            Opcode::HardTrap => Effects::new([Effect::HardTrap]),
+            Opcode::TraceLoad { record, .. } => Effects::new([
+                Effect::Read(record.map_or(MemoryRegion::Unknown, MemoryRegion::Object)),
+                Effect::TraceState,
+            ]),
+            Opcode::TraceStore { record, .. } => Effects::new([
+                Effect::Write(record.map_or(MemoryRegion::Unknown, MemoryRegion::Object)),
+                Effect::TraceState,
+            ]),
             Opcode::Failure { .. } => Effects::new([
                 Effect::Call,
                 Effect::Read(MemoryRegion::Unknown),
@@ -227,6 +272,26 @@ impl Verifier {
             return Err("incorrect x86 memory effects");
         }
         let artifacts = match node.opcode {
+            Opcode::Call(ref call) => {
+                let mut refs = vec![];
+                if let crate::backend::lir::CallTarget::Direct(target) = call.target {
+                    refs.push((target, target.category()));
+                }
+                if let crate::backend::lir::CallAttribution::SourceOperation {
+                    location: Some(location),
+                    ..
+                } = call.attribution
+                {
+                    refs.push((location, location.category()));
+                }
+                refs
+            }
+            Opcode::TlsAddress { .. } | Opcode::TraceLoad { .. } | Opcode::TraceStore { .. } => {
+                vec![(
+                    ArtifactId::TraceTls,
+                    crate::backend::plan::ArtifactCategory::Tls,
+                )]
+            }
             Opcode::Failure {
                 reason,
                 ref attribution,
@@ -252,6 +317,14 @@ impl Verifier {
             return Err("incorrect x86 symbol reference");
         }
         let objects = match node.opcode {
+            Opcode::TraceLoad {
+                record: Some(object),
+                ..
+            }
+            | Opcode::TraceStore {
+                record: Some(object),
+                ..
+            } => vec![object],
             Opcode::ObjectAddress { object, .. } | Opcode::Lifetime { object, .. } => vec![object],
             Opcode::Load {
                 region: MemoryRegion::Object(object),

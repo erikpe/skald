@@ -702,5 +702,8 @@ payloads and numeric boundaries against independent references, including loops
 and preceding correction joins. Reporter signature, ABI, effects and exact
 message/length are checked independently. A call's trace-state barrier does not
 request caller TLS; explicit trace accesses still require enabled policy and
-TLS authority. General native call/trace selection is next in the
+TLS authority. Native call/trace selection now covers the complete admitted pilot,
+including entry, indirect targets, pressure slots, nonreturning calls, both trace
+policies and selected-program closure after body release. Concrete trace sequence
+and frame checks use frozen parent facts. Placement is next in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).

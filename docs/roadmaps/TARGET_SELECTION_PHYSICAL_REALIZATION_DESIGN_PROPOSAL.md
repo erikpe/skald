@@ -554,3 +554,15 @@ artifacts, but a call still preserves its callee's possible trace observation.
 Non-call trace-state effects continue to require enabled tracing and TLS
 references. This closes a checking gap without introducing a new representation,
 public interface or tracing policy; general native call/trace recipes remain due.
+
+## Accepted trace-fact retention clarification
+
+Native trace verification must survive callable streaming. Lower completion
+receipts therefore retain the immutable trace plan and site-to-location
+associations from verified lower actions. They retain no executable body or
+source database. Native checking resolves the record through selected object
+origins and compares initial/replacement locations and call attribution against
+these frozen facts. Consuming edits retain exact snapshot authority and remap
+selected origins; lower republication derives fresh trace facts. This clarifies
+how independent checking observes the already accepted trace obligations after
+lower body release; it grants no placement or emission authority.

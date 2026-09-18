@@ -1,8 +1,9 @@
 # x86 Native Resource and Component ABI Contracts
 
 Status: immutable target resource facts and checked-signature component
-classification and scalar/numeric native selection are implemented privately.
-General call/trace selection, placement and physical emission remain planned. Production still uses the [existing backend](BACKEND.md).
+classification and the complete pilot selected vocabulary, including calls and
+trace memory operations, are implemented privately. Placement and physical
+emission remain planned. Production still uses the [existing backend](BACKEND.md).
 These contracts refine the [shared low-level model](LOW_LEVEL_IR.md) and
 [frozen target design](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 
@@ -101,9 +102,9 @@ eight-byte little-endian pointer layout, exact entry/return classification,
 signature-qualified code addresses and aligned, bounded object accesses proven
 from concrete address definitions and incoming edges. Lifetime markers retain a
 finite site count. Invalid representations, slots and recipe metadata yield
-errors; describing malformed opcodes remains total. Static memory provenance and
-unimplemented general call/trace recipes reject explicitly in the current scalar
-pilot. Production continues through the existing backend.
+errors; describing malformed opcodes remains total. Static memory provenance,
+pointer conversion/scaled-address recipes outside the pilot, and ABI thunks
+reject explicitly. Production continues through the existing backend.
 
 Incoming/outgoing/result slot shapes belong to each checked signature within one
 selection context. The same slot index can therefore represent integer bits in
@@ -114,9 +115,8 @@ authority. Symbolic ABI-area objects also name their signature.
 
 The shared event order is early uses, early clobbers, early definitions, late uses,
 late clobbers, late definitions. Transfers cannot be inserted inside an atomic
-bundle. Scalar and numeric payloads implement the contracts below, including the narrow
-reporter terminal used by numeric failures. General calls and trace walkthroughs
-remain obligations until their concrete recipes exist.
+bundle. Concrete scalar, numeric, call and trace payloads implement the contracts
+below, including the reporter terminal used by numeric failures.
 Schema tests do not certify executable native parity.
 
 | Recipe | Required operands/resources/events | Independent rejection witness |
@@ -148,9 +148,10 @@ TLS relocation and its finite scratch/address recipe must be fully described
 before physical realization; unsupported relocation forms reject rather than
 calling a resolver implicitly.
 
-General call/trace and later physical tasks must implement and test their remaining
-requirements against actual immutable opcodes and independent target verification. A mismatch requires
-an explicit contract amendment before consumers, not a permissive descriptor.
+Placement and physical realization must discharge the remaining movement and
+encoding requirements against actual immutable opcodes and independent
+verification. A mismatch requires an explicit contract amendment before
+consumers, not a permissive descriptor.
 
 ## Numeric correction walkthrough
 
@@ -217,10 +218,49 @@ followed by UD2, without a hidden successor or scratch. It retains call, unknown
 memory read, report, trace-observation and hard-trap effects. A call's trace-state
 barrier describes callee observation; it does not request a generated TLS access.
 Explicit caller trace operations still require enabled policy and TLS authority.
-General call marshaling and generated trace operations remain separate work.
+General calls expose the same ABI events and trace barrier rules.
 
 Owner tests interpret concrete selected cells independently and compare against
 primitive conversion and arithmetic references, including every cast cell,
 NaN payloads, range cut points, full-count guards, floor correction and overflow.
 This certifies selected recipe relationships; actual native placement, realization
 and subprocess execution are still required before claiming native parity.
+
+## Concrete call and trace publication
+
+Calls store their typed direct target or separate indirect value, signature,
+ordered component arguments/results, canonical ABI bindings and attribution.
+Arguments and secured indirect targets are late uses; all caller units and flags
+clobber next, followed by late result definitions. Indirect targets use R11;
+placement must secure that value before simultaneous ABI transfers, exclude it
+from transfer scratch, and preserve live inputs. Call result definitions precede
+trace cleanup; placement captures them before subsequent cells. Entry uses the
+same selector and preserves the marker/main protocol. Nonreturning calls are
+atomic call/UD2 terminals; standalone hard traps have explicit terminal effects.
+
+Enabled source frames use one sixteen-byte object aligned to sixteen bytes.
+Push stores the previous TLS head and initial location, then publishes the record.
+Location replacement stores to the second word immediately before its attributed
+call; pop loads the previous head and restores TLS immediately before return.
+`TlsAddress` expands to a call-free local-exec ELF sequence: load FS:0 into the
+result GPR, then LEA that GPR with the typed TLS TPOFF relocation. Its bounded
+recipe has two steps, no scratch and no flag clobber; reading FS:0 has an
+explicit unknown-memory read effect. Trace loads/stores expose
+pointer-width memory effects, trace-state effects and the TLS dependency.
+
+The verifier reconstructs these memory sequences, operand relationships and CFG
+frame balance. It compares records, initial locations and allowed replacements
+with immutable parent trace facts retained in the lower completion receipt.
+Each call/reporter location must match its frozen lower operation site;
+consuming rebuilds resolve the record through remapped object origins. Omitted
+tracing selects no TLS cells or source metadata. Callee trace-observation barriers
+remain mandatory on calls under either policy.
+
+Pure request collection reads the authenticated lower receipt. Immediate integer
+and binary64 constants need no additional data artifact; failure/source bytes use
+canonical shared keys. Selection requires frozen catalog authority and rejects
+any concrete reference outside its discovered set. The ABI-compatible pilot
+requires no thunks and rejects every thunk form explicitly. Whole-program selected
+closure reconciles exact lower receipts after callable bodies are released.
+These witnesses establish selected publication; physical marshaling, TLS encoding
+and native execution are validated by their subsequent owners.

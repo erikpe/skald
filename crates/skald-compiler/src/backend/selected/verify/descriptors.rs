@@ -290,11 +290,12 @@ pub(super) fn check<P: Payload>(
             }
         }
         if let Some(slot) = desc.indirect_target {
+            // Targets define whether the secured address is consumed early or late.
+            // Their verifier checks the concrete timing and resource contract.
             if !desc.operands.get(slot).is_some_and(|op| {
                 op.role == OperandRole::Use
                     && op.representation.kind
                         == crate::backend::selected::RepresentationKind::CodeAddress(signature)
-                    && op.timing == Timing::Early
             }) {
                 errors.push(Reason::Abi);
             }

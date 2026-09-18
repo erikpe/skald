@@ -487,6 +487,9 @@ selected snapshot, checked references and chosen lower input; generated thunks
 have no fictitious lower input. Complete selected publication closes required
 source bodies and target thunks and reconciles those exact input witnesses with
 the finalized lower program. Bodies may be released after local completion.
+Lower completion receipts retain immutable trace plans and site-to-location
+associations so target checking can validate frame records, initial locations and
+attributed calls after executable lower storage has been released.
 
 Targets must independently check opcode completeness, mandatory effects and
 references, real resource footprints and target-specific control-flow rules.
@@ -494,8 +497,8 @@ There is no default accepting verifier. Synthetic tests demonstrate guard and
 correction graphs, simultaneous edges, secured indirect calls, inherited helper
 attribution, partial resource preservation and receipt binding. They prove the
 shared interface is usable across two target shapes, not physical preservation.
-Real target opcodes, ABI catalogs, placement and frame realization remain future
-work.
+The private x86 pilot implements concrete opcodes and its ABI catalog. Placement
+and frame realization remain future work.
 
 ### Selected numeric and call-effect checking
 
@@ -515,7 +518,11 @@ a barrier, including omitted tracing. They do not imply a caller TLS reference.
 An explicit non-call trace-state access requires enabled policy and a declared
 TLS artifact. Native reporter terminals retain the canonical runtime service's
 memory-read, call, report, trace-state and hard-trap effects and exact ABI/data
-associations. General native calls/traces and physical execution remain planned.
+associations. General native calls, entry and explicit TLS/trace memory selection
+are implemented; see [call and trace publication](X86_NATIVE_CONTRACTS.md#concrete-call-and-trace-publication).
+Shared indirect descriptors accept the target-defined early or late use timing;
+the native verifier requires a secured late target in R11. Physical execution
+remains planned.
 
 ## Consuming edits and snapshot analyses
 

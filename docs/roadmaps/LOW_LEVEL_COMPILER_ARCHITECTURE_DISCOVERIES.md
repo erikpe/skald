@@ -42,8 +42,8 @@ change or rollback.
 
 ## ABI slot shapes must be local to the signature boundary
 
-**Status:** resolved by NP07; task baseline `5369ea69`, implementation awaiting
-manual commit. **Owner:** shared selected ABI/context/descriptor checking.
+**Status:** resolved by NP07; task baseline `5369ea69`, implementation committed
+with NP08 as `e35be34f`. **Owner:** shared selected ABI/context/descriptor checking.
 
 `SelectionContext` now stores ABI areas by checked signature. Entry/return and
 symbolic ABI object validation use the owner/declared signature; call bindings

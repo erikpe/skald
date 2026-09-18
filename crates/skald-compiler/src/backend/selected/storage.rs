@@ -68,6 +68,18 @@ pub(in crate::backend) struct SelectedDraft<'p, P> {
 
 #[cfg_attr(not(test), allow(dead_code))]
 impl<P> SelectedDraft<'_, P> {
+    pub(in crate::backend) fn lower_trace_location(
+        &self,
+        site: &crate::backend::lir::TraceSite,
+    ) -> Option<crate::backend::plan::ArtifactId> {
+        self.input
+            .as_ref()
+            .and_then(|input| input.trace_location(site))
+    }
+    /// Frozen parent trace facts remain available after releasing its executable body.
+    pub(in crate::backend) fn lower_trace_plan(&self) -> Option<&crate::backend::lir::TracePlan> {
+        self.input.as_ref().and_then(CompletionReceipt::trace_plan)
+    }
     pub(in crate::backend) fn context(&self) -> &SelectionContext<'_> {
         self.context
     }

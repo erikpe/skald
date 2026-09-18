@@ -17,7 +17,30 @@ impl Payload for Instruction {
             .into_iter()
             .enumerate()
             .map(|(slot, (v, definition))| {
-                let constraint = if let Opcode::Numeric(n) = &self.opcode {
+                let constraint = if let Opcode::Call(call) = &self.opcode {
+                    let target =
+                        matches!(call.target, crate::backend::lir::CallTarget::Indirect(_));
+                    if target && slot == call.arguments.len() {
+                        Constraint::Fixed(self.resources.gpr(Gpr::R11, 64).expect("secured target"))
+                    } else {
+                        let binding = if slot < call.arguments.len() {
+                            call.inputs.get(slot)
+                        } else {
+                            call.outputs
+                                .get(slot - call.arguments.len() - usize::from(target))
+                        };
+                        match binding.map(|b| b.location) {
+                            Some(AbiLocation::Fixed(view)) => Constraint::Fixed(view),
+                            Some(AbiLocation::Slot { area, index }) => {
+                                Constraint::AbiSlot { area, index }
+                            }
+                            None => Constraint::Resources {
+                                views: &[],
+                                memory: false,
+                            },
+                        }
+                    }
+                } else if let Opcode::Numeric(n) = &self.opcode {
                     let fixed = |gpr, bits| {
                         Constraint::Fixed(
                             self.resources
@@ -82,6 +105,7 @@ impl Payload for Instruction {
                         self.opcode,
                         Opcode::Numeric(Numeric::Divide { .. } | Numeric::Shift { .. })
                             | Opcode::Failure { .. }
+                            | Opcode::Call(_)
                     ) || definition
                     {
                         Timing::Late
@@ -134,6 +158,10 @@ impl Payload for Instruction {
             count: NonZeroU16::new(count).expect("nonzero scratch"),
         };
         let bundle = match &self.opcode {
+            Opcode::TlsAddress { .. } => Some(Bundle::Bounded {
+                steps: NonZeroU16::new(2).unwrap(),
+                scratch: Cow::Borrowed(&[]),
+            }),
             Opcode::Constant {
                 constant: crate::backend::lir::Constant::F64(_),
                 ..
@@ -169,13 +197,14 @@ impl Payload for Instruction {
             }
             | Opcode::CheckBranch { .. }
             | Opcode::Branch { .. } => Some(Bundle::Atomic),
-            Opcode::Failure { .. } => Some(Bundle::Atomic),
+            Opcode::Failure { .. } | Opcode::Call(_) => Some(Bundle::Atomic),
             _ => None,
         };
         let (flow, successors) = match self.opcode {
             Opcode::Jump => (Flow::Branch, 1),
             Opcode::Branch { .. } | Opcode::CheckBranch { .. } => (Flow::Branch, 2),
-            Opcode::Failure { .. } => (Flow::Never, 0),
+            Opcode::Failure { .. } | Opcode::HardTrap => (Flow::Never, 0),
+            Opcode::Call(ref call) if call.never => (Flow::Never, 0),
             Opcode::Return { .. } => (Flow::Return, 0),
             _ => (Flow::Instruction, 0),
         };
@@ -188,25 +217,38 @@ impl Payload for Instruction {
             objects: &self.objects,
             abi_inputs: if let Opcode::Failure { bindings, .. } = &self.opcode {
                 bindings
+            } else if let Opcode::Call(call) = &self.opcode {
+                &call.inputs
             } else {
                 &[]
             },
-            abi_results: if let Opcode::Return { bindings, .. } = &self.opcode {
+            abi_results: if let Opcode::Call(call) = &self.opcode {
+                &call.outputs
+            } else if let Opcode::Return { bindings, .. } = &self.opcode {
                 bindings
             } else {
                 &[]
             },
-            indirect_target: None,
+            indirect_target: if let Opcode::Call(call) = &self.opcode {
+                matches!(call.target, crate::backend::lir::CallTarget::Indirect(_))
+                    .then_some(call.arguments.len())
+            } else {
+                None
+            },
             bundle,
             successors,
             flow,
             call_signature: if let Opcode::Failure { signature, .. } = self.opcode {
                 Some(signature)
+            } else if let Opcode::Call(call) = &self.opcode {
+                Some(call.signature)
             } else {
                 None
             },
             call_attribution: if let Opcode::Failure { attribution, .. } = &self.opcode {
                 Some(attribution)
+            } else if let Opcode::Call(call) = &self.opcode {
+                Some(&call.attribution)
             } else {
                 None
             },

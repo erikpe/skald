@@ -18,6 +18,7 @@ use std::collections::BTreeMap;
 #[derive(Debug)]
 pub(in crate::backend) enum SelectionError {
     Unsupported(&'static str),
+    Undiscovered(crate::backend::plan::ArtifactId),
     Inventory(crate::backend::lir::ProgramError),
     Abi(AbiError),
     Build(SelectedBuildError),
@@ -40,20 +41,20 @@ impl From<PlanError> for SelectionError {
     }
 }
 
-/// Numeric corrections are selected before publication. General calls and trace
-/// actions reject until their target recipes are available.
+/// Numeric corrections, ABI events and trace memory cells precede publication.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn select<'p>(
     context: &'p SelectionContext<'p>,
     body: &VerifiedCallable<'p>,
 ) -> Result<VerifiedSelectedCallable<'p, Instruction>, SelectionError> {
+    let requests = super::requests::requests(body)?;
+    for key in &requests {
+        context.catalog().artifact(*key, key.category())?;
+    }
     let lower = body.draft();
     for (_, block) in lower.blocks() {
         for instruction in &block.instructions {
             match instruction.operation {
-                Operation::Call(_) | Operation::Trace(_) => {
-                    return Err(SelectionError::Unsupported("native call/trace recipes"))
-                }
                 Operation::Convert {
                     conversion: crate::backend::lir::Conversion::PointerBits,
                     ..
@@ -65,20 +66,6 @@ pub(in crate::backend) fn select<'p>(
                 }
                 _ => {}
             }
-        }
-        if !matches!(
-            block.terminator,
-            Some(
-                Terminator::Jump(_)
-                    | Terminator::Branch { .. }
-                    | Terminator::ScalarCheck { .. }
-                    | Terminator::ReportFailure { .. }
-                    | Terminator::Return(_)
-            )
-        ) {
-            return Err(SelectionError::Unsupported(
-                "native nonreturning call/hard-trap recipe",
-            ));
         }
     }
     let owner = body.receipt().owner();
@@ -117,7 +104,11 @@ pub(in crate::backend) fn select<'p>(
         }
         let selected = builder.object(
             object.layout,
-            crate::backend::selected::ObjectRole::Semantic,
+            if object.role == crate::backend::lir::ObjectRole::TraceRecord {
+                crate::backend::selected::ObjectRole::Trace
+            } else {
+                crate::backend::selected::ObjectRole::Semantic
+            },
             object.origin,
         )?;
         builder.map_object_origin(body, id, selected)?;
@@ -183,6 +174,40 @@ pub(in crate::backend) fn select<'p>(
                 }
             };
             match &instruction.operation {
+                Operation::Trace(action) => {
+                    let action = match action {
+                        crate::backend::lir::TraceAction::PushFrame { record } => {
+                            crate::backend::lir::TraceAction::PushFrame {
+                                record: objects[record].id(),
+                            }
+                        }
+                        crate::backend::lir::TraceAction::PopFrame { record } => {
+                            crate::backend::lir::TraceAction::PopFrame {
+                                record: objects[record].id(),
+                            }
+                        }
+                        crate::backend::lir::TraceAction::ReplaceLocation {
+                            record,
+                            location,
+                            site,
+                        } => crate::backend::lir::TraceAction::ReplaceLocation {
+                            record: objects[record].id(),
+                            location: *location,
+                            site: site.clone(),
+                        },
+                    };
+                    super::recipes::Recipes {
+                        builder: &mut builder,
+                        resources: &verifier.resources,
+                        origin,
+                    }
+                    .trace(
+                        selected,
+                        &action,
+                        lower.trace_plan().and_then(|p| p.initial_location),
+                    )?;
+                    continue;
+                }
                 Operation::Divide {
                     result,
                     dividend,
@@ -271,6 +296,13 @@ pub(in crate::backend) fn select<'p>(
                 _ => {}
             }
             let opcode = match &instruction.operation {
+                Operation::Call(call) => Opcode::Call(Box::new(native_call(
+                    owner.context(),
+                    &verifier.resources,
+                    call,
+                    instruction.results.iter().map(value).collect(),
+                    &value,
+                )?)),
                 Operation::Constant(constant) => Opcode::Constant {
                     constant: *constant,
                     out: out.expect("constant result"),
@@ -367,13 +399,12 @@ pub(in crate::backend) fn select<'p>(
                         }
                     },
                 },
-                Operation::Call(_)
-                | Operation::Trace(_)
+                Operation::Trace(_)
                 | Operation::Divide { .. }
                 | Operation::Shift { .. }
                 | Operation::Convert { .. }
                 | Operation::ScaledIndex { .. } => {
-                    unreachable!("preflight rejects unavailable recipes")
+                    unreachable!("numeric and trace recipes are consumed before ordinary cells")
                 }
             };
             let origin = Origin {
@@ -450,6 +481,17 @@ pub(in crate::backend) fn select<'p>(
                         .collect(),
                 )
             }
+            Terminator::NonReturningCall(call) => (
+                Opcode::Call(Box::new(native_call(
+                    owner.context(),
+                    &verifier.resources,
+                    call,
+                    vec![],
+                    &value,
+                )?)),
+                vec![],
+            ),
+            Terminator::HardTrap => (Opcode::HardTrap, vec![]),
             Terminator::ReportFailure { call, reason } => {
                 let classified = classify(
                     owner.context(),
@@ -503,7 +545,6 @@ pub(in crate::backend) fn select<'p>(
                 },
                 vec![],
             ),
-            _ => unreachable!("preflight rejects unavailable terminal recipes"),
         };
         if edges.len() > 1 {
             for (slot, (target, arguments)) in edges.iter_mut().enumerate() {
@@ -540,7 +581,9 @@ pub(in crate::backend) fn select<'p>(
             &edges,
         )?;
     }
-    verify_selected(builder.finish(), &verifier).map_err(SelectionError::Verify)
+    let selected = verify_selected(builder.finish(), &verifier).map_err(SelectionError::Verify)?;
+    super::requests::check_references(&requests, selected.receipt().references())?;
+    Ok(selected)
 }
 
 impl From<crate::backend::lir::ProgramError> for SelectionError {
@@ -551,6 +594,10 @@ impl From<crate::backend::lir::ProgramError> for SelectionError {
 impl std::fmt::Display for SelectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Undiscovered(key) => write!(
+                f,
+                "native selection introduced undiscovered artifact: {key:?}"
+            ),
             Self::Unsupported(reason) => write!(f, "unsupported native selection: {reason}"),
             Self::Abi(error) => write!(f, "native ABI invariant: {error:?}"),
             Self::Build(error) => write!(f, "native selected construction: {error:?}"),
@@ -561,3 +608,31 @@ impl std::fmt::Display for SelectionError {
     }
 }
 impl std::error::Error for SelectionError {}
+
+fn native_call(
+    plan: crate::backend::plan::PlanView<'_>,
+    resources: &super::super::NativeResources,
+    call: &crate::backend::lir::Call,
+    results: Vec<ValueRef>,
+    value: &impl Fn(&LoweredValueId) -> ValueRef,
+) -> Result<super::calls::NativeCall, SelectionError> {
+    let abi = classify(plan, call.signature, resources, CallArity::Fixed)?;
+    let target = match call.target {
+        crate::backend::lir::CallTarget::Direct(target) => {
+            crate::backend::lir::CallTarget::Direct(target)
+        }
+        crate::backend::lir::CallTarget::Indirect(target) => {
+            crate::backend::lir::CallTarget::Indirect(value(&target))
+        }
+    };
+    Ok(super::calls::NativeCall {
+        target,
+        signature: call.signature,
+        arguments: call.arguments.iter().map(|a| value(&a.value)).collect(),
+        results,
+        inputs: abi.call().inputs().to_vec(),
+        outputs: abi.call().results().to_vec(),
+        attribution: call.attribution.clone(),
+        never: abi.noreturn(),
+    })
+}

@@ -126,19 +126,6 @@ fn heterogeneous_incoming_slots_publish_in_one_context_and_wrong_shapes_reject()
 }
 
 #[test]
-fn future_call_and_trace_recipes_reject_without_fake_selected_bodies() {
-    for_sources(
-        "extern fn foreign() -> i64; fn main() -> i64 { return foreign(); }",
-        |context, lower| {
-            assert!(matches!(
-                select(context, lower),
-                Err(SelectionError::Unsupported("native call/trace recipes"))
-            ))
-        },
-    );
-}
-
-#[test]
 fn duplicate_parameter_edges_get_distinct_forwarders_after_the_atomic_branch() {
     let mut facts = plan::test_fixtures::facts();
     facts.signatures[0].returns = plan::ReturnShape::Scalar(plan::ScalarType::I64);

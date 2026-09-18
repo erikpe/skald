@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; shared lower closure and native scalar/numeric selection/independent verification implemented | Deliver the private whole-program native pilot through independently checked native phases | NP09 — Native call and trace selection | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
+| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; shared lower closure and complete native pilot selection/independent verification implemented | Deliver the private whole-program native pilot through independently checked native phases | NP10 — Placement representation and checker contract | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
 
 ## Pending discovery and planning records
 

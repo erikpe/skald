@@ -435,7 +435,7 @@ An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
 delivery decisions. Phase preparation has qualified existing-boundary witnesses
 and complete baseline inputs; noisy cost gates remain inconclusive. The immediate
-next step is general native call/trace selection after verified scalar/numeric
+next step is checked placement after verified scalar/numeric/call/trace
 native graphs and signature-boundary ABI slot validation, in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md), using the
 [frozen model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) and active

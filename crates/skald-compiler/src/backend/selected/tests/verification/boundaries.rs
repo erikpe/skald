@@ -150,3 +150,72 @@ fn omitted_mode_keeps_call_trace_barriers_without_generated_tls_accesses() {
     ))
     .contains(&SelectedReason::Effect));
 }
+
+#[test]
+fn shared_indirect_events_accept_target_chosen_early_and_late_uses_but_require_typed_use() {
+    for timing in [Timing::Early, Timing::Late] {
+        for invalid in [false, true] {
+            let plan = CheckedPlan::check(facts()).unwrap();
+            let lower = lower(&plan, source(0));
+            let catalog = lir::TargetDeclarations::new(plan.view()).freeze().unwrap();
+            let (resources, views, units) = resources();
+            let context = SelectionContext::new(&catalog, resources);
+            let (mut builder, entry, _) = begin(&context, &lower);
+            let signature = context.binding(source(1)).unwrap().signature_id();
+            let code = Representation::from_scalar(ScalarType::CodeAddress(signature), 64).unwrap();
+            let address = builder.value(code, None).unwrap();
+            builder
+                .append(
+                    entry,
+                    Node::new(
+                        Op::Address {
+                            out: vf(address, code),
+                            artifact: ArtifactId::Callable(source(1)),
+                        },
+                        &views,
+                    ),
+                )
+                .unwrap();
+            let mut call = call_node(
+                &context,
+                signature,
+                vec![],
+                vec![],
+                ArtifactId::Callable(source(1)),
+                &views,
+                &units,
+            );
+            if let Op::Call { target, .. } = &mut call.op {
+                *target = Some(vf(address, code));
+            }
+            call.indirect_timing = timing;
+            // Use general register alternatives; the synthetic target does not
+            // inherit a native fixed-register choice.
+            builder.append(entry, call).unwrap();
+            ret(&mut builder, entry, vec![], vec![], &views);
+            let mut draft = builder.finish();
+            if invalid {
+                if let Op::Call {
+                    target: Some(target),
+                    ..
+                } = &mut draft.blocks.get_mut(entry).unwrap().instructions[1].op
+                {
+                    target.ty = repr();
+                }
+            }
+            let result = verify_selected(
+                draft,
+                &WitnessTarget {
+                    profile: context.catalog().plan().profile(),
+                    shape: Shape::Three,
+                    reject: false,
+                },
+            );
+            if invalid {
+                assert!(reasons(result).contains(&SelectedReason::Abi));
+            } else {
+                assert!(result.is_ok());
+            }
+        }
+    }
+}

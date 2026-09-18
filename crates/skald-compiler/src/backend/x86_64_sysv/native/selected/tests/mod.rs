@@ -31,6 +31,7 @@ fn for_sources(
     }
 }
 
+mod calls;
 mod editing;
 mod malformed;
 mod numeric;

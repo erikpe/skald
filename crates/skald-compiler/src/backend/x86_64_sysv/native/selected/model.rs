@@ -64,6 +64,21 @@ impl FloatCondition {
 /// No frame offsets, value homes, MIR operands, or mutable descriptor tables.
 #[derive(Clone, Debug)]
 pub(in crate::backend) enum Opcode {
+    Call(Box<super::calls::NativeCall>),
+    TlsAddress {
+        out: ValueRef,
+    },
+    TraceLoad {
+        address: ValueRef,
+        out: ValueRef,
+        record: Option<SelectedObjectId>,
+    },
+    TraceStore {
+        address: ValueRef,
+        value: ValueRef,
+        record: Option<SelectedObjectId>,
+    },
+    HardTrap,
     Numeric(super::numeric::Numeric),
     CheckBranch {
         condition: ValueRef,
@@ -191,6 +206,17 @@ impl Instruction {
 
     pub(super) fn refresh(&mut self) {
         self.effects = match self.opcode {
+            Opcode::TlsAddress { .. } => Effects::new([Effect::Read(MemoryRegion::Unknown)]),
+            Opcode::Call(ref call) => call.effects(),
+            Opcode::HardTrap => Effects::new([Effect::HardTrap]),
+            Opcode::TraceLoad { record, .. } => Effects::new([
+                Effect::Read(record.map_or(MemoryRegion::Unknown, MemoryRegion::Object)),
+                Effect::TraceState,
+            ]),
+            Opcode::TraceStore { record, .. } => Effects::new([
+                Effect::Write(record.map_or(MemoryRegion::Unknown, MemoryRegion::Object)),
+                Effect::TraceState,
+            ]),
             Opcode::Failure { .. } => Effects::new([
                 Effect::Call,
                 Effect::Read(MemoryRegion::Unknown),
@@ -203,6 +229,10 @@ impl Instruction {
             _ => Effects::default(),
         };
         self.artifacts = match self.opcode {
+            Opcode::Call(ref call) => call.artifacts(),
+            Opcode::TlsAddress { .. } | Opcode::TraceLoad { .. } | Opcode::TraceStore { .. } => {
+                vec![(ArtifactId::TraceTls, ArtifactCategory::Tls)]
+            }
             Opcode::Failure {
                 reason,
                 ref attribution,
@@ -225,6 +255,14 @@ impl Instruction {
             _ => vec![],
         };
         self.objects = match self.opcode {
+            Opcode::TraceLoad {
+                record: Some(object),
+                ..
+            }
+            | Opcode::TraceStore {
+                record: Some(object),
+                ..
+            } => vec![object],
             Opcode::ObjectAddress { object, .. } | Opcode::Lifetime { object, .. } => vec![object],
             Opcode::Load {
                 region: MemoryRegion::Object(object),
@@ -236,7 +274,7 @@ impl Instruction {
             } => vec![object],
             _ => vec![],
         };
-        self.clobbers = if matches!(self.opcode, Opcode::Failure { .. }) {
+        self.clobbers = if matches!(self.opcode, Opcode::Failure { .. } | Opcode::Call(_)) {
             self.resources
                 .caller_clobbers()
                 .iter()
@@ -282,6 +320,11 @@ impl Instruction {
     /// Stable descriptor positions derived solely from opcode fields.
     pub(super) fn operands(&self) -> Vec<(ValueRef, bool)> {
         match &self.opcode {
+            Opcode::Call(call) => call.operands(),
+            Opcode::TlsAddress { out } => vec![(*out, true)],
+            Opcode::TraceLoad { address, out, .. } => vec![(*address, false), (*out, true)],
+            Opcode::TraceStore { address, value, .. } => vec![(*address, false), (*value, false)],
+            Opcode::HardTrap => vec![],
             Opcode::Numeric(n) => n.operands(),
             Opcode::CheckBranch { condition, .. } => vec![(*condition, false)],
             Opcode::Failure { arguments, .. } => arguments.iter().map(|v| (*v, false)).collect(),

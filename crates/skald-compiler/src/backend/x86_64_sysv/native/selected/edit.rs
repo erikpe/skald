@@ -6,6 +6,11 @@ use crate::backend::{
 impl Instruction {
     fn values_mut(&mut self) -> Vec<(&mut super::ValueRef, bool)> {
         match &mut self.opcode {
+            Opcode::Call(call) => call.operands_mut(),
+            Opcode::TlsAddress { out } => vec![(out, true)],
+            Opcode::TraceLoad { address, out, .. } => vec![(address, false), (out, true)],
+            Opcode::TraceStore { address, value, .. } => vec![(address, false), (value, false)],
+            Opcode::HardTrap => vec![],
             Opcode::Numeric(n) => n.operands_mut(),
             Opcode::CheckBranch { condition, .. } => vec![(condition, false)],
             Opcode::Failure { arguments, .. } => arguments.iter_mut().map(|v| (v, false)).collect(),
@@ -50,9 +55,16 @@ impl EditablePayload for Instruction {
             value.value = remap.values.get(value.value)?;
         }
         match &mut self.opcode {
-            Opcode::ObjectAddress { object, .. } | Opcode::Lifetime { object, .. } => {
-                *object = remap.objects.get(*object)?
+            Opcode::TraceLoad {
+                record: Some(object),
+                ..
             }
+            | Opcode::TraceStore {
+                record: Some(object),
+                ..
+            }
+            | Opcode::ObjectAddress { object, .. }
+            | Opcode::Lifetime { object, .. } => *object = remap.objects.get(*object)?,
             Opcode::Load {
                 region: crate::backend::effects::MemoryRegion::Object(object),
                 ..
