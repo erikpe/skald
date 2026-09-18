@@ -566,3 +566,15 @@ these frozen facts. Consuming edits retain exact snapshot authority and remap
 selected origins; lower republication derives fresh trace facts. This clarifies
 how independent checking observes the already accepted trace obligations after
 lower body release; it grants no placement or emission authority.
+
+## Accepted finite placement analysis contract
+
+The [placement checking contract](../compiler/PLACEMENT_CHECKING.md) freezes the
+concrete draft coordinates, state, epoch invalidation, simultaneous edge
+rebinding, alias/width kills, conservative join, descending fixed-point bound
+and deterministic failures required here. Structural validation remains
+unchecked data validation and creates no acceptance seal. Test-only independent
+counterexamples include canonical x86 resources and a synthetic target with
+different roles and partially preserved floating units. This settles the
+representation/checker checkpoint without changing the phase sequence or
+introducing a producer, frame or realization bridge.

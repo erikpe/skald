@@ -15,6 +15,7 @@ mod failure;
 mod graph;
 mod lir;
 mod pilot;
+mod placement;
 mod plan;
 mod retained_domain;
 mod selected;

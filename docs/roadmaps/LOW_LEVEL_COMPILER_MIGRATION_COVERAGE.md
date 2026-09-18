@@ -705,5 +705,16 @@ request caller TLS; explicit trace accesses still require enabled policy and
 TLS authority. Native call/trace selection now covers the complete admitted pilot,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
-and frame checks use frozen parent facts. Placement is next in the
+and frame checks use frozen parent facts. Placement checking is next in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
+
+Shared placement drafts now borrow the exact selected publication, distinguish
+private value storage from semantic objects and signature-keyed ABI slots, and
+name all operand/scratch/edge assignments and explicit transfer points.
+Structural validation grants no availability or realization authority. The
+[placement checking contract](../compiler/PLACEMENT_CHECKING.md) fixes finite
+contents, definition epochs, simultaneous parameter rebinding, conservative
+joins, work bounds and deterministic rejection. Independent owner-local
+counterexamples exercise copy cycles, loop epochs, duplicate edges, protected
+targets and partial preservation; a native-owner probe uses the canonical x86
+catalog. No producer, checked-placement seal, frame or physical body exists yet.

@@ -10,9 +10,11 @@ The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
 component classification. Private whole-program pilot admission and final-MIR
 fact projection, ordinary scalar/CFG lowering and guarded numeric lowering are
 implemented, including lower program closure, calls/tracing and generated entry.
-Private native scalar/numeric selection and joint checking are implemented with
-signature-local ABI slot shapes. General native calls/traces, placement and
-physical realization remain planned.
+Private native scalar/numeric/call/trace selection and joint checking are
+implemented with signature-local ABI slot shapes. Shared unchecked placement
+drafts and structural validation are implemented; the
+[placement checking contract](PLACEMENT_CHECKING.md) freezes the finite state
+analysis. Independent placement acceptance and physical realization remain planned.
 
 ## Shared final-MIR lowering
 

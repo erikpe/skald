@@ -1,4 +1,18 @@
 use super::*;
+
+#[test]
+fn placement_contract_uses_the_canonical_native_resource_footprints() {
+    let resources = NativeResources::new().unwrap();
+    crate::backend::placement::tests::check_native_resource_events(
+        resources.catalog(),
+        resources.gpr(Gpr::Rdi, 64).unwrap(),
+        resources.gpr(Gpr::R11, 64).unwrap(),
+        resources.gpr(Gpr::Rax, 8).unwrap(),
+        resources.gpr(Gpr::Rax, 64).unwrap(),
+        resources.xmm(0, 64).unwrap(),
+        resources.caller_clobbers(),
+    );
+}
 use crate::backend::{
     plan::{
         self, test_fixtures::facts, CheckedPlan, Component, ComponentRole, Convention, ReturnShape,

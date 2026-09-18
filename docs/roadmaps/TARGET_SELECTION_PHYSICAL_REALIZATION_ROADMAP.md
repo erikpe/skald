@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01–NP09 complete; NP10 is next.
+Status: in progress, 2026-09-18; NP01–NP10 complete; NP11 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -54,7 +54,7 @@ backend or claim full-language migration.
 - [x] NP07 — Concrete scalar selected payload and verifier
 - [x] NP08 — Constrained numeric selection recipes
 - [x] NP09 — Native call and trace selection
-- [ ] NP10 — Placement representation and checker contract
+- [x] NP10 — Placement representation and checker contract
 - [ ] NP11 — Independent placement checking
 - [ ] NP12 — Baseline placement and parallel transfers
 - [ ] NP13 — Symbolic frame planning and limits
@@ -196,10 +196,10 @@ ordinary selected publication and target verification.
 
 **Purpose:** Freeze the algorithm contract before implementing acceptance or producer heuristics.
 
-- [ ] Define drafts bound to the exact immutable selected callable, assignments at every operand event and explicit entry/instruction/edge transfer points. Separate value storage, semantic objects and ABI slots.
-- [ ] Document finite abstract location contents, overlap/width kills, definition epochs, simultaneous edge parameter rebinding, conservative joins, loop convergence and unreachable structural checks. Define a finite bound and deterministic failure reporting.
-- [ ] Write independent counterexample fixtures for live ties, call-clobbered values, protected indirect targets, mixed-bank copies, duplicate edges and loop rebinding. Check a second synthetic target with non-x86 roles and partial preservation.
-- [ ] Checkpoint: establish that these cases have unambiguous expected acceptance/rejection under the frozen design. Stop and amend or split a focused proposal on a mismatch; do not invent a provisional checked-placement seal.
+- [x] Define drafts bound to the exact immutable selected callable, assignments at every operand event and explicit entry/instruction/edge transfer points. Separate value storage, semantic objects and ABI slots.
+- [x] Document finite abstract location contents, overlap/width kills, definition epochs, simultaneous edge parameter rebinding, conservative joins, loop convergence and unreachable structural checks. Define a finite bound and deterministic failure reporting.
+- [x] Write independent counterexample fixtures for live ties, call-clobbered values, protected indirect targets, mixed-bank copies, duplicate edges and loop rebinding. Check a second synthetic target with non-x86 roles and partial preservation.
+- [x] Checkpoint: establish that these cases have unambiguous expected acceptance/rejection under the frozen design. Stop and amend or split a focused proposal on a mismatch; do not invent a provisional checked-placement seal.
 
 **Tests:** Representation validation and fixture/oracle tests; demonstrate same-ID stale selected inputs cannot confer authority. Review the checker state against cyclic CFG and overlapping-width counterexamples independently of the future producer.
 
@@ -396,6 +396,8 @@ permission to introduce it unnecessarily.
 | `SelectionContext::abi_areas`, `ObjectRole::Abi`, selected slot checks | Global shapes introduced LA02; replaced NP07, baseline `5369ea69` | NP07, checked again NP19 | Global shape storage and unqualified ABI objects removed; one signature registry preserves shared program authority; no compatibility adapter |
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Frozen lower trace facts in `lir::CompletionReceipt`; native call fields, concrete trace cells and pure requests | NP09, task baseline `e35be34f` | NP10–NP16 placement/realization/closure; reconcile NP19 | Durable narrow immutable facts survive body release; no retained executable lower body, opaque trace payload, thunk bridge or instrumentation |
+| `backend/placement/{model,structure}.rs`: unchecked drafts and non-test dead-code allowances | NP10, task baseline `3413f792` | NP11 checker and NP12 producer; reconcile NP19 | Retain typed drafts and structural checking. Retire allowances as production consumers land; no checked-placement constructor, producer success flag or realization bypass |
+| `backend/placement/tests/oracle.rs`: independent finite-state specification and native resource probe | NP10, task baseline `3413f792` | Durable independent checker regression reference, reconcile NP19 | Remains test-only and independent of producer/checker availability maps. No production path sampling, placement authority or temporary execution bridge |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
 | Fragment storage experiments/adapters, if introduced | NP16; record exact symbols/commit | NP16/NP19 | Retain only failure-safe typed-key storage with a demonstrated bounded-body purpose; no serializer/importer/cache |
@@ -758,3 +760,50 @@ indirect-use regression also passes. Final `make static-check` and tracked/untra
 whitespace checks passed. No independent follow-up was added; existing
 frame-layout and golden-artifact discoveries retain their owners. The next task
 is NP10's placement representation and checker contract.
+
+## NP10 implementation evidence
+
+Completed 2026-09-18. Task baseline: `3413f792`, the user's committed NP09;
+roadmap baseline remains `f150d028`. The working tree was clean. Reviewed the
+committed call/trace selection handoff and artifact ledger; no earlier transition
+is due for removal in this representation task. Committing remains with the user.
+
+`backend/placement` now owns unchecked exact-selected-borrow drafts, complete
+entry/parameter/operand/scratch/edge coordinates, ordered explicit transfer
+points, typed value storage and signature-qualified ABI locations. Transfers
+distinguish selected values from original preserved resource contents, allowing
+save/restore obligations without inventing a virtual definition. Structural
+validation checks completeness, coordinate/type/storage validity and explicit
+move kinds; it deliberately cannot certify content flow or grant realization.
+Same-ID republication fails exact snapshot binding. No producer, checked seal,
+frame offset, semantic-object home, unchecked renderer or temporary bridge was
+introduced. Non-test allowances have their NP11/NP12 removal owners in the ledger.
+
+The authoritative [placement checking contract](../compiler/PLACEMENT_CHECKING.md)
+and frozen-design clarification settle finite identity sets, width/overlap kills,
+definition-epoch invalidation, simultaneous edge capture/rebinding, conservative
+joins, descending iteration, checked finite bounds and stable failures. ABI
+signature shapes do not create disjoint physical slots; placement reconstructs
+relative target footprints and later frames verify their concrete realization.
+The existing ABI-area extent/stride discovery remains with NP13.
+
+**Checkpoint outcome: go for NP11.** The independent test-only oracle has
+unambiguous rejected/corrected live-tie, caller-clobber, secured-target,
+mixed-bank cycle, duplicate-edge, loop epoch and partial-preservation fixtures.
+Additional cases cover equal parameter identities, cyclic loop swaps and
+original callee-save contents. A native-owner probe supplies canonical x86
+RDI/R11, byte/full RAX, XMM and caller footprints; the synthetic profile supplies
+different resource roles and low-lane floating preservation. Genuine selected
+publication tests check stale same-ID input, entry/edge completeness,
+unreachable scratch, storage, ABI slots and bitwise transfer types. The oracle
+remains independent reference evidence; NP11 must check actual resolved
+transfers against captured parallel relations and create the sole acceptance
+authority. A contract mismatch still requires an explicit amendment before a seal.
+
+Validation on final Rust source: `make check` passed (3,391 compiler unit tests,
+including 19 new placement/resource tests, all workspace/integration/runtime/doc
+tests, and 650 goldens). Serial `make msrv-check` passed Rust 1.82 workspace/all
+targets compilation without warnings. Living architecture, migration coverage,
+roadmap status/index and frozen decision links are updated. No independent
+larger maintainability discovery was added. Final `make static-check` and
+tracked/untracked whitespace checks passed. NP11 is next.
