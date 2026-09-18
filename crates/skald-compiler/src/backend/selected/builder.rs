@@ -16,7 +16,6 @@ use crate::{
 };
 use std::collections::BTreeMap;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum SelectedBuildError {
     Context(PlanError),
     DuplicateDefinition,
@@ -29,12 +28,16 @@ impl From<PlanError> for SelectedBuildError {
         Self::Context(error)
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct SelectedBuilder<'p, P> {
     draft: SelectedDraft<'p, P>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p, P: Payload> SelectedBuilder<'p, P> {
+    pub(in crate::backend) fn value_handle(
+        &self,
+        id: SelectedValueId,
+    ) -> Result<LocalHandle<'p, SelectedValueId>, SelectedBuildError> {
+        Ok(self.draft.values.handle_id(id)?)
+    }
     /// Source selection starts from a genuine verified body, not a detached receipt.
     /// Its witness is reconciled with the finalized lower program at program closure.
     /// Only a declared target thunk may omit the lower input.
@@ -183,7 +186,9 @@ impl<'p, P: Payload> SelectedBuilder<'p, P> {
             return Err(SelectedBuildError::TypeMismatch);
         }
         for binding in bindings.inputs().iter().chain(bindings.results()) {
-            self.draft.context.require_abi_binding(binding)?;
+            self.draft
+                .context
+                .require_abi_binding(self.draft.owner.signature_id(), binding)?;
         }
         for (value, binding) in inputs.iter().zip(bindings.inputs()) {
             if self.draft.values.get(*value)?.ty != binding.representation {
@@ -359,12 +364,14 @@ impl<'p, P: Payload> SelectedBuilder<'p, P> {
         self.draft.object_origins.insert(from, to.id());
         Ok(())
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn block_origin(
         &self,
         block: LocalHandle<'p, SelectedBlockId>,
     ) -> Result<Option<Span>, SelectedBuildError> {
         Ok(self.draft.blocks.get(block)?.origin)
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn object_description(
         &self,
         object: LocalHandle<'p, SelectedObjectId>,

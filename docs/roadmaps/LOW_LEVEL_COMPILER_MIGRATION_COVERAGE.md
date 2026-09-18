@@ -639,8 +639,9 @@ opcode/event walkthroughs are frozen for downstream target consumers, not yet
 native execution evidence. Public/default production emission is unchanged.
 
 [Signature-boundary slot validation](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary)
-must be resolved before integrating heterogeneous signatures into selected
-publication. Existing global slot-shape fixtures do not certify that integration.
+is resolved: one selection context now validates per-signature shapes. Shared
+publication tests cover heterogeneous outgoing slot zero in one graph; native
+publication tests cover heterogeneous incoming slot zero and strict negatives.
 
 ## Private pilot planning readiness
 
@@ -682,9 +683,24 @@ complete shared lower closure retains exact receipts, not all callable drafts.
 Consumer failure cannot publish a complete inventory witness.
 
 This qualifies shared program closure, not native execution or trace recipes.
-`ReportFailure` preserves the mandatory reporter/defensive-trap contract; concrete
-reporter-then-trap instructions remain a selection obligation. Trace TLS zero
+`ReportFailure` preserves the mandatory reporter/defensive-trap contract; the
+native numeric selector now declares its canonical atomic call/UD2 recipe. Trace TLS zero
 storage remains a target artifact obligation. Lifecycle and aggregate source
-migration remain unsupported. The next owner is concrete scalar selected payload
-and verification, beginning with signature-boundary ABI slot validation, in the
+migration remain unsupported. Ordinary scalar native graphs now publish through
+joint shared/independent native verification, preserving lower maps and recipe
+origins, declared scratch/flag bundles and distinct branch transfer forwarders.
+Native tests cover unordered comparisons, malformed fields/effects/resources,
+object address substitution, consuming rebuilds and stale witnesses. No selected
+value has a stack home; these are schema/publication witnesses, not native
+execution evidence. Numeric cells now expose RAX/RDX divide pairs, nonaliasing
+divisors, tied CL shifts and explicit conversion cells. Correction CFG discharges
+floor/MIN overflow, unsigned rounding and float high-range handling before
+publication. Independent checking validates guards, original sources, correction
+constants and result associations; consuming splits/rebuilds remap all metadata.
+The test-only selected-cell interpreter checks all primitive casts, exact bit
+payloads and numeric boundaries against independent references, including loops
+and preceding correction joins. Reporter signature, ABI, effects and exact
+message/length are checked independently. A call's trace-state barrier does not
+request caller TLS; explicit trace accesses still require enabled policy and
+TLS authority. General native call/trace selection is next in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).

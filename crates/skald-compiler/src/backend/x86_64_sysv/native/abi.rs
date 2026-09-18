@@ -8,13 +8,11 @@ use crate::backend::{
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum CallArity {
     Fixed,
     Variadic,
 }
 #[derive(Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum AbiError {
     Plan(PlanError),
     UnsupportedExternal,
@@ -29,15 +27,14 @@ impl From<PlanError> for AbiError {
 
 /// Entry and call bindings preserve logical signature order. Stack slot indices
 /// are symbolic component locations, not byte offsets or frame positions.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct ComponentAbi {
     entry: AbiBindings,
     call: AbiBindings,
     stack_slots: Vec<Representation>,
+    #[cfg_attr(not(test), allow(dead_code))]
     outgoing_bytes: usize,
     noreturn: bool,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl ComponentAbi {
     pub(in crate::backend) fn entry(&self) -> &AbiBindings {
         &self.entry
@@ -48,6 +45,7 @@ impl ComponentAbi {
     pub(in crate::backend) fn stack_slots(&self) -> &[Representation] {
         &self.stack_slots
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn outgoing_bytes(&self) -> usize {
         self.outgoing_bytes
     }
@@ -55,7 +53,6 @@ impl ComponentAbi {
         self.noreturn
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn classify(
     plan: PlanView<'_>,
     signature: SignatureId,

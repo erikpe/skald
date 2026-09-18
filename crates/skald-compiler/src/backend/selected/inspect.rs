@@ -26,7 +26,8 @@ pub(in crate::backend) enum SelectedFact<'a, P> {
     },
     Resources {
         units: usize,
-        abi_areas: &'a super::AbiAreas,
+        abi_areas:
+            &'a std::collections::BTreeMap<crate::backend::plan::SignatureId, super::AbiAreas>,
     },
     Bank(super::BankId, super::BankKind),
     Resource(super::ViewId, &'a super::ResourceView),
@@ -65,11 +66,20 @@ pub(in crate::backend) enum SelectedFact<'a, P> {
     },
 }
 
+impl<P> SelectedDraft<'_, P> {
+    pub(in crate::backend) fn visit<'a, E>(
+        &'a self,
+        visitor: impl FnMut(SelectedFact<'a, P>) -> Result<(), E>,
+    ) -> Result<(), E> {
+        visit(self, visitor)
+    }
+}
+
 #[cfg_attr(not(test), allow(dead_code))]
 impl<P> VerifiedSelectedCallable<'_, P> {
-    pub(in crate::backend) fn visit<E>(
-        &self,
-        visitor: impl FnMut(SelectedFact<'_, P>) -> Result<(), E>,
+    pub(in crate::backend) fn visit<'a, E>(
+        &'a self,
+        visitor: impl FnMut(SelectedFact<'a, P>) -> Result<(), E>,
     ) -> Result<(), E> {
         visit(self.draft(), visitor)
     }
@@ -88,9 +98,9 @@ impl<P: InspectPayload> SelectedDraft<'_, P> {
         render(self, "unverified-draft", out)
     }
 }
-fn visit<P, E>(
-    draft: &SelectedDraft<'_, P>,
-    mut visitor: impl FnMut(SelectedFact<'_, P>) -> Result<(), E>,
+fn visit<'a, P, E>(
+    draft: &'a SelectedDraft<'_, P>,
+    mut visitor: impl FnMut(SelectedFact<'a, P>) -> Result<(), E>,
 ) -> Result<(), E> {
     visitor(SelectedFact::Entry {
         entry: draft.entry,
@@ -185,11 +195,9 @@ fn render<P: InspectPayload>(
                 None => writeln!(out, "abi <unresolved>"),
             }
         }
-        SelectedFact::Resources { units, abi_areas } => writeln!(
-            out,
-            "abi-areas incoming={:?} outgoing={:?} results={:?}\nunits {units}",
-            abi_areas.incoming, abi_areas.outgoing, abi_areas.results
-        ),
+        SelectedFact::Resources { units, abi_areas } => {
+            writeln!(out, "abi-areas {abi_areas:?}\nunits {units}")
+        }
         SelectedFact::Bank(id, bank) => writeln!(out, "bank {id:?} {bank:?}"),
         SelectedFact::Resource(id, view) => writeln!(out, "resource {id:?} {view:?}"),
         SelectedFact::Origins {

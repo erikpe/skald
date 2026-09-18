@@ -6,6 +6,7 @@ use crate::backend::{
         SignatureId,
     },
 };
+mod boundaries;
 mod editing;
 mod inspection;
 mod malformed;
@@ -68,13 +69,20 @@ fn context<'p>(
     resources: ResourceCatalog,
     inputs: Vec<Representation>,
 ) -> SelectionContext<'p> {
-    SelectionContext::new(extension, resources)
-        .with_abi_areas(AbiAreas {
-            incoming: inputs.clone(),
-            outgoing: inputs,
-            results: vec![repr()],
-        })
-        .unwrap()
+    let mut context = SelectionContext::new(extension, resources);
+    for (signature, _) in extension.plan().signatures_with_ids() {
+        context = context
+            .with_abi_areas(
+                signature,
+                AbiAreas {
+                    incoming: inputs.clone(),
+                    outgoing: inputs.clone(),
+                    results: vec![repr()],
+                },
+            )
+            .unwrap();
+    }
+    context
 }
 fn begin<'p>(
     ctx: &'p SelectionContext<'p>,
@@ -94,7 +102,7 @@ fn begin<'p>(
         .enumerate()
         .map(|(index, c)| AbiBinding {
             component: *c,
-            representation: ctx.abi_areas.incoming[index],
+            representation: ctx.areas(declaration.signature).unwrap().incoming[index],
             location: AbiLocation::Slot {
                 area: AbiArea::Incoming,
                 index,

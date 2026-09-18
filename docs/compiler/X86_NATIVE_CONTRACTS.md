@@ -1,8 +1,8 @@
 # x86 Native Resource and Component ABI Contracts
 
 Status: immutable target resource facts and checked-signature component
-classification are implemented privately. Native opcode selection, placement and
-physical emission remain planned. Production still uses the [existing backend](BACKEND.md).
+classification and scalar/numeric native selection are implemented privately.
+General call/trace selection, placement and physical emission remain planned. Production still uses the [existing backend](BACKEND.md).
 These contracts refine the [shared low-level model](LOW_LEVEL_IR.md) and
 [frozen target design](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 
@@ -67,17 +67,62 @@ there is no implied partial varargs support or vector argument-count protocol.
 Narrow byte/boolean bindings do not certify canonical upper register contents;
 marshaling and external bool-result normalization remain selection obligations.
 
+## Ordinary scalar selection
+
+The native selected owner exposes immutable opcode and origin queries. Concrete
+fields derive ordered early uses and late definitions, legal register choices,
+fixed return bindings, ties and mandatory effects/references. Ordinary choices
+exclude RSP/RBP and have no memory alternative or value stack home. Placement
+must separately preserve any used callee-saved registers.
+
+Integer arithmetic and byte offsets tie the first input to the result and declare
+late flags; complement preserves flags. Scalar floating arithmetic uses tied SIMD
+operands. Integer comparisons, boolean negation and branch testing consume flags
+inside atomic bundles. Binary64 comparisons use UCOMISD: equality, less and less
+or equal explicitly exclude unordered; inequality includes unordered. Greater and
+greater or equal use above predicates, which already exclude unordered.
+
+| Bounded recipe | Maximum steps | Explicit scratch |
+| --- | --- | --- |
+| Raw binary64 constant: integer immediate then MOVQ | 2 | One 64-bit GPR |
+| Binary64 sign flip: MOVQ, sign-mask immediate, XOR, MOVQ | 4 | Two 64-bit GPRs; late flags |
+| Byte multiply: two zero extensions, 32-bit IMUL, low-byte move | 4 | Two 32-bit GPRs; late flags |
+| Parity-sensitive comparison: UCOMISD, two SETcc, byte combination | 4 | One byte GPR; late flags |
+
+Each branch edge carrying parameters gets its own empty-parameter forwarding
+block with one outgoing jump carrying the original arguments. Parallel edge
+occurrences remain distinct. Transfers cannot occur inside the atomic branch.
+Recipe origins retain lower block, instruction ordinal or edge slot and source
+span independently of selected block relocation.
+
+Mandatory native verification checks actual fields and cached effects/references,
+not agreement between two descriptions. It requires the canonical x86 catalog,
+eight-byte little-endian pointer layout, exact entry/return classification,
+signature-qualified code addresses and aligned, bounded object accesses proven
+from concrete address definitions and incoming edges. Lifetime markers retain a
+finite site count. Invalid representations, slots and recipe metadata yield
+errors; describing malformed opcodes remains total. Static memory provenance and
+unimplemented general call/trace recipes reject explicitly in the current scalar
+pilot. Production continues through the existing backend.
+
+Incoming/outgoing/result slot shapes belong to each checked signature within one
+selection context. The same slot index can therefore represent integer bits in
+one boundary and binary64 in another without weakening validation or receipt
+authority. Symbolic ABI-area objects also name their signature.
+
 ## Native opcode and event walkthroughs
 
 The shared event order is early uses, early clobbers, early definitions, late uses,
 late clobbers, late definitions. Transfers cannot be inserted inside an atomic
-bundle. These are requirements for the concrete payload/verifier work, not claims
-that those opcodes or native probes already exist.
+bundle. Scalar and numeric payloads implement the contracts below, including the narrow
+reporter terminal used by numeric failures. General calls and trace walkthroughs
+remain obligations until their concrete recipes exist.
+Schema tests do not certify executable native parity.
 
 | Recipe | Required operands/resources/events | Independent rejection witness |
 | --- | --- | --- |
 | Signed dividend setup | RAX64 input, RDX64 high-half definition; `cqo` preserves flags, high half is an explicit value | Wrong bank/width/fixed register or undeclared high-half result |
-| Unsigned dividend setup | Explicit RDX64 zero result; a 32-bit zero idiom must declare whole-unit write/zero extension and flag clobber if it uses XOR | Implicit high half, wrong zero-extension footprint or undeclared flags |
+| Unsigned dividend setup | RAX64 input and explicit RDX64 zero result via flag-preserving MOV; an XOR zero idiom would require a different declared flag footprint | Implicit high half, wrong zero-extension footprint or undeclared flags |
 | Signed/unsigned divide | Low/high/divisor late uses; low RAX64, high RDX64; quotient RAX64 and remainder RDX64 late definitions; flag clobber after uses; divisor excludes both overlapping units | Divisor alias, wrong fixed/tied binding, missing overflow/zero guards or stale live dividend |
 | Variable shift | Validated full-width count narrows explicitly to CL8; value and CL are late uses, result is a tied late definition; flags clobber after uses | Narrowing before guard, count assigned outside CL, value/count overlap with different tokens, lost live tied input |
 | Integer destructive operation | Inputs consumed before tied result definition, declared flag footprint and legal width; other live input cannot be destroyed | Omitted tie or preserving a live input only in an overwritten location |
@@ -85,7 +130,7 @@ that those opcodes or native probes already exist.
 | Direct call | Component ABI operands are late uses; all caller units/flags clobber after uses; scalar results are late definitions | Missing call clobber, wrong slot area, result stored only after clobbering cleanup |
 | Indirect call | Separate code-address operand with exact logical signature is a late use; its location survives all preceding simultaneous marshaling/scratch transfers | Target overwritten by an argument or temporary, signature mismatch, hidden target operand |
 | Enabled trace actions | Explicit TLS address and trace loads/stores/values, ordered attribution and effects; scratch/flags are declared; call-free local-exec ELF TLS recipe | Hidden trace helper call, undeclared TLS/scratch, location update after call or reporter, result lost during pop |
-| Omitted tracing | No source lookup, trace/TLS declaration, location update or hidden frame action | Trace metadata request or TLS/reference/effect in omitted mode |
+| Omitted tracing | No source lookup, trace/TLS declaration, location update or hidden frame action | Generated trace metadata request or explicit TLS access in omitted mode |
 | Reporter/trap | Reporting call uses ordinary ABI/clobbers and exact failure attribution, then explicit defensive hard trap; no unwind edge | Reporter without call barrier/trap or unrecorded failure edge |
 
 Division overflow/floor correction, checked float ranges and full-width count
@@ -103,8 +148,8 @@ TLS relocation and its finite scratch/address recipe must be fully described
 before physical realization; unsupported relocation forms reject rather than
 calling a resolver implicitly.
 
-Later native schema tasks must implement and test these requirements against
-actual immutable opcodes and independent target verification. A mismatch requires
+General call/trace and later physical tasks must implement and test their remaining
+requirements against actual immutable opcodes and independent target verification. A mismatch requires
 an explicit contract amendment before consumers, not a permissive descriptor.
 
 ## Numeric correction walkthrough
@@ -119,7 +164,7 @@ relationship in separate blocks, then merges fresh corrected values. Unsigned
 64-bit recipe and narrows/canonicalizes its explicit result; it never uses AH.
 
 A variable shift validates the entire original count against the semantic width
-and any signed lower bound before narrowing to CL. SHL, SAR and SHR correspond
+before narrowing its unsigned 64-bit count to CL. SHL, SAR and SHR correspond
 to left, signed-right and unsigned-right cells. A narrow native count never
 substitutes for that proof, and RCX/CL overlap cannot hold different simultaneously
 required value tokens.
@@ -137,3 +182,45 @@ not numeric conversion. Each concrete recipe declares actual flags, intermediate
 constants and edges; unordered UCOMISD checks consume flags inside their atomic
 comparison bundles. Native probes must later verify range endpoints, NaNs,
 infinities and unsigned rounding independently of descriptor checking.
+
+## Concrete numeric publication
+
+Selected numeric cells expose COPY, byte zero extension and narrowing,
+CVTSI2SD/CVTTSD2SI at signed 64-bit width, bank-crossing raw-bit MOVQ,
+CQO or a flag-preserving explicit RDX64 zero move, DIV/IDIV pairs, and
+SHL/SAR/SHR with CL8 or a fixed logical shift by one. Each cell has explicit
+virtual inputs/results and register constraints. Correction arithmetic uses the
+ordinary tied ALU cells. These cells require no implicit scratch or helper calls.
+
+Selection expands each semantic diamond before publishing: signed division's
+MIN/-1 branch and floor correction; unsigned integer-to-float rounding via
+`((n >> 1) | (n & 1))` and multiplication by two; and unsigned float-to-integer
+subtraction/high-bit restoration. Join parameters carry the final result. A
+zero-code association marker records the original numeric operation and its
+secured inputs/result. It is durable verification metadata, not a value operand
+or placement event. Independent checking reconstructs actual definitions,
+constants and protected branch arms instead of trusting that marker.
+
+A check branch records its full-width source relation and tests a concretely
+computed boolean. Verification requires its success edge to protect the raw cell
+and setup/narrowing, validates exact constant evidence when there is no dynamic
+check, and checks its failure path's reporting disposition. Signed divide also
+requires the MIN/-1 exclusion before IDIV. Substituting the divisor, narrowed
+count, conversion source, correction constant or merged result fails publication.
+Consuming rebuilds remap metadata and operands; splits preserve lower origins
+and relocate concrete overflow branches.
+
+Numeric failure terminals use the canonical nonreturning panic signature, exact
+message symbol/length and source attribution, late SysV argument uses and all
+caller-unit/flag clobbers. The atomic recipe is exactly a direct reporter call
+followed by UD2, without a hidden successor or scratch. It retains call, unknown
+memory read, report, trace-observation and hard-trap effects. A call's trace-state
+barrier describes callee observation; it does not request a generated TLS access.
+Explicit caller trace operations still require enabled policy and TLS authority.
+General call marshaling and generated trace operations remain separate work.
+
+Owner tests interpret concrete selected cells independently and compare against
+primitive conversion and arithmetic references, including every cast cell,
+NaN payloads, range cut points, full-count guards, floor correction and overflow.
+This certifies selected recipe relationships; actual native placement, realization
+and subprocess execution are still required before claiming native parity.

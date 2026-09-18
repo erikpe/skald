@@ -1,13 +1,11 @@
 //! Logical components stay intact when assigning target ABI locations.
 use super::{AbiBinding, AbiLocation, Representation, ResourceCatalog};
 use crate::backend::plan::{PlanError, SignatureFact};
-#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Clone)]
 pub(in crate::backend) struct AbiBindings {
     inputs: Vec<AbiBinding>,
     results: Vec<AbiBinding>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl AbiBindings {
     pub(in crate::backend) fn new(
         signature: &SignatureFact,
@@ -45,15 +43,20 @@ impl AbiBindings {
 }
 
 /// Areas contain component-sized symbolic slots, never frame byte offsets.
-#[derive(Default)]
-#[cfg_attr(not(test), allow(dead_code))]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(in crate::backend) struct AbiAreas {
     pub incoming: Vec<Representation>,
     pub outgoing: Vec<Representation>,
     pub results: Vec<Representation>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl AbiAreas {
+    pub(in crate::backend) fn slots(&self, area: super::AbiArea) -> &[Representation] {
+        match area {
+            super::AbiArea::Incoming => &self.incoming,
+            super::AbiArea::Outgoing => &self.outgoing,
+            super::AbiArea::Results => &self.results,
+        }
+    }
     pub(in crate::backend) fn require_slot(
         &self,
         area: super::AbiArea,

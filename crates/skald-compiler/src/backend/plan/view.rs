@@ -180,6 +180,15 @@ impl<'plan> PlanView<'plan> {
     pub(in crate::backend) fn layouts(self) -> impl ExactSizeIterator<Item = &'plan LayoutFact> {
         self.plan.layouts.iter()
     }
+    pub(in crate::backend) fn signatures_with_ids(
+        self,
+    ) -> impl ExactSizeIterator<Item = (SignatureId, &'plan SignatureFact)> {
+        self.plan
+            .signatures
+            .iter()
+            .enumerate()
+            .map(|(index, fact)| (SignatureId::new(index), fact))
+    }
     pub(in crate::backend) fn signatures(
         self,
     ) -> impl ExactSizeIterator<Item = &'plan SignatureFact> {
@@ -208,6 +217,9 @@ impl<'plan> CallableBinding<'plan> {
     }
     pub(in crate::backend) const fn key(self) -> LirCallableId {
         self.key
+    }
+    pub(in crate::backend) const fn signature_id(self) -> SignatureId {
+        self.signature
     }
     pub(in crate::backend) fn signature(self) -> Result<&'plan SignatureFact, PlanError> {
         self.context.signature(DeclarationId {

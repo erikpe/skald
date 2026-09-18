@@ -21,9 +21,7 @@ pub(in crate::backend) struct SelectedReceipt<'p> {
 }
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p, P> VerifiedSelectedCallable<'p, P> {
-    pub(in crate::backend::selected) fn into_editor(
-        self,
-    ) -> crate::backend::selected::SelectedEditor<'p, P>
+    pub(in crate::backend) fn into_editor(self) -> crate::backend::selected::SelectedEditor<'p, P>
     where
         P: crate::backend::selected::EditablePayload,
     {

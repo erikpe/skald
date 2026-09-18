@@ -26,10 +26,13 @@ fn payload_events_and_structural_consumers_need_no_target_enum_matches() {
     let scratch_unit = resources.unit().unwrap();
     let scratch_view = resources.view(bank, 64, &[scratch_unit], false).unwrap();
     let ctx = SelectionContext::new(&extension, resources)
-        .with_abi_areas(AbiAreas {
-            incoming: vec![repr()],
-            ..AbiAreas::default()
-        })
+        .with_abi_areas(
+            p.view().callables().next().unwrap().signature,
+            AbiAreas {
+                incoming: vec![repr()],
+                ..AbiAreas::default()
+            },
+        )
         .unwrap();
     let signature = p.view().callables().next().unwrap().signature;
     let fact = p.view().callable(source(0)).unwrap().signature().unwrap();
@@ -273,13 +276,16 @@ fn payload_events_and_structural_consumers_need_no_target_enum_matches() {
     for role in [
         ObjectRole::Semantic,
         ObjectRole::Trace,
-        ObjectRole::Abi(AbiArea::Incoming),
+        ObjectRole::Abi {
+            area: AbiArea::Incoming,
+            signature: p.view().callables().next().unwrap().signature,
+        },
     ] {
         let object = foreign.object(facts().layouts[0], role, None).unwrap();
         let (layout, role, origin) = foreign.object_description(object).unwrap();
         assert_eq!(layout.size, 8);
         assert!(origin.is_none());
-        if let ObjectRole::Abi(area) = role {
+        if let ObjectRole::Abi { area, .. } = role {
             assert_eq!(*area, AbiArea::Incoming);
         }
     }

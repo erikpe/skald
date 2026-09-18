@@ -9,16 +9,19 @@ products support immutable visitors and private deterministic text inspection.
 The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
 component classification. Private whole-program pilot admission and final-MIR
 fact projection, ordinary scalar/CFG lowering and guarded numeric lowering are
-implemented. Placement and native consumption remain planned;
-shared ABI slot-shape integration is a tracked prerequisite before native selection.
+implemented, including lower program closure, calls/tracing and generated entry.
+Private native scalar/numeric selection and joint checking are implemented with
+signature-local ABI slot shapes. General native calls/traces, placement and
+physical realization remain planned.
 
 ## Shared final-MIR lowering
 
 The private `backend::pilot` adapter constructs ordinary scalar bodies with the
 standard lowered builder and publishes them through full callable verification.
-Its worklist registers the exact body receipt; it does not yet close an executable
-lowered program. Calls, tracing and entry construction return explicit
-pending-feature errors before beginning the work item.
+Its streaming worklist registers exact body receipts and closes the complete
+lowered program and frozen data inventory. Calls, enabled/omitted tracing and
+generated entry use checked signatures and attribution. Consumer failure prevents
+publication, and unsupported programs reject during whole-program admission.
 
 Every retained MIR block is preserved, including unreachable blocks and repeated
 successor occurrences. MIR computed values are block-local, so the adapter needs
@@ -406,7 +409,11 @@ reachability, build real helpers or certify production MIR projection.
 
 `backend::selected` supplies independent selected draft arenas over the shared
 block/value/object ID machinery. A selection context borrows a frozen target
-catalog and owns its resource catalog and symbolic ABI slot shapes. Checked
+catalog and owns its resource catalog and symbolic ABI slot shapes keyed by
+checked signature identity. Entry and return slots use the owner signature; call
+slots use the called signature. One context therefore admits different types at
+slot zero in different boundaries while checking each area, index and type
+strictly. Checked
 handles additionally carry a fresh selection scope: equal declarations and
 numeric IDs in two contexts do not confer shared ownership. Source drafts require
 an actual verified lower callable with the same plan and owner; declared target
@@ -458,7 +465,18 @@ ABI and bounded-recipe checks with a required target verifier. Calls retain thei
 logical signature and attribution; a secured indirect target is a separate early
 use. Entry/call/return bindings preserve exact component order. Trace effects
 require enabled policy and an explicit TLS dependency. Symbolic objects are
-checked for layout, role and ABI-area extent.
+checked for layout, role and signature-qualified ABI-area extent.
+
+The x86 target privately selects ordinary scalar lower graphs into native virtual
+instructions. Its immutable opcode fields derive operands, legal register views,
+ties, finite scratch bundles, effects and references. Independent native checking
+also validates fields, the exact resource catalog, canonical entry/return ABI,
+code-address signatures, pointer widths and proven object memory bounds. Branch
+edges carrying parameters pass through distinct forwarding blocks, so transfers
+occur after the flag-sensitive branch. Lower value/object/block maps and recipe
+sites survive selection and consuming edits; edits require fresh joint verification.
+Values have no selected stack homes. Constrained numeric operations, calls, traces,
+placement and physical execution remain separate implementation obligations.
 
 Selected static memory effects contribute typed dependencies to receipts even
 when the opcode has no explicit static artifact operand.
@@ -478,6 +496,26 @@ attribution, partial resource preservation and receipt binding. They prove the
 shared interface is usable across two target shapes, not physical preservation.
 Real target opcodes, ABI catalogs, placement and frame realization remain future
 work.
+
+### Selected numeric and call-effect checking
+
+The x86 owner publishes concrete numeric cells and visible correction CFG under
+joint shared/native checking; see [native numeric publication](X86_NATIVE_CONTRACTS.md#concrete-numeric-publication).
+Descriptions expose fixed divide pairs, nonaliasing divisors and tied CL shifts.
+Zero-code semantic associations remain independently checked metadata and grant
+no execution or placement authority themselves.
+
+Immutable selected visitors tie borrowed facts to the inspected snapshot's
+lifetime. Consumers may collect those borrows for a single verification or test
+session without cloning opcode payloads; consuming edits still invalidate all
+previous receipts and analysis. Builder handle lookup validates arena ownership.
+
+Trace-state effects on calls preserve the callee's possible trace observation as
+a barrier, including omitted tracing. They do not imply a caller TLS reference.
+An explicit non-call trace-state access requires enabled policy and a declared
+TLS artifact. Native reporter terminals retain the canonical runtime service's
+memory-read, call, report, trace-state and hard-trap effects and exact ABI/data
+associations. General native calls/traces and physical execution remain planned.
 
 ## Consuming edits and snapshot analyses
 

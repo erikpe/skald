@@ -10,13 +10,11 @@ use crate::backend::{
 use std::collections::BTreeSet;
 
 /// Implemented by concrete target owners; shared checks cannot certify opcode completeness.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) trait TargetVerifier<P: Payload> {
     fn profile(&self) -> TargetProfile;
     fn verify_payload(&self, payload: &P, terminal: bool) -> Result<(), &'static str>;
     fn verify_callable(&self, draft: &SelectedDraft<'_, P>) -> Result<(), &'static str>;
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn verify_selected<'p, P: Payload>(
     draft: SelectedDraft<'p, P>,
     target: &impl TargetVerifier<P>,
@@ -99,7 +97,9 @@ pub(in crate::backend) fn verify_selected<'p, P: Payload>(
                 .map(|b| (b, AbiArea::Incoming))
                 .chain(abi.results().iter().map(|b| (b, AbiArea::Results)))
             {
-                if context.require_abi_binding(binding).is_err()
+                if context
+                    .require_abi_binding(draft.owner.signature_id(), binding)
+                    .is_err()
                     || matches!(binding.location, AbiLocation::Slot { area: actual, .. } if actual != area)
                 {
                     errors.push(failure(GraphLocation::Entry, SelectedReason::Abi, None));
@@ -133,12 +133,16 @@ pub(in crate::backend) fn verify_selected<'p, P: Payload>(
         let omitted = matches!(object.role, ObjectRole::Trace)
             && context.catalog.plan().runtime_trace() == RuntimeTracePolicy::Omitted;
         let area_bad = match object.role {
-            ObjectRole::Abi(area) => {
-                let slots = match area {
-                    AbiArea::Incoming => &context.abi_areas.incoming,
-                    AbiArea::Outgoing => &context.abi_areas.outgoing,
-                    AbiArea::Results => &context.abi_areas.results,
+            ObjectRole::Abi { area, signature } => {
+                let Some(areas) = context.areas(signature) else {
+                    errors.push(failure(
+                        GraphLocation::Object(id.index()),
+                        SelectedReason::Abi,
+                        object.origin,
+                    ));
+                    continue;
                 };
+                let slots = areas.slots(area);
                 slots
                     .iter()
                     .try_fold(0usize, |size, repr| {

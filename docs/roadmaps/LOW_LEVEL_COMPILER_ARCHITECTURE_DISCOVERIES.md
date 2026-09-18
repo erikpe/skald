@@ -1,6 +1,7 @@
 # Low-Level Compiler Architecture Discoveries
 
-Status: one independent follow-up and one native-integration prerequisite,
+Status: one independent follow-up and one frame-integration prerequisite;
+signature-boundary ABI prerequisite resolved,
 2026-09-18. Findings from the [architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
 are tracked here. Independent maintenance work stays outside active task scope;
 contract gaps must be resolved before their dependent consumers.
@@ -41,30 +42,40 @@ change or rollback.
 
 ## ABI slot shapes must be local to the signature boundary
 
-**Priority:** high before native selected integration. **Owner:** shared selected
-ABI/context/descriptor checking. **Boundary:** fix validation scope before the
-[native selected-schema task](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md#np07--concrete-scalar-selected-payload-and-verifier)
-and freeze its contract before native call consumers. This is an in-roadmap
-correctness prerequisite, not an independent post-adoption optimization.
+**Status:** resolved by NP07; task baseline `5369ea69`, implementation awaiting
+manual commit. **Owner:** shared selected ABI/context/descriptor checking.
 
-At the committed publication endpoint `2cbd7ffd`, `SelectionContext` owns one `AbiAreas`
-with representation vectors for incoming/outgoing/results. `require_abi_binding`
-checks each slot against those context-wide vectors; selected descriptor checking
-uses it for call bindings. `SelectedProgramBuilder` also requires receipts from
-the same selection context. A seven-integer signature needs integer slot zero;
-a nine-floating signature needs floating slot zero. Both occupy the same eight
-bytes but have different representations. A single context cannot presently
-validate both entry shapes or both outgoing call shapes, even though the native
-ABI legitimately reuses that slot at different boundaries.
+`SelectionContext` now stores ABI areas by checked signature. Entry/return and
+symbolic ABI object validation use the owner/declared signature; call bindings
+and operand slots use the called signature. Component, area, index, width and
+bank checks and exact context/snapshot authority remain strict. No per-callable
+context bridge or globally weakened slot check remains.
 
-The native owner regression `stack_slot_shapes_belong_to_each_signature_boundary`
-proves distinct checked signatures produce those distinct valid plans. Existing
-synthetic tests do not establish production support for heterogeneous boundary
-shapes. Scope slot validation to the relevant callable entry or call signature/
-site, while preserving component roles, slot bounds, width/bank checking and exact
-context/snapshot authority. Do not relax representation checks globally or solve
-this by changing per-callable contexts without reconciling program authority.
-Add selected-publication tests for heterogeneous incoming signatures and multiple
-call sites using slot zero with different types, plus wrong-area/out-of-range/
-wrong-type negatives. If the fix exceeds the selected-schema PR, split an explicit
-prerequisite task and amend the owning contract before its consumers.
+[Shared publication regression](../../crates/skald-compiler/src/backend/selected/tests/verification/boundaries.rs)
+publishes two call sites using outgoing slot zero with integer and floating
+representations in one graph/context. Native selection regressions publish
+seven-integer and nine-floating entry signatures together, and reject wrong
+areas, indices and types. Native classifier pressure tests retain their
+independent per-signature plans.
+
+## Symbolic ABI area extent needs target slot layout
+
+**Priority:** high before native ABI-area objects/frame planning. **Owner:** shared
+selected ABI area records and native symbolic frame planning. **Boundary:** settle
+slot extent/alignment metadata with NP13, before native area objects are published.
+
+The shared selected object checker currently computes an ABI area's extent by
+summing representation byte widths. Native SysV stack slots occupy eight bytes
+even for U8/Bool; incoming/outgoing byte offsets and outgoing sixteen-byte rounding
+are target layout facts. A spilled byte has representation width one byte but
+cannot certify an eight-byte physical area's extent with the current shared sum.
+Scalar selection introduces no ABI-area objects or physical offsets, so its
+per-signature shape checks are unaffected. This is a prerequisite for the later
+frame consumer, not a reason to weaken shape checks now.
+
+Give signature-local areas explicit checked slot layout/extent authority, or
+separate symbolic component-shape authority from target-verified area layout.
+Preserve independent portable shared checks and reject forged sizes/alignments.
+Add byte/boolean stack-pressure and mixed-bank area-object/frame tests, including
+outgoing padding, incoming extents and overflow. Avoid inferring physical slot
+stride from representation width or special-casing x86 inside shared checking.

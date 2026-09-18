@@ -38,7 +38,10 @@ pub(super) struct Terminal<P> {
 pub(in crate::backend) enum ObjectRole {
     Semantic,
     Trace,
-    Abi(AbiArea),
+    Abi {
+        area: AbiArea,
+        signature: crate::backend::plan::SignatureId,
+    },
 }
 #[derive(Clone)]
 #[cfg_attr(not(test), allow(dead_code))]
@@ -65,6 +68,9 @@ pub(in crate::backend) struct SelectedDraft<'p, P> {
 
 #[cfg_attr(not(test), allow(dead_code))]
 impl<P> SelectedDraft<'_, P> {
+    pub(in crate::backend) fn context(&self) -> &SelectionContext<'_> {
+        self.context
+    }
     pub(in crate::backend) fn abi(&self) -> Option<&AbiBindings> {
         self.abi.as_ref()
     }

@@ -73,7 +73,6 @@ fn operands_bind(
             op.representation == b.representation && same_location(op.constraint, b.location)
         })
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn check<P: Payload>(
     draft: &SelectedDraft<'_, P>,
     payload: &P,
@@ -127,8 +126,12 @@ pub(super) fn check<P: Payload>(
                     })
             }
             Constraint::AbiSlot { area, index } => ctx
-                .abi_areas
-                .require_slot(area, index, op.representation)
+                .require_slot(
+                    desc.call_signature.unwrap_or(draft.owner.signature_id()),
+                    area,
+                    index,
+                    op.representation,
+                )
                 .is_ok(),
         };
         if !valid {
@@ -186,12 +189,15 @@ pub(super) fn check<P: Payload>(
             {
                 errors.push(Reason::Effect)
             }
+            // A call barrier preserves the callee's possible trace observation.
+            // Only explicit caller-side trace accesses require TLS authority.
             Effect::TraceState
-                if ctx.catalog.plan().runtime_trace() == RuntimeTracePolicy::Omitted
-                    || !desc.artifacts.contains(&(
-                        crate::backend::plan::ArtifactId::TraceTls,
-                        crate::backend::plan::ArtifactCategory::Tls,
-                    )) =>
+                if !desc.effects.contains(Effect::Call)
+                    && (ctx.catalog.plan().runtime_trace() == RuntimeTracePolicy::Omitted
+                        || !desc.artifacts.contains(&(
+                            crate::backend::plan::ArtifactId::TraceTls,
+                            crate::backend::plan::ArtifactCategory::Tls,
+                        ))) =>
             {
                 errors.push(Reason::Effect)
             }
@@ -328,7 +334,13 @@ pub(super) fn check<P: Payload>(
         errors.push(Reason::Abi);
     }
     for binding in desc.abi_inputs.iter().chain(desc.abi_results) {
-        if ctx.require_abi_binding(binding).is_err() {
+        if ctx
+            .require_abi_binding(
+                desc.call_signature.unwrap_or(draft.owner.signature_id()),
+                binding,
+            )
+            .is_err()
+        {
             errors.push(Reason::Abi);
         }
     }

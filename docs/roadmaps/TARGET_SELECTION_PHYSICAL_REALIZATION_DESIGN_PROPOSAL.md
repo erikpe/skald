@@ -539,3 +539,18 @@ stays with the user.
 Sibling Niflheim's explicit backend IR boundary informs the ownership split.
 Its multiple-definition register model and GC-oriented semantics do not replace
 Skald's single-definition, explicit lifecycle and independently sealed stages.
+
+## Accepted numeric reporter effect clarification
+
+Numeric selection consumes the existing shared reporting terminals before general
+call/trace selection. Their native atomic recipe is the canonical panic call and
+defensive UD2, with exact message/length/signature/attribution and full caller
+clobbers. It retains the runtime service's mandatory unknown-read, call, report,
+trace-state and hard-trap effects. No numeric correction hides in this recipe.
+
+The shared selected effect checker distinguishes a call trace-state barrier from
+an explicit caller TLS operation. Omitted mode does not request source/TLS
+artifacts, but a call still preserves its callee's possible trace observation.
+Non-call trace-state effects continue to require enabled tracing and TLS
+references. This closes a checking gap without introducing a new representation,
+public interface or tracing policy; general native call/trace recipes remain due.

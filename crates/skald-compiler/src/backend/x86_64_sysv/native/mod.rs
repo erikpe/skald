@@ -1,7 +1,8 @@
 //! Immutable native target facts over checked low-level signatures and resources.
-//! This owner has no MIR types and does not select or emit instructions.
+//! Target selection owns virtual instructions; physical emission is separate.
 mod abi;
 mod resources;
+mod selected;
 
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use abi::{classify, AbiError, CallArity, ComponentAbi};

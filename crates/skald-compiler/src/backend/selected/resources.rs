@@ -26,14 +26,14 @@ pub(in crate::backend) enum ResourceError {
     Footprint,
 }
 #[cfg_attr(not(test), allow(dead_code))]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(in crate::backend) struct ResourceView {
     pub bank: BankId,
     pub bits: u16,
     pub units: Vec<UnitId>,
     pub reserved: bool,
 }
-#[derive(Default)]
+#[derive(Clone, Default)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct ResourceCatalog {
     banks: Vec<BankKind>,
