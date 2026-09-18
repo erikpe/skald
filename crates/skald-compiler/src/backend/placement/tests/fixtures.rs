@@ -58,6 +58,7 @@ pub(super) enum Op {
 pub(super) struct Node {
     pub op: Op,
     pub target: Machine,
+    pub objects: Vec<crate::backend::graph::SelectedObjectId>,
     effects: Effects<crate::backend::graph::SelectedObjectId>,
     artifacts: Vec<(plan::ArtifactId, plan::ArtifactCategory)>,
 }
@@ -79,6 +80,7 @@ impl Node {
         Self {
             op,
             target: target.clone(),
+            objects: vec![],
             effects,
             artifacts,
         }
@@ -145,7 +147,7 @@ impl Payload for Node {
             },
             effects: &self.effects,
             artifacts: &self.artifacts,
-            objects: &[],
+            objects: &self.objects,
             abi_inputs: &[],
             abi_results: &[],
             indirect_target: if matches!(
@@ -206,6 +208,7 @@ pub(super) struct Machine {
     pub byte: ViewId,
     pub fp: ViewId,
     pub reserved: ViewId,
+    pub link: ViewId,
     pub secured: ViewId,
     pub floats: Vec<ViewId>,
     pub bytes: Vec<ViewId>,
@@ -257,6 +260,8 @@ impl Machine {
         call_kills.push((Timing::Late, fp_unit));
         let sp = resources.unit().unwrap();
         let reserved = resources.view(int_bank, 64, &[sp], true).unwrap();
+        let link_unit = resources.unit().unwrap();
+        let link = resources.view(int_bank, 64, &[link_unit], true).unwrap();
         let secured = ints[if second { 3 } else { 1 }];
         let promises = if second { vec![low, secured] } else { vec![] };
         let floats = vec![low, fp];
@@ -271,6 +276,7 @@ impl Machine {
             byte: byte.unwrap(),
             fp,
             reserved,
+            link,
             secured,
             floats,
             bytes,
@@ -382,6 +388,33 @@ pub(super) fn fixture(
             },
         )
         .unwrap();
+    let mut context = context;
+    for (signature, _) in plan.view().signatures_with_ids() {
+        if context.areas(signature).is_none() {
+            continue;
+        }
+        for area in [AbiArea::Incoming, AbiArea::Outgoing, AbiArea::Results] {
+            let count = context.areas(signature).unwrap().slots(area).len();
+            let stride = if second { 16 } else { 8 };
+            context = context
+                .with_abi_layout(
+                    signature,
+                    area,
+                    AbiAreaLayout {
+                        slots: (0..count)
+                            .map(|index| AbiSlotLayout {
+                                offset: index * stride,
+                                bytes: stride,
+                                alignment: stride,
+                            })
+                            .collect(),
+                        bytes: count * stride,
+                        alignment: stride,
+                    },
+                )
+                .unwrap();
+        }
+    }
     check(&context, &lower, &machine);
 }
 pub(super) fn begin<'p>(

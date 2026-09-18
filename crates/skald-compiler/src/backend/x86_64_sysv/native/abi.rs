@@ -34,7 +34,6 @@ pub(in crate::backend) struct ComponentAbi {
     entry: AbiBindings,
     call: AbiBindings,
     stack_slots: Vec<Representation>,
-    #[cfg_attr(not(test), allow(dead_code))]
     outgoing_bytes: usize,
     noreturn: bool,
 }
@@ -48,7 +47,6 @@ impl ComponentAbi {
     pub(in crate::backend) fn stack_slots(&self) -> &[Representation] {
         &self.stack_slots
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn outgoing_bytes(&self) -> usize {
         self.outgoing_bytes
     }
@@ -165,6 +163,36 @@ pub(in crate::backend) fn classify(
         noreturn: signature.returns == ReturnShape::Never,
     })
 }
+/// Canonical slot footprints and area padding; never inferred from scalar widths.
+pub(super) fn area_layout(
+    slots: usize,
+    area: AbiArea,
+) -> Result<crate::backend::selected::AbiAreaLayout, AbiError> {
+    use crate::backend::selected::{AbiAreaLayout, AbiSlotLayout};
+    let bytes = if area == AbiArea::Outgoing {
+        outgoing_bytes(slots)?
+    } else {
+        slots
+            .checked_mul(STACK_SLOT_BYTES)
+            .filter(|n| *n <= i32::MAX as usize)
+            .ok_or(AbiError::StackSizeOverflow)?
+    };
+    Ok(AbiAreaLayout {
+        slots: (0..slots)
+            .map(|i| AbiSlotLayout {
+                offset: i * STACK_SLOT_BYTES,
+                bytes: STACK_SLOT_BYTES,
+                alignment: STACK_SLOT_BYTES,
+            })
+            .collect(),
+        bytes,
+        alignment: if area == AbiArea::Outgoing {
+            16
+        } else {
+            STACK_SLOT_BYTES
+        },
+    })
+}
 fn external_scalar(ty: ScalarType) -> bool {
     matches!(
         ty,
@@ -200,6 +228,23 @@ fn outgoing_bytes(slots: usize) -> Result<usize, AbiError> {
 }
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn explicit_area_layout_preserves_word_footprints_and_rejects_overflow() {
+        use super::*;
+        let incoming = area_layout(3, AbiArea::Incoming).unwrap();
+        let outgoing = area_layout(3, AbiArea::Outgoing).unwrap();
+        assert_eq!((incoming.bytes, incoming.alignment), (24, 8));
+        assert_eq!((outgoing.bytes, outgoing.alignment), (32, 16));
+        assert_eq!(incoming.slots, outgoing.slots);
+        assert_eq!(
+            area_layout(usize::MAX, AbiArea::Incoming).err(),
+            Some(AbiError::StackSizeOverflow)
+        );
+        assert_eq!(
+            area_layout(usize::MAX, AbiArea::Outgoing).err(),
+            Some(AbiError::StackSizeOverflow)
+        );
+    }
     use super::*;
     #[test]
     fn outgoing_area_limits_include_alignment_and_arithmetic_overflow() {

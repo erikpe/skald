@@ -1,5 +1,7 @@
 //! Target payloads expose requirements; shared and target checks own publication.
 mod abi;
+mod area_layout;
+pub(in crate::backend) use area_layout::{AbiAreaLayout, AbiSlotLayout};
 mod builder;
 mod context;
 mod description;

@@ -39,4 +39,5 @@ mod oracle;
 mod predicates;
 mod selection;
 
+mod frame;
 mod placement;

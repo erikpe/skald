@@ -705,7 +705,7 @@ request caller TLS; explicit trace accesses still require enabled policy and
 TLS authority. Native call/trace selection now covers the complete admitted pilot,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
-and frame checks use frozen parent facts. Frame planning is next in the
+and frame checks use frozen parent facts. Physical realization is next in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
 
 Shared placement drafts now borrow the exact selected publication, distinguish
@@ -729,5 +729,8 @@ parallel-copy resolver uses typed point-local cycle storage and legal declared
 working resources. Native baseline output passes the same independent checker
 as manual register placements. Tests cover simultaneous-copy semantics, request
 permutations, loop swaps, mixed banks, pressure, calls, tracing and entry.
-No frame or physical body exists yet; realization requires the checked placement.
-Concrete ABI-area extent/padding remains frame-planning work.
+Checked frame plans now borrow exact checked placement and combine selected
+objects, explicit storage and validated signature-local ABI layouts. Native
+limits, fixed outgoing areas and synthetic narrow addressing/result/link roles
+are covered by owner-local tests. Physical realization and verification remain
+separate obligations; see [frame planning](../compiler/FRAME_PLANNING.md).

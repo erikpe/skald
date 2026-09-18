@@ -16,7 +16,8 @@ drafts, structural validation and independent
 [placement checking](PLACEMENT_CHECKING.md) are implemented, including finite CFG
 availability analysis and immutable checked-placement publication. Deterministic
 baseline placement with unique private homes and explicit parallel transfers is
-implemented. Frame planning and physical realization remain planned.
+implemented. [Checked frame planning](FRAME_PLANNING.md) is implemented over
+exact checked placement; physical realization remains planned.
 
 ## Shared final-MIR lowering
 
@@ -414,7 +415,10 @@ reachability, build real helpers or certify production MIR projection.
 `backend::selected` supplies independent selected draft arenas over the shared
 block/value/object ID machinery. A selection context borrows a frozen target
 catalog and owns its resource catalog and symbolic ABI slot shapes keyed by
-checked signature identity. Entry and return slots use the owner signature; call
+checked signature identity. Explicit target slot layouts separately provide
+relative offsets, footprints, alignment and area extent; shared validation checks
+the layout against its logical shape. These are not concrete frame offsets.
+Entry and return slots use the owner signature; call
 slots use the called signature. One context therefore admits different types at
 slot zero in different boundaries while checking each area, index and type
 strictly. Checked
@@ -501,8 +505,10 @@ There is no default accepting verifier. Synthetic tests demonstrate guard and
 correction graphs, simultaneous edges, secured indirect calls, inherited helper
 attribution, partial resource preservation and receipt binding. They prove the
 shared interface is usable across two target shapes, not physical preservation.
-The private x86 pilot implements concrete opcodes and its ABI catalog. Placement
-and frame realization remain future work.
+The private x86 pilot implements concrete opcodes, its ABI catalog, baseline
+placement and independent placement acceptance.
+[Checked frame planning](FRAME_PLANNING.md) consumes exact checked placement and
+validated signature-local ABI layouts. Physical realization remains future work.
 
 ### Selected numeric and call-effect checking
 

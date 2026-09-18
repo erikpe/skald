@@ -12,6 +12,7 @@ use crate::{
 
 mod effects;
 mod failure;
+mod frame;
 mod graph;
 mod lir;
 mod pilot;

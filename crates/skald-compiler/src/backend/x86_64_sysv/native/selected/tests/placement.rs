@@ -85,7 +85,15 @@ fn native_register_placement_is_checked_against_canonical_target_facts() {
             .unwrap();
         let result = check_native_placement(draft);
         match register {
-            Gpr::Rax => assert!(result.is_ok(), "{:?}", result.err()),
+            Gpr::Rax => {
+                let checked = result.unwrap();
+                assert_eq!(
+                    crate::backend::x86_64_sysv::native::plan_native_frame(&checked)
+                        .unwrap()
+                        .bytes(),
+                    0
+                );
+            }
             Gpr::Rsp => assert_eq!(result.err().unwrap().reason, CheckReason::Reserved),
             Gpr::Rbx => assert_eq!(result.err().unwrap().reason, CheckReason::MissingValue),
             _ => unreachable!(),
@@ -233,7 +241,14 @@ fn native_memory_move_recipes_validate_scratch_and_kill_its_old_contents() {
             );
             let result = check_native_placement(draft);
             match scratch {
-                Some(Gpr::R10) => assert!(result.is_ok(), "{:?}", result.err()),
+                Some(Gpr::R10) => {
+                    let checked = result.unwrap();
+                    let frame =
+                        crate::backend::x86_64_sysv::native::plan_native_frame(&checked).unwrap();
+                    assert_eq!(frame.bytes(), 16);
+                    assert_eq!(frame.storage(first).unwrap().offset, -8);
+                    assert_eq!(frame.storage(second).unwrap().offset, -16);
+                }
                 Some(Gpr::Rax) => {
                     assert_eq!(result.err().unwrap().reason, CheckReason::MissingValue)
                 }

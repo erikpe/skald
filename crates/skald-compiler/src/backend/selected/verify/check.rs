@@ -134,21 +134,18 @@ pub(in crate::backend) fn verify_selected<'p, P: Payload>(
             && context.catalog.plan().runtime_trace() == RuntimeTracePolicy::Omitted;
         let area_bad = match object.role {
             ObjectRole::Abi { area, signature } => {
-                let Some(areas) = context.areas(signature) else {
+                if context.areas(signature).is_none() {
                     errors.push(failure(
                         GraphLocation::Object(id.index()),
                         SelectedReason::Abi,
                         object.origin,
                     ));
                     continue;
-                };
-                let slots = areas.slots(area);
-                slots
-                    .iter()
-                    .try_fold(0usize, |size, repr| {
-                        size.checked_add(usize::from(repr.bits()).div_ceil(8))
-                    })
-                    .is_none_or(|size| size > object.layout.size)
+                }
+                context.abi_layout(signature, area).is_none_or(|layout| {
+                    layout.bytes != object.layout.size
+                        || layout.alignment != object.layout.alignment
+                })
             }
             _ => false,
         };

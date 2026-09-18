@@ -9,8 +9,15 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(in crate::backend) struct CheckedPlacement<'s, 'p, P> {
     draft: PlacementDraft<'s, 'p, P>,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'s, 'p, P> CheckedPlacement<'s, 'p, P> {
+    pub(in crate::backend) fn assignments(
+        &self,
+    ) -> impl Iterator<Item = (Assignment, Location)> + '_ {
+        self.draft.assignments.iter().map(|(&a, &l)| (a, l))
+    }
+    pub(in crate::backend) fn transfer_points(&self) -> impl Iterator<Item = TransferPoint> + '_ {
+        self.draft.transfers.keys().copied()
+    }
     pub(in crate::backend) fn selected(&self) -> &'s VerifiedSelectedCallable<'p, P> {
         self.draft.selected
     }
@@ -23,6 +30,7 @@ impl<'s, 'p, P> CheckedPlacement<'s, 'p, P> {
     pub(in crate::backend) fn transfers(&self, point: TransferPoint) -> &[Transfer] {
         self.draft.transfers.get(&point).map_or(&[], Vec::as_slice)
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn require_selected(
         &self,
         selected: &VerifiedSelectedCallable<'p, P>,

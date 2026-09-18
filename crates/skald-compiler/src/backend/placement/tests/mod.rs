@@ -2,6 +2,7 @@
 mod baseline;
 mod checking;
 mod fixtures;
+mod frame;
 mod oracle;
 mod representation;
 

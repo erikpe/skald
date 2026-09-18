@@ -44,6 +44,11 @@ pub(in crate::backend) enum TransferPoint {
 }
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(in crate::backend) struct StorageId(pub(super) usize);
+impl StorageId {
+    pub(in crate::backend) fn index(self) -> usize {
+        self.0
+    }
+}
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(in crate::backend) enum Location {
     Resource(ViewId),

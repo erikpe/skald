@@ -55,7 +55,8 @@ successive eight-byte symbolic slots in physical component order. Incoming and
 outgoing bindings name different areas using the same slot indices, never RBP
 or RSP byte offsets. The outgoing area rounds to sixteen bytes and rejects
 arithmetic overflow or a rounded size greater than the existing signed 32-bit
-frame/address limit. This does not yet verify a complete frame size.
+frame/address limit. [Checked frame planning](FRAME_PLANNING.md) validates complete frame size,
+alignment and address displacement bounds over exact checked placement.
 
 Scalar integer/address results use the appropriate RAX view; binary64 uses XMM0.
 Unit/aggregate/nonreturning signatures have no logical scalar result. Internal

@@ -1,7 +1,7 @@
 # Low-Level Compiler Architecture Discoveries
 
-Status: one independent follow-up and one frame-integration prerequisite;
-signature-boundary ABI prerequisite resolved,
+Status: one independent follow-up; signature-boundary and frame-layout ABI
+prerequisites resolved,
 2026-09-18. Findings from the [architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
 are tracked here. Independent maintenance work stays outside active task scope;
 contract gaps must be resolved before their dependent consumers.
@@ -60,20 +60,28 @@ independent per-signature plans.
 
 ## Symbolic ABI area extent needs target slot layout
 
+**Status:** resolved by NP13; task baseline `1d248659`. Explicit signature-local
+`AbiAreaLayout`/`AbiSlotLayout` metadata is validated independently of logical
+shapes. Native verification reclassifies shapes and checks canonical word stride
+and padding. ABI objects require exact extent/alignment; frame plans overlay
+their protocol areas. Regressions cover forged extents/alignment, overflow,
+byte/boolean stack pressure and synthetic memory-result areas.
+
 **Priority:** high before native ABI-area objects/frame planning. **Owner:** shared
 selected ABI area records and native symbolic frame planning. **Boundary:** settle
 slot extent/alignment metadata with NP13, before native area objects are published.
 
-The shared selected object checker currently computes an ABI area's extent by
+The shared selected object checker previously computed an ABI area's extent by
 summing representation byte widths. Native SysV stack slots occupy eight bytes
 even for U8/Bool; incoming/outgoing byte offsets and outgoing sixteen-byte rounding
 are target layout facts. A spilled byte has representation width one byte but
-cannot certify an eight-byte physical area's extent with the current shared sum.
+could not certify an eight-byte physical area's extent with the old shared sum.
 Scalar selection introduces no ABI-area objects or physical offsets, so its
 per-signature shape checks are unaffected. This is a prerequisite for the later
 frame consumer, not a reason to weaken shape checks now.
 
-Give signature-local areas explicit checked slot layout/extent authority, or
+Original acceptance requirement: give signature-local areas explicit checked
+slot layout/extent authority, or
 separate symbolic component-shape authority from target-verified area layout.
 Preserve independent portable shared checks and reject forged sizes/alignments.
 Add byte/boolean stack-pressure and mixed-bank area-object/frame tests, including

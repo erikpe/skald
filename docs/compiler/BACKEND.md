@@ -1279,11 +1279,13 @@ assignment, cleanup, dispatch, and generic symbol machinery as assignment
 through a mutable root. The cell evidence is a compiler trust-boundary fact;
 it is not emitted metadata and does not alter field layout or callable ABI.
 
-## Planned native phase consumers
+## Private native phase consumers
 
 The private [native resource and component ABI contracts](X86_NATIVE_CONTRACTS.md)
 provide checked-signature classification and complete register facts for the new
 phase architecture. They do not change production emission or external support.
 Private native selection, baseline placement and independent placement acceptance
-are implemented; see the [shared phase status](LOW_LEVEL_IR.md). Frame planning
-and physical realization remain planned.
+are implemented; see the [shared phase status](LOW_LEVEL_IR.md).
+[Checked frame planning](FRAME_PLANNING.md) consumes exact checked placement.
+Physical realization and verification remain
+separate planned phases before production adoption.

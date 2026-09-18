@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-18; NP01–NP12 complete; NP13 is next.
+Status: in progress, 2026-09-18; NP01–NP13 complete; NP14 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -57,7 +57,7 @@ backend or claim full-language migration.
 - [x] NP10 — Placement representation and checker contract
 - [x] NP11 — Independent placement checking
 - [x] NP12 — Baseline placement and parallel transfers
-- [ ] NP13 — Symbolic frame planning and limits
+- [x] NP13 — Symbolic frame planning and limits
 - [ ] NP14 — Typed physical realization
 - [ ] NP15 — Independent physical verification
 - [ ] NP16 — Typed program closure and fragment storage
@@ -233,10 +233,10 @@ ordinary selected publication and target verification.
 
 **Purpose:** Freeze concrete frame and physical-state contracts before realization.
 
-- [ ] Resolve [signature-local ABI area layout authority](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#symbolic-abi-area-extent-needs-target-slot-layout) before publishing native ABI-area objects; representation byte widths do not establish SysV slot stride or area padding.
-- [ ] Combine semantic objects with placement homes, spills, saves, outgoing areas and transfer scratch as typed symbolic requirements; compute deterministic checked offsets using conservative object lifetimes.
-- [ ] Implement frame-pointer/fixed-outgoing-area policy, independent incoming slots, ABI alignment and width-aware preserved-resource save areas. Freeze supported x86 size/displacement limits and explicit rejection beyond bounds.
-- [ ] Checkpoint: document entry/return stack states, CFG join rules, prologue/epilogue and forwarding provenance, legal addressing recipes and declared scratch bounds. Test narrower synthetic target displacements and non-x86 result/link roles before consumers.
+- [x] Resolve [signature-local ABI area layout authority](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#symbolic-abi-area-extent-needs-target-slot-layout) before publishing native ABI-area objects; representation byte widths do not establish SysV slot stride or area padding.
+- [x] Combine semantic objects with placement homes, spills, saves, outgoing areas and transfer scratch as typed symbolic requirements; compute deterministic checked offsets using conservative object lifetimes.
+- [x] Implement frame-pointer/fixed-outgoing-area policy, independent incoming slots, ABI alignment and width-aware preserved-resource save areas. Freeze supported x86 size/displacement limits and explicit rejection beyond bounds.
+- [x] Checkpoint: document entry/return stack states, CFG join rules, prologue/epilogue and forwarding provenance, legal addressing recipes and declared scratch bounds. Test narrower synthetic target displacements and non-x86 result/link roles before consumers.
 
 **Tests:** Layout extent/alignment/nonoverlap and overflow boundaries, outgoing pressure, manual callee-save placements, partial preserved widths and permitted address materialization versus unsupported size errors.
 
@@ -385,7 +385,7 @@ permission to introduce it unnecessarily.
 | `backend/selected/verify/{check,descriptors,failure,publication,program}.rs`: shared checking helpers, `TargetVerifier`, `VerifiedSelectedCallable`, `SelectedReceipt`, `SelectedProgramBuilder` | `73b1fafe`; closure migrated NP01 `2cbd7ffd` | First native selected verification consumer; both shared and target checks remain mandatory; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{lir,selected}/edit/{mod,editor,rebuild}.rs`, `lir/edit/split.rs`: `LoweredEditor`, `SelectedEditor`, `LoweredRemap`, `SelectedRemap`, remapping/rebuilding and split helpers | `03e4ae42` | Native edits/analysis consumers; retain consuming authority and full reverification; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
 | `backend/{inspection,lir/inspect,selected/inspect}.rs`, `lir/mod.rs`, `selected/mod.rs`: visitors/renderers, immutable enumeration and explicit facade re-export groups | `495df6b9` | First native inspection/checkpoint consumers; no fabricated observations; reconcile NP19 | Scoped allowances remain until native consumption; durable APIs remain. Audit all annotations in these files, not only principal symbols |
-| `backend/x86_64_sysv/native/{mod,resources,abi}.rs`: `Gpr`, `NativeResources`, `ComponentAbi`, classifier, explicit facade imports and scoped non-test allowances | NP02, baseline `2cbd7ffd`; introducing commit `9a9e3bc1` | NP07/NP09 actual native selection consumers; NP12/NP13 placement/frame consumers; reconcile NP19 | NP07 retired resource/classifier/type/entry allowances. NP08 retired call/noreturn and caller-clobber allowances through the numeric reporter consumer. Only outgoing extent, preservation and REX queries retain item-scoped allowances until NP12–NP14. Tests retain lint checks; no legacy adapter or production switch |
+| `backend/x86_64_sysv/native/{mod,resources,abi}.rs`: `Gpr`, `NativeResources`, `ComponentAbi`, classifier, explicit facade imports and scoped non-test allowances | NP02, baseline `2cbd7ffd`; introducing commit `9a9e3bc1` | NP07/NP09 actual native selection consumers; NP12/NP13 placement/frame consumers; reconcile NP19 | NP07 retired resource/classifier/type/entry allowances. NP08 retired call/noreturn and caller-clobber allowances through the numeric reporter consumer. NP12 consumes preservation; NP13 consumes outgoing extent. REX queries retain item-scoped allowances until NP14. Tests retain lint checks; no legacy adapter or production switch |
 | `backend/pilot/{mod,facts,projection}.rs`, `x86_64_sysv/pilot_facts.rs`: private admission facade, admitted getters, projection entry points and item-scoped non-test allowances | NP03, baseline `9a9e3bc1`; introducing commit `879bfb47` | NP04/NP06 lower consumers; NP17 private pipeline; reconcile NP19 and LA05 public adoption | Durable checked planning boundary; program/plan/layout/signature getter allowances retired NP04; trace fact allowances retired NP06; admission entry remains scoped until private orchestration. No temporary lowerer, fallback, fake intrinsic input or production switch |
 | `backend/pilot/lower/`: shared adapter and private facade allowance | NP04, baseline `879bfb47`; introducing commit `a4c3f189` | NP05 numeric lowering; NP06 calls/trace/entry and program construction; NP17 private pipeline; reconcile NP19 | NP05 retired numeric pending gates. NP06 retired all remaining pending-feature variants, duplicated preflight and call/trace/entry rejection branches, and replaced the intrinsic test bypass with complete worklist closure. Retain shared adapter and streaming `lower_program`; its private entry allowance remains until NP17 orchestration. No fake body, trap, receipt or fallback |
 | `backend/pilot/lower/tests/oracle.rs`: private numeric fixture execution oracle | NP05, baseline `a4c3f189`; introducing commit `430a30bc` | Permanent owner-local tests; reconcile purpose NP19 | Retain independent lowering association/boundary evidence, with unsupported operations rejected. No production interpreter, target parity claim or executable authority |
@@ -397,14 +397,17 @@ permission to introduce it unnecessarily.
 | Finalized-parent construction compatibility adapters, if needed | NP01; record exact symbols/commit | NP01, checked again NP19 | NP01 directly replaced the old API; no compatibility adapter or alias introduced |
 | Frozen lower trace facts in `lir::CompletionReceipt`; native call fields, concrete trace cells and pure requests | NP09, task baseline `e35be34f` | NP10–NP16 placement/realization/closure; reconcile NP19 | Durable narrow immutable facts survive body release; no retained executable lower body, opaque trace payload, thunk bridge or instrumentation |
 | `backend/placement/{model,structure}.rs`: unchecked drafts and non-test dead-code allowances | NP10, task baseline `3413f792`; committed `1d0b84e6` | NP11 checker and NP12 producer; reconcile NP19 | NP11 retired module-wide model/structure allowances and consumed draft/type allowances; NP12 retires the draft builder and home/save/transfer-scratch construction allowances. Only `Spill` construction remains narrowly scoped until a spilling producer. Structural validation grants no authority; no producer success flag or realization bypass |
-| `backend/placement/check.rs`: private immutable checked queries; native `check_native_placement` entry and facade allowance | NP11, task baseline `1d0b84e6` | NP12 producer, NP13/NP14 frame/realization consumers and NP17 private orchestration; reconcile NP19 | Sole checked constructor runs legality, finite convergence and strict replay. Retain query/entry allowances only until actual consumers; no unchecked constructor, mutable draft accessor or producer flag |
+| `backend/placement/check.rs`: private immutable checked queries; native `check_native_placement` entry and facade allowance | NP11, task baseline `1d0b84e6` | NP12 producer, NP13/NP14 frame/realization consumers and NP17 private orchestration; reconcile NP19 | Sole checked constructor runs legality, finite convergence and strict replay. NP13 retires the checked-query impl allowance and consumes selected, assignment, storage and transfer queries. Only exact-selected query and native entry allowances remain until realization/orchestration; no unchecked constructor, mutable draft accessor or producer flag |
 | `backend/placement/tests/oracle.rs`: independent finite-state specification and native resource probe | NP10, task baseline `3413f792` | Durable independent checker regression reference, reconcile NP19 | Remains test-only and independent of producer/checker availability maps. No production path sampling, placement authority or temporary execution bridge |
 | Discovery-only receipts/request instrumentation | NP16 orchestration; record exact symbols/commit | NP16/NP19 | Discovery receipts never become executable authority; remove exploratory instrumentation, retain pure request rules |
 | Draft physical test consumers/renderer shortcuts, if introduced | NP14; record exact symbols/commit | NP15–NP16 | Final emission requires verified physical callable and complete program closure; no unchecked production route |
 | Fragment storage experiments/adapters, if introduced | NP16; record exact symbols/commit | NP16/NP19 | Retain only failure-safe typed-key storage with a demonstrated bounded-body purpose; no serializer/importer/cache |
 | Private explicit pilot entry/admission gate | NP17; record exact symbols/commit | LA05 adoption, transfer NP19 | Required private test consumer until adoption; retire or become the sole production entry, never a permanent fallback route |
 | Synthetic second-target fixtures and manual register placements | NP02/NP10 onward; record owners/commits | Permanent owner-local tests, audit NP19 | Retain independent portability/checker witnesses; no production registration, exports or blanket test-only phase gating |
-| `backend/placement/baseline/{produce,operands}.rs`, `placement/transfers.rs`: descriptor-local baseline and shared deterministic copy resolver | NP12, task baseline `9e6e2405`; awaiting user commit | Durable producer/resolver; NP13 frame requirements, NP14 realization, NP17 orchestration; reconcile NP19 | No producer success flag, availability proof map, fake checked product or compatibility bridge. Typed point-local cycle storage and target-declared working views remain explicit. Native baseline entry keeps one item-scoped non-test allowance until NP17 consumes it |
+| `backend/placement/baseline/{produce,operands}.rs`, `placement/transfers.rs`: descriptor-local baseline and shared deterministic copy resolver | NP12, task baseline `9e6e2405`; committed `1d248659` | Durable producer/resolver; NP13 frame requirements, NP14 realization, NP17 orchestration; reconcile NP19 | No producer success flag, availability proof map, fake checked product or compatibility bridge. Typed point-local cycle storage and target-declared working views remain explicit. Native baseline entry keeps one item-scoped non-test allowance until NP17 consumes it |
+
+| `backend/frame/{model,layout,planning,addressing}.rs`, native `plan_native_frame`: immutable exact-placement frame plans and item-scoped consumer-query allowances | NP13, task baseline `1d248659`; awaiting user commit | Durable layout authority; NP14 query consumers, NP17 native orchestration; reconcile NP19 | No frame draft, unchecked receipt, late storage/scratch allocation or legacy adapter. Retire individual query allowances with realization and native entry allowance with orchestration. Synthetic link-role construction remains item-scoped until a real second target |
+| `backend/selected/area_layout.rs`, `SelectionContext::with_abi_layout`, native canonical area checks | NP13, task baseline `1d248659`; awaiting user commit | Durable signature-local layout authority; reconcile NP19 | Replaces representation-width summation directly. Shared shape/layout checks and independent target canonical checks remain separate; no x86 stride in shared validation |
 
 ## Discoveries and closure record
 
@@ -924,3 +927,42 @@ fixtures enforce that policy on both profiles while manual placements retain the
 strategy-independent checker contract.
 
 NP12 is complete; NP13 is next. Changes remain uncommitted for the user.
+
+### Symbolic frame implementation record
+
+NP13 baseline: `1d248659`, the manually committed baseline placement task;
+roadmap baseline remains `f150d028`. The committed placement product and inherited
+query allowances were reviewed before implementation.
+
+Explicit `AbiAreaLayout`/`AbiSlotLayout` metadata separates logical component
+shapes from target footprints, stride, extent and padding. Shared checks reject
+forged shapes/layouts and ABI objects with mismatched extent/alignment. Native
+verification independently reclassifies shapes and checks canonical layouts.
+This resolves the indexed ABI-area extent prerequisite without adding a bridge.
+
+The shared frame owner borrows the exact checked placement. It lays out selected
+semantic/trace objects and placement homes/spills/saves/cycle scratch in stable
+identity order without reuse, overlays ABI objects on their protocol areas, and
+reserves maximum outgoing and separate memory-result areas. Incoming slots stay
+independent of body size. Checked arithmetic rejects overflow, unsupported
+alignment, rounded frame limits and displacement extents before publication.
+
+The native policy freezes aligned FP/fixed outgoing SP, no red zone, canonical
+incoming offsets and signed-32-bit size/displacement bounds. Synthetic witnesses
+exercise narrow direct ranges, declared bounded address materialization, a saved
+link-register header, memory-result areas and partial SIMD preservation widths.
+Materialization requires the target-approved dedicated scratch group and counts
+against the selected bundle's declared bound; transfers cannot borrow it.
+Manual native register-only, transfer-storage and callee-save placements use the
+same planner. Byte/boolean pressure preserves full word stride and area padding.
+The [frame checkpoint](../compiler/FRAME_PLANNING.md) records the concrete
+entry/call/join/epilogue and administrative forwarding acceptance rules before
+physical consumers. Actual physical execution/checking remains NP14–NP15.
+
+Validation: 731 focused backend tests passed during implementation. Final
+`make check` passed (3,430 compiler unit tests, workspace/integration/doc tests,
+runtime suites and 650 golden observations). Serial `make msrv-check` passed
+with Rust 1.82.0. Final-source formatting, build, lint and documentation checks
+passed; whitespace and closing diff checks passed. NP13 is complete; NP14 is
+next. No independent discovery was added; the existing golden artifact race
+remains a separate follow-up. Changes remain uncommitted for the user.

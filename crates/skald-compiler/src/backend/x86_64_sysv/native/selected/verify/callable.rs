@@ -30,6 +30,39 @@ impl Verifier {
         {
             return Err("noncanonical native entry ABI");
         }
+        // Shared layout validation proves shape/bounds, not canonical SysV stride.
+        draft.visit(|fact| {
+            if let SelectedFact::Resources { abi_areas, .. } = fact {
+                for (&signature, areas) in abi_areas {
+                    let classified = super::super::super::classify(
+                        context.catalog().plan(),
+                        signature,
+                        &self.resources,
+                        super::super::super::CallArity::Fixed,
+                    )
+                    .map_err(|_| "unsupported native ABI area signature")?;
+                    if areas.incoming != classified.stack_slots()
+                        || areas.outgoing != classified.stack_slots()
+                        || !areas.results.is_empty()
+                    {
+                        return Err("noncanonical native ABI area shape");
+                    }
+                    for area in [
+                        crate::backend::selected::AbiArea::Incoming,
+                        crate::backend::selected::AbiArea::Outgoing,
+                        crate::backend::selected::AbiArea::Results,
+                    ] {
+                        let expected =
+                            super::super::super::abi::area_layout(areas.slots(area).len(), area)
+                                .map_err(|_| "native ABI area overflow")?;
+                        if context.abi_layout(signature, area) != Some(&expected) {
+                            return Err("noncanonical native ABI area layout");
+                        }
+                    }
+                }
+            }
+            Ok(())
+        })?;
         let mut objects = BTreeMap::new();
         let mut concrete_definitions = BTreeMap::new();
         let mut failures = vec![];

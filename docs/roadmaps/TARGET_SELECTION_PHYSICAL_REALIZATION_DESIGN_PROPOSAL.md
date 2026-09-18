@@ -3,8 +3,8 @@
 Status: accepted, frozen and promoted LA03 design, 2026-09-18. Accepted by the
 user after review of the draft committed at `8834bcd6`.
 Implementation: [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md),
-in progress; streaming publication authority is implemented, native consumption
-remains pending.
+in progress; publication, native selection, checked placement and symbolic frame
+planning are implemented; physical realization and native integration remain pending.
 Source assessment: `f59d3fff`, the committed executable-model closing change.
 Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Inherited contracts: [frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)

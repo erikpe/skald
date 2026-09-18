@@ -4,8 +4,8 @@ Placement is private backend data over a verified selected callable. The shared
 `backend/placement` owner implements drafts, structural validation and independent
 finite availability checking. The checker consumes a draft and publishes an
 immutable `CheckedPlacement` only after static legality, CFG convergence and
-strict replay succeed. Deterministic baseline placement is implemented; frames
-and physical realization remain planned.
+strict replay succeed. Deterministic baseline placement and [checked frame planning](FRAME_PLANNING.md)
+are implemented; physical realization and verification remain planned.
 Drafts never authorize code generation.
 
 The test-only specification oracle remains separate from the production checker.
@@ -67,7 +67,7 @@ locations, rather than general persistent homes.
 `CheckedPlacement` owns its accepted draft and retains the borrow of the exact
 selected publication. Its fields and sole constructor are private to the checker;
 consumers have immutable assignment, storage and transfer queries. There is no
-mutable draft accessor, unchecked constructor or acceptance flag. Future frame
+mutable draft accessor, unchecked constructor or acceptance flag. Checked frame
 planning and realization consume this checked product, rather than structural
 validation results. Its snapshot comparison rejects a same-ID replacement.
 

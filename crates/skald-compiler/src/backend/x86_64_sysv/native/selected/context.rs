@@ -27,6 +27,24 @@ pub(in crate::backend) fn selection_context<'p>(
                 results: vec![],
             },
         )?;
+        for area in [
+            crate::backend::selected::AbiArea::Incoming,
+            crate::backend::selected::AbiArea::Outgoing,
+            crate::backend::selected::AbiArea::Results,
+        ] {
+            let count = if area == crate::backend::selected::AbiArea::Results {
+                0
+            } else {
+                abi.stack_slots().len()
+            };
+            let layout = super::super::abi::area_layout(count, area)?;
+            if area == crate::backend::selected::AbiArea::Outgoing
+                && layout.bytes != abi.outgoing_bytes()
+            {
+                return Err(AbiError::StackSizeOverflow);
+            }
+            context = context.with_abi_layout(signature, area, layout)?;
+        }
     }
     Ok(context)
 }

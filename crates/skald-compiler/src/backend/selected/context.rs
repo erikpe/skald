@@ -11,6 +11,7 @@ pub(in crate::backend) struct SelectionContext<'p> {
     pub(super) catalog: &'p TargetCatalog<'p>,
     pub resources: ResourceCatalog,
     pub(super) abi_areas: std::collections::BTreeMap<SignatureId, AbiAreas>,
+    abi_layouts: std::collections::BTreeMap<(SignatureId, super::AbiArea), super::AbiAreaLayout>,
     scope: Box<u8>,
 }
 impl<'p> SelectionContext<'p> {
@@ -22,6 +23,7 @@ impl<'p> SelectionContext<'p> {
             catalog,
             resources,
             abi_areas: std::collections::BTreeMap::new(),
+            abi_layouts: std::collections::BTreeMap::new(),
             scope: Box::new(0),
         }
     }
@@ -46,6 +48,29 @@ impl<'p> SelectionContext<'p> {
         }
         self.abi_areas.insert(signature, areas);
         Ok(self)
+    }
+    pub(in crate::backend) fn with_abi_layout(
+        mut self,
+        signature: SignatureId,
+        area: super::AbiArea,
+        layout: super::AbiAreaLayout,
+    ) -> Result<Self, PlanError> {
+        let shape = self
+            .areas(signature)
+            .ok_or(PlanError::OutOfBounds)?
+            .slots(area);
+        layout.validate(shape)?;
+        if self.abi_layouts.insert((signature, area), layout).is_some() {
+            return Err(PlanError::DuplicateDeclaration);
+        }
+        Ok(self)
+    }
+    pub(in crate::backend) fn abi_layout(
+        &self,
+        signature: SignatureId,
+        area: super::AbiArea,
+    ) -> Option<&super::AbiAreaLayout> {
+        self.abi_layouts.get(&(signature, area))
     }
     pub(in crate::backend) fn abi_bindings(
         &self,
