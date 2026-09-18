@@ -87,6 +87,12 @@ fn runtime_trace_attribution_routes_all_target_calls_through_the_audited_facade(
         root.join("artifacts.rs"),
         root.join("emit.rs"),
         root.join("lower/call/emission.rs"),
+        // The private native path consumes independently checked selected call/
+        // trace facts. Its finite physical recipe constructs a distinct typed
+        // instruction; the formatter only matches it. Neither can emit legacy
+        // machine calls or perform source attribution.
+        root.join("native/physical/recipes.rs"),
+        root.join("native/physical/format.rs"),
     ];
     let mut pending = vec![root];
     let mut violations = Vec::new();

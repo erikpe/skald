@@ -73,10 +73,10 @@ an executable AArch64 implementation.
 
 ## Physical-state checkpoint
 
-Realization must consume the exact selected, checked-placement and frame
-products. It may emit only declared transfers, selected recipes and frame
+Private native [realization](PHYSICAL_REALIZATION.md) consumes the exact
+selected, checked-placement and frame products. It may emit only declared transfers, selected recipes and frame
 protocol actions. It cannot add homes, saves, address scratch, calls, traps or
-control-flow edges. Object addresses and location offsets come from frame
+semantic control-flow edges. Object addresses and location offsets come from frame
 queries; generated prologue and epilogue actions retain typed frame provenance.
 
 Independent physical verification must establish these rules:

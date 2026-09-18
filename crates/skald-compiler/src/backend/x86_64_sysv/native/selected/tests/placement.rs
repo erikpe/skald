@@ -87,12 +87,11 @@ fn native_register_placement_is_checked_against_canonical_target_facts() {
         match register {
             Gpr::Rax => {
                 let checked = result.unwrap();
-                assert_eq!(
-                    crate::backend::x86_64_sysv::native::plan_native_frame(&checked)
-                        .unwrap()
-                        .bytes(),
-                    0
-                );
+                let frame =
+                    crate::backend::x86_64_sysv::native::plan_native_frame(&checked).unwrap();
+                assert_eq!(frame.bytes(), 0);
+                crate::backend::x86_64_sysv::native::realize_native(&selected, &checked, &frame)
+                    .unwrap();
             }
             Gpr::Rsp => assert_eq!(result.err().unwrap().reason, CheckReason::Reserved),
             Gpr::Rbx => assert_eq!(result.err().unwrap().reason, CheckReason::MissingValue),
@@ -248,6 +247,10 @@ fn native_memory_move_recipes_validate_scratch_and_kill_its_old_contents() {
                     assert_eq!(frame.bytes(), 16);
                     assert_eq!(frame.storage(first).unwrap().offset, -8);
                     assert_eq!(frame.storage(second).unwrap().offset, -16);
+                    crate::backend::x86_64_sysv::native::realize_native(
+                        &selected, &checked, &frame,
+                    )
+                    .unwrap();
                 }
                 Some(Gpr::Rax) => {
                     assert_eq!(result.err().unwrap().reason, CheckReason::MissingValue)

@@ -56,7 +56,7 @@ pub(in crate::backend) enum FloatCondition {
     AboveEqual,
 }
 impl FloatCondition {
-    pub(super) fn parity(self) -> bool {
+    pub(in crate::backend) fn parity(self) -> bool {
         !matches!(self, Self::Above | Self::AboveEqual)
     }
 }

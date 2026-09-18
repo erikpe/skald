@@ -153,7 +153,8 @@ TLS relocation and its finite scratch/address recipe must be fully described
 before physical realization; unsupported relocation forms reject rather than
 calling a resolver implicitly.
 
-Placement and physical realization must discharge the remaining movement and
+Private [physical drafts](PHYSICAL_REALIZATION.md) implement these recipes.
+Independent physical verification must discharge the remaining movement and
 encoding requirements against actual immutable opcodes and independent
 verification. A mismatch requires an explicit contract amendment before
 consumers, not a permissive descriptor.

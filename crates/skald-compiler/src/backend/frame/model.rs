@@ -79,12 +79,10 @@ pub(in crate::backend) struct FramePlan<'f, 's, 'p, P> {
     pub(super) object_accesses: BTreeMap<(Site, SelectedObjectId), AddressRecipe>,
 }
 impl<P> FramePlan<'_, '_, '_, P> {
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn policy(&self) -> FramePolicy {
         self.policy
     }
     // Read-only realization queries cannot change the receipt.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn object(&self, object: SelectedObjectId) -> Option<Region> {
         self.regions.get(&Key::Object(object)).copied()
     }
@@ -95,7 +93,6 @@ impl<P> FramePlan<'_, '_, '_, P> {
     ) -> Option<Region> {
         self.regions.get(&Key::Storage(storage.index())).copied()
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn object_access(
         &self,
         site: Site,
@@ -103,7 +100,6 @@ impl<P> FramePlan<'_, '_, '_, P> {
     ) -> Option<AddressRecipe> {
         self.object_accesses.get(&(site, object)).copied()
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn bytes(&self) -> usize {
         self.bytes
     }
@@ -111,7 +107,6 @@ impl<P> FramePlan<'_, '_, '_, P> {
     pub(in crate::backend) fn outgoing_bytes(&self) -> usize {
         self.outgoing_bytes
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn require_placement(
         &self,
         placement: &CheckedPlacement<'_, '_, P>,

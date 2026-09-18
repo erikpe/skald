@@ -8,6 +8,11 @@ Skald uses a visible, forward-moving compiler pipeline. Each phase owns one
 kind of decision, exposes an inspectable product, and passes stable identities
 forward instead of asking later phases to repeat source analysis.
 
+The private native pipeline now includes checked placement,
+[frame planning](FRAME_PLANNING.md) and typed
+[physical drafts](PHYSICAL_REALIZATION.md). Independent physical verification
+and whole-program native publication remain planned.
+
 ## Architecture principles
 
 1. **One owner per decision.** Syntax owns source shape, resolution owns name

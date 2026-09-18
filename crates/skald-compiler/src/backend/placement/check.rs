@@ -30,7 +30,6 @@ impl<'s, 'p, P> CheckedPlacement<'s, 'p, P> {
     pub(in crate::backend) fn transfers(&self, point: TransferPoint) -> &[Transfer] {
         self.draft.transfers.get(&point).map_or(&[], Vec::as_slice)
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn require_selected(
         &self,
         selected: &VerifiedSelectedCallable<'p, P>,

@@ -15,7 +15,8 @@ deterministic inspection are delivered. The active
 records executable-model evidence and retained-artifact removal obligations.
 Native [resource facts and component ABI classification](../compiler/X86_NATIVE_CONTRACTS.md)
 and private native selection, deterministic baseline placement and independent
-placement checking are implemented. Frame planning and physical realization remain pending
+placement checking, checked frame planning and typed physical drafts are implemented.
+Independent physical verification and final native publication remain pending
 under the [accepted, frozen target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
 and its [active implementation roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
 The owning model records the implemented streaming publication amendment;
@@ -436,8 +437,8 @@ An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
 delivery decisions. Phase preparation has qualified existing-boundary witnesses
 and complete baseline inputs; noisy cost gates remain inconclusive. The immediate
-next step is physical realization after verified native graphs, independent
-checked placement and exact-placement [frame planning](../compiler/FRAME_PLANNING.md), in the
+next step is independent physical verification of
+[typed native drafts](../compiler/PHYSICAL_REALIZATION.md), in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md), using the
 [frozen model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) and active
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs).

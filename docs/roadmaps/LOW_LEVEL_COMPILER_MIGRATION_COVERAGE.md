@@ -705,7 +705,7 @@ request caller TLS; explicit trace accesses still require enabled policy and
 TLS authority. Native call/trace selection now covers the complete admitted pilot,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
-and frame checks use frozen parent facts. Physical realization is next in the
+and frame checks use frozen parent facts. Independent physical verification is next in the
 [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
 
 Shared placement drafts now borrow the exact selected publication, distinguish
@@ -732,5 +732,8 @@ permutations, loop swaps, mixed banks, pressure, calls, tracing and entry.
 Checked frame plans now borrow exact checked placement and combine selected
 objects, explicit storage and validated signature-local ABI layouts. Native
 limits, fixed outgoing areas and synthetic narrow addressing/result/link roles
-are covered by owner-local tests. Physical realization and verification remain
-separate obligations; see [frame planning](../compiler/FRAME_PLANNING.md).
+are covered by owner-local tests. Typed [physical drafts](../compiler/PHYSICAL_REALIZATION.md)
+now expand the exact checked inputs with concrete native operands, ordered transfers,
+bounded recipes and frame actions. Independent physical verification and program
+closure remain separate obligations. Draft assembler witnesses certify encoding
+acceptance only, with no native execution or production-adoption claim.

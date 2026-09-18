@@ -2,6 +2,7 @@
 //! Target selection owns virtual instructions; physical emission is separate.
 mod abi;
 mod frame;
+mod physical;
 mod placement;
 mod resources;
 mod selected;
@@ -10,6 +11,8 @@ mod selected;
 pub(in crate::backend) use abi::{classify, AbiError, CallArity, ComponentAbi};
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use frame::plan_native_frame;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use physical::realize_native;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use placement::{check_native_placement, place_native_baseline};
 #[cfg_attr(not(test), allow(unused_imports))]
