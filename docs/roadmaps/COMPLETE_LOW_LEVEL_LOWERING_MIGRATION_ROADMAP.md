@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM06 are complete and LM07 is next.
+Status: active; LM01–LM07 are complete and LM08 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -44,7 +44,7 @@ per-callable or per-operation fallback.
 - [x] LM04 — Checkpoint the complete fact model
 - [x] LM05 — Lower complex places and aggregate call boundaries
 - [x] LM06 — Lower dispatch, runtime type operations and object initialization
-- [ ] LM07 — Lower copy, cleanup and complete-class finalization
+- [x] LM07 — Lower copy, cleanup and complete-class finalization
 - [ ] LM08 — Lower shared ownership and generated owner helpers
 - [ ] LM09 — Checkpoint the aggregate and lifecycle core
 - [ ] LM10 — Lower primitive and shared-owner optional behavior
@@ -252,13 +252,13 @@ gate, 650-case golden suite and Rust 1.82 MSRV check pass.
 **Purpose:** establish the ordered lifecycle core on which ownership, optionals
 and arrays depend.
 
-- [ ] Lower user/synthesized copy construction and assignment in certified
+- [x] Lower user/synthesized copy construction and assignment in certified
   base/field order with alias-safe self-assignment.
-- [ ] Lower full-expression cleanup and destruction while preserving completed
+- [x] Lower full-expression cleanup and destruction while preserving completed
   results and reverse completion order.
-- [ ] Generate complete-class finalizers, including user bodies and every field/
+- [x] Generate complete-class finalizers, including user bodies and every field/
   base cleanup shape, through the ordinary callable worklist.
-- [ ] Preserve source trace frames for user destructors and inherited attribution
+- [x] Preserve source trace frames for user destructors and inherited attribution
   for generated wrappers.
 
 **Tests:** copy/assignment overlap, nested destruction order, early failures,
@@ -266,6 +266,18 @@ result preservation, recursive class graphs and generated-finalizer closure.
 
 **Exit criteria:** class lifecycle and finalizers pass ordinary verification and
 native parity with no opaque lifecycle operation.
+
+Completed on 2026-09-19. Shared lowering now expands user and synthesized class
+copy construction/assignment through certified base and scalar/class field
+plans. Cleanup and full-expression cleanup call ordinary generated finalizers
+after scalar results are secured. Complete-class finalizers execute user bodies,
+nested class fields and bases in frozen order; their exact reserved dependencies
+close through the normal worklist, including inherited attribution back to the
+generated boundary. Native tests cover default/minimal MIR, enabled/omitted
+tracing, self assignment, nested copy, inheritance, result preservation and a
+source-attributed destructor failure. Optional, shared and array lifecycle
+shapes remain explicitly rejected for their later roadmap owners. `make check`
+and `make msrv-check` pass for the completed slice.
 
 ### LM08 — Lower shared ownership and generated owner helpers
 

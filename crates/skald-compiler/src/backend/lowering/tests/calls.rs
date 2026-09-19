@@ -18,7 +18,7 @@ fn object_aliases_and_direct_receivers_cross_role_based_lowering() {
         "class Pair { tag: u8; value: i64; init(value: i64) { self.tag = 1u8; self.value = value; } fn read() -> i64 { return self.value; } } \
          fn invoke(ref pair: Pair) -> i64 { return pair.read(); } \
          fn inspect_value(pair: Pair) -> i64 { return pair.value; } \
-         fn main() -> i64 { return 0; }",
+         fn main() -> i64 { var pair: Pair = Pair(7); return invoke(pair) + inspect_value(pair); }",
     );
     let admitted =
         admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
@@ -402,5 +402,5 @@ fn sparse_receiverless_static_calls_close_without_resurrecting_lifecycle_bodies(
     })
     .unwrap();
     assert_eq!(method_calls, 1);
-    assert_eq!(program.receipts().len(), 3);
+    assert_eq!(program.receipts().len(), 4);
 }

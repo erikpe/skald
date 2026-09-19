@@ -3,3 +3,4 @@ mod oracle;
 mod ordinary;
 
 mod calls;
+mod lifecycle;

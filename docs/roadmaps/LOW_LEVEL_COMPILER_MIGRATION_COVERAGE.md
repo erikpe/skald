@@ -123,8 +123,8 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `Store` | `lower/value.rs` | Explicit place address and width-correct store; final-MIR authorization is not rechecked as source policy | E05 | — | LA03 scalar; LM05 checked complex places |
 | `Call` | `lower/call.rs`, `lower/call/*` | Stabilized target and ordered role-based components; ordinary/direct/static/indirect/method/interface forms; see call inventory | E02, E05, E13 | G03 | Delivered: LA03 direct/indirect scalar, LM05 aggregate/direct-member boundary, LM06 dynamic dispatch |
 | `Initialize` | `lower/call.rs` | Call the selected initializer into its final destination; receiver origin preserved | E05 | — | Delivered by LM06 |
-| `CopyConstruct`, `CopyAssign` | `lower/copy.rs` | User/synthesized selection, base/field order, shared retain-before-release and alias-safe self-assignment | E06, E07 | — | LA04 |
-| `Cleanup`, `EndFullExpression` | `lower/cleanup.rs`, `lower/copy.rs` | Destruction plan and recorded reverse completion order; preserve already-computed result | E06 | — | LA04 |
+| `CopyConstruct`, `CopyAssign` | `lower/copy.rs` | User/synthesized selection, base/field order, shared retain-before-release and alias-safe self-assignment | E06, E07 | — | Delivered by LM07 for scalar/class fields; shared fields remain LM08 |
+| `Cleanup`, `EndFullExpression` | `lower/cleanup.rs`, `lower/copy.rs` | Destruction plan and recorded reverse completion order; preserve already-computed result | E06 | — | Delivered by LM07 for complete classes; wrapper/container cleanup remains with its owning family |
 | `BindCheckedView`, `EndCheckedView` | `lower/type_operations.rs`, `lower.rs` | Materialize static/complete/metadata components; current end is a verified lifetime no-op | E12 | — | Delivered by LM06 |
 | `SharedAllocate`, `SharedInitialize`, `SharedPublish` | `lower/ownership.rs`, `lower/call.rs` | Checked allocation, unpublished payload, selected constructor/copy and publish after completion | E07, E08 | — | LA04 |
 | `SharedStatic` | `lower/strings.rs` | Static/immortal provenance and backing reference; no dynamic retain/free of immortal data | E11 | — | LA04 |
@@ -284,7 +284,7 @@ LA03's pilot and LA04's full surface.
 | Six helpers per array ID: element initializer, element copier, clone, element destroyer, release, shared finalizer | `lower/array/helpers/{initialization,copy,destruction}.rs`; currently all declared array types | Shared helper LIR/worklist, explicit recursive calls and retain/free effects; one owner per symbol | E09, E10; — | LA04 |
 | Raw-address complete class copy wrappers | `lower/array/lifecycle.rs::lower_class_copy_helpers`; class dependency closure from array element shapes | Shared helper construction with checked component shapes; recursion broken by ordinary calls | E06, E09; — | LA04 |
 | Shared handle retain/release helpers | `lower/ownership/helpers.rs`; array element and static shutdown needs | Shared lowered graphs, inherited attribution and visible call clobbers; no source trace frame | E07, E16; G04 | LA04 |
-| Complete class finalizers | `lower/finalize.rs::lower_all`; currently all classes | Shared expansion of destruction plan: `UserBody`, `Field`, `SharedField`, `OptionalSharedField`, `OptionalClassField`, `OptionalField`, `ArrayField`, `Base`; free remains with releasing caller | E06, E07; — | LA04 |
+| Complete class finalizers | `lower/finalize.rs::lower_all`; currently all classes | Shared expansion of destruction plan: `UserBody`, `Field`, `SharedField`, `OptionalSharedField`, `OptionalClassField`, `OptionalField`, `ArrayField`, `Base`; free remains with releasing caller | E06, E07; — | Delivered by LM07 for `UserBody`, class `Field` and `Base`; ownership/optional/array steps remain LM08/LM11/LM13 |
 | Exact optional-box finalizers | `lower/optional_box.rs`, `lower/finalize/optional.rs`; `exact_optional` box types | Shared recursive optional payload cleanup; same ordinary lifecycle/call pipeline | E08; G04 for caller | LA04 |
 | Program initializer/finalizer | `lower/static_lifecycle.rs`; verified activation/shutdown coordinator | Shared lowered callables; `ZeroDefault` versus `Explicit` activation, exact reverse shutdown; transitions require no target runtime state | E14; — | LA04 |
 | Static cleanup shapes | `lower/static_lifecycle.rs`; `None`, `CompleteObject`, `OptionalClass`, `Shared`, `OptionalShared`, `AggregateOptional`, `Array` | Shared lowering realizes certified plan only; no backend activation discovery | E08, E14, E15; — | LA04 |
@@ -735,6 +735,21 @@ aggregate parameters, aliases and forwarded direct receivers. Trivial class
 cleanup is a semantic no-op; every nontrivial lifecycle body still rejects
 before admission.
 
+LM06 adds checked direct, virtual and interface dispatch, runtime membership,
+success-only checked views and initializer calls into final destinations.
+Typed metadata edges retain the exact dispatch data and generated finalizer
+needed by reachable object code.
+
+LM07 expands user and synthesized class copy through certified base/field plans,
+including alias-safe self assignment for scalar and nested class fields. Cleanup
+calls generated complete-class finalizers in the MIR-recorded reverse completion
+order after return values have been secured. Finalizers execute user bodies,
+nested class fields and bases in certified order through ordinary verified LIR;
+their reserved worklist dependencies close nested and inheritance graphs without
+recursive body construction. User destructors keep source trace frames, while
+generated wrapper calls use inherited operation attribution. Shared, optional
+and array lifecycle steps remain rejected for LM08, LM11 and LM13.
+
 LM03 adds the complete immutable resource catalog. Planning now owns active and
 retained-inactive static dispositions, activation/reverse-shutdown records,
 literal and failure backing, trace/TLS records, dispatch/container descriptors,
@@ -760,7 +775,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Scalar operations, guarded numeric cells, primitive casts and ordinary CFG | Typed signatures/layouts, failure data and guard associations | Delivered pilot retained as the common base; family-specific terminators complete with LM05–LM15 |
 | Complex places, object origins, aggregate results, aliases and receiver components | Exact/complete layouts, field/base offsets, object-view components and role-based signatures | Delivered by LM05; checked-view binding remains LM06 and array-alias binding remains LM14 |
 | Direct/virtual/interface dispatch, checked views, object casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | Delivered by LM06; owner-producing shared casts remain with LM08 |
-| Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | LM07 |
+| Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | Delivered by LM07 for scalar/class copy and user/class/base destruction; remaining step families retain LM08/LM11/LM13 owners |
 | Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | LM08 |
 | Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | LM10 |
 | Aggregate/class optionals, optional views and optional boxes | Recursive optional layouts, object views, box layers/allocation and finalizer dependencies | LM11 |

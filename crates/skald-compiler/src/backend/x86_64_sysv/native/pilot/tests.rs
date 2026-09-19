@@ -500,10 +500,61 @@ fn checked_division_failure_preserves_runtime_reporting_and_trace_policy() {
 }
 
 #[test]
-fn unsupported_lifecycle_rejects_without_changing_the_public_backend() {
+fn class_copy_cleanup_and_nested_finalizers_execute_through_the_verified_path() {
     let source = concat!(
-        "class Item { value:i64; init(value:i64){self.value=value;} ",
-        "fn read()->i64{return self.value;} destroy {} }",
+        "class Leaf { value:i64; init(value:i64){self.value=value;} ",
+        "copy(ref other:Leaf){self.value=other.value+10;} ",
+        "assign(ref other:Leaf){self.value=other.value+20;} destroy {} }",
+        "class Base { base:i64; init(base:i64){self.base=base;} ",
+        "copy(ref other:Base){self.base=other.base+30;} ",
+        "assign(ref other:Base){self.base=other.base+40;} destroy {} }",
+        "class Pair extends Base { left:Leaf; right:Leaf; ",
+        "init(base:i64,left:i64,right:i64){super(base);self.left=Leaf(left);self.right=Leaf(right);} }",
+        "fn main()->i64{",
+        "var source:Pair=Pair(1,2,3);var destination:Pair=source;",
+        "destination.left=destination.left;destination.right=source.left;source=source;",
+        "return destination.base+destination.left.value+destination.right.value+source.base;}",
+    );
+    for mode in [MirMode::Default, MirMode::Minimal] {
+        let fixture = fixture(mode, source);
+        for trace in [RuntimeTracePolicy::Enabled, RuntimeTracePolicy::Omitted] {
+            let assembly = compile(&fixture, trace, true)
+                .unwrap_or_else(|error| panic!("{mode:?}/{trace:?}: {error}"));
+            // Copy construction produces (31, 12, 13); assignment changes
+            // the destination leaves to (32, 22), while Pair self assignment
+            // changes the source to (41, 22, 23).
+            assert_exit(&assembly, trace, 126);
+        }
+    }
+}
+
+#[test]
+fn destructor_failure_keeps_the_user_body_and_cleanup_site_in_the_trace() {
+    let source = concat!(
+        "class Bomb { value:i64; init(value:i64){self.value=value;} ",
+        "destroy {var zero:i64=self.value-self.value;self.value=self.value/zero;} }",
+        "fn main()->i64{{var bomb:Bomb=Bomb(7);}return 0;}",
+    );
+    let fixture = fixture(MirMode::Default, source);
+    let assembly = compile(&fixture, RuntimeTracePolicy::Enabled, true).unwrap();
+    let output = run_native_assembly_with_runtime_trace_probe(&assembly);
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("panic: integer division by zero"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("Bomb.destroy"), "{stderr}");
+    assert!(stderr.contains("main::main"), "{stderr}");
+    assert!(!stderr.contains("ClassFinalizer"), "{stderr}");
+}
+
+#[test]
+fn unsupported_optional_lifecycle_rejects_without_changing_the_public_backend() {
+    let source = concat!(
+        "class Item { value:i64; pending:i64?; ",
+        "init(value:i64){self.value=value;self.pending=none;} ",
+        "fn read()->i64{return self.value;} }",
         "fn main()->i64{var item:Item=Item(7);return item.read();}",
     );
     let fixture = fixture(MirMode::Default, source);

@@ -20,7 +20,7 @@ pub(in crate::backend) fn lower_next<'plan>(
         LirCallableId::Helper(key)
             if key.family == crate::backend::plan::HelperFamily::ClassFinalizer =>
         {
-            super::generated::lower_trivial_class_finalizer(admitted, owner, key.layout)?
+            super::generated::lower_class_finalizer(admitted, owner, key.layout)?
         }
         _ => return Err(crate::backend::plan::PlanError::InvalidDomain.into()),
     };

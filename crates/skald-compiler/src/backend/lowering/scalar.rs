@@ -40,18 +40,8 @@ impl<'plan> Lowerer<'plan, '_> {
                     },
                 )?;
             }
-            MirInstruction::EndFullExpression(end)
-                if end.temporaries.iter().all(|cleanup| {
-                    crate::backend::planning::trivial_cleanup(
-                        self.admitted.program(),
-                        cleanup.target,
-                    )
-                }) => {}
-            MirInstruction::Cleanup(cleanup)
-                if crate::backend::planning::trivial_cleanup(
-                    self.admitted.program(),
-                    cleanup.target,
-                ) => {}
+            MirInstruction::EndFullExpression(end) => self.end_full_expression(block, end)?,
+            MirInstruction::Cleanup(cleanup) => self.cleanup(block, cleanup)?,
             MirInstruction::Assign(assign) => {
                 if self
                     .guards
@@ -73,6 +63,8 @@ impl<'plan> Lowerer<'plan, '_> {
             }
             MirInstruction::Call(call) => self.call(block, call)?,
             MirInstruction::Initialize(initialize) => self.initialize(block, initialize)?,
+            MirInstruction::CopyConstruct(copy) => self.copy_construct(block, copy)?,
+            MirInstruction::CopyAssign(copy) => self.copy_assign(block, copy)?,
             MirInstruction::BindCheckedView(binding) => self.bind_checked_view(block, binding)?,
             MirInstruction::EndCheckedView(_) => {}
             _ => return Err(PlanError::InvalidDomain.into()),

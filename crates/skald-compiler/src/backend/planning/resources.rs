@@ -194,6 +194,7 @@ fn declare_generated_resources(
     facts: &mut PlanFacts,
 ) -> Result<(), PlanError> {
     let required = input.required_runtime_entities().collect::<Vec<_>>();
+    let class_artifacts = required_class_artifacts(input, &required, facts)?;
     for array in &facts.semantic.arrays.clone() {
         if input.reachable_artifacts_only()
             && !required.contains(&BackendRequiredRuntimeEntity::ArrayLifecycle(array.array))
@@ -280,27 +281,63 @@ fn declare_generated_resources(
             ArtifactId::Callable(keys[&HelperFamily::ArrayElementDestroyer]),
         );
     }
-    for class in &facts.semantic.classes.clone() {
-        if input.reachable_artifacts_only() && !needs_class_dispatch(input, &required, class.class)
-        {
-            continue;
-        }
-        let finalizer = declare_helper(
+    let classes = facts
+        .semantic
+        .classes
+        .clone()
+        .into_iter()
+        .filter(|class| !input.reachable_artifacts_only() || class_artifacts.contains(&class.class))
+        .collect::<Vec<_>>();
+    for class in &classes {
+        declare_helper(
             facts,
             HelperFamily::ClassFinalizer,
             class.complete_layout,
             helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
-            class
-                .destruction
-                .iter()
-                .filter_map(|step| match step {
-                    DestructionStepFact::UserBody(id) => {
-                        Some(ArtifactId::Callable(LirCallableId::Source((*id).into())))
-                    }
-                    _ => None,
-                })
-                .collect(),
+            BTreeSet::new(),
         )?;
+    }
+    for class in &classes {
+        let finalizer = helper_for(facts, HelperFamily::ClassFinalizer, class.complete_layout)?;
+        if !class.destruction.is_empty() {
+            // Inherited attribution names the generated boundary explicitly,
+            // so the verified receipt includes that boundary alongside the
+            // actual callee and data references.
+            add_generated_dependency(facts, finalizer, ArtifactId::Callable(finalizer));
+        }
+        for step in &class.destruction {
+            let dependency = match *step {
+                DestructionStepFact::UserBody(id) => {
+                    add_generated_dependency(
+                        facts,
+                        finalizer,
+                        ArtifactId::Data(DataKey::ClassDispatch(class.class)),
+                    );
+                    ArtifactId::Callable(LirCallableId::Source(id.into()))
+                }
+                DestructionStepFact::Field(field) => {
+                    let field = facts
+                        .semantic
+                        .field(field)
+                        .ok_or(PlanError::UnknownDeclaration)?;
+                    let SemanticType::Class(target) = field.ty else {
+                        return Err(PlanError::InvalidDomain);
+                    };
+                    ArtifactId::Callable(helper_for(
+                        facts,
+                        HelperFamily::ClassFinalizer,
+                        facts.semantic.classes[target.index()].complete_layout,
+                    )?)
+                }
+                DestructionStepFact::Base(target) => ArtifactId::Callable(helper_for(
+                    facts,
+                    HelperFamily::ClassFinalizer,
+                    facts.semantic.classes[target.index()].complete_layout,
+                )?),
+                _ => continue,
+            };
+            add_generated_dependency(facts, finalizer, dependency);
+        }
         // Reachable publication declares only helpers with an executable edge.
         // The dispatch table needs its finalizer slot now; class copying and
         // shared-owner helpers acquire roots with their LM07/LM08 operations.
@@ -390,11 +427,10 @@ fn declare_generated_resources(
 
 fn declare_metadata(input: BackendInput<'_>, facts: &mut PlanFacts) -> Result<(), PlanError> {
     let required = input.required_runtime_entities().collect::<Vec<_>>();
+    let class_artifacts = required_class_artifacts(input, &required, facts)?;
     let word = facts.profile.data_layout.pointer_bytes;
     for dispatch in facts.semantic.dispatch_tables.clone() {
-        if input.reachable_artifacts_only()
-            && !needs_class_dispatch(input, &required, dispatch.class)
-        {
+        if input.reachable_artifacts_only() && !class_artifacts.contains(&dispatch.class) {
             continue;
         }
         let finalizer = helper_for(
@@ -503,15 +539,111 @@ fn declare_metadata(input: BackendInput<'_>, facts: &mut PlanFacts) -> Result<()
     Ok(())
 }
 
-fn needs_class_dispatch(
+fn required_class_artifacts(
     input: BackendInput<'_>,
     required: &[BackendRequiredRuntimeEntity],
-    class: crate::identity::ClassId,
-) -> bool {
-    required.contains(&BackendRequiredRuntimeEntity::ClassDispatch(class))
-        || input.reachable_callables().iter().any(|callable| {
-            matches!(callable, crate::identity::CallableId::Initializer(id) if id.class() == class)
+    facts: &PlanFacts,
+) -> Result<BTreeSet<crate::identity::ClassId>, PlanError> {
+    if !input.reachable_artifacts_only() {
+        return Ok(facts
+            .semantic
+            .classes
+            .iter()
+            .map(|class| class.class)
+            .collect());
+    }
+    let reachable = input
+        .reachable_callables()
+        .iter()
+        .copied()
+        .collect::<BTreeSet<_>>();
+    let mut classes = required
+        .iter()
+        .filter_map(|entity| match entity {
+            BackendRequiredRuntimeEntity::ClassDispatch(class) => Some(*class),
+            _ => None,
         })
+        .collect::<BTreeSet<_>>();
+    for callable in &reachable {
+        match *callable {
+            crate::identity::CallableId::Initializer(id) => {
+                classes.insert(id.class());
+            }
+            crate::identity::CallableId::CopyConstructor(id) => {
+                classes.insert(id.class());
+            }
+            crate::identity::CallableId::CopyAssignment(id) => {
+                classes.insert(id.class());
+            }
+            crate::identity::CallableId::Destructor(id) => {
+                classes.insert(id.class());
+            }
+            crate::identity::CallableId::Method(id) => {
+                classes.insert(id.class());
+            }
+            crate::identity::CallableId::Function(_)
+            | crate::identity::CallableId::StaticInitializer(_) => {}
+        }
+    }
+    for definition in input.program().executable_definitions() {
+        if !reachable.contains(&definition.callable()) {
+            continue;
+        }
+        for instruction in definition
+            .body()
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+        {
+            match instruction {
+                crate::mir::MirInstruction::Initialize(initialize) => {
+                    classes.insert(initialize.target.class());
+                }
+                crate::mir::MirInstruction::CopyConstruct(copy) => {
+                    classes.insert(copy.class);
+                }
+                crate::mir::MirInstruction::CopyAssign(copy) => {
+                    classes.insert(copy.class);
+                }
+                crate::mir::MirInstruction::Cleanup(cleanup) => {
+                    classes.insert(cleanup.target);
+                }
+                crate::mir::MirInstruction::EndFullExpression(end) => {
+                    classes.extend(end.temporaries.iter().map(|cleanup| cleanup.target));
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut pending = classes.iter().copied().collect::<Vec<_>>();
+    while let Some(class) = pending.pop() {
+        let fact = facts
+            .semantic
+            .class(class)
+            .ok_or(PlanError::UnknownDeclaration)?;
+        for step in &fact.destruction {
+            let target = match *step {
+                DestructionStepFact::Field(field) => {
+                    let field = facts
+                        .semantic
+                        .field(field)
+                        .ok_or(PlanError::UnknownDeclaration)?;
+                    let SemanticType::Class(target) = field.ty else {
+                        return Err(PlanError::InvalidDomain);
+                    };
+                    Some(target)
+                }
+                DestructionStepFact::Base(target) => Some(target),
+                _ => None,
+            };
+            if let Some(target) = target {
+                if classes.insert(target) {
+                    pending.push(target);
+                }
+            }
+        }
+    }
+    Ok(classes)
 }
 
 fn declare_literals(

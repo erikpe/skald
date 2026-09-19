@@ -9,6 +9,7 @@ mod entry;
 mod error;
 mod failure;
 mod generated;
+mod lifecycle;
 mod memory;
 mod numeric;
 mod origin;

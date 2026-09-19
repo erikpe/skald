@@ -89,9 +89,9 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         if end
                             .temporaries
                             .iter()
-                            .all(|cleanup| trivial_cleanup(program, cleanup.target)) => {}
+                            .all(|cleanup| supported_cleanup(program, cleanup.target)) => {}
                     MirInstruction::Cleanup(cleanup)
-                        if trivial_cleanup(program, cleanup.target) => {}
+                        if supported_cleanup(program, cleanup.target) => {}
                     MirInstruction::Assign(assign) => match &assign.rvalue.kind {
                         MirRvalueKind::Load(source) => place(source, owner)?,
                         MirRvalueKind::CallableAddress(address) => {
@@ -191,6 +191,18 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         signature_check(program, &declaration.parameters, MirType::Unit, owner)?;
                         arguments(&initialize.arguments, owner)?;
                     }
+                    MirInstruction::CopyConstruct(copy)
+                        if supported_constructor_copy(program, copy.operation) =>
+                    {
+                        place(&copy.destination, owner)?;
+                        place(&copy.source, owner)?;
+                    }
+                    MirInstruction::CopyAssign(copy)
+                        if supported_assignment_copy(program, copy.operation) =>
+                    {
+                        place(&copy.destination, owner)?;
+                        place(&copy.source, owner)?;
+                    }
                     MirInstruction::BindCheckedView(binding) => {
                         place(&binding.view.source, owner)?;
                         origin(&binding.view.origin, owner)?;
@@ -240,10 +252,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     Ok(())
 }
 
-pub(in crate::backend) fn trivial_cleanup(
-    program: &MirProgram,
-    root: crate::identity::ClassId,
-) -> bool {
+fn supported_cleanup(program: &MirProgram, root: crate::identity::ClassId) -> bool {
     let mut pending = vec![root];
     let mut seen = std::collections::BTreeSet::new();
     while let Some(class) = pending.pop() {
@@ -255,6 +264,7 @@ pub(in crate::backend) fn trivial_cleanup(
         };
         for step in &class.destruction.steps {
             match *step {
+                MirDestructionStep::UserBody(_) => {}
                 MirDestructionStep::Base(base) => pending.push(base),
                 MirDestructionStep::Field(field) => match program
                     .class(field.class())
@@ -266,6 +276,90 @@ pub(in crate::backend) fn trivial_cleanup(
                 },
                 _ => return false,
             }
+        }
+    }
+    true
+}
+
+fn supported_constructor_copy(
+    program: &MirProgram,
+    root: MirSelectedCopyOperation<crate::identity::CopyConstructorId>,
+) -> bool {
+    let mut pending = vec![root];
+    while let Some(operation) = pending.pop() {
+        let class = match operation {
+            MirSelectedCopyOperation::User(id) => id.class(),
+            MirSelectedCopyOperation::Synthesized(class) => class,
+        };
+        let Some(capability) = program.class(class).map(|class| &class.copy_constructor) else {
+            return false;
+        };
+        match (operation, capability) {
+            (MirSelectedCopyOperation::User(id), MirCopyCapability::User(copy))
+                if copy.operation == id =>
+            {
+                if let Some(base) = copy.base {
+                    pending.push(base.operation);
+                }
+            }
+            (
+                MirSelectedCopyOperation::Synthesized(selected),
+                MirCopyCapability::Synthesized(copy),
+            ) if copy.class == selected => {
+                if let Some(base) = copy.base {
+                    pending.push(base.operation);
+                }
+                for field in &copy.fields {
+                    match *field {
+                        MirSynthesizedFieldCopy::Scalar { .. } => {}
+                        MirSynthesizedFieldCopy::Class { operation, .. } => pending.push(operation),
+                        _ => return false,
+                    }
+                }
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+fn supported_assignment_copy(
+    program: &MirProgram,
+    root: MirSelectedCopyOperation<crate::identity::CopyAssignmentId>,
+) -> bool {
+    let mut pending = vec![root];
+    while let Some(operation) = pending.pop() {
+        let class = match operation {
+            MirSelectedCopyOperation::User(id) => id.class(),
+            MirSelectedCopyOperation::Synthesized(class) => class,
+        };
+        let Some(capability) = program.class(class).map(|class| &class.copy_assignment) else {
+            return false;
+        };
+        match (operation, capability) {
+            (MirSelectedCopyOperation::User(id), MirCopyCapability::User(copy))
+                if copy.operation == id =>
+            {
+                if let Some(base) = copy.base {
+                    pending.push(base.operation);
+                }
+            }
+            (
+                MirSelectedCopyOperation::Synthesized(selected),
+                MirCopyCapability::Synthesized(copy),
+            ) if copy.class == selected => {
+                if let Some(base) = copy.base {
+                    pending.push(base.operation);
+                }
+                for field in &copy.fields {
+                    match *field {
+                        MirSynthesizedFieldCopy::Scalar { .. } => {}
+                        MirSynthesizedFieldCopy::Class { operation, .. } => pending.push(operation),
+                        _ => return false,
+                    }
+                }
+            }
+            _ => return false,
         }
     }
     true

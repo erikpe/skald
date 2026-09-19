@@ -10,8 +10,6 @@ mod projection;
 mod resources;
 mod signatures;
 
-pub(in crate::backend) use admission::trivial_cleanup;
-
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use facts::{
     AdmissionError, AdmittedProgram, TraceContext, TraceFacts, TraceLocation, TraceRequest,
