@@ -30,7 +30,6 @@ pub(in crate::backend) fn check_native_placement<'s, 'p>(
     placement::check_placement(draft, &NativeTarget::new(profile)?)
 }
 /// Conservative placement remains private until whole-program orchestration.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn place_native_baseline<'s, 'p>(
     selected: &'s VerifiedSelectedCallable<'p, Instruction>,
 ) -> Result<CheckedPlacement<'s, 'p, Instruction>, CheckFailure> {

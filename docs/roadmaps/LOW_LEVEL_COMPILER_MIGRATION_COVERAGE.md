@@ -705,9 +705,15 @@ request caller TLS; explicit trace accesses still require enabled policy and
 TLS authority. Native call/trace selection now covers the complete admitted pilot,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
-and frame checks use frozen parent facts. Typed physical-program closure now
-streams checked fragments and reconciles exact finalized parents before assembly
-publication in the [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
+and frame checks use frozen parent facts. Typed physical-program closure streams
+checked fragments and reconciles exact finalized parents before assembly
+publication. The private whole-program pilot now drives admitted source through
+projection, frozen discovery, lowering, selection, baseline placement, symbolic
+frames, physical verification and exact artifact closure without fallback. Native
+execution covers the explicit trace/MIR/artifact-policy matrix, primitive and
+failure paths, secured indirect calls and bidirectional scalar C boundaries,
+including seven-integer/nine-floating pressure. The runtime-owned ABI marker and
+trace TLS spellings remain unchanged; public/default emission remains legacy.
 
 Shared placement drafts now borrow the exact selected publication, distinguish
 private value storage from semantic objects and signature-keyed ABI slots, and

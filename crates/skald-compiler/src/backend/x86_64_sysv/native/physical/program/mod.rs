@@ -12,14 +12,12 @@ use crate::backend::{
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
-    fmt::{self, Write},
-    io,
+    fmt, io,
 };
 pub(super) use store::FragmentStore;
 pub(in crate::backend) use store::TempFragmentStore;
 
 #[derive(Debug)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum ProgramError {
     Inventory(InventoryError),
     DuplicateDefinition,
@@ -62,7 +60,6 @@ impl From<fmt::Error> for ProgramError {
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct PhysicalProgramBuilder<'p, S = TempFragmentStore> {
     context: &'p SelectionContext<'p>,
     expected: BTreeSet<LirCallableId>,
@@ -70,7 +67,6 @@ pub(in crate::backend) struct PhysicalProgramBuilder<'p, S = TempFragmentStore> 
     store: S,
     symbols: Symbols,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct VerifiedAssembly {
     text: String,
 }
@@ -82,7 +78,6 @@ impl<'p> PhysicalProgramBuilder<'p, TempFragmentStore> {
     ) -> Result<Self, ProgramError> {
         Self::with_store_and_symbols(context, TempFragmentStore::create()?, BTreeMap::new())
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn temporary_with_external_symbols(
         context: &'p SelectionContext<'p>,
         symbols: BTreeMap<crate::identity::ExternalLinkId, String>,
@@ -129,7 +124,6 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
             symbols: Symbols::new(context, external)?,
         })
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn complete(
         &mut self,
         body: &VerifiedPhysicalCallable<'_, '_, '_, 'p>,
@@ -151,7 +145,6 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
         self.completed.insert(key, receipt);
         Ok(())
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn finish(
         mut self,
         parent: &'p VerifiedSelectedProgram<'p>,
@@ -175,29 +168,6 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
         for key in &self.expected {
             text.push_str(&self.store.read(*key)?);
         }
-        if let Some(declaration) = self
-            .context
-            .catalog()
-            .plan()
-            .artifacts()
-            .find(|declaration| declaration.key == ArtifactId::TraceTls)
-        {
-            let bytes = declaration
-                .layout
-                .map(|layout| {
-                    let view = self.context.catalog().plan();
-                    view.layout(view.layout_id(layout.index())?)
-                        .map(|fact| fact.size)
-                })
-                .transpose()?
-                .ok_or(ProgramError::MissingDefinition(ArtifactId::TraceTls))?;
-            text.push_str(".section .tbss,\"awT\",@nobits\n.p2align 3\n");
-            writeln!(
-                text,
-                ".type {0},@tls_object\n{0}:\n.zero {bytes}\n.size {0}, {bytes}",
-                self.symbols.name(ArtifactId::TraceTls),
-            )?;
-        }
         text.push_str(".section .rodata\n");
         for data in parent.parent().data().chain(self.context.catalog().data()) {
             render::data(&mut text, data, &|id| self.symbols.name(id))?;
@@ -214,7 +184,6 @@ impl VerifiedAssembly {
     pub(in crate::backend) fn as_str(&self) -> &str {
         &self.text
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn into_string(self) -> String {
         self.text
     }
@@ -250,7 +219,7 @@ impl Symbols {
                     id,
                     match id {
                         ArtifactId::Runtime(service) => runtime_symbol(service).to_owned(),
-                        ArtifactId::TraceTls => ".Lska_native_trace_tls".to_owned(),
+                        ArtifactId::TraceTls => crate::backend::RUNTIME_TRACE_TOP_SYMBOL.to_owned(),
                         ArtifactId::Callable(LirCallableId::Entry) => "main".to_owned(),
                         ArtifactId::External(key) => external
                             .remove(&key)
@@ -286,6 +255,6 @@ fn runtime_symbol(service: crate::backend::plan::RuntimeService) -> &'static str
         IoRead => "ska_rt_io_read",
         IoWrite => "ska_rt_io_write",
         IoClose => "ska_rt_io_close",
-        AbiMarker => "ska_rt_abi_marker",
+        AbiMarker => crate::backend::RUNTIME_ABI_MARKER_SYMBOL,
     }
 }

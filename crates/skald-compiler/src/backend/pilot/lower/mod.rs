@@ -16,7 +16,7 @@ mod worklist;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use error::LowerError;
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use worklist::{lower_next, lower_program};
+pub(in crate::backend) use worklist::{lower_next, lower_program, lower_program_with};
 
 #[cfg(test)]
 mod tests;

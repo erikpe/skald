@@ -3,6 +3,7 @@
 mod abi;
 mod frame;
 mod physical;
+mod pilot;
 mod placement;
 mod resources;
 mod selected;
@@ -16,6 +17,8 @@ pub(in crate::backend) use physical::{
     check_native_physical, realize_native, Inspection, PhysicalFact, PhysicalProgramBuilder,
     PhysicalReceipt, VerifiedAssembly, VerifiedPhysicalCallable,
 };
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use pilot::compile_native_pilot;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use placement::{check_native_placement, place_native_baseline};
 #[cfg_attr(not(test), allow(unused_imports))]

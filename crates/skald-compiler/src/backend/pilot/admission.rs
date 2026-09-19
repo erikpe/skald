@@ -10,7 +10,6 @@ fn unsupported(callable: Option<CallableId>, reason: impl Into<String>) -> Pilot
 }
 
 /// An exhaustive whitelist of executable forms; new MIR forms require review.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn check(input: BackendInput<'_>) -> Result<(), PilotError> {
     let program = input.program();
     if !input.active_static_fields().is_empty() {

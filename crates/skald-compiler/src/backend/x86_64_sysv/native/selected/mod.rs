@@ -16,6 +16,7 @@ pub(in crate::backend) use model::{FloatCondition, IntegerCondition};
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use model::{Instruction, Opcode, Origin, Site, ValueRef};
 pub(in crate::backend) use numeric::{Cell, Numeric};
+pub(in crate::backend) use requests::requests as discover_requests;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use select::{select, SelectionError};
 #[cfg_attr(not(test), allow(unused_imports))]

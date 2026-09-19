@@ -226,6 +226,24 @@ pub(crate) fn lower_source_to_complete_final_mir_with_sources(
     })
 }
 
+/// Runs the mandatory MIR pipeline with the `None` optimization profile while
+/// retaining sources for backend trace tests.
+pub(crate) fn lower_source_to_minimal_final_mir_with_sources(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+) -> FinalMirWithSources {
+    lower_source_to_final_mir_with_sources_using(path, text, |mir| {
+        let schedule = crate::passes::resolve_mir_pass_schedule(
+            crate::passes::MirOptimizationProfile::None,
+            std::iter::empty::<&str>(),
+        )
+        .expect("minimal test MIR schedule must resolve");
+        crate::passes::run_mir_pipeline_measured(mir, &schedule)
+            .result
+            .expect("test source must produce verified minimal final MIR")
+    })
+}
+
 fn lower_source_to_final_mir_with_sources_using(
     path: impl AsRef<Path>,
     text: impl Into<String>,
@@ -468,6 +486,51 @@ pub(crate) fn run_native_assembly_with_runtime_trace_probe(output: &str) -> std:
         String::from_utf8_lossy(&linked.stderr)
     );
 
+    Command::new(executable.path()).output().unwrap()
+}
+
+/// Links generated assembly with the real runtime and a test-owned C ABI probe.
+pub(crate) fn run_native_assembly_with_c_probe(
+    output: &str,
+    probe_source: &str,
+) -> std::process::Output {
+    let executable = TemporaryFile::new("native-c-probe-executable").unwrap();
+    let probe = TemporaryFile::new("native-c-probe.c").unwrap();
+    fs::write(probe.path(), probe_source).unwrap();
+    let repository = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("compiler crate must live beneath the repository root");
+    let include = repository.join("runtime/include");
+    let runtime = repository.join("runtime/src");
+    let mut child = Command::new("cc")
+        .args(["-std=c11", "-Wall", "-Wextra", "-Werror"])
+        .arg("-I")
+        .arg(include)
+        .args(["-x", "assembler", "-", "-x", "c"])
+        .arg(runtime.join("skald_runtime.c"))
+        .arg(runtime.join("panic.c"))
+        .arg(runtime.join("io.c"))
+        .arg(probe.path())
+        .arg("-o")
+        .arg(executable.path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("native C probes require the Linux `cc` toolchain");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(output.as_bytes())
+        .unwrap();
+    let linked = child.wait_with_output().unwrap();
+    assert!(
+        linked.status.success(),
+        "linker rejected generated C-probe output:\n{}\nassembly:\n{output}",
+        String::from_utf8_lossy(&linked.stderr)
+    );
     Command::new(executable.path()).output().unwrap()
 }
 

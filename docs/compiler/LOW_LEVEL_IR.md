@@ -19,7 +19,10 @@ baseline placement with unique private homes and explicit parallel transfers is
 implemented. [Checked frame planning](FRAME_PLANNING.md) is implemented over
 exact checked placement. Private typed [physical realization](PHYSICAL_REALIZATION.md)
 and independent native checking are implemented, with immutable physical
-publication and requested-only inspection. Final program closure remains planned.
+publication and requested-only inspection. A private whole-program x86 pilot
+streams admitted bodies through both construction passes, every mandatory check,
+frame planning and exact final program closure, then returns immutable assembly.
+The public/default backend remains unchanged.
 
 ## Shared final-MIR lowering
 
@@ -131,8 +134,8 @@ synthetic empty bodies.
 `lower_program` streams each verified body to a consumer and retains exact
 completion receipts. It materializes all declared failure and enabled trace
 bytes/context/location data with checked relocations, then publishes the lower
-inventory witness. Trace TLS has a frozen declaration; its physical zero storage
-and relocation recipe belong to later target catalog/emission work. Consumer
+inventory witness. Trace TLS has a frozen declaration; its physical relocation
+recipe refers to runtime-owned zero storage. Consumer
 failure cannot publish closure. This proves shared lowering, without granting
 selected, physical or executable authority; the public backend remains legacy.
 
@@ -308,9 +311,11 @@ message artifact with exact byte length. The shared failure catalog is also used
 by current native emission, preventing a second message list. Arbitrary
 nonreturning calls retain an explicit terminal call without inventing a reason.
 Hard trap is a separate terminal with no reporter. These terminals have no
-cleanup/unwind edges; target selection later exposes the defensive trap if a
-nonreturning callee violates its contract. Explicit data initializers and inventory closure are checked during program
-publication. Native discovery and physical lowering remain future responsibilities.
+cleanup/unwind edges; target selection exposes the defensive trap if a
+nonreturning callee violates its contract. Explicit data initializers and inventory
+closure are checked during program publication. Native discovery freezes the
+target catalog before executable construction, and the private x86 pilot consumes
+the resulting lower products.
 
 The shared-release fixture uses ordinary loads/stores and branches for immortal,
 ordinary and last-owner paths, then an indirect finalizer call and free of the
@@ -409,7 +414,8 @@ missing-definition, duplicate and foreign-context completions fail.
 
 These APIs permit callable-at-a-time construction before lower-program closure;
 physical closure now retains exact receipts while spooling verified fragments.
-Production native orchestration remains planned. The
+The private x86 pilot reconciles both finalized parents before publishing
+assembly; production adoption remains planned. The
 supplied catalog remains declaration authority: checks do not rediscover semantic
 reachability, build real helpers or certify production MIR projection.
 

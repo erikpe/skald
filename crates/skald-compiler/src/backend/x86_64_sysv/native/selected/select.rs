@@ -42,7 +42,6 @@ impl From<PlanError> for SelectionError {
 }
 
 /// Numeric corrections, ABI events and trace memory cells precede publication.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn select<'p>(
     context: &'p SelectionContext<'p>,
     body: &VerifiedCallable<'p>,

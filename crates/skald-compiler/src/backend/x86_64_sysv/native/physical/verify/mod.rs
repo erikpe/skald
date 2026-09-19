@@ -57,7 +57,6 @@ impl PhysicalError {
         }
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn check_native_physical<'a, 'f, 's, 'p>(
     draft: PhysicalDraft<'a, 'f, 's, 'p>,
     selected: &VerifiedSelectedCallable<'p, SelectedInstruction>,

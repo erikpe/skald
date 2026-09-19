@@ -11,7 +11,6 @@ use crate::backend::{
 use crate::mir::*;
 use std::collections::BTreeMap;
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn admit(input: BackendInput<'_>) -> Result<AdmittedPilot<'_>, PilotError> {
     admission::check(input)?;
     let program = input.program();

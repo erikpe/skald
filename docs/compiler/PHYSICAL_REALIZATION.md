@@ -105,12 +105,17 @@ used as verification evidence.
 Finalization requires every retained callable exactly once, reconciles every
 physical receipt with the finalized selected program, and checks typed references
 against the frozen catalog. Only then are fragments read in canonical callable
-order and combined with checked data definitions and TLS storage into an immutable
-assembly product. Missing, duplicate, stale or foreign bodies reject; read, write
+order and combined with checked data definitions into an immutable assembly
+product. Trace code refers to the runtime-owned versioned TLS symbol. Missing,
+duplicate, stale or foreign bodies reject; read, write
 and cleanup failures produce errors and the temporary store removes residual
 files on drop. External linker spellings are explicit projected inputs keyed by
 typed external identities; absent or surplus entries reject before construction.
 
-Owner-local assembler witnesses consume this closed product. Assembler acceptance
-alone does not establish native semantic execution. The ordinary backend remains
-unchanged until the separate native pilot integration and adoption workstreams.
+The private whole-program pilot consumes this closed product after mandatory
+selection, placement, frame and physical checks. Its native execution matrix
+covers default/minimal MIR schedules, both trace policies and complete/reachable
+artifact policies; scalar C probes exercise both call directions and integer/SIMD
+bank pressure. Receiver, hidden-result and alias-origin components remain native
+phase fixtures because their source forms are deliberately outside admission.
+The ordinary backend remains unchanged until the separate adoption workstream.

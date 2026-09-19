@@ -4,7 +4,6 @@ use crate::backend::{
     frame::{plan_frame, FrameError, FramePlan, FramePolicy, ReturnAddress},
     placement::CheckedPlacement,
 };
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn plan_native_frame<'f, 's, 'p>(
     placement: &'f CheckedPlacement<'s, 'p, Instruction>,
 ) -> Result<FramePlan<'f, 's, 'p, Instruction>, FrameError> {

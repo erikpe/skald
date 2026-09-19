@@ -9,7 +9,6 @@ use crate::backend::{
     selected::{Payload, SelectedFact, VerifiedSelectedCallable},
 };
 use std::collections::BTreeMap;
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn realize_native<'a, 'f, 's, 'p>(
     selected: &VerifiedSelectedCallable<'p, SelectedInstruction>,
     placement: &'f CheckedPlacement<'s, 'p, SelectedInstruction>,

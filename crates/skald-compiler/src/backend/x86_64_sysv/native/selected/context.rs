@@ -4,7 +4,6 @@ use crate::backend::{
     lir::TargetCatalog,
     selected::{AbiAreas, SelectionContext},
 };
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn selection_context<'p>(
     catalog: &'p TargetCatalog<'p>,
 ) -> Result<SelectionContext<'p>, AbiError> {

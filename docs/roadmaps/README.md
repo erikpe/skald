@@ -10,7 +10,7 @@ not by roadmap history.
 
 | Roadmap | Status | Purpose | Next task | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; checked native phases and typed program closure implemented | Deliver the private whole-program native pilot through independently checked native phases | NP17 — Whole-program native pilot | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
+| [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) | In progress; private whole-program native pilot executes through all checked phases | Harden recipes and observations, then prepare the next-architecture handoff | NP18 — Native hardening, observations and handoff | Frozen target design, accepted model amendment and completed-model handoff; full migration, adoption and allocation remain separate |
 
 ## Pending discovery and planning records
 
