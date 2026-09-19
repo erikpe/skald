@@ -18,12 +18,28 @@ pub(super) struct Lowerer<'plan, 'input> {
     pub(super) builder: DraftBuilder<'plan>,
     pub(super) blocks: Vec<BlockHandle<'plan>>,
     pub(super) values: Vec<ValueHandle<'plan>>,
-    pub(super) objects: Vec<ObjectHandle<'plan>>,
+    pub(super) objects: Vec<Option<ObjectHandle<'plan>>>,
+    /// Entry-carried addresses replace local objects for aggregate results,
+    /// aggregate value parameters, aliases, and receivers.
+    pub(super) entry_addresses: BTreeMap<StorageId, ValueHandle<'plan>>,
+    pub(super) object_origins: BTreeMap<StorageId, EntryObjectOrigin<'plan>>,
     pub(super) trace_record: Option<ObjectHandle<'plan>>,
     pub(super) guards: BTreeMap<BlockId, super::numeric::Guard>,
     // Computed addresses are block-local, even though the underlying object
     // represents semantic storage across blocks and dynamic lifetime epochs.
     pub(super) addresses: BTreeMap<(BlockId, StorageId), ValueHandle<'plan>>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct ObjectOriginValues<'plan> {
+    pub(super) complete: ValueHandle<'plan>,
+    pub(super) metadata: ValueHandle<'plan>,
+}
+
+#[derive(Default)]
+pub(super) struct EntryObjectOrigin<'plan> {
+    pub(super) complete: Option<ValueHandle<'plan>>,
+    pub(super) metadata: Option<ValueHandle<'plan>>,
 }
 
 impl<'plan, 'input> Lowerer<'plan, 'input> {
@@ -66,6 +82,8 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             blocks,
             values,
             objects: vec![],
+            entry_addresses: BTreeMap::new(),
+            object_origins: BTreeMap::new(),
             trace_record: None,
             guards: super::numeric::guards(definition)?,
             addresses: BTreeMap::new(),
@@ -75,11 +93,58 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
         let entry = definition.body().entry;
         let inputs = lowerer.builder.inputs().collect::<Vec<_>>();
         for (input, component) in inputs.into_iter().zip(&owner.signature()?.inputs) {
-            let ComponentRole::Parameter(index) = component.role else {
-                return Err(PlanError::InvalidSignature.into());
-            };
-            let storage = definition.parameters()[index];
-            lowerer.store(entry, storage, input)?;
+            match component.role {
+                ComponentRole::ResultDestination(_) => {
+                    let storage = definition
+                        .return_storage()
+                        .ok_or(PlanError::InvalidSignature)?;
+                    lowerer.bind_entry_address(storage, input)?;
+                }
+                ComponentRole::ReceiverStatic => {
+                    let storage = definition.receiver().ok_or(PlanError::InvalidSignature)?;
+                    lowerer.bind_entry_address(storage, input)?;
+                }
+                ComponentRole::ReceiverComplete => {
+                    let storage = definition.receiver().ok_or(PlanError::InvalidSignature)?;
+                    lowerer.bind_origin_complete(storage, input)?;
+                }
+                ComponentRole::ReceiverMetadata => {
+                    let storage = definition.receiver().ok_or(PlanError::InvalidSignature)?;
+                    lowerer.bind_origin_metadata(storage, input)?;
+                }
+                ComponentRole::AggregateAddress { parameter, .. }
+                | ComponentRole::AliasAddress(parameter) => {
+                    let storage = *definition
+                        .parameters()
+                        .get(parameter)
+                        .ok_or(PlanError::InvalidSignature)?;
+                    lowerer.bind_entry_address(storage, input)?;
+                }
+                ComponentRole::AliasComplete(parameter) => {
+                    let storage = *definition
+                        .parameters()
+                        .get(parameter)
+                        .ok_or(PlanError::InvalidSignature)?;
+                    lowerer.bind_origin_complete(storage, input)?;
+                }
+                ComponentRole::AliasMetadata(parameter) => {
+                    let storage = *definition
+                        .parameters()
+                        .get(parameter)
+                        .ok_or(PlanError::InvalidSignature)?;
+                    lowerer.bind_origin_metadata(storage, input)?;
+                }
+                ComponentRole::Parameter(index) => {
+                    let storage = *definition
+                        .parameters()
+                        .get(index)
+                        .ok_or(PlanError::InvalidSignature)?;
+                    lowerer.store(entry, storage, input)?;
+                }
+                ComponentRole::RuntimeParameter(_) | ComponentRole::Result => {
+                    return Err(PlanError::InvalidSignature.into())
+                }
+            }
         }
         Ok(lowerer)
     }
@@ -132,6 +197,7 @@ pub(super) fn scalar_type(
                 .function_type(id)
                 .ok_or(PlanError::UnknownDeclaration)?,
         ),
+        MirType::Shared(_) => ScalarType::DataAddress,
         _ => return Err(PlanError::InvalidSignature.into()),
     })
 }

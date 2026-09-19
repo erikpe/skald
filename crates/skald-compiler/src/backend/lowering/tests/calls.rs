@@ -10,6 +10,89 @@ use crate::{
 };
 
 #[test]
+fn object_aliases_and_direct_receivers_cross_role_based_lowering() {
+    use crate::backend::plan::{ComponentRole, ScalarType};
+
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "aggregate-calls.ska",
+        "class Pair { tag: u8; value: i64; init(value: i64) { self.tag = 1u8; self.value = value; } fn read() -> i64 { return self.value; } } \
+         fn invoke(ref pair: Pair) -> i64 { return pair.read(); } \
+         fn inspect_value(pair: Pair) -> i64 { return pair.value; } \
+         fn main() -> i64 { return 0; }",
+    );
+    let admitted =
+        admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
+            .unwrap();
+
+    let definitions = fixture
+        .mir
+        .program()
+        .executable_definitions()
+        .filter(|definition| {
+            definition.receiver().is_some()
+                || definition.storage_entries().iter().any(|storage| {
+                    matches!(
+                        storage.kind,
+                        crate::mir::MirStorageKind::AliasParameter(_)
+                            | crate::mir::MirStorageKind::Parameter
+                    ) && matches!(storage.ty, crate::mir::MirType::Class(_))
+                })
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(definitions.len(), 4); // initializer, method, alias, aggregate value
+
+    let mut receiver_call = false;
+    let mut projected_load = false;
+    for definition in definitions {
+        let owner = admitted
+            .plan()
+            .view()
+            .callable(LirCallableId::Source(definition.callable()))
+            .unwrap();
+        let body = super::super::context::Lowerer::new(&admitted, owner)
+            .unwrap()
+            .finish()
+            .unwrap();
+        let draft = body.draft();
+        let signature = owner.signature().unwrap();
+        if definition.receiver().is_some() {
+            assert!(signature.inputs.iter().any(|component| {
+                component.role == ComponentRole::ReceiverStatic
+                    && component.ty == ScalarType::DataAddress
+            }));
+        }
+        if definition.storage_entries().iter().any(|storage| {
+            storage.kind == crate::mir::MirStorageKind::Parameter
+                && matches!(storage.ty, crate::mir::MirType::Class(_))
+        }) {
+            assert!(signature.inputs.iter().any(|component| {
+                matches!(component.role, ComponentRole::AggregateAddress { .. })
+            }));
+            assert_eq!(draft.objects().len(), 0);
+        }
+        for (_, block) in draft.blocks() {
+            for instruction in &block.instructions {
+                match &instruction.operation {
+                    Operation::Call(call)
+                        if call
+                            .arguments
+                            .iter()
+                            .any(|argument| argument.role == ComponentRole::ReceiverMetadata) =>
+                    {
+                        receiver_call = true;
+                        assert_eq!(call.arguments.len(), 3);
+                    }
+                    Operation::ByteOffset { .. } => projected_load = true,
+                    _ => {}
+                }
+            }
+        }
+    }
+    assert!(receiver_call);
+    assert!(projected_load);
+}
+
+#[test]
 fn direct_indirect_external_and_unit_calls_close_the_entire_inventory() {
     let fixture = lower_source_to_complete_final_mir_with_sources("calls.ska", "extern fn foreign(a: i64, b: f64) -> i64; fn identity(a: i64) -> i64 { return a; } fn ignore(a: i64) -> unit { } fn invoke(f: fn(i64) -> i64, a: i64) -> i64 { return f(a); } fn main() -> i64 { ignore(1); return foreign(invoke(identity, 7), 2.5); }");
     let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();

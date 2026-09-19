@@ -9,6 +9,8 @@ mod error;
 mod failure;
 mod memory;
 mod numeric;
+mod origin;
+mod place;
 mod scalar;
 mod trace;
 mod worklist;

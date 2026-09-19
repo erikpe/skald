@@ -28,7 +28,14 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
         ));
     }
     for entity in input.required_runtime_entities() {
-        if !matches!(entity, BackendRequiredRuntimeEntity::FunctionType(_)) {
+        if !matches!(
+            entity,
+            BackendRequiredRuntimeEntity::FunctionType(_)
+                | BackendRequiredRuntimeEntity::ClassDispatch(_)
+                | BackendRequiredRuntimeEntity::ArrayLifecycle(_)
+                | BackendRequiredRuntimeEntity::OptionalLifecycle(_)
+                | BackendRequiredRuntimeEntity::OptionalBoxLayout(_)
+        ) {
             return Err(unsupported(
                 None,
                 format!("unsupported required runtime entity {entity:?}"),
@@ -37,22 +44,23 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     }
     for definition in program.executable_definitions() {
         let owner = Some(definition.callable());
-        if definition.receiver().is_some()
-            || matches!(definition, MirDefinitionRef::StaticInitializer(_))
-        {
-            return Err(unsupported(
-                owner,
-                "receiver-bearing or static initializer body",
-            ));
+        if matches!(definition, MirDefinitionRef::StaticInitializer(_)) {
+            return Err(unsupported(owner, "static initializer body"));
         }
         for storage in definition.storage_entries() {
-            scalar(program, storage.ty, owner)?;
+            payload(program, storage.ty, owner)?;
             if !matches!(
                 storage.kind,
-                MirStorageKind::Local
+                MirStorageKind::Return
+                    | MirStorageKind::Receiver
                     | MirStorageKind::Parameter
+                    | MirStorageKind::AliasParameter(_)
+                    | MirStorageKind::Local
+                    | MirStorageKind::Argument
                     | MirStorageKind::Temporary
+                    | MirStorageKind::SharedAnchor
                     | MirStorageKind::ScalarSpill
+                    | MirStorageKind::PrimitiveAlias
                     | MirStorageKind::PathCondition
                     | MirStorageKind::NormalizedPathActivation
             ) {
@@ -63,7 +71,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
             }
         }
         for value in definition.values() {
-            scalar(program, value.ty, owner)?;
+            payload(program, value.ty, owner)?;
         }
         let signature = program
             .callable_signature(definition.callable())
@@ -75,6 +83,11 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
                     MirInstruction::Store(store) => place(&store.destination, owner)?,
                     MirInstruction::EndFullExpression(end) if end.temporaries.is_empty() => {}
+                    MirInstruction::Cleanup(cleanup)
+                        if program
+                            .classes
+                            .get(cleanup.target)
+                            .is_some_and(|class| class.destruction.steps.is_empty()) => {}
                     MirInstruction::Assign(assign) => match &assign.rvalue.kind {
                         MirRvalueKind::Load(source) => place(source, owner)?,
                         MirRvalueKind::CallableAddress(address) => {
@@ -102,18 +115,32 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         }
                     },
                     MirInstruction::Call(call) => {
-                        if call.receiver.is_some()
-                            || call.destination.is_some()
-                            || call.shared_result.is_some()
-                            || call
-                                .arguments
-                                .iter()
-                                .any(|argument| !matches!(argument, MirArgument::Value(_)))
-                        {
-                            return Err(unsupported(
-                                owner,
-                                "receiver, aggregate result or alias call argument",
-                            ));
+                        if let Some(destination) = &call.destination {
+                            place(destination, owner)?;
+                        }
+                        if let Some(receiver) = &call.receiver {
+                            match receiver {
+                                MirCallReceiver::Method(receiver) => {
+                                    place(&receiver.place, owner)?;
+                                    origin(&receiver.origin, owner)?;
+                                }
+                                MirCallReceiver::Interface(view) => {
+                                    place(&view.source, owner)?;
+                                    origin(&view.origin, owner)?;
+                                }
+                            }
+                        }
+                        for argument in &call.arguments {
+                            match argument {
+                                MirArgument::Value(_) | MirArgument::SharedOwner(_) => {}
+                                MirArgument::Place(place) | MirArgument::OwnedPlace(place) => {
+                                    self::place(place, owner)?
+                                }
+                                MirArgument::View(view) => {
+                                    self::place(&view.source, owner)?;
+                                    origin(&view.origin, owner)?;
+                                }
+                            }
                         }
                         match call.target {
                             MirCallTarget::Static(method) => {
@@ -128,7 +155,13 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                                     .expect("verified indirect signature");
                                 signature_check(program, &ty.parameters, ty.result, owner)?;
                             }
-                            _ => return Err(unsupported(owner, "member dispatch")),
+                            MirCallTarget::Method(MirMethodCallTarget::Direct(method)) => {
+                                callable(program, method.into(), owner)?
+                            }
+                            MirCallTarget::Method(MirMethodCallTarget::Virtual { .. })
+                            | MirCallTarget::Interface(_) => {
+                                return Err(unsupported(owner, "dynamic member dispatch"))
+                            }
                         }
                     }
                     other => {
@@ -171,10 +204,23 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
 }
 
 fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), AdmissionError> {
-    if !matches!(place.base, MirPlaceBase::Storage(_)) || !place.projections.is_empty() {
-        return Err(unsupported(owner, "nonlocal, projected or alias place"));
+    if matches!(
+        place.base,
+        MirPlaceBase::CheckedView(_) | MirPlaceBase::ArrayAlias(_)
+    ) {
+        return Err(unsupported(
+            owner,
+            "checked-view or array-alias place before its binding owner",
+        ));
     }
     Ok(())
+}
+
+fn origin(origin: &MirObjectOrigin, owner: Option<CallableId>) -> Result<(), AdmissionError> {
+    match origin {
+        MirObjectOrigin::Exact { complete, .. } => place(complete, owner),
+        MirObjectOrigin::Forwarded { .. } | MirObjectOrigin::Shared { .. } => Ok(()),
+    }
 }
 
 fn callable(
@@ -184,9 +230,6 @@ fn callable(
 ) -> Result<(), AdmissionError> {
     if let CallableId::Method(method) = id {
         let declaration = program.method(method).expect("verified method declaration");
-        if declaration.kind != MirMethodKind::Static {
-            return Err(unsupported(owner, "receiver-bearing callable"));
-        }
         return signature_check(
             program,
             &declaration.parameters,
@@ -235,18 +278,15 @@ fn signature_check(
     owner: Option<CallableId>,
 ) -> Result<(), AdmissionError> {
     for parameter in parameters {
-        if parameter.mode != MirParameterMode::Value {
-            return Err(unsupported(owner, "alias parameter"));
-        }
-        scalar(program, parameter.ty, owner)?;
+        payload(program, parameter.ty, owner)?;
     }
-    scalar(program, result, owner)
+    payload(program, result, owner)
 }
 
-fn scalar(
+fn payload(
     program: &MirProgram,
     ty: MirType,
-    owner: Option<CallableId>,
+    _owner: Option<CallableId>,
 ) -> Result<(), AdmissionError> {
     match ty {
         MirType::I64
@@ -265,11 +305,6 @@ fn scalar(
                     continue;
                 }
                 let signature = program.function_type(id).expect("verified function type");
-                for parameter in &signature.parameters {
-                    if parameter.mode != MirParameterMode::Value {
-                        return Err(unsupported(owner, "function-pointer alias parameter"));
-                    }
-                }
                 for ty in signature
                     .parameters
                     .iter()
@@ -283,18 +318,23 @@ fn scalar(
                         | MirType::U8
                         | MirType::Bool
                         | MirType::F64
-                        | MirType::Unit => {}
-                        _ => {
-                            return Err(unsupported(
-                                owner,
-                                format!("unsupported function-pointer payload {ty}"),
-                            ))
-                        }
+                        | MirType::Unit
+                        | MirType::Array(_)
+                        | MirType::Class(_)
+                        | MirType::Interface(_)
+                        | MirType::Obj
+                        | MirType::Shared(_)
+                        | MirType::Optional(_) => {}
                     }
                 }
             }
             Ok(())
         }
-        _ => Err(unsupported(owner, format!("unsupported payload {ty}"))),
+        MirType::Array(_)
+        | MirType::Class(_)
+        | MirType::Interface(_)
+        | MirType::Obj
+        | MirType::Shared(_)
+        | MirType::Optional(_) => Ok(()),
     }
 }

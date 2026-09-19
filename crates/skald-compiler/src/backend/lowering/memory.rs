@@ -1,14 +1,14 @@
 use super::{
-    context::{scalar_type, Lowerer},
+    context::{scalar_type, Lowerer, ObjectOriginValues},
     LowerError,
 };
 use crate::{
     backend::{
         lir::{
-            LifetimeDisposition, LifetimeMarker, MemoryRepresentation, Object, ObjectRole,
-            Operation, ValueHandle,
+            Constant, LifetimeDisposition, LifetimeMarker, MemoryRepresentation, Object,
+            ObjectRole, Operation, ValueHandle,
         },
-        plan::PlanError,
+        plan::{PlanError, ScalarType},
     },
     mir::{BlockId, MirInstruction, MirPlace, MirPlaceBase, MirType, StorageId},
 };
@@ -28,10 +28,17 @@ impl<'plan> Lowerer<'plan, '_> {
             })
             .collect::<std::collections::BTreeSet<_>>();
         for storage in self.definition.storage_entries() {
-            let id = self
-                .admitted
-                .layout(storage.ty)
-                .ok_or(PlanError::UnknownDeclaration)?;
+            let id = if matches!(storage.kind, crate::mir::MirStorageKind::SharedAllocation) {
+                self.plan()
+                    .semantic()
+                    .shared_header
+                    .ok_or(PlanError::UnknownDeclaration)?
+                    .handle_layout
+            } else {
+                self.admitted
+                    .layout(storage.ty)
+                    .ok_or(PlanError::UnknownDeclaration)?
+            };
             let layout = *self.plan().layout(self.plan().layout_id(id.index())?)?;
             let explicit_lifetime =
                 storage.ty != MirType::Unit && explicit_lifetimes.contains(&storage.id);
@@ -42,12 +49,24 @@ impl<'plan> Lowerer<'plan, '_> {
             } else {
                 LifetimeDisposition::WholeCallable
             };
-            self.objects.push(self.builder.declare_object(Object {
-                layout,
-                role: ObjectRole::SemanticStorage,
-                lifetime,
-                origin: Some(storage.span),
-            })?);
+            let caller_addressed =
+                matches!(
+                    storage.kind,
+                    crate::mir::MirStorageKind::Return
+                        | crate::mir::MirStorageKind::Receiver
+                        | crate::mir::MirStorageKind::AliasParameter(_)
+                ) || (matches!(storage.kind, crate::mir::MirStorageKind::Parameter)
+                    && scalar_type(self.admitted, storage.ty).is_err());
+            self.objects.push(if caller_addressed {
+                None
+            } else {
+                Some(self.builder.declare_object(Object {
+                    layout,
+                    role: ObjectRole::SemanticStorage,
+                    lifetime,
+                    origin: Some(storage.span),
+                })?)
+            });
         }
         Ok(())
     }
@@ -55,11 +74,14 @@ impl<'plan> Lowerer<'plan, '_> {
         &self,
         storage: StorageId,
     ) -> Result<MemoryRepresentation, LowerError> {
-        let ty = self
+        let storage = self
             .definition
             .storage(storage)
-            .expect("verified local storage")
-            .ty;
+            .expect("verified local storage");
+        if matches!(storage.kind, crate::mir::MirStorageKind::SharedAllocation) {
+            return Ok(self.address_representation());
+        }
+        let ty = storage.ty;
         let id = self
             .admitted
             .layout(ty)
@@ -79,10 +101,13 @@ impl<'plan> Lowerer<'plan, '_> {
         if let Some(address) = self.addresses.get(&(block, storage)) {
             return Ok(*address);
         }
-        let result = self.builder.append(
-            self.blocks[block.index()],
-            Operation::ObjectAddress(self.objects[storage.index()]),
-        )?[0];
+        let result = if let Some(address) = self.entry_addresses.get(&storage) {
+            *address
+        } else {
+            let object = self.objects[storage.index()].ok_or(PlanError::InvalidDomain)?;
+            self.builder
+                .append(self.blocks[block.index()], Operation::ObjectAddress(object))?[0]
+        };
         self.addresses.insert((block, storage), result);
         Ok(result)
     }
@@ -117,16 +142,111 @@ impl<'plan> Lowerer<'plan, '_> {
             .ty
             != MirType::Unit
         {
+            let object = self.objects[storage.index()].ok_or(PlanError::InvalidDomain)?;
             self.builder.append(
                 self.blocks[block.index()],
                 Operation::Lifetime {
                     marker,
-                    object: self.objects[storage.index()],
+                    object,
                     site: 0,
                 },
             )?;
         }
         Ok(())
+    }
+
+    pub(super) fn bind_entry_address(
+        &mut self,
+        storage: StorageId,
+        value: ValueHandle<'plan>,
+    ) -> Result<(), LowerError> {
+        if self.entry_addresses.insert(storage, value).is_some() {
+            return Err(PlanError::InvalidSignature.into());
+        }
+        Ok(())
+    }
+
+    pub(super) fn bind_origin_complete(
+        &mut self,
+        storage: StorageId,
+        value: ValueHandle<'plan>,
+    ) -> Result<(), LowerError> {
+        let origin = self.object_origins.entry(storage).or_default();
+        if origin.complete.replace(value).is_some() {
+            return Err(PlanError::InvalidSignature.into());
+        }
+        Ok(())
+    }
+
+    pub(super) fn bind_origin_metadata(
+        &mut self,
+        storage: StorageId,
+        value: ValueHandle<'plan>,
+    ) -> Result<(), LowerError> {
+        let origin = self.object_origins.entry(storage).or_default();
+        if origin.metadata.replace(value).is_some() {
+            return Err(PlanError::InvalidSignature.into());
+        }
+        Ok(())
+    }
+
+    pub(super) fn entry_origin(
+        &self,
+        storage: StorageId,
+    ) -> Result<ObjectOriginValues<'plan>, LowerError> {
+        let origin = self
+            .object_origins
+            .get(&storage)
+            .ok_or(PlanError::InvalidSignature)?;
+        Ok(ObjectOriginValues {
+            complete: origin.complete.ok_or(PlanError::InvalidSignature)?,
+            metadata: origin.metadata.ok_or(PlanError::InvalidSignature)?,
+        })
+    }
+
+    pub(super) fn load_storage(
+        &mut self,
+        block: BlockId,
+        storage: StorageId,
+    ) -> Result<ValueHandle<'plan>, LowerError> {
+        let address = self.address(block, storage)?;
+        Ok(self.builder.append(
+            self.blocks[block.index()],
+            Operation::Load {
+                address,
+                representation: self.representation(storage)?,
+            },
+        )?[0])
+    }
+
+    pub(super) fn byte_offset(
+        &mut self,
+        block: BlockId,
+        base: ValueHandle<'plan>,
+        bytes: usize,
+    ) -> Result<ValueHandle<'plan>, LowerError> {
+        if bytes == 0 {
+            return Ok(base);
+        }
+        let offset = self.builder.append(
+            self.blocks[block.index()],
+            Operation::Constant(Constant::U64(
+                bytes.try_into().map_err(|_| PlanError::SizeOverflow)?,
+            )),
+        )?[0];
+        Ok(self.builder.append(
+            self.blocks[block.index()],
+            Operation::ByteOffset { base, offset },
+        )?[0])
+    }
+
+    pub(super) fn address_representation(&self) -> MemoryRepresentation {
+        let layout = self.plan().profile().data_layout;
+        MemoryRepresentation {
+            scalar: ScalarType::DataAddress,
+            bytes: layout.pointer_bytes,
+            alignment: layout.pointer_alignment,
+        }
     }
 }
 

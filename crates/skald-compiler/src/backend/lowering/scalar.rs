@@ -1,4 +1,4 @@
-use super::{context::Lowerer, memory::local, LowerError};
+use super::{context::Lowerer, LowerError};
 use crate::{
     backend::{
         lir::{
@@ -28,12 +28,26 @@ impl<'plan> Lowerer<'plan, '_> {
             MirInstruction::StorageDead(dead) => {
                 self.lifetime(block, dead.storage, LifetimeMarker::End)?
             }
-            MirInstruction::Store(store) => self.store(
-                block,
-                local(&store.destination)?,
-                self.values[store.value.index()],
-            )?,
+            MirInstruction::Store(store) => {
+                let address = self.place_address(block, &store.destination)?;
+                let representation = self.place_representation(&store.destination)?;
+                self.builder.append(
+                    self.blocks[block.index()],
+                    Operation::Store {
+                        address,
+                        value: self.values[store.value.index()],
+                        representation,
+                    },
+                )?;
+            }
             MirInstruction::EndFullExpression(end) if end.temporaries.is_empty() => {}
+            MirInstruction::Cleanup(cleanup)
+                if self
+                    .admitted
+                    .program()
+                    .classes
+                    .get(cleanup.target)
+                    .is_some_and(|class| class.destruction.steps.is_empty()) => {}
             MirInstruction::Assign(assign) => {
                 if self
                     .guards
@@ -73,13 +87,10 @@ impl<'plan> Lowerer<'plan, '_> {
                         .ok_or(PlanError::UnknownDeclaration)?,
                 ),
             },
-            MirRvalueKind::Load(place) => {
-                let storage = local(place)?;
-                Operation::Load {
-                    address: self.address(block, storage)?,
-                    representation: self.representation(storage)?,
-                }
-            }
+            MirRvalueKind::Load(place) => Operation::Load {
+                address: self.place_address(block, place)?,
+                representation: self.place_representation(place)?,
+            },
             MirRvalueKind::PathCondition(condition) => Operation::Load {
                 address: self.address(block, condition.activation)?,
                 representation: self.representation(condition.activation)?,

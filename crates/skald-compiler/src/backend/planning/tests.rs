@@ -72,16 +72,20 @@ fn arithmetic_checks_and_all_primitive_cells_are_admitted() {
 fn artifact_policy_cannot_hide_an_unsupported_retained_body() {
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "excluded.ska",
-        "fn dead(ref x: i64) -> i64 { return x; } fn main() -> i64 { return 0; }",
+        "fn dead(values: i64[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
     );
-    for input in [
-        BackendInput::without_runtime_trace(&fixture.mir),
-        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    for (input, body_must_identify_owner) in [
+        (BackendInput::without_runtime_trace(&fixture.mir), false),
+        (
+            BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+            true,
+        ),
     ] {
         let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
-            panic!("unsupported retained alias body must reject")
+            panic!("unsupported retained owner body must reject")
         };
-        assert!(reason.callable.is_some());
+        assert!(!reason.reason.is_empty());
+        assert_eq!(reason.callable.is_some(), body_must_identify_owner);
     }
 }
 
@@ -182,14 +186,9 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
 fn excluded_source_families_reject_before_plan_publication() {
     let sources = [
         "fn dead(values: i64[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
-        "fn dead(value: i64?) -> i64 { return 0; } fn main() -> i64 { return 0; }",
-        "class Item { init() {} } fn dead(value: Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
-        "interface Marker { fn mark() -> i64; } fn dead(ref value: Marker) -> i64 { return 0; } fn main() -> i64 { return 0; }",
-        "fn dead(ref value: Obj) -> i64 { return 0; } fn main() -> i64 { return 0; }",
         "class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
         "class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }",
         "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
-        "fn dead(callback: fn(ref i64) -> i64) -> i64 { return 0; } fn main() -> i64 { return 0; }",
     ];
     for source in sources {
         let fixture = fixture(source);

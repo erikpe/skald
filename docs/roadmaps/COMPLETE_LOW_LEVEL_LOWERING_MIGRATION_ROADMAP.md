@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM04 are complete and LM05 is next.
+Status: active; LM01–LM05 are complete and LM06 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -42,7 +42,7 @@ per-callable or per-operation fallback.
 - [x] LM02 — Complete semantic layout and object-view planning facts
 - [x] LM03 — Complete data, artifact and static-storage planning facts
 - [x] LM04 — Checkpoint the complete fact model
-- [ ] LM05 — Lower complex places and aggregate call boundaries
+- [x] LM05 — Lower complex places and aggregate call boundaries
 - [ ] LM06 — Lower dispatch, runtime type operations and object initialization
 - [ ] LM07 — Lower copy, cleanup and complete-class finalization
 - [ ] LM08 — Lower shared ownership and generated owner helpers
@@ -186,13 +186,13 @@ design amendment, legacy planning query or unresolved fact prerequisite remains.
 **Purpose:** establish reusable address/origin and role-based call machinery for
 all later object and lifecycle families.
 
-- [ ] Lower every place base/projection through checked layouts, preserving
+- [x] Lower every place base/projection through checked layouts, preserving
   provenance, alias anchors, zero-size and metadata-only dispositions.
-- [ ] Materialize hidden result destinations, receiver/static/complete origins,
+- [x] Materialize hidden result destinations, receiver/static/complete origins,
   aliases, views, owned places and shared-owner call components in source order.
-- [ ] Select and realize internal aggregate calls/results under integer/floating
+- [x] Select and realize internal aggregate calls/results under integer/floating
   register and stack pressure, including later argument calls.
-- [ ] Cover aggregate return preservation across trace pop and cleanup without
+- [x] Cover aggregate return preservation across trace pop and cleanup without
   target-specific facts in shared lowering.
 
 **Tests:** complex-place verifier negatives, object result/receiver pressure,
@@ -200,6 +200,19 @@ alias and origin corruption, assembler acceptance and native call parity.
 
 **Exit criteria:** all complex places and aggregate call roles cross the checked
 pipeline; no object call uses legacy marshalling.
+
+Completed on 2026-09-19. Shared lowering now owns separate storage, place and
+origin modules. Caller-provided aggregate results, aggregate value parameters,
+aliases and receivers bind directly to checked signature inputs; local storage
+retains symbolic LIR objects. Complex projections consume only frozen semantic
+offsets and strides, and direct calls materialize their complete component list
+from `ComponentRole` before target selection assigns ABI locations. Trivial
+class cleanup is admitted as a semantic no-op, while nontrivial lifecycle and
+dynamic dispatch remain rejected for LM07 and LM06 respectively. Existing LIR,
+selected and physical adversarial suites cover provenance corruption, exact
+role checking and mixed register/stack pressure; the new lowering regression
+covers projected fields, aggregate parameters, aliases and direct receiver
+origin forwarding. The backend suite, formatting and static checks pass.
 
 ### LM06 — Lower dispatch, runtime type operations and object initialization
 

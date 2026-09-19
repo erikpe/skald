@@ -100,11 +100,12 @@ An absent source declaration remains inspectable but cannot acquire that binding
 Target thunks cannot enter the shared declaration catalog.
 
 The private planner checks every physically retained body and its storage,
-places, signatures, calls and terminators against the current scalar admission
+places, signatures, calls and terminators against the current staged admission
 allowlist.
 Requesting reachable artifact emission does not remove unsupported bodies.
-Receiverless static methods are eligible; receiver-bearing bodies, aliases,
-aggregate/lifecycle operations, I/O, string panic and statics reject explicitly.
+Direct receiver-bearing bodies, aliases, complex places, aggregate parameters
+and no-op class cleanup are eligible. Dynamic dispatch, nontrivial lifecycle,
+I/O, string panic and statics still reject explicitly.
 Complete artifact emission also rejects declared families requiring unsupported
 generated lifecycle/metadata roots. Reachable emission uses certified runtime
 obligations; unused declarations do not acquire executable authority.
@@ -135,13 +136,19 @@ The public backend remains on legacy emission; admission creates no executable
 lowered, selected or physical body and never falls back after a private failure.
 
 The private shared adapter can close the complete admitted lower inventory. It
-lowers scalar direct/indirect calls and C externs against frozen logical signatures,
+forms local, caller-provided, static and shared-backed addresses from checked
+layout facts, preserving symbolic object provenance where it is available.
+Aggregate results and parameters, aliases and direct receivers bind to logical
+signature components rather than local copies. Calls are assembled by component
+role; target selection alone assigns registers and stack slots. It also lowers
+scalar direct/indirect calls and C externs against frozen logical signatures,
 with ordered conservative effects; normalized binary64 bit intrinsics remain
 ordinary conversions. Source bodies in enabled mode own a two-word shadow frame
 (previous frame and current location), initialized with their frozen definition
 location before parameter stores. Calls update the frame immediately before the
 call; checked numeric failures update only on their failure path before reporting.
-Scalar result values and source stores precede the final return-frame pop.
+Scalar result values and source stores precede the final return-frame pop;
+aggregate results remain in the caller-provided destination across that pop.
 The generated process entry owns no source frame: it calls the runtime ABI marker,
 then language main and returns main's exact scalar result. Admission excludes
 statics, so startup/shutdown coordinators remain absent rather than acquiring

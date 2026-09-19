@@ -120,8 +120,8 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | --- | --- | --- | --- | --- | --- |
 | `StorageLive`, `StorageDead` | `lower.rs`, `frame.rs` | Preserve lifetime information for addressable objects; current emission is a no-op, not machine liveness or permission to reuse storage | E01 | — | LA03 |
 | `Assign` | `lower/assignment.rs` and scalar/type/optional/array selectors | See exhaustive rvalue inventory; widths and canonical forms survive home removal | E01, E03 | G01, G02 | LA03 scalar; LA04 remaining rvalues |
-| `Store` | `lower/value.rs` | Explicit place address and width-correct store; final-MIR authorization is not rechecked as source policy | E05 | — | LA03 scalar; LA04 complex places |
-| `Call` | `lower/call.rs`, `lower/call/*` | Stabilized target and ordered role-based components; ordinary/direct/static/indirect/method/interface forms; see call inventory | E02, E05, E13 | G03 | LA03 direct/indirect scalar; LA04 remaining shapes |
+| `Store` | `lower/value.rs` | Explicit place address and width-correct store; final-MIR authorization is not rechecked as source policy | E05 | — | LA03 scalar; LM05 checked complex places |
+| `Call` | `lower/call.rs`, `lower/call/*` | Stabilized target and ordered role-based components; ordinary/direct/static/indirect/method/interface forms; see call inventory | E02, E05, E13 | G03 | LA03 direct/indirect scalar; LM05 aggregate/direct-member boundary; LM06 dynamic dispatch |
 | `Initialize` | `lower/call.rs` | Call the selected initializer into its final destination; receiver origin preserved | E05 | — | LA04 |
 | `CopyConstruct`, `CopyAssign` | `lower/copy.rs` | User/synthesized selection, base/field order, shared retain-before-release and alias-safe self-assignment | E06, E07 | — | LA04 |
 | `Cleanup`, `EndFullExpression` | `lower/cleanup.rs`, `lower/copy.rs` | Destruction plan and recorded reverse completion order; preserve already-computed result | E06 | — | LA04 |
@@ -149,7 +149,7 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `ConstantI64`, `ConstantU64`, `ConstantU8`, `ConstantF64Bits`, `ConstantBool` | `lower/assignment.rs` | Explicit scalar width/raw float bits; canonical bytes/booleans | E01, E02 | — | LA03 |
 | `CallableAddress` | `lower/assignment.rs`, `symbol.rs` | Typed code reference to exact eligible callable, not string resolution | E13, E15 | — | LA03 |
 | `PathCondition` | `mir/verify/contract.rs`; rejected at selector boundary | Proof-rich-only: normalized to executable storage/load before final MIR; absent from the closed lowered schema | E04, E17; maintained core dependency guards | No lowered opcode or unchecked escape hatch | Schema complete; production lowering remains sealed-final-MIR only |
-| `Load` | `lower/assignment.rs`, `lower/value.rs` | Address plus aligned scalar read; alias/heap/static objects remain memory | E05 | — | LA03 scalar; LA04 complex places |
+| `Load` | `lower/assignment.rs`, `lower/value.rs` | Address plus aligned scalar read; alias/heap/static objects remain memory | E05 | — | LA03 scalar; LM05 checked complex places |
 | `Unary`, `Binary` | `lower/assignment.rs` | Exact operation inventory below; preserve wrapping/float meaning and live inputs | E01 | G01 | LA03 |
 | `IntegerDivision` | `lower/integer_division.rs` | Quotient/remainder, signed floor rounding and defined minimum pair; selected correction CFG explicit | E03 | G02 | LA03 |
 | `Shift` | `lower/shift.rs` | Left/right, arithmetic/logical right by integer kind; checked width, no host masking semantics | E03 | — | LA03 |
@@ -362,7 +362,7 @@ to introduce global caches or a general pass manager.
 | --- | --- | --- |
 | Live arithmetic input with x86 tie versus AArch64 three-address form | E01 selection plus E19 runtime-loaded inputs reused after arithmetic result and a call; G01 closed | LA03 selected tie test plus independent placement corruption/value-flow test; synthetic three-address/resource view test, no AArch64 execution claim |
 | Loop, join and checked signed division | E03 boundary/property/failure coverage plus E19 signed division/remainder through both joins and loop epochs with original inputs live; G02 closed | LA02 dominance/block-parameter/edge negatives; LA03 all selection-created correction blocks visible and transfers checked |
-| Object result, receiver triple, integer/float pressure and indirect target | E05 hidden destination/receiver plus E19 direct/interface object results with seven integer/nine floating arguments and later argument calls; G03 closed | LA03 joint role-based shape/ABI contract; LA04 full method/virtual/interface result native parity; AArch64 `x8` witness remains proposed private mapping |
+| Object result, receiver triple, integer/float pressure and indirect target | E05 hidden destination/receiver plus E19 direct/interface object results with seven integer/nine floating arguments and later argument calls; G03 closed | LM05 checked role assembly, pressure selection and realization; LM06 adds virtual/interface target selection; AArch64 `x8` witness remains proposed private mapping |
 | Original allocation across finalizer and free | E07/E08 lifecycle integration plus E20 finalizer-before-free, mutable-owner replacement, all caller-saved integer/SIMD registers clobbered, original header freed once; G04 closed | LA04 lowered header value survives call, metadata/helper checks remain hard defects, source destructor gets its own trace frame |
 | Width overlap, preserved resources and platform reservations | E02/E05 exercise current scalar x86 ABI; no machine resource model exists yet | LA03 synthetic overlap/partial-preservation/link-register/resource tests and real x86 assembler/C ABI probes; full AArch64 remains separate |
 
@@ -677,12 +677,13 @@ publication tests cover heterogeneous incoming slot zero and strict negatives.
 ## Private planning and lowering readiness
 
 Whole-program admission now checks the physically retained final-MIR domain,
-including uncalled bodies, signatures, scalar/function-pointer payloads, storage
-and places. Artifact retention requests cannot hide unsupported bodies. Complete
+including uncalled bodies, signatures, scalar/function-pointer and aggregate
+payloads, storage and places. Artifact retention requests cannot hide
+unsupported bodies. Complete
 emission also checks unsupported generated family roots; reachable emission uses
 certified runtime obligations. Sparse declarations remain absent rather than
-being resurrected. Scalar static methods are eligible when their owning class
-requires no retained unsupported lifecycle/metadata family.
+being resurrected. Direct receiver-bearing and static methods are eligible when
+their owning class requires no retained unsupported lifecycle family.
 
 `backend::planning` freezes checked semantic layout identities, canonical higher-order
 code signatures, source/entry declarations, C/runtime declarations, failure data
@@ -695,10 +696,9 @@ and array layouts, element lifecycle plans, object-view component shapes and
 runtime membership, virtual/interface/conformance identities, method slots and
 per-class dispatch selections. Independent supplied-fact checks cover foreign
 identities, recursive and overflowing layouts, missing dynamic metadata and
-membership/layout disagreement. Sparse aggregate declarations retain checked
-hidden-result signatures without gaining executable authority. These are
-planning facts for the following lowering families; they do not claim those
-families execute through the private native path yet.
+membership/layout disagreement. Aggregate, alias and receiver signatures bind
+caller-provided addresses and object origins directly at shared-lowering entry;
+dynamic dispatch and nontrivial lifecycle retain later executable owners.
 Ordinary scalar memory/control-flow bodies now publish genuine lower receipts
 through the shared builder, full callable checker and lower inventory worklist.
 [Owner tests](../../crates/skald-compiler/src/backend/lowering/tests/mod.rs) cover
@@ -723,6 +723,17 @@ with checked relocations. A streaming consumer receives each verified body;
 complete shared lower closure retains exact receipts, not all callable drafts.
 Consumer failure cannot publish a complete inventory witness.
 
+LM05 adds checked complex-place formation from semantic base, field, optional,
+array, static and shared-allocation facts. Object origins remain explicit
+static/complete/metadata values, including forwarded alias and shared-header
+forms. Direct calls assemble hidden destinations, aggregate values, aliases,
+shared owners and receiver triples from logical roles before selection. Existing
+mixed-bank pressure, verifier-corruption and physical-realization witnesses
+cover that common boundary; a source-derived regression covers projected fields,
+aggregate parameters, aliases and forwarded direct receivers. Trivial class
+cleanup is a semantic no-op; every nontrivial lifecycle body still rejects
+before admission.
+
 LM03 adds the complete immutable resource catalog. Planning now owns active and
 retained-inactive static dispositions, activation/reverse-shutdown records,
 literal and failure backing, trace/TLS records, dispatch/container descriptors,
@@ -746,7 +757,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Coverage rows | Checked input available at LM04 | Remaining executable owner |
 | --- | --- | --- |
 | Scalar operations, guarded numeric cells, primitive casts and ordinary CFG | Typed signatures/layouts, failure data and guard associations | Delivered pilot retained as the common base; family-specific terminators complete with LM05–LM15 |
-| Complex places, object origins, aggregate results, aliases and receiver components | Exact/complete layouts, field/base offsets, object-view components and role-based signatures | LM05 |
+| Complex places, object origins, aggregate results, aliases and receiver components | Exact/complete layouts, field/base offsets, object-view components and role-based signatures | Delivered by LM05; checked-view binding remains LM06 and array-alias binding remains LM14 |
 | Direct/virtual/interface dispatch, checked views, casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | LM06 |
 | Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | LM07 |
 | Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | LM08 |
