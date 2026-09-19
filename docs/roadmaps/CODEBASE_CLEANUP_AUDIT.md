@@ -1084,8 +1084,11 @@ The [archived native target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZA
 and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
 deliver concrete native selection, ABI handling, transfers, checked baseline
 placement, symbolic frames, independently verified physical realization and a
-private whole-program pilot. Production migration, adoption and allocation
-remain pending; preserved measurements grant no cost clearance.
+private whole-program pilot. The proposed
+[complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+defines whole-program, no-fallback expansion across the remaining language,
+lifecycle, helper, data and artifact surface. Production migration, adoption and
+allocation remain pending; preserved measurements grant no cost clearance.
 Scalar promotion and semantic SSA remain separate follow-ups.
 
 **Planning/validation:** use the existing

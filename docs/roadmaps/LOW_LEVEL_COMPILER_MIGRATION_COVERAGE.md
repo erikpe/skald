@@ -1,7 +1,8 @@
 # Low-Level Compiler Migration Coverage
 
-Status: phase preparation, executable model and private LA03 pilot complete,
-2026-09-19.
+Status: phase preparation, executable model and private LA03 pilot complete;
+the focused [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+is proposed for review, 2026-09-19.
 Model cumulative review covers `f1053782..495df6b9` plus the closing static-effect
 receipt fix and payload-contract/documentation changes. Production full-language
 migration, adoption and allocation remain pending. Archived child
@@ -628,7 +629,7 @@ Carry these accepted constraints into the native design:
 | --- | --- |
 | LA02 | Complete: checked declarations, full lowered vocabulary/verification/publication, program inventories/target extensions, selected structural and mandatory target verification, consuming edits, snapshot analysis and deterministic inspection; native obligations transferred above |
 | LA03 | Complete private scalar/control-flow/call pilot: target resources, selection, checked baseline placement, symbolic frames, physical verification/closure, hardened x86 execution and synthetic target contract witnesses. Its private gate and observation adapters transfer to LA05 |
-| LA04 | Full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, strings, I/O, aggregate calls/results, dispatch, generated helpers, entry/static initialization/shutdown and complete-mode inactive statics; update each inventory row with delivery evidence |
+| LA04 | [Proposed complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md): full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, strings, I/O, aggregate calls/results, dispatch, generated helpers, entry/static initialization/shutdown and complete-mode inactive statics; update each inventory row with delivery evidence |
 | LA05 | One production LIR pipeline, public requested observations, reporting/determinism parity, private-gate and legacy-path removal, portability/cumulative review and frozen foundation cost acceptance; preserve all eleven inconclusive timing classifications until compatible paired captures resolve them |
 | LA06 | Separate allocation design, implementation/checking and measured adoption after foundation consolidation |
 

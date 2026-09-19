@@ -257,9 +257,9 @@ remain unimplemented. The frozen phase architecture design's
 [preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) is complete:
 existing-boundary witnesses and durable pre-migration inputs are qualified.
 The [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
-now carries the executable LIR model and checked private native pilot into
-complete lowering migration. Production migration, adoption and cost acceptance
-remain pending.
+now carries the executable LIR model and checked private native pilot into the
+proposed [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md).
+Production migration, adoption and cost acceptance remain pending.
 
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |
 |---|---|---|---|---|---|
