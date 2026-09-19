@@ -573,9 +573,10 @@ records cumulative review and artifact-free validation. The
 handoff through migration and adoption. The architecture program and cleanup
 audit's A22 remain in progress: the completed private scalar pilot does not
 deliver full-language production lowering, adoption or allocation.
-The [accepted, frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
-and [active roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) define and
-implement the private pilot. The [owning model amendment](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
+The [accepted, frozen native target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
+define and implement the private pilot. The
+[owning model amendment](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
 accepts plan-bound target catalogs and final exact-receipt reconciliation. The
 amendment is implemented in publication APIs: catalogs bind the checked plan,
 source selection requires genuine verified callables, and selected closure

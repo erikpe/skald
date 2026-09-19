@@ -473,8 +473,8 @@ references may add target dependencies but cannot resurrect removed MIR bodies.
 
 ## Accepted streaming publication amendment
 
-Accepted 2026-09-18 with the [frozen native target design](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md#declaration-freeze-and-callable-streaming).
-The [native phase roadmap](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
+Accepted 2026-09-18 with the [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md#declaration-freeze-and-callable-streaming).
+The [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
 implements this change. This amendment supersedes any reading of staged
 publication above that requires a finalized lower program before source
 selection begins; it does not weaken complete-program authority.

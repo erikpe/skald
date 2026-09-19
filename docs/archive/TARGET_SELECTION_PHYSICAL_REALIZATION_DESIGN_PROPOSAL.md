@@ -1,18 +1,18 @@
 # Target Selection, Checked Placement, and Physical Realization Design Proposal
 
-Status: accepted, frozen and promoted LA03 design, 2026-09-18. Accepted by the
+Status: accepted, frozen, implemented and archived, 2026-09-19. Accepted by the
 user after review of the draft committed at `8834bcd6`.
 Implementation: [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md),
-in progress; publication, native selection, checked placement and symbolic frame
-planning, typed physical drafts, independent physical verification and typed
-program closure are implemented; native integration remains pending.
+complete; streaming publication, target selection, checked placement, symbolic
+frames, typed physical realization, independent verification, final program
+closure and the private native pilot are implemented.
 Source assessment: `f59d3fff`, the committed executable-model closing change.
-Parent: [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
-Inherited contracts: [frozen phase design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
-and [frozen model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
-Preparation: [completed-model handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness),
-[target obligations](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#target-implementation-obligations)
-and [retained artifacts](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#retained-model-artifacts-and-removal-owners).
+Parent: [Low-Level Compiler Architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+Inherited contracts: [frozen phase design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
+and [frozen model design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md).
+Preparation: [completed-model handoff](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness),
+[target obligations](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#target-implementation-obligations)
+and [retained artifacts](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#retained-model-artifacts-and-removal-owners).
 Program implementation baseline remains `495debd3`. Record the child baseline
 immediately before implementation; this document does not start implementation.
 
@@ -142,10 +142,11 @@ immutable checked plan and its permitted body/domain declarations, while deferri
 exact complete-program receipt reconciliation to program closure. Retain genuine
 per-callable verification and exact derivation witnesses. This changes when the
 parent inventory must be complete, not what complete-program authority proves.
-The [owning frozen model](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
-records this accepted amendment. The active roadmap implements it with a
+The [owning frozen model](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
+records this accepted amendment. The completed roadmap implements it with a
 plan-bound `TargetCatalog` and exact finalized-parent reconciliation at selected
-program closure, preserving invariant coverage. Native orchestration remains pending.
+program closure, preserving invariant coverage. Private native orchestration is
+implemented; production adoption remains separate.
 
 The executable schedule is:
 
@@ -479,7 +480,7 @@ Implementation runs focused owner checks, `make check` and serial
 `make msrv-check`; native-path changes also require the applicable release and
 full-determinism gates in `make check-long`. Final gates use an artifact-free
 snapshot containing closing fixups. Golden runs in one checkout remain serial
-until the indexed [artifact ownership discovery](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
+until the indexed [artifact ownership discovery](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
 is resolved.
 
 The [foundation measurement protocol](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md)

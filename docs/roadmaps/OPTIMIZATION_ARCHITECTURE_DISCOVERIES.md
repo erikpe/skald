@@ -479,9 +479,12 @@ publication, inventories/receipts, consuming edits, snapshot-bound analyses and
 deterministic inspection are delivered. The active
 [migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
 records executable-model evidence and retained-artifact removal obligations.
-Concrete native selection, ABI, transfers, placement and physical realization
-remain pending under their own design. Production migration, adoption and
-allocation remain pending; preserved measurements grant no cost clearance.
+The [archived native target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
+deliver concrete native selection, ABI handling, checked baseline placement,
+symbolic frames, independently verified physical realization and a private
+whole-program pilot. Production migration, adoption and allocation remain
+pending; preserved measurements grant no cost clearance.
 ### Optimization possibilities unlocked
 
 - register allocation and copy coalescing;

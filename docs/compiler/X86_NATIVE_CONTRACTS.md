@@ -4,12 +4,14 @@ Status: immutable target resource facts and checked-signature component
 classification and the complete pilot selected vocabulary, including calls and
 trace memory operations, and independent placement checking are implemented
 privately. Deterministic baseline placement marshals operands and ABI values
-through independently checked explicit transfers. Frame planning and physical
-emission remain planned. Production still uses the [existing backend](BACKEND.md).
+through independently checked explicit transfers. Symbolic frame planning,
+typed physical realization, independent verification and exact final program
+closure are implemented in the private pilot. Production still uses the
+[existing backend](BACKEND.md).
 Shared [placement drafts and checking](PLACEMENT_CHECKING.md) enforce exact-input
 binding, target constraints, preservation and finite CFG availability.
 These contracts refine the [shared low-level model](LOW_LEVEL_IR.md) and
-[frozen target design](../roadmaps/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
+[frozen target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 
 ## Resource authority
 

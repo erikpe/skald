@@ -1,7 +1,8 @@
 /// Private requested-only checkpoints for the native architectural pilot.
 ///
 /// Each flag renders the immutable product owned by that phase while its body is
-/// resident. The public driver does not consume this type; LA05 owns that adapter.
+/// resident. The public driver does not consume this type; architecture adoption
+/// owns that adapter.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(in crate::backend) struct NativePilotInspection {
     pub lowered: bool,

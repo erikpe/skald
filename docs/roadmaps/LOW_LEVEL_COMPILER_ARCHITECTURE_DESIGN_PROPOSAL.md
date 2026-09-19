@@ -1,6 +1,6 @@
 # Low-Level Compiler Architecture Design Proposal
 
-Status: accepted architectural direction, prepared 2026-09-17. The first child
+Status: accepted architectural direction, updated 2026-09-19. The first child
 [phase architecture design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen, and its
 [preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) is complete.
@@ -13,14 +13,14 @@ publication, inventories/receipts, consuming edits, snapshot-bound analyses and
 deterministic inspection are delivered. The active
 [migration handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness)
 records executable-model evidence and retained-artifact removal obligations.
-Native [resource facts and component ABI classification](../compiler/X86_NATIVE_CONTRACTS.md)
-and private native selection, deterministic baseline placement and independent
-placement checking, checked frame planning and typed physical drafts are implemented.
-Independent physical verification is implemented; final native program publication remains pending
-under the [accepted, frozen target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
-and its [active implementation roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
-The owning model records the implemented streaming publication amendment;
-concrete native orchestration remains pending. Production migration, adoption and
+Native [resource facts and component ABI classification](../compiler/X86_NATIVE_CONTRACTS.md),
+selection, deterministic baseline placement, independent placement checking,
+checked frame planning, typed physical realization, independent verification,
+program closure and private whole-program orchestration are implemented under the
+[archived target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
+The owning model records the implemented streaming publication amendment.
+Production migration, adoption and
 allocation remain pending; preserved measurements grant no cost clearance.
 Repository assessment baseline:
 `f97a9e51`. Program implementation baseline: `495debd3`, before the migration
@@ -307,7 +307,7 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 | --- | --- | --- | --- |
 | LA01 | **[Phase architecture and backend ownership](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md):** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
 | LA02 | **[LIR model, construction, and verification](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md):** identities, values, memory, CFG/edges, effects, calls, mutation and dumps | Complete; [archived roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md). Executable checked models and current [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness) delivered | Common/selected readiness passed; concrete native counterparts remain LA03 |
-| LA03 | **[Target selection and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md) (accepted and frozen):** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | In-progress [roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md); end-to-end executable scalar/control-flow/call pilot through every new phase, without a production register allocator | LA01–LA02; required native contract checkpoints precede dependent algorithms |
+| LA03 | **[Target selection and physical realization](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md) (accepted, frozen and implemented):** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | Complete; [archived roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) delivers an executable checked scalar/control-flow/call pilot through every new phase | LA01–LA02; complete, with migration/adoption/allocation transferred to LA04–LA06 |
 | LA04 | **Complete lowering migration:** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | Complete supported x86 behavior through LIR and stack placement; explicit operation/helper coverage and native parity | LA03; may split into lifecycle/helper and observation/artifact proposals |
 | LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04; portability review and full foundation validation |
 | LA06 | **Register allocation:** allocator selection, liveness, constraints, preserved registers, splitting/spilling, coalescing scope, checking, and measured adoption | Proper allocation implemented through the existing placement contract; separate acceptance evidence and explicit disposition of baseline placement | LA05; own design and implementation roadmap |
@@ -435,11 +435,10 @@ contract. Exact Rust schemas, executable seals, operation inventories, and
 target interfaces remain with LA02/LA03.
 An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
-delivery decisions. Phase preparation has qualified existing-boundary witnesses
-and complete baseline inputs; noisy cost gates remain inconclusive. The immediate
-next step is typed program closure and fragment storage after
-[independent native physical verification](../compiler/PHYSICAL_REALIZATION.md), in the
-[native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md), using the
-[frozen model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md) and active
+delivery decisions. Phase preparation and the private native pilot have qualified
+the current boundaries; noisy cost gates remain inconclusive. The immediate next
+step is a focused LA04 design for complete lowering migration, using the
+[archived native design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md),
+[completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md),
+[frozen model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md), and active
 [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs).
-Settle concrete native contracts before their dependent implementation.

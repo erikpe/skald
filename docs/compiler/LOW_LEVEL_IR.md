@@ -515,9 +515,10 @@ correction graphs, simultaneous edges, secured indirect calls, inherited helper
 attribution, partial resource preservation and receipt binding. They prove the
 shared interface is usable across two target shapes, not physical preservation.
 The private x86 pilot implements concrete opcodes, its ABI catalog, baseline
-placement and independent placement acceptance.
+placement, independent placement acceptance, typed physical realization,
+independent verification and exact program closure.
 [Checked frame planning](FRAME_PLANNING.md) consumes exact checked placement and
-validated signature-local ABI layouts. Physical realization remains future work.
+validated signature-local ABI layouts. Production adoption remains future work.
 
 ### Selected numeric and call-effect checking
 
@@ -626,7 +627,7 @@ Writer failure stops the pilot before complete-program publication. Checkpoint
 text remains deterministic diagnostic output rather than a stable wire format.
 
 Production phase events, public dump adapters and requested metrics remain an
-LA05 obligation. Current CLI dumps still observe the existing production
+architecture-adoption obligation. Current CLI dumps still observe the existing production
 compiler. The private pilot fabricates no public stage event, adds no CLI switch
 and makes no native performance claim.
 

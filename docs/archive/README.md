@@ -25,6 +25,8 @@ For current information, use:
 
 Archived plans:
 
+- [Target selection, checked placement and physical realization frozen design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+- [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
 - [Low-level IR model, construction and verification frozen design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
 - [Low-level IR model, construction and verification](LOW_LEVEL_IR_MODEL_ROADMAP.md)
 - [Low-level phase architecture and backend ownership frozen design](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
