@@ -108,20 +108,18 @@ impl<'plan> Lowerer<'plan, '_> {
         block: BlockId,
         storage: StorageId,
     ) -> Result<ValueHandle<'plan>, LowerError> {
-        if let Some(address) = self.addresses.get(&(block, storage)) {
-            return Ok(*address);
-        }
-        let result = if let Some(address) = self.entry_addresses.get(&storage) {
-            *address
+        if let Some(address) = self.entry_addresses.get(&storage) {
+            Ok(*address)
         } else {
+            // One MIR instruction may expand into an internal CFG. Define a
+            // fresh symbolic address at the active LIR block so it dominates
+            // every use in that path; caching by MIR block is insufficient.
             let object = self.objects[storage.index()].ok_or(PlanError::InvalidDomain)?;
-            self.builder.append(
+            Ok(self.builder.append(
                 self.active_blocks[block.index()],
                 Operation::ObjectAddress(object),
-            )?[0]
-        };
-        self.addresses.insert((block, storage), result);
-        Ok(result)
+            )?[0])
+        }
     }
     pub(super) fn store(
         &mut self,

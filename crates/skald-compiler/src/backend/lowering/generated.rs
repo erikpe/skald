@@ -178,11 +178,212 @@ pub(super) fn lower_class_finalizer<'plan>(
                 builder.terminate(release, Terminator::Jump(edge(next)))?;
                 current = next;
             }
+            DestructionStepFact::OptionalClassField(field)
+            | DestructionStepFact::OptionalField { field, .. } => {
+                let field = plan
+                    .semantic()
+                    .field(field)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                let crate::backend::plan::SemanticType::Optional(optional) = field.ty else {
+                    return Err(PlanError::InvalidDomain.into());
+                };
+                let address = byte_offset(&mut builder, current, complete, field.offset)?;
+                current = emit_optional_cleanup(
+                    plan,
+                    &mut builder,
+                    current,
+                    owner.key(),
+                    optional,
+                    address,
+                )?;
+            }
             _ => return Err(PlanError::InvalidDomain.into()),
         }
     }
     builder.terminate(current, Terminator::Return(vec![]))?;
     crate::backend::lir::verify_callable(builder.finish()).map_err(LowerError::Verification)
+}
+
+/// Emit one exact optional-box finalizer. The owner release helper passes the
+/// allocation payload, which is the first byte of the stored optional wrapper.
+pub(super) fn lower_optional_box_finalizer<'plan>(
+    admitted: &'plan AdmittedProgram<'_>,
+    owner: CallableBinding<'plan>,
+    layout: LayoutId,
+) -> Result<VerifiedCallable<'plan>, LowerError> {
+    let plan = admitted.plan().view();
+    plan.require_same_context(owner.context())?;
+    let mut candidates = plan
+        .semantic()
+        .optional_boxes
+        .iter()
+        .filter_map(|fact| {
+            let optional = fact.exact_optional?;
+            let candidate = plan.semantic().optional(optional)?;
+            (candidate.layout == layout).then_some(optional)
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_unstable();
+    candidates.dedup();
+    let [optional] = candidates.as_slice() else {
+        return Err(PlanError::InvalidDomain.into());
+    };
+    let mut builder = DraftBuilder::new(owner)?;
+    let entry = builder.reserve_block()?;
+    builder.define_block(entry, &[])?;
+    builder.set_entry(entry)?;
+    let inputs = builder.inputs().collect::<Vec<_>>();
+    let [payload] = inputs.as_slice() else {
+        return Err(PlanError::InvalidSignature.into());
+    };
+    let complete =
+        emit_optional_cleanup(plan, &mut builder, entry, owner.key(), *optional, *payload)?;
+    builder.terminate(complete, Terminator::Return(vec![]))?;
+    crate::backend::lir::verify_callable(builder.finish()).map_err(LowerError::Verification)
+}
+
+fn emit_optional_cleanup<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    current: crate::backend::lir::BlockHandle<'plan>,
+    boundary: LirCallableId,
+    optional: crate::identity::OptionalTypeId,
+    address: ValueHandle<'plan>,
+) -> Result<crate::backend::lir::BlockHandle<'plan>, LowerError> {
+    let fact = plan
+        .semantic()
+        .optional(optional)
+        .ok_or(PlanError::UnknownDeclaration)?;
+    match fact.storage {
+        crate::backend::plan::OptionalStorageFact::Scalar => Ok(current),
+        crate::backend::plan::OptionalStorageFact::SharedOwner(_) => {
+            let data = plan.profile().data_layout;
+            let handle = builder.append(
+                current,
+                Operation::Load {
+                    address,
+                    representation: crate::backend::lir::MemoryRepresentation {
+                        scalar: ScalarType::DataAddress,
+                        bytes: data.pointer_bytes,
+                        alignment: data.pointer_alignment,
+                    },
+                },
+            )?[0];
+            let null = builder.append(
+                current,
+                Operation::Constant(Constant::Null(ScalarType::DataAddress)),
+            )?[0];
+            let present = builder.append(
+                current,
+                Operation::Compare {
+                    predicate: crate::primitive_comparison::PrimitiveComparisonPredicate::NotEqual,
+                    left: handle,
+                    right: null,
+                },
+            )?[0];
+            let cleanup = reserve_block(builder)?;
+            let complete = reserve_block(builder)?;
+            builder.terminate(
+                current,
+                Terminator::Branch {
+                    condition: present,
+                    true_edge: edge(cleanup),
+                    false_edge: edge(complete),
+                },
+            )?;
+            call_owner_helper(
+                plan,
+                builder,
+                cleanup,
+                boundary,
+                HelperFamily::Release,
+                handle,
+            )?;
+            builder.terminate(cleanup, Terminator::Jump(edge(complete)))?;
+            Ok(complete)
+        }
+        crate::backend::plan::OptionalStorageFact::InlineClass(class) => {
+            let cleanup = optional_present_branch(plan, builder, current, fact, address)?;
+            let payload = byte_offset(builder, cleanup.body, address, fact.payload_offset)?;
+            call_finalizer(plan, builder, cleanup.body, boundary, class, payload)?;
+            builder.terminate(cleanup.body, Terminator::Jump(edge(cleanup.complete)))?;
+            Ok(cleanup.complete)
+        }
+        crate::backend::plan::OptionalStorageFact::Nested(inner) => {
+            let cleanup = optional_present_branch(plan, builder, current, fact, address)?;
+            let payload = byte_offset(builder, cleanup.body, address, fact.payload_offset)?;
+            let body =
+                emit_optional_cleanup(plan, builder, cleanup.body, boundary, inner, payload)?;
+            builder.terminate(body, Terminator::Jump(edge(cleanup.complete)))?;
+            Ok(cleanup.complete)
+        }
+        crate::backend::plan::OptionalStorageFact::InlineArray(_) => {
+            Err(PlanError::InvalidDomain.into())
+        }
+    }
+}
+
+struct CleanupBranch<'plan> {
+    body: crate::backend::lir::BlockHandle<'plan>,
+    complete: crate::backend::lir::BlockHandle<'plan>,
+}
+
+fn optional_present_branch<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    current: crate::backend::lir::BlockHandle<'plan>,
+    fact: &crate::backend::plan::OptionalLayoutFact,
+    address: ValueHandle<'plan>,
+) -> Result<CleanupBranch<'plan>, LowerError> {
+    let state = byte_offset(
+        builder,
+        current,
+        address,
+        fact.state_offset.ok_or(PlanError::InvalidLayout)?,
+    )?;
+    let state = builder.append(
+        current,
+        Operation::Load {
+            address: state,
+            representation: state_representation(plan),
+        },
+    )?[0];
+    let zero = builder.append(current, Operation::Constant(Constant::U64(0)))?[0];
+    let present = builder.append(
+        current,
+        Operation::Compare {
+            predicate: crate::primitive_comparison::PrimitiveComparisonPredicate::NotEqual,
+            left: state,
+            right: zero,
+        },
+    )?[0];
+    let body = reserve_block(builder)?;
+    let complete = reserve_block(builder)?;
+    builder.terminate(
+        current,
+        Terminator::Branch {
+            condition: present,
+            true_edge: edge(body),
+            false_edge: edge(complete),
+        },
+    )?;
+    Ok(CleanupBranch { body, complete })
+}
+
+fn reserve_block<'plan>(
+    builder: &mut DraftBuilder<'plan>,
+) -> Result<crate::backend::lir::BlockHandle<'plan>, LowerError> {
+    let block = builder.reserve_block()?;
+    builder.define_block(block, &[])?;
+    Ok(block)
+}
+
+fn state_representation(plan: PlanView<'_>) -> crate::backend::lir::MemoryRepresentation {
+    crate::backend::lir::MemoryRepresentation {
+        scalar: ScalarType::U64,
+        bytes: plan.profile().data_layout.pointer_bytes,
+        alignment: plan.profile().data_layout.pointer_alignment,
+    }
 }
 
 fn edge<'plan>(

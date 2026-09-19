@@ -1,8 +1,8 @@
 use crate::{
-    backend::{RuntimeTracePolicy, Target},
+    backend::RuntimeTracePolicy,
     test_support::{
         lower_source_to_final_mir_with_sources, lower_source_to_minimal_final_mir_with_sources,
-        run_native_assembly, run_native_assembly_output, run_native_assembly_with_c_probe,
+        run_native_assembly_output, run_native_assembly_with_c_probe,
         run_native_assembly_with_runtime_trace_probe, FinalMirWithSources,
     },
 };
@@ -787,21 +787,69 @@ fn destructor_failure_keeps_the_user_body_and_cleanup_site_in_the_trace() {
 }
 
 #[test]
-fn unsupported_aggregate_optional_lifecycle_rejects_without_changing_the_public_backend() {
+fn aggregate_and_class_optional_lifecycle_executes_through_the_verified_path() {
     let source = concat!(
         "class Pending { init(){} }",
         "class Item { value:i64; pending:Pending?; ",
         "init(value:i64){self.value=value;self.pending=none;} ",
         "fn read()->i64{return self.value;} }",
-        "fn main()->i64{var item:Item=Item(7);return item.read();}",
+        "fn main()->i64{var item:Item=Item(7);var pending:Pending?=Pending();",
+        "pending=none;item.pending=Pending();item.pending=none;return item.read();}",
     );
-    let fixture = fixture(MirMode::Default, source);
-    assert!(matches!(
-        compile(&fixture, RuntimeTracePolicy::Omitted, true),
-        Err(super::NativePilotError::Admission(_))
-    ));
-    let legacy = fixture
-        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Omitted)
-        .unwrap();
-    assert_eq!(run_native_assembly(&legacy).code(), Some(7));
+    for mode in [MirMode::Default, MirMode::Minimal] {
+        let fixture = fixture(mode, source);
+        let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true)
+            .unwrap_or_else(|error| panic!("{mode:?}: {error}"));
+        assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 7);
+    }
+}
+
+#[test]
+fn nested_optional_copy_executes_through_the_verified_path() {
+    let fixture = fixture(
+        MirMode::Minimal,
+        "fn main()->i64{var deep:i64??=some(some(21));var copy:i64??=deep;copy=deep;return copy!!+21;}",
+    );
+    let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
+    assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 42);
+}
+
+#[test]
+fn optional_boxes_publish_access_and_finalize_through_the_verified_path() {
+    let source = concat!(
+        "interface Marker { fn mark()->i64; }",
+        "class Value implements Marker { marker:i64; init(marker:i64){self.marker=marker;} fn mark()->i64{return self.marker;} destroy {} }",
+        "fn read(box:shared Marker?)->i64{return (*box)!.mark();}",
+        "fn main()->i64{var present:shared Value?=new Value?(Value(42));",
+        "var marker:shared Marker?=present;return read(marker);}"
+    );
+    for mode in [MirMode::Default, MirMode::Minimal] {
+        let fixture = fixture(mode, source);
+        for reachable in [false, true] {
+            let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, reachable)
+                .unwrap_or_else(|error| panic!("{mode:?}/reachable={reachable}: {error}"));
+            assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 42);
+        }
+    }
+}
+
+#[test]
+fn guarded_optional_mutation_reports_the_language_failure() {
+    let source = concat!(
+        "class Item { value:i64; init(value:i64){self.value=value;} }",
+        "class Holder { item:Item?; init(){self.item=Item(42);} ",
+        "mut fn clear()->i64{self.item=none;return 0;} }",
+        "fn consume(ref item:Item,ignored:i64)->i64{return item.value+ignored;}",
+        "fn main()->i64{var holder:Holder=Holder();return consume(holder.item!,holder.clear());}"
+    );
+    let fixture = fixture(MirMode::Minimal, source);
+    let assembly = compile(&fixture, RuntimeTracePolicy::Enabled, true).unwrap();
+    let output = run_native_assembly_with_runtime_trace_probe(&assembly);
+    assert!(!output.status.success(), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("cannot mutate a guarded optional value"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("native-pilot.ska"), "{stderr}");
 }

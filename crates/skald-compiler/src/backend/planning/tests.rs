@@ -219,18 +219,19 @@ fn class_lifecycle_is_admitted_under_both_artifact_policies() {
 }
 
 #[test]
-fn optional_abi_and_admission_follow_the_storage_representation() {
+fn optional_abi_and_admission_cover_recursive_non_array_storage() {
     let supported = fixture(concat!(
         "class Value { init(){} }",
         "fn tagged(value:i64?)->i64?{return value;}",
         "fn nullable(value:shared? Value)->shared? Value{return value;}",
+        "fn aggregate(value:Value?,nested:i64??)->Value?{return value;}",
         "fn main()->i64{return 0;}",
     ));
     for input in [
         BackendInput::without_runtime_trace(&supported.mir),
         BackendInput::without_runtime_trace(&supported.mir).with_reachable_artifacts_only(),
     ] {
-        let admitted = admit(input).expect("primitive and nullable-owner optionals are supported");
+        let admitted = admit(input).expect("recursive non-array optionals are supported");
         let view = admitted.plan().view();
         let signature = |name| {
             let function = admitted
@@ -264,10 +265,7 @@ fn optional_abi_and_admission_follow_the_storage_representation() {
         );
     }
 
-    let unsupported = fixture(concat!(
-        "class Value { init(){} }",
-        "fn main()->i64{var value:Value?=none;return 0;}",
-    ));
+    let unsupported = fixture("fn main()->i64{var value:i64[]?=none;return 0;}");
     for input in [
         BackendInput::without_runtime_trace(&unsupported.mir),
         BackendInput::without_runtime_trace(&unsupported.mir).with_reachable_artifacts_only(),

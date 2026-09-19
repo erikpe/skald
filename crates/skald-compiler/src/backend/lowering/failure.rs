@@ -28,6 +28,8 @@ impl<'plan> Lowerer<'plan, '_> {
             }
             MirTerminationReason::ObjectCastFailure => FailureMessage::ObjectCastFailure,
             MirTerminationReason::OptionalAccessFailure => FailureMessage::OptionalAccessFailure,
+            MirTerminationReason::OptionalGuardOverflow => FailureMessage::OptionalGuardOverflow,
+            MirTerminationReason::OptionalPinnedMutation => FailureMessage::OptionalPinnedMutation,
             _ => return Err(PlanError::InvalidDomain.into()),
         };
         let target = ArtifactId::Runtime(RuntimeService::Panic);

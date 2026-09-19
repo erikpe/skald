@@ -23,8 +23,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
             || program
                 .optional_types
                 .iter()
-                .any(|optional| !supported_optional(program, optional.id))
-            || !program.optional_box_types.is_empty())
+                .any(|optional| !supported_optional(program, optional.id)))
     {
         return Err(unsupported(
             None,
@@ -129,6 +128,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                             place(source, owner)?;
                             require_supported_optional_place(program, definition, source, owner)?;
                         }
+                        MirRvalueKind::OptionalBoxPresence { .. } => {}
                         other => {
                             return Err(unsupported(owner, format!("unsupported rvalue {other:?}")))
                         }
@@ -219,9 +219,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         origin(&binding.view.origin, owner)?;
                     }
                     MirInstruction::EndCheckedView(_) => {}
-                    MirInstruction::SharedAllocate(allocation)
-                        if matches!(allocation.target, MirSharedAllocationTarget::Class(_)) =>
-                    {
+                    MirInstruction::SharedAllocate(allocation) => {
                         if let MirSharedAllocationMode::Copy { source } = &allocation.mode {
                             place(source, owner)?;
                         }
@@ -293,6 +291,59 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     {
                         place(&cleanup.destination, owner)?;
                     }
+                    MirInstruction::AggregateOptionalInitialize(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                        if let MirAggregateOptionalSource::Copy(source) = &operation.source {
+                            place(source, owner)?;
+                        }
+                    }
+                    MirInstruction::AggregateOptionalAssign(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                        if let MirAggregateOptionalSource::Copy(source) = &operation.source {
+                            place(source, owner)?;
+                        }
+                    }
+                    MirInstruction::AggregateOptionalPublish(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                    }
+                    MirInstruction::AggregateOptionalCleanup(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                    }
+                    MirInstruction::ClassOptionalInitialize(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                        match &operation.source {
+                            MirClassOptionalSource::Present(source)
+                            | MirClassOptionalSource::Copy(source) => place(source, owner)?,
+                            MirClassOptionalSource::Absent => {}
+                        }
+                    }
+                    MirInstruction::ClassOptionalAssign(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                        match &operation.source {
+                            MirClassOptionalSource::Present(source)
+                            | MirClassOptionalSource::Copy(source) => place(source, owner)?,
+                            MirClassOptionalSource::Absent => {}
+                        }
+                    }
+                    MirInstruction::ClassOptionalPublish(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                    }
+                    MirInstruction::ClassOptionalCleanup(operation) => {
+                        require_supported_optional(program, operation.optional, owner)?;
+                        place(&operation.destination, owner)?;
+                    }
+                    MirInstruction::EndOptionalView(end) => {
+                        require_supported_optional(program, end.optional, owner)?;
+                        place(&end.source, owner)?;
+                    }
+                    MirInstruction::EndOptionalBoxView(_) => {}
                     other => {
                         return Err(unsupported(
                             owner,
@@ -314,7 +365,9 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         | MirTerminationReason::IntegerDivisionByZero
                         | MirTerminationReason::IntegerRemainderByZero
                         | MirTerminationReason::PrimitiveCastOutOfRange
-                        | MirTerminationReason::ObjectCastFailure,
+                        | MirTerminationReason::ObjectCastFailure
+                        | MirTerminationReason::OptionalGuardOverflow
+                        | MirTerminationReason::OptionalPinnedMutation,
                     ..
                 } => {}
                 MirTerminator::CheckedCast { binding, .. } => {
@@ -340,6 +393,15 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     reason: MirTerminationReason::OptionalAccessFailure,
                     ..
                 } => {}
+                MirTerminator::BeginOptionalView { begin, .. } => {
+                    require_supported_optional(program, begin.optional, owner)?;
+                    place(&begin.source, owner)?;
+                }
+                MirTerminator::BeginOptionalBoxView { .. } => {}
+                MirTerminator::CheckOptionalMutation { source, .. } => {
+                    place(source, owner)?;
+                    require_supported_optional_place(program, definition, source, owner)?;
+                }
                 other => {
                     return Err(unsupported(
                         owner,
@@ -371,6 +433,15 @@ fn supported_cleanup(program: &MirProgram, root: crate::identity::ClassId) -> bo
                 MirDestructionStep::UserBody(_)
                 | MirDestructionStep::SharedField(_)
                 | MirDestructionStep::OptionalSharedField(_) => {}
+                MirDestructionStep::OptionalClassField(field) => {
+                    match program.field(field).map(|field| field.ty) {
+                        Some(MirType::Optional(optional))
+                            if supported_optional(program, optional) => {}
+                        _ => return false,
+                    }
+                }
+                MirDestructionStep::OptionalField { optional, .. }
+                    if supported_optional(program, optional) => {}
                 MirDestructionStep::Base(base) => pending.push(base),
                 MirDestructionStep::Field(field) => match program
                     .class(field.class())
@@ -421,6 +492,11 @@ fn supported_constructor_copy(
                         | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                         | MirSynthesizedFieldCopy::Shared { .. }
                         | MirSynthesizedFieldCopy::OptionalShared { .. } => {}
+                        MirSynthesizedFieldCopy::OptionalClass { operation, .. } => {
+                            pending.push(operation)
+                        }
+                        MirSynthesizedFieldCopy::Optional { optional, .. }
+                            if supported_optional(program, optional) => {}
                         MirSynthesizedFieldCopy::Class { operation, .. } => pending.push(operation),
                         _ => return false,
                     }
@@ -466,6 +542,11 @@ fn supported_assignment_copy(
                         | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                         | MirSynthesizedFieldCopy::Shared { .. }
                         | MirSynthesizedFieldCopy::OptionalShared { .. } => {}
+                        MirSynthesizedFieldCopy::OptionalClass { operation, .. } => {
+                            pending.push(operation)
+                        }
+                        MirSynthesizedFieldCopy::Optional { optional, .. }
+                            if supported_optional(program, optional) => {}
                         MirSynthesizedFieldCopy::Class { operation, .. } => pending.push(operation),
                         _ => return false,
                     }
@@ -488,20 +569,12 @@ fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), AdmissionErr
 }
 
 fn supported_shared_cast(cast: &MirSharedCast) -> bool {
-    !matches!(
-        cast.target,
-        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_)
-    ) && !matches!(
-        cast.source.target(),
-        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_)
-    )
+    !matches!(cast.target, MirSharedTarget::Array(_))
+        && !matches!(cast.source.target(), MirSharedTarget::Array(_))
 }
 
 fn supported_shared_target(target: MirSharedTarget) -> bool {
-    !matches!(
-        target,
-        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_)
-    )
+    !matches!(target, MirSharedTarget::Array(_))
 }
 
 fn supported_optional(program: &MirProgram, optional: crate::identity::OptionalTypeId) -> bool {
@@ -509,11 +582,23 @@ fn supported_optional(program: &MirProgram, optional: crate::identity::OptionalT
         .optional_type(optional)
         .is_some_and(|optional| match optional.storage {
             MirOptionalStorage::Scalar => optional.primitive().is_some(),
-            MirOptionalStorage::SharedOwner(target) => supported_shared_target(target),
-            MirOptionalStorage::InlineClass(_)
-            | MirOptionalStorage::InlineArray(_)
-            | MirOptionalStorage::Nested(_) => false,
+            MirOptionalStorage::SharedOwner(target) => !matches!(target, MirSharedTarget::Array(_)),
+            MirOptionalStorage::InlineClass(_) => true,
+            MirOptionalStorage::Nested(inner) => supported_optional(program, inner),
+            MirOptionalStorage::InlineArray(_) => false,
         })
+}
+
+fn require_supported_optional(
+    program: &MirProgram,
+    optional: crate::identity::OptionalTypeId,
+    owner: Option<CallableId>,
+) -> Result<(), AdmissionError> {
+    if supported_optional(program, optional) {
+        Ok(())
+    } else {
+        Err(unsupported(owner, "unsupported optional storage"))
+    }
 }
 
 fn optional_shared_source(
@@ -576,7 +661,14 @@ fn place_type(
             };
             program.shared_target_type(target)?
         }
-        MirPlaceBase::OptionalBoxPayload { .. } => return None,
+        MirPlaceBase::OptionalBoxPayload { target, .. } => {
+            let metadata = program.optional_box_type(target)?;
+            match metadata.object_view? {
+                MirViewTarget::Class(class) => MirType::Class(class),
+                MirViewTarget::Interface(interface) => MirType::Interface(interface),
+                MirViewTarget::Obj => MirType::Obj,
+            }
+        }
     };
     for projection in &place.projections {
         ty = match *projection {

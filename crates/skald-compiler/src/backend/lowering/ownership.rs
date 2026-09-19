@@ -34,8 +34,14 @@ impl<'plan> Lowerer<'plan, '_> {
                     .shared_allocation
                     .byte_count
             }
-            MirSharedAllocationTarget::OptionalBox { .. } => {
-                return Err(PlanError::InvalidDomain.into())
+            MirSharedAllocationTarget::OptionalBox { target, optional } => {
+                self.plan()
+                    .semantic()
+                    .optional_box(target)
+                    .filter(|fact| fact.exact_optional == Some(optional))
+                    .and_then(|fact| fact.allocation)
+                    .ok_or(PlanError::InvalidLayout)?
+                    .byte_count
             }
         };
         let bytes = self.append(block, Operation::Constant(Constant::U64(bytes)))?[0];
@@ -192,7 +198,7 @@ impl<'plan> Lowerer<'plan, '_> {
         failure_target: BlockId,
     ) -> Result<(), LowerError> {
         let metadata = self.shared_cast_metadata(block, &cast.source)?;
-        let condition = self.membership(block, metadata, shared_view(cast.target)?)?;
+        let condition = self.membership(block, metadata, self.shared_view(cast.target)?)?;
         let handle = self.shared_cast_source(block, &cast.source)?;
         let destination = self.address(block, cast.destination)?;
         let success = self.builder.reserve_block()?;
@@ -522,6 +528,28 @@ impl<'plan> Lowerer<'plan, '_> {
         }
     }
 
+    fn shared_view(&self, target: MirSharedTarget) -> Result<MirViewTarget, LowerError> {
+        Ok(match target {
+            MirSharedTarget::Class(class) => MirViewTarget::Class(class),
+            MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
+            MirSharedTarget::Obj => MirViewTarget::Obj,
+            MirSharedTarget::OptionalBox(optional_box) => match self
+                .plan()
+                .semantic()
+                .optional_box(optional_box)
+                .and_then(|fact| fact.object_view)
+                .ok_or(PlanError::InvalidDomain)?
+            {
+                crate::backend::plan::ObjectViewTarget::Class(class) => MirViewTarget::Class(class),
+                crate::backend::plan::ObjectViewTarget::Interface(interface) => {
+                    MirViewTarget::Interface(interface)
+                }
+                crate::backend::plan::ObjectViewTarget::Obj => MirViewTarget::Obj,
+            },
+            MirSharedTarget::Array(_) => return Err(PlanError::InvalidDomain.into()),
+        })
+    }
+
     fn append(
         &mut self,
         block: BlockId,
@@ -535,17 +563,6 @@ impl<'plan> Lowerer<'plan, '_> {
             .builder
             .append(self.active_blocks[block.index()], operation)?)
     }
-}
-
-fn shared_view(target: MirSharedTarget) -> Result<MirViewTarget, LowerError> {
-    Ok(match target {
-        MirSharedTarget::Class(class) => MirViewTarget::Class(class),
-        MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
-        MirSharedTarget::Obj => MirViewTarget::Obj,
-        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_) => {
-            return Err(PlanError::InvalidDomain.into())
-        }
-    })
 }
 
 pub(super) fn owner_helper(

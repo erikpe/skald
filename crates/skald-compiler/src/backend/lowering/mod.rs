@@ -14,6 +14,8 @@ mod lifecycle;
 mod memory;
 mod numeric;
 mod optional;
+mod optional_access;
+mod optional_aggregate;
 mod origin;
 mod ownership;
 mod place;

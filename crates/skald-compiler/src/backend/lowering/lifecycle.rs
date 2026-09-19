@@ -80,7 +80,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn copy_construction_operation(
+    pub(super) fn copy_construction_operation(
         &mut self,
         block: BlockId,
         operation: MirSelectedCopyOperation<CopyConstructorId>,
@@ -136,7 +136,7 @@ impl<'plan> Lowerer<'plan, '_> {
         }
     }
 
-    fn copy_assignment_operation(
+    pub(super) fn copy_assignment_operation(
         &mut self,
         block: BlockId,
         operation: MirSelectedCopyOperation<CopyAssignmentId>,
@@ -233,6 +233,35 @@ impl<'plan> Lowerer<'plan, '_> {
                 span,
                 false,
             ),
+            MirSynthesizedFieldCopy::OptionalClass {
+                field,
+                class,
+                operation,
+            } => self.class_optional_initialize(
+                block,
+                &crate::mir::MirClassOptionalInitialize {
+                    optional: optional_field(self.admitted.program(), field)?,
+                    destination: destination.clone().project_field(field),
+                    source: crate::mir::MirClassOptionalSource::Copy(
+                        source.clone().project_field(field),
+                    ),
+                    class,
+                    copy_constructor: Some(operation),
+                    span,
+                },
+            ),
+            MirSynthesizedFieldCopy::Optional { field, optional } => self
+                .aggregate_optional_initialize(
+                    block,
+                    &crate::mir::MirAggregateOptionalInitialize {
+                        optional,
+                        destination: destination.clone().project_field(field),
+                        source: crate::mir::MirAggregateOptionalSource::Copy(
+                            source.clone().project_field(field),
+                        ),
+                        span,
+                    },
+                ),
             _ => Err(PlanError::InvalidDomain.into()),
         }
     }
@@ -277,6 +306,48 @@ impl<'plan> Lowerer<'plan, '_> {
                 span,
                 true,
             ),
+            MirSynthesizedFieldCopy::OptionalClass {
+                field,
+                class,
+                operation,
+            } => {
+                let constructor = self
+                    .admitted
+                    .program()
+                    .class(class)
+                    .and_then(|class| class.copy_constructor.selected())
+                    .ok_or(PlanError::InvalidDomain)?;
+                self.class_optional_assign(
+                    block,
+                    &crate::mir::MirClassOptionalAssign {
+                        optional: optional_field(self.admitted.program(), field)?,
+                        destination: destination.clone().project_field(field),
+                        source: crate::mir::MirClassOptionalSource::Copy(
+                            source.clone().project_field(field),
+                        ),
+                        class,
+                        copy_constructor: Some(constructor),
+                        copy_assignment: Some(operation),
+                        authorization: None,
+                        final_authorization: None,
+                        span,
+                    },
+                )
+            }
+            MirSynthesizedFieldCopy::Optional { field, optional } => self
+                .aggregate_optional_assign(
+                    block,
+                    &crate::mir::MirAggregateOptionalAssign {
+                        optional,
+                        destination: destination.clone().project_field(field),
+                        source: crate::mir::MirAggregateOptionalSource::Copy(
+                            source.clone().project_field(field),
+                        ),
+                        authorization: None,
+                        final_authorization: None,
+                        span,
+                    },
+                ),
             _ => Err(PlanError::InvalidDomain.into()),
         }
     }
@@ -370,5 +441,15 @@ impl<'plan> Lowerer<'plan, '_> {
                 ty: ScalarType::DataAddress,
             },
         )?[0])
+    }
+}
+
+fn optional_field(
+    program: &crate::mir::MirProgram,
+    field: crate::identity::FieldId,
+) -> Result<crate::identity::OptionalTypeId, LowerError> {
+    match program.field(field).map(|field| field.ty) {
+        Some(crate::mir::MirType::Optional(optional)) => Ok(optional),
+        _ => Err(PlanError::InvalidDomain.into()),
     }
 }

@@ -164,7 +164,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 )?;
                 Ok(true)
             }
-            _ => Ok(false),
+            other => self.optional_access_terminator(block, other),
         }
     }
 
@@ -424,7 +424,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn optional_fact(&self, place: &MirPlace) -> Result<OptionalLayoutFact, LowerError> {
+    pub(super) fn optional_fact(&self, place: &MirPlace) -> Result<OptionalLayoutFact, LowerError> {
         let SemanticType::Optional(optional) = self.place_type(place)? else {
             return Err(PlanError::InvalidDomain.into());
         };
@@ -456,7 +456,7 @@ impl<'plan> Lowerer<'plan, '_> {
         })
     }
 
-    fn optional_state_address(
+    pub(super) fn optional_state_address(
         &mut self,
         block: BlockId,
         place: &MirPlace,
@@ -470,7 +470,7 @@ impl<'plan> Lowerer<'plan, '_> {
         )
     }
 
-    fn new_optional_block(
+    pub(super) fn new_optional_block(
         &mut self,
     ) -> Result<crate::backend::lir::BlockHandle<'plan>, LowerError> {
         let block = self.builder.reserve_block()?;
@@ -478,7 +478,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(block)
     }
 
-    fn branch_active(
+    pub(super) fn branch_active(
         &mut self,
         block: BlockId,
         condition: ValueHandle<'plan>,
@@ -496,7 +496,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn jump_optional(
+    pub(super) fn jump_optional(
         &mut self,
         from: crate::backend::lir::BlockHandle<'plan>,
         to: crate::backend::lir::BlockHandle<'plan>,
@@ -515,7 +515,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .append(self.active_blocks[block.index()], operation)?)
     }
 
-    fn load_optional_at(
+    pub(super) fn load_optional_at(
         &mut self,
         block: BlockId,
         address: ValueHandle<'plan>,
@@ -530,7 +530,7 @@ impl<'plan> Lowerer<'plan, '_> {
         )?[0])
     }
 
-    fn load_optional_at_handle(
+    pub(super) fn load_optional_at_handle(
         &mut self,
         block: crate::backend::lir::BlockHandle<'plan>,
         address: ValueHandle<'plan>,
@@ -545,7 +545,7 @@ impl<'plan> Lowerer<'plan, '_> {
         )?[0])
     }
 
-    fn store_optional_at(
+    pub(super) fn store_optional_at(
         &mut self,
         block: BlockId,
         address: ValueHandle<'plan>,
@@ -563,7 +563,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn store_optional_at_handle(
+    pub(super) fn store_optional_at_handle(
         &mut self,
         block: crate::backend::lir::BlockHandle<'plan>,
         address: ValueHandle<'plan>,
@@ -581,7 +581,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn byte_offset_at(
+    pub(super) fn byte_offset_at(
         &mut self,
         block: crate::backend::lir::BlockHandle<'plan>,
         base: ValueHandle<'plan>,

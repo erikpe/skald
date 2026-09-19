@@ -279,8 +279,12 @@ impl<'plan> Lowerer<'plan, '_> {
                     .semantic()
                     .optional_box(target)
                     .ok_or(PlanError::UnknownDeclaration)?;
-                let allocation = fact.allocation.ok_or(PlanError::InvalidDomain)?;
-                address = self.byte_offset(block, address, allocation.payload_offset)?;
+                let header = self
+                    .plan()
+                    .semantic()
+                    .shared_header
+                    .ok_or(PlanError::InvalidLayout)?;
+                address = self.byte_offset(block, address, header.header_size)?;
                 address = self.byte_offset(
                     block,
                     address,

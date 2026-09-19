@@ -28,9 +28,6 @@ pub(super) struct Lowerer<'plan, 'input> {
     pub(super) object_origins: BTreeMap<StorageId, EntryObjectOrigin<'plan>>,
     pub(super) trace_record: Option<ObjectHandle<'plan>>,
     pub(super) guards: BTreeMap<BlockId, super::numeric::Guard>,
-    // Computed addresses are block-local, even though the underlying object
-    // represents semantic storage across blocks and dynamic lifetime epochs.
-    pub(super) addresses: BTreeMap<(BlockId, StorageId), ValueHandle<'plan>>,
 }
 
 #[derive(Clone, Copy)]
@@ -90,7 +87,6 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             object_origins: BTreeMap::new(),
             trace_record: None,
             guards: super::numeric::guards(definition)?,
-            addresses: BTreeMap::new(),
         };
         lowerer.declare_storage()?;
         lowerer.initialize_trace()?;

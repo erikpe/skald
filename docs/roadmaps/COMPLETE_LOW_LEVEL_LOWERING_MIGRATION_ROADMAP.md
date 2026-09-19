@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM10 are complete and LM11 is next.
+Status: active; LM01–LM11 are complete and LM12 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -48,7 +48,7 @@ per-callable or per-operation fallback.
 - [x] LM08 — Lower shared ownership and generated owner helpers
 - [x] LM09 — Checkpoint the aggregate and lifecycle core
 - [x] LM10 — Lower primitive and shared-owner optional behavior
-- [ ] LM11 — Lower aggregate, class and boxed optional behavior
+- [x] LM11 — Lower aggregate, class and boxed optional behavior
 - [ ] LM12 — Lower array storage, construction, positions and anchors
 - [ ] LM13 — Lower array element lifecycle and generated helper families
 - [ ] LM14 — Lower indexed construction, slices and array aliases
@@ -389,19 +389,33 @@ golden determinism, release golden execution and the Rust 1.82 MSRV check pass.
 
 **Purpose:** complete recursive optional storage, publication and finalization.
 
-- [ ] Lower aggregate/class optional initialization, assignment, publication,
+- [x] Lower aggregate/class optional initialization, assignment, publication,
   payload access and conditional cleanup using checked aligned layouts.
-- [ ] Lower nested optional arrays/classes/shared fields without flattening layer
-  state or losing recursive lifecycle order.
-- [ ] Generate exact optional-box finalizers through the ordinary worklist.
-- [ ] Reject premature publication, payload access, cleanup and cross-layer guard
+- [x] Lower nested optional classes/shared fields without flattening layer state
+  or losing recursive lifecycle order. Inline-array payload execution remains
+  behind the explicit LM12–LM13 array-helper gate.
+- [x] Generate exact optional-box finalizers through the ordinary worklist.
+- [x] Reject premature publication, payload access, cleanup and cross-layer guard
   consumption at verifier boundaries.
 
 **Tests:** nested aggregate/class shapes, calls/results/fields, recursive cleanup,
 box finalizers, pinned views, malformed state transitions and native failures.
 
-**Exit criteria:** every optional instruction, terminator, layout and generated
-family has checked native parity.
+**Exit criteria:** every non-array optional instruction, terminator, layout and
+generated family has checked native parity; array-backed payload execution stays
+with the array tasks that own its storage and helpers.
+
+Completed on 2026-09-19. Shared lowering now expands tagged aggregate and
+inline-class optional initialization, assignment, publication, conditional
+cleanup and checked payload guards into ordinary LIR. Recursive nested layers
+retain independent state, optional fields participate in synthesized copy and
+class finalization, and exact optional-box allocations publish typed descriptors
+whose generated finalizers close through the ordinary worklist. Exact and
+polymorphic box views use the shared-header-relative planned layer offsets, so
+static view metadata does not pretend to own an exact allocation layout. Native
+tests cover nested copies, class fields, exact/polymorphic boxes, both artifact
+policies and pinned mutation failures. Inline-array optional payload operations
+remain rejected until LM12–LM13 provide their storage and helper bodies.
 
 ### LM12 — Lower array storage, construction, positions and anchors
 
@@ -607,7 +621,7 @@ continuing purpose and explicit removal owner.
 | Eager complete-mode `RawClassCopy` declarations for every class | LM03, `dbada8c6` | LM09 | Removed in LM09: raw-address wrappers are array-element machinery and will acquire roots from their actual array-helper consumers |
 | Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
 | `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
-| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrowed through LM09: both artifact policies admit the complete class/shared core; optional, array, string, I/O and static families retain explicit later owners |
+| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrowed through LM11: both artifact policies admit the complete class/shared and non-array optional core; array, string, I/O and static families retain explicit later owners |
 | Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LM19/LA05 | Retain focused admission, post-admission failure, dump, native and policy regressions; remove broad duplicates during cumulative review/adoption |
 | Legacy x86 lowering/frame/machine/emitter | Pre-program production backend | LA05 adoption | Preserve unchanged as default and parity oracle during LA04 |
 

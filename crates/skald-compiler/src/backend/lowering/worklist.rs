@@ -22,6 +22,11 @@ pub(in crate::backend) fn lower_next<'plan>(
         {
             super::generated::lower_class_finalizer(admitted, owner, key.layout)?
         }
+        LirCallableId::Helper(key)
+            if key.family == crate::backend::plan::HelperFamily::OptionalBoxFinalizer =>
+        {
+            super::generated::lower_optional_box_finalizer(admitted, owner, key.layout)?
+        }
         LirCallableId::Helper(key) if key.family == crate::backend::plan::HelperFamily::Retain => {
             super::generated_ownership::lower_retain(admitted, owner)?
         }

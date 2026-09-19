@@ -385,6 +385,20 @@ fn declare_generated_resources(
                         .ok_or(PlanError::InvalidLayout)?
                         .handle_layout,
                 )?),
+                DestructionStepFact::OptionalClassField(field)
+                | DestructionStepFact::OptionalField { field, .. } => {
+                    let field = facts
+                        .semantic
+                        .field(field)
+                        .ok_or(PlanError::UnknownDeclaration)?;
+                    let SemanticType::Optional(optional) = field.ty else {
+                        return Err(PlanError::InvalidDomain);
+                    };
+                    for dependency in optional_cleanup_dependencies(facts, optional)? {
+                        add_generated_dependency(facts, finalizer, dependency);
+                    }
+                    continue;
+                }
                 _ => continue,
             };
             add_generated_dependency(facts, finalizer, dependency);
@@ -401,12 +415,15 @@ fn declare_generated_resources(
         {
             continue;
         }
-        let Some(allocation) = optional_box.allocation else {
+        if optional_box.allocation.is_none() {
+            continue;
+        }
+        let Some(optional) = optional_box.exact_optional else {
             continue;
         };
-        let layout = optional_box
-            .exact_optional
-            .and_then(|optional| facts.semantic.layout(SemanticType::Optional(optional)))
+        let layout = facts
+            .semantic
+            .layout(SemanticType::Optional(optional))
             .ok_or(PlanError::InvalidLayout)?;
         let finalizer = declare_helper(
             facts,
@@ -415,10 +432,59 @@ fn declare_generated_resources(
             helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
             BTreeSet::new(),
         )?;
-        let _ = allocation;
-        let _ = finalizer;
+        let dependencies = optional_cleanup_dependencies(facts, optional)?;
+        if !dependencies.is_empty() {
+            // Inherited attribution names the generated boundary explicitly,
+            // so the receipt includes the boundary as well as actual callees.
+            add_generated_dependency(facts, finalizer, ArtifactId::Callable(finalizer));
+        }
+        for dependency in dependencies {
+            add_generated_dependency(facts, finalizer, dependency);
+        }
     }
     Ok(())
+}
+
+fn optional_cleanup_dependencies(
+    facts: &PlanFacts,
+    root: crate::identity::OptionalTypeId,
+) -> Result<BTreeSet<ArtifactId>, PlanError> {
+    let mut dependencies = BTreeSet::new();
+    let mut pending = vec![root];
+    while let Some(optional) = pending.pop() {
+        let fact = facts
+            .semantic
+            .optional(optional)
+            .ok_or(PlanError::UnknownDeclaration)?;
+        match fact.storage {
+            crate::backend::plan::OptionalStorageFact::Scalar => {}
+            crate::backend::plan::OptionalStorageFact::SharedOwner(_) => {
+                dependencies.insert(ArtifactId::Callable(helper_for(
+                    facts,
+                    HelperFamily::Release,
+                    facts
+                        .semantic
+                        .shared_header
+                        .ok_or(PlanError::InvalidLayout)?
+                        .handle_layout,
+                )?));
+            }
+            crate::backend::plan::OptionalStorageFact::InlineClass(class) => {
+                dependencies.insert(ArtifactId::Callable(helper_for(
+                    facts,
+                    HelperFamily::ClassFinalizer,
+                    facts
+                        .semantic
+                        .class(class)
+                        .ok_or(PlanError::UnknownDeclaration)?
+                        .complete_layout,
+                )?));
+            }
+            crate::backend::plan::OptionalStorageFact::Nested(inner) => pending.push(inner),
+            crate::backend::plan::OptionalStorageFact::InlineArray(_) => {}
+        }
+    }
+    Ok(dependencies)
 }
 
 fn declare_metadata(input: BackendInput<'_>, facts: &mut PlanFacts) -> Result<(), PlanError> {

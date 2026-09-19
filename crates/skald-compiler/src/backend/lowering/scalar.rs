@@ -63,6 +63,22 @@ impl<'plan> Lowerer<'plan, '_> {
                     )?;
                     return Ok(());
                 }
+                if let MirRvalueKind::OptionalBoxPresence {
+                    owner,
+                    target,
+                    layer,
+                    kind,
+                } = &assign.rvalue.kind
+                {
+                    let operation =
+                        self.optional_box_presence(block, *owner, *target, *layer, *kind)?;
+                    self.builder.append_into(
+                        self.active_blocks[block.index()],
+                        operation,
+                        &[self.values[assign.result.index()]],
+                    )?;
+                    return Ok(());
+                }
                 let operation = self.rvalue(block, &assign.rvalue.kind)?;
                 self.builder.append_into(
                     self.active_blocks[block.index()],
@@ -111,6 +127,32 @@ impl<'plan> Lowerer<'plan, '_> {
             MirInstruction::OptionalSharedCleanup(cleanup) => {
                 self.optional_shared_cleanup(block, cleanup)?
             }
+            MirInstruction::AggregateOptionalInitialize(initialize) => {
+                self.aggregate_optional_initialize(block, initialize)?
+            }
+            MirInstruction::AggregateOptionalAssign(assign) => {
+                self.aggregate_optional_assign(block, assign)?
+            }
+            MirInstruction::AggregateOptionalPublish(publish) => {
+                self.aggregate_optional_publish(block, publish)?
+            }
+            MirInstruction::AggregateOptionalCleanup(cleanup) => {
+                self.aggregate_optional_cleanup(block, cleanup)?
+            }
+            MirInstruction::ClassOptionalInitialize(initialize) => {
+                self.class_optional_initialize(block, initialize)?
+            }
+            MirInstruction::ClassOptionalAssign(assign) => {
+                self.class_optional_assign(block, assign)?
+            }
+            MirInstruction::ClassOptionalPublish(publish) => {
+                self.class_optional_publish(block, publish)?
+            }
+            MirInstruction::ClassOptionalCleanup(cleanup) => {
+                self.class_optional_cleanup(block, cleanup)?
+            }
+            MirInstruction::EndOptionalView(end) => self.end_optional_view(block, end)?,
+            MirInstruction::EndOptionalBoxView(end) => self.end_optional_box_view(block, end)?,
             _ => return Err(PlanError::InvalidDomain.into()),
         }
         Ok(())
