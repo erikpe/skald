@@ -168,17 +168,22 @@ fn scalar_schemas_accept_wrapping_arithmetic_and_reject_mixed_domains() {
         )),
         BuildError::InvalidScalar
     );
-    assert_eq!(
-        err(builder.append(
-            entry,
-            Operation::Binary {
-                operation: BinaryOperation::And,
-                left: boolean,
-                right: boolean
-            }
-        )),
-        BuildError::InvalidScalar
-    );
+    for operation in [
+        BinaryOperation::And,
+        BinaryOperation::Or,
+        BinaryOperation::Xor,
+    ] {
+        builder
+            .append(
+                entry,
+                Operation::Binary {
+                    operation,
+                    left: boolean,
+                    right: boolean,
+                },
+            )
+            .unwrap();
+    }
     // This layer records the wrapping/floor operation, including the overflow
     // pair; execution recipe equivalence remains a native target obligation.
     let draft = builder.finish();

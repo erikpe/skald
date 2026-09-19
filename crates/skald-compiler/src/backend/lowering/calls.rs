@@ -5,17 +5,19 @@ use super::{context::Lowerer, LowerError};
 use crate::{
     backend::{
         lir::{Call, CallArgument, CallTarget, Operation, ValueHandle},
-        plan::{ArtifactId, ComponentRole, LirCallableId, PlanError},
+        plan::{
+            ArtifactId, ComponentRole, DataKey, LirCallableId, MethodSlot, PlanError, ScalarType,
+        },
     },
     mir::{
         BlockId, MirArgument, MirCall, MirCallReceiver, MirCallTarget, MirFunctionLinkage,
-        MirMethodCallTarget, MirObjectView,
+        MirInitialize, MirMethodCallTarget, MirObjectView,
     },
 };
 
 impl<'plan> Lowerer<'plan, '_> {
     pub(super) fn call(&mut self, block: BlockId, source: &MirCall) -> Result<(), LowerError> {
-        let (target, signature) = self.call_target(source)?;
+        let (target, signature) = self.call_target(block, source)?;
         let roles = self
             .plan()
             .signature(self.plan().signature_id(signature.index())?)?
@@ -63,7 +65,8 @@ impl<'plan> Lowerer<'plan, '_> {
     }
 
     fn call_target(
-        &self,
+        &mut self,
+        block: BlockId,
         source: &MirCall,
     ) -> Result<
         (
@@ -96,8 +99,51 @@ impl<'plan> Lowerer<'plan, '_> {
                         .ok_or(PlanError::UnknownDeclaration)?,
                 ))
             }
-            MirCallTarget::Method(MirMethodCallTarget::Virtual { .. })
-            | MirCallTarget::Interface(_) => return Err(PlanError::InvalidDomain.into()),
+            MirCallTarget::Method(MirMethodCallTarget::Virtual {
+                family,
+                slot,
+                selected,
+            }) => {
+                let fact = self
+                    .plan()
+                    .semantic()
+                    .virtual_family(family)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                if fact.slot != slot || !fact.members.contains(&selected) {
+                    return Err(PlanError::InvalidDomain.into());
+                }
+                let artifact = ArtifactId::Callable(LirCallableId::Source(selected.into()));
+                let signature = self
+                    .plan()
+                    .artifact(self.plan().artifact_id(artifact)?, artifact.category())?
+                    .signature
+                    .ok_or(PlanError::InvalidSignature)?;
+                let receiver = receiver(source)?;
+                let origin = receiver.origin();
+                return Ok((
+                    self.dispatch_target(block, origin, MethodSlot::Virtual(family), signature)?,
+                    signature,
+                ));
+            }
+            MirCallTarget::Interface(target) => {
+                let signature = self
+                    .plan()
+                    .semantic()
+                    .interface_requirement(target.requirement)
+                    .ok_or(PlanError::UnknownDeclaration)?
+                    .signature;
+                let receiver = receiver(source)?;
+                let origin = receiver.origin();
+                return Ok((
+                    self.dispatch_target(
+                        block,
+                        origin,
+                        MethodSlot::Interface(target.requirement),
+                        signature,
+                    )?,
+                    signature,
+                ));
+            }
         };
         let signature = self
             .plan()
@@ -105,6 +151,95 @@ impl<'plan> Lowerer<'plan, '_> {
             .signature
             .ok_or(PlanError::InvalidSignature)?;
         Ok((CallTarget::Direct(artifact), signature))
+    }
+
+    pub(super) fn initialize(
+        &mut self,
+        block: BlockId,
+        source: &MirInitialize,
+    ) -> Result<(), LowerError> {
+        let artifact = ArtifactId::Callable(LirCallableId::Source(source.target.into()));
+        let signature = self
+            .plan()
+            .artifact(self.plan().artifact_id(artifact)?, artifact.category())?
+            .signature
+            .ok_or(PlanError::InvalidSignature)?;
+        let roles = self
+            .plan()
+            .signature(self.plan().signature_id(signature.index())?)?
+            .inputs
+            .iter()
+            .map(|component| component.role)
+            .collect::<Vec<_>>();
+        let destination = self.place_address(block, &source.destination)?;
+        let metadata = self.builder.append(
+            self.blocks[block.index()],
+            Operation::SymbolAddress {
+                symbol: ArtifactId::Data(DataKey::ClassDispatch(source.target.class())),
+                ty: ScalarType::DataAddress,
+            },
+        )?[0];
+        let arguments = roles
+            .into_iter()
+            .map(|role| {
+                let value = match role {
+                    ComponentRole::ReceiverStatic | ComponentRole::ReceiverComplete => destination,
+                    ComponentRole::ReceiverMetadata => metadata,
+                    _ => self.argument_component(block, &source.arguments, role)?,
+                };
+                Ok(CallArgument { role, value })
+            })
+            .collect::<Result<Vec<_>, LowerError>>()?;
+        let attribution = self.attribution(block, source.span, false)?;
+        self.builder.append(
+            self.blocks[block.index()],
+            Operation::Call(Call {
+                target: CallTarget::Direct(artifact),
+                signature,
+                arguments,
+                attribution,
+            }),
+        )?;
+        Ok(())
+    }
+
+    fn argument_component(
+        &mut self,
+        block: BlockId,
+        arguments: &[MirArgument],
+        role: ComponentRole,
+    ) -> Result<ValueHandle<'plan>, LowerError> {
+        match role {
+            ComponentRole::Parameter(index) => match arguments.get(index) {
+                Some(MirArgument::Value(value)) => Ok(self.values[value.index()]),
+                Some(MirArgument::SharedOwner(owner)) => self.load_call_storage(block, *owner),
+                _ => Err(PlanError::InvalidSignature.into()),
+            },
+            ComponentRole::AggregateAddress { parameter, .. } => match arguments.get(parameter) {
+                Some(MirArgument::Place(place) | MirArgument::OwnedPlace(place)) => {
+                    self.place_address(block, place)
+                }
+                _ => Err(PlanError::InvalidSignature.into()),
+            },
+            ComponentRole::AliasAddress(index) => match arguments.get(index) {
+                Some(MirArgument::Place(place)) => self.place_address(block, place),
+                Some(MirArgument::View(view)) => self.place_address(block, &view.source),
+                _ => Err(PlanError::InvalidSignature.into()),
+            },
+            ComponentRole::AliasComplete(index) => Ok(self
+                .alias_origin(
+                    block,
+                    arguments.get(index).ok_or(PlanError::InvalidSignature)?,
+                )?
+                .complete),
+            ComponentRole::AliasMetadata(index) => Ok(self
+                .alias_origin(
+                    block,
+                    arguments.get(index).ok_or(PlanError::InvalidSignature)?,
+                )?
+                .metadata),
+            _ => Err(PlanError::InvalidSignature.into()),
+        }
     }
 
     fn call_component(

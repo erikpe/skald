@@ -17,6 +17,11 @@ pub(in crate::backend) fn lower_next<'plan>(
     let body = match key {
         LirCallableId::Source(_) => Lowerer::new(admitted, owner)?.finish()?,
         LirCallableId::Entry => super::entry::lower(admitted, owner)?,
+        LirCallableId::Helper(key)
+            if key.family == crate::backend::plan::HelperFamily::ClassFinalizer =>
+        {
+            super::generated::lower_trivial_class_finalizer(admitted, owner, key.layout)?
+        }
         _ => return Err(crate::backend::plan::PlanError::InvalidDomain.into()),
     };
     worklist.complete(&body, &body.receipt())?;

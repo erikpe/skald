@@ -106,7 +106,7 @@ impl<'p> DraftChecks<'_, 'p> {
                     | BinaryOperation::Multiply => integer(ty) || ty == F64,
                     BinaryOperation::FloatDivide => ty == F64,
                     BinaryOperation::And | BinaryOperation::Or | BinaryOperation::Xor => {
-                        integer(ty)
+                        integer(ty) || ty == Bool
                     }
                 };
                 if !valid || ty != other {

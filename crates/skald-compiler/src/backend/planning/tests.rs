@@ -187,7 +187,6 @@ fn excluded_source_families_reject_before_plan_publication() {
     let sources = [
         "fn dead(values: i64[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
         "class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
-        "class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }",
         "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
     ];
     for source in sources {
@@ -202,6 +201,14 @@ fn excluded_source_families_reject_before_plan_publication() {
             assert!(!reason.reason.is_empty());
         }
     }
+
+    let object = fixture("class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }");
+    assert!(matches!(
+        admit(BackendInput::without_runtime_trace(&object.mir)),
+        Err(AdmissionError::Unsupported(_))
+    ));
+    admit(BackendInput::without_runtime_trace(&object.mir).with_reachable_artifacts_only())
+        .expect("LM06 admits reachable object initialization and direct dispatch");
 }
 
 #[test]

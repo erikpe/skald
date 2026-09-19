@@ -130,6 +130,63 @@ fn source_execution_matrix_covers_mir_trace_and_artifact_policies() {
 }
 
 #[test]
+fn object_initialization_dispatch_and_checked_views_execute_through_the_verified_path() {
+    let source = concat!(
+        "interface Readable { fn read() -> i64; fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64; }",
+        "class Root implements Readable {",
+        "value:i64; init(value:i64){self.value=value;}",
+        "virtual fn read()->i64{return self.value;}",
+        "virtual fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64{",
+        "return a+b+c+d+e+f+g+h;}}",
+        "class Leaf extends Root {",
+        "extra:i64; init(value:i64,extra:i64){super(value);self.extra=extra;}",
+        "override fn read()->i64{return self.value+self.extra;}",
+        "override fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64{",
+        "return a+b+c+d+e+f+g+h+self.extra;}}",
+        "fn observe(ref exact:Leaf,ref ancestor:Root,ref readable:Readable,ref object:Obj)->i64{",
+        "if(object is Leaf){return exact.read()+ancestor.read()+readable.read()+((Leaf)object).read()",
+        "+readable.pressure(1,2,3,4,5,6,7,8);}",
+        "return 99;}",
+        "fn main()->i64{return observe(Leaf(1,2),Leaf(3,4),Leaf(5,6),Leaf(7,8));}",
+    );
+    let fixture = fixture(MirMode::Default, source);
+    let (assembly, lowered) = inspect_with_policy(
+        &fixture,
+        RuntimeTracePolicy::Omitted,
+        true,
+        super::NativePilotInspection {
+            lowered: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    assert!(lowered.contains("ClassDispatch"), "{lowered}");
+    assert!(lowered.contains("target: Indirect("), "{lowered}");
+    assert!(lowered.contains("Compare { predicate: Equal"), "{lowered}");
+    assert_exit(&assembly, RuntimeTracePolicy::Omitted, 78);
+}
+
+#[test]
+fn failed_checked_cast_reports_at_its_source_operation() {
+    let fixture = fixture(
+        MirMode::Default,
+        concat!(
+            "class Root { init() {} }",
+            "class Leaf extends Root { init(){super();} fn value()->i64{return 1;} }",
+            "fn force(ref object:Obj)->i64{return ((Leaf)object).value();}",
+            "fn main()->i64{return force(Root());}",
+        ),
+    );
+    let assembly = compile(&fixture, RuntimeTracePolicy::Enabled, true).unwrap();
+    let output = run_native_assembly_with_runtime_trace_probe(&assembly);
+    assert!(!output.status.success(), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("checked object cast failed"), "{stderr}");
+    assert!(stderr.contains("native-pilot.ska"), "{stderr}");
+}
+
+#[test]
 fn scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries() {
     let source = concat!(
         "extern fn c_integer_pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64)->i64;",
@@ -443,10 +500,10 @@ fn checked_division_failure_preserves_runtime_reporting_and_trace_policy() {
 }
 
 #[test]
-fn unsupported_source_rejects_without_changing_the_public_backend() {
+fn unsupported_lifecycle_rejects_without_changing_the_public_backend() {
     let source = concat!(
         "class Item { value:i64; init(value:i64){self.value=value;} ",
-        "fn read()->i64{return self.value;} }",
+        "fn read()->i64{return self.value;} destroy {} }",
         "fn main()->i64{var item:Item=Item(7);return item.read();}",
     );
     let fixture = fixture(MirMode::Default, source);

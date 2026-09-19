@@ -103,9 +103,11 @@ The private planner checks every physically retained body and its storage,
 places, signatures, calls and terminators against the current staged admission
 allowlist.
 Requesting reachable artifact emission does not remove unsupported bodies.
-Direct receiver-bearing bodies, aliases, complex places, aggregate parameters
-and no-op class cleanup are eligible. Dynamic dispatch, nontrivial lifecycle,
-I/O, string panic and statics still reject explicitly.
+Direct receiver-bearing bodies, aliases, complex places, aggregate parameters,
+initializers, runtime type tests, checked object views, virtual/interface
+dispatch and recursively empty class cleanup are eligible. Shared-owner
+transfers, nontrivial lifecycle, I/O, string panic and statics still reject
+explicitly.
 Complete artifact emission also rejects declared families requiring unsupported
 generated lifecycle/metadata roots. Reachable emission uses certified runtime
 obligations; unused declarations do not acquire executable authority.
@@ -149,6 +151,16 @@ location before parameter stores. Calls update the frame immediately before the
 call; checked numeric failures update only on their failure path before reporting.
 Scalar result values and source stores precede the final return-frame pop;
 aggregate results remain in the caller-provided destination across that pop.
+Dynamic member calls load a signature-typed code address from the checked slot
+of the receiver's exact metadata. Runtime membership compares metadata against
+the retained class/optional-box descriptors in the checked object-view set.
+Checked casts branch through a generated success-only binding block that writes
+the view address and preserves the complete-object/metadata origin. Initializer
+calls use the final destination as both static and complete receiver and retain
+the initializer class dispatch table through typed data edges. Reachable
+dispatch publication declares only helpers with real executable edges; the
+recursively empty class finalizer has an ordinary verified no-op body until
+nontrivial lifecycle lowering replaces it in LM07.
 The generated process entry owns no source frame: it calls the runtime ABI marker,
 then language main and returns main's exact scalar result. Admission excludes
 statics, so startup/shutdown coordinators remain absent rather than acquiring

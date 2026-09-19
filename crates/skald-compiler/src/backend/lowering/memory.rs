@@ -28,7 +28,12 @@ impl<'plan> Lowerer<'plan, '_> {
             })
             .collect::<std::collections::BTreeSet<_>>();
         for storage in self.definition.storage_entries() {
-            let id = if matches!(storage.kind, crate::mir::MirStorageKind::SharedAllocation) {
+            let address_carrier = matches!(
+                storage.kind,
+                crate::mir::MirStorageKind::SharedAllocation
+                    | crate::mir::MirStorageKind::CheckedView(_)
+            );
+            let id = if address_carrier {
                 self.plan()
                     .semantic()
                     .shared_header
@@ -78,7 +83,11 @@ impl<'plan> Lowerer<'plan, '_> {
             .definition
             .storage(storage)
             .expect("verified local storage");
-        if matches!(storage.kind, crate::mir::MirStorageKind::SharedAllocation) {
+        if matches!(
+            storage.kind,
+            crate::mir::MirStorageKind::SharedAllocation
+                | crate::mir::MirStorageKind::CheckedView(_)
+        ) {
             return Ok(self.address_representation());
         }
         let ty = storage.ty;
@@ -187,6 +196,24 @@ impl<'plan> Lowerer<'plan, '_> {
         if origin.metadata.replace(value).is_some() {
             return Err(PlanError::InvalidSignature.into());
         }
+        Ok(())
+    }
+
+    pub(super) fn bind_origin(
+        &mut self,
+        storage: StorageId,
+        origin: ObjectOriginValues<'plan>,
+    ) -> Result<(), LowerError> {
+        if self.object_origins.contains_key(&storage) {
+            return Err(PlanError::InvalidSignature.into());
+        }
+        self.object_origins.insert(
+            storage,
+            super::context::EntryObjectOrigin {
+                complete: Some(origin.complete),
+                metadata: Some(origin.metadata),
+            },
+        );
         Ok(())
     }
 

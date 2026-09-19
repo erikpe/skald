@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM05 are complete and LM06 is next.
+Status: active; LM01–LM06 are complete and LM07 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -43,7 +43,7 @@ per-callable or per-operation fallback.
 - [x] LM03 — Complete data, artifact and static-storage planning facts
 - [x] LM04 — Checkpoint the complete fact model
 - [x] LM05 — Lower complex places and aggregate call boundaries
-- [ ] LM06 — Lower dispatch, runtime type operations and object initialization
+- [x] LM06 — Lower dispatch, runtime type operations and object initialization
 - [ ] LM07 — Lower copy, cleanup and complete-class finalization
 - [ ] LM08 — Lower shared ownership and generated owner helpers
 - [ ] LM09 — Checkpoint the aggregate and lifecycle core
@@ -219,19 +219,33 @@ origin forwarding. The backend suite, formatting and static checks pass.
 **Purpose:** make object identity, dispatch and checked view construction usable
 by lifecycle and ownership lowering.
 
-- [ ] Lower direct, virtual and interface method target selection from checked
+- [x] Lower direct, virtual and interface method target selection from checked
   tables and exact receiver metadata.
-- [ ] Lower type tests, checked object/shared casts, checked-view binding and
-  success/failure carriers with exact source attribution.
-- [ ] Lower initializer calls into final destinations and preserve complete
+- [x] Lower type tests, checked object casts and shared-origin membership,
+  checked-view binding and success/failure carriers with exact source
+  attribution. Owner-producing shared casts retain their explicit LM08 owner.
+- [x] Lower initializer calls into final destinations and preserve complete
   object origins through base/interface views.
-- [ ] Publish required dispatch/metadata data with typed callable/data edges.
+- [x] Publish required dispatch/metadata data with typed callable/data edges.
 
 **Tests:** direct/virtual/interface execution, deep inheritance and interface
 views, cast success/failure, malformed slots/metadata and aggregate ABI pressure.
 
 **Exit criteria:** object construction, runtime membership and every dispatch
 form execute without legacy selection or unchecked metadata access.
+
+Completed on 2026-09-19. Shared lowering now loads virtual and interface targets
+from checked signature-typed slots, evaluates membership from frozen object-view
+sets, and binds checked views only on the successful cast edge. Initializers use
+their final destination and exact class metadata, including inherited
+initializer chains. Reachable planning retains those dispatch tables and only
+the helper edges they actually reference; recursively empty class finalizers
+publish ordinary verified no-op bodies until LM07 expands lifecycle lowering.
+The private native path executes deep inheritance, direct/virtual/interface
+calls, successful and failing casts, source-attributed failure reporting and an
+eight-argument interface call under stack pressure. Shared-owner transfer,
+retain and adopt behavior remains wholly owned by LM08. The complete repository
+gate, 650-case golden suite and Rust 1.82 MSRV check pass.
 
 ### LM07 — Lower copy, cleanup and complete-class finalization
 

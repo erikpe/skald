@@ -281,21 +281,10 @@ fn declare_generated_resources(
         );
     }
     for class in &facts.semantic.classes.clone() {
-        if input.reachable_artifacts_only()
-            && !required.contains(&BackendRequiredRuntimeEntity::ClassDispatch(class.class))
+        if input.reachable_artifacts_only() && !needs_class_dispatch(input, &required, class.class)
         {
             continue;
         }
-        let copy = declare_helper(
-            facts,
-            HelperFamily::RawClassCopy,
-            class.complete_layout,
-            helper_signature(
-                &[ScalarType::DataAddress, ScalarType::DataAddress],
-                ReturnShape::Unit,
-            ),
-            BTreeSet::new(),
-        )?;
         let finalizer = declare_helper(
             facts,
             HelperFamily::ClassFinalizer,
@@ -311,6 +300,22 @@ fn declare_generated_resources(
                     _ => None,
                 })
                 .collect(),
+        )?;
+        // Reachable publication declares only helpers with an executable edge.
+        // The dispatch table needs its finalizer slot now; class copying and
+        // shared-owner helpers acquire roots with their LM07/LM08 operations.
+        if input.reachable_artifacts_only() {
+            continue;
+        }
+        let copy = declare_helper(
+            facts,
+            HelperFamily::RawClassCopy,
+            class.complete_layout,
+            helper_signature(
+                &[ScalarType::DataAddress, ScalarType::DataAddress],
+                ReturnShape::Unit,
+            ),
+            BTreeSet::new(),
         )?;
         let shared_layout = facts
             .semantic
@@ -388,7 +393,7 @@ fn declare_metadata(input: BackendInput<'_>, facts: &mut PlanFacts) -> Result<()
     let word = facts.profile.data_layout.pointer_bytes;
     for dispatch in facts.semantic.dispatch_tables.clone() {
         if input.reachable_artifacts_only()
-            && !required.contains(&BackendRequiredRuntimeEntity::ClassDispatch(dispatch.class))
+            && !needs_class_dispatch(input, &required, dispatch.class)
         {
             continue;
         }
@@ -496,6 +501,17 @@ fn declare_metadata(input: BackendInput<'_>, facts: &mut PlanFacts) -> Result<()
         )?;
     }
     Ok(())
+}
+
+fn needs_class_dispatch(
+    input: BackendInput<'_>,
+    required: &[BackendRequiredRuntimeEntity],
+    class: crate::identity::ClassId,
+) -> bool {
+    required.contains(&BackendRequiredRuntimeEntity::ClassDispatch(class))
+        || input.reachable_callables().iter().any(|callable| {
+            matches!(callable, crate::identity::CallableId::Initializer(id) if id.class() == class)
+        })
 }
 
 fn declare_literals(

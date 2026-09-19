@@ -58,6 +58,12 @@ impl<'plan> Lowerer<'plan, '_> {
             MirTerminator::Terminate { reason, span } => {
                 self.report_failure(block, *reason, *span)?
             }
+            MirTerminator::CheckedCast {
+                binding,
+                success_target,
+                failure_target,
+                ..
+            } => return self.checked_cast(block, binding, *success_target, *failure_target),
             _ => return Err(PlanError::InvalidDomain.into()),
         };
         self.builder

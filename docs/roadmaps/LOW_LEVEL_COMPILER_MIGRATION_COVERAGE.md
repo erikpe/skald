@@ -121,11 +121,11 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `StorageLive`, `StorageDead` | `lower.rs`, `frame.rs` | Preserve lifetime information for addressable objects; current emission is a no-op, not machine liveness or permission to reuse storage | E01 | — | LA03 |
 | `Assign` | `lower/assignment.rs` and scalar/type/optional/array selectors | See exhaustive rvalue inventory; widths and canonical forms survive home removal | E01, E03 | G01, G02 | LA03 scalar; LA04 remaining rvalues |
 | `Store` | `lower/value.rs` | Explicit place address and width-correct store; final-MIR authorization is not rechecked as source policy | E05 | — | LA03 scalar; LM05 checked complex places |
-| `Call` | `lower/call.rs`, `lower/call/*` | Stabilized target and ordered role-based components; ordinary/direct/static/indirect/method/interface forms; see call inventory | E02, E05, E13 | G03 | LA03 direct/indirect scalar; LM05 aggregate/direct-member boundary; LM06 dynamic dispatch |
-| `Initialize` | `lower/call.rs` | Call the selected initializer into its final destination; receiver origin preserved | E05 | — | LA04 |
+| `Call` | `lower/call.rs`, `lower/call/*` | Stabilized target and ordered role-based components; ordinary/direct/static/indirect/method/interface forms; see call inventory | E02, E05, E13 | G03 | Delivered: LA03 direct/indirect scalar, LM05 aggregate/direct-member boundary, LM06 dynamic dispatch |
+| `Initialize` | `lower/call.rs` | Call the selected initializer into its final destination; receiver origin preserved | E05 | — | Delivered by LM06 |
 | `CopyConstruct`, `CopyAssign` | `lower/copy.rs` | User/synthesized selection, base/field order, shared retain-before-release and alias-safe self-assignment | E06, E07 | — | LA04 |
 | `Cleanup`, `EndFullExpression` | `lower/cleanup.rs`, `lower/copy.rs` | Destruction plan and recorded reverse completion order; preserve already-computed result | E06 | — | LA04 |
-| `BindCheckedView`, `EndCheckedView` | `lower/type_operations.rs`, `lower.rs` | Materialize static/complete/metadata components; current end is a verified lifetime no-op | E12 | — | LA04 |
+| `BindCheckedView`, `EndCheckedView` | `lower/type_operations.rs`, `lower.rs` | Materialize static/complete/metadata components; current end is a verified lifetime no-op | E12 | — | Delivered by LM06 |
 | `SharedAllocate`, `SharedInitialize`, `SharedPublish` | `lower/ownership.rs`, `lower/call.rs` | Checked allocation, unpublished payload, selected constructor/copy and publish after completion | E07, E08 | — | LA04 |
 | `SharedStatic` | `lower/strings.rs` | Static/immortal provenance and backing reference; no dynamic retain/free of immortal data | E11 | — | LA04 |
 | `SharedAdopt`, `SharedMove` | `lower/ownership.rs` | Transfer owner exactly once; no extra retain; source disposition preserved | E07 | — | LA04 |
@@ -198,7 +198,8 @@ handle checked terminators before the basic `lower/terminator.rs` fallback.
 | `ShiftCountCheck` | `lower/shift.rs` | Success/failure edges before operation; reject count at selected width | E03 | — | LA03 |
 | `IntegerDivisorCheck` | `lower/integer_division.rs` | Matching divisor check and operation-specific failure attribution | E03 | G02 | LA03 |
 | `PrimitiveCastRangeCheck` | `lower/primitive_cast.rs` | Matching finite/range relation with success-only conversion | E03 | — | LA03 |
-| `CheckedCast`, `SharedCast` | `lower/type_operations.rs` | Runtime membership and success-only carrier/owner, exact failure edge | E12 | — | LA04 |
+| `CheckedCast` | `lower/type_operations.rs` | Runtime membership and success-only carrier, exact failure edge | E12 | — | Delivered by LM06 |
+| `SharedCast` | `lower/type_operations.rs` | Runtime membership plus success-only owner transfer/retain semantics | E07, E12 | — | LM08 |
 | `OptionalUnwrap`, `OptionalSharedUnwrap` | `lower/optional/access.rs` | Success-only payload/owner transfer, absent failure with exact layer | E08 | — | LA04 |
 | `BeginOptionalView`, `BeginOptionalBoxView` | `lower/optional/access.rs` | Success, absence and overflow are separate edges; pin exact state/owner | E08 | — | LA04 |
 | `CheckOptionalMutation` | `lower/optional/access.rs` | Pinned mutation reports; invalid internal pin state hard-traps | E08 | — | LA04 |
@@ -758,7 +759,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | --- | --- | --- |
 | Scalar operations, guarded numeric cells, primitive casts and ordinary CFG | Typed signatures/layouts, failure data and guard associations | Delivered pilot retained as the common base; family-specific terminators complete with LM05–LM15 |
 | Complex places, object origins, aggregate results, aliases and receiver components | Exact/complete layouts, field/base offsets, object-view components and role-based signatures | Delivered by LM05; checked-view binding remains LM06 and array-alias binding remains LM14 |
-| Direct/virtual/interface dispatch, checked views, casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | LM06 |
+| Direct/virtual/interface dispatch, checked views, object casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | Delivered by LM06; owner-producing shared casts remain with LM08 |
 | Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | LM07 |
 | Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | LM08 |
 | Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | LM10 |

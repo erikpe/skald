@@ -40,14 +40,18 @@ impl<'plan> Lowerer<'plan, '_> {
                     },
                 )?;
             }
-            MirInstruction::EndFullExpression(end) if end.temporaries.is_empty() => {}
+            MirInstruction::EndFullExpression(end)
+                if end.temporaries.iter().all(|cleanup| {
+                    crate::backend::planning::trivial_cleanup(
+                        self.admitted.program(),
+                        cleanup.target,
+                    )
+                }) => {}
             MirInstruction::Cleanup(cleanup)
-                if self
-                    .admitted
-                    .program()
-                    .classes
-                    .get(cleanup.target)
-                    .is_some_and(|class| class.destruction.steps.is_empty()) => {}
+                if crate::backend::planning::trivial_cleanup(
+                    self.admitted.program(),
+                    cleanup.target,
+                ) => {}
             MirInstruction::Assign(assign) => {
                 if self
                     .guards
@@ -55,6 +59,10 @@ impl<'plan> Lowerer<'plan, '_> {
                     .is_some_and(|guard| guard.value == assign.result)
                 {
                     return Ok(()); // The secured load is defined by the predecessor check.
+                }
+                if let MirRvalueKind::TypeTest { source, target } = &assign.rvalue.kind {
+                    self.type_test(block, assign.result, source, *target)?;
+                    return Ok(());
                 }
                 let operation = self.rvalue(block, &assign.rvalue.kind)?;
                 self.builder.append_into(
@@ -64,6 +72,9 @@ impl<'plan> Lowerer<'plan, '_> {
                 )?;
             }
             MirInstruction::Call(call) => self.call(block, call)?,
+            MirInstruction::Initialize(initialize) => self.initialize(block, initialize)?,
+            MirInstruction::BindCheckedView(binding) => self.bind_checked_view(block, binding)?,
+            MirInstruction::EndCheckedView(_) => {}
             _ => return Err(PlanError::InvalidDomain.into()),
         }
         Ok(())

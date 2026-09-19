@@ -1,4 +1,4 @@
-//! Numeric failures are explicit typed reporter calls with source attribution.
+//! Language failures are explicit typed reporter calls with source attribution.
 use super::{context::Lowerer, LowerError};
 use crate::{
     backend::{
@@ -26,6 +26,7 @@ impl<'plan> Lowerer<'plan, '_> {
             MirTerminationReason::PrimitiveCastOutOfRange => {
                 FailureMessage::PrimitiveCastOutOfRange
             }
+            MirTerminationReason::ObjectCastFailure => FailureMessage::ObjectCastFailure,
             _ => return Err(PlanError::InvalidDomain.into()),
         };
         let target = ArtifactId::Runtime(RuntimeService::Panic);

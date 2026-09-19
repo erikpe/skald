@@ -32,6 +32,8 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
             entity,
             BackendRequiredRuntimeEntity::FunctionType(_)
                 | BackendRequiredRuntimeEntity::ClassDispatch(_)
+                | BackendRequiredRuntimeEntity::VirtualFamily(_)
+                | BackendRequiredRuntimeEntity::InterfaceRequirement(_)
                 | BackendRequiredRuntimeEntity::ArrayLifecycle(_)
                 | BackendRequiredRuntimeEntity::OptionalLifecycle(_)
                 | BackendRequiredRuntimeEntity::OptionalBoxLayout(_)
@@ -61,6 +63,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     | MirStorageKind::SharedAnchor
                     | MirStorageKind::ScalarSpill
                     | MirStorageKind::PrimitiveAlias
+                    | MirStorageKind::CheckedView(_)
                     | MirStorageKind::PathCondition
                     | MirStorageKind::NormalizedPathActivation
             ) {
@@ -82,12 +85,13 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 match instruction {
                     MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
                     MirInstruction::Store(store) => place(&store.destination, owner)?,
-                    MirInstruction::EndFullExpression(end) if end.temporaries.is_empty() => {}
+                    MirInstruction::EndFullExpression(end)
+                        if end
+                            .temporaries
+                            .iter()
+                            .all(|cleanup| trivial_cleanup(program, cleanup.target)) => {}
                     MirInstruction::Cleanup(cleanup)
-                        if program
-                            .classes
-                            .get(cleanup.target)
-                            .is_some_and(|class| class.destruction.steps.is_empty()) => {}
+                        if trivial_cleanup(program, cleanup.target) => {}
                     MirInstruction::Assign(assign) => match &assign.rvalue.kind {
                         MirRvalueKind::Load(source) => place(source, owner)?,
                         MirRvalueKind::CallableAddress(address) => {
@@ -110,6 +114,10 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         | MirRvalueKind::PrimitiveComparison { .. }
                         | MirRvalueKind::PrimitiveCast { .. }
                         | MirRvalueKind::CheckedF64ToInteger { .. } => {}
+                        MirRvalueKind::TypeTest { source, .. } => {
+                            place(&source.source, owner)?;
+                            origin(&source.origin, owner)?;
+                        }
                         other => {
                             return Err(unsupported(owner, format!("unsupported rvalue {other:?}")))
                         }
@@ -158,12 +166,36 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                             MirCallTarget::Method(MirMethodCallTarget::Direct(method)) => {
                                 callable(program, method.into(), owner)?
                             }
-                            MirCallTarget::Method(MirMethodCallTarget::Virtual { .. })
-                            | MirCallTarget::Interface(_) => {
-                                return Err(unsupported(owner, "dynamic member dispatch"))
+                            MirCallTarget::Method(MirMethodCallTarget::Virtual {
+                                selected,
+                                ..
+                            }) => callable(program, selected.into(), owner)?,
+                            MirCallTarget::Interface(target) => {
+                                let requirement = program
+                                    .interface_requirement(target.requirement)
+                                    .expect("verified interface requirement");
+                                signature_check(
+                                    program,
+                                    &requirement.parameters,
+                                    requirement.return_type,
+                                    owner,
+                                )?;
                             }
                         }
                     }
+                    MirInstruction::Initialize(initialize) => {
+                        place(&initialize.destination, owner)?;
+                        let declaration = program
+                            .initializer(initialize.target)
+                            .expect("verified initializer declaration");
+                        signature_check(program, &declaration.parameters, MirType::Unit, owner)?;
+                        arguments(&initialize.arguments, owner)?;
+                    }
+                    MirInstruction::BindCheckedView(binding) => {
+                        place(&binding.view.source, owner)?;
+                        origin(&binding.view.origin, owner)?;
+                    }
+                    MirInstruction::EndCheckedView(_) => {}
                     other => {
                         return Err(unsupported(
                             owner,
@@ -184,9 +216,14 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         MirTerminationReason::ShiftCountOutOfRange
                         | MirTerminationReason::IntegerDivisionByZero
                         | MirTerminationReason::IntegerRemainderByZero
-                        | MirTerminationReason::PrimitiveCastOutOfRange,
+                        | MirTerminationReason::PrimitiveCastOutOfRange
+                        | MirTerminationReason::ObjectCastFailure,
                     ..
                 } => {}
+                MirTerminator::CheckedCast { binding, .. } => {
+                    place(&binding.view.source, owner)?;
+                    origin(&binding.view.origin, owner)?;
+                }
                 other => {
                     return Err(unsupported(
                         owner,
@@ -203,15 +240,59 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     Ok(())
 }
 
+pub(in crate::backend) fn trivial_cleanup(
+    program: &MirProgram,
+    root: crate::identity::ClassId,
+) -> bool {
+    let mut pending = vec![root];
+    let mut seen = std::collections::BTreeSet::new();
+    while let Some(class) = pending.pop() {
+        if !seen.insert(class) {
+            continue;
+        }
+        let Some(class) = program.classes.get(class) else {
+            return false;
+        };
+        for step in &class.destruction.steps {
+            match *step {
+                MirDestructionStep::Base(base) => pending.push(base),
+                MirDestructionStep::Field(field) => match program
+                    .class(field.class())
+                    .and_then(|class| class.field(field))
+                    .map(|field| field.ty)
+                {
+                    Some(MirType::Class(class)) => pending.push(class),
+                    _ => return false,
+                },
+                _ => return false,
+            }
+        }
+    }
+    true
+}
+
 fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), AdmissionError> {
-    if matches!(
-        place.base,
-        MirPlaceBase::CheckedView(_) | MirPlaceBase::ArrayAlias(_)
-    ) {
+    if matches!(place.base, MirPlaceBase::ArrayAlias(_)) {
         return Err(unsupported(
             owner,
-            "checked-view or array-alias place before its binding owner",
+            "array-alias place before its binding owner",
         ));
+    }
+    Ok(())
+}
+
+fn arguments(arguments: &[MirArgument], owner: Option<CallableId>) -> Result<(), AdmissionError> {
+    for argument in arguments {
+        match argument {
+            MirArgument::Value(_) | MirArgument::SharedOwner(_) => {}
+            MirArgument::Place(argument_place) | MirArgument::OwnedPlace(argument_place) => {
+                place(argument_place, owner)?
+            }
+            MirArgument::View(view) => {
+                place(&view.source, owner)?;
+                origin(&view.origin, owner)?;
+            }
+        }
     }
     Ok(())
 }

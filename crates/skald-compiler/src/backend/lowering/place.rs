@@ -216,7 +216,6 @@ impl<'plan> Lowerer<'plan, '_> {
             }
             MirPlaceBase::Storage(storage)
             | MirPlaceBase::AliasParameter(storage)
-            | MirPlaceBase::CheckedView(storage)
             | MirPlaceBase::ArrayAlias(storage) => {
                 let ty = self
                     .definition
@@ -224,6 +223,14 @@ impl<'plan> Lowerer<'plan, '_> {
                     .ok_or(PlanError::InvalidDomain)?
                     .ty;
                 Ok((self.address(block, storage)?, semantic_type(ty)))
+            }
+            MirPlaceBase::CheckedView(storage) => {
+                let ty = self
+                    .definition
+                    .storage(storage)
+                    .ok_or(PlanError::InvalidDomain)?
+                    .ty;
+                Ok((self.load_storage(block, storage)?, semantic_type(ty)))
             }
             MirPlaceBase::SharedPointee(owner) => {
                 let target = shared_storage_target(self.definition, owner)?;

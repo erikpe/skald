@@ -17,6 +17,12 @@ impl Verifier {
         let float = |r: Representation| r.kind == RepresentationKind::Float && r.bits() == 64;
         let pointer =
             |r: Representation| r.kind == RepresentationKind::DataAddress && r.bits() == 64;
+        let address = |r: Representation| {
+            matches!(
+                r.kind,
+                RepresentationKind::DataAddress | RepresentationKind::CodeAddress(_)
+            ) && r.bits() == 64
+        };
         let bool_rep = Representation::from_scalar(ScalarType::Bool, 64).unwrap();
         let same = |a: ValueRef, b: ValueRef| a.representation == b.representation;
         let (valid, flags) = match &node.opcode {
@@ -118,10 +124,11 @@ impl Verifier {
                 out,
             } => (
                 same(*left, *right)
-                    && bits(left.representation)
+                    && (bits(left.representation)
+                        || (address(left.representation) && predicate.is_equality()))
                     && out.representation == bool_rep
                     && *condition == integer_condition(*predicate, *signed)
-                    && (!*signed || left.representation.bits() == 64),
+                    && (!*signed || bits(left.representation) && left.representation.bits() == 64),
                 true,
             ),
             Opcode::FloatCompare {
