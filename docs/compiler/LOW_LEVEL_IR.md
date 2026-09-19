@@ -177,7 +177,7 @@ target responsibilities.
 Typed artifacts distinguish callables, data, runtime services, user externals and
 trace TLS. Runtime/external declarations require exact service/convention
 signatures; data requires an addressable layout. The resource catalog freezes
-literal backing, failure text, trace records, dispatch and container descriptors,
+literal backing, failure text, trace metadata, dispatch and container descriptors,
 generated callable dependencies, TLS initialization and complete/reachable roots
 in canonical order. Omitted tracing rejects trace catalog/TLS entries.
 
@@ -188,6 +188,16 @@ reference; that slot has an exact all-zero physical recipe and no semantic
 initializer or cleanup. Reachable mode rejects this representation. Program
 publication reconciles active data definitions against the frozen recipes;
 retained-inactive zero storage remains a later target-materialization obligation.
+
+The complete-fact checkpoint reconciles this catalog with the exhaustive
+migration inventory. Aggregate hidden results and receiver metadata remain
+logical signature roles; recursive helper edges are typed artifact dependencies;
+retained-inactive storage is a complete-mode physical fact. The same combined
+catalog validates under the x86-64/System V and synthetic AArch64/AAPCS64
+profiles. Static trace resources consist of bytes, contexts, locations and TLS;
+trace activation records are callable-local LIR objects rather than data keys.
+All remaining migration work consumes these facts while constructing executable
+products, without querying a legacy planner.
 
 ## Identity and lookup
 

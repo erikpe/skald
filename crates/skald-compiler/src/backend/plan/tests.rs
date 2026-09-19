@@ -457,7 +457,7 @@ fn typed_artifacts_validate_category_and_trace_policy_before_lookup() {
     );
     for key in [
         ArtifactId::TraceTls,
-        ArtifactId::Data(DataKey::TraceRecord(0)),
+        ArtifactId::Data(DataKey::TraceBytes(0)),
         ArtifactId::Data(DataKey::TraceContext(0)),
         ArtifactId::Data(DataKey::TraceLocation(0)),
     ] {
@@ -782,6 +782,105 @@ fn semantic_catalog_is_target_portable_and_requires_dynamic_view_metadata() {
     let mut invalid = supplied;
     invalid.semantic.object_views[0].components.pop();
     rejected(invalid, PlanError::InvalidDispatch);
+}
+
+#[test]
+fn complete_fact_checkpoint_is_portable_across_target_profiles() {
+    let mut supplied = resource_facts(StaticStorageDisposition::RetainedInactive);
+    supplied.signatures[0] = SignatureFact {
+        convention: Convention::Language,
+        inputs: vec![
+            address(ComponentRole::ResultDestination(LayoutId::new(0))),
+            address(ComponentRole::ReceiverStatic),
+            address(ComponentRole::ReceiverComplete),
+            address(ComponentRole::ReceiverMetadata),
+        ],
+        results: vec![],
+        returns: ReturnShape::Aggregate(LayoutId::new(0)),
+    };
+    let helper_signature = supplied
+        .add_signature(SignatureFact {
+            convention: Convention::Language,
+            inputs: vec![],
+            results: vec![],
+            returns: ReturnShape::Unit,
+        })
+        .unwrap();
+    let helpers = [HelperFamily::ArrayClone, HelperFamily::ArrayRelease].map(|family| {
+        LirCallableId::Helper(HelperKey {
+            family,
+            layout: LayoutId::new(0),
+            signature: helper_signature,
+        })
+    });
+    for (helper, dependency) in [(helpers[0], helpers[1]), (helpers[1], helpers[0])] {
+        supplied.callables.push(CallableDeclaration {
+            key: helper,
+            signature: helper_signature,
+            body: BodyDisposition::Required,
+        });
+        supplied.resources.generated.push(GeneratedCallableFact {
+            callable: helper,
+            attribution: GeneratedAttribution::InheritedSourceOperation,
+            dependencies: [ArtifactId::Callable(dependency)].into_iter().collect(),
+        });
+        let root = ArtifactRootFact {
+            artifact: ArtifactId::Callable(helper),
+            reason: ArtifactRootReason::GeneratedFamily,
+        };
+        supplied.resources.complete_roots.insert(root);
+        supplied.resources.reachable_roots.insert(root);
+    }
+    supplied
+        .resources
+        .generated
+        .sort_by_key(|generated| generated.callable);
+
+    for (architecture, abi) in [
+        (Architecture::X86_64, Abi::SysV),
+        (Architecture::Aarch64, Abi::Aapcs64),
+    ] {
+        let mut candidate = supplied.clone();
+        candidate.profile.architecture = architecture;
+        candidate.profile.abi = abi;
+        let plan = CheckedPlan::check(candidate).unwrap();
+        assert_eq!(
+            plan.view()
+                .static_storage_disposition(StaticFieldId::new(ClassId::new(0), 0)),
+            Some(StaticStorageDisposition::RetainedInactive)
+        );
+        assert_eq!(plan.view().resources().generated.len(), 2);
+        let signature = plan
+            .view()
+            .callable(source(0))
+            .unwrap()
+            .signature()
+            .unwrap();
+        assert_eq!(signature.returns, ReturnShape::Aggregate(LayoutId::new(0)));
+        assert_eq!(
+            signature
+                .inputs
+                .iter()
+                .map(|component| component.role)
+                .collect::<Vec<_>>(),
+            vec![
+                ComponentRole::ResultDestination(LayoutId::new(0)),
+                ComponentRole::ReceiverStatic,
+                ComponentRole::ReceiverComplete,
+                ComponentRole::ReceiverMetadata,
+            ]
+        );
+        assert_eq!(
+            plan.view().resources().generated[0].dependencies,
+            [ArtifactId::Callable(helpers[1])].into_iter().collect()
+        );
+        assert_eq!(
+            plan.view().resources().generated[1].dependencies,
+            [ArtifactId::Callable(helpers[0])].into_iter().collect()
+        );
+        assert!(plan.view().callable(helpers[0]).is_ok());
+        assert!(plan.view().callable(helpers[1]).is_ok());
+    }
 }
 
 #[test]

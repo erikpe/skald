@@ -100,7 +100,6 @@ pub(in crate::backend) enum DataKey {
     OptionalBoxDescriptor(OptionalBoxTypeId),
     Static(StaticFieldId),
     TraceBytes(usize),
-    TraceRecord(usize),
     TraceContext(usize),
     TraceLocation(usize),
 }
@@ -142,10 +141,7 @@ impl ArtifactId {
             self,
             Self::TraceTls
                 | Self::Data(
-                    DataKey::TraceBytes(_)
-                        | DataKey::TraceRecord(_)
-                        | DataKey::TraceContext(_)
-                        | DataKey::TraceLocation(_)
+                    DataKey::TraceBytes(_) | DataKey::TraceContext(_) | DataKey::TraceLocation(_)
                 )
         )
     }

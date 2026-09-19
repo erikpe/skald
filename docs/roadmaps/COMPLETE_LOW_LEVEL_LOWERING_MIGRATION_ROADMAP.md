@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM03 are complete and LM04 is next.
+Status: active; LM01–LM04 are complete and LM05 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -41,7 +41,7 @@ per-callable or per-operation fallback.
 - [x] LM01 — Establish durable migration ownership and the no-fallback gate
 - [x] LM02 — Complete semantic layout and object-view planning facts
 - [x] LM03 — Complete data, artifact and static-storage planning facts
-- [ ] LM04 — Checkpoint the complete fact model
+- [x] LM04 — Checkpoint the complete fact model
 - [ ] LM05 — Lower complex places and aggregate call boundaries
 - [ ] LM06 — Lower dispatch, runtime type operations and object initialization
 - [ ] LM07 — Lower copy, cleanup and complete-class finalization
@@ -157,19 +157,29 @@ complete-mode inactive-reference exception.
 **Purpose:** audit the first design checkpoint before executable feature work
 amplifies any planning error.
 
-- [ ] Reconcile plan schemas against every operation/helper/data row in the
+- [x] Reconcile plan schemas against every operation/helper/data row in the
   migration coverage record and record remaining executable owners only.
-- [ ] Walk aggregate result, metadata receiver, recursive helper and retained
+- [x] Walk aggregate result, metadata receiver, recursive helper and retained
   inactive-data cases against the AArch64-informed synthetic target boundary.
-- [ ] Remove unused/provisional facts and expired allowances; amend the frozen
+- [x] Remove unused/provisional facts and expired allowances; amend the frozen
   design explicitly if an unresolved representation decision remains.
-- [ ] Update living low-level planning documentation and ledger dispositions.
+- [x] Update living low-level planning documentation and ledger dispositions.
 
 **Tests:** complete plan/target-program owner suites, phase-boundary guards,
 documentation checks, `make check`, and `make msrv-check`.
 
 **Exit criteria:** the complete-fact checkpoint passes with no legacy planning
 query, placeholder fact or unresolved prerequisite for LM05–LM17.
+
+Completed on 2026-09-19. The exhaustive coverage record now maps every operation,
+helper and data family to its checked plan inputs and names only the remaining
+LM05–LM17 executable owner. A combined x86-64/AArch64 synthetic regression walks
+aggregate result and receiver roles, mutually recursive helpers and complete-mode
+retained inactive storage through one checked catalog. Review removed the unused
+`DataKey::TraceRecord` identity: activation records are callable-local LIR
+objects, while resource facts own trace bytes, contexts, locations and TLS. All
+remaining staged allowances have named executable consumers in the ledger; no
+design amendment, legacy planning query or unresolved fact prerequisite remains.
 
 ### LM05 — Lower complex places and aggregate call boundaries
 
@@ -507,7 +517,7 @@ continuing purpose and explicit removal owner.
 | `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | Consuming LM02–LM17 tasks; residual facade allowance LA05 | Retained only for the private admitted product, structured errors and trace facts; narrow as feature consumers land |
 | `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | Consuming LM05–LM17 tasks; residual facade allowance LA05 | Retained only for private checked lowering entries while production still uses legacy emission |
 | `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01; semantic catalog expanded LM02 and resource consumers added LM03 | Residual root allowance LA05 | Retained target-owned semantic layout/dispatch and trace projection; legacy planner types do not escape into the checked plan |
-| `plan::ResourceFacts` and `planning::resources` complete resource catalog | LM03, pending manual commit | LM04 audit; executable consumers LM05–LM17 | Retain as the checked owner of static dispositions/lifecycle, typed data, runtime/generated declarations and artifact roots; complete-mode inactive storage is physical-only and all-zero |
+| `plan::ResourceFacts` and `planning::resources` complete resource catalog | LM03, `dbada8c6`; audited LM04 | Executable consumers LM05–LM17 | Retain as the checked owner of static dispositions/lifecycle, typed data, runtime/generated declarations and artifact roots; complete-mode inactive storage is physical-only and all-zero |
 | Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
 | `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
 | Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrow during family delivery, then remove after complete coverage |

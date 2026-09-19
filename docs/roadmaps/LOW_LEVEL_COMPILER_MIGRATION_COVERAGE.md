@@ -3,7 +3,7 @@
 Status: phase preparation, executable model and private LA03 pilot complete;
 the focused [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
 is accepted and its [roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
-is active with durable migration ownership complete, 2026-09-19.
+is active with the complete-fact checkpoint passed, 2026-09-19.
 Model cumulative review covers `f1053782..495df6b9` plus the closing static-effect
 receipt fix and payload-contract/documentation changes. Production full-language
 migration, adoption and allocation remain pending. Archived child
@@ -59,10 +59,11 @@ in the gap column means no additional *current-behavior* witness was identified
 for that family; downstream verifier/native parity work remains mandatory.
 
 Delivery notation: `LA03` is the complete scalar/CFG/call pilot, `LA04` is full
-language/helper migration, and `LA05` is consolidation/default adoption. Every
-row remains pending even where current compiler tests already exist. The
-future shared owner expands semantic work into explicit operations; target
-selection realizes those operations using checked layout/ABI facts.
+language/helper migration, and `LA05` is consolidation/default adoption. After
+the LM04 complete-fact checkpoint, a pending delivery names executable lowering,
+selection and realization only: its planning inputs already have checked owners.
+The shared owner expands semantic work into explicit operations; target selection
+realizes those operations using checked layout/ABI facts.
 
 ## Current evidence registry
 
@@ -538,7 +539,9 @@ maintained through LA05, which reconciles its obligations and archives it.
 ### Retained model artifacts and removal owners
 
 Cumulative review found no provisional seals, placeholder placement, production
-switch, compatibility alias or abandoned emitter. Draft adapters are independent
+switch, compatibility alias or abandoned emitter. LM04 removed the unused
+`DataKey::TraceRecord` identity rather than carrying it into executable work;
+callable-local trace records remain LIR objects. Draft adapters are independent
 verifier inputs; synthetic targets and malformed fixtures are durable regression
 machinery. The exact shared failure bytes remain production-used; the legacy
 MIR-to-message mapping retires with legacy lowering.
@@ -552,7 +555,7 @@ unused exports rather than widen visibility or gate the model under `cfg(test)`.
 | Exact owner / principal symbols | Removal owner / retention criterion |
 | --- | --- |
 | `backend/effects.rs`: `MemoryRegion`, `Effect`, `Effects` and their checked set/remapping methods | First native effect/verification consumers; conservative barriers remain durable |
-| `backend/plan/{facts,identities,check,view,services}.rs`, `plan/mod.rs`: `PlanFacts`, `CheckedPlan`, `PlanView`, typed IDs/declarations, checked services and explicit re-export groups | First native planning/lowering consumer; remaining full-surface facts retire their allowances with complete migration |
+| `backend/plan/{facts,identities,check,view,services,semantic,resources}.rs`, `plan/mod.rs`: `PlanFacts`, `CheckedPlan`, `PlanView`, typed IDs/declarations, checked services/semantic/resource catalogs and explicit re-export groups | LM04 confirmed every remaining fact has an LM05–LM17 executable consumer; retire item allowances as those consumers land and the residual facade allowance at LA05 |
 | `backend/graph/{arena,edit}.rs`, `graph/verify/{model,check,analysis}.rs`, `graph/mod.rs`: `OwnedArena`, `IdMap`, `GraphView`, `check_graph`, `GraphSession` and explicit re-export groups | First native graph/analysis/edit consumers; shared algorithm stays durable |
 | `backend/lir/{model,scalar,builder,schema,read,call,trace,observable}.rs`, `lir/graph/{storage,operands}.rs`: draft records, `DraftBuilder`, `DraftChecks` and graph adapter impls | First native lowered construction/checking consumers; remaining vocabulary with complete migration |
 | `backend/lir/verify/{check,domains,memory,trace,lift,failure,publication}.rs`: full checking helpers, structured failures, `VerifiedCallable` and `CompletionReceipt` | First native lowered verification/publication consumer; no replacement with builder trust |
@@ -732,6 +735,38 @@ relocation categories/addends and invalid roots. Shared data lowering consumes
 these exact recipes, and completion receipts reconcile generated dependencies
 without retaining executable drafts. Executing complex helpers, descriptors and
 static lifecycle remains assigned to LM05–LM17.
+
+### Complete-fact checkpoint
+
+LM04 reconciled every operation, generated-body and data row above against the
+checked plan. The plan now contains all information that later tasks may consume;
+the remaining owners below are executable owners only. No LM05–LM17 task may
+call a legacy layout, dispatch, retention, trace or static planner.
+
+| Coverage rows | Checked input available at LM04 | Remaining executable owner |
+| --- | --- | --- |
+| Scalar operations, guarded numeric cells, primitive casts and ordinary CFG | Typed signatures/layouts, failure data and guard associations | Delivered pilot retained as the common base; family-specific terminators complete with LM05–LM15 |
+| Complex places, object origins, aggregate results, aliases and receiver components | Exact/complete layouts, field/base offsets, object-view components and role-based signatures | LM05 |
+| Direct/virtual/interface dispatch, checked views, casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | LM06 |
+| Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | LM07 |
+| Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | LM08 |
+| Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | LM10 |
+| Aggregate/class optionals, optional views and optional boxes | Recursive optional layouts, object views, box layers/allocation and finalizer dependencies | LM11 |
+| Array storage, construction, indexing, positions and anchors | Descriptor/element layouts, strides, bounds and descriptor recipes | LM12 |
+| Array copy/assignment/destruction and six generated array helper families | Element lifecycle facts plus canonical recursive helper declarations/dependencies | LM13 |
+| Indexed construction, element lists, slices and array aliases | Array layouts, operation identities and failure-message resources | LM14 |
+| String literals, panic slices and five standard I/O operations | Literal recipes, runtime service signatures/effects and failure data | LM15 |
+| Active static initialization, reverse shutdown, retained-inactive storage and process entry | Certified dispositions, activation/shutdown records, coordinators and complete/reachable roots | LM16 |
+| Enabled/omitted tracing, TLS, metadata, all data definitions and artifact closure | Owned trace facts, exact initializers/relocations, generated receipts and typed root/dependency sets | LM17 |
+
+The combined plan regression exercises an aggregate hidden result, all three
+receiver components, mutually recursive generated helpers and retained-inactive
+all-zero storage under both x86-64/System V and AArch64/AAPCS64 profiles. This is
+a portability check of the target-neutral boundary, not an AArch64 backend. The
+audit removed the unused `DataKey::TraceRecord`; trace activation records are
+callable-local LIR objects, while static trace resources remain bytes, contexts,
+locations and TLS. No frozen-design amendment or unresolved representation
+decision remains.
 
 This qualifies shared program closure, not native execution or trace recipes.
 `ReportFailure` preserves the mandatory reporter/defensive-trap contract; the
