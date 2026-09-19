@@ -408,7 +408,8 @@ borrows its exact finalized parent authority. Wrong-parent, stale/replaced-input
 missing-definition, duplicate and foreign-context completions fail.
 
 These APIs permit callable-at-a-time construction before lower-program closure;
-production discovery/orchestration and physical closure remain planned. The
+physical closure now retains exact receipts while spooling verified fragments.
+Production native orchestration remains planned. The
 supplied catalog remains declaration authority: checks do not rediscover semantic
 reachability, build real helpers or certify production MIR projection.
 

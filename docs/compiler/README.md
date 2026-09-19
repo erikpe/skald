@@ -9,9 +9,9 @@ kind of decision, exposes an inspectable product, and passes stable identities
 forward instead of asking later phases to repeat source analysis.
 
 The private native pipeline now includes checked placement,
-[frame planning](FRAME_PLANNING.md) and typed
-[physical verification](PHYSICAL_REALIZATION.md). Whole-program native closure
-and assembly publication remain planned.
+[frame planning](FRAME_PLANNING.md), typed
+[physical verification](PHYSICAL_REALIZATION.md), and whole-program checked
+assembly publication. Native execution remains planned.
 
 ## Architecture principles
 

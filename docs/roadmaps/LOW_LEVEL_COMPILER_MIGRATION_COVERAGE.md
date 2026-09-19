@@ -705,8 +705,9 @@ request caller TLS; explicit trace accesses still require enabled policy and
 TLS authority. Native call/trace selection now covers the complete admitted pilot,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
-and frame checks use frozen parent facts. Typed physical-program closure is next in the
-[native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
+and frame checks use frozen parent facts. Typed physical-program closure now
+streams checked fragments and reconciles exact finalized parents before assembly
+publication in the [native phase roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
 
 Shared placement drafts now borrow the exact selected publication, distinguish
 private value storage from semantic objects and signature-keyed ABI slots, and
@@ -737,6 +738,7 @@ now expand the exact checked inputs with concrete native operands, ordered trans
 bounded recipes and frame actions. Independent physical checking now consumes
 drafts into immutable exact-parent publications after encoding, finite recipe,
 reference and CFG stack/preservation checks. Requested-only inspection and
-cloneable body-free receipts are implemented. Assembler witnesses consume checked
-physical products; native execution parity and program closure remain separate
-obligations, with no production-adoption claim.
+cloneable body-free receipts are implemented. Typed program closure retains those
+receipts and dependencies while storing callable text privately, then publishes
+assembly only after complete selected, data and fragment reconciliation. Native
+execution parity remains separate, with no production-adoption claim.

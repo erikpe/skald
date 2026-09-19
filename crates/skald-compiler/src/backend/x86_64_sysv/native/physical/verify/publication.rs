@@ -29,6 +29,11 @@ impl<'a, 'f, 's, 'p> VerifiedPhysicalCallable<'a, 'f, 's, 'p> {
     pub(in crate::backend) fn receipt(&self) -> PhysicalReceipt<'p> {
         self.receipt.clone()
     }
+    pub(in crate::backend::x86_64_sysv::native::physical) fn draft(
+        &self,
+    ) -> &PhysicalDraft<'a, 'f, 's, 'p> {
+        &self.draft
+    }
     pub(in crate::backend) fn inspect(
         &self,
         out: &mut dyn Write,

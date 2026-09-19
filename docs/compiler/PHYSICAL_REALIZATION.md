@@ -96,8 +96,21 @@ when explicitly requested; quiet checking does not collect dumps or access
 source services. An immutable visitor exposes entry, blocks and instructions.
 
 The target-owned formatter accepts one typed instruction and callbacks for
-artifact symbols and scoped block labels. It has no callable/program emitter or
-public assembly entry. Owner-local assembler witnesses now consume independently
-verified physical products. Assembler acceptance alone does not establish native
-semantic execution or complete program closure. The ordinary backend remains
+artifact symbols and scoped block labels. A physical-program builder is its only
+callable/program owner. It renders independently verified callables into private
+temporary fragments, then releases their bodies while retaining exact physical
+and selected receipts plus typed dependencies. Fragment text is never parsed or
+used as verification evidence.
+
+Finalization requires every retained callable exactly once, reconciles every
+physical receipt with the finalized selected program, and checks typed references
+against the frozen catalog. Only then are fragments read in canonical callable
+order and combined with checked data definitions and TLS storage into an immutable
+assembly product. Missing, duplicate, stale or foreign bodies reject; read, write
+and cleanup failures produce errors and the temporary store removes residual
+files on drop. External linker spellings are explicit projected inputs keyed by
+typed external identities; absent or surplus entries reject before construction.
+
+Owner-local assembler witnesses consume this closed product. Assembler acceptance
+alone does not establish native semantic execution. The ordinary backend remains
 unchanged until the separate native pilot integration and adoption workstreams.

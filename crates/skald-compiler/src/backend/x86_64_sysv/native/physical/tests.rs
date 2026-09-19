@@ -5,10 +5,49 @@ use super::super::{
 use super::model::*;
 use crate::backend::{
     frame::{plan_frame, FramePolicy, ReturnAddress},
-    lir::{ProgramBuilder, TargetDeclarations},
-    pilot::{admit, lower_next},
+    lir::TargetDeclarations,
+    pilot::{admit, lower_program},
+    selected::SelectedProgramBuilder,
     BackendInput,
 };
+use std::collections::BTreeMap;
+
+#[derive(Clone, Copy)]
+enum StoreFailure {
+    Write,
+    Read,
+    Remove,
+}
+struct FailingStore {
+    failure: StoreFailure,
+    fragments: BTreeMap<crate::backend::plan::LirCallableId, String>,
+}
+impl super::program::FragmentStore for FailingStore {
+    fn write(
+        &mut self,
+        key: crate::backend::plan::LirCallableId,
+        text: &str,
+    ) -> std::io::Result<()> {
+        if matches!(self.failure, StoreFailure::Write) {
+            return Err(std::io::Error::other("injected write failure"));
+        }
+        self.fragments.insert(key, text.to_owned());
+        Ok(())
+    }
+    fn read(&self, key: crate::backend::plan::LirCallableId) -> std::io::Result<String> {
+        if matches!(self.failure, StoreFailure::Read) {
+            return Err(std::io::Error::other("injected read failure"));
+        }
+        Ok(self.fragments[&key].clone())
+    }
+    fn remove(&mut self, key: crate::backend::plan::LirCallableId) -> std::io::Result<()> {
+        if matches!(self.failure, StoreFailure::Remove) {
+            return Err(std::io::Error::other("injected cleanup failure"));
+        }
+        self.fragments.remove(&key);
+        Ok(())
+    }
+}
 
 pub(super) fn complete(
     source: &str,
@@ -29,10 +68,69 @@ pub(super) fn complete(
         .freeze()
         .unwrap();
     let context = selection_context(&catalog).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    while worklist.next().is_some() {
-        let lower = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+    let external_symbols = fixture
+        .mir
+        .program()
+        .external_links
+        .iter()
+        .map(|link| (link.id, link.symbol.clone()))
+        .collect::<BTreeMap<_, _>>();
+    if !external_symbols.is_empty() {
+        assert!(matches!(
+            super::super::PhysicalProgramBuilder::temporary(&context),
+            Err(super::ProgramError::MissingDefinition(
+                crate::backend::plan::ArtifactId::External(_)
+            ))
+        ));
+    }
+    let mut selected_program = SelectedProgramBuilder::new(&context);
+    let mut replacement_program = SelectedProgramBuilder::new(&context);
+    let mut physical_program =
+        super::super::PhysicalProgramBuilder::temporary_with_external_symbols(
+            &context,
+            external_symbols.clone(),
+        )
+        .unwrap();
+    let mut wrong_parent_program =
+        super::super::PhysicalProgramBuilder::temporary_with_external_symbols(
+            &context,
+            external_symbols.clone(),
+        )
+        .unwrap();
+    let mut read_failure = super::program::PhysicalProgramBuilder::with_store(
+        &context,
+        FailingStore {
+            failure: StoreFailure::Read,
+            fragments: BTreeMap::new(),
+        },
+        external_symbols.clone(),
+    );
+    let mut cleanup_failure = super::program::PhysicalProgramBuilder::with_store(
+        &context,
+        FailingStore {
+            failure: StoreFailure::Remove,
+            fragments: BTreeMap::new(),
+        },
+        external_symbols.clone(),
+    );
+    let mut duplicate_checked = false;
+    let mut write_failure = Some(super::program::PhysicalProgramBuilder::with_store(
+        &context,
+        FailingStore {
+            failure: StoreFailure::Write,
+            fragments: BTreeMap::new(),
+        },
+        external_symbols.clone(),
+    ));
+    let parent = lower_program(&admitted, |lower| {
         let selected = select(&context, &lower).unwrap();
+        selected_program
+            .complete(&selected, &selected.receipt())
+            .unwrap();
+        let replacement = select(&context, &lower).unwrap();
+        replacement_program
+            .complete(&replacement, &replacement.receipt())
+            .unwrap();
         let placement = place_native_baseline(&selected).unwrap();
         let frame = plan_native_frame(&placement).unwrap();
         let draft = realize_native(&selected, &placement, &frame).unwrap();
@@ -95,6 +193,23 @@ pub(super) fn complete(
         }
         let verified =
             super::verify::check_native_physical(draft, &selected, &placement, &frame).unwrap();
+        physical_program.complete(&verified).unwrap();
+        wrong_parent_program.complete(&verified).unwrap();
+        read_failure.complete(&verified).unwrap();
+        cleanup_failure.complete(&verified).unwrap();
+        if let Some(mut failing) = write_failure.take() {
+            assert!(matches!(
+                failing.complete(&verified),
+                Err(super::ProgramError::Store(_))
+            ));
+        }
+        if !duplicate_checked {
+            assert!(matches!(
+                physical_program.complete(&verified),
+                Err(super::ProgramError::DuplicateDefinition)
+            ));
+            duplicate_checked = true;
+        }
         assemble(&verified);
         check(verified.body());
         let mut quiet = String::new();
@@ -180,7 +295,39 @@ pub(super) fn complete(
                 crate::backend::frame::FrameError::InvalidPolicy
             ))
         );
-    }
+        Ok(())
+    })
+    .unwrap();
+    let selected_parent = selected_program.finish(&parent).unwrap();
+    let replacement_parent = replacement_program.finish(&parent).unwrap();
+    assert!(matches!(
+        wrong_parent_program.finish(&replacement_parent),
+        Err(super::ProgramError::Inventory(
+            crate::backend::lir::ProgramError::StaleReceipt
+        ))
+    ));
+    assert!(matches!(
+        read_failure.finish(&selected_parent),
+        Err(super::ProgramError::Store(_))
+    ));
+    assert!(matches!(
+        cleanup_failure.finish(&selected_parent),
+        Err(super::ProgramError::Store(_))
+    ));
+    let missing = super::super::PhysicalProgramBuilder::temporary_with_external_symbols(
+        &context,
+        external_symbols,
+    )
+    .unwrap();
+    assert!(matches!(
+        missing.finish(&selected_parent),
+        Err(super::ProgramError::MissingDefinition(_))
+    ));
+    let assembly: super::super::VerifiedAssembly =
+        physical_program.finish(&selected_parent).unwrap();
+    assert!(assembly.as_str().starts_with(".intel_syntax noprefix\n"));
+    let assembly = assembly.into_string();
+    crate::test_support::assert_system_assembler_accepts(&assembly);
 }
 #[test]
 fn concrete_scalar_calls_loops_transfers_and_frames_preserve_derivation() {
@@ -204,6 +351,15 @@ fn concrete_scalar_calls_loops_transfers_and_frames_preserve_derivation() {
         assert!(calls >= 2);
         assert!(returns >= 3);
     }
+}
+
+#[test]
+fn external_linker_names_are_explicit_typed_closure_inputs() {
+    complete(
+        "extern fn observe(value:i64)->i64; fn main()->i64{return observe(7);}",
+        false,
+        |_| {},
+    );
 }
 
 #[test]

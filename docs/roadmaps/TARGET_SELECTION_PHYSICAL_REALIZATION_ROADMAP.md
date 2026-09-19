@@ -1,6 +1,6 @@
 # Target Selection, Checked Placement, and Physical Realization Roadmap
 
-Status: in progress, 2026-09-19; NP01–NP15 complete; NP16 is next.
+Status: in progress, 2026-09-19; NP01–NP16 complete; NP17 is next.
 Accepted design: [frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md).
 Planning baseline: `8834bcd6`, the reviewed draft commit.
 Implementation baseline: `f150d028`, immediately before NP01 code changes.
@@ -60,7 +60,7 @@ backend or claim full-language migration.
 - [x] NP13 — Symbolic frame planning and limits
 - [x] NP14 — Typed physical realization
 - [x] NP15 — Independent physical verification
-- [ ] NP16 — Typed program closure and fragment storage
+- [x] NP16 — Typed program closure and fragment storage
 - [ ] NP17 — Whole-program native pilot
 - [ ] NP18 — Native hardening, observations and handoff
 - [ ] NP19 — Cumulative review, cleanup and closure
@@ -270,9 +270,9 @@ ordinary selected publication and target verification.
 
 **Purpose:** Bound resident bodies while retaining exact whole-program artifact authority.
 
-- [ ] Implement discovery/freeze and executable-pass orchestration with pure matching request rules; reconcile lower/selected/physical receipts against exact finalized parents and all required data/thunks.
-- [ ] Render only verified physical callables into a private temporary fragment store keyed canonically. Retain typed dependencies/derivations; never parse fragments to discover symbols or prove correctness.
-- [ ] Publish deterministic complete/reachable assembly only after full closure, preserving the final String interface. Account for store/read/write failures and cleanup of failed passes.
+- [x] Implement discovery/freeze and executable-pass orchestration with pure matching request rules; reconcile lower/selected/physical receipts against exact finalized parents and all required data/thunks.
+- [x] Render only verified physical callables into a private temporary fragment store keyed canonically. Retain typed dependencies/derivations; never parse fragments to discover symbols or prove correctness.
+- [x] Publish deterministic complete/reachable assembly only after full closure, preserving the final String interface. Account for store/read/write failures and cleanup of failed passes.
 
 **Tests:** Wrong-parent and replaced-input closure, missing bodies/data/thunks, late requests, duplicate canonical keys, attempted premature emission, complete/reachable retention, randomized request order and fragment I/O failure cleanup. Verify predecessor bodies can be released.
 
@@ -410,7 +410,8 @@ permission to introduce it unnecessarily.
 | `backend/x86_64_sysv/native/physical/{model,realize,operands,recipes,transfers,format}.rs`: private typed drafts, exact-input realizer, target instruction leaf and scoped non-test field/entry allowances | NP14, task baseline `8d842643`; committed `1e573da3` | Durable concrete target vocabulary; NP15 independent checker, NP16 verified fragment formatting, NP17 orchestration; reconcile NP19 | Drafts retain exact frame/placement/selected borrows. NP15 removes all draft-field and instruction-leaf allowances through independent checking and verified inspection. Retire realizer/facade allowances with orchestration. No unchecked publication seal, final emitter, legacy adapter or semantic-operation escape |
 | `native/physical/tests.rs`: draft-to-assembler encoding witness | NP14, task baseline `8d842643`; committed `1e573da3` | NP15 verified-product tests; reconcile NP19 | NP15 reroutes assembler witnesses through independently checked physical publication. Test-only draft views/clones remain solely for adversarial checker fixtures. Retain instruction-leaf encoding coverage; assembler acceptance is never execution, state or closure authority |
 
-| `native/physical/verify/{encoding,authority,recipes,derivation,state,publication}.rs`: independent acceptance, immutable publication, exact parent receipts and requested inspection | NP15, task baseline `1e573da3`; awaiting user commit | Durable physical authority; NP16 receipt/fragment consumers, NP17 native orchestration; reconcile NP19 | Sole consuming constructor requires exact checked inputs. No producer replay, draft renderer, unchecked seal or public/default switch. Entry/inspection/receipt method non-test allowances remain narrowly scoped until orchestration/closure; test-only clones and body views serve adversarial fixtures only |
+| `native/physical/verify/{encoding,authority,recipes,derivation,state,publication}.rs`: independent acceptance, immutable publication, exact parent receipts and requested inspection | NP15, task baseline `1e573da3`; committed `284146f3` | Durable physical authority; NP16 receipt/fragment consumers, NP17 native orchestration; reconcile NP19 | Sole consuming constructor requires exact checked inputs. NP16 consumes receipts and verified bodies through typed closure. Entry/inspection method allowances remain narrowly scoped until orchestration; test-only clones and body views serve adversarial fixtures only |
+| `native/physical/program/{mod,render,store}.rs`: exact program reconciliation, checked rendering and private temporary fragments | NP16, task baseline `284146f3`; awaiting user commit | Durable final physical authority and bounded body storage; NP17 consumes the closed assembly, NP19 reconciles temporary APIs | Only verified physical callables render. Finalization requires the exact finalized selected receipts, all canonical bodies and typed dependencies. External spellings are explicit typed inputs. Test-only injected stores cover failures; production fragments are deleted on completion/drop |
 
 ## Discoveries and closure record
 
@@ -1057,3 +1058,33 @@ textual call audit; its explicit owner list has been corrected. No independent
 discovery was added. NP15 is complete; NP16 will own whole-program closure and
 verified fragment rendering. Native execution parity remains a later pilot
 obligation. Changes are uncommitted for the user.
+
+## NP16 implementation record
+
+Task baseline: `284146f3`, the user's committed NP15 physical verifier.
+
+The target-owned physical program builder accepts only independently verified
+callables. Each body is rendered immediately into a private temporary fragment
+and released; the builder retains its exact physical receipt, selected parent and
+typed dependencies. Fragment keys and final read order come from canonical typed
+callable identities. Text is never parsed to recover labels, references or proof.
+
+Finalization requires every retained plan/catalog callable exactly once and
+reconciles every receipt with the exact finalized selected program. It validates
+typed dependencies against the frozen catalog before reading any fragment, then
+emits checked data/TLS definitions and returns one immutable assembly product.
+Runtime/internal names are deterministic; external linker names must be supplied
+as an exact typed map, with missing or surplus mappings rejected. The temporary
+store reports write/read/removal errors and removes its directory on drop.
+
+Owner tests now run full callable streaming through lower and selected program
+closure, discard predecessor bodies, close physical fragments and submit only the
+closed assembly to the system assembler. They also exercise duplicate/missing
+bodies, replaced selected parents, missing external names and injected store
+write/read/cleanup failures. Final-source `make check` passed with 3,444 compiler
+tests, all workspace/runtime suites and 650 golden cases. Serial `make msrv-check`
+passed with Rust 1.82.0; all 14 physical-owner tests also passed in release mode.
+Formatting, Clippy, documentation links/indexes and whitespace checks passed.
+No independent discovery was added. NP16 is complete; NP17 will consume the
+closed product from the private source-to-native pilot and supply projected
+external spellings. Changes are uncommitted for the user.
