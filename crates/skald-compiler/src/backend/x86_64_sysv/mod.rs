@@ -23,7 +23,9 @@ mod native;
 mod planning;
 
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use fact_projection::{project_layouts, project_trace};
+pub(in crate::backend) use fact_projection::{
+    begin_semantic_projection, finish_semantic_projection, project_trace,
+};
 mod runtime_trace;
 mod static_fields;
 mod symbol;

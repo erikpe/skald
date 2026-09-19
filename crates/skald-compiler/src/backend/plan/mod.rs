@@ -9,6 +9,8 @@
 mod check;
 mod facts;
 mod identities;
+mod semantic;
+mod semantic_check;
 mod services;
 mod view;
 
@@ -25,6 +27,16 @@ pub(in crate::backend) use facts::{
 pub(in crate::backend) use identities::{
     ArtifactCategory, ArtifactId, Coordinator, DataKey, HelperFamily, HelperKey, LayoutId,
     LirCallableId, RuntimeService, SignatureId, TargetThunkKey,
+};
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(in crate::backend) use semantic::{
+    ArrayAssignElementFact, ArrayCopyElementFact, ArrayDefaultElementFact, ArrayDestroyElementFact,
+    ArrayLayoutFact, BaseLayoutFact, ClassDispatchFact, ClassLayoutFact, ConformanceFact,
+    DestructionStepFact, FieldLayoutFact, InterfaceFact, InterfaceRequirementFact, MethodSlot,
+    MethodSlotFact, ObjectComponent, ObjectViewFact, ObjectViewTarget, OptionalBoxLayoutFact,
+    OptionalLayoutFact, OptionalStorageFact, RequirementImplementationFact, SelectedCopy,
+    SemanticFacts, SemanticType, SharedAllocationLayout, SharedHeaderLayout, SharedTarget,
+    TypeLayoutBinding, VirtualFamilyFact,
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use view::{CallableBinding, DeclarationId, PlanView};

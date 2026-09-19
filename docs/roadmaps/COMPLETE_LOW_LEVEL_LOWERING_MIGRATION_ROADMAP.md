@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01 is complete and LM02 is next.
+Status: active; LM01–LM02 are complete and LM03 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -39,7 +39,7 @@ per-callable or per-operation fallback.
 ## Progress
 
 - [x] LM01 — Establish durable migration ownership and the no-fallback gate
-- [ ] LM02 — Complete semantic layout and object-view planning facts
+- [x] LM02 — Complete semantic layout and object-view planning facts
 - [ ] LM03 — Complete data, artifact and static-storage planning facts
 - [ ] LM04 — Checkpoint the complete fact model
 - [ ] LM05 — Lower complex places and aggregate call boundaries
@@ -95,13 +95,13 @@ tests pass together with `make static-check`, `make msrv-check` and `make check`
 **Purpose:** give object, dispatch and aggregate lowering immutable checked facts
 without importing legacy planners into later phases.
 
-- [ ] Project checked exact/complete class layouts, base and field offsets,
+- [x] Project checked exact/complete class layouts, base and field offsets,
   destruction plans, object-view component shapes and aggregate result layouts.
-- [ ] Freeze virtual-family, interface-requirement, conformance, method-slot and
+- [x] Freeze virtual-family, interface-requirement, conformance, method-slot and
   runtime-membership facts with typed identities and deterministic ordering.
-- [ ] Add recursive optional, optional-box, shared-header, array and element
+- [x] Add recursive optional, optional-box, shared-header, array and element
   lifecycle layout facts needed by later families.
-- [ ] Reject foreign identities, recursive/overflowing layouts, missing dynamic
+- [x] Reject foreign identities, recursive/overflowing layouts, missing dynamic
   metadata and shape/layout disagreement before lowering.
 
 **Tests:** focused plan owner tests, malformed supplied-fact tests, representative
@@ -109,6 +109,15 @@ exact/base/interface/aggregate walkthroughs, and synthetic portability checks.
 
 **Exit criteria:** every complex place, call component and runtime type query has
 a checked plan source; downstream consumers need no MIR/type/layout lookup.
+
+Completed on 2026-09-19. The checked plan now owns a typed semantic catalog for
+class, field, container, shared-allocation, object-view, membership and dispatch
+facts. The x86 projection computes layout and dispatch once, converts their
+results into plan-owned records, and exposes narrow identity lookups for later
+lowering. Independent checks reject malformed supplied facts; representative
+inheritance/interface/aggregate/container and synthetic AArch64-profile tests
+exercise the boundary. Executable use of these facts remains assigned to the
+subsequent lowering tasks.
 
 ### LM03 — Complete data, artifact and static-storage planning facts
 
@@ -485,9 +494,9 @@ continuing purpose and explicit removal owner.
 | Shared `backend::pilot` projection/admission/lowering names | LA03 commits through `8f8c1825` | LM01 | Removed in LM01: admission/fact projection are owned by `backend::planning`, lowering by `backend::lowering`, and target fact adapters use semantic names |
 | `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | Consuming LM02–LM17 tasks; residual facade allowance LA05 | Retained only for the private admitted product, structured errors and trace facts; narrow as feature consumers land |
 | `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | Consuming LM05–LM17 tasks; residual facade allowance LA05 | Retained only for private checked lowering entries while production still uses legacy emission |
-| `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01 | LM02–LM03 fact expansion; residual root allowance LA05 | Retained target-owned layout/trace projection; no shared `pilot` naming remains |
+| `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01; semantic catalog expanded LM02 | LM03 fact expansion; residual root allowance LA05 | Retained target-owned semantic layout/dispatch and trace projection; legacy planner types do not escape into the checked plan |
 | Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
-| `native::pilot::pipeline::compile_admitted` post-admission seam | LM01 working tree; commit pending | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
+| `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
 | Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrow during family delivery, then remove after complete coverage |
 | Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LM19/LA05 | Retain focused admission, post-admission failure, dump, native and policy regressions; remove broad duplicates during cumulative review/adoption |
 | Legacy x86 lowering/frame/machine/emitter | Pre-program production backend | LA05 adoption | Preserve unchanged as default and parity oracle during LA04 |

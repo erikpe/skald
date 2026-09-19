@@ -84,6 +84,12 @@ immutable views. It has no MIR executable enums, frontend state, source database
 physical instruction types or frame offsets. The facts contain target/profile
 and trace/artifact policies, dense layout/signature pools, typed callable/artifact
 keys, executable source dispositions, active statics and stable dispatch slots.
+The plan also owns a target-independent semantic catalog keyed by stable class,
+field, array, optional, optional-box, interface, requirement and virtual-family
+identities. It records exact and complete class layouts, base and field offsets,
+destruction order, recursive container layouts, shared allocation headers,
+element lifecycle operations, object-view components and runtime membership,
+and the checked target method-slot/table projection.
 
 Checking consumes the supplied facts and validates their structural consistency.
 The checker never recalculates semantic reachability. The private
@@ -107,11 +113,19 @@ The admitted product borrows the exact inspected MIR snapshot for shared lowerin
 and owns immutable checked facts. It preserves absent source declarations,
 canonical higher-order function signature IDs, distinct semantic layout IDs,
 external and runtime service declarations, entry and failure-message data.
+Semantic catalog lookups return plan-owned records, so complex place, aggregate,
+object-view, dispatch and runtime-membership lowering does not need a MIR type or
+legacy layout/dispatch query. Structural checking independently rejects foreign
+or duplicate identities, recursive and overflowing inline layouts, invalid
+offsets, incomplete object components, incompatible membership, malformed
+method slots and dispatch targets without executable authority.
 Unused aggregate/alias declarations remain inspectable; they do not grant
 lowering support. Empty lifecycle coordinators are absent. Selection and later
 phases use plan views rather than the admitted product's MIR access.
 
-Existing checked x86 layout and trace services have narrow projection adapters.
+Existing checked x86 layout, dispatch and trace services have narrow projection
+adapters. Layout and dispatch computation occurs once during projection; legacy
+planner types do not cross into the shared checked plan.
 Enabled trace planning freezes owned byte strings, context/location records and
 source-span mappings in canonical order; target symbols and source databases do
 not escape the adapter. `TraceBytes` keys distinguish byte backing from activation

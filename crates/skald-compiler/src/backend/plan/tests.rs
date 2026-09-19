@@ -583,3 +583,123 @@ fn incomplete_domains_references_and_dispatch_slots_are_rejected() {
     }];
     rejected(invalid, PlanError::UnknownDeclaration);
 }
+
+fn minimal_semantic_facts() -> PlanFacts {
+    let mut supplied = facts();
+    supplied.semantic = SemanticFacts {
+        types: vec![
+            TypeLayoutBinding {
+                ty: SemanticType::U64,
+                layout: LayoutId::new(0),
+            },
+            TypeLayoutBinding {
+                ty: SemanticType::Shared(SharedTarget::Obj),
+                layout: LayoutId::new(0),
+            },
+        ],
+        shared_header: Some(SharedHeaderLayout {
+            handle_layout: LayoutId::new(0),
+            owner_count_offset: 0,
+            dynamic_metadata_offset: 8,
+            header_size: 16,
+        }),
+        object_views: vec![ObjectViewFact {
+            target: ObjectViewTarget::Obj,
+            components: vec![
+                ObjectComponent::StaticAddress,
+                ObjectComponent::CompleteAddress,
+                ObjectComponent::DynamicMetadata,
+            ],
+            members: vec![],
+        }],
+        method_slots: vec![MethodSlotFact {
+            slot: MethodSlot::Finalizer,
+            index: 0,
+            byte_offset: 0,
+        }],
+        ..SemanticFacts::default()
+    };
+    supplied
+}
+
+#[test]
+fn semantic_catalog_is_target_portable_and_requires_dynamic_view_metadata() {
+    let supplied = minimal_semantic_facts();
+    assert_eq!(
+        CheckedPlan::check(supplied.clone())
+            .unwrap()
+            .view()
+            .semantic()
+            .shared_header
+            .unwrap()
+            .header_size,
+        16
+    );
+
+    let mut aarch64 = supplied.clone();
+    aarch64.profile.architecture = Architecture::Aarch64;
+    aarch64.profile.abi = Abi::Aapcs64;
+    CheckedPlan::check(aarch64).unwrap();
+
+    let mut invalid = supplied;
+    invalid.semantic.object_views[0].components.pop();
+    rejected(invalid, PlanError::InvalidDispatch);
+}
+
+#[test]
+fn semantic_catalog_rejects_foreign_recursive_and_inconsistent_layout_facts() {
+    let mut foreign = minimal_semantic_facts();
+    foreign.semantic.types.push(TypeLayoutBinding {
+        ty: SemanticType::Class(ClassId::new(0)),
+        layout: LayoutId::new(0),
+    });
+    rejected(foreign, PlanError::InvalidLayout);
+
+    let mut recursive = minimal_semantic_facts();
+    recursive.semantic.types.extend([TypeLayoutBinding {
+        ty: SemanticType::Optional(crate::identity::OptionalTypeId::new(0)),
+        layout: LayoutId::new(0),
+    }]);
+    recursive.semantic.optionals.push(OptionalLayoutFact {
+        optional: crate::identity::OptionalTypeId::new(0),
+        payload: SemanticType::Optional(crate::identity::OptionalTypeId::new(0)),
+        storage: OptionalStorageFact::Nested(crate::identity::OptionalTypeId::new(0)),
+        layout: LayoutId::new(0),
+        payload_layout: LayoutId::new(0),
+        state_offset: None,
+        payload_offset: 0,
+        nullable_niche: true,
+    });
+    rejected(recursive, PlanError::InvalidLayout);
+
+    let mut overflowing = minimal_semantic_facts();
+    overflowing.semantic.types.push(TypeLayoutBinding {
+        ty: SemanticType::Array(crate::identity::ArrayTypeId::new(0)),
+        layout: LayoutId::new(0),
+    });
+    overflowing.semantic.arrays.push(ArrayLayoutFact {
+        array: crate::identity::ArrayTypeId::new(0),
+        descriptor_layout: LayoutId::new(0),
+        element: SemanticType::U64,
+        element_layout: LayoutId::new(0),
+        element_offset: 16,
+        shared_element_offset: 24,
+        stride: 8,
+        maximum_length: u64::MAX,
+        shared_maximum_length: u64::MAX,
+        default: Some(ArrayDefaultElementFact::Primitive),
+        copy: Some(ArrayCopyElementFact::Primitive),
+        assignment: Some(ArrayAssignElementFact::Primitive),
+        destruction: ArrayDestroyElementFact::Trivial,
+    });
+    rejected(overflowing, PlanError::SizeOverflow);
+
+    let mut inconsistent = minimal_semantic_facts();
+    inconsistent
+        .semantic
+        .shared_header
+        .as_mut()
+        .unwrap()
+        .dynamic_metadata_offset = 0;
+    rejected(inconsistent, PlanError::InvalidLayout);
+}

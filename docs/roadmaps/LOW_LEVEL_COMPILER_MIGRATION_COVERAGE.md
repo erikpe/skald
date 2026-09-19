@@ -684,6 +684,16 @@ code signatures, source/entry declarations, C/runtime declarations, failure data
 and enabled-only owned trace metadata. It borrows the inspected MIR snapshot only
 for `backend::lowering`; later phases consume immutable views. Public emission remains
 legacy. This is admission/projection evidence, not executable native equivalence.
+The semantic catalog now includes exact/complete class and shared-allocation
+layouts, base/field offsets, destruction order, recursive optional/optional-box
+and array layouts, element lifecycle plans, object-view component shapes and
+runtime membership, virtual/interface/conformance identities, method slots and
+per-class dispatch selections. Independent supplied-fact checks cover foreign
+identities, recursive and overflowing layouts, missing dynamic metadata and
+membership/layout disagreement. Sparse aggregate declarations retain checked
+hidden-result signatures without gaining executable authority. These are
+planning facts for the following lowering families; they do not claim those
+families execute through the private native path yet.
 Ordinary scalar memory/control-flow bodies now publish genuine lower receipts
 through the shared builder, full callable checker and lower inventory worklist.
 [Owner tests](../../crates/skald-compiler/src/backend/lowering/tests/mod.rs) cover

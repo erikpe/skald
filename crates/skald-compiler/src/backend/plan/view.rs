@@ -3,7 +3,7 @@
 use super::{
     ArtifactCategory, ArtifactDeclaration, ArtifactId, ArtifactPolicy, BodyDisposition,
     CallableDeclaration, CheckedPlan, DispatchSlot, LayoutFact, LayoutId, LirCallableId, PlanError,
-    SignatureFact, SignatureId, TargetProfile,
+    SemanticFacts, SignatureFact, SignatureId, TargetProfile,
 };
 
 #[derive(Clone, Copy)]
@@ -196,6 +196,9 @@ impl<'plan> PlanView<'plan> {
     }
     pub(in crate::backend) fn dispatch(self) -> &'plan [DispatchSlot] {
         &self.plan.dispatch
+    }
+    pub(in crate::backend) fn semantic(self) -> &'plan SemanticFacts {
+        &self.plan.semantic
     }
     pub(in crate::backend) fn is_active_static(
         self,

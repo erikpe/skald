@@ -159,6 +159,14 @@ impl DispatchMetadata {
             .chain(exact_optional_box_tables)
             .collect()
     }
+
+    pub(super) fn class_entries(&self, class: ClassId) -> Option<&[Option<MethodId>]> {
+        self.tables.get(class.index()).map(Vec::as_slice)
+    }
+
+    pub(super) const fn finalizer_index(&self) -> usize {
+        self.finalizer_displacement as usize / DISPATCH_ENTRY_SIZE
+    }
 }
 
 fn interface_layout(program: &MirProgram) -> Result<(Vec<usize>, usize), BackendError> {

@@ -10,6 +10,7 @@ pub(super) fn collect_types(program: &MirProgram) -> Vec<MirType> {
         MirType::F64,
         MirType::Unit,
         MirType::Obj,
+        MirType::Shared(MirSharedTarget::Obj),
     ];
     types.extend(
         program
@@ -26,6 +27,22 @@ pub(super) fn collect_types(program: &MirProgram) -> Vec<MirType> {
             .iter()
             .map(|o| MirType::Optional(o.id)),
     );
+    for ty in program
+        .classes
+        .iter()
+        .flat_map(|class| class.fields.iter().map(|field| field.ty))
+        .chain(program.array_types.iter().map(|array| array.element))
+        .chain(
+            program
+                .optional_types
+                .iter()
+                .map(|optional| optional.payload),
+        )
+    {
+        if !types.contains(&ty) {
+            types.push(ty);
+        }
+    }
     for ty in declaration_inventory(program)
         .into_iter()
         .flat_map(|(id, _)| {

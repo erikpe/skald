@@ -49,6 +49,7 @@ pub(in crate::backend) fn facts() -> PlanFacts {
         executable_sources: (0..2).map(|index| FunctionId::new(index).into()).collect(),
         active_statics: BTreeSet::new(),
         dispatch: vec![],
+        semantic: SemanticFacts::default(),
     }
 }
 

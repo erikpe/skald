@@ -47,10 +47,12 @@ pub(in crate::backend) fn admit(
             .collect(),
         active_statics: input.active_static_fields().iter().copied().collect(),
         dispatch: vec![],
+        semantic: SemanticFacts::default(),
     };
     let types = collect_types(program);
     let mut layouts = Vec::new();
-    let projected_layouts = x86_64_sysv::project_layouts(input, &types)?;
+    let (projected_layouts, semantic_projection) =
+        x86_64_sysv::begin_semantic_projection(input, &types)?;
     for (ty, layout) in types.into_iter().zip(projected_layouts) {
         layouts.push((ty, facts.add_layout(layout)?));
     }
@@ -59,6 +61,30 @@ pub(in crate::backend) fn admit(
     let mut function_types = BTreeMap::new();
     for ty in program.function_types.iter() {
         function_types.insert(ty.id, facts.add_signature(unit_signature())?);
+    }
+    let mut interface_requirements = BTreeMap::new();
+    for interface in program.interfaces.iter() {
+        for requirement in &interface.requirements {
+            let mut projected = signature(
+                &requirement.parameters,
+                requirement.return_type,
+                Convention::Language,
+                &layouts,
+                &function_types,
+            );
+            projected.inputs.extend(
+                [
+                    ComponentRole::ReceiverStatic,
+                    ComponentRole::ReceiverComplete,
+                    ComponentRole::ReceiverMetadata,
+                ]
+                .map(|role| Component {
+                    ty: ScalarType::DataAddress,
+                    role,
+                }),
+            );
+            interface_requirements.insert(requirement.id, facts.add_signature(projected)?);
+        }
     }
     for ty in program.function_types.iter() {
         let id = function_types[&ty.id];
@@ -257,6 +283,12 @@ pub(in crate::backend) fn admit(
         .record_layout
         .map(|layout| facts.add_layout(layout))
         .transpose()?;
+    facts.semantic = x86_64_sysv::finish_semantic_projection(
+        semantic_projection,
+        program,
+        &layouts,
+        &interface_requirements,
+    )?;
     let plan = CheckedPlan::check(facts)?;
     Ok(AdmittedProgram {
         program,
@@ -285,4 +317,70 @@ fn data(
         layout: Some(layout),
     });
     Ok(())
+}
+
+#[cfg(test)]
+pub(super) fn project_semantic_catalog(
+    input: BackendInput<'_>,
+) -> Result<CheckedPlan, AdmissionError> {
+    let program = input.program();
+    let types = collect_types(program);
+    let (layouts, projection) = x86_64_sysv::begin_semantic_projection(input, &types)?;
+    let executable_sources = program
+        .executable_definitions()
+        .map(|definition| definition.callable())
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut facts = PlanFacts {
+        profile: TargetProfile {
+            architecture: Architecture::X86_64,
+            abi: Abi::SysV,
+            data_layout: DataLayout {
+                pointer_bytes: 8,
+                pointer_alignment: 8,
+                endianness: Endianness::Little,
+            },
+            capabilities: Capabilities {
+                binary64: true,
+                indirect_calls: true,
+                runtime_trace: true,
+            },
+        },
+        runtime_trace: input.runtime_trace(),
+        artifact_policy: ArtifactPolicy::Complete,
+        layouts: vec![],
+        signatures: vec![],
+        callables: vec![],
+        artifacts: vec![],
+        executable_sources: executable_sources.clone(),
+        active_statics: Default::default(),
+        dispatch: vec![],
+        semantic: SemanticFacts::default(),
+    };
+    let type_layouts = types
+        .into_iter()
+        .zip(layouts)
+        .map(|(ty, layout)| facts.add_layout(layout).map(|id| (ty, id)))
+        .collect::<Result<Vec<_>, _>>()?;
+    let signature = facts.add_signature(unit_signature())?;
+    facts.callables = executable_sources
+        .into_iter()
+        .map(|source| CallableDeclaration {
+            key: LirCallableId::Source(source),
+            signature,
+            body: BodyDisposition::Required,
+        })
+        .collect();
+    let requirement_signatures = program
+        .interfaces
+        .iter()
+        .flat_map(|interface| interface.requirements.iter())
+        .map(|requirement| (requirement.id, signature))
+        .collect();
+    facts.semantic = x86_64_sysv::finish_semantic_projection(
+        projection,
+        program,
+        &type_layouts,
+        &requirement_signatures,
+    )?;
+    CheckedPlan::check(facts).map_err(AdmissionError::from)
 }

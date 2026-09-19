@@ -6,7 +6,7 @@ use super::{
     Abi, Architecture, ArtifactDeclaration, ArtifactId, ArtifactPolicy, BodyDisposition,
     CallableDeclaration, ComponentRole, Convention, DataKey, DispatchSlot, Endianness,
     LayoutDisposition, LayoutFact, LayoutId, LirCallableId, PlanFacts, PlanView, ReturnShape,
-    ScalarType, SignatureFact, SignatureId, TargetProfile,
+    ScalarType, SemanticFacts, SignatureFact, SignatureId, TargetProfile,
 };
 use crate::backend::RuntimeTracePolicy;
 use crate::identity::StaticFieldId;
@@ -45,6 +45,7 @@ pub(in crate::backend) struct CheckedPlan {
     pub(super) dispatch: Vec<DispatchSlot>,
     pub(super) callables: BTreeMap<LirCallableId, CallableDeclaration>,
     pub(super) artifacts: BTreeMap<ArtifactId, ArtifactDeclaration>,
+    pub(super) semantic: SemanticFacts,
 }
 
 #[cfg_attr(not(test), allow(dead_code))]
@@ -111,6 +112,7 @@ impl CheckedPlan {
                 return Err(PlanError::InvalidDomain);
             }
         }
+        super::semantic_check::check(&facts)?;
         facts.dispatch.sort_by_key(|slot| (slot.family, slot.index));
         let mut previous = None;
         for slot in &facts.dispatch {
@@ -144,6 +146,7 @@ impl CheckedPlan {
             dispatch: facts.dispatch,
             callables,
             artifacts,
+            semantic: facts.semantic,
         })
     }
 

@@ -372,3 +372,122 @@ fn scalar_io_intrinsic_rejects_even_without_lifecycle_dependencies() {
     assert!(reason.callable.is_some());
     assert!(reason.reason.contains("Io"), "{}", reason.reason);
 }
+
+#[test]
+fn semantic_catalog_freezes_layout_views_dispatch_and_recursive_aggregate_facts() {
+    let fixture = fixture(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Base { value: i64; init(value: i64) { self.value = value; } virtual fn read() -> i64 { return self.value; } }\n",
+        "class Leaf extends Base implements Readable { tail: u8; init(value: i64) { super(value); self.tail = 1u8; } override fn read() -> i64 { return self.value + 1; } }\n",
+        "fn aggregate(value: Leaf, values: i64[], maybe: i64??, boxed: shared Leaf?) -> Leaf { return value; }\n",
+        "fn main() -> i64 { return 0; }",
+    ));
+    let plan = super::projection::project_semantic_catalog(BackendInput::without_runtime_trace(
+        &fixture.mir,
+    ))
+    .unwrap();
+    let semantic = plan.view().semantic();
+
+    assert!(semantic.layout(SemanticType::I64).is_some());
+    assert_eq!(semantic.classes.len(), 2);
+    let leaf = semantic.class(crate::identity::ClassId::new(1)).unwrap();
+    assert_eq!(leaf.base.unwrap().class, crate::identity::ClassId::new(0));
+    assert_eq!(leaf.fields[0].offset, 8);
+    assert_eq!(semantic.field(leaf.fields[0].field), Some(leaf.fields[0]));
+    assert!(leaf.shared_allocation.byte_count >= 24);
+    assert_eq!(semantic.interfaces.len(), 1);
+    assert_eq!(semantic.conformances.len(), 1);
+    assert_eq!(semantic.virtual_families.len(), 1);
+    assert!(semantic
+        .interface(semantic.interfaces[0].interface)
+        .is_some());
+    assert!(semantic
+        .interface_requirement(semantic.interfaces[0].requirements[0].requirement)
+        .is_some());
+    assert!(semantic
+        .conformance(
+            semantic.conformances[0].class,
+            semantic.conformances[0].interface,
+        )
+        .is_some());
+    assert!(semantic
+        .virtual_family(semantic.virtual_families[0].family)
+        .is_some());
+    assert!(semantic
+        .method_slot(MethodSlot::Virtual(semantic.virtual_families[0].family))
+        .is_some());
+    assert_eq!(semantic.dispatch_tables.len(), 2);
+    assert!(semantic
+        .dispatch_table(crate::identity::ClassId::new(1))
+        .is_some());
+    assert!(semantic.arrays.iter().any(|array| {
+        array.element == SemanticType::I64
+            && array.stride == 8
+            && semantic.array(array.array).is_some()
+    }));
+    assert!(semantic.optionals.len() >= 2);
+    assert!(semantic.optional(semantic.optionals[0].optional).is_some());
+    assert!(semantic
+        .optional_boxes
+        .iter()
+        .any(|item| item.exact_optional.is_some()
+            && item.allocation.is_some()
+            && semantic.optional_box(item.optional_box).is_some()));
+    let readable = semantic
+        .object_views
+        .iter()
+        .find(|view| matches!(view.target, ObjectViewTarget::Interface(_)))
+        .unwrap();
+    assert_eq!(semantic.object_view(readable.target), Some(readable));
+    assert_eq!(readable.members, [crate::identity::ClassId::new(1)]);
+    assert_eq!(
+        readable.components,
+        [
+            ObjectComponent::StaticAddress,
+            ObjectComponent::CompleteAddress,
+            ObjectComponent::DynamicMetadata,
+        ]
+    );
+
+    use crate::mir::retain::{prepare_reachable_definition_retention, MirDefinitionRetention};
+    let MirDefinitionRetention::Changed(retention) =
+        prepare_reachable_definition_retention(fixture.mir.program(), fixture.mir.reachability())
+            .unwrap()
+    else {
+        panic!("the scalar entry must leave aggregate declarations sparse")
+    };
+    let sparse =
+        crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
+            .unwrap();
+    let admitted =
+        admit(BackendInput::without_runtime_trace(&sparse).with_reachable_artifacts_only())
+            .unwrap();
+    let aggregate = sparse
+        .program()
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "aggregate")
+        .unwrap();
+    let declaration = admitted
+        .plan()
+        .view()
+        .callables()
+        .find(|declaration| declaration.key == LirCallableId::Source(aggregate.id.into()))
+        .unwrap();
+    assert_eq!(declaration.body, BodyDisposition::Absent);
+    assert!(matches!(
+        admitted
+            .plan()
+            .view()
+            .signature(
+                admitted
+                    .plan()
+                    .view()
+                    .signature_id(declaration.signature.index())
+                    .unwrap()
+            )
+            .unwrap()
+            .returns,
+        ReturnShape::Aggregate(_)
+    ));
+}

@@ -121,6 +121,10 @@ impl ClassLayout {
     pub(super) fn field(&self, field: FieldId) -> Option<FieldLayout> {
         self.fields.get(field.index()).copied()
     }
+
+    pub(super) fn fields(&self) -> impl ExactSizeIterator<Item = FieldLayout> + '_ {
+        self.fields.iter().copied()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -250,6 +254,17 @@ impl DataLayout {
             .map(|layout| layout.byte_count())
     }
 
+    pub(super) fn shared_allocation(
+        &self,
+        class: ClassId,
+    ) -> Result<SharedAllocationLayout, BackendError> {
+        let payload = self
+            .class(class)
+            .ok_or_else(|| layout_error(format!("class {class} has no target layout")))?
+            .ty();
+        shared_allocation_layout(payload, &format!("class {class}"))
+    }
+
     pub(super) fn exact_optional_box(
         &self,
         target: OptionalBoxTypeId,
@@ -291,6 +306,16 @@ impl DataLayout {
                     "optional-box {target} has no object payload layout"
                 ))
             })
+    }
+
+    pub(super) fn optional_object_box_layer_offsets(
+        &self,
+        target: OptionalBoxTypeId,
+    ) -> Option<&[usize]> {
+        self.optional_object_boxes
+            .get(target.index())
+            .and_then(Option::as_ref)
+            .map(|layout| layout.layer_offsets.as_slice())
     }
 }
 
