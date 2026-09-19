@@ -1,5 +1,6 @@
 //! Command-line parsing, inspection, and bounded parallel execution.
 
+mod artifact_lock;
 mod options;
 
 use crate::process::DEFAULT_TIMEOUT;
@@ -8,6 +9,7 @@ use crate::{
     CompilerConfig, ExecutionOptions, PlannedLeafKind, ProcessCommand, Report, ReportFormat,
     ReportOptions, RuntimePreparation, SandboxRetention, SchedulerOptions, SequentialOptions,
 };
+use artifact_lock::ArtifactRootLock;
 use options::{Inspection, Options};
 use skald_compiler::driver::{Toolchain, C_COMPILER_ENV, RUNTIME_ARCHIVE_ENV};
 use std::{
@@ -111,6 +113,10 @@ fn run_cli_with_context(
         Ok(compiler) => compiler,
         Err(error) => return usage_error(stderr, &error.to_string()),
     };
+    let _artifact_lock = match ArtifactRootLock::acquire(plan.artifact_root()) {
+        Ok(lock) => lock,
+        Err(error) => return execution_error(stderr, &error),
+    };
     if options.format == ReportFormat::Human {
         match write_output(
             stdout,
@@ -191,6 +197,11 @@ fn stage_options(
 fn usage_error(stderr: &mut impl Write, message: &str) -> u8 {
     let _ = writeln!(stderr, "skald-golden: {message}");
     2
+}
+
+fn execution_error(stderr: &mut impl Write, message: &str) -> u8 {
+    let _ = writeln!(stderr, "skald-golden: {message}");
+    1
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

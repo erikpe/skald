@@ -149,7 +149,7 @@ its acceptance boundary; do not silently defer part of its contract.
 
 **Purpose:** Turn native opcode contracts into a target-owned selected representation.
 
-- [x] Resolve [signature-boundary ABI slot validation](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary) before native selected consumers; preserve context authority and strict per-boundary shape checks. Split an explicit prerequisite if necessary.
+- [x] Resolve [signature-boundary ABI slot validation](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary) before native selected consumers; preserve context authority and strict per-boundary shape checks. Split an explicit prerequisite if necessary.
 - [x] Implement immutable inspect/edit payload contracts and exhaustive opcode-derived descriptors for constants, bit operations, addresses, loads/stores, integer/float arithmetic, comparisons and graph flow.
 - [x] Implement the mandatory independent x86 TargetVerifier against actual fields, resources, effects and encoding rules. Malformed drafts must be describable without panic; descriptor self-comparison is insufficient.
 - [x] Preserve recipe/origin provenance and normalize parameter-transfer edges before selected publication; consuming edits create fresh identities and witnesses.
@@ -233,7 +233,7 @@ ordinary selected publication and target verification.
 
 **Purpose:** Freeze concrete frame and physical-state contracts before realization.
 
-- [x] Resolve [signature-local ABI area layout authority](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#symbolic-abi-area-extent-needs-target-slot-layout) before publishing native ABI-area objects; representation byte widths do not establish SysV slot stride or area padding.
+- [x] Resolve [signature-local ABI area layout authority](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#symbolic-abi-area-extent-needs-target-slot-layout) before publishing native ABI-area objects; representation byte widths do not establish SysV slot stride or area padding.
 - [x] Combine semantic objects with placement homes, spills, saves, outgoing areas and transfer scratch as typed symbolic requirements; compute deterministic checked offsets using conservative object lifetimes.
 - [x] Implement frame-pointer/fixed-outgoing-area policy, independent incoming slots, ABI alignment and width-aware preserved-resource save areas. Freeze supported x86 size/displacement limits and explicit rejection beyond bounds.
 - [x] Checkpoint: document entry/return stack states, CFG join rules, prologue/epilogue and forwarding provenance, legal addressing recipes and declared scratch bounds. Test narrower synthetic target displacements and non-x86 result/link roles before consumers.
@@ -355,7 +355,7 @@ cells rather than blindly multiplying every case.
 
 Run applicable release/determinism checks for native changes; closing validation
 uses `make check-long` plus the ordinary artifact-free gate. Run golden/MSRV
-commands serially: the [architecture discoveries](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
+commands serially: the [architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
 track the independent concurrent artifact race. Do not fix it by broadening this
 roadmap or accept a contaminated run as evidence.
 
@@ -415,7 +415,7 @@ permission to introduce it unnecessarily.
 ## Discoveries and closure record
 
 Record independent candidates in the existing indexed
-[architecture discoveries](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md), with
+[architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md), with
 evidence, owner, priority and a bounded follow-up. Implement small maintainability
 fixes that support the current task directly; substantial design/correctness gaps
 must be resolved before dependent tasks or closure rather than hidden there.

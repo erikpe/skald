@@ -295,7 +295,7 @@ actual selected payloads remain LI07/LI08. `make check` passed serially (3,220
 compiler unit tests, 12 boundary tests, runtime tests and 650 golden observations);
 `make msrv-check` passed on Rust 1.82.0. An earlier overlapping gate exposed a
 shared golden-artifact collision; the independent follow-up is recorded in
-[discoveries](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md). No design amendment,
+[discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md). No design amendment,
 compatibility bridge, provisional seal or production phase switch was introduced.
 Scoped pre-consumer allowances and durable fixtures are ledgered below.
 
@@ -749,6 +749,6 @@ to LA03's first real consumer. LI11 transfers outstanding obligations to the
 program handoff rather than forgetting them at child archival. No blanket lint
 allowance or empty placeholder API is justified.
 
-Use [architecture discoveries](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
+Use [architecture discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
 for substantial new independent findings; keep its active index entry current. Implement small maintainability fixes directly within the
 responsible task when they preserve the reviewed scope.

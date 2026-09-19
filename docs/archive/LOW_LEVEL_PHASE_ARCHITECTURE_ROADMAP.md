@@ -507,7 +507,7 @@ placement is a planned implementation, not a temporary bridge to delete during
 LA01 closure. The legacy selector remains production code until LA05 retires it.
 
 Record substantial independent maintainability findings in
-`docs/roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md` when the first
+`docs/archive/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md` when the first
 actionable finding exists, and index it then. Include evidence, impact, owner,
 and a bounded follow-up. Required correctness/contract gaps stay in the active
 roadmap rather than being deferred merely to mark it complete.

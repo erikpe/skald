@@ -1,12 +1,25 @@
 # Low-Level Compiler Architecture Discoveries
 
-Status: one independent follow-up; signature-boundary and frame-layout ABI
-prerequisites resolved,
-2026-09-18. Findings from the [architecture program](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
-are tracked here. Independent maintenance work stays outside active task scope;
-contract gaps must be resolved before their dependent consumers.
+Status: resolved and archived on 2026-09-19. Findings from the
+[architecture program](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md)
+are preserved here with their resolutions.
 
 ## Golden artifact ownership across concurrent invocations
+
+**Status:** resolved on 2026-09-19. The CLI now acquires a nonblocking,
+process-lifetime advisory lock for the planned artifact root after compiler
+discovery and before it prints the execution header or mutates case outputs. A
+contending invocation exits with status 1, identifies the live owner when
+available, and asks the caller to wait. The operating system releases ownership
+when the process exits, while the persistent lock file avoids a deletion race.
+Read-only inspection and allowed empty selections remain artifact-free.
+
+The cross-process CLI regression holds the root in the parent, places sentinels
+at the planned `assembly.s` and `program` paths, and launches an independent
+runner process against the same root. It proves the contender is rejected
+before either artifact is removed and that ownership can be reacquired after
+the parent guard is dropped. Focused and full runner tests retain deterministic
+case identities, normalized diagnostics and failure-artifact behavior.
 
 **Priority:** medium. **Owner:** golden planning/compiler execution, independently
 of low-level compiler phases. **Boundary:** one focused runner change with
@@ -36,9 +49,10 @@ two-process regression using existing fake-compiler support; check assembly and
 linked executable isolation, including success/failure cleanup. Avoid relying on
 scheduling delays alone to reproduce the race.
 
-Until addressed, run golden/full checks serially within a checkout. The model
-task's final gate was rerun serially; this candidate requires no compiler-phase
-change or rollback.
+Repository gates should still run serially because Cargo target outputs are
+shared. Golden-specific overlap now fails explicitly rather than corrupting the
+active owner's artifacts. This resolution required no compiler-phase change or
+rollback.
 
 ## ABI slot shapes must be local to the signature boundary
 

@@ -1,15 +1,23 @@
-use super::{options::Options, run_cli_with_context, stage_options, HELP};
+use super::{
+    artifact_lock::ArtifactRootLock, options::Options, run_cli_with_context, stage_options, HELP,
+};
 use crate::{
-    Determinism, ReportFormat, SandboxRetention, DEFAULT_OUTPUT_FILE_LIMIT,
+    build_plan, Determinism, ReportFormat, SandboxRetention, DEFAULT_OUTPUT_FILE_LIMIT,
     DEFAULT_PROCESS_CAPTURE_LIMIT,
 };
 use std::{
+    env,
+    ffi::OsString,
     fs,
     io::{self, Write},
     path::Path,
     path::PathBuf,
+    process::Command,
     sync::atomic::{AtomicUsize, Ordering},
 };
+
+const ARTIFACT_LOCK_PROBE_ROOT: &str = "SKALD_GOLDEN_ARTIFACT_LOCK_PROBE_ROOT";
+const ARTIFACT_LOCK_PROBE_ARTIFACTS: &str = "SKALD_GOLDEN_ARTIFACT_LOCK_PROBE_ARTIFACTS";
 
 static NEXT_FIXTURE: AtomicUsize = AtomicUsize::new(0);
 
@@ -227,6 +235,70 @@ fn empty_execution_does_not_require_a_compiler_or_prepare_artifacts() {
         .contains("golden: 0 passed, 0 failed, 0 cancelled"));
     assert!(stderr.is_empty());
     assert!(!artifact_root.exists());
+}
+
+#[test]
+fn artifact_lock_subprocess_helper() {
+    let Some(root) = env::var_os(ARTIFACT_LOCK_PROBE_ROOT) else {
+        return;
+    };
+    let artifact_root = PathBuf::from(env::var_os(ARTIFACT_LOCK_PROBE_ARTIFACTS).unwrap());
+    let compiler = env::current_exe().unwrap();
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let status = run_cli_with_context(
+        [
+            OsString::from("skald-golden"),
+            OsString::from("--compiler"),
+            compiler.into_os_string(),
+        ],
+        Path::new(&root),
+        &artifact_root,
+        Path::new(&root),
+        &mut stdout,
+        &mut stderr,
+    );
+    assert_eq!(status, 1);
+    assert!(stdout.is_empty());
+    let stderr = String::from_utf8(stderr).unwrap();
+    assert!(stderr.contains("already owned by another golden invocation"));
+    assert!(stderr.contains("wait for it to finish"));
+}
+
+#[test]
+fn concurrent_process_cannot_remove_another_invocations_artifacts() {
+    let fixture = Fixture::new();
+    let artifact_root = fixture.root.with_extension("artifacts");
+    let plan = build_plan(&fixture.root, &artifact_root, &[]).unwrap();
+    let artifact_directory = plan.builds()[0].artifact_directory();
+    fs::create_dir_all(artifact_directory).unwrap();
+    let assembly = artifact_directory.join("assembly.s");
+    let executable = artifact_directory.join("program");
+    fs::write(&assembly, "owner assembly").unwrap();
+    fs::write(&executable, "owner executable").unwrap();
+
+    let owner = ArtifactRootLock::acquire(&artifact_root).unwrap();
+    let output = Command::new(env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "cli::tests::artifact_lock_subprocess_helper",
+            "--nocapture",
+        ])
+        .env(ARTIFACT_LOCK_PROBE_ROOT, &fixture.root)
+        .env(ARTIFACT_LOCK_PROBE_ARTIFACTS, &artifact_root)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "helper failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(fs::read_to_string(&assembly).unwrap(), "owner assembly");
+    assert_eq!(fs::read_to_string(&executable).unwrap(), "owner executable");
+
+    drop(owner);
+    ArtifactRootLock::acquire(&artifact_root).unwrap();
+    fs::remove_dir_all(artifact_root).unwrap();
 }
 
 #[test]

@@ -662,7 +662,7 @@ pressure and hidden-destination/receiver/alias boundaries. Numeric/call/trace
 opcode/event walkthroughs are frozen for downstream target consumers, not yet
 native execution evidence. Public/default production emission is unchanged.
 
-[Signature-boundary slot validation](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary)
+[Signature-boundary slot validation](../archive/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md#abi-slot-shapes-must-be-local-to-the-signature-boundary)
 is resolved: one selection context now validates per-signature shapes. Shared
 publication tests cover heterogeneous outgoing slot zero in one graph; native
 publication tests cover heterogeneous incoming slot zero and strict negatives.

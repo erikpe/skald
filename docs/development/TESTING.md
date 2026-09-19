@@ -711,8 +711,14 @@ tests and require no compiler-specific box fixture.
 Run repository gates sequentially against a fixed source snapshot. Avoid
 concurrent Cargo rebuilds in the same target directory while tests and Rustdoc
 are running: rebuilt shared dependencies can invalidate the running checks'
-artifacts. Golden invocations also share build outputs; their internal parallel
-scheduler does not isolate separate runner invocations.
+artifacts. A golden invocation takes exclusive ownership of
+`build/golden/cases` before compilation. A second invocation using that root
+exits with a clear error and leaves the owner's assembly and executable
+artifacts untouched. The ownership lock is released automatically when the
+runner process exits; read-only planning commands and an allowed empty
+selection do not create the artifact root or acquire the lock. The runner's
+internal parallel scheduler continues to execute cases under the one owning
+invocation.
 
 `make help` is the complete command inventory. Useful focused forms include:
 

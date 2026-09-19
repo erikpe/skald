@@ -480,7 +480,7 @@ Implementation runs focused owner checks, `make check` and serial
 `make msrv-check`; native-path changes also require the applicable release and
 full-determinism gates in `make check-long`. Final gates use an artifact-free
 snapshot containing closing fixups. Golden runs in one checkout remain serial
-until the indexed [artifact ownership discovery](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
+until the indexed [artifact ownership discovery](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
 is resolved.
 
 The [foundation measurement protocol](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md)

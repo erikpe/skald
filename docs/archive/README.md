@@ -25,6 +25,7 @@ For current information, use:
 
 Archived plans:
 
+- [Low-level compiler architecture resolved discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
 - [Target selection, checked placement and physical realization frozen design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
 - [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
 - [Low-level IR model, construction and verification frozen design](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md)
