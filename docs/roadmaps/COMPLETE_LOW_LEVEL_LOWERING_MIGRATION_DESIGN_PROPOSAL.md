@@ -1,8 +1,10 @@
 # Complete Low-Level Lowering Migration Design Proposal
 
-Status: proposed for review, 2026-09-19. Source assessment: `edff66b5`, after
-completion of the private native pilot and the independent golden-artifact
-ownership fix. Parent:
+Status: accepted, frozen and promoted on 2026-09-19. Accepted after review of
+the proposal committed as `a099d228`. Implementation:
+[complete lowering migration roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md),
+planned from baseline `a099d228`. Source assessment: `edff66b5`, after completion
+of the private native pilot and the independent golden-artifact ownership fix. Parent:
 [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Inherited contracts: the frozen
 [phase architecture](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
@@ -86,7 +88,7 @@ experiment. Preserve these inherited invariants:
 - sparse bodies remain absent. Neither complete-mode retention nor migration
   admission may recreate a body excluded by the verified final-MIR product.
 
-## Proposed migration architecture
+## Accepted migration architecture
 
 ```mermaid
 flowchart LR
@@ -416,7 +418,7 @@ representation, ABI, runtime or phase-authority decision not settled here.
 | Fold LA05 into this workstream | Mixes feature completeness with rollout, public observation, legacy deletion and cost acceptance |
 | Add register allocation now | Makes correctness of full lowering depend on an optimization that is intentionally a later replaceable placement strategy |
 
-## Decisions and remaining review questions
+## Accepted decisions
 
 This proposal selects whole-program no-fallback migration, dependency-ordered
 families, ordinary LIR expansion for lifecycle/aggregates, explicit
@@ -424,7 +426,7 @@ retained-inactive static storage, first-class generated callables, typed data
 closure, early removal of shared `pilot` naming, full private parity in LA04 and
 production adoption in LA05.
 
-Review should confirm three boundaries before freezing:
+Acceptance confirms three boundaries:
 
 1. retained-inactive static storage is the accepted complete-mode representation
    and does not participate in semantic startup/shutdown;
@@ -433,6 +435,5 @@ Review should confirm three boundaries before freezing:
 3. public driver phase observations remain LA05, while LA04 requires complete
    private requested checkpoints and deterministic inspection.
 
-Once accepted, freeze this document, update the parent and handoff status, and
-create the implementation roadmap with a fresh baseline. Implementation must not
-begin from this draft alone.
+The implementation roadmap owns delivery and may amend this frozen design only
+through an explicit recorded decision before dependent work proceeds.

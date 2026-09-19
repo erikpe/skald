@@ -483,11 +483,11 @@ The [archived native target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZA
 and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
 deliver concrete native selection, ABI handling, checked baseline placement,
 symbolic frames, independently verified physical realization and a private
-whole-program pilot. The proposed
+whole-program pilot. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
-owns the remaining private full-language parity work. Production migration,
-adoption and allocation remain pending; preserved measurements grant no cost
-clearance.
+and [planned roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) own the
+remaining private full-language parity work. Production migration, adoption and
+allocation remain pending; preserved measurements grant no cost clearance.
 ### Optimization possibilities unlocked
 
 - register allocation and copy coalescing;
