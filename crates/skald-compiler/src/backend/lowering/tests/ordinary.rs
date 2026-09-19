@@ -1,8 +1,11 @@
 use crate::{
     backend::{
-        lir::{InventoryState, Operation, ProgramBuilder},
+        lir::{
+            verify_callable, Constant, DataDefinition, DataInitializer, DraftBuilder,
+            InventoryState, Operation, ProgramBuilder, ProgramError, Terminator,
+        },
         lowering::{lower_next, LowerError},
-        plan::LirCallableId,
+        plan::{DataInitializerFact, DataKey, LirCallableId},
         planning::admit,
         BackendInput,
     },
@@ -41,6 +44,107 @@ fn source_loop_publishes_with_semantic_memory_and_exact_worklist_receipt() {
     assert!(body.receipt().matches(&body));
     assert!(body.analysis().is_ok());
     assert_eq!(worklist.next(), Some(LirCallableId::Entry));
+}
+
+#[test]
+fn frozen_data_recipes_are_reconciled_exactly_without_retaining_drafts() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "data.ska",
+        "fn main() -> i64 { return 0; }",
+    );
+    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    while lower_next(&admitted, &mut worklist).unwrap().is_some() {}
+
+    let first = &admitted.plan().view().resources().data[0];
+    assert_eq!(
+        worklist.define_data(DataDefinition {
+            key: first.key,
+            initializers: vec![DataInitializer::Zero(
+                admitted
+                    .plan()
+                    .view()
+                    .layout(
+                        admitted
+                            .plan()
+                            .view()
+                            .layout_id(first.layout.index())
+                            .unwrap()
+                    )
+                    .unwrap()
+                    .size
+            )],
+        }),
+        Err(ProgramError::InvalidInitializer)
+    );
+
+    for fact in &admitted.plan().view().resources().data {
+        let initializers = fact
+            .initializers
+            .iter()
+            .map(|initializer| match initializer {
+                DataInitializerFact::Bytes(bytes) => DataInitializer::Bytes(bytes.clone()),
+                DataInitializerFact::Zero(bytes) => DataInitializer::Zero(*bytes),
+                DataInitializerFact::Address {
+                    target,
+                    category,
+                    addend,
+                } => DataInitializer::Address {
+                    target: *target,
+                    category: *category,
+                    addend: *addend,
+                },
+            })
+            .collect();
+        worklist
+            .define_data(DataDefinition {
+                key: fact.key,
+                initializers,
+            })
+            .unwrap();
+    }
+    let program = worklist.finish().unwrap();
+    assert_eq!(
+        program
+            .data()
+            .map(|definition| definition.key)
+            .collect::<Vec<DataKey>>(),
+        admitted
+            .plan()
+            .view()
+            .resources()
+            .data
+            .iter()
+            .map(|fact| fact.key)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn generated_completion_receipts_must_match_frozen_dependencies() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "generated.ska",
+        "fn main() -> i64 { return 0; }",
+    );
+    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    assert!(lower_next(&admitted, &mut worklist).unwrap().is_some());
+    let owner = worklist.begin(LirCallableId::Entry).unwrap();
+    let mut builder = DraftBuilder::new(owner).unwrap();
+    let entry = builder.reserve_block().unwrap();
+    builder.define_block(entry, &[]).unwrap();
+    builder.set_entry(entry).unwrap();
+    let result = builder
+        .append(entry, Operation::Constant(Constant::I64(0)))
+        .unwrap();
+    builder
+        .terminate(entry, Terminator::Return(result))
+        .unwrap();
+    let body = verify_callable(builder.finish()).unwrap();
+    assert_eq!(
+        worklist.complete(&body, &body.receipt()),
+        Err(ProgramError::DependencyMismatch)
+    );
 }
 
 #[test]

@@ -10,6 +10,14 @@ pub(super) fn check_service(
     service: RuntimeService,
     signature: &SignatureFact,
 ) -> Result<(), PlanError> {
+    if signature != &service_signature(service) {
+        return Err(PlanError::InvalidSignature);
+    }
+    Ok(())
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) fn service_signature(service: RuntimeService) -> SignatureFact {
     use ScalarType::*;
     let (inputs, returns): (&[ScalarType], ReturnShape) = match service {
         RuntimeService::Allocate => (&[U64], ReturnShape::Scalar(DataAddress)),
@@ -23,21 +31,25 @@ pub(super) fn check_service(
         RuntimeService::IoClose => (&[I64], ReturnShape::Scalar(I64)),
         RuntimeService::AbiMarker => (&[], ReturnShape::Unit),
     };
-    if signature.convention != Convention::Runtime
-        || signature.returns != returns
-        || signature.inputs.len() != inputs.len()
-        || signature
-            .inputs
+    SignatureFact {
+        convention: Convention::Runtime,
+        inputs: inputs
             .iter()
-            .zip(inputs)
             .enumerate()
-            .any(|(index, (component, ty))| {
-                component.ty != *ty || component.role != ComponentRole::RuntimeParameter(index)
+            .map(|(index, ty)| super::Component {
+                ty: *ty,
+                role: ComponentRole::RuntimeParameter(index),
             })
-    {
-        return Err(PlanError::InvalidSignature);
+            .collect(),
+        results: match returns {
+            ReturnShape::Scalar(ty) => vec![super::Component {
+                ty,
+                role: ComponentRole::Result,
+            }],
+            _ => vec![],
+        },
+        returns,
     }
-    Ok(())
 }
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn service_effects<O: Copy + Ord>(service: RuntimeService) -> Effects<O> {

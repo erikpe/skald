@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM02 are complete and LM03 is next.
+Status: active; LM01–LM03 are complete and LM04 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -40,7 +40,7 @@ per-callable or per-operation fallback.
 
 - [x] LM01 — Establish durable migration ownership and the no-fallback gate
 - [x] LM02 — Complete semantic layout and object-view planning facts
-- [ ] LM03 — Complete data, artifact and static-storage planning facts
+- [x] LM03 — Complete data, artifact and static-storage planning facts
 - [ ] LM04 — Checkpoint the complete fact model
 - [ ] LM05 — Lower complex places and aggregate call boundaries
 - [ ] LM06 — Lower dispatch, runtime type operations and object initialization
@@ -124,14 +124,14 @@ subsequent lowering tasks.
 **Purpose:** settle finite program resources and the accepted complete-mode
 inactive-static representation before executable consumers depend on them.
 
-- [ ] Add active and retained-inactive static storage dispositions, enforcing
+- [x] Add active and retained-inactive static storage dispositions, enforcing
   zero-only physical retention and excluding inactive storage from semantic
   initialization and shutdown.
-- [ ] Freeze literal backing, failure message, trace/TLS, dispatch/descriptor,
+- [x] Freeze literal backing, failure message, trace/TLS, dispatch/descriptor,
   runtime-service and generated-helper declarations with typed dependencies.
-- [ ] Define complete/reachable roots and reject retained-inactive references in
+- [x] Define complete/reachable roots and reject retained-inactive references in
   reachable mode, missing storage, lifecycle promotion and forged substitutions.
-- [ ] Extend exact program reconciliation for every new data/declaration family
+- [x] Extend exact program reconciliation for every new data/declaration family
   without retaining executable drafts.
 
 **Tests:** active/inactive static policy matrix, typed data/relocation failures,
@@ -139,6 +139,18 @@ artifact-policy roots, discarded-body/receipt closure, and deterministic plans.
 
 **Exit criteria:** the complete plan can describe every LA04 callable/data family
 and the inactive-static amendment has positive and adversarial evidence.
+
+Completed on 2026-09-19. `plan::ResourceFacts` now freezes canonical static
+dispositions and lifecycle work, data recipes and relocations, TLS, runtime
+services, generated callable dependencies and complete/reachable roots. Complete
+projection retains typed all-zero storage for inactive slots referenced by
+physically retained bodies; reachable projection rejects the same leakage, and
+neither activation nor shutdown can promote such a slot. Shared lowering consumes
+the frozen data recipes directly, while program publication reconciles exact
+initializers and generated dependencies without retaining callable drafts.
+Focused owner tests cover malformed storage, lifecycle promotion, identities,
+relocations, roots, deterministic complex catalogs, reachable pruning and the
+complete-mode inactive-reference exception.
 
 ### LM04 — Checkpoint the complete fact model
 
@@ -494,7 +506,8 @@ continuing purpose and explicit removal owner.
 | Shared `backend::pilot` projection/admission/lowering names | LA03 commits through `8f8c1825` | LM01 | Removed in LM01: admission/fact projection are owned by `backend::planning`, lowering by `backend::lowering`, and target fact adapters use semantic names |
 | `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | Consuming LM02–LM17 tasks; residual facade allowance LA05 | Retained only for the private admitted product, structured errors and trace facts; narrow as feature consumers land |
 | `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | Consuming LM05–LM17 tasks; residual facade allowance LA05 | Retained only for private checked lowering entries while production still uses legacy emission |
-| `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01; semantic catalog expanded LM02 | LM03 fact expansion; residual root allowance LA05 | Retained target-owned semantic layout/dispatch and trace projection; legacy planner types do not escape into the checked plan |
+| `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01; semantic catalog expanded LM02 and resource consumers added LM03 | Residual root allowance LA05 | Retained target-owned semantic layout/dispatch and trace projection; legacy planner types do not escape into the checked plan |
+| `plan::ResourceFacts` and `planning::resources` complete resource catalog | LM03, pending manual commit | LM04 audit; executable consumers LM05–LM17 | Retain as the checked owner of static dispositions/lifecycle, typed data, runtime/generated declarations and artifact roots; complete-mode inactive storage is physical-only and all-zero |
 | Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
 | `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
 | Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrow during family delivery, then remove after complete coverage |

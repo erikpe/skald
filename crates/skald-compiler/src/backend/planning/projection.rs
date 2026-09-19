@@ -5,9 +5,7 @@ use super::{
     layouts::collect_types,
     signatures::{declaration_inventory, intern_source_signature, signature, unit_signature},
 };
-use crate::backend::{
-    failure::FailureMessage, plan::*, x86_64_sysv, BackendInput, RuntimeTracePolicy,
-};
+use crate::backend::{plan::*, x86_64_sysv, BackendInput};
 use crate::mir::*;
 use std::collections::BTreeMap;
 
@@ -48,6 +46,7 @@ pub(in crate::backend) fn admit(
         active_statics: input.active_static_fields().iter().copied().collect(),
         dispatch: vec![],
         semantic: SemanticFacts::default(),
+        resources: ResourceFacts::default(),
     };
     let types = collect_types(program);
     let mut layouts = Vec::new();
@@ -209,75 +208,7 @@ pub(in crate::backend) fn admit(
         signature: entry,
         body: BodyDisposition::Required,
     });
-    for (service, inputs, returns) in [
-        (RuntimeService::AbiMarker, &[][..], ReturnShape::Unit),
-        (
-            RuntimeService::Panic,
-            &[ScalarType::DataAddress, ScalarType::U64][..],
-            ReturnShape::Never,
-        ),
-    ] {
-        let signature = facts.add_signature(SignatureFact {
-            convention: Convention::Runtime,
-            inputs: inputs
-                .iter()
-                .enumerate()
-                .map(|(i, ty)| Component {
-                    ty: *ty,
-                    role: ComponentRole::RuntimeParameter(i),
-                })
-                .collect(),
-            results: vec![],
-            returns,
-        })?;
-        facts.artifacts.push(ArtifactDeclaration {
-            key: ArtifactId::Runtime(service),
-            signature: Some(signature),
-            layout: None,
-        });
-    }
-    // Freeze the complete failure pool; retention later chooses used data.
-    for message in [
-        FailureMessage::ShiftCountOutOfRange,
-        FailureMessage::IntegerDivisionByZero,
-        FailureMessage::IntegerRemainderByZero,
-        FailureMessage::PrimitiveCastOutOfRange,
-    ] {
-        data(
-            &mut facts,
-            ArtifactId::Data(DataKey::FailureMessage(message)),
-            message.bytes().len(),
-            1,
-        )?;
-    }
     let trace = x86_64_sysv::project_trace(input)?;
-    for (i, bytes) in trace.strings.iter().enumerate() {
-        data(
-            &mut facts,
-            ArtifactId::Data(DataKey::TraceBytes(i)),
-            bytes.len(),
-            1,
-        )?;
-    }
-    for i in 0..trace.contexts.len() {
-        data(
-            &mut facts,
-            ArtifactId::Data(DataKey::TraceContext(i)),
-            32,
-            8,
-        )?;
-    }
-    for i in 0..trace.locations.len() {
-        data(
-            &mut facts,
-            ArtifactId::Data(DataKey::TraceLocation(i)),
-            24,
-            8,
-        )?;
-    }
-    if input.runtime_trace() == RuntimeTracePolicy::Enabled {
-        data(&mut facts, ArtifactId::TraceTls, 8, 8)?;
-    }
     // Reuse the target's existing runtime frame shape; freeze its checked ID.
     let trace_record_layout = trace
         .record_layout
@@ -289,6 +220,7 @@ pub(in crate::backend) fn admit(
         &layouts,
         &interface_requirements,
     )?;
+    super::resources::project(input, &layouts, &trace, &mut facts)?;
     let plan = CheckedPlan::check(facts)?;
     Ok(AdmittedProgram {
         program,
@@ -300,28 +232,24 @@ pub(in crate::backend) fn admit(
     })
 }
 
-fn data(
-    facts: &mut PlanFacts,
-    key: ArtifactId,
-    size: usize,
-    alignment: usize,
-) -> Result<(), PlanError> {
-    let layout = facts.add_layout(LayoutFact {
-        size,
-        alignment,
-        disposition: LayoutDisposition::Addressable,
-    })?;
-    facts.artifacts.push(ArtifactDeclaration {
-        key,
-        signature: None,
-        layout: Some(layout),
-    });
-    Ok(())
-}
-
 #[cfg(test)]
 pub(super) fn project_semantic_catalog(
     input: BackendInput<'_>,
+) -> Result<CheckedPlan, AdmissionError> {
+    project_test_catalog(input, false)
+}
+
+#[cfg(test)]
+pub(in crate::backend) fn project_resource_catalog(
+    input: BackendInput<'_>,
+) -> Result<CheckedPlan, AdmissionError> {
+    project_test_catalog(input, true)
+}
+
+#[cfg(test)]
+fn project_test_catalog(
+    input: BackendInput<'_>,
+    include_resources: bool,
 ) -> Result<CheckedPlan, AdmissionError> {
     let program = input.program();
     let types = collect_types(program);
@@ -346,15 +274,20 @@ pub(super) fn project_semantic_catalog(
             },
         },
         runtime_trace: input.runtime_trace(),
-        artifact_policy: ArtifactPolicy::Complete,
+        artifact_policy: if input.reachable_artifacts_only() {
+            ArtifactPolicy::Reachable
+        } else {
+            ArtifactPolicy::Complete
+        },
         layouts: vec![],
         signatures: vec![],
         callables: vec![],
         artifacts: vec![],
         executable_sources: executable_sources.clone(),
-        active_statics: Default::default(),
+        active_statics: input.active_static_fields().iter().copied().collect(),
         dispatch: vec![],
         semantic: SemanticFacts::default(),
+        resources: ResourceFacts::default(),
     };
     let type_layouts = types
         .into_iter()
@@ -382,5 +315,23 @@ pub(super) fn project_semantic_catalog(
         &type_layouts,
         &requirement_signatures,
     )?;
+    if include_resources {
+        let entry_signature = facts.add_signature(SignatureFact {
+            convention: Convention::ExternC,
+            inputs: vec![],
+            results: vec![Component {
+                ty: ScalarType::I64,
+                role: ComponentRole::Result,
+            }],
+            returns: ReturnShape::Scalar(ScalarType::I64),
+        })?;
+        facts.callables.push(CallableDeclaration {
+            key: LirCallableId::Entry,
+            signature: entry_signature,
+            body: BodyDisposition::Required,
+        });
+        let trace = x86_64_sysv::project_trace(input)?;
+        super::resources::project(input, &type_layouts, &trace, &mut facts)?;
+    }
     CheckedPlan::check(facts).map_err(AdmissionError::from)
 }

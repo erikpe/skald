@@ -62,7 +62,10 @@ fn direct_indirect_external_and_unit_calls_close_the_entire_inventory() {
         program.receipts().len(),
         fixture.mir.program().executable_definitions().count() + 1
     );
-    assert_eq!(program.data().len(), 4);
+    assert_eq!(
+        program.data().len(),
+        crate::backend::failure::FailureMessage::ALL.len()
+    );
 }
 
 #[test]

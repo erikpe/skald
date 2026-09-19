@@ -7,6 +7,7 @@ mod admission;
 mod facts;
 mod layouts;
 mod projection;
+mod resources;
 mod signatures;
 
 #[cfg_attr(not(test), allow(unused_imports))]
@@ -15,6 +16,8 @@ pub(in crate::backend) use facts::{
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use projection::admit;
+#[cfg(test)]
+pub(in crate::backend) use projection::project_resource_catalog;
 
 #[cfg(test)]
 mod tests;

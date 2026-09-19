@@ -1,6 +1,9 @@
 //! Explicit initializer bytes and relocatable addresses; never assembly parsing.
 use super::inventory::ProgramError;
-use crate::backend::plan::{ArtifactCategory, ArtifactId, DataKey, PlanView};
+use crate::backend::plan::{
+    ArtifactCategory, ArtifactId, ArtifactPolicy, DataInitializerFact, DataKey, PlanView,
+    StaticStorageDisposition,
+};
 use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,6 +28,46 @@ pub(super) fn check(
     parent: PlanView<'_>,
     lookup: impl Fn(ArtifactId, ArtifactCategory) -> Result<Option<usize>, ProgramError>,
 ) -> Result<BTreeSet<ArtifactId>, ProgramError> {
+    if let Some(planned) = parent
+        .resources()
+        .data
+        .iter()
+        .find(|fact| fact.key == definition.key)
+    {
+        let exact = definition.initializers.len() == planned.initializers.len()
+            && definition
+                .initializers
+                .iter()
+                .zip(&planned.initializers)
+                .all(|(actual, expected)| match (actual, expected) {
+                    (DataInitializer::Bytes(actual), DataInitializerFact::Bytes(expected)) => {
+                        actual == expected
+                    }
+                    (DataInitializer::Zero(actual), DataInitializerFact::Zero(expected)) => {
+                        actual == expected
+                    }
+                    (
+                        DataInitializer::Address {
+                            target: actual_target,
+                            category: actual_category,
+                            addend: actual_addend,
+                        },
+                        DataInitializerFact::Address {
+                            target: expected_target,
+                            category: expected_category,
+                            addend: expected_addend,
+                        },
+                    ) => {
+                        actual_target == expected_target
+                            && actual_category == expected_category
+                            && actual_addend == expected_addend
+                    }
+                    _ => false,
+                });
+        if !exact {
+            return Err(ProgramError::InvalidInitializer);
+        }
+    }
     let extent = lookup(ArtifactId::Data(definition.key), ArtifactCategory::Data)?
         .ok_or(ProgramError::InvalidInitializer)?;
     let mut bytes = 0usize;
@@ -95,7 +138,14 @@ pub(super) fn parent_artifact(
         parent.callable(key)?;
     }
     if let ArtifactId::Data(DataKey::Static(field)) = key {
-        if !parent.is_active_static(field) {
+        let permitted = match parent.static_storage_disposition(field) {
+            Some(StaticStorageDisposition::Active) => true,
+            Some(StaticStorageDisposition::RetainedInactive) => {
+                parent.artifact_policy() == ArtifactPolicy::Complete
+            }
+            None => parent.is_active_static(field),
+        };
+        if !permitted {
             return Err(ProgramError::Plan(
                 crate::backend::plan::PlanError::InvalidDomain,
             ));

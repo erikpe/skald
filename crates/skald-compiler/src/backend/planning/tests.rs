@@ -146,6 +146,10 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
     assert!(!enabled.trace().strings.is_empty());
     assert_eq!(enabled.trace().contexts.len(), 1);
     let view = enabled.plan().view();
+    assert_eq!(
+        view.resources().tls.as_ref().unwrap().initializers,
+        [DataInitializerFact::Zero(8)]
+    );
     for request in &enabled.trace().requests {
         view.artifact_id(ArtifactId::Data(request.location))
             .unwrap();
@@ -171,6 +175,7 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
     ));
     let omitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     assert!(omitted.trace().strings.is_empty());
+    assert!(omitted.plan().view().resources().tls.is_none());
 }
 
 #[test]
@@ -490,4 +495,113 @@ fn semantic_catalog_freezes_layout_views_dispatch_and_recursive_aggregate_facts(
             .returns,
         ReturnShape::Aggregate(_)
     ));
+}
+
+#[test]
+fn resource_catalog_freezes_generated_metadata_services_and_data_deterministically() {
+    let source = concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Item implements Readable { value: i64; init(value: i64) { self.value = value; } fn read() -> i64 { return self.value; } }\n",
+        "fn retained(value: Item, values: i64[], boxed: shared Item?) -> i64 { return value.read(); }\n",
+        "fn main() -> i64 { return 0; }",
+    );
+    let fixture = fixture(source);
+    let input = BackendInput::without_runtime_trace(&fixture.mir);
+    let first = super::projection::project_resource_catalog(input).unwrap();
+    let second = super::projection::project_resource_catalog(input).unwrap();
+    assert_eq!(first.view().resources(), second.view().resources());
+
+    let resources = first.view().resources();
+    assert!(resources.generated.iter().any(|fact| matches!(
+        fact.callable,
+        LirCallableId::Helper(_) | LirCallableId::Entry
+    )));
+    assert!(resources
+        .data
+        .iter()
+        .any(|fact| matches!(fact.purpose, DataPurpose::ClassDispatch(_))));
+    assert!(resources
+        .data
+        .iter()
+        .any(|fact| matches!(fact.purpose, DataPurpose::ArrayDescriptor(_))));
+    assert_eq!(
+        resources
+            .data
+            .iter()
+            .filter(|fact| fact.purpose == DataPurpose::FailureMessage)
+            .count(),
+        crate::backend::failure::FailureMessage::ALL.len()
+    );
+    assert_eq!(
+        first
+            .view()
+            .artifacts()
+            .filter(|artifact| matches!(artifact.key, ArtifactId::Runtime(_)))
+            .count(),
+        9
+    );
+}
+
+#[test]
+fn resource_catalog_separates_complete_inactive_storage_from_reachable_storage() {
+    let fixture = fixture(
+        "class State {\n\
+           static live: i64 = 1;\n\
+           static inactive: i64 = 2;\n\
+           init() {}\n\
+         }\n\
+         fn dead() -> i64 { return State.inactive; }\n\
+         fn main() -> i64 { return State.live; }",
+    );
+    let complete = super::projection::project_resource_catalog(
+        BackendInput::without_runtime_trace(&fixture.mir),
+    )
+    .unwrap();
+    let resources = complete.view().resources();
+    assert_eq!(
+        resources
+            .statics
+            .iter()
+            .filter(|fact| fact.disposition == StaticStorageDisposition::Active)
+            .count(),
+        1
+    );
+    assert_eq!(
+        resources
+            .statics
+            .iter()
+            .filter(|fact| fact.disposition == StaticStorageDisposition::RetainedInactive)
+            .count(),
+        1
+    );
+    assert_eq!(resources.activation.len(), 1);
+    assert_eq!(resources.shutdown.len(), 1);
+
+    assert!(matches!(
+        super::projection::project_resource_catalog(
+            BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only()
+        ),
+        Err(AdmissionError::Plan(PlanError::InvalidDomain))
+    ));
+
+    use crate::mir::retain::{prepare_reachable_definition_retention, MirDefinitionRetention};
+    let MirDefinitionRetention::Changed(retention) =
+        prepare_reachable_definition_retention(fixture.mir.program(), fixture.mir.reachability())
+            .unwrap()
+    else {
+        panic!("dead static access must be removed")
+    };
+    let sparse =
+        crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
+            .unwrap();
+    let reachable = super::projection::project_resource_catalog(
+        BackendInput::without_runtime_trace(&sparse).with_reachable_artifacts_only(),
+    )
+    .unwrap();
+    assert!(reachable
+        .view()
+        .resources()
+        .statics
+        .iter()
+        .all(|fact| fact.disposition == StaticStorageDisposition::Active));
 }

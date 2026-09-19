@@ -50,6 +50,7 @@ pub(in crate::backend) fn facts() -> PlanFacts {
         active_statics: BTreeSet::new(),
         dispatch: vec![],
         semantic: SemanticFacts::default(),
+        resources: ResourceFacts::default(),
     }
 }
 

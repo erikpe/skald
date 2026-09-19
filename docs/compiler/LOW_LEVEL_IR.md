@@ -148,10 +148,12 @@ statics, so startup/shutdown coordinators remain absent rather than acquiring
 synthetic empty bodies.
 
 `lower_program` streams each verified body to a consumer and retains exact
-completion receipts. It materializes all declared failure and enabled trace
-bytes/context/location data with checked relocations, then publishes the lower
-inventory witness. Trace TLS has a frozen declaration; its physical relocation
-recipe refers to runtime-owned zero storage. Consumer
+completion receipts. It materializes the plan's frozen data recipes directly,
+including failure and enabled trace bytes/context/location data with checked
+relocations, then publishes the lower inventory witness. A different byte,
+relocation target, category or addend cannot satisfy the planned definition.
+Trace TLS has a frozen declaration and exact all-zero initialization recipe.
+Consumer
 failure cannot publish closure. This proves shared lowering, without granting
 selected, physical or executable authority; the public backend remains legacy.
 
@@ -173,10 +175,19 @@ recipes. Concrete target capability projection and ABI/resource binding remain
 target responsibilities.
 
 Typed artifacts distinguish callables, data, runtime services, user externals and
-trace TLS. Runtime/external declarations require matching convention signatures;
-data requires an addressable layout. Omitted tracing rejects trace catalog/TLS
-entries. Complete mode permits inactive static declarations; reachable mode
-requires static declarations to belong to the supplied active domain.
+trace TLS. Runtime/external declarations require exact service/convention
+signatures; data requires an addressable layout. The resource catalog freezes
+literal backing, failure text, trace records, dispatch and container descriptors,
+generated callable dependencies, TLS initialization and complete/reachable roots
+in canonical order. Omitted tracing rejects trace catalog/TLS entries.
+
+Static storage records an active or retained-inactive disposition. Active slots
+alone participate in certified activation and reverse shutdown. Complete mode may
+retain an inactive slot when a physically retained unreachable body has a typed
+reference; that slot has an exact all-zero physical recipe and no semantic
+initializer or cleanup. Reachable mode rejects this representation. Program
+publication reconciles active data definitions against the frozen recipes;
+retained-inactive zero storage remains a later target-materialization obligation.
 
 ## Identity and lookup
 
@@ -307,8 +318,10 @@ known object cannot cover unknown memory. Pure operations have empty effects.
 Verification recomputes provenance and mandatory effects independently before
 publication, including forward address definitions. Supplied known provenance
 must agree; unknown metadata can become known after checking. Known object and
-static accesses must fit their declared extent and alignment; inactive statics
-are rejected even in complete mode. Unknown addresses grant no bounds proof.
+static accesses must fit their declared extent and alignment. Active statics are
+valid in either artifact policy. A retained-inactive static reference is valid
+only in complete mode and cannot be supplied as a semantic data initializer;
+reachable mode rejects it. Unknown addresses grant no bounds proof.
 
 Call attribution distinguishes source operations, inherited boundaries, source
 bodies entered from omitted helpers, nonreporting calls, hard defects and process

@@ -15,6 +15,144 @@ fn address(role: ComponentRole) -> Component {
     }
 }
 
+fn resource_facts(disposition: StaticStorageDisposition) -> PlanFacts {
+    let mut supplied = minimal_semantic_facts();
+    let field = StaticFieldId::new(ClassId::new(0), 0);
+    supplied.semantic.types.push(TypeLayoutBinding {
+        ty: SemanticType::I64,
+        layout: LayoutId::new(0),
+    });
+    supplied.artifacts.push(ArtifactDeclaration {
+        key: ArtifactId::Data(DataKey::Static(field)),
+        signature: None,
+        layout: Some(LayoutId::new(0)),
+    });
+    supplied.resources.statics.push(StaticStorageFact {
+        field,
+        ty: SemanticType::I64,
+        layout: LayoutId::new(0),
+        disposition,
+    });
+    supplied.resources.data.push(DataFact {
+        key: DataKey::Static(field),
+        purpose: DataPurpose::StaticStorage(disposition),
+        layout: LayoutId::new(0),
+        initializers: vec![DataInitializerFact::Zero(8)],
+        dependencies: Default::default(),
+    });
+    for index in 0..2 {
+        let root = ArtifactRootFact {
+            artifact: ArtifactId::Callable(source(index)),
+            reason: ArtifactRootReason::CompleteDefinition,
+        };
+        supplied.resources.complete_roots.insert(root);
+        supplied.resources.reachable_roots.insert(root);
+    }
+    let storage_root = ArtifactRootFact {
+        artifact: ArtifactId::Data(DataKey::Static(field)),
+        reason: ArtifactRootReason::StaticStorage(field),
+    };
+    supplied.resources.complete_roots.insert(storage_root);
+    if disposition == StaticStorageDisposition::Active {
+        supplied.active_statics.insert(field);
+        supplied.resources.activation.push(StaticActivationFact {
+            field,
+            action: StaticActivationKind::ZeroDefault,
+        });
+        supplied.resources.shutdown.push(StaticShutdownFact {
+            field,
+            cleanup: StaticCleanupFact::None,
+        });
+        supplied.resources.reachable_roots.insert(storage_root);
+    }
+    supplied
+}
+
+#[test]
+fn static_resources_distinguish_active_and_retained_inactive_storage() {
+    for disposition in [
+        StaticStorageDisposition::Active,
+        StaticStorageDisposition::RetainedInactive,
+    ] {
+        let plan = CheckedPlan::check(resource_facts(disposition)).unwrap();
+        let field = StaticFieldId::new(ClassId::new(0), 0);
+        assert_eq!(
+            plan.view().static_storage_disposition(field),
+            Some(disposition)
+        );
+    }
+}
+
+#[test]
+fn resource_catalog_rejects_static_promotion_missing_storage_and_nonzero_retention() {
+    let field = StaticFieldId::new(ClassId::new(0), 0);
+
+    let mut reachable = resource_facts(StaticStorageDisposition::RetainedInactive);
+    reachable.artifact_policy = ArtifactPolicy::Reachable;
+    rejected(reachable, PlanError::InvalidDomain);
+
+    let mut promoted = resource_facts(StaticStorageDisposition::RetainedInactive);
+    promoted.resources.activation.push(StaticActivationFact {
+        field,
+        action: StaticActivationKind::ZeroDefault,
+    });
+    rejected(promoted, PlanError::InvalidDomain);
+
+    let mut missing = resource_facts(StaticStorageDisposition::RetainedInactive);
+    missing.artifacts.clear();
+    rejected(missing, PlanError::UnknownDeclaration);
+
+    let mut nonzero = resource_facts(StaticStorageDisposition::RetainedInactive);
+    nonzero.resources.data[0].initializers = vec![DataInitializerFact::Bytes(vec![1; 8])];
+    rejected(nonzero, PlanError::InvalidDomain);
+}
+
+#[test]
+fn resource_catalog_rejects_forged_relocations_roots_and_data_identity() {
+    let field = StaticFieldId::new(ClassId::new(0), 0);
+    let mut relocated = resource_facts(StaticStorageDisposition::Active);
+    relocated.resources.data[0].initializers = vec![DataInitializerFact::Address {
+        target: ArtifactId::Callable(source(0)),
+        category: ArtifactCategory::Data,
+        addend: 0,
+    }];
+    relocated.resources.data[0]
+        .dependencies
+        .insert(ArtifactId::Callable(source(0)));
+    rejected(relocated, PlanError::ArtifactCategoryMismatch);
+
+    let mut wrong_purpose = resource_facts(StaticStorageDisposition::Active);
+    wrong_purpose.resources.data[0].purpose = DataPurpose::FailureMessage;
+    rejected(wrong_purpose, PlanError::InvalidArtifact);
+
+    let mut leaked_root = resource_facts(StaticStorageDisposition::RetainedInactive);
+    leaked_root
+        .resources
+        .reachable_roots
+        .insert(ArtifactRootFact {
+            artifact: ArtifactId::Data(DataKey::Static(field)),
+            reason: ArtifactRootReason::CompleteDefinition,
+        });
+    rejected(leaked_root, PlanError::InvalidDomain);
+
+    let mut unknown_root = resource_facts(StaticStorageDisposition::Active);
+    unknown_root
+        .resources
+        .complete_roots
+        .insert(ArtifactRootFact {
+            artifact: ArtifactId::Data(DataKey::Table(99)),
+            reason: ArtifactRootReason::CompleteDefinition,
+        });
+    rejected(unknown_root, PlanError::UnknownDeclaration);
+
+    let mut missing_root = resource_facts(StaticStorageDisposition::Active);
+    missing_root
+        .resources
+        .complete_roots
+        .retain(|root| root.artifact != ArtifactId::Data(DataKey::Static(field)));
+    rejected(missing_root, PlanError::InvalidDomain);
+}
+
 #[test]
 fn live_context_identity_is_checked_for_every_declaration_lookup() {
     let first = CheckedPlan::check(facts()).unwrap();

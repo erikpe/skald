@@ -4,7 +4,9 @@ use std::collections::BTreeSet;
 
 use crate::identity::{CallableId, StaticFieldId, VirtualFamilyId};
 
-use super::{ArtifactId, LayoutId, LirCallableId, PlanError, SemanticFacts, SignatureId};
+use super::{
+    ArtifactId, LayoutId, LirCallableId, PlanError, ResourceFacts, SemanticFacts, SignatureId,
+};
 use crate::backend::RuntimeTracePolicy;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -183,6 +185,7 @@ pub(in crate::backend) struct PlanFacts {
     pub active_statics: BTreeSet<StaticFieldId>,
     pub dispatch: Vec<DispatchSlot>,
     pub semantic: SemanticFacts,
+    pub resources: ResourceFacts,
 }
 
 #[cfg_attr(not(test), allow(dead_code))]

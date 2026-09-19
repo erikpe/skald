@@ -438,7 +438,9 @@ fault injection and malformed storage support remain test-only.
 
 The final review additionally covers static read/write effects without explicit
 opcode artifact operands: they must contribute typed static dependencies to the
-selected receipt; inactive statics fail verification. Public compile-fail tests
+selected receipt. Active statics are valid under either artifact policy;
+retained-inactive references are accepted only in complete mode with declared
+all-zero physical storage and no lifecycle work. Public compile-fail tests
 and maintained phase-boundary guards protect private APIs and dependency owners.
 The [living IR guide](../compiler/LOW_LEVEL_IR.md) owns detailed API contracts;
 the [archived implementation record](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md) owns task
@@ -717,6 +719,19 @@ invented statics coordinators. Frozen failure and enabled trace data materialize
 with checked relocations. A streaming consumer receives each verified body;
 complete shared lower closure retains exact receipts, not all callable drafts.
 Consumer failure cannot publish a complete inventory witness.
+
+LM03 adds the complete immutable resource catalog. Planning now owns active and
+retained-inactive static dispositions, activation/reverse-shutdown records,
+literal and failure backing, trace/TLS records, dispatch/container descriptors,
+all runtime service declarations, generated helper identities/dependencies and
+complete/reachable roots. Reachable projection filters helper/metadata families
+through the certified runtime-entity set and rejects retained inactive accesses;
+complete projection preserves only typed all-zero inactive storage. Independent
+checking rejects missing storage, lifecycle promotion, forged data identities,
+relocation categories/addends and invalid roots. Shared data lowering consumes
+these exact recipes, and completion receipts reconcile generated dependencies
+without retaining executable drafts. Executing complex helpers, descriptors and
+static lifecycle remains assigned to LM05–LM17.
 
 This qualifies shared program closure, not native execution or trace recipes.
 `ReportFailure` preserves the mandatory reporter/defensive-trap contract; the

@@ -1,6 +1,9 @@
 //! Compact declaration keys; authority comes from their borrowed context.
 
-use crate::identity::{CallableId, ExternalLinkId, LiteralDataId, StaticFieldId};
+use crate::identity::{
+    ArrayTypeId, CallableId, ClassId, ExternalLinkId, LiteralDataId, OptionalBoxTypeId,
+    StaticFieldId,
+};
 
 macro_rules! declaration_id {
     ($name:ident) => {
@@ -92,6 +95,9 @@ pub(in crate::backend) enum DataKey {
     FailureMessage(crate::backend::failure::FailureMessage),
     Table(usize),
     Literal(LiteralDataId),
+    ClassDispatch(ClassId),
+    ArrayDescriptor(ArrayTypeId),
+    OptionalBoxDescriptor(OptionalBoxTypeId),
     Static(StaticFieldId),
     TraceBytes(usize),
     TraceRecord(usize),

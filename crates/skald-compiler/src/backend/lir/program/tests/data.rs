@@ -212,3 +212,44 @@ fn active_statics_require_initializers_in_both_artifact_policies() {
         assert_eq!(work.finish().unwrap().data().len(), 1);
     }
 }
+
+#[test]
+fn complete_mode_permits_typed_inactive_static_references_but_not_initialization() {
+    let fixture = crate::test_support::lower_source_to_complete_final_mir_with_sources(
+        "inactive-static.ska",
+        "class State { static live: i64 = 1; static inactive: i64 = 2; init() {} }\n\
+         fn dead() -> i64 { return State.inactive; }\n\
+         fn main() -> i64 { return State.live; }",
+    );
+    let plan = crate::backend::planning::project_resource_catalog(
+        crate::backend::BackendInput::without_runtime_trace(&fixture.mir),
+    )
+    .unwrap();
+    let inactive = plan
+        .view()
+        .resources()
+        .statics
+        .iter()
+        .find(|fact| {
+            fact.disposition == crate::backend::plan::StaticStorageDisposition::RetainedInactive
+        })
+        .unwrap();
+    assert_eq!(
+        super::super::data::parent_artifact(
+            plan.view(),
+            ArtifactId::Data(DataKey::Static(inactive.field)),
+            ArtifactCategory::Data,
+        )
+        .unwrap(),
+        Some(8)
+    );
+
+    let mut work = ProgramBuilder::new(plan.view());
+    assert_eq!(
+        error(work.define_data(definition(
+            DataKey::Static(inactive.field),
+            DataInitializer::Zero(8),
+        ))),
+        ProgramError::Plan(PlanError::InvalidDomain)
+    );
+}

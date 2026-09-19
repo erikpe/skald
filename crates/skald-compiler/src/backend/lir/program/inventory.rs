@@ -21,6 +21,7 @@ pub(in crate::backend) enum ProgramError {
     AlreadyBuilding,
     DuplicateDefinition,
     StaleReceipt,
+    DependencyMismatch,
     MissingDefinition(ArtifactId),
     InvalidInitializer,
     InvalidAddend,
@@ -111,6 +112,17 @@ impl<'p> ProgramBuilder<'p> {
             return Err(ProgramError::StaleReceipt);
         }
         let key = receipt.owner().key();
+        if let Some(generated) = self
+            .parent
+            .resources()
+            .generated
+            .iter()
+            .find(|fact| fact.callable == key)
+        {
+            if receipt.references() != &generated.dependencies {
+                return Err(ProgramError::DependencyMismatch);
+            }
+        }
         match self.request(key)? {
             InventoryState::Declared => {
                 return Err(ProgramError::MissingDefinition(ArtifactId::Callable(key)))
@@ -129,6 +141,15 @@ impl<'p> ProgramBuilder<'p> {
     ) -> Result<(), ProgramError> {
         if self.data.contains_key(&definition.key) {
             return Err(ProgramError::DuplicateDefinition);
+        }
+        if let DataKey::Static(field) = definition.key {
+            if self.parent.static_storage_disposition(field)
+                == Some(crate::backend::plan::StaticStorageDisposition::RetainedInactive)
+            {
+                return Err(ProgramError::Plan(
+                    crate::backend::plan::PlanError::InvalidDomain,
+                ));
+            }
         }
         let references = data::check(&definition, self.parent, |key, category| {
             data::parent_artifact(self.parent, key, category)

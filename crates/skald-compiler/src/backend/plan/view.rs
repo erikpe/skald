@@ -3,7 +3,7 @@
 use super::{
     ArtifactCategory, ArtifactDeclaration, ArtifactId, ArtifactPolicy, BodyDisposition,
     CallableDeclaration, CheckedPlan, DispatchSlot, LayoutFact, LayoutId, LirCallableId, PlanError,
-    SemanticFacts, SignatureFact, SignatureId, TargetProfile,
+    ResourceFacts, SemanticFacts, SignatureFact, SignatureId, TargetProfile,
 };
 
 #[derive(Clone, Copy)]
@@ -199,6 +199,18 @@ impl<'plan> PlanView<'plan> {
     }
     pub(in crate::backend) fn semantic(self) -> &'plan SemanticFacts {
         &self.plan.semantic
+    }
+    pub(in crate::backend) fn resources(self) -> &'plan ResourceFacts {
+        &self.plan.resources
+    }
+    pub(in crate::backend) fn static_storage_disposition(
+        self,
+        field: crate::identity::StaticFieldId,
+    ) -> Option<super::StaticStorageDisposition> {
+        self.plan
+            .resources
+            .static_storage(field)
+            .map(|fact| fact.disposition)
     }
     pub(in crate::backend) fn is_active_static(
         self,

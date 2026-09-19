@@ -52,6 +52,34 @@ impl<'input> BackendInput<'input> {
             .map(BackendRequiredRuntimeEntity::from)
     }
 
+    pub(crate) fn reachable_callables(self) -> &'input [crate::identity::CallableId] {
+        self.verified.reachability().reachable_callables()
+    }
+
+    /// Returns static slots referenced by any physically retained body, not
+    /// only the reachable semantic domain. Complete artifact planning uses the
+    /// difference to allocate inert zero storage without promoting lifecycle.
+    pub(crate) fn retained_static_fields(
+        self,
+    ) -> Result<Vec<StaticFieldId>, crate::backend::BackendError> {
+        let extraction = crate::passes::reachability::extract_final_dependencies(self.program())
+            .map_err(|error| {
+                crate::backend::BackendError::new(
+                    crate::backend::Target::X86_64SysV,
+                    None,
+                    format!("cannot project retained static dependencies: {error}"),
+                )
+            })?;
+        let mut fields = extraction
+            .static_accesses()
+            .iter()
+            .map(|access| access.target())
+            .collect::<Vec<_>>();
+        fields.sort_unstable();
+        fields.dedup();
+        Ok(fields)
+    }
+
     pub(crate) fn uses_virtual_family(self, family: VirtualFamilyId) -> bool {
         self.verified
             .reachability()

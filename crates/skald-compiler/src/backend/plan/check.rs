@@ -46,6 +46,7 @@ pub(in crate::backend) struct CheckedPlan {
     pub(super) callables: BTreeMap<LirCallableId, CallableDeclaration>,
     pub(super) artifacts: BTreeMap<ArtifactId, ArtifactDeclaration>,
     pub(super) semantic: SemanticFacts,
+    pub(super) resources: super::ResourceFacts,
 }
 
 #[cfg_attr(not(test), allow(dead_code))]
@@ -113,6 +114,7 @@ impl CheckedPlan {
             }
         }
         super::semantic_check::check(&facts)?;
+        super::resource_check::check(&facts, &callables, &artifacts)?;
         facts.dispatch.sort_by_key(|slot| (slot.family, slot.index));
         let mut previous = None;
         for slot in &facts.dispatch {
@@ -147,6 +149,7 @@ impl CheckedPlan {
             callables,
             artifacts,
             semantic: facts.semantic,
+            resources: facts.resources,
         })
     }
 
