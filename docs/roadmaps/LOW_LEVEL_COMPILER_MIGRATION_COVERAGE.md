@@ -3,7 +3,7 @@
 Status: phase preparation, executable model and private LA03 pilot complete;
 the focused [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
 is accepted and its [roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
-is active with the complete-fact checkpoint passed, 2026-09-19.
+is active with the aggregate/lifecycle checkpoint passed, 2026-09-19.
 Model cumulative review covers `f1053782..495df6b9` plus the closing static-effect
 receipt fix and payload-contract/documentation changes. Production full-language
 migration, adoption and allocation remain pending. Archived child
@@ -94,7 +94,7 @@ Retain the semantic expectations while adapting owners during migration.
 | E19 | [Live integers](../../tests/golden/operators/live_integer_inputs.ska), `operators/arithmetic::live_integer_inputs`; [aggregate pressure](../../tests/golden/calls/aggregate_pressure.ska), `calls/functions::aggregate_pressure`; exact variants/runs below |
 | E20 | [Strong-count native probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/count/tests.rs): `release_frees_original_header_after_finalizer_changes_owner_and_clobbers_callers` |
 | E21 | [Generated retain ABI probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/helpers/tests.rs): `generated_retain_helper_aligns_the_stack_before_reporting_exhaustion`; demonstrated the unaligned overflow reporter call before its correction |
-| E22 | [Private native pilot](../../crates/skald-compiler/src/backend/x86_64_sysv/native/pilot/tests.rs): `source_execution_matrix_covers_mir_trace_and_artifact_policies`, `adversarial_numeric_boundaries_execute_through_the_verified_path`, `full_width_shift_count_reports_before_native_cl_narrowing`, `scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries`, `requested_checkpoints_are_independent_deterministic_and_quiet_by_default`, `private_pilot_artifact_and_checkpoints_are_deterministic_across_processes` |
+| E22 | [Private native pilot](../../crates/skald-compiler/src/backend/x86_64_sysv/native/pilot/tests.rs): `source_execution_matrix_covers_mir_trace_and_artifact_policies`, `aggregate_lifecycle_checkpoint_crosses_every_policy_and_schedule`, `adversarial_numeric_boundaries_execute_through_the_verified_path`, `full_width_shift_count_reports_before_native_cl_narrowing`, `scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries`, `requested_checkpoints_are_independent_deterministic_and_quiet_by_default`, `private_pilot_artifact_and_checkpoints_are_deterministic_across_processes` |
 
 Feature-owned native/failure goldens additionally protect
 [calls](../../tests/golden/calls/functions.golden.toml),
@@ -155,7 +155,7 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `Shift` | `lower/shift.rs` | Left/right, arithmetic/logical right by integer kind; checked width, no host masking semantics | E03 | — | LA03 |
 | `PrimitiveComparison` | `lower/assignment.rs` | Six shared predicates, integer signedness, floating unordered behavior and canonical bool | E01, E03 | — | LA03 |
 | `PrimitiveCast`, `CheckedF64ToInteger` | `lower/primitive_cast.rs` | Exact source/target cells; checked finite post-truncation range; preserve bits/canonical forms | E03 | — | LA03 |
-| `TypeTest` | `lower/type_operations.rs` | Runtime membership against planned metadata; exact static outcome already realized in MIR | E12 | — | LA04 |
+| `TypeTest` | `lower/type_operations.rs` | Runtime membership against planned metadata; exact static outcome already realized in MIR | E12 | — | Delivered by LM06 |
 | `OptionalPresence`, `OptionalBoxPresence` | `lower/optional/scalar.rs`, `lower/optional/access.rs` | Exact layer/kind, planned tag or niche, secured box owner | E08 | — | LA04 |
 | `ArrayLength` | `lower/array.rs` | Length from exact planned descriptor/header representation | E09 | — | LA04 |
 
@@ -193,13 +193,13 @@ handle checked terminators before the basic `lower/terminator.rs` fallback.
 | `MirTerminator` members | Current owner | Future shared lowering obligation / invariant | Evidence | Gap | Delivery (pending) |
 | --- | --- | --- | --- | --- | --- |
 | `Return` | `lower/terminator.rs`, `lower/call/*` | Unit/scalar or previously materialized aggregate destination; result survives cleanup and trace pop | E02, E05, E06, E16 | G03 | LA03 scalar; LA04 aggregate |
-| `ReturnShared`, `ReturnOptionalShared` | `lower/terminator.rs` | Transfer live owner or zero niche to caller, no hidden aggregate destination | E07, E08 | — | LA04 |
+| `ReturnShared`, `ReturnOptionalShared` | `lower/terminator.rs` | Transfer live owner or zero niche to caller, no hidden aggregate destination | E07, E08 | — | `ReturnShared` delivered by LM08; optional shared return remains LM10 |
 | `Goto`, `Branch` | `lower/terminator.rs` | Explicit target CFG and canonical condition; stable entry/block ordering | E04 | G02 | LA03 |
 | `ShiftCountCheck` | `lower/shift.rs` | Success/failure edges before operation; reject count at selected width | E03 | — | LA03 |
 | `IntegerDivisorCheck` | `lower/integer_division.rs` | Matching divisor check and operation-specific failure attribution | E03 | G02 | LA03 |
 | `PrimitiveCastRangeCheck` | `lower/primitive_cast.rs` | Matching finite/range relation with success-only conversion | E03 | — | LA03 |
 | `CheckedCast` | `lower/type_operations.rs` | Runtime membership and success-only carrier, exact failure edge | E12 | — | Delivered by LM06 |
-| `SharedCast` | `lower/type_operations.rs` | Runtime membership plus success-only owner transfer/retain semantics | E07, E12 | — | LM08 |
+| `SharedCast` | `lower/type_operations.rs` | Runtime membership plus success-only owner transfer/retain semantics | E07, E12 | — | Delivered by LM08 |
 | `OptionalUnwrap`, `OptionalSharedUnwrap` | `lower/optional/access.rs` | Success-only payload/owner transfer, absent failure with exact layer | E08 | — | LA04 |
 | `BeginOptionalView`, `BeginOptionalBoxView` | `lower/optional/access.rs` | Success, absence and overflow are separate edges; pin exact state/owner | E08 | — | LA04 |
 | `CheckOptionalMutation` | `lower/optional/access.rs` | Pinned mutation reports; invalid internal pin state hard-traps | E08 | — | LA04 |
@@ -303,7 +303,7 @@ No new runtime service or marker revision is implied by this migration.
 | Artifact family/root | Current owner | Future responsibility / invariant | Evidence | Delivery (pending) |
 | --- | --- | --- | --- | --- |
 | Required runtime entities: `ClassDispatch`, `VirtualFamily`, `InterfaceRequirement`, `FunctionType`, `ArrayLifecycle`, `OptionalLifecycle`, `OptionalBoxLayout`, `StaticStorage`, `LiteralBacking` | `backend/retained_domain.rs`, `planning.rs` | Checked plan consumes narrow certified queries, never analysis internals or mutable certificates | E15, E17 | LA02 planning contract, LA04 consumption |
-| Class dispatch/interface witnesses, shared-array and optional-box descriptors | `dispatch.rs`, `layout.rs` | Shared plan identities/dependencies, target encoding; stable dense slots with null only for verified-unused selections | E08, E12, E15 | LA04 |
+| Class dispatch/interface witnesses, shared-array and optional-box descriptors | `dispatch.rs`, `layout.rs` | Shared plan identities/dependencies, target encoding; stable dense slots with null only for verified-unused selections | E08, E12, E15 | Class dispatch/interface data delivered by LM06; array and optional-box descriptors remain LM11–LM14 |
 | Writable static slots, including complete-mode inactive-field fallback | `static_fields.rs` | Certified active domain; fallback only for references in present complete-mode bodies; closure removes dead body/slot together | E14, E15 | LA04 |
 | Immutable literal backings, including empty backing | `literal_data.rs`, `lower/strings.rs` | Canonical byte pooling/provenance and explicit metadata references | E11 | LA04 |
 | Panic-message constants | `lower/terminator.rs::PanicMessagePool` | Exact reason byte strings and reference inventory; source panic also uses ordinary string slice | E03, E11 | LA03/LA04 |
@@ -763,6 +763,17 @@ original entry handle across the visible call for the subsequent runtime free.
 Generated attribution and exact dependency receipts close through the ordinary
 worklist. Native tests exercise transfers, self replacement, dynamic views,
 one-time finalization and failing destructors through the real runtime.
+
+The aggregate/lifecycle checkpoint reconciles the LM05–LM08 inventory as one
+executable slice. A mixed class hierarchy combines aggregate results, inline
+copy and cleanup, shared fields, owner casts, interface dispatch and argument
+pressure across both MIR schedules, trace policies and artifact policies. Its
+lowered and selected observations retain result/receiver/runtime call roles,
+allocation and free effects, hard and reported failure paths, and inherited
+generated attribution. Complete artifact emission now retains the implemented
+class and shared-owner families without eagerly inventing raw class-copy
+wrappers; those wrappers remain owned by array-element lifecycle. No object or
+shared-core exception remains before optional and array lowering begins.
 
 LM03 adds the complete immutable resource catalog. Planning now owns active and
 retained-inactive static dispositions, activation/reverse-shutdown records,

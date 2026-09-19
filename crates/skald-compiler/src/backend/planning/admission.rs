@@ -15,10 +15,11 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     if !input.active_static_fields().is_empty() {
         return Err(unsupported(None, "active static storage"));
     }
-    // Complete emission also retains generated metadata/lifecycle families.
+    // Complete emission retains every declared generated lifecycle family.
+    // Class metadata, copy helpers, finalizers and shared-owner helpers are
+    // complete; wrapper/container helper families remain staged separately.
     if !input.reachable_artifacts_only()
-        && (!program.classes.is_empty()
-            || !program.array_types.is_empty()
+        && (!program.array_types.is_empty()
             || !program.optional_types.is_empty()
             || !program.optional_box_types.is_empty())
     {

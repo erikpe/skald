@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM08 are complete and LM09 is next.
+Status: active; LM01–LM09 are complete and LM10 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -46,7 +46,7 @@ per-callable or per-operation fallback.
 - [x] LM06 — Lower dispatch, runtime type operations and object initialization
 - [x] LM07 — Lower copy, cleanup and complete-class finalization
 - [x] LM08 — Lower shared ownership and generated owner helpers
-- [ ] LM09 — Checkpoint the aggregate and lifecycle core
+- [x] LM09 — Checkpoint the aggregate and lifecycle core
 - [ ] LM10 — Lower primitive and shared-owner optional behavior
 - [ ] LM11 — Lower aggregate, class and boxed optional behavior
 - [ ] LM12 — Lower array storage, construction, positions and anchors
@@ -321,19 +321,35 @@ pass for the completed slice.
 **Purpose:** stop before recursive wrapper/container families if object or owner
 semantics are not independently sound.
 
-- [ ] Reconcile LM05–LM08 against object, call, copy, cleanup, cast and shared
+- [x] Reconcile LM05–LM08 against object, call, copy, cleanup, cast and shared
   rows in the coverage record.
-- [ ] Run mixed object/shared/dispatch/trace pressure through both artifact and
+- [x] Run mixed object/shared/dispatch/trace pressure through both artifact and
   trace policies and default/minimal MIR schedules.
-- [ ] Review effects, call roles, hard defects, reported failures, generated
+- [x] Review effects, call roles, hard defects, reported failures, generated
   attribution and ledger transitions as one cumulative slice.
-- [ ] Correct the owning contract or add an explicit corrective task for any gap.
+- [x] Correct the owning contract or add an explicit corrective task for any gap.
 
 **Tests:** focused cumulative native matrix, full repository gate, full golden
 determinism, release goldens and MSRV.
 
 **Exit criteria:** the lifecycle checkpoint passes and optionals/arrays can reuse
 the core without exceptions or legacy fragments.
+
+Completed on 2026-09-19. The checkpoint reviewed the committed LM05–LM08 slice
+from `f4159542` through `e481f791` against the coverage inventory and current
+source. A mixed aggregate/object/shared program now crosses default and minimal
+MIR, enabled and omitted tracing, and complete and reachable artifact policies.
+Its requested checkpoints jointly witness aggregate result roles, receiver
+metadata, runtime calls, allocation/free effects, reported and hard failures,
+and inherited generated attribution before native execution.
+
+The review found one staged-contract defect: complete emission rejected every
+class program because planning eagerly declared raw-address class-copy wrappers
+that belong to the later array helper family. Complete mode now admits the
+implemented class metadata, copy, finalizer and shared-owner families; raw copy
+wrappers acquire roots with array lifecycle, while optional and array families
+remain explicitly rejected. Focused planning and private native suites pass;
+the complete repository, golden and MSRV gates pass for the checkpoint.
 
 ### LM10 — Lower primitive and shared-owner optional behavior
 
@@ -573,9 +589,10 @@ continuing purpose and explicit removal owner.
 | `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | Consuming LM05–LM17 tasks; residual facade allowance LA05 | Retained only for private checked lowering entries while production still uses legacy emission |
 | `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01; semantic catalog expanded LM02 and resource consumers added LM03 | Residual root allowance LA05 | Retained target-owned semantic layout/dispatch and trace projection; legacy planner types do not escape into the checked plan |
 | `plan::ResourceFacts` and `planning::resources` complete resource catalog | LM03, `dbada8c6`; audited LM04 | Executable consumers LM05–LM17 | Retain as the checked owner of static dispositions/lifecycle, typed data, runtime/generated declarations and artifact roots; complete-mode inactive storage is physical-only and all-zero |
+| Eager complete-mode `RawClassCopy` declarations for every class | LM03, `dbada8c6` | LM09 | Removed in LM09: raw-address wrappers are array-element machinery and will acquire roots from their actual array-helper consumers |
 | Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
 | `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
-| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrow during family delivery, then remove after complete coverage |
+| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrowed through LM09: both artifact policies admit the complete class/shared core; optional, array, string, I/O and static families retain explicit later owners |
 | Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LM19/LA05 | Retain focused admission, post-admission failure, dump, native and policy regressions; remove broad duplicates during cumulative review/adoption |
 | Legacy x86 lowering/frame/machine/emitter | Pre-program production backend | LA05 adoption | Preserve unchanged as default and parity oracle during LA04 |
 

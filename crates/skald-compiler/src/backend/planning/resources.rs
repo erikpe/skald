@@ -388,23 +388,9 @@ fn declare_generated_resources(
             };
             add_generated_dependency(facts, finalizer, dependency);
         }
-        // Reachable publication declares only helpers with an executable edge.
-        // The dispatch table needs its finalizer slot now; class copying and
-        // shared-owner helpers acquire roots with their LM07/LM08 operations.
-        if input.reachable_artifacts_only() {
-            continue;
-        }
-        let copy = declare_helper(
-            facts,
-            HelperFamily::RawClassCopy,
-            class.complete_layout,
-            helper_signature(
-                &[ScalarType::DataAddress, ScalarType::DataAddress],
-                ReturnShape::Unit,
-            ),
-            BTreeSet::new(),
-        )?;
-        let _ = copy;
+        // The dispatch table requires every retained class finalizer. Raw
+        // address copy wrappers are array-element machinery and acquire roots
+        // only when the array helper family is introduced.
     }
     for optional_box in facts.semantic.optional_boxes.clone() {
         if input.reachable_artifacts_only()

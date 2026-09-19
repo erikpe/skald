@@ -82,6 +82,33 @@ fn assert_runtime_exit(assembly: &str, trace: RuntimeTracePolicy, expected: i32)
     assert!(output.stderr.is_empty(), "{output:?}");
 }
 
+fn aggregate_lifecycle_checkpoint_source() -> &'static str {
+    concat!(
+        "interface Readable { fn read()->i64; ",
+        "fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64; }",
+        "class Root implements Readable { value:i64; init(value:i64){self.value=value;} ",
+        "virtual fn read()->i64{return self.value;} ",
+        "virtual fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64{",
+        "return a+b+c+d+e+f+g+h;} destroy {} }",
+        "class Leaf extends Root { extra:i64; init(value:i64,extra:i64){",
+        "super(value);self.extra=extra;} override fn read()->i64{return self.value+self.extra;} ",
+        "override fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64{",
+        "return a+b+c+d+e+f+g+h+self.extra;} }",
+        "class Holder { inline:Leaf; edge:shared Leaf; ",
+        "init(inline:Leaf,edge:shared Leaf){self.inline=inline;self.edge=edge;} ",
+        "mut fn replace(edge:shared Leaf)->unit{self.edge=edge;} }",
+        "fn forward(value:Holder)->Holder{return value;}",
+        "fn main()->i64{",
+        "var owner:shared Leaf=new Leaf(2,3);var copy:shared Leaf=owner;",
+        "var holder:Holder=Holder(Leaf(5,7),owner);",
+        "var forwarded:Holder=forward(holder);forwarded=forwarded;",
+        "forwarded.replace(forwarded.edge);",
+        "var erased:shared Obj=copy;",
+        "var readable:shared Readable=(shared Readable)erased;",
+        "return forwarded.inline.read()+readable->pressure(1,2,3,4,5,6,7,8);}",
+    )
+}
+
 #[test]
 fn source_execution_matrix_covers_mir_trace_and_artifact_policies() {
     let source = concat!(
@@ -133,6 +160,62 @@ fn source_execution_matrix_covers_mir_trace_and_artifact_policies() {
                     );
                 }
                 assert_exit(&assembly, trace, 13);
+            }
+        }
+    }
+}
+
+#[test]
+fn aggregate_lifecycle_checkpoint_crosses_every_policy_and_schedule() {
+    for mode in [MirMode::Default, MirMode::Minimal] {
+        let fixture = fixture(mode, aggregate_lifecycle_checkpoint_source());
+        for trace in [RuntimeTracePolicy::Enabled, RuntimeTracePolicy::Omitted] {
+            for reachable in [false, true] {
+                let (assembly, inspection) = inspect_with_policy(
+                    &fixture,
+                    trace,
+                    reachable,
+                    super::NativePilotInspection {
+                        lowered: true,
+                        selected: true,
+                        physical: true,
+                        placement: true,
+                        frame: true,
+                    },
+                )
+                .unwrap_or_else(|error| {
+                    panic!("{mode:?}/{trace:?}/reachable={reachable}: {error}")
+                });
+                for marker in [
+                    "stage=lowered",
+                    "stage=selected",
+                    "stage=physical",
+                    "assignment ",
+                    "frame bytes=",
+                    "ClassDispatch",
+                    "ResultDestination",
+                    "ReceiverMetadata",
+                    "RuntimeParameter",
+                    "InheritedOperation",
+                    "ReportFailure",
+                    "HardTrap",
+                    "Allocate",
+                    "Free",
+                ] {
+                    assert!(
+                        inspection.contains(marker),
+                        "missing {marker}: {inspection}"
+                    );
+                }
+                assert_eq!(
+                    inspection.contains("TraceTls"),
+                    trace == RuntimeTracePolicy::Enabled
+                );
+                assert_eq!(
+                    assembly.contains("ska_rt_trace_top@tpoff"),
+                    trace == RuntimeTracePolicy::Enabled
+                );
+                assert_runtime_exit(&assembly, trace, 51);
             }
         }
     }

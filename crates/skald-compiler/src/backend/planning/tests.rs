@@ -200,22 +200,22 @@ fn excluded_source_families_reject_before_plan_publication() {
             assert!(!reason.reason.is_empty());
         }
     }
+}
 
-    let shared = fixture("class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }");
-    assert!(matches!(
-        admit(BackendInput::without_runtime_trace(&shared.mir)),
-        Err(AdmissionError::Unsupported(_))
-    ));
-    admit(BackendInput::without_runtime_trace(&shared.mir).with_reachable_artifacts_only())
-        .expect("LM08 admits shared signatures in retained source bodies");
-
-    let object = fixture("class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }");
-    assert!(matches!(
-        admit(BackendInput::without_runtime_trace(&object.mir)),
-        Err(AdmissionError::Unsupported(_))
-    ));
-    admit(BackendInput::without_runtime_trace(&object.mir).with_reachable_artifacts_only())
-        .expect("LM06 admits reachable object initialization and direct dispatch");
+#[test]
+fn class_lifecycle_is_admitted_under_both_artifact_policies() {
+    for source in [
+        "class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }",
+    ] {
+        let fixture = fixture(source);
+        for input in [
+            BackendInput::without_runtime_trace(&fixture.mir),
+            BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+        ] {
+            admit(input).expect("class lifecycle is complete under both artifact policies");
+        }
+    }
 }
 
 #[test]
@@ -299,11 +299,27 @@ fn sparse_receiverless_methods_share_canonical_code_signatures() {
         .view()
         .callables()
         .any(|c| c.body == BodyDisposition::Absent));
-    // Complete mode would still require the unsupported generated class family.
-    assert!(matches!(
-        admit(BackendInput::without_runtime_trace(&sparse)),
-        Err(AdmissionError::Unsupported(_))
-    ));
+    let complete = admit(BackendInput::without_runtime_trace(&sparse)).unwrap();
+    assert!(complete
+        .plan()
+        .view()
+        .resources()
+        .generated
+        .iter()
+        .any(|fact| matches!(
+            fact.callable,
+            LirCallableId::Helper(key) if key.family == HelperFamily::ClassFinalizer
+        )));
+    assert!(complete
+        .plan()
+        .view()
+        .resources()
+        .generated
+        .iter()
+        .all(|fact| !matches!(
+            fact.callable,
+            LirCallableId::Helper(key) if key.family == HelperFamily::RawClassCopy
+        )));
 }
 
 #[test]
