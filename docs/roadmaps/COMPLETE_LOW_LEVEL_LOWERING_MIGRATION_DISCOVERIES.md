@@ -28,3 +28,12 @@ not a reason to weaken checked array addressing or add a target opcode. Measure
 it together with D01 after LM14 has completed array aliases and slices; then
 improve the placement worklist or compact equivalent CFG where the evidence
 points. Priority is medium and the placement pipeline owns the follow-up.
+
+## D03 — Completed place admission leaves a no-op staging seam
+
+LM14 removed the last place form rejected by the low-level admission pass:
+array aliases. The shared `place` admission helper is therefore now a no-op,
+although earlier instruction families still call it. Removing that seam touches
+the full admission matrix and is better handled during the roadmap's final
+cumulative cleanup, once LM15 and LM16 have removed the remaining staged
+rejections. Priority is low; the admission boundary owns the follow-up.

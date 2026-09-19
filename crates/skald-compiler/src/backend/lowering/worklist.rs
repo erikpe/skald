@@ -33,6 +33,8 @@ pub(in crate::backend) fn lower_next<'plan>(
                 crate::backend::plan::HelperFamily::ArrayElementInitializer
                     | crate::backend::plan::HelperFamily::ArrayElementCopier
                     | crate::backend::plan::HelperFamily::ArrayClone
+                    | crate::backend::plan::HelperFamily::ArraySliceClone
+                    | crate::backend::plan::HelperFamily::ArrayPrimitiveSliceAssign
                     | crate::backend::plan::HelperFamily::ArrayElementDestroyer
                     | crate::backend::plan::HelperFamily::ArrayRelease
                     | crate::backend::plan::HelperFamily::ArraySharedFinalizer

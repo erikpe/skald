@@ -201,7 +201,7 @@ fn declare_generated_resources(
         {
             continue;
         }
-        let shapes = [
+        let mut shapes = vec![
             (
                 HelperFamily::ArrayElementInitializer,
                 helper_signature(
@@ -229,6 +229,13 @@ fn declare_generated_resources(
                 ),
             ),
             (
+                HelperFamily::ArraySliceClone,
+                helper_signature(
+                    &[ScalarType::DataAddress, ScalarType::U64],
+                    ReturnShape::Scalar(ScalarType::DataAddress),
+                ),
+            ),
+            (
                 HelperFamily::ArrayElementDestroyer,
                 helper_signature(
                     &[ScalarType::DataAddress, ScalarType::U64],
@@ -244,6 +251,19 @@ fn declare_generated_resources(
                 helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
             ),
         ];
+        if array.assignment == Some(ArrayAssignElementFact::Primitive) {
+            shapes.push((
+                HelperFamily::ArrayPrimitiveSliceAssign,
+                helper_signature(
+                    &[
+                        ScalarType::DataAddress,
+                        ScalarType::DataAddress,
+                        ScalarType::U64,
+                    ],
+                    ReturnShape::Unit,
+                ),
+            ));
+        }
         let mut keys = BTreeMap::new();
         for (family, signature) in shapes {
             let key = declare_helper(
@@ -268,6 +288,21 @@ fn declare_generated_resources(
         add_generated_dependency(
             facts,
             keys[&HelperFamily::ArrayClone],
+            ArtifactId::Runtime(RuntimeService::Allocate),
+        );
+        add_generated_dependency(
+            facts,
+            keys[&HelperFamily::ArraySliceClone],
+            ArtifactId::Callable(keys[&HelperFamily::ArrayElementCopier]),
+        );
+        add_generated_dependency(
+            facts,
+            keys[&HelperFamily::ArraySliceClone],
+            ArtifactId::Callable(keys[&HelperFamily::ArraySliceClone]),
+        );
+        add_generated_dependency(
+            facts,
+            keys[&HelperFamily::ArraySliceClone],
             ArtifactId::Runtime(RuntimeService::Allocate),
         );
         add_generated_dependency(

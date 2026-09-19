@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM13 are complete and LM14 is next.
+Status: active; LM01–LM14 are complete and LM15 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -51,7 +51,7 @@ per-callable or per-operation fallback.
 - [x] LM11 — Lower aggregate, class and boxed optional behavior
 - [x] LM12 — Lower array storage, construction, positions and anchors
 - [x] LM13 — Lower array element lifecycle and generated helper families
-- [ ] LM14 — Lower indexed construction, slices and array aliases
+- [x] LM14 — Lower indexed construction, slices and array aliases
 - [ ] LM15 — Lower strings, literal data and standard I/O
 - [ ] LM16 — Lower static lifecycle and complete entry orchestration
 - [ ] LM17 — Complete trace, data and artifact closure parity
@@ -490,13 +490,13 @@ are recorded with this implementation.
 **Purpose:** complete the remaining array protocols and checkpoint recursive
 family closure.
 
-- [ ] Lower indexed construction epochs, binding, one-time element evaluation,
+- [x] Lower indexed construction epochs, binding, one-time element evaluation,
   completion/backedges and publication.
-- [ ] Lower slice bounds/length checks, copy snapshots, overlap-safe assignment
+- [x] Lower slice bounds/length checks, copy snapshots, overlap-safe assignment
   and selected per-element lifecycle.
-- [ ] Lower whole-array and exact-element aliases without transferring ownership
+- [x] Lower whole-array and exact-element aliases without transferring ownership
   or losing required backing anchors.
-- [ ] Reconcile all 29 array variants and recursive optional/array helper receipts.
+- [x] Reconcile all 29 array variants and recursive optional/array helper receipts.
 
 **Tests:** zero/one/many indexed construction, effectful producers, overlaps,
 invalid/reversed bounds, aliases through replacement, recursive matrix and
@@ -504,6 +504,18 @@ malformed epoch/receipt negatives.
 
 **Exit criteria:** the recursive-family checkpoint passes with every optional and
 array row delivered and no recursion/emission special case.
+
+Completed on 2026-09-20. Indexed construction now preserves its checked prefix,
+signed binding and single-evaluation epoch through ordinary LIR backedges. Slice
+bounds and length failures remain distinct, snapshots use a planned generated
+range-clone helper, and primitive slice assignment uses a compact generated
+loop while other assignments retain their selected element semantics.
+Whole-array and exact-element aliases reuse the existing descriptor and
+backing-anchor representation, including replacement during argument
+evaluation. Admission now exhaustively accepts all
+29 array instructions and both loop kinds; complete and reachable recursive
+optional/array programs close with exact generated receipts. Focused lowering,
+failure, replacement-alias and native execution tests cover the checkpoint.
 
 ### LM15 — Lower strings, literal data and standard I/O
 

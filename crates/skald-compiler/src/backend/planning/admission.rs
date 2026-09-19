@@ -359,7 +359,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     }
                     MirInstruction::EndOptionalBoxView(_) => {}
                     MirInstruction::Array(operation)
-                        if supported_array_instruction(program, operation, owner)? => {}
+                        if supported_array_instruction(program, operation) => {}
                     other => {
                         return Err(unsupported(
                             owner,
@@ -424,10 +424,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 }
                 MirTerminator::ArrayPositionCheck { .. }
                 | MirTerminator::ArrayOperationCheck { .. } => {}
-                MirTerminator::ArrayLoop {
-                    kind: MirArrayLoopKind::Ordinary,
-                    ..
-                } => {}
+                MirTerminator::ArrayLoop { .. } => {}
                 other => {
                     return Err(unsupported(
                         owner,
@@ -621,11 +618,7 @@ fn supported_array(program: &MirProgram, array: crate::identity::ArrayTypeId) ->
     })
 }
 
-fn supported_array_instruction(
-    program: &MirProgram,
-    operation: &MirArrayInstruction,
-    owner: Option<CallableId>,
-) -> Result<bool, AdmissionError> {
+fn supported_array_instruction(program: &MirProgram, operation: &MirArrayInstruction) -> bool {
     let array = match operation {
         MirArrayInstruction::Allocate { array, .. }
         | MirArrayInstruction::AllocateElements { array, .. }
@@ -636,70 +629,43 @@ fn supported_array_instruction(
         | MirArrayInstruction::AnchorBegin { array, .. }
         | MirArrayInstruction::Normalize { array, .. }
         | MirArrayInstruction::Offset { array, .. }
-        | MirArrayInstruction::Boundary { array, .. } => *array,
-        MirArrayInstruction::InitializeElement { backing, .. }
-        | MirArrayInstruction::CompleteElement { backing, .. }
-        | MirArrayInstruction::InitializeNext { backing, .. }
-        | MirArrayInstruction::CopyNext { backing, .. } => {
-            let _ = backing;
-            if let MirArrayInstruction::CopyNext { source, .. } = operation {
-                place(source, owner)?;
-            }
-            return Ok(true);
-        }
-        MirArrayInstruction::Publish { .. } | MirArrayInstruction::AnchorEnd { .. } => {
-            return Ok(true)
-        }
-        MirArrayInstruction::AliasBind { source, .. } => {
-            place(source, owner)?;
-            return Ok(true);
-        }
-        MirArrayInstruction::ElementAssign {
-            destination,
-            source,
-            ..
-        } => {
-            place(destination, owner)?;
-            place(source, owner)?;
-            return Ok(true);
-        }
-        MirArrayInstruction::DestroyNext { owner: place, .. } => {
-            self::place(place, owner)?;
-            return Ok(true);
-        }
-        _ => return Ok(false),
+        | MirArrayInstruction::Boundary { array, .. }
+        | MirArrayInstruction::SliceCopy { array, .. }
+        | MirArrayInstruction::SliceLengthCheck { array, .. }
+        | MirArrayInstruction::SliceBoundsCheck { array, .. } => *array,
+        MirArrayInstruction::BeginIndexed { .. }
+        | MirArrayInstruction::BindIndexed { .. }
+        | MirArrayInstruction::InitializeIndexedElement { .. }
+        | MirArrayInstruction::AdvanceIndexedElement { .. }
+        | MirArrayInstruction::EndIndexedElement { .. }
+        | MirArrayInstruction::CompleteIndexed { .. }
+        | MirArrayInstruction::InitializeElement { .. }
+        | MirArrayInstruction::CompleteElement { .. }
+        | MirArrayInstruction::InitializeNext { .. }
+        | MirArrayInstruction::CopyNext { .. }
+        | MirArrayInstruction::Publish { .. }
+        | MirArrayInstruction::AnchorEnd { .. }
+        | MirArrayInstruction::AliasBind { .. }
+        | MirArrayInstruction::ElementAssign { .. }
+        | MirArrayInstruction::SliceAssignNext { .. }
+        | MirArrayInstruction::DestroyNext { .. } => return true,
     };
-    if !supported_array(program, array) {
-        return Ok(false);
-    }
-    match operation {
-        MirArrayInstruction::Adopt { destination, .. }
-        | MirArrayInstruction::Replace { destination, .. } => place(destination, owner)?,
-        MirArrayInstruction::Release { owner: place, .. }
-        | MirArrayInstruction::AnchorBegin { owner: place, .. }
-        | MirArrayInstruction::Normalize { owner: place, .. }
-        | MirArrayInstruction::Offset { owner: place, .. }
-        | MirArrayInstruction::Boundary { owner: place, .. } => self::place(place, owner)?,
-        MirArrayInstruction::AliasBind { source, .. } => place(source, owner)?,
-        _ => {}
-    }
-    Ok(true)
+    supported_array(program, array)
 }
 
-fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), AdmissionError> {
-    if matches!(place.base, MirPlaceBase::ArrayAlias(_)) {
-        return Err(unsupported(
-            owner,
-            "array-alias place before its LM14 execution owner",
-        ));
-    }
+fn place(_place: &MirPlace, _owner: Option<CallableId>) -> Result<(), AdmissionError> {
     Ok(())
 }
 
 fn supported_shared_cast(program: &MirProgram, cast: &MirSharedCast) -> bool {
-    let _ = program;
-    !matches!(cast.target, MirSharedTarget::Array(_))
-        && !matches!(cast.source.target(), MirSharedTarget::Array(_))
+    let source = cast.source.target();
+    supported_shared_target(program, source)
+        && supported_shared_target(program, cast.target)
+        && match (source, cast.target) {
+            (MirSharedTarget::Array(source), MirSharedTarget::Array(target)) => source == target,
+            (MirSharedTarget::Array(_), _) | (_, MirSharedTarget::Array(_)) => false,
+            _ => true,
+        }
 }
 
 fn supported_shared_target(program: &MirProgram, target: MirSharedTarget) -> bool {

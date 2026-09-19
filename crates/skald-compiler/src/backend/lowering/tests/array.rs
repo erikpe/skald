@@ -80,6 +80,7 @@ fn shared_and_optional_shared_primitive_arrays_close_the_owner_worklist() {
         HelperFamily::ArrayElementInitializer,
         HelperFamily::ArrayElementCopier,
         HelperFamily::ArrayClone,
+        HelperFamily::ArraySliceClone,
         HelperFamily::ArrayElementDestroyer,
         HelperFamily::ArrayRelease,
         HelperFamily::ArraySharedFinalizer,
@@ -199,4 +200,120 @@ fn optional_array_elements_close_recursive_clone_and_release_edges() {
         program.receipts().count(),
         admitted.plan().view().callables().count()
     );
+}
+
+#[test]
+fn indexed_slices_and_aliases_cross_the_checked_lowering_boundary() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "complete-array-protocols.ska",
+        concat!(
+            "fn next(mut ref effects:i64,index:i64)->i64{",
+            "effects=effects+1;return index+10;}",
+            "fn mutate(mut ref values:i64[])->unit{values[0]=values[0]+1;}",
+            "fn main()->i64{var effects:i64=0;",
+            "var empty:i64[]=i64[](0u;index=>1/index);",
+            "var indexed:i64[]=i64[](3u;index=>next(effects,index));",
+            "var copied:i64[]=indexed[0:2];",
+            "indexed[1:3]=copied;mutate(indexed);",
+            "return indexed[0]+indexed[2]+effects+(i64)empty.len();}"
+        ),
+    );
+    let admitted =
+        admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
+            .expect("the complete indexed, slice, and alias protocols are admitted");
+    let program = lower_program(&admitted, |_| Ok(())).unwrap();
+    assert_eq!(
+        program.receipts().count(),
+        admitted.plan().view().callables().count()
+    );
+}
+
+#[test]
+fn recursive_optional_array_slices_close_every_generated_receipt() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "recursive-array-slices.ska",
+        concat!(
+            "fn main()->i64{var row:i64[]=i64[]{4,8};",
+            "var maybe:i64[]?=row;var values:i64[]?[]=i64[]?[]{none,maybe};",
+            "var copied:i64[]?[]=values[:];var assigned:i64[]?[]=i64[]?[](2u);",
+            "assigned[:]=copied;if(assigned[1] is none){return 1;}",
+            "return assigned[1]![1];}"
+        ),
+    );
+    for input in [
+        BackendInput::without_runtime_trace(&fixture.mir),
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    ] {
+        let admitted = admit(input).expect("recursive array slices are admitted");
+        let program = lower_program(&admitted, |_| Ok(())).unwrap();
+        assert_eq!(
+            program.receipts().count(),
+            admitted.plan().view().callables().count()
+        );
+    }
+}
+
+#[test]
+fn array_aliases_keep_descriptor_and_element_anchor_protocols_through_replacement() {
+    let fixture = lower_source_to_complete_final_mir_with_sources(
+        "array-alias-replacement.ska",
+        concat!(
+            "class Item{value:i64;init(){self.value=0;}destroy{}}",
+            "class Holder{items:shared Item[];init(value:i64){",
+            "self.items=new Item[](1u);self.items->[0].value=value;}",
+            "mut fn replace(value:i64)->i64{self.items=new Item[](1u);",
+            "self.items->[0].value=value;return 0;}}",
+            "fn element(ref item:Item,ignored:i64)->i64{return item.value;}",
+            "fn array(ref items:Item[],ignored:i64)->i64{return items[0].value;}",
+            "fn main()->i64{var left:Holder=Holder(7);var right:Holder=Holder(8);",
+            "return element(left.items->[0],left.replace(20))",
+            "+array(*right.items,right.replace(30));}"
+        ),
+    );
+    let admitted =
+        admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
+            .expect("whole-array and exact-element aliases are admitted");
+    let program = lower_program(&admitted, |_| Ok(())).unwrap();
+    assert_eq!(
+        program.receipts().count(),
+        admitted.plan().view().callables().count()
+    );
+}
+
+#[test]
+fn invalid_slice_bounds_and_lengths_retain_distinct_failure_edges() {
+    let sources = [
+        (
+            "invalid-slice-bounds.ska",
+            "fn main()->i64{var values:i64[]=i64[](3u);var copy:i64[]=values[2:1];return 0;}",
+            FailureMessage::ArrayInvalidSliceBounds,
+        ),
+        (
+            "invalid-slice-length.ska",
+            concat!(
+                "fn main()->i64{var values:i64[]=i64[](3u);",
+                "var source:i64[]=i64[](2u);values[:]=source;return 0;}"
+            ),
+            FailureMessage::ArraySliceLengthMismatch,
+        ),
+    ];
+    for (name, source, expected) in sources {
+        let fixture = lower_source_to_complete_final_mir_with_sources(name, source);
+        let admitted = admit(
+            BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+        )
+        .unwrap();
+        let mut observed = false;
+        lower_program(&admitted, |body| {
+            observed |= body.draft().blocks().any(|(_, block)| {
+                matches!(
+                    block.terminator,
+                    Some(Terminator::ReportFailure { reason, .. }) if reason == expected
+                )
+            });
+            Ok(())
+        })
+        .unwrap();
+        assert!(observed, "missing {expected:?} for {name}");
+    }
 }

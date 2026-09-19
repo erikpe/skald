@@ -32,6 +32,8 @@ pub(in crate::backend) enum HelperFamily {
     ArrayElementInitializer,
     ArrayElementCopier,
     ArrayClone,
+    ArraySliceClone,
+    ArrayPrimitiveSliceAssign,
     ArrayElementDestroyer,
     ArrayRelease,
     ArraySharedFinalizer,

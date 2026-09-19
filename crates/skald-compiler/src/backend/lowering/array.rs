@@ -1,5 +1,10 @@
 //! Checked array backing, position, loop, and anchor lowering.
 
+mod indexed;
+mod slices;
+
+use slices::{SliceAssignment, SliceCopy};
+
 use super::{context::Lowerer, LowerError};
 use crate::{
     backend::{
@@ -11,9 +16,9 @@ use crate::{
     },
     identity::ArrayTypeId,
     mir::{
-        BlockId, MirArrayAnchorKind, MirArrayBoundary, MirArrayInstruction, MirArrayLoopKind,
-        MirArrayOwnership, MirArrayPositionKind, MirPlace, MirPlaceBase, MirPlaceProjection,
-        MirTerminator, MirType, StorageId, ValueId,
+        BlockId, MirArrayAnchorKind, MirArrayBoundary, MirArrayInstruction, MirArrayOwnership,
+        MirArrayPositionKind, MirPlace, MirPlaceBase, MirPlaceProjection, MirTerminator, MirType,
+        StorageId, ValueId,
     },
     primitive_comparison::PrimitiveComparisonPredicate,
     source::Span,
@@ -54,6 +59,23 @@ impl<'plan> Lowerer<'plan, '_> {
                 let length = self.constant_u64(block, *length)?;
                 self.allocate_array(block, *backing, *array, length, *ownership, *span)
             }
+            MirArrayInstruction::BeginIndexed { prefix, .. } => {
+                self.begin_indexed_array(block, *prefix)
+            }
+            MirArrayInstruction::BindIndexed {
+                prefix, binding, ..
+            } => self.bind_indexed_array(block, *prefix, *binding),
+            MirArrayInstruction::InitializeIndexedElement {
+                backing,
+                prefix,
+                value,
+                ..
+            } => self.initialize_indexed_element(block, *backing, *prefix, *value),
+            MirArrayInstruction::AdvanceIndexedElement { prefix, .. } => {
+                self.advance_index(block, *prefix)
+            }
+            MirArrayInstruction::EndIndexedElement { .. }
+            | MirArrayInstruction::CompleteIndexed { .. } => Ok(()),
             MirArrayInstruction::InitializeElement {
                 backing,
                 prefix,
@@ -260,7 +282,55 @@ impl<'plan> Lowerer<'plan, '_> {
                 };
                 self.store(block, *destination, value)
             }
-            _ => Err(PlanError::InvalidDomain.into()),
+            MirArrayInstruction::SliceBoundsCheck { start, end, .. } => {
+                self.check_slice_bounds(block, *start, *end)
+            }
+            MirArrayInstruction::SliceLengthCheck {
+                destination_start,
+                destination_end,
+                source,
+                array,
+                ..
+            } => {
+                self.check_slice_length(block, *destination_start, *destination_end, source, *array)
+            }
+            MirArrayInstruction::SliceCopy {
+                destination,
+                source,
+                start,
+                end,
+                array,
+                operation: _,
+                span,
+            } => self.copy_array_slice(
+                block,
+                SliceCopy {
+                    destination: *destination,
+                    source,
+                    start: *start,
+                    end: *end,
+                    array: *array,
+                    span: *span,
+                },
+            ),
+            MirArrayInstruction::SliceAssignNext {
+                destination,
+                source,
+                destination_index,
+                source_index,
+                operation,
+                span,
+            } => self.assign_array_slice(
+                block,
+                SliceAssignment {
+                    destination,
+                    source,
+                    destination_index: *destination_index,
+                    source_index: *source_index,
+                    operation: *operation,
+                    span: *span,
+                },
+            ),
         }
     }
 
@@ -324,7 +394,6 @@ impl<'plan> Lowerer<'plan, '_> {
             MirTerminator::ArrayLoop {
                 index,
                 length,
-                kind: MirArrayLoopKind::Ordinary,
                 body_target,
                 complete_target,
                 ..
@@ -828,6 +897,23 @@ impl<'plan> Lowerer<'plan, '_> {
         values: Vec<ValueHandle<'plan>>,
         span: Span,
     ) -> Result<Vec<ValueHandle<'plan>>, LowerError> {
+        self.call_array_helper_at(
+            self.active_blocks[block.index()],
+            array,
+            family,
+            values,
+            span,
+        )
+    }
+
+    fn call_array_helper_at(
+        &mut self,
+        block: crate::backend::lir::BlockHandle<'plan>,
+        array: ArrayTypeId,
+        family: crate::backend::plan::HelperFamily,
+        values: Vec<ValueHandle<'plan>>,
+        span: Span,
+    ) -> Result<Vec<ValueHandle<'plan>>, LowerError> {
         let layout = self.array_fact(array)?.descriptor_layout;
         let target = self
             .plan()
@@ -859,8 +945,8 @@ impl<'plan> Lowerer<'plan, '_> {
             .zip(values)
             .map(|(role, value)| CallArgument { role, value })
             .collect();
-        let attribution = self.attribution(block, span, false)?;
-        self.append(
+        let attribution = self.synthetic_attribution(block, span)?;
+        Ok(self.builder.append(
             block,
             Operation::Call(crate::backend::lir::Call {
                 target: crate::backend::lir::CallTarget::Direct(ArtifactId::Callable(target)),
@@ -868,7 +954,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 arguments,
                 attribution,
             }),
-        )
+        )?)
     }
 
     fn select_value(

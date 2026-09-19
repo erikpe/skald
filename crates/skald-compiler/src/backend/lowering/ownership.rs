@@ -16,6 +16,7 @@ use crate::{
         MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedStatic, MirSharedTarget,
         MirType, MirViewTarget, StorageId,
     },
+    primitive_comparison::PrimitiveComparisonPredicate,
     source::Span,
 };
 
@@ -198,7 +199,18 @@ impl<'plan> Lowerer<'plan, '_> {
         failure_target: BlockId,
     ) -> Result<(), LowerError> {
         let metadata = self.shared_cast_metadata(block, &cast.source)?;
-        let condition = self.membership(block, metadata, self.shared_view(cast.target)?)?;
+        let condition = match cast.target {
+            MirSharedTarget::Array(array) => {
+                let descriptor = self.data_address(block, DataKey::ArrayDescriptor(array))?;
+                self.compare(
+                    block,
+                    PrimitiveComparisonPredicate::Equal,
+                    metadata,
+                    descriptor,
+                )?
+            }
+            target => self.membership(block, metadata, self.shared_view(target)?)?,
+        };
         let handle = self.shared_cast_source(block, &cast.source)?;
         let destination = self.address(block, cast.destination)?;
         let success = self.builder.reserve_block()?;

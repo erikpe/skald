@@ -303,6 +303,53 @@ fn nontrivial_array_element_lifecycle_executes_through_generated_helpers() {
 }
 
 #[test]
+fn indexed_arrays_and_array_aliases_execute_through_the_verified_path() {
+    let fixture = fixture(
+        MirMode::Default,
+        concat!(
+            "fn next(mut ref effects:i64,index:i64)->i64{",
+            "effects=effects+1;return index+1;}",
+            "fn mutate(mut ref values:i64[])->unit{values[0]=values[0]+1;}",
+            "fn main()->i64{var effects:i64=0;",
+            "var empty:i64[]=i64[](0u;index=>1/index);",
+            "var values:i64[]=i64[](4u;index=>next(effects,index));",
+            "mutate(values);return values[0]+values[3]+effects",
+            "+(i64)empty.len();}"
+        ),
+    );
+    let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
+    assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 10);
+}
+
+#[test]
+fn copied_array_slices_execute_through_the_verified_path() {
+    let fixture = fixture(
+        MirMode::Default,
+        concat!(
+            "fn main()->i64{var values:i64[]=i64[]{1,2,3,4};",
+            "var snapshot:i64[]=values[0:3];",
+            "return snapshot[0]+snapshot[2];}"
+        ),
+    );
+    let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
+    assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 4);
+}
+
+#[test]
+fn primitive_slice_assignment_executes_through_the_verified_path() {
+    let fixture = fixture(
+        MirMode::Default,
+        concat!(
+            "fn main()->i64{var destination:i64[]=i64[]{0,0,0};",
+            "var source:i64[]=i64[]{4,8,16};destination[:]=source;",
+            "return destination[0]+destination[2];}"
+        ),
+    );
+    let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
+    assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 20);
+}
+
+#[test]
 fn object_initialization_dispatch_and_checked_views_execute_through_the_verified_path() {
     let source = concat!(
         "interface Readable { fn read() -> i64; fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64; }",

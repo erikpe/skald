@@ -39,6 +39,8 @@ pub(super) fn lower<'plan>(
         HelperFamily::ArrayElementInitializer => lifecycle::initializer(admitted, owner, array),
         HelperFamily::ArrayElementCopier => lifecycle::copier(admitted, owner, array),
         HelperFamily::ArrayClone => clone_array(plan, owner, array),
+        HelperFamily::ArraySliceClone => clone_array_slice(plan, owner, array),
+        HelperFamily::ArrayPrimitiveSliceAssign => primitive_slice_assign(plan, owner, array),
         HelperFamily::ArrayElementDestroyer => lifecycle::destroyer(admitted, owner, array),
         HelperFamily::ArrayRelease => release(plan, owner, array),
         HelperFamily::ArraySharedFinalizer => shared_finalizer(plan, owner, array),
@@ -185,6 +187,232 @@ fn clone_array<'plan>(
     )?[0];
     builder.terminate(body, Terminator::Jump(edge_with(loop_header, next)))?;
     finish(builder, complete, vec![result])
+}
+
+fn clone_array_slice<'plan>(
+    plan: PlanView<'plan>,
+    owner: CallableBinding<'plan>,
+    array: &crate::backend::plan::ArrayLayoutFact,
+) -> Result<VerifiedCallable<'plan>, LowerError> {
+    let boundary = owner.key();
+    let (mut builder, entry, inputs) = begin(owner)?;
+    let [source, length] = inputs.as_slice() else {
+        return Err(PlanError::InvalidSignature.into());
+    };
+    let zero = constant_u64(&mut builder, entry, 0)?;
+    let nonempty = compare(
+        &mut builder,
+        entry,
+        PrimitiveComparisonPredicate::NotEqual,
+        *length,
+        zero,
+    )?;
+    let empty = reserve_block(&mut builder)?;
+    let allocate = reserve_block(&mut builder)?;
+    let result = builder.reserve_value(ScalarType::DataAddress, None)?;
+    let complete = builder.reserve_block()?;
+    builder.define_block(complete, &[result])?;
+    builder.terminate(
+        entry,
+        Terminator::Branch {
+            condition: nonempty,
+            true_edge: edge(allocate),
+            false_edge: edge(empty),
+        },
+    )?;
+    let null = builder.append(
+        empty,
+        Operation::Constant(Constant::Null(ScalarType::DataAddress)),
+    )?[0];
+    builder.terminate(empty, Terminator::Jump(edge_with(complete, null)))?;
+
+    let stride = constant_u64(&mut builder, allocate, array.stride as u64)?;
+    let element_bytes = builder.append(
+        allocate,
+        Operation::Binary {
+            operation: BinaryOperation::Multiply,
+            left: *length,
+            right: stride,
+        },
+    )?[0];
+    let header = constant_u64(&mut builder, allocate, array.element_offset as u64)?;
+    let bytes = builder.append(
+        allocate,
+        Operation::Binary {
+            operation: BinaryOperation::Add,
+            left: element_bytes,
+            right: header,
+        },
+    )?[0];
+    let results = runtime_call(
+        plan,
+        &mut builder,
+        allocate,
+        boundary,
+        RuntimeService::Allocate,
+        bytes,
+    )?;
+    let [destination] = results.as_slice() else {
+        return Err(PlanError::InvalidSignature.into());
+    };
+    let destination = *destination;
+    let one = constant_u64(&mut builder, allocate, 1)?;
+    store_offset(
+        &mut builder,
+        allocate,
+        destination,
+        array.inline_owner_count_offset,
+        one,
+    )?;
+    store_offset(
+        &mut builder,
+        allocate,
+        destination,
+        array.inline_length_offset,
+        *length,
+    )?;
+
+    let index = builder.reserve_value(ScalarType::U64, None)?;
+    let loop_header = builder.reserve_block()?;
+    builder.define_block(loop_header, &[index])?;
+    builder.terminate(allocate, Terminator::Jump(edge_with(loop_header, zero)))?;
+    let running = compare(
+        &mut builder,
+        loop_header,
+        PrimitiveComparisonPredicate::LessThan,
+        index,
+        *length,
+    )?;
+    let body = reserve_block(&mut builder)?;
+    builder.terminate(
+        loop_header,
+        Terminator::Branch {
+            condition: running,
+            true_edge: edge(body),
+            false_edge: edge_with(complete, destination),
+        },
+    )?;
+    let destination_elements = byte_offset(&mut builder, body, destination, array.element_offset)?;
+    let source_elements = byte_offset(&mut builder, body, *source, array.element_offset)?;
+    call_helper(
+        plan,
+        &mut builder,
+        body,
+        boundary,
+        array.descriptor_layout,
+        HelperFamily::ArrayElementCopier,
+        vec![destination_elements, source_elements, index, index],
+    )?;
+    let one = constant_u64(&mut builder, body, 1)?;
+    let next = builder.append(
+        body,
+        Operation::Binary {
+            operation: BinaryOperation::Add,
+            left: index,
+            right: one,
+        },
+    )?[0];
+    builder.terminate(body, Terminator::Jump(edge_with(loop_header, next)))?;
+    finish(builder, complete, vec![result])
+}
+
+fn primitive_slice_assign<'plan>(
+    plan: PlanView<'plan>,
+    owner: CallableBinding<'plan>,
+    array: &crate::backend::plan::ArrayLayoutFact,
+) -> Result<VerifiedCallable<'plan>, LowerError> {
+    if array.assignment != Some(crate::backend::plan::ArrayAssignElementFact::Primitive) {
+        return Err(PlanError::InvalidDomain.into());
+    }
+    let (mut builder, entry, inputs) = begin(owner)?;
+    let [destination, source, length] = inputs.as_slice() else {
+        return Err(PlanError::InvalidSignature.into());
+    };
+    let zero = constant_u64(&mut builder, entry, 0)?;
+    let index = builder.reserve_value(ScalarType::U64, None)?;
+    let header = builder.reserve_block()?;
+    builder.define_block(header, &[index])?;
+    builder.terminate(entry, Terminator::Jump(edge_with(header, zero)))?;
+    let running = compare(
+        &mut builder,
+        header,
+        PrimitiveComparisonPredicate::LessThan,
+        index,
+        *length,
+    )?;
+    let body = reserve_block(&mut builder)?;
+    let complete = reserve_block(&mut builder)?;
+    builder.terminate(
+        header,
+        Terminator::Branch {
+            condition: running,
+            true_edge: edge(body),
+            false_edge: edge(complete),
+        },
+    )?;
+    let stride = constant_u64(&mut builder, body, array.stride as u64)?;
+    let offset = builder.append(
+        body,
+        Operation::Binary {
+            operation: BinaryOperation::Multiply,
+            left: index,
+            right: stride,
+        },
+    )?[0];
+    let destination = builder.append(
+        body,
+        Operation::ByteOffset {
+            base: *destination,
+            offset,
+        },
+    )?[0];
+    let source = builder.append(
+        body,
+        Operation::ByteOffset {
+            base: *source,
+            offset,
+        },
+    )?[0];
+    let layout = plan.layout(plan.layout_id(array.element_layout.index())?)?;
+    let scalar = match array.element {
+        crate::backend::plan::SemanticType::I64 => ScalarType::I64,
+        crate::backend::plan::SemanticType::U64 => ScalarType::U64,
+        crate::backend::plan::SemanticType::U8 => ScalarType::U8,
+        crate::backend::plan::SemanticType::F64 => ScalarType::F64,
+        crate::backend::plan::SemanticType::Bool => ScalarType::Bool,
+        _ => return Err(PlanError::InvalidDomain.into()),
+    };
+    let representation = MemoryRepresentation {
+        scalar,
+        bytes: layout.size,
+        alignment: layout.alignment,
+    };
+    let value = builder.append(
+        body,
+        Operation::Load {
+            address: source,
+            representation,
+        },
+    )?[0];
+    builder.append(
+        body,
+        Operation::Store {
+            address: destination,
+            value,
+            representation,
+        },
+    )?;
+    let one = constant_u64(&mut builder, body, 1)?;
+    let next = builder.append(
+        body,
+        Operation::Binary {
+            operation: BinaryOperation::Add,
+            left: index,
+            right: one,
+        },
+    )?[0];
+    builder.terminate(body, Terminator::Jump(edge_with(header, next)))?;
+    finish(builder, complete, vec![])
 }
 
 fn release<'plan>(
