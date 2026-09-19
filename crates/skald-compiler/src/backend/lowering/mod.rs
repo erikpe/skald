@@ -1,4 +1,4 @@
-//! Shared final-MIR adapter. Target selection receives only verified lower products.
+//! Shared final-MIR lowering. Target selection receives only verified products.
 
 mod calls;
 mod context;

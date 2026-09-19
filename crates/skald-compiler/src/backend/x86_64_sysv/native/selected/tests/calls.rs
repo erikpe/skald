@@ -374,7 +374,7 @@ fn whole_program_selected_closure_reconciles_released_lower_bodies_under_both_tr
             .unwrap();
         let context = selection_context(&catalog).unwrap();
         let mut inventory = selected::SelectedProgramBuilder::new(&context);
-        let lower = crate::backend::pilot::lower_program(&admitted, |body| {
+        let lower = crate::backend::lowering::lower_program(&admitted, |body| {
             let selected = select(&context, &body).unwrap();
             inventory.complete(&selected, &selected.receipt()).unwrap();
             drop(body);

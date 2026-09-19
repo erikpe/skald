@@ -1,8 +1,10 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: planned; LM01 is next.
-Implementation baseline: `a099d228`, the committed and accepted
-[complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md).
+Status: active; LM01 is complete and LM02 is next.
+Implementation baseline: `9e6177fe`, the committed roadmap immediately before
+implementation began. The accepted
+[complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+is committed as `a099d228`.
 Parent program:
 [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Exhaustive handoff:
@@ -36,7 +38,7 @@ per-callable or per-operation fallback.
 
 ## Progress
 
-- [ ] LM01 — Establish durable migration ownership and the no-fallback gate
+- [x] LM01 — Establish durable migration ownership and the no-fallback gate
 - [ ] LM02 — Complete semantic layout and object-view planning facts
 - [ ] LM03 — Complete data, artifact and static-storage planning facts
 - [ ] LM04 — Checkpoint the complete fact model
@@ -63,16 +65,16 @@ per-callable or per-operation fallback.
 **Purpose:** replace scalar-pilot naming for reusable shared owners and make the
 migration boundary explicit before expanding it.
 
-- [ ] Move reusable projection, fact, admission and lowering owners from
+- [x] Move reusable projection, fact, admission and lowering owners from
   `backend::pilot` into cohesive planning/lowering modules without widening
   visibility or changing behavior.
-- [ ] Retain a thin private whole-program native entry whose tests explicitly
+- [x] Retain a thin private whole-program native entry whose tests explicitly
   require admission and prove that post-admission errors cannot invoke legacy
   lowering.
-- [ ] Create the roadmap artifact ledger with every inherited allowance, private
+- [x] Create the roadmap artifact ledger with every inherited allowance, private
   gate, adapter and differential fixture, including introducing commits and
   LM/LA05 removal owners.
-- [ ] Preserve the scalar pilot's exact dumps, native behavior and no-fallback
+- [x] Preserve the scalar pilot's exact dumps, native behavior and no-fallback
   negatives across the move.
 
 **Tests:** backend phase-boundary/privacy tests, existing pilot planning/lowering/
@@ -81,6 +83,12 @@ native tests, exact dump comparisons, `make static-check`, and `make msrv-check`
 **Exit criteria:** reusable code no longer has pilot ownership; the remaining
 pilot surface is the thin private orchestration/inspection entry recorded for
 LA05, and no transition artifact lacks an owner.
+
+Completed on 2026-09-19. `backend::planning` owns admission and immutable fact
+projection, `backend::lowering` owns shared MIR-to-LIR construction, and the x86
+fact adapter has a semantic filename. The private native pilot remains the sole
+explicit no-fallback path. Owner, phase-boundary and post-admission terminal-error
+tests pass together with `make static-check`, `make msrv-check` and `make check`.
 
 ### LM02 — Complete semantic layout and object-view planning facts
 
@@ -427,7 +435,7 @@ measurement evidence without cost clearance claims.
 **Purpose:** review the complete roadmap diff as one architecture change and
 leave no hidden migration residue before production adoption.
 
-- [ ] Review `git diff a099d228..HEAD`, committed task history, and all staged,
+- [ ] Review `git diff 9e6177fe..HEAD`, committed task history, and all staged,
   unstaged and untracked changes against the frozen design and coverage record.
 - [ ] Reconcile every artifact-ledger entry; remove expired aliases, gates,
   adapters, allowances, duplicate implementations, stale pilot names/comments
@@ -474,11 +482,14 @@ continuing purpose and explicit removal owner.
 
 | Artifact | Introduced | Removal owner | Current disposition |
 | --- | --- | --- | --- |
-| Shared `backend::pilot` projection/admission/lowering names | LA03 commits through `8f8c1825` | LM01 | Rename reusable owners; retain no shared pilot namespace |
-| Thin `x86_64_sysv::native::pilot` entry/inspection adapter | LA03 commits through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry |
-| New-pipeline non-test dead-code/unused-import allowances | LA02–LA03 archived ledgers | Consuming LM task; residual LA05 facade work | Remove with real consumers; enumerate any transfer at LM19 |
-| Feature admission allowlist and unsupported reasons | LA03 private pilot | LM18 | Narrow during family delivery, then remove after complete coverage |
-| Legacy/new differential and forced-new-path fixtures | LA03 and LM tasks | LM19/LA05 | Retain focused final-interface regressions; remove broad duplicates |
+| Shared `backend::pilot` projection/admission/lowering names | LA03 commits through `8f8c1825` | LM01 | Removed in LM01: admission/fact projection are owned by `backend::planning`, lowering by `backend::lowering`, and target fact adapters use semantic names |
+| `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | Consuming LM02–LM17 tasks; residual facade allowance LA05 | Retained only for the private admitted product, structured errors and trace facts; narrow as feature consumers land |
+| `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | Consuming LM05–LM17 tasks; residual facade allowance LA05 | Retained only for private checked lowering entries while production still uses legacy emission |
+| `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01 | LM02–LM03 fact expansion; residual root allowance LA05 | Retained target-owned layout/trace projection; no shared `pilot` naming remains |
+| Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
+| `native::pilot::pipeline::compile_admitted` post-admission seam | LM01 working tree; commit pending | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
+| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrow during family delivery, then remove after complete coverage |
+| Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LM19/LA05 | Retain focused admission, post-admission failure, dump, native and policy regressions; remove broad duplicates during cumulative review/adoption |
 | Legacy x86 lowering/frame/machine/emitter | Pre-program production backend | LA05 adoption | Preserve unchanged as default and parity oracle during LA04 |
 
 ## Required documentation updates

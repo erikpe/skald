@@ -1,5 +1,5 @@
 use super::LowerError;
-use crate::backend::pilot::AdmittedPilot;
+use crate::backend::planning::AdmittedProgram;
 use crate::{
     backend::{
         lir::{
@@ -13,7 +13,7 @@ use crate::{
 use std::collections::BTreeMap;
 
 pub(super) struct Lowerer<'plan, 'input> {
-    pub(super) admitted: &'plan AdmittedPilot<'input>,
+    pub(super) admitted: &'plan AdmittedProgram<'input>,
     pub(super) definition: MirDefinitionRef<'plan>,
     pub(super) builder: DraftBuilder<'plan>,
     pub(super) blocks: Vec<BlockHandle<'plan>>,
@@ -28,7 +28,7 @@ pub(super) struct Lowerer<'plan, 'input> {
 
 impl<'plan, 'input> Lowerer<'plan, 'input> {
     pub(super) fn new(
-        admitted: &'plan AdmittedPilot<'input>,
+        admitted: &'plan AdmittedProgram<'input>,
         owner: CallableBinding<'plan>,
     ) -> Result<Self, LowerError> {
         admitted
@@ -104,7 +104,7 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
 }
 
 pub(super) fn definition<'plan>(
-    admitted: &'plan AdmittedPilot<'_>,
+    admitted: &'plan AdmittedProgram<'_>,
     callable: CallableId,
 ) -> Result<MirDefinitionRef<'plan>, LowerError> {
     let program = admitted.program();
@@ -118,7 +118,7 @@ pub(super) fn definition<'plan>(
 }
 
 pub(super) fn scalar_type(
-    admitted: &AdmittedPilot<'_>,
+    admitted: &AdmittedProgram<'_>,
     ty: MirType,
 ) -> Result<ScalarType, LowerError> {
     Ok(match ty {

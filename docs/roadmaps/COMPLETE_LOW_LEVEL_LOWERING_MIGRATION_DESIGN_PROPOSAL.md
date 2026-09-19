@@ -3,7 +3,7 @@
 Status: accepted, frozen and promoted on 2026-09-19. Accepted after review of
 the proposal committed as `a099d228`. Implementation:
 [complete lowering migration roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md),
-planned from baseline `a099d228`. Source assessment: `edff66b5`, after completion
+implemented from baseline `9e6177fe`. Source assessment: `edff66b5`, after completion
 of the private native pilot and the independent golden-artifact ownership fix. Parent:
 [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Inherited contracts: the frozen

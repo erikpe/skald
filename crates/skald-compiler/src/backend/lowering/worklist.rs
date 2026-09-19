@@ -1,5 +1,5 @@
 use super::{context::Lowerer, LowerError};
-use crate::backend::pilot::AdmittedPilot;
+use crate::backend::planning::AdmittedProgram;
 use crate::backend::{
     lir::{ProgramBuilder, VerifiedCallable},
     plan::LirCallableId,
@@ -7,7 +7,7 @@ use crate::backend::{
 
 /// Construct one declared body and register its exact verified receipt.
 pub(in crate::backend) fn lower_next<'plan>(
-    admitted: &'plan AdmittedPilot<'_>,
+    admitted: &'plan AdmittedProgram<'_>,
     worklist: &mut ProgramBuilder<'plan>,
 ) -> Result<Option<VerifiedCallable<'plan>>, LowerError> {
     let Some(key) = worklist.next() else {
@@ -27,7 +27,7 @@ pub(in crate::backend) fn lower_next<'plan>(
 /// This witness closes shared lowering, not native emission or executable authority.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) fn lower_program<'plan>(
-    admitted: &'plan AdmittedPilot<'_>,
+    admitted: &'plan AdmittedProgram<'_>,
     mut consume: impl FnMut(VerifiedCallable<'plan>) -> Result<(), LowerError>,
 ) -> Result<crate::backend::lir::VerifiedProgram<'plan>, LowerError> {
     lower_program_with(admitted, &mut consume)
@@ -38,7 +38,7 @@ pub(in crate::backend) fn lower_program<'plan>(
 /// The generic error keeps shared lowering independent of any target phase while
 /// preserving the rule that consumer failure cannot publish lower-program closure.
 pub(in crate::backend) fn lower_program_with<'plan, E>(
-    admitted: &'plan AdmittedPilot<'_>,
+    admitted: &'plan AdmittedProgram<'_>,
     mut consume: impl FnMut(VerifiedCallable<'plan>) -> Result<(), E>,
 ) -> Result<crate::backend::lir::VerifiedProgram<'plan>, E>
 where

@@ -36,7 +36,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let context = ArtifactId::Data(self.admitted.trace().locations[index].context);
         let layout = self
             .admitted
-            .trace_record_layout
+            .trace_record_layout()
             .ok_or(PlanError::UnknownDeclaration)?;
         let record = self.builder.declare_object(Object {
             layout: *self.plan().layout(self.plan().layout_id(layout.index())?)?,

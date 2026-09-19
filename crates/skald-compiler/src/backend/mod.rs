@@ -15,9 +15,10 @@ mod failure;
 mod frame;
 mod graph;
 mod lir;
-mod pilot;
+mod lowering;
 mod placement;
 mod plan;
+mod planning;
 mod retained_domain;
 mod selected;
 mod x86_64_sysv;
@@ -97,6 +98,16 @@ pub enum RuntimeTracePolicy {
 ///
 /// ```compile_fail
 /// use skald_compiler::backend::selected::SelectedDraft;
+/// ```
+///
+/// Admission and shared lowering orchestration remain compiler-private:
+///
+/// ```compile_fail
+/// use skald_compiler::backend::planning::AdmittedProgram;
+/// ```
+///
+/// ```compile_fail
+/// use skald_compiler::backend::lowering::LowerError;
 /// ```
 ///
 /// Selected publication and receipt constructors remain verification-private:

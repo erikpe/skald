@@ -1,8 +1,9 @@
 use crate::{
     backend::{
         lir::{InventoryState, Operation, ProgramBuilder},
-        pilot::{admit, lower_next, LowerError},
+        lowering::{lower_next, LowerError},
         plan::LirCallableId,
+        planning::admit,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,

@@ -6,7 +6,8 @@ use super::model::*;
 use crate::backend::{
     frame::{plan_frame, FramePolicy, ReturnAddress},
     lir::TargetDeclarations,
-    pilot::{admit, lower_program},
+    lowering::lower_program,
+    planning::admit,
     selected::SelectedProgramBuilder,
     BackendInput,
 };

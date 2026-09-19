@@ -1,8 +1,9 @@
 use crate::{
     backend::{
         lir::{CallAttribution, CallTarget, DataInitializer, Operation, Terminator, TraceAction},
-        pilot::{admit, lower_program},
+        lowering::{lower_program, LowerError},
         plan::{ArtifactId, Convention, DataKey, LirCallableId, RuntimeService},
+        planning::admit,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -210,7 +211,7 @@ fn a_consumer_failure_cannot_publish_complete_program_authority() {
     let mut visited = 0;
     assert!(lower_program(&admitted, |_| {
         visited += 1;
-        Err(crate::backend::pilot::LowerError::Plan(
+        Err(LowerError::Plan(
             crate::backend::plan::PlanError::InvalidDomain,
         ))
     })

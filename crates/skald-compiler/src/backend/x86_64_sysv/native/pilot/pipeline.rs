@@ -2,7 +2,8 @@ use super::super::selected::{discover_requests, select, selection_context};
 use super::{super::*, NativePilotError, NativePilotInspection};
 use crate::backend::{
     lir::TargetDeclarations,
-    pilot::{admit, lower_program_with},
+    lowering::lower_program_with,
+    planning::{admit, AdmittedProgram},
     selected::SelectedProgramBuilder,
     BackendInput,
 };
@@ -34,14 +35,25 @@ pub(in crate::backend) fn compile_native_pilot_inspected(
 fn compile(
     input: BackendInput<'_>,
     inspection: NativePilotInspection,
-    mut out: Option<&mut dyn Write>,
+    out: Option<&mut dyn Write>,
 ) -> Result<String, NativePilotError> {
     let admitted = admit(input).map_err(NativePilotError::Admission)?;
+    compile_admitted(&admitted, inspection, out)
+}
 
+/// Continue the private path after whole-program admission.
+///
+/// Keeping this seam visible only inside the pilot makes post-admission failure
+/// tests explicit without creating a second production entry or fallback path.
+pub(super) fn compile_admitted(
+    admitted: &AdmittedProgram<'_>,
+    inspection: NativePilotInspection,
+    mut out: Option<&mut dyn Write>,
+) -> Result<String, NativePilotError> {
     // Exploratory receipts never certify the executable pass. The pure request
     // rule is repeated by selection after this catalog has been frozen.
     let mut requests = BTreeSet::new();
-    let exploratory = lower_program_with(&admitted, |lower| {
+    let exploratory = lower_program_with(admitted, |lower| {
         requests.extend(discover_requests(&lower).map_err(NativePilotError::Selection)?);
         Ok::<(), NativePilotError>(())
     })?;
@@ -54,7 +66,7 @@ fn compile(
         plan.artifact(request_id, request.category())
             .map_err(|error| NativePilotError::Discovery(error.into()))?;
     }
-    // The admitted scalar pilot needs no target-local constants or thunks.
+    // The admitted program needs no target-local constants or thunks yet.
     let catalog = TargetDeclarations::new(plan)
         .freeze()
         .map_err(NativePilotError::Discovery)?;
@@ -70,7 +82,7 @@ fn compile(
         PhysicalProgramBuilder::temporary_with_external_symbols(&context, symbols)
             .map_err(NativePilotError::PhysicalProgram)?;
 
-    let lower_program = lower_program_with(&admitted, |lower| {
+    let lower_program = lower_program_with(admitted, |lower| {
         observe(&mut out, inspection.lowered, |out| lower.dump(out))?;
         let selected = select(&context, &lower).map_err(NativePilotError::Selection)?;
         observe(&mut out, inspection.selected, |out| selected.dump(out))?;

@@ -4,8 +4,9 @@ use crate::{
         effects::Effect,
         failure::FailureMessage,
         lir::*,
-        pilot::{admit, lower_next},
+        lowering::{lower_next, lower_program},
         plan::*,
+        planning::admit,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -364,7 +365,7 @@ fn bit_reinterpretation_intrinsics_keep_payloads_and_need_no_range_guard() {
         admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
             .unwrap();
     let mut conversions = 0;
-    crate::backend::pilot::lower_program(&admitted, |body| {
+    lower_program(&admitted, |body| {
         let normalized_intrinsic = body
             .draft()
             .blocks()

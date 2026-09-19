@@ -2,12 +2,12 @@
 use super::LowerError;
 use crate::backend::{
     lir::{DataDefinition, DataInitializer, ProgramBuilder},
-    pilot::AdmittedPilot,
     plan::{ArtifactCategory, ArtifactId, DataKey, PlanError},
+    planning::AdmittedProgram,
 };
 
 pub(super) fn define(
-    admitted: &AdmittedPilot<'_>,
+    admitted: &AdmittedProgram<'_>,
     worklist: &mut ProgramBuilder<'_>,
 ) -> Result<(), LowerError> {
     let trace = admitted.trace();

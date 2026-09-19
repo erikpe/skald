@@ -1,10 +1,10 @@
-//! Narrow projection of existing checked services; no machine products escape.
+//! Narrow projection of existing checked target services; no machine products escape.
 
 use super::{layout, runtime_trace};
 use crate::{
     backend::{
-        pilot::{TraceContext, TraceFacts, TraceLocation, TraceRequest},
         plan::{DataKey, LayoutDisposition, LayoutFact},
+        planning::{TraceContext, TraceFacts, TraceLocation, TraceRequest},
         BackendError, BackendInput, RuntimeTracePolicy,
     },
     mir::MirType,

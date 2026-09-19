@@ -6,7 +6,7 @@ use crate::{
 };
 
 fn fixture(source: &str) -> crate::test_support::FinalMirWithSources {
-    lower_source_to_complete_final_mir_with_sources("pilot.ska", source)
+    lower_source_to_complete_final_mir_with_sources("planning.ska", source)
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn artifact_policy_cannot_hide_an_unsupported_retained_body() {
         BackendInput::without_runtime_trace(&fixture.mir),
         BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
     ] {
-        let Err(PilotError::Unsupported(reason)) = admit(input) else {
+        let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
             panic!("unsupported retained alias body must reject")
         };
         assert!(reason.callable.is_some());
@@ -167,7 +167,7 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
     let empty = crate::source::SourceDatabase::new();
     assert!(matches!(
         admit(BackendInput::with_runtime_trace(&fixture.mir, &empty)),
-        Err(PilotError::Backend(_))
+        Err(AdmissionError::Backend(_))
     ));
     let omitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     assert!(omitted.trace().strings.is_empty());
@@ -192,7 +192,7 @@ fn excluded_source_families_reject_before_plan_publication() {
             BackendInput::without_runtime_trace(&fixture.mir),
             BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
         ] {
-            let Err(PilotError::Unsupported(reason)) = admit(input) else {
+            let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
                 panic!("excluded fixture admitted: {source}")
             };
             assert!(!reason.reason.is_empty());
@@ -221,7 +221,7 @@ fn extern_cells_are_projected_without_changing_public_emission() {
 }
 
 #[test]
-fn normalized_intrinsics_and_user_panic_respect_the_pilot_boundary() {
+fn normalized_intrinsics_and_user_panic_respect_the_admission_boundary() {
     for (source, supported) in [
         ("import std::f64; extern fn input() -> f64; fn main() -> i64 { return (i64) std::f64::from_bits(std::f64::to_bits(input())); }", true),
         ("import std::io; fn main() -> i64 { std::io::println_i64(1); return 0; }", false),
@@ -236,7 +236,7 @@ fn normalized_intrinsics_and_user_panic_respect_the_pilot_boundary() {
         let verified = crate::passes::run_mir_pipeline(program).unwrap();
         let result = admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only());
         if supported {result.unwrap();}
-        else {assert!(matches!(result, Err(PilotError::Unsupported(_))));}
+        else {assert!(matches!(result, Err(AdmissionError::Unsupported(_))));}
     }
 }
 
@@ -284,7 +284,7 @@ fn sparse_receiverless_methods_share_canonical_code_signatures() {
     // Complete mode would still require the unsupported generated class family.
     assert!(matches!(
         admit(BackendInput::without_runtime_trace(&sparse)),
-        Err(PilotError::Unsupported(_))
+        Err(AdmissionError::Unsupported(_))
     ));
 }
 
@@ -364,7 +364,7 @@ fn scalar_io_intrinsic_rejects_even_without_lifecycle_dependencies() {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
     let verified = crate::passes::run_mir_pipeline(program).unwrap();
-    let Err(PilotError::Unsupported(reason)) =
+    let Err(AdmissionError::Unsupported(reason)) =
         admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
     else {
         panic!("scalar I/O must reject")

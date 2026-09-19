@@ -239,7 +239,7 @@ fn normalized_bit_intrinsics_preserve_nan_payloads_and_signed_zero() {
         .unwrap();
     let context = selection_context(&catalog).unwrap();
     let mut tested = 0;
-    crate::backend::pilot::lower_program(&admitted, |lower| {
+    crate::backend::lowering::lower_program(&admitted, |lower| {
         let bit_conversion = lower
             .draft()
             .blocks()

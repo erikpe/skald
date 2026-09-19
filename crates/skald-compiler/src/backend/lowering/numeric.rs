@@ -10,8 +10,8 @@ use crate::{
             Conversion, DivisionResult, Operation, ScalarCheck, ScalarDomainEvidence,
             ShiftDirection,
         },
-        pilot::AdmittedPilot,
         plan::PlanError,
+        planning::AdmittedProgram,
     },
     mir::{
         BlockId, MirDefinitionRef, MirInstruction, MirIntegerDivisionKind, MirIntegerType,
@@ -197,7 +197,7 @@ impl<'plan> Lowerer<'plan, '_> {
 }
 
 fn check_relation<'p>(
-    admitted: &AdmittedPilot<'_>,
+    admitted: &AdmittedProgram<'_>,
     terminator: &MirTerminator,
     value: crate::backend::lir::ValueHandle<'p>,
 ) -> Result<ScalarCheck<crate::backend::lir::ValueHandle<'p>>, LowerError> {

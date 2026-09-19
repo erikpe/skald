@@ -34,7 +34,7 @@ impl std::fmt::Display for LowerError {
         match self {
             Self::MissingBody(callable) => write!(
                 f,
-                "native pilot lowering requires a retained body for {callable}"
+                "low-level lowering requires a retained body for {callable}"
             ),
             Self::Plan(error) => write!(f, "lower planning invariant: {error:?}"),
             Self::Build(error) => write!(f, "lower construction invariant: {error:?}"),

@@ -5,12 +5,12 @@ use crate::backend::{
         verify_callable, Call, CallAttribution, CallTarget, DraftBuilder, Operation, Terminator,
         VerifiedCallable,
     },
-    pilot::AdmittedPilot,
     plan::{ArtifactId, CallableBinding, LirCallableId, PlanError, RuntimeService},
+    planning::AdmittedProgram,
 };
 
 pub(super) fn lower<'plan>(
-    admitted: &'plan AdmittedPilot<'_>,
+    admitted: &'plan AdmittedProgram<'_>,
     owner: CallableBinding<'plan>,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
     let plan = admitted.plan().view();

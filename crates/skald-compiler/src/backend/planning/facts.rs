@@ -8,25 +8,25 @@ use crate::{identity::FunctionTypeId, mir::MirType};
 
 #[derive(Debug, Eq, PartialEq)]
 #[cfg_attr(not(test), allow(dead_code))]
-pub(in crate::backend) struct UnsupportedPilot {
+pub(in crate::backend) struct UnsupportedProgram {
     pub callable: Option<crate::identity::CallableId>,
     pub reason: String,
 }
 
 #[derive(Debug)]
 #[cfg_attr(not(test), allow(dead_code))]
-pub(in crate::backend) enum PilotError {
-    Unsupported(UnsupportedPilot),
+pub(in crate::backend) enum AdmissionError {
+    Unsupported(UnsupportedProgram),
     Backend(BackendError),
     Plan(PlanError),
 }
 
-impl From<BackendError> for PilotError {
+impl From<BackendError> for AdmissionError {
     fn from(error: BackendError) -> Self {
         Self::Backend(error)
     }
 }
-impl From<PlanError> for PilotError {
+impl From<PlanError> for AdmissionError {
     fn from(error: PlanError) -> Self {
         Self::Plan(error)
     }
@@ -34,7 +34,7 @@ impl From<PlanError> for PilotError {
 
 /// Immutable maps retain semantic identity even when physical shapes coincide.
 /// Only the admission/projection owner can construct this authority.
-pub(in crate::backend) struct AdmittedPilot<'input> {
+pub(in crate::backend) struct AdmittedProgram<'input> {
     pub(super) program: &'input crate::mir::MirProgram,
     pub(super) plan: CheckedPlan,
     pub(super) layouts: Vec<(MirType, LayoutId)>,
@@ -43,7 +43,7 @@ pub(in crate::backend) struct AdmittedPilot<'input> {
     pub(super) function_types: BTreeMap<FunctionTypeId, SignatureId>,
 }
 
-impl AdmittedPilot<'_> {
+impl AdmittedProgram<'_> {
     pub(in crate::backend) fn program(&self) -> &crate::mir::MirProgram {
         self.program
     }
@@ -61,6 +61,9 @@ impl AdmittedPilot<'_> {
     pub(in crate::backend) fn function_type(&self, id: FunctionTypeId) -> Option<SignatureId> {
         self.function_types.get(&id).copied()
     }
+    pub(in crate::backend) fn trace_record_layout(&self) -> Option<LayoutId> {
+        self.trace_record_layout
+    }
 }
 
 #[derive(Default)]
@@ -72,20 +75,20 @@ pub(in crate::backend) struct TraceFacts {
     pub requests: Vec<TraceRequest>,
 }
 
-impl std::fmt::Display for PilotError {
+impl std::fmt::Display for AdmissionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Unsupported(reason) => write!(
                 f,
-                "unsupported native pilot input in {:?}: {}",
+                "unsupported low-level input in {:?}: {}",
                 reason.callable, reason.reason
             ),
             Self::Backend(error) => error.fmt(f),
-            Self::Plan(error) => write!(f, "native pilot planning invariant: {error:?}"),
+            Self::Plan(error) => write!(f, "low-level planning invariant: {error:?}"),
         }
     }
 }
-impl std::error::Error for PilotError {}
+impl std::error::Error for AdmissionError {}
 
 pub(in crate::backend) struct TraceContext {
     pub name: crate::backend::plan::DataKey,

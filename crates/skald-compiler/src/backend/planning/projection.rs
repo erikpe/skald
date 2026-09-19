@@ -1,6 +1,6 @@
 //! Final-MIR queries stop here. Downstream facts carry no frontend authority.
 
-use super::{admission, AdmittedPilot, PilotError};
+use super::{admission, AdmissionError, AdmittedProgram};
 use super::{
     layouts::collect_types,
     signatures::{declaration_inventory, intern_source_signature, signature, unit_signature},
@@ -11,7 +11,9 @@ use crate::backend::{
 use crate::mir::*;
 use std::collections::BTreeMap;
 
-pub(in crate::backend) fn admit(input: BackendInput<'_>) -> Result<AdmittedPilot<'_>, PilotError> {
+pub(in crate::backend) fn admit(
+    input: BackendInput<'_>,
+) -> Result<AdmittedProgram<'_>, AdmissionError> {
     admission::check(input)?;
     let program = input.program();
     let mut facts = PlanFacts {
@@ -208,7 +210,7 @@ pub(in crate::backend) fn admit(input: BackendInput<'_>) -> Result<AdmittedPilot
             layout: None,
         });
     }
-    // Freeze the complete pilot failure pool; retention later chooses used data.
+    // Freeze the complete failure pool; retention later chooses used data.
     for message in [
         FailureMessage::ShiftCountOutOfRange,
         FailureMessage::IntegerDivisionByZero,
@@ -256,7 +258,7 @@ pub(in crate::backend) fn admit(input: BackendInput<'_>) -> Result<AdmittedPilot
         .map(|layout| facts.add_layout(layout))
         .transpose()?;
     let plan = CheckedPlan::check(facts)?;
-    Ok(AdmittedPilot {
+    Ok(AdmittedProgram {
         program,
         plan,
         layouts,

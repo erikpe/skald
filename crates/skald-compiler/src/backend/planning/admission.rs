@@ -1,16 +1,16 @@
-use super::{PilotError, UnsupportedPilot};
+use super::{facts::UnsupportedProgram, AdmissionError};
 use crate::backend::{BackendInput, BackendRequiredRuntimeEntity, RuntimeTracePolicy};
 use crate::{identity::CallableId, intrinsic::Intrinsic, mir::*};
 
-fn unsupported(callable: Option<CallableId>, reason: impl Into<String>) -> PilotError {
-    PilotError::Unsupported(UnsupportedPilot {
+fn unsupported(callable: Option<CallableId>, reason: impl Into<String>) -> AdmissionError {
+    AdmissionError::Unsupported(UnsupportedProgram {
         callable,
         reason: reason.into(),
     })
 }
 
 /// An exhaustive whitelist of executable forms; new MIR forms require review.
-pub(super) fn check(input: BackendInput<'_>) -> Result<(), PilotError> {
+pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     let program = input.program();
     if !input.active_static_fields().is_empty() {
         return Err(unsupported(None, "active static storage"));
@@ -170,7 +170,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), PilotError> {
     Ok(())
 }
 
-fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), PilotError> {
+fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), AdmissionError> {
     if !matches!(place.base, MirPlaceBase::Storage(_)) || !place.projections.is_empty() {
         return Err(unsupported(owner, "nonlocal, projected or alias place"));
     }
@@ -181,7 +181,7 @@ fn callable(
     program: &MirProgram,
     id: CallableId,
     owner: Option<CallableId>,
-) -> Result<(), PilotError> {
+) -> Result<(), AdmissionError> {
     if let CallableId::Method(method) = id {
         let declaration = program.method(method).expect("verified method declaration");
         if declaration.kind != MirMethodKind::Static {
@@ -233,7 +233,7 @@ fn signature_check(
     parameters: &[MirParameter],
     result: MirType,
     owner: Option<CallableId>,
-) -> Result<(), PilotError> {
+) -> Result<(), AdmissionError> {
     for parameter in parameters {
         if parameter.mode != MirParameterMode::Value {
             return Err(unsupported(owner, "alias parameter"));
@@ -243,7 +243,11 @@ fn signature_check(
     scalar(program, result, owner)
 }
 
-fn scalar(program: &MirProgram, ty: MirType, owner: Option<CallableId>) -> Result<(), PilotError> {
+fn scalar(
+    program: &MirProgram,
+    ty: MirType,
+    owner: Option<CallableId>,
+) -> Result<(), AdmissionError> {
     match ty {
         MirType::I64
         | MirType::U64

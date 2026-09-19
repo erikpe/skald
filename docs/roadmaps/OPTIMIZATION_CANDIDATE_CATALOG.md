@@ -259,7 +259,7 @@ existing-boundary witnesses and durable pre-migration inputs are qualified.
 The [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#preparation-handoff-and-next-designs)
 now carries the executable LIR model and checked private native pilot into the
 accepted [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
-and [planned roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md).
+and [active roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md).
 Production migration, adoption and cost acceptance remain pending.
 
 | ID | Candidate | Placement and ordering | Status / effort | Potential value | Main pitfalls |

@@ -485,7 +485,7 @@ deliver concrete native selection, ABI handling, checked baseline placement,
 symbolic frames, independently verified physical realization and a private
 whole-program pilot. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
-and [planned roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) own the
+and [active roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) own the
 remaining private full-language parity work. Production migration, adoption and
 allocation remain pending; preserved measurements grant no cost clearance.
 ### Optimization possibilities unlocked

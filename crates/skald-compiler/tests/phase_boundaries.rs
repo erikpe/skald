@@ -150,6 +150,16 @@ fn production_compiler_dependencies_follow_owned_boundaries() {
                     ));
                 }
             }
+            if is_shared_lowering(relative) {
+                for reference in forbidden_identifier_references(&source, LOWERING_FORBIDDEN) {
+                    violations.push(format!(
+                        "{}:{}: shared lowering may not reference `{}`",
+                        relative.display(),
+                        reference.line,
+                        reference.identifier
+                    ));
+                }
+            }
         });
     }
     for exception in TEMPORARY_EXCEPTIONS {
@@ -177,6 +187,15 @@ const LOW_LEVEL_FORBIDDEN: &[&str] = &[
     "BackendRequiredRuntimeEntity",
 ];
 
+const LOWERING_FORBIDDEN: &[&str] = &[
+    "x86_64_sysv",
+    "SourceDatabase",
+    "SourceFile",
+    "SourceLookup",
+    "BackendInput",
+    "BackendRequiredRuntimeEntity",
+];
+
 fn is_low_level_core(path: &Path) -> bool {
     path.starts_with("backend/plan")
         || path.starts_with("backend/graph")
@@ -184,6 +203,10 @@ fn is_low_level_core(path: &Path) -> bool {
         || path.starts_with("backend/selected")
         || path == Path::new("backend/effects.rs")
         || path == Path::new("backend/failure.rs")
+}
+
+fn is_shared_lowering(path: &Path) -> bool {
+    path.starts_with("backend/lowering")
 }
 
 fn low_level_dependency_allowed(dependency: &str) -> bool {
@@ -206,6 +229,10 @@ fn low_level_core_guards_accept_metadata_and_reject_execution_or_lookup_inputs()
     )));
     assert!(!is_low_level_core(Path::new(
         "backend/x86_64_sysv/planning.rs"
+    )));
+    assert!(is_shared_lowering(Path::new("backend/lowering/context.rs")));
+    assert!(!is_shared_lowering(Path::new(
+        "backend/planning/projection.rs"
     )));
     let source = "use crate::{identity::CallableId, source::Span, mir::MirProgram,
         passes::VerifiedFinalMirProgram, syntax::CompilationUnit};

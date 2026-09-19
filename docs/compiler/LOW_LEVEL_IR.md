@@ -7,8 +7,8 @@ Complete lowered-program inventory publication, plan-bound target catalogs,
 selected graphs with exact parent reconciliation and consuming edits are implemented. Verified
 products support immutable visitors and private deterministic text inspection.
 The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
-component classification. Private whole-program pilot admission and final-MIR
-fact projection, ordinary scalar/CFG lowering and guarded numeric lowering are
+component classification. Private whole-program admission and final-MIR fact
+projection, ordinary scalar/CFG lowering and guarded numeric lowering are
 implemented, including lower program closure, calls/tracing and generated entry.
 Private native scalar/numeric/call/trace selection and joint checking are
 implemented with signature-local ABI slot shapes. Shared unchecked placement
@@ -26,7 +26,8 @@ The public/default backend remains unchanged.
 
 ## Shared final-MIR lowering
 
-The private `backend::pilot` adapter constructs ordinary scalar bodies with the
+Private `backend::planning` owns whole-program admission and immutable fact
+projection. `backend::lowering` constructs ordinary scalar bodies with the
 standard lowered builder and publishes them through full callable verification.
 Its streaming worklist registers exact body receipts and closes the complete
 lowered program and frozen data inventory. Calls, enabled/omitted tracing and
@@ -86,14 +87,15 @@ keys, executable source dispositions, active statics and stable dispatch slots.
 
 Checking consumes the supplied facts and validates their structural consistency.
 The checker never recalculates semantic reachability. The private
-`backend::pilot` planner obtains executable and static domains from verified final
-MIR and certified retention services before freezing a checked plan. Supplied-fact
+`backend::planning` owner obtains executable and static domains from verified
+final MIR and certified retention services before freezing a checked plan. Supplied-fact
 fixtures remain available for independent model tests. Present source bodies may acquire an executable callable binding.
 An absent source declaration remains inspectable but cannot acquire that binding.
 Target thunks cannot enter the shared declaration catalog.
 
 The private planner checks every physically retained body and its storage,
-places, signatures, calls and terminators against the scalar pilot whitelist.
+places, signatures, calls and terminators against the current scalar admission
+allowlist.
 Requesting reachable artifact emission does not remove unsupported bodies.
 Receiverless static methods are eligible; receiver-bearing bodies, aliases,
 aggregate/lifecycle operations, I/O, string panic and statics reject explicitly.
@@ -105,9 +107,9 @@ The admitted product borrows the exact inspected MIR snapshot for shared lowerin
 and owns immutable checked facts. It preserves absent source declarations,
 canonical higher-order function signature IDs, distinct semantic layout IDs,
 external and runtime service declarations, entry and failure-message data.
-Unused aggregate/alias declarations remain inspectable; they do not grant pilot
-support. Empty lifecycle coordinators are absent. Selection and later phases use
-plan views rather than the admitted product's MIR access.
+Unused aggregate/alias declarations remain inspectable; they do not grant
+lowering support. Empty lifecycle coordinators are absent. Selection and later
+phases use plan views rather than the admitted product's MIR access.
 
 Existing checked x86 layout and trace services have narrow projection adapters.
 Enabled trace planning freezes owned byte strings, context/location records and

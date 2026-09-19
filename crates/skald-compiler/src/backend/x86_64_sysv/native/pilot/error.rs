@@ -1,8 +1,6 @@
 use crate::backend::{
-    frame::FrameError,
-    lir::ProgramError as InventoryError,
-    pilot::{LowerError, PilotError},
-    placement::CheckFailure,
+    frame::FrameError, lir::ProgramError as InventoryError, lowering::LowerError,
+    placement::CheckFailure, planning::AdmissionError,
 };
 
 use super::super::{
@@ -14,7 +12,7 @@ use super::super::{
 #[derive(Debug)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum NativePilotError {
-    Admission(PilotError),
+    Admission(AdmissionError),
     Discovery(InventoryError),
     Abi(AbiError),
     Lower(LowerError),

@@ -335,24 +335,32 @@ fn requested_checkpoints_are_independent_deterministic_and_quiet_by_default() {
         let (_, repeated) = inspect(&fixture, options).unwrap();
         assert_eq!(observed, repeated);
     }
+}
 
+#[test]
+fn post_admission_observation_failure_is_terminal() {
     struct FailingWriter;
     impl fmt::Write for FailingWriter {
         fn write_str(&mut self, _: &str) -> fmt::Result {
             Err(fmt::Error)
         }
     }
-    assert!(matches!(
-        super::compile_native_pilot_inspected(
-            fixture.backend_input(RuntimeTracePolicy::Omitted),
-            super::NativePilotInspection {
-                lowered: true,
-                ..Default::default()
-            },
-            &mut FailingWriter,
-        ),
-        Err(super::NativePilotError::Observation(_))
-    ));
+
+    let fixture = fixture(MirMode::Default, "fn main()->i64{return 23;}");
+    let admitted =
+        crate::backend::planning::admit(fixture.backend_input(RuntimeTracePolicy::Omitted))
+            .expect("fixture must cross the whole-program admission boundary");
+    let error = super::pipeline::compile_admitted(
+        &admitted,
+        super::NativePilotInspection {
+            lowered: true,
+            ..Default::default()
+        },
+        Some(&mut FailingWriter),
+    )
+    .expect_err("post-admission failure must remain terminal");
+
+    assert!(matches!(error, super::NativePilotError::Observation(_)));
 }
 
 #[test]

@@ -12,6 +12,7 @@ mod array_legality;
 mod artifacts;
 mod dispatch;
 mod emit;
+mod fact_projection;
 mod frame;
 mod layout;
 mod legality;
@@ -19,11 +20,10 @@ mod literal_data;
 mod lower;
 mod machine;
 mod native;
-mod pilot_facts;
 mod planning;
 
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use pilot_facts::{project_layouts, project_trace};
+pub(in crate::backend) use fact_projection::{project_layouts, project_trace};
 mod runtime_trace;
 mod static_fields;
 mod symbol;
