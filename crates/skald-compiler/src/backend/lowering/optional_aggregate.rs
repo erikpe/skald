@@ -306,6 +306,9 @@ impl<'plan> Lowerer<'plan, '_> {
             .cloned()
             .ok_or(PlanError::UnknownDeclaration)?;
         match fact.storage {
+            OptionalStorageFact::InlineArray(array) => {
+                self.copy_inline_array_payload(block, destination, source, array, assigning, span)
+            }
             OptionalStorageFact::Nested(inner) => {
                 let inner_fact = self
                     .plan()
@@ -421,7 +424,14 @@ impl<'plan> Lowerer<'plan, '_> {
                             )
                         }
                     }
-                    OptionalStorageFact::InlineArray(_) => Err(PlanError::InvalidDomain.into()),
+                    OptionalStorageFact::InlineArray(array) => self.copy_inline_array_payload(
+                        block,
+                        destination,
+                        source,
+                        array,
+                        assigning,
+                        span,
+                    ),
                 }
             }
             _ => Err(PlanError::InvalidDomain.into()),
@@ -454,7 +464,10 @@ impl<'plan> Lowerer<'plan, '_> {
             OptionalStorageFact::Nested(inner) => {
                 self.cleanup_optional_payload(block, inner, payload, span)?
             }
-            OptionalStorageFact::InlineArray(_) => return Err(PlanError::InvalidDomain.into()),
+            OptionalStorageFact::InlineArray(array) => {
+                let handle = self.load_place(block, &payload)?;
+                self.release_inline_array(block, handle, array, span)?;
+            }
             _ => return Err(PlanError::InvalidDomain.into()),
         }
         self.store_optional_state(block, destination, optional, 0)?;
@@ -505,7 +518,30 @@ impl<'plan> Lowerer<'plan, '_> {
                     span,
                 },
             ),
-            OptionalStorageFact::InlineArray(_) => Err(PlanError::InvalidDomain.into()),
+            OptionalStorageFact::InlineArray(array) => {
+                let handle = self.load_place(block, &destination)?;
+                self.release_inline_array(block, handle, array, span)
+            }
+        }
+    }
+
+    fn copy_inline_array_payload(
+        &mut self,
+        block: BlockId,
+        destination: MirPlace,
+        source: MirPlace,
+        array: crate::identity::ArrayTypeId,
+        assigning: bool,
+        span: Span,
+    ) -> Result<(), LowerError> {
+        let source = self.load_place(block, &source)?;
+        let replacement = self.clone_inline_array(block, source, array, span)?;
+        if assigning {
+            let previous = self.load_place(block, &destination)?;
+            self.store_place(block, &destination, replacement)?;
+            self.release_inline_array(block, previous, array, span)
+        } else {
+            self.store_place(block, &destination, replacement)
         }
     }
 

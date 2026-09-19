@@ -36,6 +36,7 @@ pub(in crate::backend) fn lower_next<'plan>(
                     | crate::backend::plan::HelperFamily::ArrayElementDestroyer
                     | crate::backend::plan::HelperFamily::ArrayRelease
                     | crate::backend::plan::HelperFamily::ArraySharedFinalizer
+                    | crate::backend::plan::HelperFamily::RawClassCopy
             ) =>
         {
             super::generated_array::lower(admitted, owner, key)?

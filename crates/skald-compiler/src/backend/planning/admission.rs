@@ -19,7 +19,10 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     // Class metadata, copy helpers, finalizers and shared-owner helpers are
     // complete; wrapper/container helper families remain staged separately.
     if !input.reachable_artifacts_only()
-        && (!program.array_types.is_empty()
+        && (program
+            .array_types
+            .iter()
+            .any(|array| !supported_array(program, array.id))
             || program
                 .optional_types
                 .iter()
@@ -514,7 +517,8 @@ fn supported_constructor_copy(
                         MirSynthesizedFieldCopy::Scalar { .. }
                         | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                         | MirSynthesizedFieldCopy::Shared { .. }
-                        | MirSynthesizedFieldCopy::OptionalShared { .. } => {}
+                        | MirSynthesizedFieldCopy::OptionalShared { .. }
+                        | MirSynthesizedFieldCopy::Array { .. } => {}
                         MirSynthesizedFieldCopy::OptionalClass { operation, .. } => {
                             pending.push(operation)
                         }
@@ -564,7 +568,8 @@ fn supported_assignment_copy(
                         MirSynthesizedFieldCopy::Scalar { .. }
                         | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                         | MirSynthesizedFieldCopy::Shared { .. }
-                        | MirSynthesizedFieldCopy::OptionalShared { .. } => {}
+                        | MirSynthesizedFieldCopy::OptionalShared { .. }
+                        | MirSynthesizedFieldCopy::Array { .. } => {}
                         MirSynthesizedFieldCopy::OptionalClass { operation, .. } => {
                             pending.push(operation)
                         }
@@ -583,22 +588,36 @@ fn supported_assignment_copy(
 
 fn supported_array(program: &MirProgram, array: crate::identity::ArrayTypeId) -> bool {
     program.array_type(array).is_some_and(|array| {
-        matches!(
-            array.element,
-            MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool | MirType::F64
-        ) && array
+        let copy = array
             .lifecycle
-            .default
-            .is_none_or(|operation| operation == MirArrayDefaultElement::Primitive)
-            && array
-                .lifecycle
-                .copy
-                .is_none_or(|operation| operation == MirArrayCopyElement::Primitive)
-            && array
-                .lifecycle
-                .assignment
-                .is_none_or(|operation| operation == MirArrayAssignElement::Primitive)
-            && array.lifecycle.destruction == MirArrayDestroyElement::Trivial
+            .copy
+            .is_none_or(|operation| match operation {
+                MirArrayCopyElement::Class { operation, .. }
+                | MirArrayCopyElement::OptionalClass { operation, .. } => {
+                    supported_constructor_copy(program, operation)
+                }
+                MirArrayCopyElement::Optional(optional) => supported_optional(program, optional),
+                _ => true,
+            });
+        let assignment = array
+            .lifecycle
+            .assignment
+            .is_none_or(|operation| match operation {
+                MirArrayAssignElement::Class { operation, .. } => {
+                    supported_assignment_copy(program, operation)
+                }
+                MirArrayAssignElement::OptionalClass {
+                    copy_constructor,
+                    copy_assignment,
+                    ..
+                } => {
+                    supported_constructor_copy(program, copy_constructor)
+                        && supported_assignment_copy(program, copy_assignment)
+                }
+                MirArrayAssignElement::Optional(optional) => supported_optional(program, optional),
+                _ => true,
+            });
+        copy && assignment
     })
 }
 
@@ -619,16 +638,14 @@ fn supported_array_instruction(
         | MirArrayInstruction::Offset { array, .. }
         | MirArrayInstruction::Boundary { array, .. } => *array,
         MirArrayInstruction::InitializeElement { backing, .. }
-        | MirArrayInstruction::InitializeNext { backing, .. } => {
+        | MirArrayInstruction::CompleteElement { backing, .. }
+        | MirArrayInstruction::InitializeNext { backing, .. }
+        | MirArrayInstruction::CopyNext { backing, .. } => {
             let _ = backing;
-            return Ok(matches!(
-                operation,
-                MirArrayInstruction::InitializeElement { .. }
-                    | MirArrayInstruction::InitializeNext {
-                        operation: MirArrayDefaultElement::Primitive,
-                        ..
-                    }
-            ));
+            if let MirArrayInstruction::CopyNext { source, .. } = operation {
+                place(source, owner)?;
+            }
+            return Ok(true);
         }
         MirArrayInstruction::Publish { .. } | MirArrayInstruction::AnchorEnd { .. } => {
             return Ok(true)
@@ -640,11 +657,14 @@ fn supported_array_instruction(
         MirArrayInstruction::ElementAssign {
             destination,
             source,
-            operation: MirArrayAssignElement::Primitive,
             ..
         } => {
             place(destination, owner)?;
             place(source, owner)?;
+            return Ok(true);
+        }
+        MirArrayInstruction::DestroyNext { owner: place, .. } => {
+            self::place(place, owner)?;
             return Ok(true);
         }
         _ => return Ok(false),
@@ -697,7 +717,7 @@ fn supported_optional(program: &MirProgram, optional: crate::identity::OptionalT
             MirOptionalStorage::SharedOwner(target) => supported_shared_target(program, target),
             MirOptionalStorage::InlineClass(_) => true,
             MirOptionalStorage::Nested(inner) => supported_optional(program, inner),
-            MirOptionalStorage::InlineArray(_) => false,
+            MirOptionalStorage::InlineArray(array) => supported_array(program, array),
         })
 }
 

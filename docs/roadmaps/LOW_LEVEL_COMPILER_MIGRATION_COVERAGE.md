@@ -3,7 +3,8 @@
 Status: phase preparation, executable model and private LA03 pilot complete;
 the focused [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
 is accepted and its [roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
-is active with the aggregate/lifecycle checkpoint passed, 2026-09-19.
+is active with array element lifecycle and generated-helper closure complete,
+2026-09-19.
 Model cumulative review covers `f1053782..495df6b9` plus the closing static-effect
 receipt fix and payload-contract/documentation changes. Production full-language
 migration, adoption and allocation remain pending. Archived child
@@ -135,11 +136,11 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `SharedFieldInitialize`, `SharedFieldReplace` | `lower/ownership.rs` | Initialize or replace edge; retain secured replacement before old-owner release | E07 | — | Delivered by LM08 |
 | `StringInitialize` | `lower/strings.rs`, `literal_data.rs` | Exact byte slice/descriptor with pooled immutable backing and planned initializer shape | E11 | — | LA04 |
 | `OptionalInitialize`, `OptionalAssign` | `lower/optional/scalar.rs` | Exact primitive presence/payload representation; assignment preserves absence semantics | E08 | — | Delivered by LM10 for primitive tagged optionals |
-| `AggregateOptionalInitialize`, `AggregateOptionalAssign`, `AggregateOptionalPublish`, `AggregateOptionalCleanup` | `lower/optional/aggregate.rs` | Recursive state/payload layout, publish after initialization, conditional cleanup and pin checks | E08 | — | Delivered by LM11 except inline-array payload execution, which follows its LM12–LM13 array helpers |
+| `AggregateOptionalInitialize`, `AggregateOptionalAssign`, `AggregateOptionalPublish`, `AggregateOptionalCleanup` | `lower/optional/aggregate.rs` | Recursive state/payload layout, publish after initialization, conditional cleanup and pin checks | E08 | — | Delivered by LM11 and LM13, including inline-array payload execution |
 | `ClassOptionalInitialize`, `ClassOptionalAssign`, `ClassOptionalPublish`, `ClassOptionalCleanup` | `lower/optional/inline_class.rs` | Aligned inline payload, copy/destruction order, explicit publication state and pinned-mutation behavior | E08 | — | Delivered by LM11 |
 | `EndOptionalView`, `EndOptionalBoxView` | `lower/optional/access.rs` | Real guard decrement under verified guard ownership; not equivalent to `EndCheckedView` | E08 | — | Delivered by LM11 |
 | `OptionalSharedInitialize`, `OptionalSharedAssign`, `OptionalSharedCleanup` | `lower/optional/shared_owner.rs` | Zero-niche absent owner, conditional retain/release and balanced self-assignment | E08 | G04 closed | Delivered by LM10 |
-| `Array` | `lower/array.rs` and siblings | All 29 members below; explicit lifecycle, checks, backing anchors and loops | E09, E10 | — | LA04 |
+| `Array` | `lower/array.rs` and siblings | All 29 members below; explicit lifecycle, checks, backing anchors and loops | E09, E10 | — | Storage and lifecycle delivered by LM12–LM13; indexed construction, slices and array aliases remain LM14 |
 | `Io` | `lower/io.rs` | All five runtime operations below; raw buffer pointers/lengths with anchored owner | E11 | — | LA04 |
 
 ## Rvalues, operations and places
@@ -219,14 +220,14 @@ LA03/LA04 implement their respective failure paths and LA05 checks complete pari
 
 ## Array and I/O suboperations
 
-LM12 delivers checked storage, allocation, primitive initialization/assignment,
-publication, release, length, positions, ordinary loops, aliases and anchors for
-primitive/trivial inline and shared arrays. LM13 owns the remaining element
-lifecycle shapes and complete generated-helper closure; LM14 owns indexed
-construction and slices. `backend/lowering/array.rs` dispatches the source
-protocol and `backend/lowering/generated_array.rs` provides the currently
-admitted primitive/trivial helper bodies. E09/E10 remain the legacy parity
-oracle until the later rows close.
+LM12 delivers checked storage, allocation, publication, release, length,
+positions, ordinary loops, aliases and anchors for inline and shared arrays.
+LM13 delivers every selected element lifecycle shape and the complete generated
+helper closure. LM14 owns indexed construction and slices.
+`backend/lowering/array.rs` dispatches the source protocol, while
+`backend/lowering/generated_array/` owns generated loop and element-lifecycle
+bodies. E09/E10 remain the legacy parity oracle for the protocols still assigned
+to LM14.
 
 | `MirArrayInstruction` members | Current specialized owner | Shared expansion invariant |
 | --- | --- | --- |
@@ -234,16 +235,16 @@ oracle until the later rows close.
 | `BeginIndexed`, `BindIndexed`, `InitializeIndexedElement`, `AdvanceIndexedElement` | `lower/array.rs` | Explicit prefix/length/binding state; element epoch evaluates once; advance only after completion |
 | `EndIndexedElement`, `CompleteIndexed` | `lower/array.rs` | Verified cleanup/backedge/publication markers currently no-op; preserve disposition rather than invent executable effects |
 | `InitializeElement`, `CompleteElement` | `lower/array.rs` | Ordered element-list evaluation and exact initialized-prefix advancement |
-| `InitializeNext`, `CopyNext` | `lower/array.rs`, `lower/array/lifecycle.rs`, `lower/array/shared_elements.rs` | Selected primitive/class/nested array/shared/optional element operations; recursive helpers explicit |
+| `InitializeNext`, `CopyNext` | `lower/array.rs`, `lower/generated_array/lifecycle.rs` | Delivered for every selected primitive/class/nested array/shared/optional element operation; recursive helpers explicit |
 | `Publish`, `PublishShared` | `lower/array.rs` | Publish descriptor or shared owner after completed initialization; planned header/metadata |
 | `Adopt`, `Replace` | `lower/array.rs` | Transfer produced backing; release old backing safely; no unintended extra clone |
-| `ElementAssign`, `DestroyNext`, `Release` | `lower/array.rs`, `lower/array/lifecycle.rs` | Exact element assignment/destruction plan, reverse cleanup and balanced count/free |
+| `ElementAssign`, `DestroyNext`, `Release` | `lower/array.rs`, `lower/generated_array/lifecycle.rs` | Delivered exact element assignment/destruction plans, reverse cleanup and balanced count/free |
 | `AnchorBegin`, `AnchorEnd`, `AliasBind` | `lower/array/anchors.rs`, `lower/array.rs` | Secure backing across replacement; distinguish descriptor alias from detached element alias |
 | `Normalize`, `Offset`, `Boundary` | `lower/array.rs`, `lower/array/slices.rs` | Signed/unsigned position normalization and boundary semantics; no unchecked element address before guard |
 | `SliceCopy`, `SliceAssignNext` | `lower/array/slices.rs`, `lower/array.rs` | Snapshot/overlap semantics, selected element lifecycle, ordered source/destination indices |
 | `SliceLengthCheck`, `SliceBoundsCheck` | `lower/array/slices.rs`, `lower/array.rs` | Exact failure reason before mutation or result publication |
 
-Array element plan members are explicit migration obligations:
+Array element plan members delivered by LM13 are:
 
 - Default: `Primitive`, `OptionalAbsent`, `Class`, `ArrayEmpty`, `SharedClass`,
   `SharedArrayEmpty`, `SharedOptionalBoxAbsent`.
@@ -258,9 +259,9 @@ Array element plan members are explicit migration obligations:
   failure results: `AllocationSize`, `IndexOutOfBounds`, `InvalidSliceBounds`,
   `SliceLengthMismatch`.
 
-LA04 must split family rows by concrete element/optional shape when recording
-implemented coverage. The current helpers cover recursive class/array graphs;
-their calls cannot be replaced with opaque legacy assembly snippets.
+The generated helpers cover recursive class/array graphs through typed callable
+dependencies and ordinary worklist completion; no helper body is constructed by
+recursive host calls or replaced with an opaque legacy assembly snippet.
 
 I/O members `StandardHandle`, `Open`, `Read`, `Write`, `Close` are dispatched in
 `lower/io.rs`. Shared lowering forms anchored buffers and ordered runtime calls;
@@ -285,11 +286,11 @@ LA03's pilot and LA04's full surface.
 | Generated/external family | Current construction/domain | Future owner and invariant | Evidence / gap | Delivery (pending) |
 | --- | --- | --- | --- | --- |
 | Ordinary source callable bodies | `lower.rs::lower_definition`; `executable_definitions()` includes function, static initializer, initializer, copy constructor, copy assignment, destructor, method bodies | Shared lowered callable; never recreate physically absent bodies from dense declarations | E15; — | LA03 pilot, LA04 full |
-| Six helpers per array ID: element initializer, element copier, clone, element destroyer, release, shared finalizer | `lower/array/helpers/{initialization,copy,destruction}.rs`; currently all declared array types | Shared helper LIR/worklist, explicit recursive calls and retain/free effects; one owner per symbol | E09, E10; — | LA04 |
-| Raw-address complete class copy wrappers | `lower/array/lifecycle.rs::lower_class_copy_helpers`; class dependency closure from array element shapes | Shared helper construction with checked component shapes; recursion broken by ordinary calls | E06, E09; — | LA04 |
+| Six helpers per array ID: element initializer, element copier, clone, element destroyer, release, shared finalizer | `backend/lowering/generated_array/`; retained array types | Shared helper LIR/worklist, explicit recursive calls and retain/free effects; one owner per symbol | E09, E10; — | Delivered by LM12–LM13 |
+| Raw-address complete class copy wrappers | `backend/lowering/generated_array/lifecycle.rs`; retained class dependency closure from array element shapes | Shared helper construction with checked component shapes; recursion broken by ordinary calls | E06, E09; — | Delivered by LM13 |
 | Shared handle retain/release helpers | `lower/ownership/helpers.rs`; array element and static shutdown needs | Shared lowered graphs, inherited attribution and visible call clobbers; no source trace frame | E07, E16; G04 closed | Delivered by LM08 |
-| Complete class finalizers | `lower/finalize.rs::lower_all`; currently all classes | Shared expansion of destruction plan: `UserBody`, `Field`, `SharedField`, `OptionalSharedField`, `OptionalClassField`, `OptionalField`, `ArrayField`, `Base`; free remains with releasing caller | E06, E07; — | Delivered by LM07 for `UserBody`, class `Field` and `Base`, and LM08 for `SharedField`; optional/array steps remain LM11/LM13 |
-| Exact optional-box finalizers | `lower/optional_box.rs`, `lower/finalize/optional.rs`; `exact_optional` box types | Shared recursive optional payload cleanup; same ordinary lifecycle/call pipeline | E08; G04 for caller | Delivered by LM11 except inline-array payload cleanup, which follows LM13 |
+| Complete class finalizers | `lower/finalize.rs::lower_all`; currently all classes | Shared expansion of destruction plan: `UserBody`, `Field`, `SharedField`, `OptionalSharedField`, `OptionalClassField`, `OptionalField`, `ArrayField`, `Base`; free remains with releasing caller | E06, E07; — | Delivered by LM07–LM08, LM11 and LM13 |
+| Exact optional-box finalizers | `lower/optional_box.rs`, `lower/finalize/optional.rs`; `exact_optional` box types | Shared recursive optional payload cleanup; same ordinary lifecycle/call pipeline | E08; G04 for caller | Delivered by LM11 and LM13, including inline-array payload cleanup |
 | Program initializer/finalizer | `lower/static_lifecycle.rs`; verified activation/shutdown coordinator | Shared lowered callables; `ZeroDefault` versus `Explicit` activation, exact reverse shutdown; transitions require no target runtime state | E14; — | LA04 |
 | Static cleanup shapes | `lower/static_lifecycle.rs`; `None`, `CompleteObject`, `OptionalClass`, `Shared`, `OptionalShared`, `AggregateOptional`, `Array` | Shared lowering realizes certified plan only; no backend activation discovery | E08, E14, E15; — | LA04 |
 | Exported `main` entry wrapper | `lower.rs::entry_wrapper` | Target entry ABI plus explicit runtime-marker/initializer/entry/finalizer calls; preserve entry result across shutdown; no synthetic trace frame | E02, E14; — | LA03 minimal, LA04 lifecycle |
@@ -816,12 +817,12 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Scalar operations, guarded numeric cells, primitive casts and ordinary CFG | Typed signatures/layouts, failure data and guard associations | Delivered pilot retained as the common base; family-specific terminators complete with LM05–LM15 |
 | Complex places, object origins, aggregate results, aliases and receiver components | Exact/complete layouts, field/base offsets, object-view components and role-based signatures | Delivered by LM05; checked-view binding remains LM06 and array-alias binding remains LM14 |
 | Direct/virtual/interface dispatch, checked views, object casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | Delivered by LM06; owner-producing shared casts remain with LM08 |
-| Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | Delivered by LM07 for scalar/class copy and user/class/base destruction; remaining step families retain LM08/LM11/LM13 owners |
+| Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | Delivered by LM07–LM08, LM11 and LM13 for all currently admitted scalar, class, optional, shared and array steps |
 | Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | Delivered by LM08 for class owners; wrapper/container owners reuse this core in LM10–LM14 |
 | Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | Delivered by LM10; aggregate/class/boxed guards remain LM11 |
-| Aggregate/class optionals, optional views and optional boxes | Recursive optional layouts, object views, box layers/allocation and finalizer dependencies | LM11 |
+| Aggregate/class optionals, optional views and optional boxes | Recursive optional layouts, object views, box layers/allocation and finalizer dependencies | Delivered by LM11; inline-array payload lifecycle delivered by LM13 |
 | Array storage, construction, indexing, positions and anchors | Descriptor/element layouts, strides, bounds and descriptor recipes | Delivered by LM12 for primitive/trivial inline, shared and optional-shared owners; indexed construction and slices remain LM14 |
-| Array copy/assignment/destruction and six generated array helper families | Element lifecycle facts plus canonical recursive helper declarations/dependencies | LM13 |
+| Array copy/assignment/destruction and six generated array helper families | Element lifecycle facts plus canonical recursive helper declarations/dependencies | Delivered by LM13 |
 | Indexed construction, element lists, slices and array aliases | Array layouts, operation identities and failure-message resources | LM14 |
 | String literals, panic slices and five standard I/O operations | Literal recipes, runtime service signatures/effects and failure data | LM15 |
 | Active static initialization, reverse shutdown, retained-inactive storage and process entry | Certified dispositions, activation/shutdown records, coordinators and complete/reachable roots | LM16 |

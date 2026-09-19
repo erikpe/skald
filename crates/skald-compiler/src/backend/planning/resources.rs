@@ -344,6 +344,7 @@ fn declare_generated_resources(
         .into_iter()
         .filter(|class| !input.reachable_artifacts_only() || class_artifacts.contains(&class.class))
         .collect::<Vec<_>>();
+    let raw_copy_classes = required_raw_copy_classes(input.program(), facts)?;
     for class in &classes {
         declare_helper(
             facts,
@@ -352,6 +353,20 @@ fn declare_generated_resources(
             helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
             BTreeSet::new(),
         )?;
+    }
+    for class in &classes {
+        if raw_copy_classes.contains(&class.class) {
+            declare_helper(
+                facts,
+                HelperFamily::RawClassCopy,
+                class.complete_layout,
+                helper_signature(
+                    &[ScalarType::DataAddress, ScalarType::DataAddress],
+                    ReturnShape::Unit,
+                ),
+                BTreeSet::new(),
+            )?;
+        }
     }
     for class in &classes {
         let finalizer = helper_for(facts, HelperFamily::ClassFinalizer, class.complete_layout)?;
@@ -414,7 +429,16 @@ fn declare_generated_resources(
                     }
                     continue;
                 }
-                _ => continue,
+                DestructionStepFact::ArrayField(field) => {
+                    let field = facts
+                        .semantic
+                        .field(field)
+                        .ok_or(PlanError::UnknownDeclaration)?;
+                    let SemanticType::Array(array) = field.ty else {
+                        return Err(PlanError::InvalidDomain);
+                    };
+                    array_helper_dependency(facts, array, HelperFamily::ArrayRelease)?
+                }
             };
             add_generated_dependency(facts, finalizer, dependency);
         }
@@ -457,7 +481,390 @@ fn declare_generated_resources(
             add_generated_dependency(facts, finalizer, dependency);
         }
     }
+    declare_raw_class_copy_dependencies(input.program(), facts, &classes)?;
+    declare_array_lifecycle_dependencies(facts)?;
     Ok(())
+}
+
+fn required_raw_copy_classes(
+    program: &MirProgram,
+    facts: &PlanFacts,
+) -> Result<BTreeSet<crate::identity::ClassId>, PlanError> {
+    let mut required = BTreeSet::new();
+    let mut pending = facts
+        .semantic
+        .arrays
+        .iter()
+        .filter(|array| {
+            helper_for(
+                facts,
+                HelperFamily::ArrayElementCopier,
+                array.descriptor_layout,
+            )
+            .is_ok()
+        })
+        .filter_map(|array| array.copy.map(|_| array.element))
+        .collect::<Vec<_>>();
+
+    while let Some(ty) = pending.pop() {
+        match ty {
+            SemanticType::Class(class) => {
+                if !required.insert(class) {
+                    continue;
+                }
+                let capability = &program
+                    .class(class)
+                    .ok_or(PlanError::UnknownDeclaration)?
+                    .copy_constructor;
+                match capability {
+                    crate::mir::MirCopyCapability::User(copy) => {
+                        if let Some(base) = copy.base {
+                            pending.push(SemanticType::Class(base.base));
+                        }
+                    }
+                    crate::mir::MirCopyCapability::Synthesized(copy) => {
+                        if let Some(base) = copy.base {
+                            pending.push(SemanticType::Class(base.base));
+                        }
+                        for field in &copy.fields {
+                            pending.push(
+                                facts
+                                    .semantic
+                                    .field(field.field())
+                                    .ok_or(PlanError::UnknownDeclaration)?
+                                    .ty,
+                            );
+                        }
+                    }
+                    crate::mir::MirCopyCapability::Unavailable => {
+                        return Err(PlanError::InvalidDomain);
+                    }
+                }
+            }
+            SemanticType::Array(array) => {
+                let array = facts
+                    .semantic
+                    .array(array)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                if array.copy.is_some() {
+                    pending.push(array.element);
+                }
+            }
+            SemanticType::Optional(optional) => {
+                let optional = facts
+                    .semantic
+                    .optional(optional)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                match optional.storage {
+                    OptionalStorageFact::InlineClass(class) => {
+                        pending.push(SemanticType::Class(class));
+                    }
+                    OptionalStorageFact::Nested(inner) => {
+                        pending.push(SemanticType::Optional(inner));
+                    }
+                    OptionalStorageFact::InlineArray(array) => {
+                        pending.push(SemanticType::Array(array));
+                    }
+                    OptionalStorageFact::Scalar | OptionalStorageFact::SharedOwner(_) => {}
+                }
+            }
+            SemanticType::I64
+            | SemanticType::U64
+            | SemanticType::U8
+            | SemanticType::Bool
+            | SemanticType::F64
+            | SemanticType::Shared(_)
+            | SemanticType::Function(_)
+            | SemanticType::Interface(_)
+            | SemanticType::Obj
+            | SemanticType::Unit => {}
+        }
+    }
+    Ok(required)
+}
+
+fn declare_raw_class_copy_dependencies(
+    program: &MirProgram,
+    facts: &mut PlanFacts,
+    classes: &[ClassLayoutFact],
+) -> Result<(), PlanError> {
+    for class in classes {
+        let Ok(helper) = helper_for(facts, HelperFamily::RawClassCopy, class.complete_layout)
+        else {
+            continue;
+        };
+        let capability = &program
+            .class(class.class)
+            .ok_or(PlanError::UnknownDeclaration)?
+            .copy_constructor;
+        let mut dependencies = BTreeSet::new();
+        match capability {
+            crate::mir::MirCopyCapability::User(copy) => {
+                dependencies.insert(ArtifactId::Callable(LirCallableId::Source(
+                    copy.operation.into(),
+                )));
+                dependencies.insert(ArtifactId::Data(DataKey::ClassDispatch(class.class)));
+                if let Some(base) = copy.base {
+                    dependencies.insert(raw_class_copy_dependency(facts, base.base)?);
+                }
+            }
+            crate::mir::MirCopyCapability::Synthesized(copy) => {
+                if let Some(base) = copy.base {
+                    dependencies.insert(raw_class_copy_dependency(facts, base.base)?);
+                }
+                for field in &copy.fields {
+                    let fact = facts
+                        .semantic
+                        .field(field.field())
+                        .ok_or(PlanError::UnknownDeclaration)?;
+                    dependencies.extend(copy_type_dependencies(facts, fact.ty)?);
+                }
+            }
+            crate::mir::MirCopyCapability::Unavailable => continue,
+        }
+        if !dependencies.is_empty() {
+            dependencies.insert(ArtifactId::Callable(helper));
+        }
+        for dependency in dependencies {
+            add_generated_dependency(facts, helper, dependency);
+        }
+    }
+    Ok(())
+}
+
+fn declare_array_lifecycle_dependencies(facts: &mut PlanFacts) -> Result<(), PlanError> {
+    for array in facts.semantic.arrays.clone() {
+        let Ok(initializer) = helper_for(
+            facts,
+            HelperFamily::ArrayElementInitializer,
+            array.descriptor_layout,
+        ) else {
+            continue;
+        };
+        let copier = helper_for(
+            facts,
+            HelperFamily::ArrayElementCopier,
+            array.descriptor_layout,
+        )?;
+        let destroyer = helper_for(
+            facts,
+            HelperFamily::ArrayElementDestroyer,
+            array.descriptor_layout,
+        )?;
+        let mut initialize = BTreeSet::new();
+        match array.default {
+            Some(ArrayDefaultElementFact::Class { class, initializer }) => {
+                initialize.insert(ArtifactId::Callable(LirCallableId::Source(
+                    initializer.into(),
+                )));
+                initialize.insert(ArtifactId::Data(DataKey::ClassDispatch(class)));
+            }
+            Some(ArrayDefaultElementFact::SharedClass { class, initializer }) => {
+                initialize.insert(ArtifactId::Runtime(RuntimeService::Allocate));
+                initialize.insert(ArtifactId::Callable(LirCallableId::Source(
+                    initializer.into(),
+                )));
+                initialize.insert(ArtifactId::Data(DataKey::ClassDispatch(class)));
+            }
+            Some(ArrayDefaultElementFact::SharedArrayEmpty(inner)) => {
+                initialize.insert(ArtifactId::Runtime(RuntimeService::Allocate));
+                initialize.insert(ArtifactId::Data(DataKey::ArrayDescriptor(inner)));
+            }
+            Some(ArrayDefaultElementFact::SharedOptionalBoxAbsent(target)) => {
+                initialize.insert(ArtifactId::Runtime(RuntimeService::Allocate));
+                initialize.insert(ArtifactId::Data(DataKey::OptionalBoxDescriptor(target)));
+            }
+            _ => {}
+        }
+        add_helper_dependencies(facts, initializer, initialize);
+
+        let copy = array.copy.map_or(Ok(BTreeSet::new()), |copy| match copy {
+            ArrayCopyElementFact::Primitive | ArrayCopyElementFact::OptionalPrimitive => {
+                Ok(BTreeSet::new())
+            }
+            ArrayCopyElementFact::Class { class, .. } => {
+                Ok([raw_class_copy_dependency(facts, class)?]
+                    .into_iter()
+                    .collect())
+            }
+            ArrayCopyElementFact::OptionalClass { .. } | ArrayCopyElementFact::Optional(_) => {
+                copy_type_dependencies(facts, array.element)
+            }
+            ArrayCopyElementFact::Array(inner) => Ok([array_helper_dependency(
+                facts,
+                inner,
+                HelperFamily::ArrayClone,
+            )?]
+            .into_iter()
+            .collect()),
+            ArrayCopyElementFact::Shared(_) | ArrayCopyElementFact::OptionalShared(_) => {
+                Ok([owner_helper_dependency(facts, HelperFamily::Retain)?]
+                    .into_iter()
+                    .collect())
+            }
+        })?;
+        add_helper_dependencies(facts, copier, copy);
+
+        let destroy = match array.destruction {
+            ArrayDestroyElementFact::Trivial => BTreeSet::new(),
+            ArrayDestroyElementFact::Class(class) => [class_helper_dependency(
+                facts,
+                class,
+                HelperFamily::ClassFinalizer,
+            )?]
+            .into_iter()
+            .collect(),
+            ArrayDestroyElementFact::OptionalClass(_)
+            | ArrayDestroyElementFact::OptionalShared(_)
+            | ArrayDestroyElementFact::Optional(_) => {
+                destroy_type_dependencies(facts, array.element)?
+            }
+            ArrayDestroyElementFact::Array(inner) => [array_helper_dependency(
+                facts,
+                inner,
+                HelperFamily::ArrayRelease,
+            )?]
+            .into_iter()
+            .collect(),
+            ArrayDestroyElementFact::Shared(_) => {
+                [owner_helper_dependency(facts, HelperFamily::Release)?]
+                    .into_iter()
+                    .collect()
+            }
+        };
+        add_helper_dependencies(facts, destroyer, destroy);
+    }
+    Ok(())
+}
+
+fn add_helper_dependencies(
+    facts: &mut PlanFacts,
+    helper: LirCallableId,
+    mut dependencies: BTreeSet<ArtifactId>,
+) {
+    if !dependencies.is_empty() {
+        dependencies.insert(ArtifactId::Callable(helper));
+    }
+    for dependency in dependencies {
+        add_generated_dependency(facts, helper, dependency);
+    }
+}
+
+fn copy_type_dependencies(
+    facts: &PlanFacts,
+    root: SemanticType,
+) -> Result<BTreeSet<ArtifactId>, PlanError> {
+    let mut dependencies = BTreeSet::new();
+    let mut pending = vec![root];
+    while let Some(ty) = pending.pop() {
+        match ty {
+            SemanticType::Class(class) => {
+                dependencies.insert(raw_class_copy_dependency(facts, class)?);
+            }
+            SemanticType::Array(array) => {
+                dependencies.insert(array_helper_dependency(
+                    facts,
+                    array,
+                    HelperFamily::ArrayClone,
+                )?);
+            }
+            SemanticType::Shared(_) => {
+                dependencies.insert(owner_helper_dependency(facts, HelperFamily::Retain)?);
+            }
+            SemanticType::Optional(optional) => {
+                let fact = facts
+                    .semantic
+                    .optional(optional)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                pending.push(fact.payload);
+            }
+            _ => {}
+        }
+    }
+    Ok(dependencies)
+}
+
+fn destroy_type_dependencies(
+    facts: &PlanFacts,
+    root: SemanticType,
+) -> Result<BTreeSet<ArtifactId>, PlanError> {
+    let mut dependencies = BTreeSet::new();
+    let mut pending = vec![root];
+    while let Some(ty) = pending.pop() {
+        match ty {
+            SemanticType::Class(class) => {
+                dependencies.insert(class_helper_dependency(
+                    facts,
+                    class,
+                    HelperFamily::ClassFinalizer,
+                )?);
+            }
+            SemanticType::Array(array) => {
+                dependencies.insert(array_helper_dependency(
+                    facts,
+                    array,
+                    HelperFamily::ArrayRelease,
+                )?);
+            }
+            SemanticType::Shared(_) => {
+                dependencies.insert(owner_helper_dependency(facts, HelperFamily::Release)?);
+            }
+            SemanticType::Optional(optional) => {
+                let fact = facts
+                    .semantic
+                    .optional(optional)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                pending.push(fact.payload);
+            }
+            _ => {}
+        }
+    }
+    Ok(dependencies)
+}
+
+fn raw_class_copy_dependency(
+    facts: &PlanFacts,
+    class: crate::identity::ClassId,
+) -> Result<ArtifactId, PlanError> {
+    class_helper_dependency(facts, class, HelperFamily::RawClassCopy)
+}
+
+fn class_helper_dependency(
+    facts: &PlanFacts,
+    class: crate::identity::ClassId,
+    family: HelperFamily,
+) -> Result<ArtifactId, PlanError> {
+    let layout = facts
+        .semantic
+        .class(class)
+        .ok_or(PlanError::UnknownDeclaration)?
+        .complete_layout;
+    Ok(ArtifactId::Callable(helper_for(facts, family, layout)?))
+}
+
+fn array_helper_dependency(
+    facts: &PlanFacts,
+    array: crate::identity::ArrayTypeId,
+    family: HelperFamily,
+) -> Result<ArtifactId, PlanError> {
+    let layout = facts
+        .semantic
+        .array(array)
+        .ok_or(PlanError::UnknownDeclaration)?
+        .descriptor_layout;
+    Ok(ArtifactId::Callable(helper_for(facts, family, layout)?))
+}
+
+fn owner_helper_dependency(
+    facts: &PlanFacts,
+    family: HelperFamily,
+) -> Result<ArtifactId, PlanError> {
+    let layout = facts
+        .semantic
+        .shared_header
+        .ok_or(PlanError::InvalidLayout)?
+        .handle_layout;
+    Ok(ArtifactId::Callable(helper_for(facts, family, layout)?))
 }
 
 fn optional_cleanup_dependencies(
@@ -496,7 +903,13 @@ fn optional_cleanup_dependencies(
                 )?));
             }
             crate::backend::plan::OptionalStorageFact::Nested(inner) => pending.push(inner),
-            crate::backend::plan::OptionalStorageFact::InlineArray(_) => {}
+            crate::backend::plan::OptionalStorageFact::InlineArray(array) => {
+                dependencies.insert(array_helper_dependency(
+                    facts,
+                    array,
+                    HelperFamily::ArrayRelease,
+                )?);
+            }
         }
     }
     Ok(dependencies)
@@ -741,7 +1154,33 @@ fn owner_helper_needs(
             .map(|definition| definition.callable())
             .collect()
     };
-    let mut retain = false;
+    let retained_array = |array: &ArrayLayoutFact| {
+        !input.reachable_artifacts_only()
+            || input
+                .required_runtime_entities()
+                .any(|entity| entity == BackendRequiredRuntimeEntity::ArrayLifecycle(array.array))
+    };
+    let mut retain = facts
+        .semantic
+        .arrays
+        .iter()
+        .filter(|array| retained_array(array))
+        .any(|array| {
+            matches!(
+                array.copy,
+                Some(
+                    ArrayCopyElementFact::Shared(_)
+                        | ArrayCopyElementFact::OptionalShared(_)
+                        | ArrayCopyElementFact::Optional(_)
+                )
+            )
+        })
+        || classes.iter().any(|class| {
+            constructor_copy_uses_shared(
+                input.program(),
+                crate::mir::MirSelectedCopyOperation::Synthesized(*class),
+            )
+        });
     let mut release = classes.iter().any(|class| {
         facts.semantic.class(*class).is_some_and(|class| {
             class.destruction.iter().any(|step| {
@@ -752,7 +1191,19 @@ fn owner_helper_needs(
                 )
             })
         })
-    });
+    }) || facts
+        .semantic
+        .arrays
+        .iter()
+        .filter(|array| retained_array(array))
+        .any(|array| {
+            matches!(
+                array.destruction,
+                ArrayDestroyElementFact::Shared(_)
+                    | ArrayDestroyElementFact::OptionalShared(_)
+                    | ArrayDestroyElementFact::Optional(_)
+            )
+        });
     for definition in input.program().executable_definitions() {
         if !reachable.contains(&definition.callable()) {
             continue;

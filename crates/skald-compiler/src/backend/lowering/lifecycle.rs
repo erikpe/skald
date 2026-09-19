@@ -262,7 +262,13 @@ impl<'plan> Lowerer<'plan, '_> {
                         span,
                     },
                 ),
-            _ => Err(PlanError::InvalidDomain.into()),
+            MirSynthesizedFieldCopy::Array { field, array } => {
+                let source = source.clone().project_field(field);
+                let destination = destination.clone().project_field(field);
+                let handle = self.load_place(block, &source)?;
+                let copy = self.clone_inline_array(block, handle, array, span)?;
+                self.store_place(block, &destination, copy)
+            }
         }
     }
 
@@ -348,7 +354,15 @@ impl<'plan> Lowerer<'plan, '_> {
                         span,
                     },
                 ),
-            _ => Err(PlanError::InvalidDomain.into()),
+            MirSynthesizedFieldCopy::Array { field, array } => {
+                let source = source.clone().project_field(field);
+                let destination = destination.clone().project_field(field);
+                let handle = self.load_place(block, &source)?;
+                let copy = self.clone_inline_array(block, handle, array, span)?;
+                let previous = self.load_place(block, &destination)?;
+                self.store_place(block, &destination, copy)?;
+                self.release_inline_array(block, previous, array, span)
+            }
         }
     }
 

@@ -197,7 +197,37 @@ pub(super) fn lower_class_finalizer<'plan>(
                     address,
                 )?;
             }
-            _ => return Err(PlanError::InvalidDomain.into()),
+            DestructionStepFact::ArrayField(field) => {
+                let field = plan
+                    .semantic()
+                    .field(field)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                let crate::backend::plan::SemanticType::Array(array) = field.ty else {
+                    return Err(PlanError::InvalidDomain.into());
+                };
+                let address = byte_offset(&mut builder, current, complete, field.offset)?;
+                let data = plan.profile().data_layout;
+                let handle = builder.append(
+                    current,
+                    Operation::Load {
+                        address,
+                        representation: crate::backend::lir::MemoryRepresentation {
+                            scalar: ScalarType::DataAddress,
+                            bytes: data.pointer_bytes,
+                            alignment: data.pointer_alignment,
+                        },
+                    },
+                )?[0];
+                call_array_helper(
+                    plan,
+                    &mut builder,
+                    current,
+                    owner.key(),
+                    array,
+                    HelperFamily::ArrayRelease,
+                    handle,
+                )?;
+            }
         }
     }
     builder.terminate(current, Terminator::Return(vec![]))?;
@@ -317,8 +347,32 @@ fn emit_optional_cleanup<'plan>(
             builder.terminate(body, Terminator::Jump(edge(cleanup.complete)))?;
             Ok(cleanup.complete)
         }
-        crate::backend::plan::OptionalStorageFact::InlineArray(_) => {
-            Err(PlanError::InvalidDomain.into())
+        crate::backend::plan::OptionalStorageFact::InlineArray(array) => {
+            let cleanup = optional_present_branch(plan, builder, current, fact, address)?;
+            let payload = byte_offset(builder, cleanup.body, address, fact.payload_offset)?;
+            let data = plan.profile().data_layout;
+            let handle = builder.append(
+                cleanup.body,
+                Operation::Load {
+                    address: payload,
+                    representation: crate::backend::lir::MemoryRepresentation {
+                        scalar: ScalarType::DataAddress,
+                        bytes: data.pointer_bytes,
+                        alignment: data.pointer_alignment,
+                    },
+                },
+            )?[0];
+            call_array_helper(
+                plan,
+                builder,
+                cleanup.body,
+                boundary,
+                array,
+                HelperFamily::ArrayRelease,
+                handle,
+            )?;
+            builder.terminate(cleanup.body, Terminator::Jump(edge(cleanup.complete)))?;
+            Ok(cleanup.complete)
         }
     }
 }
@@ -410,6 +464,46 @@ fn call_owner_helper<'plan>(
         Operation::Call(Call {
             target: CallTarget::Direct(ArtifactId::Callable(target)),
             signature,
+            arguments: vec![CallArgument {
+                role: ComponentRole::Parameter(0),
+                value: handle,
+            }],
+            attribution: CallAttribution::InheritedOperation { boundary },
+        }),
+    )?;
+    Ok(())
+}
+
+fn call_array_helper<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    block: crate::backend::lir::BlockHandle<'plan>,
+    boundary: LirCallableId,
+    array: crate::identity::ArrayTypeId,
+    family: HelperFamily,
+    handle: ValueHandle<'plan>,
+) -> Result<(), LowerError> {
+    let layout = plan
+        .semantic()
+        .array(array)
+        .ok_or(PlanError::UnknownDeclaration)?
+        .descriptor_layout;
+    let target = plan
+        .resources()
+        .generated
+        .iter()
+        .find_map(|generated| match generated.callable {
+            LirCallableId::Helper(key) if key.family == family && key.layout == layout => {
+                Some(generated.callable)
+            }
+            _ => None,
+        })
+        .ok_or(PlanError::UnknownDeclaration)?;
+    builder.append(
+        block,
+        Operation::Call(Call {
+            target: CallTarget::Direct(ArtifactId::Callable(target)),
+            signature: callable_signature(plan, target)?,
             arguments: vec![CallArgument {
                 role: ComponentRole::Parameter(0),
                 value: handle,

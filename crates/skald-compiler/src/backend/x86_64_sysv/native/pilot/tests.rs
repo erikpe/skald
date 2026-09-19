@@ -287,6 +287,22 @@ fn empty_inline_array_uses_its_null_representation_without_header_access() {
 }
 
 #[test]
+fn nontrivial_array_element_lifecycle_executes_through_generated_helpers() {
+    let fixture = fixture(
+        MirMode::Default,
+        concat!(
+            "class Item{value:i64;init(){self.value=0;}",
+            "copy(ref other:Item){self.value=other.value;}",
+            "assign(ref other:Item){self.value=other.value;}destroy{}}",
+            "fn main()->i64{var source:Item[]=Item[](2u);source[0].value=7;",
+            "var copied:Item[]=source;copied[1]=source[0];return copied[1].value;}"
+        ),
+    );
+    let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
+    assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 7);
+}
+
+#[test]
 fn object_initialization_dispatch_and_checked_views_execute_through_the_verified_path() {
     let source = concat!(
         "interface Readable { fn read() -> i64; fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64; }",

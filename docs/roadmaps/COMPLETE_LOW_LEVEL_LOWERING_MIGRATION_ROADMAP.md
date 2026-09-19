@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM12 are complete and LM13 is next.
+Status: active; LM01–LM13 are complete and LM14 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -50,7 +50,7 @@ per-callable or per-operation fallback.
 - [x] LM10 — Lower primitive and shared-owner optional behavior
 - [x] LM11 — Lower aggregate, class and boxed optional behavior
 - [x] LM12 — Lower array storage, construction, positions and anchors
-- [ ] LM13 — Lower array element lifecycle and generated helper families
+- [x] LM13 — Lower array element lifecycle and generated helper families
 - [ ] LM14 — Lower indexed construction, slices and array aliases
 - [ ] LM15 — Lower strings, literal data and standard I/O
 - [ ] LM16 — Lower static lifecycle and complete entry orchestration
@@ -457,13 +457,13 @@ repository gates are recorded with this implementation.
 **Purpose:** implement every concrete element default/copy/assignment/destruction
 shape and recursive helper closure.
 
-- [ ] Lower primitive, optional, class, nested array, shared and optional-shared
+- [x] Lower primitive, optional, class, nested array, shared and optional-shared
   element initialization/copy/assignment/destruction plans.
-- [ ] Lower ordered element-list construction and advance the prefix only after
+- [x] Lower ordered element-list construction and advance the prefix only after
   complete slot initialization.
-- [ ] Generate the six array helper families plus raw-address class-copy wrappers
+- [x] Generate the six array helper families plus raw-address class-copy wrappers
   with deterministic reservation/completion and typed dependencies.
-- [ ] Cover recursive class/array graphs without recursive host calls or body
+- [x] Cover recursive class/array graphs without recursive host calls or body
   duplication.
 
 **Tests:** every element-plan cell, nested/shared arrays, reverse partial cleanup,
@@ -471,6 +471,19 @@ element-list failure order, helper recursion and exact receipt reconciliation.
 
 **Exit criteria:** the coverage record splits and closes every concrete array
 element shape; all helpers use the ordinary checked pipeline.
+
+Completed on 2026-09-19. Array element initialization, copying, assignment and
+destruction now consume every selected primitive, optional, class, nested-array,
+shared and optional-shared lifecycle fact. Ordered construction advances its
+initialized prefix only after the selected helper returns. The six array helper
+families and only the raw-address class-copy wrappers required by their retained
+dependency graph are reserved, lowered and reconciled through the ordinary
+worklist. Nested optional/array/class graphs close through calls between reserved
+helpers rather than recursive Rust lowering. Shared-array cleanup walks the
+initialized prefix in reverse. Focused planning, lowering and native tests cover
+complete and reachable policies, nontrivial element graphs, recursive closure,
+exact receipts and executable copy/assignment/destruction; the repository gates
+are recorded with this implementation.
 
 ### LM14 — Lower indexed construction, slices and array aliases
 

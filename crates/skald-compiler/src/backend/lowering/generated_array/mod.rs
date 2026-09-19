@@ -1,5 +1,7 @@
 //! Generated primitive/trivial array lifecycle bodies.
 
+mod lifecycle;
+
 use super::LowerError;
 use crate::backend::{
     lir::{
@@ -21,6 +23,9 @@ pub(super) fn lower<'plan>(
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
     let plan = admitted.plan().view();
     plan.require_same_context(owner.context())?;
+    if key.family == HelperFamily::RawClassCopy {
+        return lifecycle::raw_class_copy(admitted, owner, key.layout);
+    }
     let candidates = plan
         .semantic()
         .arrays
@@ -30,109 +35,15 @@ pub(super) fn lower<'plan>(
     let [array] = candidates.as_slice() else {
         return Err(PlanError::InvalidDomain.into());
     };
-    if !primitive_trivial(array) {
-        return Err(PlanError::InvalidDomain.into());
-    }
     match key.family {
-        HelperFamily::ArrayElementInitializer => initializer(plan, owner, array),
-        HelperFamily::ArrayElementCopier => copier(plan, owner, array),
+        HelperFamily::ArrayElementInitializer => lifecycle::initializer(admitted, owner, array),
+        HelperFamily::ArrayElementCopier => lifecycle::copier(admitted, owner, array),
         HelperFamily::ArrayClone => clone_array(plan, owner, array),
-        HelperFamily::ArrayElementDestroyer => no_op(owner, 2),
+        HelperFamily::ArrayElementDestroyer => lifecycle::destroyer(admitted, owner, array),
         HelperFamily::ArrayRelease => release(plan, owner, array),
         HelperFamily::ArraySharedFinalizer => shared_finalizer(plan, owner, array),
         _ => Err(PlanError::InvalidDomain.into()),
     }
-}
-
-fn primitive_trivial(array: &crate::backend::plan::ArrayLayoutFact) -> bool {
-    use crate::backend::plan::{
-        ArrayAssignElementFact, ArrayCopyElementFact, ArrayDefaultElementFact,
-        ArrayDestroyElementFact,
-    };
-    array
-        .default
-        .is_none_or(|item| item == ArrayDefaultElementFact::Primitive)
-        && array
-            .copy
-            .is_none_or(|item| item == ArrayCopyElementFact::Primitive)
-        && array
-            .assignment
-            .is_none_or(|item| item == ArrayAssignElementFact::Primitive)
-        && array.destruction == ArrayDestroyElementFact::Trivial
-}
-
-fn initializer<'plan>(
-    plan: PlanView<'plan>,
-    owner: CallableBinding<'plan>,
-    array: &crate::backend::plan::ArrayLayoutFact,
-) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let (mut builder, entry, inputs) = begin(owner)?;
-    let [backing, index] = inputs.as_slice() else {
-        return Err(PlanError::InvalidSignature.into());
-    };
-    let address = element_address(
-        &mut builder,
-        entry,
-        *backing,
-        *index,
-        array,
-        array.element_offset,
-    )?;
-    let representation = element_representation(plan, array)?;
-    let zero = builder.append(entry, Operation::Constant(zero(representation.scalar)?))?[0];
-    builder.append(
-        entry,
-        Operation::Store {
-            address,
-            value: zero,
-            representation,
-        },
-    )?;
-    finish(builder, entry, vec![])
-}
-
-fn copier<'plan>(
-    plan: PlanView<'plan>,
-    owner: CallableBinding<'plan>,
-    array: &crate::backend::plan::ArrayLayoutFact,
-) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let (mut builder, entry, inputs) = begin(owner)?;
-    let [destination, source, destination_index, source_index] = inputs.as_slice() else {
-        return Err(PlanError::InvalidSignature.into());
-    };
-    let representation = element_representation(plan, array)?;
-    let source = element_address(
-        &mut builder,
-        entry,
-        *source,
-        *source_index,
-        array,
-        array.element_offset,
-    )?;
-    let value = builder.append(
-        entry,
-        Operation::Load {
-            address: source,
-            representation,
-        },
-    )?[0];
-    let destination = element_address(
-        &mut builder,
-        entry,
-        *destination,
-        *destination_index,
-        array,
-        array.element_offset,
-    )?;
-    builder.append(
-        entry,
-        Operation::Store {
-            address: destination,
-            value,
-            representation,
-        },
-    )?;
-    finish(builder, entry, vec![])
 }
 
 fn clone_array<'plan>(
@@ -252,6 +163,8 @@ fn clone_array<'plan>(
             false_edge: edge_with(complete, destination),
         },
     )?;
+    let destination_elements = byte_offset(&mut builder, body, destination, array.element_offset)?;
+    let source_elements = byte_offset(&mut builder, body, *source, array.element_offset)?;
     call_helper(
         plan,
         &mut builder,
@@ -259,7 +172,7 @@ fn clone_array<'plan>(
         boundary,
         array.descriptor_layout,
         HelperFamily::ArrayElementCopier,
-        vec![destination, *source, index, index],
+        vec![destination_elements, source_elements, index, index],
     )?;
     let one = constant_u64(&mut builder, body, 1)?;
     let next = builder.append(
@@ -419,13 +332,13 @@ fn shared_finalizer<'plan>(
     let index = builder.reserve_value(ScalarType::U64, None)?;
     let header = builder.reserve_block()?;
     builder.define_block(header, &[index])?;
-    builder.terminate(entry, Terminator::Jump(edge_with(header, zero)))?;
+    builder.terminate(entry, Terminator::Jump(edge_with(header, length)))?;
     let running = compare(
         &mut builder,
         header,
-        PrimitiveComparisonPredicate::LessThan,
+        PrimitiveComparisonPredicate::NotEqual,
         index,
-        length,
+        zero,
     )?;
     let body = reserve_block(&mut builder)?;
     let complete = reserve_block(&mut builder)?;
@@ -437,9 +350,23 @@ fn shared_finalizer<'plan>(
             false_edge: edge(complete),
         },
     )?;
-    // Element destroyers consume a descriptor whose element start is at the
-    // planned inline offset. The payload starts at its length field, so the
-    // element displacement relative to it is identical.
+    // Element helpers consume the first-element address. Both inline and shared
+    // representations place elements immediately after their length word.
+    let elements = byte_offset(
+        &mut builder,
+        body,
+        *payload,
+        array.element_offset - array.inline_length_offset,
+    )?;
+    let one = constant_u64(&mut builder, body, 1)?;
+    let next = builder.append(
+        body,
+        Operation::Binary {
+            operation: BinaryOperation::Subtract,
+            left: index,
+            right: one,
+        },
+    )?[0];
     call_helper(
         plan,
         &mut builder,
@@ -447,30 +374,10 @@ fn shared_finalizer<'plan>(
         boundary,
         array.descriptor_layout,
         HelperFamily::ArrayElementDestroyer,
-        vec![*payload, index],
+        vec![elements, next],
     )?;
-    let one = constant_u64(&mut builder, body, 1)?;
-    let next = builder.append(
-        body,
-        Operation::Binary {
-            operation: BinaryOperation::Add,
-            left: index,
-            right: one,
-        },
-    )?[0];
     builder.terminate(body, Terminator::Jump(edge_with(header, next)))?;
     finish(builder, complete, vec![])
-}
-
-fn no_op<'plan>(
-    owner: CallableBinding<'plan>,
-    inputs: usize,
-) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let (builder, entry, actual) = begin(owner)?;
-    if actual.len() != inputs {
-        return Err(PlanError::InvalidSignature.into());
-    }
-    finish(builder, entry, vec![])
 }
 
 fn begin<'plan>(
@@ -498,58 +405,6 @@ fn finish<'plan>(
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
     builder.terminate(block, Terminator::Return(values))?;
     crate::backend::lir::verify_callable(builder.finish()).map_err(LowerError::Verification)
-}
-
-fn element_address<'plan>(
-    builder: &mut DraftBuilder<'plan>,
-    block: crate::backend::lir::BlockHandle<'plan>,
-    backing: ValueHandle<'plan>,
-    index: ValueHandle<'plan>,
-    array: &crate::backend::plan::ArrayLayoutFact,
-    offset: usize,
-) -> Result<ValueHandle<'plan>, LowerError> {
-    let base = byte_offset(builder, block, backing, offset)?;
-    let stride = constant_u64(builder, block, array.stride as u64)?;
-    let offset = builder.append(
-        block,
-        Operation::Binary {
-            operation: BinaryOperation::Multiply,
-            left: index,
-            right: stride,
-        },
-    )?[0];
-    Ok(builder.append(block, Operation::ByteOffset { base, offset })?[0])
-}
-
-fn element_representation(
-    plan: PlanView<'_>,
-    array: &crate::backend::plan::ArrayLayoutFact,
-) -> Result<MemoryRepresentation, LowerError> {
-    let layout = plan.layout(plan.layout_id(array.element_layout.index())?)?;
-    let scalar = match array.element {
-        crate::backend::plan::SemanticType::I64 => ScalarType::I64,
-        crate::backend::plan::SemanticType::U64 => ScalarType::U64,
-        crate::backend::plan::SemanticType::U8 => ScalarType::U8,
-        crate::backend::plan::SemanticType::Bool => ScalarType::Bool,
-        crate::backend::plan::SemanticType::F64 => ScalarType::F64,
-        _ => return Err(PlanError::InvalidDomain.into()),
-    };
-    Ok(MemoryRepresentation {
-        scalar,
-        bytes: layout.size,
-        alignment: layout.alignment,
-    })
-}
-
-fn zero(ty: ScalarType) -> Result<Constant, LowerError> {
-    Ok(match ty {
-        ScalarType::I64 => Constant::I64(0),
-        ScalarType::U64 => Constant::U64(0),
-        ScalarType::U8 => Constant::U8(0),
-        ScalarType::Bool => Constant::Bool(false),
-        ScalarType::F64 => Constant::F64(0),
-        _ => return Err(PlanError::InvalidDomain.into()),
-    })
 }
 
 fn call_helper<'plan>(

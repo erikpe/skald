@@ -69,23 +69,19 @@ fn arithmetic_checks_and_all_primitive_cells_are_admitted() {
 }
 
 #[test]
-fn artifact_policy_cannot_hide_an_unsupported_retained_body() {
+fn artifact_policy_cannot_hide_unsupported_static_lifecycle() {
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "excluded.ska",
-        "class Item { init() {} } fn dead(values: Item[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
     );
-    for (input, body_must_identify_owner) in [
-        (BackendInput::without_runtime_trace(&fixture.mir), false),
-        (
-            BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
-            true,
-        ),
+    for input in [
+        BackendInput::without_runtime_trace(&fixture.mir),
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
     ] {
         let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
             panic!("unsupported retained owner body must reject")
         };
         assert!(!reason.reason.is_empty());
-        assert_eq!(reason.callable.is_some(), body_must_identify_owner);
     }
 }
 
@@ -183,22 +179,18 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
 }
 
 #[test]
-fn excluded_source_families_reject_before_plan_publication() {
-    let sources = [
-        "class Item { init() {} } fn dead(values: Item[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+fn static_lifecycle_rejects_before_plan_publication() {
+    let fixture = fixture(
         "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
-    ];
-    for source in sources {
-        let fixture = fixture(source);
-        for input in [
-            BackendInput::without_runtime_trace(&fixture.mir),
-            BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
-        ] {
-            let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
-                panic!("excluded fixture admitted: {source}")
-            };
-            assert!(!reason.reason.is_empty());
-        }
+    );
+    for input in [
+        BackendInput::without_runtime_trace(&fixture.mir),
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    ] {
+        let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
+            panic!("static lifecycle fixture admitted")
+        };
+        assert!(!reason.reason.is_empty());
     }
 }
 
@@ -219,7 +211,7 @@ fn class_lifecycle_is_admitted_under_both_artifact_policies() {
 }
 
 #[test]
-fn optional_abi_and_admission_cover_recursive_non_array_storage() {
+fn optional_abi_and_admission_cover_recursive_storage() {
     let supported = fixture(concat!(
         "class Value { init(){} }",
         "fn tagged(value:i64?)->i64?{return value;}",
@@ -265,12 +257,12 @@ fn optional_abi_and_admission_cover_recursive_non_array_storage() {
         );
     }
 
-    let unsupported = fixture("fn main()->i64{var value:i64[]?=none;return 0;}");
+    let inline_array = fixture("fn main()->i64{var value:i64[]?=none;return 0;}");
     for input in [
-        BackendInput::without_runtime_trace(&unsupported.mir),
-        BackendInput::without_runtime_trace(&unsupported.mir).with_reachable_artifacts_only(),
+        BackendInput::without_runtime_trace(&inline_array.mir),
+        BackendInput::without_runtime_trace(&inline_array.mir).with_reachable_artifacts_only(),
     ] {
-        assert!(matches!(admit(input), Err(AdmissionError::Unsupported(_))));
+        admit(input).expect("inline-array optional lifecycle is supported");
     }
 }
 

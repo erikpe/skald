@@ -74,32 +74,51 @@ impl<'plan> Lowerer<'plan, '_> {
                 )?;
                 self.advance_index(block, *prefix)
             }
-            MirArrayInstruction::InitializeNext {
+            MirArrayInstruction::CompleteElement { prefix, .. } => {
+                self.advance_index(block, *prefix)
+            }
+            MirArrayInstruction::InitializeNext { backing, index, .. } => {
+                let array = self.array_for_backing(*backing)?;
+                let backing = self.load_storage(block, *backing)?;
+                let backing =
+                    self.byte_offset(block, backing, self.array_fact(array)?.element_offset)?;
+                let index_value = self.load_storage(block, *index)?;
+                self.call_array_helper(
+                    block,
+                    array,
+                    crate::backend::plan::HelperFamily::ArrayElementInitializer,
+                    vec![backing, index_value],
+                    instruction.span(),
+                )?;
+                self.advance_index(block, *index)
+            }
+            MirArrayInstruction::CopyNext {
                 backing,
+                source,
                 index,
-                operation: crate::mir::MirArrayDefaultElement::Primitive,
                 ..
             } => {
                 let array = self.array_for_backing(*backing)?;
-                let place = array_element(MirPlace::base(*backing), array, *index);
-                let representation = self.place_representation(&place)?;
-                let zero = match representation.scalar {
-                    ScalarType::I64 => Operation::Constant(Constant::I64(0)),
-                    ScalarType::U64 => Operation::Constant(Constant::U64(0)),
-                    ScalarType::U8 => Operation::Constant(Constant::U8(0)),
-                    ScalarType::Bool => Operation::Constant(Constant::Bool(false)),
-                    ScalarType::F64 => Operation::Constant(Constant::F64(0)),
-                    _ => return Err(PlanError::InvalidDomain.into()),
-                };
-                let zero = self.append(block, zero)?[0];
-                let address = self.place_address(block, &place)?;
-                self.append(
+                let destination = self.load_storage(block, *backing)?;
+                let (mut source, shared) = self.array_owner(block, source)?;
+                if shared {
+                    let fact = self.array_fact(array)?;
+                    source = self.byte_offset(
+                        block,
+                        source,
+                        fact.shared_element_offset - fact.element_offset,
+                    )?;
+                }
+                let element_offset = self.array_fact(array)?.element_offset;
+                let destination = self.byte_offset(block, destination, element_offset)?;
+                source = self.byte_offset(block, source, element_offset)?;
+                let index_value = self.load_storage(block, *index)?;
+                self.call_array_helper(
                     block,
-                    Operation::Store {
-                        address,
-                        value: zero,
-                        representation,
-                    },
+                    array,
+                    crate::backend::plan::HelperFamily::ArrayElementCopier,
+                    vec![destination, source, index_value, index_value],
+                    instruction.span(),
                 )?;
                 self.advance_index(block, *index)
             }
@@ -164,26 +183,32 @@ impl<'plan> Lowerer<'plan, '_> {
             MirArrayInstruction::ElementAssign {
                 destination,
                 source,
-                operation: crate::mir::MirArrayAssignElement::Primitive,
-                ..
-            } => {
-                let source_address = self.place_address(block, source)?;
-                let representation = self.place_representation(source)?;
-                let value = self.append(
+                operation,
+                span,
+            } => self.assign_array_element(block, destination, source, *operation, *span),
+            MirArrayInstruction::DestroyNext { owner, index, .. } => {
+                let array = match self.place_type(owner)? {
+                    crate::backend::plan::SemanticType::Array(array) => array,
+                    _ => return Err(PlanError::InvalidDomain.into()),
+                };
+                let (mut backing, shared) = self.array_owner(block, owner)?;
+                if shared {
+                    let fact = self.array_fact(array)?;
+                    backing = self.byte_offset(
+                        block,
+                        backing,
+                        fact.shared_element_offset - fact.element_offset,
+                    )?;
+                }
+                backing =
+                    self.byte_offset(block, backing, self.array_fact(array)?.element_offset)?;
+                let index = self.load_storage(block, *index)?;
+                self.call_array_helper(
                     block,
-                    Operation::Load {
-                        address: source_address,
-                        representation,
-                    },
-                )?[0];
-                let destination_address = self.place_address(block, destination)?;
-                self.append(
-                    block,
-                    Operation::Store {
-                        address: destination_address,
-                        value,
-                        representation,
-                    },
+                    array,
+                    crate::backend::plan::HelperFamily::ArrayElementDestroyer,
+                    vec![backing, index],
+                    instruction.span(),
                 )?;
                 Ok(())
             }
@@ -417,6 +442,102 @@ impl<'plan> Lowerer<'plan, '_> {
         self.active_blocks[block.index()] = complete;
         self.array_status.insert(block, status);
         Ok(())
+    }
+
+    fn assign_array_element(
+        &mut self,
+        block: BlockId,
+        destination: &MirPlace,
+        source: &MirPlace,
+        operation: crate::mir::MirArrayAssignElement,
+        span: Span,
+    ) -> Result<(), LowerError> {
+        use crate::mir::MirArrayAssignElement;
+        if destination == source {
+            return Ok(());
+        }
+        match operation {
+            MirArrayAssignElement::Primitive => {
+                let source_address = self.place_address(block, source)?;
+                let representation = self.place_representation(source)?;
+                let value = self.append(
+                    block,
+                    Operation::Load {
+                        address: source_address,
+                        representation,
+                    },
+                )?[0];
+                let destination_address = self.place_address(block, destination)?;
+                self.append(
+                    block,
+                    Operation::Store {
+                        address: destination_address,
+                        value,
+                        representation,
+                    },
+                )?;
+                Ok(())
+            }
+            MirArrayAssignElement::OptionalPrimitive => {
+                self.optional_primitive_copy(block, destination, source)
+            }
+            MirArrayAssignElement::Class { operation, .. } => self.copy_assignment_operation(
+                block,
+                operation,
+                destination.clone(),
+                source.clone(),
+                span,
+            ),
+            MirArrayAssignElement::OptionalClass {
+                class,
+                copy_constructor,
+                copy_assignment,
+            } => {
+                let optional = self
+                    .admitted
+                    .program()
+                    .optional_for_payload(MirType::Class(class))
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                self.class_optional_assign(
+                    block,
+                    &crate::mir::MirClassOptionalAssign {
+                        optional,
+                        destination: destination.clone(),
+                        source: crate::mir::MirClassOptionalSource::Copy(source.clone()),
+                        class,
+                        copy_constructor: Some(copy_constructor),
+                        copy_assignment: Some(copy_assignment),
+                        authorization: None,
+                        final_authorization: None,
+                        span,
+                    },
+                )
+            }
+            MirArrayAssignElement::Array(array) => {
+                let source_handle = self.load_place(block, source)?;
+                let replacement = self.clone_inline_array(block, source_handle, array, span)?;
+                let previous = self.load_place(block, destination)?;
+                self.store_place(block, destination, replacement)?;
+                self.release_inline_array(block, previous, array, span)
+            }
+            MirArrayAssignElement::Shared(_) => {
+                self.shared_field_assign(block, destination, source, span)
+            }
+            MirArrayAssignElement::OptionalShared(_) => {
+                self.optional_shared_copy(block, destination, source, span, true)
+            }
+            MirArrayAssignElement::Optional(optional) => self.aggregate_optional_assign(
+                block,
+                &crate::mir::MirAggregateOptionalAssign {
+                    optional,
+                    destination: destination.clone(),
+                    source: crate::mir::MirAggregateOptionalSource::Copy(source.clone()),
+                    authorization: None,
+                    final_authorization: None,
+                    span,
+                },
+            ),
+        }
     }
 
     fn allocate_array_bytes(
@@ -662,98 +783,92 @@ impl<'plan> Lowerer<'plan, '_> {
         self.clear_address_storage(block, anchor)
     }
 
-    fn release_inline_array(
+    pub(super) fn release_inline_array(
         &mut self,
         block: BlockId,
         handle: ValueHandle<'plan>,
         array: ArrayTypeId,
         span: Span,
     ) -> Result<(), LowerError> {
-        let fact = self.array_fact(array)?;
-        if fact.destruction != crate::backend::plan::ArrayDestroyElementFact::Trivial {
-            return Err(PlanError::InvalidDomain.into());
-        }
-        let owner_count_offset = fact.inline_owner_count_offset;
-        let null = self.null_address(block)?;
-        let present = self.compare(block, PrimitiveComparisonPredicate::NotEqual, handle, null)?;
-        let release = self.new_array_block()?;
-        let complete = self.new_array_block()?;
-        self.branch_active(block, present, release, complete)?;
-        let count_address = self.byte_offset_at(release, handle, owner_count_offset)?;
-        let count = self.builder.append(
-            release,
-            Operation::Load {
-                address: count_address,
-                representation: count_representation(),
-            },
-        )?[0];
-        let one = self
-            .builder
-            .append(release, Operation::Constant(Constant::U64(1)))?[0];
-        let zero = self
-            .builder
-            .append(release, Operation::Constant(Constant::U64(0)))?[0];
-        let valid = self.builder.append(
-            release,
-            Operation::Compare {
-                predicate: PrimitiveComparisonPredicate::NotEqual,
-                left: count,
-                right: zero,
-            },
-        )?[0];
-        let owned = self.new_array_block()?;
-        let invalid = self.new_array_block()?;
-        self.builder.terminate(
-            release,
-            Terminator::Branch {
-                condition: valid,
-                true_edge: edge(owned),
-                false_edge: edge(invalid),
-            },
+        self.call_array_helper(
+            block,
+            array,
+            crate::backend::plan::HelperFamily::ArrayRelease,
+            vec![handle],
+            span,
         )?;
-        self.builder.terminate(invalid, Terminator::HardTrap)?;
-        let last = self.builder.append(
-            owned,
-            Operation::Compare {
-                predicate: PrimitiveComparisonPredicate::Equal,
-                left: count,
-                right: one,
-            },
-        )?[0];
-        let free = self.new_array_block()?;
-        let decrement = self.new_array_block()?;
-        self.builder.terminate(
-            owned,
-            Terminator::Branch {
-                condition: last,
-                true_edge: edge(free),
-                false_edge: edge(decrement),
-            },
-        )?;
-        let reduced = self.builder.append(
-            decrement,
-            Operation::Binary {
-                operation: BinaryOperation::Subtract,
-                left: count,
-                right: one,
-            },
-        )?[0];
-        self.builder.append(
-            decrement,
-            Operation::Store {
-                address: count_address,
-                value: reduced,
-                representation: count_representation(),
-            },
-        )?;
-        self.builder
-            .terminate(decrement, Terminator::Jump(edge(complete)))?;
-        let call = self.runtime_call_at(free, RuntimeService::Free, handle, span)?;
-        self.builder.append(free, Operation::Call(call))?;
-        self.builder
-            .terminate(free, Terminator::Jump(edge(complete)))?;
-        self.active_blocks[block.index()] = complete;
         Ok(())
+    }
+
+    pub(super) fn clone_inline_array(
+        &mut self,
+        block: BlockId,
+        handle: ValueHandle<'plan>,
+        array: ArrayTypeId,
+        span: Span,
+    ) -> Result<ValueHandle<'plan>, LowerError> {
+        let values = self.call_array_helper(
+            block,
+            array,
+            crate::backend::plan::HelperFamily::ArrayClone,
+            vec![handle],
+            span,
+        )?;
+        values
+            .into_iter()
+            .next()
+            .ok_or_else(|| PlanError::InvalidSignature.into())
+    }
+
+    fn call_array_helper(
+        &mut self,
+        block: BlockId,
+        array: ArrayTypeId,
+        family: crate::backend::plan::HelperFamily,
+        values: Vec<ValueHandle<'plan>>,
+        span: Span,
+    ) -> Result<Vec<ValueHandle<'plan>>, LowerError> {
+        let layout = self.array_fact(array)?.descriptor_layout;
+        let target = self
+            .plan()
+            .resources()
+            .generated
+            .iter()
+            .find_map(|fact| match fact.callable {
+                crate::backend::plan::LirCallableId::Helper(key)
+                    if key.family == family && key.layout == layout =>
+                {
+                    Some(fact.callable)
+                }
+                _ => None,
+            })
+            .ok_or(PlanError::UnknownDeclaration)?;
+        let signature = self.callable_signature(target)?;
+        let roles = self
+            .plan()
+            .signature(self.plan().signature_id(signature.index())?)?
+            .inputs
+            .iter()
+            .map(|component| component.role)
+            .collect::<Vec<_>>();
+        if roles.len() != values.len() {
+            return Err(PlanError::InvalidSignature.into());
+        }
+        let arguments = roles
+            .into_iter()
+            .zip(values)
+            .map(|(role, value)| CallArgument { role, value })
+            .collect();
+        let attribution = self.attribution(block, span, false)?;
+        self.append(
+            block,
+            Operation::Call(crate::backend::lir::Call {
+                target: crate::backend::lir::CallTarget::Direct(ArtifactId::Callable(target)),
+                signature,
+                arguments,
+                attribution,
+            }),
+        )
     }
 
     fn select_value(
